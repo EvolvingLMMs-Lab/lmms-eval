@@ -1,9 +1,8 @@
 import os
-import yaml
 from typing import List, Union, Dict
 
 from lmm_eval import utils
-from lmm_eval import prompts
+# from lmm_eval import prompts
 from lmm_eval.api.task import TaskConfig, Task, ConfigurableTask
 from lmm_eval.api.registry import (
     register_task,
@@ -14,17 +13,6 @@ from lmm_eval.api.registry import (
 )
 
 import logging
-
-# import python tasks
-from .squadv2.task import SQuAD2
-from .scrolls.task import (
-    QuALITY,
-    NarrativeQA,
-    ContractNLI,
-    GovReport,
-    SummScreenFD,
-    QMSum,
-)
 
 eval_logger = utils.eval_logger
 
@@ -88,35 +76,35 @@ def check_prompt_config(
     config: Dict[str, str], yaml_path: str = None
 ) -> List[Dict[str, str]]:
     all_configs = []
-    if "use_prompt" in config:
-        prompt_list = prompts.load_prompt_list(
-            use_prompt=config["use_prompt"],
-            dataset_name=config["dataset_path"],
-            subset_name=config["dataset_name"] if "dataset_name" in config else None,
-            yaml_path=yaml_path,
-        )
-        for idx, prompt_variation in enumerate(prompt_list):
-            all_configs.append(
-                {
-                    **config,
-                    **{"use_prompt": prompt_variation},
-                    **{
-                        "task": "_".join(
-                            [
-                                config["task"]
-                                if "task" in config
-                                else get_task_name_from_config(config),
-                                prompt_variation.split("/")[-1]
-                                if ".yaml" in prompt_variation
-                                else prompt_variation,
-                            ]
-                        )
-                    },
-                    **{"output_type": "generate_until"},
-                }
-            )
-    else:
-        all_configs.append(config)
+    # if "use_prompt" in config:
+    #     prompt_list = prompts.load_prompt_list(
+    #         use_prompt=config["use_prompt"],
+    #         dataset_name=config["dataset_path"],
+    #         subset_name=config["dataset_name"] if "dataset_name" in config else None,
+    #         yaml_path=yaml_path,
+    #     )
+    #     for idx, prompt_variation in enumerate(prompt_list):
+    #         all_configs.append(
+    #             {
+    #                 **config,
+    #                 **{"use_prompt": prompt_variation},
+    #                 **{
+    #                     "task": "_".join(
+    #                         [
+    #                             config["task"]
+    #                             if "task" in config
+    #                             else get_task_name_from_config(config),
+    #                             prompt_variation.split("/")[-1]
+    #                             if ".yaml" in prompt_variation
+    #                             else prompt_variation,
+    #                         ]
+    #                     )
+    #                 },
+    #                 **{"output_type": "generate_until"},
+    #             }
+    #         )
+    # else:
+    all_configs.append(config)
     return all_configs
 
 
@@ -132,6 +120,7 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
     Calling this function
     """
     for root, subdirs, file_list in os.walk(task_dir):
+
         # if (subdirs == [] or subdirs == ["__pycache__"]) and (len(file_list) > 0):
         for f in file_list:
             if f.endswith(".yaml"):
@@ -141,10 +130,8 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
 
                     if "task" not in config:
                         continue
-
-                    all_configs = check_prompt_config(
-                        config, yaml_path=os.path.dirname(yaml_path)
-                    )
+                    
+                    all_configs = check_prompt_config(config, yaml_path=os.path.dirname(yaml_path))
                     for config in all_configs:
                         if register_task:
                             if type(config["task"]) == str:

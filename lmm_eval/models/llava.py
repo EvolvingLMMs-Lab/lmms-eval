@@ -7,7 +7,7 @@ from collections import defaultdict
 from tqdm import tqdm
 from lmm_eval import utils
 from lmm_eval.api.instance import Instance
-from lmm_eval.api.model import LM
+from lmm_eval.api.model import LMM
 from lmm_eval.api.registry import register_model
 from accelerate import Accelerator, DistributedType
 from typing import List, Optional, Union, Tuple
@@ -17,7 +17,7 @@ from lmm_eval.utils import stop_sequences_criteria
 
 
 @register_model("llava")
-class Llava(LM):
+class Llava(LMM):
     """
     Llava Model
     """
@@ -76,15 +76,19 @@ class Llava(LM):
                 f"cuda:{accelerator.local_process_index}"
             )
             self.accelerator = accelerator
+            if self.accelerator.is_local_main_process:
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
         else:
             self._device = device
             self.model.to(self._device)
+            self._rank = 0
+            self._word_size = 1
 
-        if self.accelerator.is_local_main_process:
-            eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+        
 
-        self._rank = self.accelerator.local_process_index
-        self._world_size = self.accelerator.num_processes
+        
         
     @property
     def config(self):

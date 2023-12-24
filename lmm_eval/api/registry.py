@@ -1,6 +1,6 @@
 import os
 import evaluate
-from lmm_eval.api.model import LM
+from lmm_eval.api.model import LMM
 
 import logging
 
@@ -16,8 +16,8 @@ def register_model(*names):
     def decorate(cls):
         for name in names:
             assert issubclass(
-                cls, LM
-            ), f"Model '{name}' ({cls.__name__}) must extend LM class"
+                cls, LMM
+            ), f"Model '{name}' ({cls.__name__}) must extend LMM class"
 
             assert (
                 name not in MODEL_REGISTRY

@@ -23,7 +23,6 @@ from lmm_eval.api import samplers
 from lmm_eval.api.instance import Instance
 from lmm_eval.api.filter import FilterEnsemble
 
-from lmm_eval.prompts import get_prompt
 from lmm_eval.filters import build_filter_ensemble
 from lmm_eval.api.metrics import (
     mean,
@@ -72,6 +71,7 @@ class TaskConfig(dict):
     # formatting / prompting options.
     # see docs/advanced_task_guide.md for more info
     process_docs: Callable = None
+    doc_to_visual: Union[Callable, str] = None
     doc_to_text: Union[Callable, str] = None
     doc_to_target: Union[Callable, str] = None
     doc_to_choice: Union[Callable, str, dict, list] = None
@@ -652,13 +652,13 @@ class ConfigurableTask(Task):
         else:
             self._filters = [build_filter_ensemble("none", [["take_first", None]])]
 
-        if self.config.use_prompt is not None:
-            eval_logger.info(f"loading prompt {self.config.use_prompt}")
-            self.prompt = get_prompt(
-                self.config.use_prompt, self.DATASET_PATH, self.DATASET_NAME
-            )
-        else:
-            self.prompt = None
+        # if self.config.use_prompt is not None:
+        #     eval_logger.info(f"loading prompt {self.config.use_prompt}")
+        #     self.prompt = get_prompt(
+        #         self.config.use_prompt, self.DATASET_PATH, self.DATASET_NAME
+        #     )
+        # else:
+        self.prompt = None
 
         if self.fewshot_docs() is not None:
             self.sampler = samplers.get_sampler(
@@ -935,7 +935,17 @@ class ConfigurableTask(Task):
                 return self.config.fewshot_delimiter
         else:
             raise TypeError
-
+        
+    def doc_to_visual(self, doc: dict) -> Union[int, str, list]:
+        self.config.doc_to_visual
+        if type(self.config.doc_to_visual) == str:
+            assert self.config.doc_to_visual in self.features
+            # Single image. Still return a list for consistency.
+            return [doc[self.config.doc_to_visual]]
+        else: 
+            assert callable(self.config.doc_to_visual)
+            return self.config.doc_to_visual(doc)
+        
     def doc_to_choice(self, doc: Any) -> List[str]:
         if self.prompt is not None:
             doc_to_choice = self.prompt
@@ -1011,7 +1021,7 @@ class ConfigurableTask(Task):
             return request_list
 
         elif self.OUTPUT_TYPE == "generate_until":
-            arguments = (ctx, self.config.generation_kwargs)
+            arguments = (ctx, self.config.generation_kwargs, self.self.doc_to_visual(doc))
 
         return Instance(
             request_type=self.OUTPUT_TYPE, doc=doc, arguments=arguments, idx=0, **kwargs

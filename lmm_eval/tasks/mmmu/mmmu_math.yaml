@@ -1,0 +1,6 @@
+"dataset_name": "Math"
+"group": "mmmu_science"
+"group_alias": "science"
+"include": "_default_template_yaml"
+"task": "mmmu_math"
+"task_alias": "math"

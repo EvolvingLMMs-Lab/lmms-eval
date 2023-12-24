@@ -1,0 +1,6 @@
+"dataset_name": "Accounting"
+"group": "mmmu_business"
+"group_alias": "buisiness"
+"include": "_default_template_yaml"
+"task": "mmmu_accounting"
+"task_alias": "accounting"

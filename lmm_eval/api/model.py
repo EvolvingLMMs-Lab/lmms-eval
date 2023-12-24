@@ -8,12 +8,12 @@ import json
 import hashlib
 from lmm_eval.api.instance import Instance
 from tqdm import tqdm
-
+from lmm_eval import utils
 import logging
 
 eval_logger = logging.getLogger("lmm-eval")
 
-T = TypeVar("T", bound="LM")
+T = TypeVar("T", bound="LMM")
 
 
 class LMM(abc.ABC):

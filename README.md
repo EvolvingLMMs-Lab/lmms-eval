@@ -24,7 +24,10 @@ Below are the changes we made to the original API:
 
 ## How to run
 
-
+```bash
+pip install -e .
+lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mmmu     --device cuda:0 
+```
 
 ## Models to be added
 
