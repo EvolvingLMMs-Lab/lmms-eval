@@ -4,9 +4,11 @@ The API, togegher with many code blocks of this project come from [lm-eval-harne
 
 Below are the changes we made to the original API:
 
-- Intance.args (lmm_eval/api/instance.py) now contains a list of images to be inputted to LMM.
+- Instance.args (lmm_eval/api/instance.py) now contains a list of images to be inputted to LMM.
 - lm-eval-harness supports all HF LM as single model class. Currently this is not possible of LMM because the input/output format of LMM in HF are not yet unified. Thererfore, we have to create a new class for each LMM model. This is not ideal and we will try to unify them in the future.
 
+**It is very easy to add new tasks, but adding new models requires holistic understanding of the codebase**
+**I recommend you to spend at least one entire days (8 hours) to look through lm evaluation harness first.**
 
 ## How to run
 
@@ -15,10 +17,11 @@ pip install -e .
 ```
 
 ```bash
-lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mmmu     --device cuda:0  # I have not tested this yet.
-lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mme_llava_prompt      --device cuda:0  #I have tested this.
+lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mmmu     --device cuda:0 --batch_size 2 # I have not tested this yet.
+lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mme_llava_prompt      --device cuda:0 --batch_size 2  # I have not tested this yet.
+accelerate launch -m lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mme_llava_prompt --device cuda:0 --batch_size 2 # I have not tested this yet.
 ```
-
+There are still bugs in the code. I will fix them when I come back from vacation.
 ## Current models
 
 - llava （only generate_until function. Please help add the other two required functions. You can refer to lm-eval-harness for the required functions and how to implement them.)
