@@ -115,7 +115,7 @@ class Llava(LMM):
     def eot_token_id(self):
         # we use EOT because end of *text* is more accurate for what we're doing than end of *sentence*
         return self.tokenizer.eos_token_id
-
+    
     @property
     def max_length(self):
         return self._max_length
@@ -141,6 +141,20 @@ class Llava(LMM):
     def world_size(self):
         return self._world_size
 
+    def tok_encode(
+        self, string: str, left_truncate_len=None, add_special_tokens=None
+    ) -> List[int]:
+        """ """
+        add_special_tokens = False if add_special_tokens is None else add_special_tokens
+        encoding = self.tokenizer.encode(string, add_special_tokens=add_special_tokens)
+        # left-truncate the encoded context to be at most `left_truncate_len` tokens long
+        if left_truncate_len:
+            encoding = encoding[-left_truncate_len:]
+        return encoding
+    
+    def tok_decode(self, tokens):
+        return self.tokenizer.decode(tokens)
+    
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "We have not implemented this function for llava yet"
@@ -166,7 +180,7 @@ class Llava(LMM):
             **generation_kwargs,
         )
 
-
+    
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = defaultdict(list)
         re_ords = {}
@@ -199,6 +213,13 @@ class Llava(LMM):
             )
             for chunk in chunks:
                 contexts, all_gen_kwargs, visuals = zip(*chunk)
+                def flatten(input):
+                    new_list = []
+                    for i in input:
+                        for j in i:
+                            new_list.append(j)
+                    return new_list
+                visuals = flatten(visuals)
                 # we assume all gen kwargs in the batch are the same
                 # this is safe to assume because the `grouper` object ensures it.
                 gen_kwargs = all_gen_kwargs[0]
@@ -231,7 +252,7 @@ class Llava(LMM):
                 # encode, pad, and truncate contexts for this batch
                 batch_features = self.processor(
                     contexts,
-                    visual=visuals,
+                    visuals,
                     max_length=max_ctx_len,
                     truncation=self.truncation,
                 ).to(self.device)

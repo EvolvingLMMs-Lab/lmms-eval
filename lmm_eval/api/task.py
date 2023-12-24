@@ -1021,7 +1021,7 @@ class ConfigurableTask(Task):
             return request_list
 
         elif self.OUTPUT_TYPE == "generate_until":
-            arguments = (ctx, self.config.generation_kwargs, self.self.doc_to_visual(doc))
+            arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual(doc))
 
         return Instance(
             request_type=self.OUTPUT_TYPE, doc=doc, arguments=arguments, idx=0, **kwargs

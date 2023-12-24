@@ -20,6 +20,7 @@ def parse_options(options):
         return parsed_result
     
 def doc_to_text(doc):
+    question = doc["question"]
     if doc["question_type"] == "multiple-choice":
         # Weirdly, data["options"] is a string in MMMU Huggingface dataset
         parsed_options = parse_options(

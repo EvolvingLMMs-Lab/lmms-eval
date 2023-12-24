@@ -1,0 +1,13 @@
+dataset_path: Otter-AI/MME
+task: "mme_llava_prompt"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: "{USER: <image>\n{{question}}\nASSISTANT:"
+doc_to_target: "answer"
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  - version: 0.0
