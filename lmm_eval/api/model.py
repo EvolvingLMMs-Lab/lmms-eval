@@ -42,7 +42,9 @@ class LMM(abc.ABC):
                 The continuation over which log likelihood will be calculated. If
                 there is a word boundary, the space should be in the continuation.
                 For example, context="hello" continuation=" world" is correct.
-
+            'visual_list: list[dict]'
+                Visual input to the model. Can be None.
+                
         :return: list[tuple[float, bool]]
             A list of pairs (logprob, isgreedy)
             `logprob: float`
@@ -85,6 +87,8 @@ class LMM(abc.ABC):
             A list of Instance objects with property `args` which returns a tuple (context, continuation).
             string: str
                 String for which we are computing per-token loglikelihood
+            'visual_list: list[dict]'
+                Visual input to the model. Can be None.
         :return: list[tuple[float, bool]]
             A list of pairs (logprob, isgreedy)
             logprob: float
@@ -103,9 +107,10 @@ class LMM(abc.ABC):
             A list of Instance objects with property `args` which returns a tuple (context, until).
             context: str
                 Context string
-            until: [str]
-                The string sequences to generate until. These string sequences
-                may each span across multiple tokens, or may be part of one token.
+            generation_kwargs: dict
+                Generation Kwargs
+            'visual_list: list[dict]'
+                Visual input to the model. Can be None.
         :return: list[str]
             A list of strings continuation
             continuation: str
