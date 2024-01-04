@@ -18,6 +18,10 @@ eval_logger = logging.getLogger("lmm-eval")
 def mean(arr):
     return sum(arr) / len(arr)
 
+@register_aggregation("sum")
+def mean(arr):
+    return sum(arr)
+
 
 @register_aggregation("median")
 def median(arr):

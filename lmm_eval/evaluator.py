@@ -377,9 +377,9 @@ def evaluate(
                     target = task.doc_to_target(doc)
                     example = {
                         "doc_id": doc_id,
-                        "doc": doc,
+                        "doc": {k: v for k, v in doc.items() if "image" not in k}, # do not include image 
                         "target": target,
-                        "arguments": [req.args for req in requests],
+                        "arguments": [req.args[:2] for req in requests], #do not include image
                         "resps": [req.resps for req in requests],
                         "filtered_resps": [req.filtered_resps[key] for req in requests],
                     }
@@ -394,9 +394,7 @@ def evaluate(
         for task_name, task_samples in list(samples.items()):
             full_samples = [None] * lm.world_size
             torch.distributed.all_gather_object(full_samples, task_samples)
-
             samples[task_name] = list(itertools.chain.from_iterable(full_samples))
-
         # then collect metrics across all ranks
         vals_torch = collections.defaultdict(list)
         for (task_name, key, metric), items in vals.items():
@@ -477,7 +475,6 @@ def evaluate(
                 group_name, task = task
             else:
                 group_name = None
-
             agg_fn = task.aggregation()[metric]
             results[task_name][metric_key] = agg_fn(items)
             results[task_name]["samples"] = len(items)

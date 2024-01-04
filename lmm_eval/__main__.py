@@ -94,6 +94,12 @@ def parse_eval_args() -> argparse.Namespace:
         help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis",
     )
     parser.add_argument(
+        "--log_samples_sufix",
+        type=str,
+        default="",
+        help="Specify a sufix for the log_samples file name.",
+    )
+    parser.add_argument(
         "--show_config",
         action="store_true",
         default=False,
@@ -235,12 +241,12 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
             if args.log_samples:
                 for task_name, config in results["configs"].items():
-                    output_name = "{}_{}".format(
-                        re.sub("/|=", "__", args.model_args), task_name
+                    output_name = "{}_{}_{}".format(
+                        re.sub("/|=", "__", args.model_args), task_name, args.log_samples_sufix
                     )
                     filename = path.joinpath(f"{output_name}.jsonl")
                     samples_dumped = json.dumps(
-                        samples[task_name], indent=2, default=_handle_non_serializable
+                        sorted(samples[task_name], key=lambda x: x["doc_id"]), indent=2, default=_handle_non_serializable
                     )
                     filename.open("w").write(samples_dumped)
 

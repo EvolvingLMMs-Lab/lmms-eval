@@ -3,11 +3,16 @@ task: "mme_llava_prompt"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.doc_to_visual
-doc_to_text: "{USER: <image>\n{{question}}\nASSISTANT:"
+doc_to_text: !function utils.doc_to_text
 doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
 metric_list:
-  - metric: acc
-    aggregation: mean
+  - metric: exact_match
+    aggregation: sum
     higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
 metadata:
   - version: 0.0

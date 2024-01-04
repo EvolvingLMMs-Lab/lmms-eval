@@ -32,7 +32,7 @@ class Llava(LMM):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = False,
         revision = None,
-        use_flash_attention_2=True,
+        use_flash_attention_2=False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -248,19 +248,12 @@ class Llava(LMM):
 
                 max_ctx_len = self.max_length - max_gen_toks
 
-
                 # encode, pad, and truncate contexts for this batch
-                batch_features = self.processor(
-                    contexts,
-                    visuals,
-                    max_length=max_ctx_len,
-                    truncation=self.truncation,
-                ).to(self.device)
+                batch_features = self.processor(contexts,visuals,max_length=max_ctx_len,truncation=self.truncation,padding=True,).to(self.device)
 
 
                 if "max_length" not in kwargs:
                     kwargs["max_length"] = batch_features.input_ids.shape[1] + max_gen_toks
-
                 # perform batched generation
                 cont = self._model_generate(
                     batch_features=batch_features,
