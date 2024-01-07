@@ -1,16 +1,16 @@
 dataset_path: Otter-AI/ScienceQA
-task: "mme_llava_prompt"
+task: "scienceqa"
 test_split: test
 output_type: generate_until
-doc_to_visual: !function utils.doc_to_visual
-doc_to_text: !function utils.doc_to_text
-doc_to_target: "answer"
+doc_to_visual: !function utils.sqa_doc_to_visual
+doc_to_text: !function utils.sqa_doc_to_text
+doc_to_target: !function utils.sqa_doc_to_target
 generation_kwargs:
   until:
     - "ASSISTANT:"
 metric_list:
   - metric: exact_match
-    aggregation: sum
+    aggregation: mean
     higher_is_better: true
     ignore_case: true
     ignore_punctuation: true

@@ -12,8 +12,8 @@ eval_logger = utils.eval_logger
 from lmm_eval.utils import stop_sequences_criteria
 from llava.model.builder import load_pretrained_model
 from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
-from llava.constants import IMAGE_TOKEN_INDEX
-
+from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from llava.conversation import conv_templates, SeparatorStyle
 @register_model("llava")
 class Llava(LMM):
     """
@@ -38,13 +38,18 @@ class Llava(LMM):
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         accelerator = Accelerator()
-        
+        if accelerator.num_processes > 1:
+            self._device = torch.device(
+                    f"cuda:{accelerator.local_process_index}"
+            )
+        else:
+            self._device = device
         (
             self._tokenizer,
             self._model,
             self._image_processor,
             self._max_length,
-        ) = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map="cpu", device="cpu")
+        ) = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self._device, device=self._device)
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -62,16 +67,12 @@ class Llava(LMM):
                 self._model = accelerator.prepare_model(
                     self.model, evaluation_mode=True
                 )
-            self._device = torch.device(
-                f"cuda:{accelerator.local_process_index}"
-            )
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
-            self._device = device
             self.model.to(self._device)
             self._rank = 0
             self._word_size = 1
@@ -132,7 +133,6 @@ class Llava(LMM):
         self, string: str, left_truncate_len=None, add_special_tokens=None
     ) -> List[int]:
         """ """
-        import pdb; pdb.set_trace()
         add_special_tokens = False if add_special_tokens is None else add_special_tokens
         encoding = self.tokenizer.encode(string, add_special_tokens=add_special_tokens)
         # left-truncate the encoded context to be at most `left_truncate_len` tokens long
@@ -151,23 +151,6 @@ class Llava(LMM):
         # TODO
         assert False, "We have not implemented this function for llava yet"
 
-    def _model_generate(self, input_ids, visual, max_length, stop, **generation_kwargs):
-        # we require users to pass do_sample=True explicitly
-        # for non-greedy gen. This should be reevaluated when considering beam search.
-        if "do_sample" not in generation_kwargs:
-            generation_kwargs["do_sample"] = False
-        # build stopping criteria
-        stopping_criteria = stop_sequences_criteria(
-            self.tokenizer, stop, 1, input_ids.input_ids.shape[0]
-        )
-        return self.model.generate(
-            input_ids,
-            visual,
-            max_length=max_length,
-            stopping_criteria=stopping_criteria,
-            use_cache=True,
-            **generation_kwargs,
-        )
 
     
     def generate_until(self, requests: List[Instance]) -> List[str]:
@@ -231,21 +214,44 @@ class Llava(LMM):
                 visuals, self._image_processor, self._config
             )
             if type(image) is list:
-                image = [_image.to(self.device) for _image in image]
+                image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
             else:
-                image = image.to(self.device)
-
-            input_ids = tokenizer_image_token(contexts, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").to(self.device )
+                image = image.to(dtype=torch.float16, device=self.device) 
+                
+                
+            if DEFAULT_IMAGE_TOKEN in contexts[0]:
+                # some datasets already specify the place of image tokens in the prompt
+                prompts_input = contexts[0]
+            else:
+                image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
+                image_tokens = " ".join(image_tokens)
+                if self.model.config.mm_use_im_start_end:
+                    prompts_input = (
+                        DEFAULT_IM_START_TOKEN
+                        + image_tokens
+                        + DEFAULT_IM_END_TOKEN
+                        + "\n"
+                        + contexts[0]
+                    )
+                else:
+                    prompts_input = image_tokens + "\n" + contexts[0]
+            
+            conv = conv_templates["vicuna_v1"].copy()
+            conv.append_message(conv.roles[0], prompts_input)
+            conv.append_message(conv.roles[1], None)
+            prompt = conv.get_prompt()
+            input_ids = (
+            tokenizer_image_token(
+                prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
+            )
+            .unsqueeze(0)
+            .to(self.device )
+        )
             
             if "max_length" not in kwargs:
                 kwargs["max_length"] = input_ids.shape[1] + max_gen_toks
             # perform batched generation
-            cont = self._model_generate(
-                input_ids=input_ids,
-                visual=image,
-                stop=until,
-                **kwargs,
-            )
+            cont = self.model.generate(input_ids,images=image,do_sample=False,use_cache=True)
 
             cont_toks_list = cont.tolist()
             for cont_toks, context in zip(cont_toks_list, contexts):

@@ -13,32 +13,27 @@ Below are the changes we made to the original API:
 ## How to run
 
 ```bash
-pip install -e .
+pip install -e . # 真的是一键装， 不需要提前装torch啥的
 ```
 
 ```bash
-lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mmmu     --device cuda:0 --batch_size 2 --log_samples True # I have not tested this yet.
-accelerate launch -m lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mme_llava_prompt  --batch_size 2 --log_samples --output_path ./logs/  # This is working. run accelerate config to set number of GPUs.
-accelerate launch -m lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mme_llava_prompt --device cuda:0 --batch_size 2 --log_samples True # I have not tested this yet.
+accelerate launch --num_processes=8 -m lmm_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks gqa  --batch_size 1 --log_samples --log_samples_sufix debug --output_path ./logs/ # Eactly reproduce llava resulve
+
 ```
-There are still bugs in the code. I will fix them when I come back from vacation.
 ## Current models
 
 - llava （only generate_until function. Please help add the other two required functions. You can refer to lm-eval-harness for the required functions and how to implement them.)
 
 ## Current datasets
-- MME (no extra prompts. work as expected)
-- MMMU (only two subsets. I have not runned them yet Please help add all the subsets. )
+- GQA
 
 
-
-
-## Models to be added
-
+## Models to be added and tested
+- MMMU
+- SQA
+- MME
 
 ## Datasets to be added
 
 
-## Advanced Functionality (to add later)
-- support text only dataset (to evaluate if LMM can retain the performance of LM)
-- support CoT and multi sampling 
+

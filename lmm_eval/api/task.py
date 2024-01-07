@@ -774,7 +774,6 @@ class ConfigurableTask(Task):
             labeled_examples = self.config.description + self.sampler.get_context(
                 doc, num_fewshot
             )
-
         example = self.doc_to_text(doc)
         if type(example) == str:
             return labeled_examples + example
@@ -827,7 +826,6 @@ class ConfigurableTask(Task):
         return doc
 
     def doc_to_text(self, doc):
-
         doc_to_text = self.config.doc_to_text
 
         if type(doc_to_text) == int:
