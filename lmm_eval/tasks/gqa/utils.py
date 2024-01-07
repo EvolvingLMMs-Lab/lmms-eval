@@ -1,5 +1,5 @@
 from datasets import load_dataset
-prompt = " Answer the question using a single word or phrase."
+prompt = "\nAnswer the question using a single word or phrase."
 raw_image_data = load_dataset("lmms-lab/GQA", "testdev_balanced_images", split="testdev")
 
 images_dataset = {}
@@ -12,4 +12,4 @@ def gqa_doc_to_visual(doc):
     
 def gqa_doc_to_text(doc):
     question = doc["question"]
-    return f"USER: <image>\n{question}{prompt}\nASSISTANT:"
+    return f"{question}{prompt}"

@@ -205,7 +205,6 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         if args.show_config:
             print(dumped)
 
-        batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
 
         if args.output_path:
             output_path_file.open("w").write(dumped)
@@ -223,7 +222,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
         print(
             f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, "
-            f"batch_size: {args.batch_size}{f' ({batch_sizes})' if batch_sizes else ''}"
+            f"batch_size: {args.batch_size}"
         )
         print(evaluator.make_table(results))
         if "groups" in results:
