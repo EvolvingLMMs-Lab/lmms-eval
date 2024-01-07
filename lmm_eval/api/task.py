@@ -19,19 +19,12 @@ from lmm_eval.api import samplers
 from lmm_eval.api.instance import Instance
 
 from lmm_eval.filters import build_filter_ensemble
-from lmm_eval.api.metrics import (
-    mean,
-    weighted_perplexity,
-    bits_per_byte,
-    metric_max_over_ground_truths,
-    METRIC_REGISTRY
-)
 from lmm_eval.api.registry import (
-    get_metric,
     get_aggregation,
     get_metric_aggregation,
     is_higher_better,
     DEFAULT_METRIC_REGISTRY,
+    METRIC_REGISTRY,
     OUTPUT_TYPE_REGISTRY,
     AGGREGATION_REGISTRY,
 )
@@ -641,7 +634,7 @@ class ConfigurableTask(Task):
             _metric_list = DEFAULT_METRIC_REGISTRY[self.config.output_type]
 
             for metric_name in _metric_list:
-                self._metric_fn_list[metric_name] = get_metric(metric_name)
+                self._metric_fn_list[metric_name] = METRIC_REGISTRY[metric_name]
                 self._metric_fn_kwargs[metric_name] = {}
                 self._aggregation_list[metric_name] = get_metric_aggregation(
                     metric_name

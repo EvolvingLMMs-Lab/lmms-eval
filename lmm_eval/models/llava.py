@@ -1,6 +1,4 @@
 import torch
-import transformers
-from transformers import LlavaForConditionalGeneration, AutoProcessor
 
 import copy
 from tqdm import tqdm
@@ -12,8 +10,9 @@ from accelerate import Accelerator, DistributedType
 from typing import List, Optional, Union, Tuple
 eval_logger = utils.eval_logger
 from lmm_eval.utils import stop_sequences_criteria
-
-
+from llava.model.builder import load_pretrained_model
+from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
+from llava.constants import IMAGE_TOKEN_INDEX
 
 @register_model("llava")
 class Llava(LMM):
@@ -23,7 +22,7 @@ class Llava(LMM):
 
     def __init__(
         self,
-        pretrained: str = "llava-hf/llava-1.5-7b-hf",
+        pretrained: str = "liuhaotian/llava-v1.5-7b",
         truncation: Optional[bool] = True,
         max_length: Optional[int] = 4096,
         device: Optional[str] = "cuda",
@@ -35,29 +34,21 @@ class Llava(LMM):
         **kwargs,
     ) -> None:
         super().__init__()
-        model_kwargs = kwargs if kwargs else {}
+        # Do not use kwargs for now
+        assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         accelerator = Accelerator()
-        self._config = transformers.AutoConfig.from_pretrained(
-            pretrained,
-            revision=revision,
-            trust_remote_code=trust_remote_code,
-        )
-        self._model = LlavaForConditionalGeneration.from_pretrained(
-                pretrained,
-                torch_dtype=utils.get_dtype(dtype),
-                trust_remote_code=trust_remote_code,
-                revision=revision,
-                use_flash_attention_2=use_flash_attention_2,
-                **model_kwargs,
-        )
-        self._processor = AutoProcessor.from_pretrained(pretrained)
+        
+        (
+            self._tokenizer,
+            self._model,
+            self._image_processor,
+            self._max_length,
+        ) = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map="cpu", device="cpu")
+        self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
-        
-
         self.truncation = truncation
-        self._max_length = max_length
         self.batch_size_per_gpu = int(batch_size)
         assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
@@ -94,13 +85,10 @@ class Llava(LMM):
         # return the associated transformers.AutoConfig for the given pretrained model.
         return self._config
     
-    @property
-    def processor(self):
-        # return the associated transformers.AutoConfig for the given pretrained model.
-        return self._processor
+
     @property
     def tokenizer(self):
-        return self.processor.tokenizer
+        return self._tokenizer
     
     @property
     def model(self):
@@ -144,6 +132,7 @@ class Llava(LMM):
         self, string: str, left_truncate_len=None, add_special_tokens=None
     ) -> List[int]:
         """ """
+        import pdb; pdb.set_trace()
         add_special_tokens = False if add_special_tokens is None else add_special_tokens
         encoding = self.tokenizer.encode(string, add_special_tokens=add_special_tokens)
         # left-truncate the encoded context to be at most `left_truncate_len` tokens long
@@ -162,17 +151,18 @@ class Llava(LMM):
         # TODO
         assert False, "We have not implemented this function for llava yet"
 
-    def _model_generate(self, batch_features, max_length, stop, **generation_kwargs):
+    def _model_generate(self, input_ids, visual, max_length, stop, **generation_kwargs):
         # we require users to pass do_sample=True explicitly
         # for non-greedy gen. This should be reevaluated when considering beam search.
         if "do_sample" not in generation_kwargs:
             generation_kwargs["do_sample"] = False
         # build stopping criteria
         stopping_criteria = stop_sequences_criteria(
-            self.tokenizer, stop, 1, batch_features.input_ids.shape[0]
+            self.tokenizer, stop, 1, input_ids.input_ids.shape[0]
         )
         return self.model.generate(
-            **batch_features,
+            input_ids,
+            visual,
             max_length=max_length,
             stopping_criteria=stopping_criteria,
             use_cache=True,
@@ -237,14 +227,22 @@ class Llava(LMM):
             max_ctx_len = self.max_length - max_gen_toks
 
             # encode, pad, and truncate contexts for this batch
-            batch_features = self.processor(contexts,visuals).to(self.device)
+            image = process_images(
+                visuals, self._image_processor, self._config
+            )
+            if type(image) is list:
+                image = [_image.to(self.device) for _image in image]
+            else:
+                image = image.to(self.device)
 
-
+            input_ids = tokenizer_image_token(contexts, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").to(self.device )
+            
             if "max_length" not in kwargs:
-                kwargs["max_length"] = batch_features.input_ids.shape[1] + max_gen_toks
+                kwargs["max_length"] = input_ids.shape[1] + max_gen_toks
             # perform batched generation
             cont = self._model_generate(
-                batch_features=batch_features,
+                input_ids=input_ids,
+                visual=image,
                 stop=until,
                 **kwargs,
             )
@@ -252,7 +250,7 @@ class Llava(LMM):
             cont_toks_list = cont.tolist()
             for cont_toks, context in zip(cont_toks_list, contexts):
                 # discard context + left-padding toks if using causal decoder-only LM
-                cont_toks = cont_toks[batch_features.input_ids.shape[1] :]
+                cont_toks = cont_toks[input_ids.shape[1] :]
                 s = self.tokenizer.decode(cont_toks, skip_special_tokens=True)
 
                 # use secondary stop seqs to cut off should-have-been-stopped content post-hoc
