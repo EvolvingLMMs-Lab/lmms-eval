@@ -38,10 +38,10 @@ def get_model(model_name):
         )
 
 
-TASK_REGISTRY = {}
-GROUP_REGISTRY = {}
-ALL_TASKS = set()
-func2task_index = {}
+TASK_REGISTRY = {} # Key: task name, Value: task ConfigurableTask class
+GROUP_REGISTRY = {} # Key: group name, Value: list of task names or group names
+ALL_TASKS = set() # Set of all task names and group names
+func2task_index = {} # Key: task ConfigurableTask class, Value: task name
 
 
 def register_task(name):
@@ -119,23 +119,6 @@ def register_metric(**args):
     return decorate
 
 
-def get_metric(name, hf_evaluate_metric=False):
-
-    if not hf_evaluate_metric:
-        if name in METRIC_REGISTRY:
-            return METRIC_REGISTRY[name]
-        else:
-            eval_logger.warning(
-                f"Could not find registered metric '{name}' in lmm-eval, searching in HF Evaluate library..."
-            )
-
-    try:
-        metric_object = evaluate.load(name)
-        return metric_object.compute
-    except Exception:
-        eval_logger.error(
-            f"{name} not found in the evaluate library! Please check https://huggingface.co/evaluate-metric",
-        )
 
 
 def register_aggregation(name):

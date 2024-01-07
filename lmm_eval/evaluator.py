@@ -32,14 +32,11 @@ def simple_evaluate(
     tasks=[],
     num_fewshot=None,
     batch_size=None,
-    max_batch_size=None,
     device=None,
-    use_cache=None,
     limit=None,
     bootstrap_iters: int = 100000,
     check_integrity: bool = False,
-    decontamination_ngrams_path=None,
-    write_out: bool = False,
+    show_task_to_terminal: bool = False,
     log_samples: bool = True,
     gen_kwargs: str = None,
 ):
@@ -56,19 +53,15 @@ def simple_evaluate(
         Number of examples in few-shot context
     :param batch_size: int or str, optional
         Batch size for model
-    :param max_batch_size: int, optional
-        Maximal batch size to try with automatic batch size detection
     :param device: str, optional
         PyTorch device (e.g. "cpu" or "cuda:0") for running models
-    :param use_cache: str, optional
-        A path to a sqlite db file for caching model responses. `None` if not caching.
     :param limit: int or float, optional
         Limit the number of examples per task (only use this for testing), If <1, limit is a percentage of the total number of examples.
     :param bootstrap_iters:
         Number of iterations for bootstrap statistics
     :param check_integrity: bool
         Whether to run the relevant part of the test suite for the tasks
-    :param write_out: bool
+    :param show_task_to_terminal: bool
         If True, write out an example document and model input for checking task integrity
     :param log_samples: bool
         If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis
@@ -88,38 +81,26 @@ def simple_evaluate(
         tasks != []
     ), "No tasks specified, or no tasks found. Please verify the task names."
 
-    if gen_kwargs is not None:
+    if gen_kwargs:
         gen_kwargs = simple_parse_args_string(gen_kwargs)
+        import pdb; pdb.set_trace()
         eval_logger.warning(
             f"generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks."
         )
         if gen_kwargs == "":
             gen_kwargs = None
 
-    if isinstance(model, str):
-        if model_args is None:
-            model_args = ""
-        lm = lmm_eval.api.registry.get_model(model).create_from_arg_string(
-            model_args,
-            {
-                "batch_size": batch_size,
-                "max_batch_size": max_batch_size,
-                "device": device,
-            },
-        )
-    else:
-        assert isinstance(model, lmm_eval.api.model.LM)
-        lm = model
 
-    if use_cache is not None:
-        print(f"Using cache at {use_cache + '_rank' + str(lm.rank) + '.db'}")
-        lm = lmm_eval.api.model.CachingLM(
-            lm,
-            use_cache
-            # each rank receives a different cache db.
-            # necessary to avoid multiple writes to cache at once
-            + "_rank" + str(lm.rank) + ".db",
-        )
+    if model_args is None:
+        model_args = ""
+    lm = lmm_eval.api.registry.get_model(model).create_from_arg_string(
+        model_args,
+        {
+            "batch_size": batch_size,
+            "device": device,
+        },
+    )
+
 
     task_dict = lmm_eval.tasks.get_task_dict(tasks)
     for task_name in task_dict.keys():
@@ -130,7 +111,7 @@ def simple_evaluate(
                 continue
 
         config = task_obj._config
-        if config["output_type"] == "generate_until" and gen_kwargs is not None:
+        if config["output_type"] == "generate_until" and gen_kwargs:
             config["generation_kwargs"].update(gen_kwargs)
 
         if num_fewshot is not None:
@@ -154,8 +135,7 @@ def simple_evaluate(
         task_dict=task_dict,
         limit=limit,
         bootstrap_iters=bootstrap_iters,
-        decontamination_ngrams_path=decontamination_ngrams_path,
-        write_out=write_out,
+        show_task_to_terminal=show_task_to_terminal,
         log_samples=log_samples,
     )
 
@@ -167,11 +147,7 @@ def simple_evaluate(
             else model.model.config._name_or_path,
             "model_args": model_args,
             "batch_size": batch_size,
-            "batch_sizes": list(lm.batch_sizes.values())
-            if hasattr(lm, "batch_sizes")
-            else [],
             "device": device,
-            "use_cache": use_cache,
             "limit": limit,
             "bootstrap_iters": bootstrap_iters,
             "gen_kwargs": gen_kwargs,
@@ -191,8 +167,7 @@ def evaluate(
     task_dict,
     limit=None,
     bootstrap_iters: int = 100000,
-    decontamination_ngrams_path=None,
-    write_out: bool = False,
+    show_task_to_terminal: bool = False,
     log_samples: bool = True,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -205,7 +180,7 @@ def evaluate(
         Limit the number of examples per task (only use this for testing)
     :param bootstrap_iters:
         Number of iterations for bootstrap statistics
-    :param write_out: bool
+    :param show_task_to_terminal: bool
         If True, write out an example document and model input for checking task integrity
     :param log_samples: bool
         If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis
@@ -213,7 +188,6 @@ def evaluate(
         Dictionary of results
     """
 
-    # decontaminate = decontamination_ngrams_path is not None
 
     # stores the final result for each task, for each metric/filter pair.
     results = collections.defaultdict(dict)
@@ -288,7 +262,7 @@ def evaluate(
             f"Task: {task_name}; number of requests on this rank: {len(task.instances)}"
         )
 
-        if write_out:
+        if show_task_to_terminal:
             for inst in task.instances:
                 # print the prompt for the first few documents
                 if inst.doc_id < 1:

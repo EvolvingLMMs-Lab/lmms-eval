@@ -44,12 +44,6 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument("--batch_size", type=str, default=1)
     parser.add_argument(
-        "--max_batch_size",
-        type=int,
-        default=None,
-        help="Maximal batch size to try with --batch_size auto",
-    )
-    parser.add_argument(
         "--device",
         type=str,
         default=None,
@@ -70,19 +64,12 @@ def parse_eval_args() -> argparse.Namespace:
         "If <1, limit is a percentage of the total number of examples.",
     )
     parser.add_argument(
-        "--use_cache",
-        type=str,
-        default=None,
-        help="A path to a sqlite db file for caching model responses. `None` if not caching.",
-    )
-    parser.add_argument("--decontamination_ngrams_path", default=None)  # TODO: not used
-    parser.add_argument(
         "--check_integrity",
         action="store_true",
         help="Whether to run the relevant part of the test suite for the tasks",
     )
     parser.add_argument(
-        "--write_out",
+        "--show_task_to_terminal",
         action="store_true",
         default=False,
         help="Prints the prompt for the first few documents",
@@ -157,36 +144,23 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         )
         sys.exit()
     else:
-        if os.path.isdir(args.tasks):
-            import glob
+        tasks_list = args.tasks.split(",")
+        task_names = utils.pattern_match(tasks_list, ALL_TASKS)
+        task_missing = [
+            task
+            for task in tasks_list
+            if task not in task_names and "*" not in task
+        ]  # we don't want errors if a wildcard ("*") task name was used
 
-            task_names = []
-            yaml_path = os.path.join(args.tasks, "*.yaml")
-            for yaml_file in glob.glob(yaml_path):
-                config = utils.load_yaml_config(yaml_file)
-                task_names.append(config)
-        else:
-            tasks_list = args.tasks.split(",")
-            task_names = utils.pattern_match(tasks_list, ALL_TASKS)
-            for task in [task for task in tasks_list if task not in task_names]:
-                if os.path.isfile(task):
-                    config = utils.load_yaml_config(task)
-                    task_names.append(config)
-            task_missing = [
-                task
-                for task in tasks_list
-                if task not in task_names and "*" not in task
-            ]  # we don't want errors if a wildcard ("*") task name was used
-
-            if task_missing:
-                missing = ", ".join(task_missing)
-                eval_logger.error(
-                    f"Tasks were not found: {missing}\n"
-                    f"{utils.SPACING}Try `lmm-eval --tasks list` for list of available tasks",
-                )
-                raise ValueError(
-                    f"Tasks {missing} were not found. Try `lmm-eval --tasks list` for list of available tasks."
-                )
+        if task_missing:
+            missing = ", ".join(task_missing)
+            eval_logger.error(
+                f"Tasks were not found: {missing}\n"
+                f"{utils.SPACING}Try `lmm-eval --tasks list` for list of available tasks",
+            )
+            raise ValueError(
+                f"Tasks {missing} were not found. Try `lmm-eval --tasks list` for list of available tasks."
+            )
 
     if args.output_path:
         path = Path(args.output_path)
@@ -216,13 +190,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         tasks=task_names,
         num_fewshot=args.num_fewshot,
         batch_size=args.batch_size,
-        max_batch_size=args.max_batch_size,
         device=args.device,
-        use_cache=args.use_cache,
         limit=args.limit,
-        decontamination_ngrams_path=args.decontamination_ngrams_path,
         check_integrity=args.check_integrity,
-        write_out=args.write_out,
+        show_task_to_terminal=args.show_task_to_terminal,
         log_samples=args.log_samples,
         gen_kwargs=args.gen_kwargs,
     )

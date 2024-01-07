@@ -29,6 +29,7 @@ from lmm_eval.api.metrics import (
     weighted_perplexity,
     bits_per_byte,
     metric_max_over_ground_truths,
+    METRIC_REGISTRY
 )
 from lmm_eval.api.registry import (
     get_metric,
@@ -528,108 +529,21 @@ class ConfigurableTask(Task):
     CONFIG = None
 
     def __init__(
-        self, data_dir=None, cache_dir=None, download_mode=None, config: dict = None
+        self
     ) -> None:  # TODO no super() call here
         # Get pre-configured attributes
         self._config = self.CONFIG
+        
+        assert self.config.output_type in ALL_OUTPUT_TYPES
+        self.OUTPUT_TYPE = self.config.output_type
 
-        # Use new configurations if there was no preconfiguration
-        if self.config is None:
-            self._config = TaskConfig(**config)
-        # Overwrite configs
-        else:
-            if config is not None:
-                self._config.__dict__.update(config)
-
-        if self.config is None:
-            raise ValueError(
-                "Must pass a config to ConfigurableTask, either in cls.CONFIG or `config` kwarg"
-            )
-
-        if self.config.output_type is not None:
-            assert self.config.output_type in ALL_OUTPUT_TYPES
-            self.OUTPUT_TYPE = self.config.output_type
-
-        if self.config.dataset_path is not None:
-            self.DATASET_PATH = self.config.dataset_path
+        
+        self.DATASET_PATH = self.config.dataset_path
 
         if self.config.dataset_name is not None:
             self.DATASET_NAME = self.config.dataset_name
 
-        self._metric_fn_list = {}
-        self._metric_fn_kwargs = {}
-        self._aggregation_list = {}
-        self._higher_is_better = {}
-
-        if self.config.metric_list is None:
-            # TODO: handle this in TaskConfig.__post_init__ ?
-            _metric_list = DEFAULT_METRIC_REGISTRY[self.config.output_type]
-
-            for metric_name in _metric_list:
-                self._metric_fn_list[metric_name] = get_metric(metric_name)
-                self._metric_fn_kwargs[metric_name] = {}
-                self._aggregation_list[metric_name] = get_metric_aggregation(
-                    metric_name
-                )
-                self._higher_is_better[metric_name] = is_higher_better(metric_name)
-        else:
-            for metric_config in self.config.metric_list:
-                assert "metric" in metric_config
-                metric_name = metric_config["metric"]
-                kwargs = {
-                    key: metric_config[key]
-                    for key in metric_config
-                    if key
-                    not in ["metric", "aggregation", "higher_is_better", "hf_evaluate"]
-                }
-                hf_evaluate_metric = (
-                    "hf_evaluate" in metric_config
-                    and metric_config["hf_evaluate"] is True
-                )
-
-                if self.config.process_results is not None:
-                    self._metric_fn_list[metric_name] = None
-                    self._metric_fn_kwargs[metric_name] = {}
-                elif callable(metric_name):
-                    metric_fn = metric_name.__call__
-                    metric_name = metric_name.__name__
-                    self._metric_fn_list[metric_name] = metric_fn
-                    self._metric_fn_kwargs[metric_name] = kwargs
-                else:
-                    self._metric_fn_list[metric_name] = get_metric(
-                        metric_name, hf_evaluate_metric
-                    )
-                    self._metric_fn_kwargs[metric_name] = kwargs
-
-                if "aggregation" in metric_config:
-                    agg_name = metric_config["aggregation"]
-                    if type(agg_name) == str:
-                        self._aggregation_list[metric_name] = get_aggregation(agg_name)
-                    elif callable(agg_name):
-                        self._aggregation_list[metric_name] = metric_config[
-                            "aggregation"
-                        ]
-                else:
-                    INV_AGG_REGISTRY = {v: k for k, v in AGGREGATION_REGISTRY.items()}
-                    metric_agg = get_metric_aggregation(metric_name)
-                    eval_logger.warning(
-                        f"[Task: {self._config.task}] metric {metric_name} is defined, but aggregation is not. "
-                        f"using default "
-                        f"aggregation={INV_AGG_REGISTRY[metric_agg]}"
-                    )
-                    self._aggregation_list[metric_name] = metric_agg
-
-                if "higher_is_better" in metric_config:
-                    self._higher_is_better[metric_name] = metric_config[
-                        "higher_is_better"
-                    ]
-                else:
-                    eval_logger.warning(
-                        f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. "
-                        f"using default "
-                        f"higher_is_better={is_higher_better(metric_name)}"
-                    )
-                    self._higher_is_better[metric_name] = is_higher_better(metric_name)
+        self._prepare_metric_and_aggregation()
 
         self.download(self.config.dataset_kwargs)
         self._training_docs = None
@@ -652,13 +566,7 @@ class ConfigurableTask(Task):
         else:
             self._filters = [build_filter_ensemble("none", [["take_first", None]])]
 
-        # if self.config.use_prompt is not None:
-        #     eval_logger.info(f"loading prompt {self.config.use_prompt}")
-        #     self.prompt = get_prompt(
-        #         self.config.use_prompt, self.DATASET_PATH, self.DATASET_NAME
-        #     )
-        # else:
-        self.prompt = None
+
 
         if self.fewshot_docs() is not None:
             self.sampler = samplers.get_sampler(
@@ -727,6 +635,78 @@ class ConfigurableTask(Task):
                         f'Both target_delimiter "{self.config.target_delimiter}" and target choice: "{choice}" do not have whitespace, ignore if the language you are evaluating on does not require/use whitespace'
                     )
 
+    def _prepare_metric_and_aggregation(self):
+        self._metric_fn_list = {}
+        self._metric_fn_kwargs = {}
+        self._aggregation_list = {}
+        self._higher_is_better = {}
+
+        if self.config.metric_list is None:
+            # TODO: handle this in TaskConfig.__post_init__ ?
+            _metric_list = DEFAULT_METRIC_REGISTRY[self.config.output_type]
+
+            for metric_name in _metric_list:
+                self._metric_fn_list[metric_name] = get_metric(metric_name)
+                self._metric_fn_kwargs[metric_name] = {}
+                self._aggregation_list[metric_name] = get_metric_aggregation(
+                    metric_name
+                )
+                self._higher_is_better[metric_name] = is_higher_better(metric_name)
+        else:
+            for metric_config in self.config.metric_list:
+                assert "metric" in metric_config
+                metric_name = metric_config["metric"]
+                kwargs = {
+                    key: metric_config[key]
+                    for key in metric_config
+                    if key
+                    not in ["metric", "aggregation", "higher_is_better"]
+                }
+
+
+                if self.config.process_results is not None:
+                    self._metric_fn_list[metric_name] = None
+                    self._metric_fn_kwargs[metric_name] = {}
+                elif callable(metric_name):
+                    metric_fn = metric_name.__call__
+                    metric_name = metric_name.__name__
+                    self._metric_fn_list[metric_name] = metric_fn
+                    self._metric_fn_kwargs[metric_name] = kwargs
+                else:
+                    self._metric_fn_list[metric_name] = METRIC_REGISTRY[metric_name]
+                    self._metric_fn_kwargs[metric_name] = kwargs
+
+                if "aggregation" in metric_config:
+                    agg_name = metric_config["aggregation"]
+                    if type(agg_name) == str:
+                        self._aggregation_list[metric_name] = get_aggregation(agg_name)
+                    elif callable(agg_name):
+                        self._aggregation_list[metric_name] = metric_config[
+                            "aggregation"
+                        ]
+                else:
+                    INV_AGG_REGISTRY = {v: k for k, v in AGGREGATION_REGISTRY.items()}
+                    metric_agg = get_metric_aggregation(metric_name)
+                    eval_logger.warning(
+                        f"[Task: {self._config.task}] metric {metric_name} is defined, but aggregation is not. "
+                        f"using default "
+                        f"aggregation={INV_AGG_REGISTRY[metric_agg]}"
+                    )
+                    self._aggregation_list[metric_name] = metric_agg
+
+                if "higher_is_better" in metric_config:
+                    self._higher_is_better[metric_name] = metric_config[
+                        "higher_is_better"
+                    ]
+                else:
+                    eval_logger.warning(
+                        f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. "
+                        f"using default "
+                        f"higher_is_better={is_higher_better(metric_name)}"
+                    )
+                    self._higher_is_better[metric_name] = is_higher_better(metric_name)
+                    
+                    
     def download(self, dataset_kwargs=None) -> None:
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
@@ -859,10 +839,8 @@ class ConfigurableTask(Task):
         return doc
 
     def doc_to_text(self, doc):
-        if self.prompt is not None:
-            doc_to_text = self.prompt
-        else:
-            doc_to_text = self.config.doc_to_text
+
+        doc_to_text = self.config.doc_to_text
 
         if type(doc_to_text) == int:
             return doc_to_text
@@ -893,10 +871,8 @@ class ConfigurableTask(Task):
             raise TypeError
 
     def doc_to_target(self, doc: dict) -> Union[int, str, list]:
-        if self.prompt is not None:
-            doc_to_target = self.prompt
-        else:
-            doc_to_target = self.config.doc_to_target
+
+        doc_to_target = self.config.doc_to_target
 
         if type(doc_to_target) == int:
             return doc_to_target
@@ -947,9 +923,7 @@ class ConfigurableTask(Task):
             return self.config.doc_to_visual(doc)
         
     def doc_to_choice(self, doc: Any) -> List[str]:
-        if self.prompt is not None:
-            doc_to_choice = self.prompt
-        elif self.config.doc_to_choice is None:
+        if self.config.doc_to_choice is None:
             eval_logger.error("doc_to_choice was called but not set in config")
         else:
             doc_to_choice = self.config.doc_to_choice
@@ -1207,120 +1181,3 @@ class ConfigurableTask(Task):
     def higher_is_better(self):
         return self._higher_is_better
 
-
-class MultipleChoiceTask(Task):
-    OUTPUT_TYPE: str = "loglikelihood"
-
-    def doc_to_target(self, doc: dict) -> str:
-        return " " + doc["choices"][doc["gold"]]
-
-    def construct_requests(self, doc: dict, ctx: str, **kwargs) -> List[Instance]:
-        # TODO: add mutual info here?
-        return [
-            Instance(
-                request_type="loglikelihood",
-                doc=doc,
-                arguments=(ctx, " {}".format(choice)),
-                idx=i,
-                **kwargs,
-            )
-            for i, choice in enumerate(doc["choices"])
-        ]
-
-    def process_results(self, doc: dict, results: List[Tuple[float, bool]]) -> dict:
-        results = [
-            res[0] for res in results
-        ]  # only retain loglikelihoods, discard is_greedy TODO: do we need is_greedy anywhere?
-        gold = doc["gold"]
-
-        acc = 1.0 if np.argmax(results) == gold else 0.0
-        completion_len = np.array([float(len(i)) for i in doc["choices"]])
-        acc_norm = 1.0 if np.argmax(results / completion_len) == gold else 0.0
-
-        return {
-            "acc": acc,
-            "acc_norm": acc_norm,
-        }
-
-    def higher_is_better(self) -> dict:
-        return {
-            "acc": True,
-            "acc_norm": True,
-        }
-
-    def aggregation(self) -> dict:
-        return {
-            "acc": mean,
-            "acc_norm": mean,
-        }
-
-
-class PerplexityTask(Task):
-    OUTPUT_TYPE = "loglikelihood_rolling"
-
-    def has_training_docs(self) -> bool:
-        return False
-
-    def fewshot_examples(self, k: int, rnd) -> List:
-        assert k == 0
-        return []
-
-    def fewshot_context(self, doc: dict, num_fewshot: int) -> Literal[""]:
-        assert (
-            num_fewshot == 0
-        ), "The number of fewshot examples must be 0 for perplexity tasks."
-
-        return ""
-
-    def higher_is_better(self) -> dict:
-        return {
-            "word_perplexity": False,
-            "byte_perplexity": False,
-            "bits_per_byte": False,
-        }
-
-    def doc_to_decontamination_query(self, doc):
-        return doc
-
-    def doc_to_text(self, doc) -> str:
-        return ""
-
-    def doc_to_target(self, doc):
-        return doc
-
-    def construct_requests(self, doc: dict, ctx: Union[str, None], **kwargs):
-        assert not ctx
-
-        return Instance(
-            request_type=self.OUTPUT_TYPE,
-            doc=doc,
-            arguments=(self.doc_to_target(doc),),
-            idx=0,
-            **kwargs,
-        )
-
-    def process_results(self, doc: dict, results: float) -> dict:
-        (loglikelihood,) = results
-        words = self.count_words(self.doc_to_target(doc))
-        bytes_ = self.count_bytes(self.doc_to_target(doc))
-        return {
-            "word_perplexity": (loglikelihood, words),
-            "byte_perplexity": (loglikelihood, bytes_),
-            "bits_per_byte": (loglikelihood, bytes_),
-        }
-
-    def aggregation(self) -> dict:
-        return {
-            "word_perplexity": weighted_perplexity,
-            "byte_perplexity": weighted_perplexity,
-            "bits_per_byte": bits_per_byte,
-        }
-
-    @classmethod
-    def count_bytes(cls, doc) -> int:
-        return len(doc.encode("utf-8"))
-
-    @classmethod
-    def count_words(cls, doc) -> int:
-        """Downstream tasks with custom word boundaries should override this!"""
-        return len(re.split(r"\s+", doc))
