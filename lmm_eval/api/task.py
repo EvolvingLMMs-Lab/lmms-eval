@@ -4,24 +4,19 @@ from dataclasses import dataclass, field, asdict
 import os
 import re
 import ast
-import yaml
 import logging
-import evaluate
 import random
-import itertools
-import functools
-from tqdm import tqdm
+
 
 import datasets
 import numpy as np
 
-from typing import Union, List, Any, Tuple, Literal
+from typing import Union, List, Any
 from collections.abc import Callable
 
 from lmm_eval import utils
 from lmm_eval.api import samplers
 from lmm_eval.api.instance import Instance
-from lmm_eval.api.filter import FilterEnsemble
 
 from lmm_eval.filters import build_filter_ensemble
 from lmm_eval.api.metrics import (

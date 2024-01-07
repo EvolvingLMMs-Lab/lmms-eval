@@ -1,5 +1,3 @@
-import os
-import evaluate
 from lmm_eval.api.model import LMM
 
 import logging
