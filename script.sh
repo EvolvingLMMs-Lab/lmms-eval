@@ -18,4 +18,4 @@ gpu = 4 bs 1 use_flash_attention_2=True:
 
 
 
-accelerate launch --num_processes=1 -m lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks gqa  --batch_size 1 --log_samples --log_samples_sufix debug --output_path ./logs/
+accelerate launch --num_processes=8 -m lmm_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks gqa  --batch_size 1 --log_samples --log_samples_sufix debug --output_path ./logs/

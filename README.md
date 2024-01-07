@@ -17,9 +17,9 @@ pip install -e .
 ```
 
 ```bash
-lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mmmu     --device cuda:0 --batch_size 2 --log_samples True # I have not tested this yet.
-accelerate launch -m lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mme_llava_prompt  --batch_size 2 --log_samples --output_path ./logs/  # This is working. run accelerate config to set number of GPUs.
-accelerate launch -m lmm_eval --model llava   --model_args pretrained=llava-hf/llava-1.5-7b-hf   --tasks mme_llava_prompt --device cuda:0 --batch_size 2 --log_samples True # I have not tested this yet.
+accelerate launch --num_processes=8 -m lmm_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks gqa  --batch_size 1 --log_samples --log_samples_sufix debug --output_path ./logs/ # Eactly reproduce llava resulve
+accelerate launch --num_processes=8 -m lmm_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks scienceqa  --batch_size 1 --log_samples --log_samples_sufix debug --output_path ./logs/
+
 ```
 There are still bugs in the code. I will fix them when I come back from vacation.
 ## Current models

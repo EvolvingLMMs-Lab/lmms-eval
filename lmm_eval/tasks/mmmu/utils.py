@@ -40,6 +40,6 @@ def doc_to_visual(doc):
     image_tokens = re.findall(r'<image \d+>', prompt)
     # Remove <> and  swap space as _
     image_tokens = [image_token.strip("<>").replace(" ", "_") for image_token in image_tokens]
-    visual = [doc[image_token] for image_token in image_tokens]
+    visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
     return visual
 
