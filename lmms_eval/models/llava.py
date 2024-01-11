@@ -218,11 +218,15 @@ class Llava(lmms):
             else:
                 image = image.to(dtype=torch.float16, device=self.device) 
                 
-                
-            if DEFAULT_IMAGE_TOKEN in contexts[0]:
-                # some datasets already specify the place of image tokens in the prompt
-                prompts_input = contexts[0]
-            else:
+            prompts_input = contexts[0]
+            
+            if not image and DEFAULT_IM_END_TOKEN not in prompts_input:
+                """
+                Three senarios:
+                1. No image, and there for, no image token should be added.
+                2. image token is already specified in the context, so we don't need to add it.
+                3. image token is not specified in the context and there is image inputs, so we need to add it.
+                """
                 image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
                 image_tokens = " ".join(image_tokens)
                 if self.model.config.mm_use_im_start_end:

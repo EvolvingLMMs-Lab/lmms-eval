@@ -5,9 +5,12 @@ def sqa_doc_to_text(doc):
     choices_str = "\n".join(
         [f"{option}. {choice}" for option, choice in zip(options, choices)]
     )
-    return f"Context: {context}\n{question}\n{choices_str}\nAnswer with the option's letter from the given choices directly."
+    if context:
+        context = f"Context: {context}\n"
+    return f"{context}{question}\n{choices_str}\nAnswer with the option's letter from the given choices directly."
     
 def sqa_doc_to_visual(doc):
+    
     return [doc["image"].convert("RGB")]
 
 def sqa_doc_to_target(doc):

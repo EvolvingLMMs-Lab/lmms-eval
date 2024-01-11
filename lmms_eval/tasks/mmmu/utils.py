@@ -1,7 +1,7 @@
 import re
 import ast
 
-MULTI_CHOICE_PROMPT = "Answer with the option letter from the given choices directly:"
+MULTI_CHOICE_PROMPT = "Answer with the option letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 def replace_images_tokens(input_string):
     for i in range(1, 8):
