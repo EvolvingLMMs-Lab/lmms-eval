@@ -1,4 +1,4 @@
-dataset_path: lmmss-lab/GQA
+dataset_path: lmms-lab/GQA
 dataset_name: testdev_balanced_instructions
 task: "gqa"
 test_split: testdev
