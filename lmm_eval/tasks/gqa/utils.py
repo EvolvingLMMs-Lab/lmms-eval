@@ -1,6 +1,6 @@
 from datasets import load_dataset
 prompt = "\nAnswer the question using a single word or phrase."
-raw_image_data = load_dataset("lmmss-lab/GQA", "testdev_balanced_images", split="testdev")
+raw_image_data = load_dataset("lmms-lab/GQA", "testdev_balanced_images", split="testdev")
 
 images_dataset = {}
 for row in raw_image_data:
