@@ -1,4 +1,4 @@
-from lmm_eval.api.filter import FilterEnsemble
+from lmms_eval.api.filter import FilterEnsemble
 from . import selection
 from . import extraction
 from . import transformation

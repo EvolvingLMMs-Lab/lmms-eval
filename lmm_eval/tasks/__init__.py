@@ -1,10 +1,10 @@
 import os
 from typing import List, Union, Dict
 
-from lmm_eval import utils
-# from lmm_eval import prompts
-from lmm_eval.api.task import TaskConfig, Task, ConfigurableTask
-from lmm_eval.api.registry import (
+from lmms_eval import utils
+# from lmms_eval import prompts
+from lmms_eval.api.task import TaskConfig, Task, ConfigurableTask
+from lmms_eval.api.registry import (
     register_task,
     register_group,
     TASK_REGISTRY,

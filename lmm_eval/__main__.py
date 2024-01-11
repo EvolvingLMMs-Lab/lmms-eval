@@ -9,9 +9,9 @@ import numpy as np
 from pathlib import Path
 from typing import Union
 
-from lmm_eval import evaluator, utils
-from lmm_eval.tasks import initialize_tasks, include_path
-from lmm_eval.api.registry import ALL_TASKS
+from lmms_eval import evaluator, utils
+from lmms_eval.tasks import initialize_tasks, include_path
+from lmms_eval.api.registry import ALL_TASKS
 
 
 def _handle_non_serializable(o):
@@ -29,7 +29,7 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "--tasks",
         default=None,
-        help="To get full list of tasks, use the command lmm-eval --tasks list",
+        help="To get full list of tasks, use the command lmms-eval --tasks list",
     )
     parser.add_argument(
         "--model_args",
@@ -156,10 +156,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             missing = ", ".join(task_missing)
             eval_logger.error(
                 f"Tasks were not found: {missing}\n"
-                f"{utils.SPACING}Try `lmm-eval --tasks list` for list of available tasks",
+                f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
             )
             raise ValueError(
-                f"Tasks {missing} were not found. Try `lmm-eval --tasks list` for list of available tasks."
+                f"Tasks {missing} were not found. Try `lmms-eval --tasks list` for list of available tasks."
             )
 
     if args.output_path:

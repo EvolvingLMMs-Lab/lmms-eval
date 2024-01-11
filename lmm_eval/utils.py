@@ -36,7 +36,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d:%H:%M:%S",
     level=logging.INFO,
 )
-eval_logger = logging.getLogger("lmm-eval")
+eval_logger = logging.getLogger("lmms-eval")
 
 SPACING = " " * 47
 
@@ -409,7 +409,7 @@ def positional_deprecated(fn):
             print(
                 f"WARNING: using {fn.__name__} with positional arguments is "
                 "deprecated and will be disallowed in a future version of "
-                "lmm-evaluation-harness!"
+                "lmms-evaluation-harness!"
             )
         return fn(*args, **kwargs)
 
