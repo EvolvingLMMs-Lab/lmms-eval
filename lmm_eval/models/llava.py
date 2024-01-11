@@ -2,20 +2,20 @@ import torch
 
 import copy
 from tqdm import tqdm
-from lmm_eval import utils
-from lmm_eval.api.instance import Instance
-from lmm_eval.api.model import LMM
-from lmm_eval.api.registry import register_model
+from lmms_eval import utils
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 from accelerate import Accelerator, DistributedType
 from typing import List, Optional, Union, Tuple
 eval_logger = utils.eval_logger
-from lmm_eval.utils import stop_sequences_criteria
+from lmms_eval.utils import stop_sequences_criteria
 from llava.model.builder import load_pretrained_model
 from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
 from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from llava.conversation import conv_templates, SeparatorStyle
 @register_model("llava")
-class Llava(LMM):
+class Llava(lmms):
     """
     Llava Model
     """

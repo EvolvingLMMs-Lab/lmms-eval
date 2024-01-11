@@ -3,7 +3,7 @@ requires = ["setuptools>=40.8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lmm_eval"
+name = "lmms_eval"
 version = "0.1.0"
 authors = [
     {name="Peiyuan Zhang, Bo Li, Yi Fan", email="a1286225768@gmail.com"}
@@ -39,15 +39,15 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["lmm_eval*"]
+include = ["lmms_eval*"]
 
 # required to include yaml files in pip installation
 [tool.setuptools.package-data]
-lmm_eval = ["**/*.yaml", "tasks/**/*"]
+lmms_eval = ["**/*.yaml", "tasks/**/*"]
 
 [project.scripts]
-lmm-eval = "lmm_eval.__main__:cli_evaluate"
-lmm_eval = "lmm_eval.__main__:cli_evaluate"
+lmms-eval = "lmms_eval.__main__:cli_evaluate"
+lmms_eval = "lmms_eval.__main__:cli_evaluate"
 
 [project.urls]
 Homepage = "Null"
@@ -71,15 +71,15 @@ openai = ["openai==1.3.9", "tiktoken"]
 vllm = ["vllm"]
 ifeval = ["langdetect", "immutabledict"]
 all = [
-    "lmm_eval[dev]",
-    "lmm_eval[testing]",
-    "lmm_eval[linting]",
-    "lmm_eval[multilingual]",
-    "lmm_eval[sentencepiece]",
-    "lmm_eval[promptsource]",
-    "lmm_eval[gptq]",
-    "lmm_eval[anthropic]",
-    "lmm_eval[openai]",
-    "lmm_eval[vllm]",
-    "lmm_eval[ifeval]",
+    "lmms_eval[dev]",
+    "lmms_eval[testing]",
+    "lmms_eval[linting]",
+    "lmms_eval[multilingual]",
+    "lmms_eval[sentencepiece]",
+    "lmms_eval[promptsource]",
+    "lmms_eval[gptq]",
+    "lmms_eval[anthropic]",
+    "lmms_eval[openai]",
+    "lmms_eval[vllm]",
+    "lmms_eval[ifeval]",
 ]

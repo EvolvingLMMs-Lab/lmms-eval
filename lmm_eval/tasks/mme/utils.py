@@ -6,5 +6,4 @@ def mme_doc_to_visual(doc):
 def mme_doc_to_text(doc):
     question = doc["question"]
     question = question.replace(replace_prompt, "").strip()
-    question = f"{question}{prompt}"
-    return question
+    return f"{question}{prompt}"

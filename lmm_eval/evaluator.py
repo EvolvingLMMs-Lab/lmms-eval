@@ -8,13 +8,13 @@ import torch
 
 import numpy as np
 
-import lmm_eval.api
-import lmm_eval.tasks
-import lmm_eval.models
-import lmm_eval.api.metrics
-import lmm_eval.api.registry
+import lmms_eval.api
+import lmms_eval.tasks
+import lmms_eval.models
+import lmms_eval.api.metrics
+import lmms_eval.api.registry
 
-from lmm_eval.utils import (
+from lmms_eval.utils import (
     positional_deprecated,
     run_task_tests,
     make_table,
@@ -43,7 +43,7 @@ def simple_evaluate(
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model or LM object, see lmm_eval.models.get_model
+        Name of model or LM object, see lmms_eval.models.get_model
     :param model_args: Optional[str]
         String arguments for each model class, see LM.create_from_arg_string.
         Ignored if `model` argument is a LM object.
@@ -93,7 +93,7 @@ def simple_evaluate(
 
     if model_args is None:
         model_args = ""
-    lm = lmm_eval.api.registry.get_model(model).create_from_arg_string(
+    lm = lmms_eval.api.registry.get_model(model).create_from_arg_string(
         model_args,
         {
             "batch_size": batch_size,
@@ -102,7 +102,7 @@ def simple_evaluate(
     )
 
 
-    task_dict = lmm_eval.tasks.get_task_dict(tasks)
+    task_dict = lmms_eval.tasks.get_task_dict(tasks)
     for task_name in task_dict.keys():
         task_obj = task_dict[task_name]
         if type(task_obj) == tuple:
@@ -456,7 +456,7 @@ def evaluate(
             # hotfix: bleu, chrf, ter seem to be really expensive to bootstrap
             # so we run them less iterations. still looking for a cleaner way to do this
             if bootstrap_iters > 0:
-                stderr = lmm_eval.api.metrics.stderr_for_metric(
+                stderr = lmms_eval.api.metrics.stderr_for_metric(
                     metric=task.aggregation()[metric],
                     bootstrap_iters=min(bootstrap_iters, 100)
                     if metric in ["bleu", "chrf", "ter"]

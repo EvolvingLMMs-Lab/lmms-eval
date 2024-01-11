@@ -7,11 +7,11 @@ import sklearn.metrics
 import random
 import evaluate
 
-from lmm_eval.api.registry import register_metric, register_aggregation
+from lmms_eval.api.registry import register_metric, register_aggregation
 
 import logging
 
-eval_logger = logging.getLogger("lmm-eval")
+eval_logger = logging.getLogger("lmms-eval")
 
 # Register Aggregations First
 @register_aggregation("mean")

@@ -14,12 +14,12 @@ import numpy as np
 from typing import Union, List, Any
 from collections.abc import Callable
 
-from lmm_eval import utils
-from lmm_eval.api import samplers
-from lmm_eval.api.instance import Instance
+from lmms_eval import utils
+from lmms_eval.api import samplers
+from lmms_eval.api.instance import Instance
 
-from lmm_eval.filters import build_filter_ensemble
-from lmm_eval.api.registry import (
+from lmms_eval.filters import build_filter_ensemble
+from lmms_eval.api.registry import (
     get_aggregation,
     get_metric_aggregation,
     is_higher_better,
@@ -37,7 +37,7 @@ ALL_OUTPUT_TYPES = [
 ]
 
 
-eval_logger = logging.getLogger("lmm-eval")
+eval_logger = logging.getLogger("lmms-eval")
 
 
 @dataclass

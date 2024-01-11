@@ -1,6 +1,6 @@
 from collections import Counter
 
-from lmm_eval.api.filter import Filter
+from lmms_eval.api.filter import Filter
 
 
 class TakeFirstFilter(Filter):

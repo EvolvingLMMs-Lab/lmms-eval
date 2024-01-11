@@ -1,6 +1,6 @@
 import re
 
-from lmm_eval.api.filter import Filter
+from lmms_eval.api.filter import Filter
 
 
 class RegexFilter(Filter):

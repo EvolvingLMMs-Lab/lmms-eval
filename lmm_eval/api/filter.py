@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from lmm_eval.api.instance import Instance
+from lmms_eval.api.instance import Instance
 from datasets import Dataset
 
 

@@ -5,20 +5,20 @@ from typing import Union, List, Tuple, Optional, Type, TypeVar
 from sqlitedict import SqliteDict
 import json
 import hashlib
-from lmm_eval.api.instance import Instance
+from lmms_eval.api.instance import Instance
 from tqdm import tqdm
-from lmm_eval import utils
+from lmms_eval import utils
 import logging
 
-eval_logger = logging.getLogger("lmm-eval")
+eval_logger = logging.getLogger("lmms-eval")
 
-T = TypeVar("T", bound="LMM")
+T = TypeVar("T", bound="lmms")
 
 
-class LMM(abc.ABC):
+class lmms(abc.ABC):
     def __init__(self) -> None:
-        """Defines the interface that should be implemented by all LMM subclasses.
-        LMMs are assumed to take image-text as input and yield strings as output
+        """Defines the interface that should be implemented by all lmms subclasses.
+        lmmss are assumed to take image-text as input and yield strings as output
         (inputs/outputs should be tokenization-agnostic.)
         """
         # set rank and world size to a single process, by default.
