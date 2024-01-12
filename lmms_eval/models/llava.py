@@ -220,7 +220,7 @@ class Llava(lmms):
                 
             prompts_input = contexts[0]
             
-            if not image and DEFAULT_IM_END_TOKEN not in prompts_input:
+            if image is not None and len(image) != 0 and DEFAULT_IM_END_TOKEN not in prompts_input:
                 """
                 Three senarios:
                 1. No image, and there for, no image token should be added.
