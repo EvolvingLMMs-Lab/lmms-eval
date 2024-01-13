@@ -376,7 +376,7 @@ def evaluate(
             if type(items[0]) == tuple:
                 numitem = len(items[0])
 
-            if isinstance(items[0], (str, list)):
+            if isinstance(items[0], (str, list, dict)):
                 # handle the string case
                 gathered_items = [None] * lm.accelerator.num_processes
                 torch.distributed.all_gather_object(gathered_items, items)

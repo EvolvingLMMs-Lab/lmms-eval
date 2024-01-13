@@ -210,13 +210,16 @@ class Llava(lmms):
             max_ctx_len = self.max_length - max_gen_toks
 
             # encode, pad, and truncate contexts for this batch
-            image = process_images(
-                visuals, self._image_processor, self._config
-            )
-            if type(image) is list:
-                image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
-            else:
-                image = image.to(dtype=torch.float16, device=self.device) 
+            if visuals:
+                image = process_images(
+                    visuals, self._image_processor, self._config
+                )
+                if type(image) is list:
+                    image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
+                else:
+                    image = image.to(dtype=torch.float16, device=self.device) 
+            else: 
+                image = None
                 
             prompts_input = contexts[0]
             
@@ -225,20 +228,11 @@ class Llava(lmms):
                 Three senarios:
                 1. No image, and there for, no image token should be added.
                 2. image token is already specified in the context, so we don't need to add it.
-                3. image token is not specified in the context and there is image inputs, so we need to add it.
+                3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
                 """
                 image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
                 image_tokens = " ".join(image_tokens)
-                if self.model.config.mm_use_im_start_end:
-                    prompts_input = (
-                        DEFAULT_IM_START_TOKEN
-                        + image_tokens
-                        + DEFAULT_IM_END_TOKEN
-                        + "\n"
-                        + contexts[0]
-                    )
-                else:
-                    prompts_input = image_tokens + "\n" + contexts[0]
+                prompts_input = image_tokens + "\n" + contexts[0]
             
             conv = conv_templates["vicuna_v1"].copy()
             conv.append_message(conv.roles[0], prompts_input)
