@@ -1,4 +1,4 @@
-from collections import defaultdict 
+from collections import defaultdict
 
 eval_type_dict = {
     "Perception": [
@@ -23,14 +23,18 @@ eval_type_dict = {
 
 
 replace_prompt = "Please answer yes or no."
+
+
 def mme_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
+
 
 def mme_doc_to_text(doc):
     question = doc["question"]
     # TODO: This is a hack. We should fix this in the dataset.
     question = question.replace(replace_prompt, "").strip()
     return f"{question}\nAnswer the question using a single word or phrase."
+
 
 def parse_pred_ans(pred_ans):
     """Brought from Otter Eval"""
@@ -47,7 +51,8 @@ def parse_pred_ans(pred_ans):
         else:
             pred_label = "other"
     return pred_label
-    
+
+
 def mme_process_results(doc, results):
     """
     Args:
@@ -67,6 +72,7 @@ def mme_process_results(doc, results):
     # Note: the key name here is very important. It decides which aggregation function will receive the results
     # We note down the question id/category to help us aggregate the results later
     return {key_name: {"question_id": doc["question_id"], "category": category, "score": score}}
+
 
 def mme_aggregate_results(results):
     """
@@ -88,8 +94,8 @@ def mme_aggregate_results(results):
         total_score = 0
         for question_id, scores in question2scores.items():
             assert len(scores) == 2
-            acc = sum(scores) / len(scores) * 100.
-            acc_plus = (sum(scores) == 2) * 100.
+            acc = sum(scores) / len(scores) * 100.0
+            acc_plus = (sum(scores) == 2) * 100.0
             score = acc_plus + acc
             total_score += score
         avg_score = total_score / len(question2scores)

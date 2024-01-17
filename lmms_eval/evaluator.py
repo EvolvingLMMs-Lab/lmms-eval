@@ -3,6 +3,7 @@ import itertools
 import json
 import collections
 import sys
+from tqdm import tqdm
 
 import torch
 
@@ -42,11 +43,11 @@ def simple_evaluate(
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
-    :param model: Union[str, LM]
-        Name of model or LM object, see lmms_eval.models.get_model
+    :param model: Union[str, LMM]
+        Name of model or LMM object, see lmms_eval.models.get_model
     :param model_args: Optional[str]
-        String arguments for each model class, see LM.create_from_arg_string.
-        Ignored if `model` argument is a LM object.
+        String arguments for each model class, see LMM.create_from_arg_string.
+        Ignored if `model` argument is a LMM object.
     :param tasks: list[Union[str, Task]]
         List of task names or Task objects. Task objects will be taken to have name task.EVAL_HARNESS_NAME if defined and type(task).__name__ otherwise.
     :param num_fewshot: int
@@ -73,23 +74,15 @@ def simple_evaluate(
     """
     random.seed(0)
     np.random.seed(1234)
-    torch.manual_seed(
-        1234
-    )  # TODO: this may affect training runs that are run with evaluation mid-run.
+    torch.manual_seed(1234)  # TODO: this may affect training runs that are run with evaluation mid-run.
 
-    assert (
-        tasks != []
-    ), "No tasks specified, or no tasks found. Please verify the task names."
+    assert tasks != [], "No tasks specified, or no tasks found. Please verify the task names."
 
     if gen_kwargs:
         gen_kwargs = simple_parse_args_string(gen_kwargs)
-        import pdb; pdb.set_trace()
-        eval_logger.warning(
-            f"generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks."
-        )
+        eval_logger.warning(f"generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks.")
         if gen_kwargs == "":
             gen_kwargs = None
-
 
     if model_args is None:
         model_args = ""
@@ -100,7 +93,6 @@ def simple_evaluate(
             "device": device,
         },
     )
-
 
     task_dict = lmms_eval.tasks.get_task_dict(tasks)
     for task_name in task_dict.keys():
@@ -116,14 +108,10 @@ def simple_evaluate(
 
         if num_fewshot is not None:
             if config["num_fewshot"] == 0:
-                eval_logger.info(
-                    f"num_fewshot has been set to 0 for {task_name} in its config. Manual configuration will be ignored."
-                )
+                eval_logger.info(f"num_fewshot has been set to 0 for {task_name} in its config. Manual configuration will be ignored.")
             else:
                 default_num_fewshot = config["num_fewshot"]
-                eval_logger.warning(
-                    f"Overwriting default num_fewshot of {task_name} from {default_num_fewshot} to {num_fewshot}"
-                )
+                eval_logger.warning(f"Overwriting default num_fewshot of {task_name} from {default_num_fewshot} to {num_fewshot}")
 
                 task_obj._config["num_fewshot"] = num_fewshot
 
@@ -142,9 +130,7 @@ def simple_evaluate(
     if lm.rank == 0:
         # add info about the model and few shot config
         results["config"] = {
-            "model": model
-            if isinstance(model, str)
-            else model.model.config._name_or_path,
+            "model": model if isinstance(model, str) else model.model.config._name_or_path,
             "model_args": model_args,
             "batch_size": batch_size,
             "device": device,
@@ -187,7 +173,6 @@ def evaluate(
     :return
         Dictionary of results
     """
-
 
     # stores the final result for each task, for each metric/filter pair.
     results = collections.defaultdict(dict)
@@ -240,11 +225,7 @@ def evaluate(
         if "task_alias" in configs[task_name]:
             task_group_alias[task_name] = configs[task_name]["task_alias"]
 
-        if (
-            ("group_alias" in configs[task_name])
-            and (group_name not in task_group_alias)
-            and (group_name is not None)
-        ):
+        if ("group_alias" in configs[task_name]) and (group_name not in task_group_alias) and (group_name is not None):
             task_group_alias[group_name] = configs[task_name]["group_alias"]
 
         if limit is not None:
@@ -258,9 +239,7 @@ def evaluate(
 
         task.build_all_requests(limit=limit, rank=lm.rank, world_size=lm.world_size)
 
-        eval_logger.debug(
-            f"Task: {task_name}; number of requests on this rank: {len(task.instances)}"
-        )
+        eval_logger.debug(f"Task: {task_name}; number of requests on this rank: {len(task.instances)}")
 
         if show_task_to_terminal:
             for inst in task.instances:
@@ -272,22 +251,20 @@ def evaluate(
                     )
                     eval_logger.info(f"Request: {str(inst)}")
 
-        # aggregate Instances by LM method requested to get output.
+        # aggregate Instances by LMM method requested to get output.
         for instance in task.instances:
             reqtype = instance.request_type
             requests[reqtype].append(instance)
 
         if lm.world_size > 1:
             instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-            gathered_item = (
-                lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
-            )
+            gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
 
             # compute number of pseudobatches to pad with (FSDP/DDP require even batches among ranks)
             numpad = max(gathered_item) - gathered_item[lm.rank]
             padding_requests[task.OUTPUT_TYPE] += numpad
 
-    ### Run LM on inputs, get all outputs ###
+    ### Run LMM on inputs, get all outputs ###
     # execute each type of request
     for reqtype, reqs in requests.items():
         eval_logger.info("Running {} requests".format(reqtype))
@@ -331,29 +308,23 @@ def evaluate(
         # TODO: make it possible to use a different metric per filter
         # iterate over different filters used
         for key in task.instances[0].filtered_resps.keys():
-            doc_iterator = (
-                itertools.islice(
-                    enumerate(task.test_docs()), lm.rank, limit, lm.world_size
-                )
-                if task.has_test_docs()
-                else itertools.islice(
-                    enumerate(task.validation_docs()), lm.rank, limit, lm.world_size
-                )
-            )
+            doc_iterator = itertools.islice(enumerate(task.test_docs()), lm.rank, limit, lm.world_size) if task.has_test_docs() else itertools.islice(enumerate(task.validation_docs()), lm.rank, limit, lm.world_size)
+            # Instead of converting the iterator to a list, use `itertools.tee` to create a parallel iterator for counting
+            doc_iterator, doc_iterator_for_counting = itertools.tee(doc_iterator)
+            total_docs = sum(1 for _ in doc_iterator_for_counting)
+            pbar = tqdm(total=total_docs, desc="Postprocessing")
             for doc_id, doc in doc_iterator:
                 # subset instances to only this document id ; sort by idx
                 requests = list(filter(lambda x: x.doc_id == doc_id, task.instances))
                 requests.sort(key=lambda x: x.idx)
-                metrics = task.process_results(
-                    doc, [req.filtered_resps[key] for req in requests]
-                )
+                metrics = task.process_results(doc, [req.filtered_resps[key] for req in requests])
                 if log_samples:
                     target = task.doc_to_target(doc)
                     example = {
                         "doc_id": doc_id,
-                        "doc": {k: v for k, v in doc.items() if "image" not in k}, # do not include image 
+                        "doc": {k: v for k, v in doc.items() if "image" not in k},  # do not include image
                         "target": target,
-                        "arguments": [req.args[:2] for req in requests], #do not include image
+                        "arguments": [req.args[:2] for req in requests],  # do not include image
                         "resps": [req.resps for req in requests],
                         "filtered_resps": [req.filtered_resps[key] for req in requests],
                     }
@@ -361,6 +332,7 @@ def evaluate(
                     samples[task_name].append(example)
                 for metric, value in metrics.items():
                     vals[(task_name, key, metric)].append(value)
+                pbar.update(1)
 
     if lm.world_size > 1:
         # if multigpu, then gather data across all ranks
@@ -389,9 +361,7 @@ def evaluate(
                 metrics_tensor = torch.tensor(items, device=lm.device)
 
                 original_dtype = metrics_tensor.dtype  # store original dtype
-                torch_device_tensor = lm.accelerator.pad_across_processes(
-                    metrics_tensor.to(torch.float32), pad_index=pad_value
-                )
+                torch_device_tensor = lm.accelerator.pad_across_processes(metrics_tensor.to(torch.float32), pad_index=pad_value)
                 gathered_item = lm.accelerator.gather(torch_device_tensor)
 
                 if numitem > 0:
@@ -399,9 +369,7 @@ def evaluate(
                 else:
                     gathered_filtered = gathered_item[gathered_item != pad_value]
 
-                gathered_item = (
-                    gathered_filtered.to(original_dtype).cpu().detach().numpy().tolist()
-                )
+                gathered_item = gathered_filtered.to(original_dtype).cpu().detach().numpy().tolist()
                 # reconvert if we were passed a tuple of values
                 if numitem > 0:
                     gathered_item = [tuple(g) for g in gathered_item]
@@ -458,9 +426,7 @@ def evaluate(
             if bootstrap_iters > 0:
                 stderr = lmms_eval.api.metrics.stderr_for_metric(
                     metric=task.aggregation()[metric],
-                    bootstrap_iters=min(bootstrap_iters, 100)
-                    if metric in ["bleu", "chrf", "ter"]
-                    else bootstrap_iters,
+                    bootstrap_iters=min(bootstrap_iters, 100) if metric in ["bleu", "chrf", "ter"] else bootstrap_iters,
                 )
 
                 if stderr is not None and len(items) > 1:
@@ -486,33 +452,20 @@ def evaluate(
                         #     current_size = 1
 
                         all_stderr = []
-                        for metric in [
-                            key for key in metrics.keys() if "_stderr" not in key
-                        ]:
+                        for metric in [key for key in metrics.keys() if "_stderr" not in key]:
                             stderr = "_stderr,".join(metric.split(","))
                             stderr_score = results[task][stderr]
-                            var_score = stderr_score**2
+                            var_score = stderr_score**2 if stderr_score != "N/A" else 0
                             metric_score = results[task][metric]
 
                             all_stderr.append(stderr)
 
                             if metric in results[group]:
-                                results[group][metric] = (
-                                    results[group][metric] * total_size
-                                    + metric_score * current_size
-                                ) / (total_size + current_size)
+                                results[group][metric] = (results[group][metric] * total_size + metric_score * current_size) / (total_size + current_size)
                                 # $$s_z^2 = \frac{(n-1) s_x^2 + (m-1) s_y^2}{n+m-1} + \frac{nm(\bar x - \bar y)^2}{(n+m)(n+m-1)}.$$
-                                results[group][stderr] = (
-                                    (total_size - 1) * results[group][stderr]
-                                    + (current_size - 1) * var_score
-                                ) / (
-                                    total_size + current_size - 1
-                                ) + total_size * current_size / (
-                                    (total_size + current_size)
-                                    * (total_size + current_size - 1)
-                                ) * (
-                                    results[group][metric] - metric_score
-                                ) ** 2
+                                results[group][stderr] = ((total_size - 1) * results[group][stderr] + (current_size - 1) * var_score) / (total_size + current_size - 1) + total_size * current_size / (
+                                    (total_size + current_size) * (total_size + current_size - 1)
+                                ) * (results[group][metric] - metric_score) ** 2
                             else:
                                 results[group][metric] = metric_score
                                 results[group][stderr] = var_score
@@ -543,18 +496,14 @@ def evaluate(
                         else:
                             _task_hierarchy = {task: []}
 
-                        _results_agg, _groups_agg, task_version = print_tasks(
-                            _task_hierarchy, task_order, task_version, task_group_alias
-                        )
+                        _results_agg, _groups_agg, task_version = print_tasks(_task_hierarchy, task_order, task_version, task_group_alias)
 
                         results_agg = {**results_agg, **_results_agg}
                         groups_agg = {**groups_agg, **_groups_agg}
 
             return results_agg, groups_agg, task_version
 
-        results_agg, groups_agg, versions = print_tasks(
-            task_hierarchy, task_order, versions, task_group_alias
-        )
+        results_agg, groups_agg, versions = print_tasks(task_hierarchy, task_order, versions, task_group_alias)
 
         for task in results_agg:
             task_results = results_agg[task]

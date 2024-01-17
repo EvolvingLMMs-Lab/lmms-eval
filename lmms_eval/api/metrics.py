@@ -13,10 +13,12 @@ import logging
 
 eval_logger = logging.getLogger("lmms-eval")
 
+
 # Register Aggregations First
 @register_aggregation("mean")
 def mean(arr):
     return sum(arr) / len(arr)
+
 
 @register_aggregation("sum")
 def mean(arr):

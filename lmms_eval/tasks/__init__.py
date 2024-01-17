@@ -2,6 +2,7 @@ import os
 from typing import List, Union, Dict
 
 from lmms_eval import utils
+
 # from lmms_eval import prompts
 from lmms_eval.api.task import TaskConfig, Task, ConfigurableTask
 from lmms_eval.api.registry import (
@@ -56,7 +57,6 @@ def register_configurable_group(config: Dict[str, str]) -> int:
     return 0
 
 
-
 def get_task_name_from_config(task_config: Dict[str, str]) -> str:
     if "dataset_name" in task_config:
         return "{dataset_path}_{dataset_name}".format(**task_config)
@@ -69,7 +69,6 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
     Calling this function
     """
     for root, subdirs, file_list in os.walk(task_dir):
-
         # if (subdirs == [] or subdirs == ["__pycache__"]) and (len(file_list) > 0):
         for f in file_list:
             if f.endswith(".yaml"):
@@ -90,9 +89,7 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
                 # Log this silently and show it only when
                 # the user defines the appropriate verbosity.
                 except ModuleNotFoundError as e:
-                    eval_logger.debug(
-                        f"{yaml_path}: {e}. Config will not be added to registry."
-                    )
+                    eval_logger.debug(f"{yaml_path}: {e}. Config will not be added to registry.")
                 except Exception as error:
                     import traceback
 
@@ -135,16 +132,11 @@ def get_task_name_from_object(task_object):
 
     # TODO: scrap this
     # this gives a mechanism for non-registered tasks to have a custom name anyways when reporting
-    return (
-        task_object.EVAL_HARNESS_NAME
-        if hasattr(task_object, "EVAL_HARNESS_NAME")
-        else type(task_object).__name__
-    )
+    return task_object.EVAL_HARNESS_NAME if hasattr(task_object, "EVAL_HARNESS_NAME") else type(task_object).__name__
 
 
 # TODO: pass num_fewshot and other cmdline overrides in a better way
 def get_task_dict(task_name_list: List[Union[str, Dict, Task]]):
-
     all_task_dict = {}
 
     if type(task_name_list) != list:
@@ -178,7 +170,4 @@ def get_task_dict(task_name_list: List[Union[str, Dict, Task]]):
                     task_name: get_task(task_name=task_element),
                 }
 
-
-
- 
     return all_task_dict
