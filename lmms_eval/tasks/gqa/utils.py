@@ -6,7 +6,6 @@ GQA_RAW_IMAGE_DATASET = None
 GQA_ID2IMAGE = None
 
 
-
 def gqa_doc_to_visual(doc):
     global GQA_RAW_IMAGE_DATASET
     global GQA_ID2IMAGE

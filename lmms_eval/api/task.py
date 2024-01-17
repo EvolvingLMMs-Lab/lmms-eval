@@ -279,7 +279,8 @@ class Task(abc.ABC):
         elif self.has_validation_docs():
             return self.validation_docs()
         else:
-            eval_logger.warning("has_training_docs and has_validation_docs are False" ", using test_docs as fewshot_docs but this is not recommended.")
+            if self.config.num_fewshot is not None:
+                eval_logger.warning("has_training_docs and has_validation_docs are False" ", using test_docs as fewshot_docs but this is not recommended.")
             return self.test_docs()
 
     def _process_doc(self, doc):
@@ -517,8 +518,7 @@ class ConfigurableTask(Task):
                 self._filters.append(filter_pipeline)
         else:
             self._filters = [build_filter_ensemble("none", [["take_first", None]])]
-
-        if self.fewshot_docs() is not None:
+        if self.config.fewshot_config is not None:
             self.sampler = samplers.get_sampler(self.config.fewshot_config.get("sampler", "default") if self.config.fewshot_config else "default")(list(self.fewshot_docs()), self, rnd=random.Random(1234))
 
         if self.has_test_docs():
