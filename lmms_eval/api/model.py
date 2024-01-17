@@ -30,12 +30,12 @@ class lmms(abc.ABC):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         """Compute log-likelihood of generating a continuation from a context.
         Downstream tasks should attempt to use loglikelihood instead of other
-        LM calls whenever possible.
+        LMM calls whenever possible.
 
         :param requests: list[Instance]
             A list of Instance objects, with property `args` which returns a tuple (context, continuation).
             `context: str`
-                Context string. Implementations of LM must be able to handle an
+                Context string. Implementations of LMM must be able to handle an
                 empty context string.
             `continuation: str`
                 The continuation over which log likelihood will be calculated. If
@@ -43,7 +43,7 @@ class lmms(abc.ABC):
                 For example, context="hello" continuation=" world" is correct.
             'visual_list: list[dict]'
                 Visual input to the model. Can be None.
-                
+
         :return: list[tuple[float, bool]]
             A list of pairs (logprob, isgreedy)
             `logprob: float`
@@ -118,18 +118,16 @@ class lmms(abc.ABC):
         pass
 
     @classmethod
-    def create_from_arg_string(
-        cls: Type[T], arg_string: str, additional_config: Optional[dict] = None
-    ) -> T:
+    def create_from_arg_string(cls: Type[T], arg_string: str, additional_config: Optional[dict] = None) -> T:
         """
-        Creates an instance of the LM class using the given argument string and additional config.
+        Creates an instance of the LMM class using the given argument string and additional config.
 
         Parameters:
         - arg_string: A string containing arguments in the format key1=value1,key2=value2.
         - additional_config: Optional dictionary containing additional configuration parameters.
 
         Returns:
-        - Instance of the LM class.
+        - Instance of the LMM class.
         """
         additional_config = {} if additional_config is None else additional_config
         args = utils.simple_parse_args_string(arg_string)
@@ -154,7 +152,7 @@ class lmms(abc.ABC):
         self.cache_hook = cache_hook
 
 
-### SQLite-based caching of LM responses
+### SQLite-based caching of LMM responses
 def hash_args(attr, args):
     dat = json.dumps([attr] + list(args))
     return hashlib.sha256(dat.encode("utf-8")).hexdigest()
@@ -175,12 +173,12 @@ class CacheHook:
         self.dbdict[hsh] = res
 
 
-class CachingLM:
+class CachingLMM:
     def __init__(self, lm, cache_db) -> None:
-        """LM wrapper that returns cached results if they exist, and uses the underlying LM if not.
+        """LMM wrapper that returns cached results if they exist, and uses the underlying LMM if not.
 
-        :param lm: LM
-            Underlying LM
+        :param lm: LMM
+            Underlying LMM
         :param cache_db: str
             Path to cache db
         """
@@ -203,18 +201,14 @@ class CachingLM:
             remaining_reqs = []
             warned = False
             # figure out which ones are cached and which ones are new
-            eval_logger.info(
-                f"Loading '{attr}' responses from cache '{self.cache_db}' where possible..."
-            )
+            eval_logger.info(f"Loading '{attr}' responses from cache '{self.cache_db}' where possible...")
             for req in tqdm(requests):
                 hsh = hash_args(attr, req.args)
                 if attr == "generate_until" and req.args[1].get("do_sample", False):
                     # when we are doing non-greedy generation, don't use the cache
                     # (else every "randomly sampled" generation would be identical for repeats > 1).
                     if not warned:
-                        eval_logger.warning(
-                            f"Arguments to lm.generate_until() '{req.args[1]}' include non-deterministic sampling. Caching will not be performed for such requests."
-                        )
+                        eval_logger.warning(f"Arguments to lm.generate_until() '{req.args[1]}' include non-deterministic sampling. Caching will not be performed for such requests.")
                         warned = True
                     res.append(None)
                     remaining_reqs.append(req)
@@ -228,7 +222,7 @@ class CachingLM:
                     res.append(None)
                     remaining_reqs.append(req)
 
-            # actually run the LM on the requests that do not have cached results
+            # actually run the LMM on the requests that do not have cached results
             rem_res = getattr(self.lm, attr)(remaining_reqs)
 
             # stick the new ones back into the list and also cache any of the new ones

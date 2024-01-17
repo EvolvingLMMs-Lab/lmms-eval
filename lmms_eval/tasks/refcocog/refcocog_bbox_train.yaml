@@ -1,0 +1,4 @@
+group: refcocog_bbox
+task: refcocog_bbox_train
+include: _default_template_bbox_yaml
+test_split: train

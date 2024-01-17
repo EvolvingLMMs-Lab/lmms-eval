@@ -1,0 +1,4 @@
+group: refcoco+_seg
+task: refcoco+_seg_testB
+include: _default_template_seg_yaml
+test_split: testB

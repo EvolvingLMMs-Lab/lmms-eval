@@ -1,0 +1,4 @@
+group: refcocog_seg
+task: refcocog_seg_val
+include: _default_template_seg_yaml
+test_split: val

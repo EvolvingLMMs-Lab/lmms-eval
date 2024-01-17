@@ -1,0 +1,4 @@
+group: refcoco+
+task:
+- refcoco+_bbox
+- refcoco+_seg

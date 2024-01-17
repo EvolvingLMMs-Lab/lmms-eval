@@ -1,0 +1,3 @@
+group : coco
+task:
+  - coco_caption

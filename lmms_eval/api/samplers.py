@@ -19,11 +19,7 @@ class ContextSampler:
 
     def get_context(self, doc, num_fewshot):
         # draw an extra fewshot sample if using same split as evaluating on
-        n_samples = (
-            num_fewshot + 1
-            if self.config.fewshot_split == self.config.test_split
-            else num_fewshot
-        )
+        n_samples = num_fewshot + 1 if self.config.fewshot_split == self.config.test_split else num_fewshot
 
         # draw `n_samples` docs from fewshot_docs
         fewshotex = self.sample(n_samples)
@@ -36,23 +32,13 @@ class ContextSampler:
             self.fewshot_delimiter.join(
                 [
                     # TODO: is separating doc_to_text and doc_to_target by one space always desired?
-                    (
-                        self.doc_to_text(doc)
-                        if (
-                            self.config.doc_to_choice is None
-                            or type(self.doc_to_text(doc)) is str
-                        )
-                        else self.doc_to_choice(doc)[self.doc_to_text(doc)]
-                    )
+                    (self.doc_to_text(doc) if (self.config.doc_to_choice is None or type(self.doc_to_text(doc)) is str) else self.doc_to_choice(doc)[self.doc_to_text(doc)])
                     + self.target_delimiter
                     + (
                         str(self.doc_to_target(doc)[0])
                         if type(self.doc_to_target(doc)) is list
                         else self.doc_to_target(doc)
-                        if (
-                            self.config.doc_to_choice is None
-                            or type(self.doc_to_target(doc)) is str
-                        )
+                        if (self.config.doc_to_choice is None or type(self.doc_to_target(doc)) is str)
                         else str(self.doc_to_choice(doc)[self.doc_to_target(doc)])
                     )
                     for doc in selected_docs
@@ -77,9 +63,7 @@ class FirstNSampler(ContextSampler):
         Draw the first `n` samples in order from the specified split.
         Used for tasks with "canonical" ordered fewshot examples, such as MMLU and CMMLU.
         """
-        assert n <= len(
-            self.docs
-        ), f"Error: number of fewshot samples requested exceeds the {len(self.docs)} that are available."
+        assert n <= len(self.docs), f"Error: number of fewshot samples requested exceeds the {len(self.docs)} that are available."
         return self.docs[:n]
 
 
@@ -109,6 +93,4 @@ def get_sampler(name):
     try:
         return SAMPLER_REGISTRY[name]
     except KeyError:
-        raise ValueError(
-            f"Attempted to use contextsampler '{name}', but no sampling strategy for this name found! Supported model names: {', '.join(SAMPLER_REGISTRY.keys())}"
-        )
+        raise ValueError(f"Attempted to use contextsampler '{name}', but no sampling strategy for this name found! Supported model names: {', '.join(SAMPLER_REGISTRY.keys())}")

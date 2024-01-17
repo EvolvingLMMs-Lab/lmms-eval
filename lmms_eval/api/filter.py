@@ -42,10 +42,7 @@ class FilterEnsemble:
     filters: List[Filter]
 
     def apply(self, instances: List[Instance], docs: List[Dataset]) -> None:
-
-        resps = [
-            inst.resps for inst in instances
-        ]  # operate just on the model responses
+        resps = [inst.resps for inst in instances]  # operate just on the model responses
         for f in self.filters:
             # apply filters in sequence
             resps = f.apply(resps, docs)
