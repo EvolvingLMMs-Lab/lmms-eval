@@ -1,13 +1,19 @@
 from datasets import load_dataset
 prompt = "\nAnswer the question using a single word or phrase."
-raw_image_data = load_dataset("lmms-lab/GQA", "testdev_balanced_images", split="testdev")
+GQA_RAW_IMAGE_DATASET = None
 
-images_dataset = {}
-for row in raw_image_data:
-    images_dataset[row["id"]] = row["image"].convert("RGB")
+GQA_ID2IMAGE = None
+
 
 def gqa_doc_to_visual(doc):
-    image = images_dataset[doc["imageId"]]
+    global GQA_RAW_IMAGE_DATASET
+    global GQA_ID2IMAGE
+    if GQA_RAW_IMAGE_DATASET is None:
+        GQA_RAW_IMAGE_DATASET = load_dataset("lmms-lab/GQA", "testdev_balanced_images", split="testdev")
+        GQA_ID2IMAGE = {}
+        for row in GQA_RAW_IMAGE_DATASET:
+            GQA_ID2IMAGE[row["id"]] = row["image"].convert("RGB")
+    image = GQA_ID2IMAGE[doc["imageId"]]
     return [image]
     
 def gqa_doc_to_text(doc):
