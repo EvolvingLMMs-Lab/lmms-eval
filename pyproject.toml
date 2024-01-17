@@ -1,12 +1,15 @@
+[tool.black]
+line-length = 240
+
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel"]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[tomli]>=6.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
 version = "0.1.0"
 authors = [
-    {name="Peiyuan Zhang, Bo Li, Yi Fan", email="a1286225768@gmail.com"}
+    {name="LMMMs-Lab Evaluation Team", email="lmms_eval@gmail.com"}
 ]
 description = "A framework for evaluating large multi-modality language models"
 readme = "README.md"
@@ -33,9 +36,14 @@ dependencies = [
     "sqlitedict",
     "torch>=1.8",
     "tqdm-multiprocess",
-    "transformers>=4.1",
-    "llava @ git+https://github.com/haotian-liu/LLaVA",
+    "transformers>=4.35.1",
     "zstandard",
+    "pillow",
+    "pyyaml",
+    "black",
+    "sympy",
+    "mpmath",
+    "Jinja2",
 ]
 
 [tool.setuptools.packages.find]
@@ -74,12 +82,4 @@ all = [
     "lmms_eval[dev]",
     "lmms_eval[testing]",
     "lmms_eval[linting]",
-    "lmms_eval[multilingual]",
-    "lmms_eval[sentencepiece]",
-    "lmms_eval[promptsource]",
-    "lmms_eval[gptq]",
-    "lmms_eval[anthropic]",
-    "lmms_eval[openai]",
-    "lmms_eval[vllm]",
-    "lmms_eval[ifeval]",
 ]

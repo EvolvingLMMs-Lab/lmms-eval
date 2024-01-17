@@ -1,0 +1,40 @@
+dataset_path: lmms-lab/COCO-Caption
+task : "coco_train"
+group : "coco_caption"
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.coco_doc_to_visual
+doc_to_text: !function utils.coco_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+process_results: !function utils.coco_process_result
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: coco_Bleu_4 
+    aggregation : !function utils.coco_bleu4
+    higher_is_better : true
+  - metric: coco_Bleu_3
+    aggregation : !function utils.coco_bleu3
+    higher_is_better : true
+  - metric: coco_Bleu_2
+    aggregation : !function utils.coco_bleu2
+    higher_is_better : true
+  - metric: coco_Bleu_1
+    aggregation : !function utils.coco_bleu1
+    higher_is_better : true
+  - metric: coco_METEOR
+    aggregation : !function utils.coco_meteor
+    higher_is_better : true
+  - metric: coco_ROUGE_L
+    aggregation : !function utils.coco_rougel
+    higher_is_better : true
+  - metric: coco_CIDEr
+    aggregation : !function utils.coco_cider
+    higher_is_better : true
+  - metric: coco_SPICE
+    aggregation : !function utils.coco_spice
+    higher_is_better : true
+metadata:
+  - version: 0.0

@@ -31,12 +31,30 @@ from itertools import islice
 
 import logging
 
-logging.basicConfig(
-    format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d:%H:%M:%S",
-    level=logging.INFO,
-)
+
+class PathFormatter(logging.Formatter):
+    def format(self, record):
+        # Extract the pathname from the record
+        pathname = record.pathname
+        # Split the pathname into folders
+        folders = pathname.split(os.sep)
+        # Get the last two folders and the filename
+        if len(folders) > 2:
+            record.pathname = os.sep.join(folders[-3:])
+        return super(PathFormatter, self).format(record)
+
+
 eval_logger = logging.getLogger("lmms-eval")
+# eval_logger.setLevel(logging.INFO)
+
+ch = logging.StreamHandler()
+# ch.setLevel(logging.INFO)
+
+# Create a formatter and set it to the handler, ONLY MAKING IT SHOW THE LAST 3 FOLDERS of a path
+formatter = PathFormatter("%(asctime)s,%(msecs)03d %(levelname)-8s [%(pathname)s:%(lineno)d] %(message)s", "%Y-%m-%d:%H:%M:%S")
+ch.setFormatter(formatter)
+
+eval_logger.addHandler(ch)
 
 SPACING = " " * 47
 
@@ -53,9 +71,7 @@ def escaped_split(text, sep_char, maxsplit=-1):
     is not specified or less than 0, then there is no limit on the
     number of splits (all possible splits are made).
     """
-    assert (
-        len(sep_char) == 1
-    ), "separation string must be a single character for escaped splitting"
+    assert len(sep_char) == 1, "separation string must be a single character for escaped splitting"
 
     if maxsplit == 0:
         return text
@@ -87,9 +103,7 @@ def simple_parse_args_string(args_string):
     if not args_string:
         return {}
     arg_list = [arg for arg in args_string.split(",") if arg]
-    args_dict = {
-        k: handle_arg_string(v) for k, v in [arg.split("=") for arg in arg_list]
-    }
+    args_dict = {k: handle_arg_string(v) for k, v in [arg.split("=") for arg in arg_list]}
     return args_dict
 
 
@@ -203,7 +217,7 @@ def get_rolling_token_windows(token_list, prefix_token, max_seq_len, context_len
     :return: generator
         Generator of tuples
             (input_tokens, pred_tokens)
-        Note: Score only the last len(pred_tokens) logits of the LM
+        Note: Score only the last len(pred_tokens) logits of the LMM
     """
     assert 1 <= context_len <= max_seq_len
     if not token_list:
@@ -365,6 +379,12 @@ def make_table(result_dict, column: str = "results"):
     md_writer.headers = all_headers
     latex_writer.headers = all_headers
 
+    # Set column alignments for LaTeX
+    latex_writer.column_alignments = ["center"] * len(all_headers)
+
+    # Set padding for LaTeX columns (this will add space between columns)
+    latex_writer.column_format = " ".join(["|c"] * len(all_headers)) + "|"
+
     values = []
 
     for k, dic in result_dict[column].items():
@@ -391,9 +411,10 @@ def make_table(result_dict, column: str = "results"):
     md_writer.value_matrix = values
     latex_writer.value_matrix = values
 
-    # todo: make latex table look good
+    # Print LaTeX table to see how it looks
     # print(latex_writer.dumps())
 
+    # Return Markdown table (note: column width and text alignment may not be supported)
     return md_writer.dumps()
 
 
@@ -406,11 +427,7 @@ def positional_deprecated(fn):
     @functools.wraps(fn)
     def _wrapper(*args, **kwargs):
         if len(args) != 1 if inspect.ismethod(fn) else 0:
-            print(
-                f"WARNING: using {fn.__name__} with positional arguments is "
-                "deprecated and will be disallowed in a future version of "
-                "lmms-evaluation-harness!"
-            )
+            print(f"WARNING: using {fn.__name__} with positional arguments is " "deprecated and will be disallowed in a future version of " "lmms-evaluation-harness!")
         return fn(*args, **kwargs)
 
     return _wrapper
@@ -429,9 +446,7 @@ def find_test_root(start_path: pathlib.Path) -> pathlib.Path:
             return cur_path
         else:
             cur_path = cur_path.parent.resolve()
-    raise FileNotFoundError(
-        f"Unable to find package root within {max_layers} upwards" + f"of {start_path}"
-    )
+    raise FileNotFoundError(f"Unable to find package root within {max_layers} upwards" + f"of {start_path}")
 
 
 @positional_deprecated
@@ -452,9 +467,7 @@ def run_task_tests(task_list: List[str]):
     sys.path.append(str(package_root))
     pytest_return_val = pytest.main(args)
     if pytest_return_val:
-        raise ValueError(
-            f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}"
-        )
+        raise ValueError(f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}")
 
 
 def get_git_commit_hash():
@@ -564,9 +577,7 @@ def pad_and_concat(
     length in the batch. Used for batching inputs and continuations in
     seq2seq models.
     """
-    assert (
-        padding_side == "left" or padding_side == "right"
-    ), f"Unrecognized padding type: '{padding_side}' not 'left' or 'right'"
+    assert padding_side == "left" or padding_side == "right", f"Unrecognized padding type: '{padding_side}' not 'left' or 'right'"
 
     for i, tensor in enumerate(tensors):
         if len(tensor.shape) == 2:
@@ -647,9 +658,7 @@ class MultiTokenEOSCriteria(transformers.StoppingCriteria):
 
     def __call__(self, input_ids, scores, **kwargs) -> bool:
         # For efficiency, we compare the last n tokens where n is the number of tokens in the stop_sequence
-        lookback_ids_batch = input_ids[:, self.initial_decoder_input_length :][
-            :, -self.sequence_id_len :
-        ]
+        lookback_ids_batch = input_ids[:, self.initial_decoder_input_length :][:, -self.sequence_id_len :]
 
         lookback_tokens_batch = self.tokenizer.batch_decode(lookback_ids_batch)
         for i, done in enumerate(self.done_tracker):
@@ -666,12 +675,7 @@ def stop_sequences_criteria(
 ) -> transformers.StoppingCriteriaList:
     return transformers.StoppingCriteriaList(
         [
-            *[
-                MultiTokenEOSCriteria(
-                    sequence, tokenizer, initial_decoder_input_length, batch_size
-                )
-                for sequence in stop_sequences
-            ],
+            *[MultiTokenEOSCriteria(sequence, tokenizer, initial_decoder_input_length, batch_size) for sequence in stop_sequences],
         ]
     )
 
@@ -728,7 +732,6 @@ def divide(iterable, n) -> List[Iterator]:
     return ret
 
 
-
 class Collator:
     """
     A class for reordering and batching elements of an array.
@@ -753,9 +756,7 @@ class Collator:
             self.group_by_index()
 
     def group_by_index(self) -> None:
-        self.arr_with_indices = self.group(
-            self.arr_with_indices, fn=self.group_fn, values=False
-        )
+        self.arr_with_indices = self.group(self.arr_with_indices, fn=self.group_fn, values=False)
 
     def get_batched(self, n: int = 1, batch_fn: Optional[Callable] = None) -> Iterator:
         """
@@ -838,9 +839,7 @@ class Collator:
                 hashable_dict = tuple(
                     (
                         key,
-                        tuple(value)
-                        if isinstance(value, collections.abc.Iterable)
-                        else value,
+                        tuple(value) if isinstance(value, collections.abc.Iterable) else value,
                     )
                     for key, value in sorted(fn(ob).items())
                 )

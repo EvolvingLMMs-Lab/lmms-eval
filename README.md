@@ -5,15 +5,12 @@ The API, togegher with many code blocks of this project come from [lm-eval-harne
 Below are the changes we made to the original API:
 
 - Instance.args (lmms_eval/api/instance.py) now contains a list of images to be inputted to lmms.
-- lm-eval-harness supports all HF LM as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
-
-**It is very easy to add new tasks, but adding new models requires holistic understanding of the codebase**
-**I recommend you to spend at least one entire days (8 hours) to look through lm evaluation harness first.**
+- lm-eval-harness supports all HF LMM as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
 
 ## How to run
 
 ```bash
-pip install -e . # 真的是一键装， 不需要提前装torch啥的
+pip install -e .
 ```
 
 ```bash
@@ -26,12 +23,15 @@ accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pr
 
 ## Current datasets
 - GQA
-
-
-## Models to be added and tested
 - MMMU
-- SQA
+- SQA-IMG
 - MME
+- MMVet
+- LLaVA-Bench
+- LLaVA-Bench-CN
+
+## Datasets to be added and tested
+
 
 ## Datasets to be added
 

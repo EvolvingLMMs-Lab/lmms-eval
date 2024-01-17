@@ -60,8 +60,7 @@ def parse_eval_args() -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help="Limit the number of examples per task. "
-        "If <1, limit is a percentage of the total number of examples.",
+        help="Limit the number of examples per task. " "If <1, limit is a percentage of the total number of examples.",
     )
     parser.add_argument(
         "--check_integrity",
@@ -101,10 +100,7 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "--gen_kwargs",
         default="",
-        help=(
-            "String arguments for model generation on greedy_until tasks,"
-            " e.g. `temperature=0,top_k=0,top_p=0`"
-        ),
+        help=("String arguments for model generation on greedy_until tasks," " e.g. `temperature=0,top_k=0,top_p=0`"),
     )
     parser.add_argument(
         "--verbosity",
@@ -128,10 +124,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     initialize_tasks(args.verbosity)
 
     if args.limit:
-        eval_logger.warning(
-            " --limit SHOULD ONLY BE USED FOR TESTING."
-            "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT."
-        )
+        eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
     if args.include_path is not None:
         eval_logger.info(f"Including path: {args.include_path}")
         include_path(args.include_path)
@@ -139,36 +132,25 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     if args.tasks is None:
         task_names = ALL_TASKS
     elif args.tasks == "list":
-        eval_logger.info(
-            "Available Tasks:\n - {}".format(f"\n - ".join(sorted(ALL_TASKS)))
-        )
+        eval_logger.info("Available Tasks:\n - {}".format(f"\n - ".join(sorted(ALL_TASKS))))
         sys.exit()
     else:
         tasks_list = args.tasks.split(",")
         task_names = utils.pattern_match(tasks_list, ALL_TASKS)
-        task_missing = [
-            task
-            for task in tasks_list
-            if task not in task_names and "*" not in task
-        ]  # we don't want errors if a wildcard ("*") task name was used
+        task_missing = [task for task in tasks_list if task not in task_names and "*" not in task]  # we don't want errors if a wildcard ("*") task name was used
 
         if task_missing:
             missing = ", ".join(task_missing)
             eval_logger.error(
-                f"Tasks were not found: {missing}\n"
-                f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
+                f"Tasks were not found: {missing}\n" f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
             )
-            raise ValueError(
-                f"Tasks {missing} were not found. Try `lmms-eval --tasks list` for list of available tasks."
-            )
+            raise ValueError(f"Tasks {missing} were not found. Try `lmms-eval --tasks list` for list of available tasks.")
 
     if args.output_path:
         path = Path(args.output_path)
         # check if file or 'dir/results.json' exists
         if path.is_file() or Path(args.output_path).joinpath("results.json").is_file():
-            eval_logger.warning(
-                f"File already exists at {path}. Results will be overwritten."
-            )
+            eval_logger.warning(f"File already exists at {path}. Results will be overwritten.")
             output_path_file = path.joinpath("results.json")
             assert not path.is_file(), "File already exists"
         # if path json then get parent dir
@@ -205,25 +187,17 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         if args.show_config:
             print(dumped)
 
-
         if args.output_path:
             output_path_file.open("w").write(dumped)
 
             if args.log_samples:
                 for task_name, config in results["configs"].items():
-                    output_name = "{}_{}_{}".format(
-                        re.sub("/|=", "__", args.model_args), task_name, args.log_samples_sufix
-                    )
+                    output_name = "{}_{}_{}".format(re.sub(r"[\/=,]", "_", args.model_args), task_name, args.log_samples_sufix)
                     filename = path.joinpath(f"{output_name}.jsonl")
-                    samples_dumped = json.dumps(
-                        sorted(samples[task_name], key=lambda x: x["doc_id"]), indent=2, default=_handle_non_serializable
-                    )
+                    samples_dumped = json.dumps(sorted(samples[task_name], key=lambda x: x["doc_id"]), indent=2, default=_handle_non_serializable)
                     filename.open("w").write(samples_dumped)
 
-        print(
-            f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, "
-            f"batch_size: {args.batch_size}"
-        )
+        print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
         print(evaluator.make_table(results))
         if "groups" in results:
             print(evaluator.make_table(results, "groups"))
