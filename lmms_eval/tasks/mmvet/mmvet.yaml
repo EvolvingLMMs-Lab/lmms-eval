@@ -1,4 +1,6 @@
 dataset_path: lmms-lab/MMVet
+dataset_kwargs:
+  token: True
 task: "mmvet"
 test_split: test
 output_type: generate_until
@@ -8,6 +10,11 @@ doc_to_target: "{{answer}}"
 generation_kwargs:
   until:
     - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
 process_results: !function utils.mmvet_process_results # apply gpt eval here
 metric_list:
   - metric: gpt_eval_score

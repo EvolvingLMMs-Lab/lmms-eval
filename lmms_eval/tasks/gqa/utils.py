@@ -2,7 +2,6 @@ from datasets import load_dataset
 
 prompt = "\nAnswer the question using a single word or phrase."
 GQA_RAW_IMAGE_DATASET = None
-
 GQA_ID2IMAGE = None
 
 

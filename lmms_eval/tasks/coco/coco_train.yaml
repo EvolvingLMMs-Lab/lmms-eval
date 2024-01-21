@@ -1,4 +1,6 @@
 dataset_path: lmms-lab/COCO-Caption
+dataset_kwargs:
+  token: True
 task : "coco_train"
 group : "coco_caption"
 test_split: train
@@ -9,6 +11,11 @@ doc_to_target: "answer"
 generation_kwargs:
   until:
     - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
 process_results: !function utils.coco_process_result
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
