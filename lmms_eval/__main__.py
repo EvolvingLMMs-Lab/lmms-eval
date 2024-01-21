@@ -184,7 +184,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     if results is not None:
         if args.log_samples:
             samples = results.pop("samples")
-        dumped = json.dumps(results, indent=2, default=_handle_non_serializable)
+        dumped = json.dumps(results, indent=4, default=_handle_non_serializable)
         if args.show_config:
             print(dumped)
 
@@ -200,7 +200,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                     output_name = f"{args.model}_{args.tasks.replace(',', '_')}_{hash_output}_{datetime_str}_{args.log_samples_suffix}"
                     filename = path.joinpath(f"{output_name}.json")
                     # Structure the data with 'args' and 'logs' keys
-                    data_to_dump = {"args": vars(args), "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
+                    data_to_dump = {"args": vars(args), "config": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
                     samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable)
                     filename.open("w").write(samples_dumped)
                     eval_logger.info(f"Saved samples to {filename}")
