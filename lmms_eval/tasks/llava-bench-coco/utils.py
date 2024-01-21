@@ -6,14 +6,27 @@ import numpy as np
 import openai
 from openai import OpenAI
 import time
+import yaml
+from pathlib import Path
 
 eval_logger = logging.getLogger("lmms-eval")
 NUM_SECONDS_TO_SLEEP = 0.5
 
 rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule.json"), "r"))
 
+with open(Path(__file__).parent / "llava-bench-coco.yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+
+    config = yaml.safe_load("".join(safe_data))
+
 API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
 API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
 
 
 def get_eval(content: str, max_tokens: int):
@@ -24,7 +37,7 @@ def get_eval(content: str, max_tokens: int):
 
     messages = [{"role": "system", "content": "You are a helpful and precise assistant for checking the quality of the answer."}, {"role": "user", "content": content}]
 
-    payload = {"model": "gpt-4-0314", "messages": messages, "temperature": 0.2, "max_tokens": max_tokens}
+    payload = {"model": GPT_EVAL_MODEL_NAME, "messages": messages, "temperature": 0.2, "max_tokens": max_tokens}
 
     while True:
         try:
@@ -90,7 +103,7 @@ def llava_process_results(doc, result):
     review, model_name = get_eval(content, 1024)
     scores = parse_score(review)
     metric = f"gpt_eval_llava_{doc['category']}"
-    review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_mode": model_name}
+    review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name}
 
     return {metric: review_dict, "gpt_eval_llava_all": review_dict}
 

@@ -101,6 +101,7 @@ def simple_evaluate(
             group, task_obj = task_obj
             if task_obj is None:
                 continue
+        lm.task_dict[task_name] = task_obj.dataset
 
         config = task_obj._config
         if config["output_type"] == "generate_until" and gen_kwargs:

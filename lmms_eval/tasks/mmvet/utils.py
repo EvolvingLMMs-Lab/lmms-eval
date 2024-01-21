@@ -10,12 +10,13 @@ eval_logger = logging.getLogger("lmms-eval")
 
 with open(Path(__file__).parent / "mmvet.yaml", "r") as f:
     raw_data = f.readlines()
+    safe_data = []
     for i, line in enumerate(raw_data):
         # remove function definition since yaml load cannot handle it
-        if "!function" in line:
-            raw_data.pop(i)
+        if "!function" not in line:
+            safe_data.append(line)
 
-    config = yaml.safe_load("".join(raw_data))
+    config = yaml.safe_load("".join(safe_data))
 
 API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
 API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")

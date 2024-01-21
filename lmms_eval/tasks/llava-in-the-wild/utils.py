@@ -6,14 +6,27 @@ import numpy as np
 import openai
 from openai import OpenAI
 import time
+import yaml
+from pathlib import Path
 
 eval_logger = logging.getLogger("lmms-eval")
 NUM_SECONDS_TO_SLEEP = 0.5
 
 rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule.json"), "r"))
 
+with open(Path(__file__).parent / "llava-in-the-wild.yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+
+    config = yaml.safe_load("".join(safe_data))
+
 API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
 API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
 
 
 def get_eval(content: str, max_tokens: int):
@@ -24,7 +37,7 @@ def get_eval(content: str, max_tokens: int):
 
     messages = [{"role": "system", "content": "You are a helpful and precise assistant for checking the quality of the answer."}, {"role": "user", "content": content}]
 
-    payload = {"model": "gpt-4-0314", "messages": messages, "temperature": 0.2, "max_tokens": max_tokens}
+    payload = {"model": GPT_EVAL_MODEL_NAME, "messages": messages, "temperature": 0.2, "max_tokens": max_tokens}
 
     while True:
         try:
@@ -52,11 +65,11 @@ def parse_score(review):
         if len(sp) == 2:
             return [float(sp[0]), float(sp[1])]
         else:
-            print("error", review)
+            eval_logger.debug("error", review)
             return [-1, -1]
     except Exception as e:
-        print(e)
-        print("error", review)
+        eval_logger.debug(e)
+        eval_logger.debug("error", review)
         return [-1, -1]
 
 
@@ -79,8 +92,11 @@ def llava_process_results(doc, result):
     """
     question = doc["question"]
     ans1 = doc["gpt_answer"]
-    ans2 = result
-    context = doc["caption"]
+    ans2 = result[0]
+    if isinstance(doc["caption"], list):
+        context = "\n".join(doc["caption"])
+    else:
+        context = doc["caption"]
     category = "llava_bench_" + doc["category"]
     rule = rule_dict[category]
     prompt = rule["prompt"]
@@ -90,7 +106,7 @@ def llava_process_results(doc, result):
     review, model_name = get_eval(content, 1024)
     scores = parse_score(review)
     metric = f"gpt_eval_llava_{doc['category']}"
-    review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_mode": model_name}
+    review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name}
 
     return {metric: review_dict, "gpt_eval_llava_all": review_dict}
 
@@ -103,6 +119,9 @@ def llava_aggregation(results):
 
     stats = np.asarray(scores).mean(0).tolist()
     stats = [round(x, 3) for x in stats]
-    print(category, round(stats[1] / stats[0] * 100, 1), round(stats[0] * 10, 1), round(stats[1] * 10, 1))
-    print("=========================")
+    eval_logger.info(f"Model/GPT4 Score for {category}: {stats[1] / stats[0] * 100:.1f}%")
+    eval_logger.info(f"GPT4 Score for {category}: {stats[0] * 10:.1f}%")
+    eval_logger.info(f"Model Score for {category}: {stats[1] * 10:.1f}%")
+    # TODO: For KC, Please make the logging information more clear. e.g. GPT4 Score: 0.8, Model Score: 0.7...
+    eval_logger.info("=========================")
     return round(stats[1] / stats[0] * 100, 1)

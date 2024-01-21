@@ -1,4 +1,6 @@
 dataset_path: Otter-AI/MME
+dataset_kwargs:
+  token: True
 task: "mme"
 test_split: test
 output_type: generate_until

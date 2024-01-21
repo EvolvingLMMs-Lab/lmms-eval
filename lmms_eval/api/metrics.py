@@ -34,7 +34,8 @@ def median(arr):
 # We use them as aggregation metrics, paired with no-op passthrough metric fns.
 @register_aggregation("perplexity")
 def perplexity(items):
-    return math.exp(-mean(items))
+    # return math.exp(-mean(items))
+    return sum(items) / len(items)
 
 
 @register_aggregation("weighted_perplexity")
