@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import datetime
 import yaml
 import inspect
 import pathlib
@@ -482,6 +483,13 @@ def get_git_commit_hash():
         # FileNotFoundError occurs when git not installed on system
         git_hash = None
     return git_hash
+
+
+def get_datetime_str():
+    """
+    Gets the current datetime as a string.
+    """
+    return datetime.datetime.now().strftime("%Y-%m%d%-H%M%S")
 
 
 def import_function(loader, node):
