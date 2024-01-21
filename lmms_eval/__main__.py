@@ -8,6 +8,7 @@ import numpy as np
 
 from pathlib import Path
 from typing import Union
+import hashlib
 
 from lmms_eval import evaluator, utils
 from lmms_eval.tasks import initialize_tasks, include_path
@@ -80,10 +81,10 @@ def parse_eval_args() -> argparse.Namespace:
         help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis",
     )
     parser.add_argument(
-        "--log_samples_sufix",
+        "--log_samples_suffix",
         type=str,
         default="",
-        help="Specify a sufix for the log_samples file name.",
+        help="Specify a suffix for the log_samples file name.",
     )
     parser.add_argument(
         "--show_config",
@@ -192,10 +193,16 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
             if args.log_samples:
                 for task_name, config in results["configs"].items():
-                    output_name = "{}_{}_{}".format(re.sub(r"[\/=,]", "_", args.model_args), task_name, args.log_samples_sufix)
-                    filename = path.joinpath(f"{output_name}.jsonl")
-                    samples_dumped = json.dumps(sorted(samples[task_name], key=lambda x: x["doc_id"]), indent=2, default=_handle_non_serializable)
+                    # Create a hash of the model arguments and task name
+                    hash_input = f"{args.model_args}_{task_name}".encode("utf-8")
+                    hash_output = hashlib.sha256(hash_input).hexdigest()[:10]  # Take the first 10 characters for brevity
+                    output_name = f"{args.model}_{args.tasks.replace(',', '_')}_{hash_output}_{args.log_samples_suffix}"
+                    filename = path.joinpath(f"{output_name}.json")
+                    # Structure the data with 'args' and 'logs' keys
+                    data_to_dump = {"args": vars(args), "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
+                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable)
                     filename.open("w").write(samples_dumped)
+                    eval_logger.info(f"Saved samples to {filename}")
 
         print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
         print(evaluator.make_table(results))

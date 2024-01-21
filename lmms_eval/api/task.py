@@ -7,7 +7,6 @@ import ast
 import logging
 import random
 
-
 import datasets
 import numpy as np
 
@@ -319,12 +318,15 @@ class Task(abc.ABC):
     def doc_to_target(self, doc):
         pass
 
+    # @profile
     def build_all_requests(self, limit=None, rank=None, world_size=None) -> None:
         """Build a set of Instances for a task, and store them in task.instances"""
         if self.has_test_docs():
             docs = self.test_docs()
+            split = self.config.test_split
         elif self.has_validation_docs():
             docs = self.validation_docs()
+            split = self.config.validation_split
         else:
             assert False, f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!"
 
@@ -339,11 +341,7 @@ class Task(abc.ABC):
             )
 
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
-            inst = self.construct_requests(
-                doc=doc,
-                ctx=fewshot_ctx,
-                metadata=(self.config["task"], doc_id, self.config.repeats),
-            )
+            inst = self.construct_requests(doc=doc, ctx=fewshot_ctx, metadata=(self.config["task"], doc_id, self.config.repeats), split=split)
 
             if not isinstance(inst, list):
                 inst = [inst]
@@ -839,7 +837,7 @@ class ConfigurableTask(Task):
 
     def construct_requests(self, doc: dict, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
         if self.OUTPUT_TYPE == "loglikelihood":
-            arguments = (ctx, self.doc_to_target(doc))
+            arguments = (ctx, self.doc_to_target(doc), self.doc_to_visual(doc))
         elif self.OUTPUT_TYPE == "loglikelihood_rolling":
             arguments = (self.doc_to_target(doc),)
         elif self.OUTPUT_TYPE == "multiple_choice":
@@ -886,8 +884,8 @@ class ConfigurableTask(Task):
             return request_list
 
         elif self.OUTPUT_TYPE == "generate_until":
-            arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual(doc))
-
+            arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual, kwargs.get("metadata")[1], self.config.task, kwargs.get("split"))
+        kwargs.pop("split")
         return Instance(request_type=self.OUTPUT_TYPE, doc=doc, arguments=arguments, idx=0, **kwargs)
 
     def process_results(self, doc, results):

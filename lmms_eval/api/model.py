@@ -25,6 +25,7 @@ class lmms(abc.ABC):
         self._rank = 0
         self._world_size = 1
         self.cache_hook = CacheHook(None)
+        self.task_dict = {}
 
     @abc.abstractmethod
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:

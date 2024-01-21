@@ -1,5 +1,7 @@
 dataset_path: lmms-lab/ScienceQA-IMG
 task: "scienceqa_img"
+dataset_kwargs:
+  token: True
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.sqa_doc_to_visual

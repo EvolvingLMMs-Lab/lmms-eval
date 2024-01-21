@@ -1,5 +1,7 @@
 dataset_path: lmms-lab/GQA
 dataset_name: testdev_balanced_instructions
+dataset_kwargs:
+  token: True
 task: "gqa"
 test_split: testdev
 output_type: generate_until
