@@ -196,7 +196,8 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                     # Create a hash of the model arguments and task name
                     hash_input = f"{args.model_args}_{task_name}".encode("utf-8")
                     hash_output = hashlib.sha256(hash_input).hexdigest()[:10]  # Take the first 10 characters for brevity
-                    output_name = f"{args.model}_{args.tasks.replace(',', '_')}_{hash_output}_{args.log_samples_suffix}"
+                    datetime_str = utils.get_datetime_str()
+                    output_name = f"{args.model}_{args.tasks.replace(',', '_')}_{hash_output}_{datetime_str}_{args.log_samples_suffix}"
                     filename = path.joinpath(f"{output_name}.json")
                     # Structure the data with 'args' and 'logs' keys
                     data_to_dump = {"args": vars(args), "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
