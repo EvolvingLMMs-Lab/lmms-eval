@@ -46,7 +46,6 @@ def pope_aggregate_precision(results):
             false_positives += 1
     precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
     return precision
-    # return {"pope_precision": precision}
 
 
 def pope_aggregate_recall(results):
@@ -60,15 +59,13 @@ def pope_aggregate_recall(results):
         elif gt == "yes" and pred == "no":
             false_negatives += 1
     recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
-    # return {"pope_recall": recall}
     return recall
 
 
 def pope_aggregate_f1_score(results):
-    precision = pope_aggregate_precision(results)["pope_precision"]
-    recall = pope_aggregate_recall(results)["pope_recall"]
+    precision = pope_aggregate_precision(results)
+    recall = pope_aggregate_recall(results)
     f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    # return {"pope_f1_score": f1_score}
     return f1_score
 
 
@@ -82,5 +79,4 @@ def pope_aggregate_yes_ratio(results):
         elif gt == "no":
             no_count += 1
     yes_ratio = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
-    # return {"pope_yes_ratio": yes_ratio}
     return yes_ratio
