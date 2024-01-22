@@ -1,7 +1,6 @@
 import os
 import re
 import sys
-import datetime
 import yaml
 import inspect
 import pathlib
@@ -10,6 +9,7 @@ import subprocess
 import collections
 import importlib.util
 import fnmatch
+import datetime
 from typing import (
     Any,
     Callable,
@@ -489,7 +489,7 @@ def get_datetime_str():
     """
     Gets the current datetime as a string.
     """
-    return datetime.datetime.now().strftime("%Y-%m%d-%H-%M-%S")
+    return datetime.datetime.now().strftime("%Y_%m%d_%H_%M_%S")
 
 
 def import_function(loader, node):
