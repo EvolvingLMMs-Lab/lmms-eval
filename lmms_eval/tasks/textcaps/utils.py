@@ -10,19 +10,19 @@ eval_logger = logging.getLogger("lmms-eval")
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
-COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
+TEXTCAPS_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
 
 
-def coco_doc_to_visual(doc):
+def textcaps_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def coco_doc_to_text(doc):
+def textcaps_doc_to_text(doc):
     question = doc["question"]
     return f"{question}\nAnswer the question using a single word or phrase."
 
 
-def coco_process_result(doc, result):
+def textcaps_process_result(doc, result):
     """
     Args:
         doc: a instance of the eval dataset
@@ -31,17 +31,13 @@ def coco_process_result(doc, result):
         a dictionary with key: metric name, value: metric value
     """
     pred = result[0] if len(result) > 0 else ""
-    question_id = doc["question_id"]
-    # The question id in our dataset is the image file itself
-    image_id = int(question_id.split("_")[-1].split(".")[0])
-    id = doc["id"]
 
-    data_dict = {"answer": doc["answer"], "pred": pred, "image_id": image_id, "id": id}
+    data_dict = {"answer": doc["caption_str"], "pred": pred, "image_id": doc["image_id"]}
 
-    return {f"coco_{metric}": data_dict for metric in COCO_METRICS}
+    return {f"textcaps_{metric}": data_dict for metric in TEXTCAPS_METRICS}
 
 
-def coco_aggregation_result(results, metric):
+def textcaps_aggregation_result(results, metric):
     scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr"), (Spice(), "SPICE")]
     scorers_dict = {s[1]: s for s in scorers}
 
@@ -54,9 +50,9 @@ def coco_aggregation_result(results, metric):
     dataset = {"annotations": [], "images": []}
     idx = 0
     for result in results:
-        stored_results.append({"image_id": int(result["image_id"]), "caption": result["pred"]})
+        stored_results.append({"image_id": result["image_id"], "caption": result["pred"]})
         for a in result["answer"]:
-            dataset["annotations"].append({"image_id": int(result["image_id"]), "caption": a, "id": idx})
+            dataset["annotations"].append({"image_id": result["image_id"], "caption": a, "id": idx})
             idx += 1
         dataset["images"].append({"id": result["image_id"]})
 
@@ -65,15 +61,15 @@ def coco_aggregation_result(results, metric):
     coco.dataset = dataset
     coco.createIndex()
 
-    coco_result = coco.loadRes(stored_results)
-    coco_eval = COCOEvalCap(coco, coco_result)
+    textcaps_result = coco.loadRes(stored_results)
+    textcaps_eval = COCOEvalCap(coco, textcaps_result)
 
-    imgIds = coco_eval.params["image_id"]
+    imgIds = textcaps_eval.params["image_id"]
     gts = {}
     res = {}
     for imgId in imgIds:
-        gts[imgId] = coco_eval.coco.imgToAnns[imgId]
-        res[imgId] = coco_eval.cocoRes.imgToAnns[imgId]
+        gts[imgId] = textcaps_eval.coco.imgToAnns[imgId]
+        res[imgId] = textcaps_eval.cocoRes.imgToAnns[imgId]
 
     eval_logger.info("tokenization...")
     tokenizer = PTBTokenizer()
@@ -96,56 +92,53 @@ def coco_aggregation_result(results, metric):
     return score
 
 
-def coco_bleu4(results):
-    return coco_aggregation_result(results, "Bleu_4")
+def textcaps_bleu4(results):
+    return textcaps_aggregation_result(results, "Bleu_4")
 
 
-def coco_bleu3(results):
-    return coco_aggregation_result(results, "Bleu_3")
+def textcaps_bleu3(results):
+    return textcaps_aggregation_result(results, "Bleu_3")
 
 
-def coco_bleu2(results):
-    return coco_aggregation_result(results, "Bleu_2")
+def textcaps_bleu2(results):
+    return textcaps_aggregation_result(results, "Bleu_2")
 
 
-def coco_bleu1(results):
-    return coco_aggregation_result(results, "Bleu_1")
+def textcaps_bleu1(results):
+    return textcaps_aggregation_result(results, "Bleu_1")
 
 
-def coco_meteor(results):
-    return coco_aggregation_result(results, "METEOR")
+def textcaps_meteor(results):
+    return textcaps_aggregation_result(results, "METEOR")
 
 
-def coco_rougel(results):
-    return coco_aggregation_result(results, "ROUGE_L")
+def textcaps_rougel(results):
+    return textcaps_aggregation_result(results, "ROUGE_L")
 
 
-def coco_cider(results):
-    return coco_aggregation_result(results, "CIDEr")
+def textcaps_cider(results):
+    return textcaps_aggregation_result(results, "CIDEr")
 
 
-def coco_spice(results):
-    return coco_aggregation_result(results, "SPICE")
+def textcaps_spice(results):
+    return textcaps_aggregation_result(results, "SPICE")
 
 
-def coco_test_process_result(doc, result):
+def textcaps_test_process_result(doc, result):
     """
     Args:
         doc: a instance of the eval dataset
         results: [pred]
     Returns:
-        a dictionary with key: metric name (in this case coco_passthrough), value: metric value
+        a dictionary with key: metric name (in this case textcaps_passthrough), value: metric value
     """
-    question_id = doc["question_id"]
-    # The question id in our dataset is the image file itself
-    image_id = int(question_id.split("_")[-1].split(".")[0])
-    return {"coco_passthrough": {"pred": result, "image_id": image_id}}
+    return {"textcaps_passthrough": {"pred": result, "image_id": doc["image_id"]}}
 
 
-def coco_test_aggregation_result(results):
+def textcaps_test_aggregation_result(results):
     stored_results = []
     for result in results:
-        stored_results.append({"image_id": int(result["image_id"]), "caption": result["pred"]})
+        stored_results.append({"image_id": result["image_id"], "caption": result["pred"]})
 
     if not os.path.exists("./captions_test2014_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
