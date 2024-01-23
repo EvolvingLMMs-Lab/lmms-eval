@@ -9,6 +9,7 @@ import random
 
 import datasets
 import numpy as np
+from PIL import ImageFile
 
 from typing import Union, List, Any
 from collections.abc import Callable
@@ -37,6 +38,10 @@ ALL_OUTPUT_TYPES = [
 
 
 eval_logger = logging.getLogger("lmms-eval")
+
+# HuggingfaceM4/NoCaps contains truncated image in test split
+# Include this inside code block to avoid error
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 @dataclass
@@ -837,7 +842,7 @@ class ConfigurableTask(Task):
 
     def construct_requests(self, doc: dict, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
         if self.OUTPUT_TYPE == "loglikelihood":
-            arguments = (ctx, self.doc_to_target(doc), self.doc_to_visual(doc))
+            arguments = (ctx, self.doc_to_target(doc), self.doc_to_visual, kwargs.get("metadata")[1], self.config.task, kwargs.get("split"))
         elif self.OUTPUT_TYPE == "loglikelihood_rolling":
             arguments = (self.doc_to_target(doc),)
         elif self.OUTPUT_TYPE == "multiple_choice":
@@ -846,11 +851,11 @@ class ConfigurableTask(Task):
             if self.multiple_input:
                 # If there are multiple inputs, choices are placed in the ctx
                 cont = self.doc_to_target(doc)
-                arguments = [(ctx, f"{target_delimiter}{cont}") for ctx in choices]
+                arguments = [(ctx, f"{target_delimiter}{cont}", self.doc_to_visual, kwargs.get("metadata")[1], self.config.task, kwargs.get("split")) for ctx in choices]
             else:
                 # Otherwise they are placed in the continuation
-                arguments = [(ctx, f"{target_delimiter}{cont}") for cont in choices]
-
+                arguments = [(ctx, f"{target_delimiter}{cont}", self.doc_to_visual, kwargs.get("metadata")[1], self.config.task, kwargs.get("split")) for cont in choices]
+            kwargs.pop("split")
             request_list = [
                 Instance(
                     request_type="loglikelihood",

@@ -40,8 +40,8 @@ metric_list:
   - metric: coco_CIDEr
     aggregation : !function utils.coco_cider
     higher_is_better : true
-  - metric: coco_SPICE
-    aggregation : !function utils.coco_spice
-    higher_is_better : true
+  #- metric: coco_SPICE
+  #  aggregation : !function utils.coco_spice
+  #  higher_is_better : true
 metadata:
   - version: 0.0

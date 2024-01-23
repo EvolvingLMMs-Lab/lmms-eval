@@ -3,7 +3,11 @@ from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
 
-COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr", "SPICE"]
+COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
+
+import logging
+
+eval_logger = logging.getLogger("lmms-eval")
 
 
 def refcoco_bbox_doc_to_visual(doc):
@@ -79,12 +83,12 @@ def refcoco_aggregation_result(results, metric):
         gts[imgId] = coco_eval.coco.imgToAnns[imgId]
         res[imgId] = coco_eval.cocoRes.imgToAnns[imgId]
 
-    print("tokenization...")
+    eval_logger.info("tokenization...")
     tokenizer = PTBTokenizer()
     gts = tokenizer.tokenize(gts)
     res = tokenizer.tokenize(res)
 
-    print(f"Computing {metric} scores...")
+    eval_logger.info(f"Computing {metric} scores...")
 
     score, scores = scorers_dict[metric][0].compute_score(gts, res)
     # coco_eval.setEval(score, metric)

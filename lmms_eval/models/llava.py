@@ -145,8 +145,10 @@ class Llava(lmms):
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, continuation, visuals in [reg.args for reg in requests]:
+        for contexts, continuation, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
+            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+            visuals = self.flatten(visuals)
             if visuals:
                 image = process_images(visuals, self._image_processor, self._config)
                 if type(image) is list:
@@ -186,7 +188,7 @@ class Llava(lmms):
             with torch.inference_mode():
                 outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True)
             loss = outputs["loss"]
-            loss = torch.exp(loss)
+            # loss = torch.exp(loss)
             logits = outputs["logits"]
             greedy_tokens = logits.argmax(dim=-1)
             cont_toks = input_ids[:, contxt_id.shape[1] :]  # [1, seq]
