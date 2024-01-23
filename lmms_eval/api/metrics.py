@@ -6,6 +6,7 @@ import sacrebleu
 import sklearn.metrics
 import random
 import evaluate
+import torch
 
 from lmms_eval.api.registry import register_metric, register_aggregation
 
@@ -20,11 +21,6 @@ def mean(arr):
     return sum(arr) / len(arr)
 
 
-@register_aggregation("sum")
-def mean(arr):
-    return sum(arr)
-
-
 @register_aggregation("median")
 def median(arr):
     return arr[len(arr) // 2]
@@ -35,6 +31,7 @@ def median(arr):
 @register_aggregation("perplexity")
 def perplexity(items):
     # return math.exp(-mean(items))
+    items = torch.exp(torch.tensor(items)).tolist()
     return sum(items) / len(items)
 
 

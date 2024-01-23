@@ -10,19 +10,19 @@ eval_logger = logging.getLogger("lmms-eval")
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
-COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
+NOCAPS_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
 
 
-def coco_doc_to_visual(doc):
+def nocaps_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def coco_doc_to_text(doc):
-    question = doc["question"]
+def nocaps_doc_to_text(doc):
+    question = "Please carefully observe the image and come up with a caption for the image"
     return f"{question}\nAnswer the question using a single word or phrase."
 
 
-def coco_process_result(doc, result):
+def nocaps_process_result(doc, result):
     """
     Args:
         doc: a instance of the eval dataset
@@ -30,18 +30,16 @@ def coco_process_result(doc, result):
     Returns:
         a dictionary with key: metric name, value: metric value
     """
-    pred = result[0] if len(result) > 0 else ""
-    question_id = doc["question_id"]
+    pred = result[0]
     # The question id in our dataset is the image file itself
-    image_id = int(question_id.split("_")[-1].split(".")[0])
-    id = doc["id"]
+    image_id = doc["image_id"]
 
-    data_dict = {"answer": doc["answer"], "pred": pred, "image_id": image_id, "id": id}
+    data_dict = {"answer": doc["annotations_captions"], "pred": pred, "image_id": image_id}
 
-    return {f"coco_{metric}": data_dict for metric in COCO_METRICS}
+    return {f"nocaps_{metric}": data_dict for metric in NOCAPS_METRICS}
 
 
-def coco_aggregation_result(results, metric):
+def nocaps_aggregation_result(results, metric):
     scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr"), (Spice(), "SPICE")]
     scorers_dict = {s[1]: s for s in scorers}
 
@@ -65,15 +63,15 @@ def coco_aggregation_result(results, metric):
     coco.dataset = dataset
     coco.createIndex()
 
-    coco_result = coco.loadRes(stored_results)
-    coco_eval = COCOEvalCap(coco, coco_result)
+    nocaps_result = coco.loadRes(stored_results)
+    nocaps_eval = COCOEvalCap(coco, nocaps_result)
 
-    imgIds = coco_eval.params["image_id"]
+    imgIds = nocaps_eval.params["image_id"]
     gts = {}
     res = {}
     for imgId in imgIds:
-        gts[imgId] = coco_eval.coco.imgToAnns[imgId]
-        res[imgId] = coco_eval.cocoRes.imgToAnns[imgId]
+        gts[imgId] = nocaps_eval.coco.imgToAnns[imgId]
+        res[imgId] = nocaps_eval.cocoRes.imgToAnns[imgId]
 
     eval_logger.info("tokenization...")
     tokenizer = PTBTokenizer()
@@ -88,68 +86,65 @@ def coco_aggregation_result(results, metric):
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 
-    if not os.path.exists("./captions_val2014_alg_results.json"):
+    if not os.path.exists("./captions_nocaps_val_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_val2014_alg_results.json", "w") as f:
+        with open("./captions_nocaps_val_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     return score
 
 
-def coco_bleu4(results):
-    return coco_aggregation_result(results, "Bleu_4")
+def nocaps_bleu4(results):
+    return nocaps_aggregation_result(results, "Bleu_4")
 
 
-def coco_bleu3(results):
-    return coco_aggregation_result(results, "Bleu_3")
+def nocaps_bleu3(results):
+    return nocaps_aggregation_result(results, "Bleu_3")
 
 
-def coco_bleu2(results):
-    return coco_aggregation_result(results, "Bleu_2")
+def nocaps_bleu2(results):
+    return nocaps_aggregation_result(results, "Bleu_2")
 
 
-def coco_bleu1(results):
-    return coco_aggregation_result(results, "Bleu_1")
+def nocaps_bleu1(results):
+    return nocaps_aggregation_result(results, "Bleu_1")
 
 
-def coco_meteor(results):
-    return coco_aggregation_result(results, "METEOR")
+def nocaps_meteor(results):
+    return nocaps_aggregation_result(results, "METEOR")
 
 
-def coco_rougel(results):
-    return coco_aggregation_result(results, "ROUGE_L")
+def nocaps_rougel(results):
+    return nocaps_aggregation_result(results, "ROUGE_L")
 
 
-def coco_cider(results):
-    return coco_aggregation_result(results, "CIDEr")
+def nocaps_cider(results):
+    return nocaps_aggregation_result(results, "CIDEr")
 
 
-def coco_spice(results):
-    return coco_aggregation_result(results, "SPICE")
+def nocaps_spice(results):
+    return nocaps_aggregation_result(results, "SPICE")
 
 
-def coco_test_process_result(doc, result):
+def nocaps_test_process_result(doc, result):
     """
     Args:
         doc: a instance of the eval dataset
         results: [pred]
     Returns:
-        a dictionary with key: metric name (in this case coco_passthrough), value: metric value
+        a dictionary with key: metric name (in this case nocaps_passthrough), value: metric value
     """
-    question_id = doc["question_id"]
-    # The question id in our dataset is the image file itself
-    image_id = int(question_id.split("_")[-1].split(".")[0])
-    return {"coco_passthrough": {"pred": result, "image_id": image_id}}
+    return {"nocaps_passthrough": {"pred": result, "image_id": doc["image_id"]}}
 
 
-def coco_test_aggregation_result(results):
+def nocaps_test_aggregation_result(results):
     stored_results = []
     for result in results:
         stored_results.append({"image_id": int(result["image_id"]), "caption": result["pred"]})
 
-    if not os.path.exists("./captions_test2014_alg_results.json"):
+    if not os.path.exists("./captions_nocaps_test_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_test2014_alg_results.json", "w") as f:
+        with open("./captions_nocaps_val_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     eval_logger.info("Your test result has been stored. Make sure you also have the val result stored to submit to the server on https://codalab.lisn.upsaclay.fr/competitions/7404#participate.")
