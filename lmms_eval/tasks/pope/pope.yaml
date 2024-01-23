@@ -8,8 +8,11 @@ doc_to_visual: !function utils.pope_doc_to_visual
 doc_to_text: !function utils.pope_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
+  max_new_tokens: 128
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
 process_results: !function utils.pope_process_results
 metric_list:
   - metric: pope_accuracy
