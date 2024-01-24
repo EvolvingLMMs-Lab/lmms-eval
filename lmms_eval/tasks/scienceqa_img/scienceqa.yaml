@@ -8,8 +8,8 @@ doc_to_visual: !function utils.sqa_doc_to_visual
 doc_to_text: !function utils.sqa_doc_to_text
 doc_to_target: !function utils.sqa_doc_to_target
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
+  max_new_tokens: 16
+  image_aspect_ratio: original
 metric_list:
   - metric: exact_match
     aggregation: mean
