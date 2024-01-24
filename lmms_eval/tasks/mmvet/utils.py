@@ -34,7 +34,7 @@ Can you explain this meme? | This meme is poking fun at the fact that the names 
 """
 
 
-def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, temperature=0.0, max_tokens=128, patience=3, sleep_time=15):
+def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, temperature=0.0, max_tokens=128, patience=3, sleep_time=5):
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
@@ -84,7 +84,6 @@ def mmvet_doc_to_visual(doc):
 
 def mmvet_process_results(doc, results):
     # get pred and ground truth here
-    target = doc["answer"]
     pred = results[0]
     question = doc["question"]
     answer = doc["answer"]
@@ -114,7 +113,7 @@ def mmvet_process_results(doc, results):
                 if temperature >= 2:  # Assuming a max temperature threshold
                     score = 0.0
                     grade_sample_run_complete = True
-                    eval_logger.info(f"{doc['question_id']} failed to get a score.")
+                    eval_logger.info(f"Reach to max trials, {doc['question_id']} failed to get a score.")
         else:
             score = 0.0
             grade_sample_run_complete = True
@@ -132,29 +131,6 @@ def mmvet_process_results(doc, results):
         }
     }
 
-
-# # all appearances of combination of cap needed for each question in the dataset
-# capability_list = [
-#     {"ocr", "math"},
-#     {"ocr", "spat", "math"},
-#     {"rec", "ocr", "spat", "math"},
-#     {"rec", "spat"},
-#     {"ocr", "spat"},
-#     {"rec", "ocr", "spat"},
-#     {"know", "ocr", "spat"},
-#     {"rec", "ocr"},
-#     {"rec", "spat", "know"},
-#     {"ocr"},
-#     {"rec"},
-#     {"rec", "know"},
-#     {"rec", "gen", "know"},
-#     {"rec", "ocr", "gen", "know"},
-#     {"rec", "ocr", "gen", "spat"},
-#     {"ocr", "gen", "spat"},
-# ]
-
-# # count of each capability in the dataset
-# capability_counter_list = [11, 14, 1, 12, 26, 7, 3, 4, 2, 12, 37, 9, 62, 8, 8, 2]
 
 cap_columns = pd.DataFrame(["rec", "ocr", "know", "gen", "spat", "math", "total"])
 cap_details_columns = pd.DataFrame(
