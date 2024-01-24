@@ -148,17 +148,20 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             raise ValueError(f"Tasks {missing} were not found. Try `lmms-eval --tasks list` for list of available tasks.")
 
     if args.output_path:
+        hash_input = f"{args.model_args}_{args.tasks}".encode("utf-8")
+        hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
+        datetime_str = utils.get_datetime_str()
         path = Path(args.output_path)
+        path = path.expanduser().resolve().joinpath(f"{datetime_str}_{hash_output}")
         # check if file or 'dir/results.json' exists
-        if path.is_file() or Path(args.output_path).joinpath("results.json").is_file():
+        if path.is_file() or path.joinpath("results.json").is_file():
             eval_logger.warning(f"File already exists at {path}. Results will be overwritten.")
             output_path_file = path.joinpath("results.json")
             assert not path.is_file(), "File already exists"
         # if path json then get parent dir
         elif path.suffix in (".json", ".jsonl"):
             output_path_file = path
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path = path.parent
+            path.mkdir(parents=True, exist_ok=True)
         else:
             path.mkdir(parents=True, exist_ok=True)
             output_path_file = path.joinpath("results.json")
@@ -193,11 +196,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
             if args.log_samples:
                 for task_name, config in results["configs"].items():
-                    # Create a hash of the model arguments and task name
-                    hash_input = f"{args.model_args}_{task_name}".encode("utf-8")
-                    hash_output = hashlib.sha256(hash_input).hexdigest()[:10]  # Take the first 10 characters for brevity
-                    datetime_str = utils.get_datetime_str()
-                    output_name = f"{args.model}_{task_name}_{hash_output}_{datetime_str}_{args.log_samples_suffix}"
+                    output_name = f"{args.model}_{task_name}_{args.log_samples_suffix}"
                     filename = path.joinpath(f"{output_name}.json")
                     # Structure the data with 'args' and 'logs' keys
                     data_to_dump = {"args": vars(args), "config": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
