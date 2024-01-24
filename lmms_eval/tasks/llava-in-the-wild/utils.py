@@ -29,17 +29,28 @@ API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
 
 
-def get_eval(content: str, max_tokens: int):
+def get_eval(content: str, max_tokens: int, retries: int = 3):
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
 
-    messages = [{"role": "system", "content": "You are a helpful and precise assistant for checking the quality of the answer."}, {"role": "user", "content": content}]
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful and precise assistant for checking the quality of the answer.",
+        },
+        {"role": "user", "content": content},
+    ]
 
-    payload = {"model": GPT_EVAL_MODEL_NAME, "messages": messages, "temperature": 0.2, "max_tokens": max_tokens}
+    payload = {
+        "model": GPT_EVAL_MODEL_NAME,
+        "messages": messages,
+        "temperature": 0.2,
+        "max_tokens": max_tokens,
+    }
 
-    while True:
+    for attempt in range(retries):
         try:
             response = requests.post(API_URL, headers=headers, json=payload)
             response.raise_for_status()
@@ -48,12 +59,15 @@ def get_eval(content: str, max_tokens: int):
             content = response_data["choices"][0]["message"]["content"].strip()
             if content != "":
                 return content, response_data["model"]
+            break  # If successful, break out of the loop
 
         except Exception as e:
-            eval_logger.info(f"Error in response : {response.json()['error']['message']}")
-            if "Rate limit" in str(e):
-                eval_logger.info("Sleeping due to rate limit...")
+            eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
+            if attempt < retries - 1:  # If we have retries left, sleep and then continue to next attempt
                 time.sleep(NUM_SECONDS_TO_SLEEP)
+            else:  # If this was the last attempt, log and return empty
+                eval_logger.error(f"All {retries} attempts failed. Last error message: {str(e)}")
+                return "", ""
     return "", ""
 
 
@@ -90,38 +104,59 @@ def llava_process_results(doc, result):
     Returns:
         a dictionary with key: metric name (in this case coco_bleu), value: metric value
     """
-    question = doc["question"]
-    ans1 = doc["gpt_answer"]
-    ans2 = result[0]
-    if isinstance(doc["caption"], list):
-        context = "\n".join(doc["caption"])
-    else:
-        context = doc["caption"]
-    category = "llava_bench_" + doc["category"]
-    rule = rule_dict[category]
-    prompt = rule["prompt"]
-    role = rule["role"]
-    content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
+    try:
+        question = doc.get("question", "")
+        ans1 = doc.get("gpt_answer", "")
+        ans2 = result[0] if result else ""
+        captions = doc.get("caption", [])
+        context = "\n".join(captions) if isinstance(captions, list) else captions
+        category = "llava_bench_" + doc.get("category", "")
+        rule = rule_dict.get(category, {})
+        prompt = rule.get("prompt", "")
+        role = rule.get("role", "user")
+        content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
 
-    review, model_name = get_eval(content, 1024)
-    scores = parse_score(review)
-    metric = f"gpt_eval_llava_{doc['category']}"
-    review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name}
+        review, model_name = get_eval(content, 1024)
+        scores = parse_score(review)
+    except Exception as e:
+        eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
+        review = "Failed to Get a Proper Review."
+        model_name = "Failed Request"
+        scores = [-1, -1]
 
-    return {metric: review_dict, "gpt_eval_llava_all": review_dict}
+    # metric = f"gpt_eval_llava_{doc.get('category', 'unknown')}"
+    review_dict = {
+        "question": question,
+        "ans1": ans1,
+        "ans2": ans2,
+        "context": context,
+        "category": category,
+        "review": review,
+        "scores": scores,
+        "eval_model": model_name,
+    }
+
+    return {"gpt_eval_llava_all": review_dict}
+    # return {metric: review_dict, "gpt_eval_llava_all": review_dict}
 
 
 def llava_aggregation(results):
-    scores = []
-    category = results[0]["category"]
-    for result in results:
-        scores.append(result["scores"])
+    return 0
+    try:
+        scores = []
+        category = results[0]["category"]
+        for result in results:
+            scores.append(result["scores"])
 
-    stats = np.asarray(scores).mean(0).tolist()
-    stats = [round(x, 3) for x in stats]
-    eval_logger.info(f"Model/GPT4 Score for {category}: {stats[1] / stats[0] * 100:.1f}%")
-    eval_logger.info(f"GPT4 Score for {category}: {stats[0] * 10:.1f}%")
-    eval_logger.info(f"Model Score for {category}: {stats[1] * 10:.1f}%")
-    # TODO: For KC, Please make the logging information more clear. e.g. GPT4 Score: 0.8, Model Score: 0.7...
-    eval_logger.info("=========================")
-    return round(stats[1] / stats[0] * 100, 1)
+        stats = np.asarray(scores).mean(0).tolist()
+        stats = [round(x, 3) for x in stats]
+        gpt4_score_percentage = stats[0] * 10
+        model_score_percentage = stats[1] * 10
+        eval_logger.info(f"Category: {category}")
+        eval_logger.info(f"GPT4 Score: {gpt4_score_percentage:.1f}%")
+        eval_logger.info(f"Model Score: {model_score_percentage:.1f}%")
+        eval_logger.info("=========================")
+        return round(stats[1] / stats[0] * 100, 1)
+    except Exception as e:
+        eval_logger.error(f"Error in llava_aggregation: {e}")
+        return None
