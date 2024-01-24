@@ -1,4 +1,4 @@
-dataset_path: HuggingFaceM4/NoCaps
+dataset_path: lmms-lab/NoCaps
 dataset_kwargs:
   token: True
 task : "nocaps_test"
