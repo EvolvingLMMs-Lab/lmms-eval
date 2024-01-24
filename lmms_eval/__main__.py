@@ -152,7 +152,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
         datetime_str = utils.get_datetime_str()
         path = Path(args.output_path)
-        path = path.expanduser().resolve().joinpath(f"{datetime_str}_{hash_output}")
+        path = path.expanduser().resolve().joinpath(f"{args.model}_{datetime_str}_{hash_output}")
         # check if file or 'dir/results.json' exists
         if path.is_file() or path.joinpath("results.json").is_file():
             eval_logger.warning(f"File already exists at {path}. Results will be overwritten.")
