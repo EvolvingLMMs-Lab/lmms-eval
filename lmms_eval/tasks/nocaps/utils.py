@@ -134,7 +134,7 @@ def nocaps_test_process_result(doc, result):
     Returns:
         a dictionary with key: metric name (in this case nocaps_passthrough), value: metric value
     """
-    return {"nocaps_passthrough": {"pred": result, "image_id": doc["image_id"]}}
+    return {"nocaps_passthrough": {"pred": result[0], "image_id": doc["image_id"]}}
 
 
 def nocaps_test_aggregation_result(results):
@@ -144,7 +144,7 @@ def nocaps_test_aggregation_result(results):
 
     if not os.path.exists("./captions_nocaps_test_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_nocaps_val_alg_results.json", "w") as f:
+        with open("./captions_nocaps_test_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     eval_logger.info("Your test result has been stored. Make sure you also have the val result stored to submit to the server on https://codalab.lisn.upsaclay.fr/competitions/7404#participate.")

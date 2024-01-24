@@ -124,7 +124,7 @@ def llava_process_results(doc, result):
         model_name = "Failed Request"
         scores = [-1, -1]
 
-    # metric = f"gpt_eval_llava_{doc.get('category', 'unknown')}"
+    metric = f"gpt_eval_llava_{doc.get('category', 'unknown')}"
     review_dict = {
         "question": question,
         "ans1": ans1,
@@ -136,26 +136,40 @@ def llava_process_results(doc, result):
         "eval_model": model_name,
     }
 
-    return {"gpt_eval_llava_all": review_dict}
-    # return {metric: review_dict, "gpt_eval_llava_all": review_dict}
+    # return {"gpt_eval_llava_all": review_dict}
+    return {metric: review_dict, "gpt_eval_llava_all": review_dict}
 
 
-def llava_aggregation(results):
-    return 0
+def llava_conv_aggregation(results):
+    return llava_aggregation(results, "conv")
+
+
+def llava_complex_aggregation(results):
+    return llava_aggregation(results, "complex")
+
+
+def llava_detail_aggregation(results):
+    return llava_aggregation(results, "detail")
+
+
+def llava_all_aggregation(results):
+    return llava_aggregation(results, "all")
+
+
+def llava_aggregation(results, category):
     try:
         scores = []
-        category = results[0]["category"]
         for result in results:
             scores.append(result["scores"])
 
         stats = np.asarray(scores).mean(0).tolist()
         stats = [round(x, 3) for x in stats]
-        gpt4_score_percentage = stats[0] * 10
-        model_score_percentage = stats[1] * 10
-        eval_logger.info(f"Category: {category}")
-        eval_logger.info(f"GPT4 Score: {gpt4_score_percentage:.1f}%")
-        eval_logger.info(f"Model Score: {model_score_percentage:.1f}%")
-        eval_logger.info("=========================")
+        # gpt4_score_percentage = stats[0] * 10
+        # model_score_percentage = stats[1] * 10
+        # eval_logger.info(f"Category: {category}")
+        # eval_logger.info(f"GPT4 Score: {gpt4_score_percentage:.1f}%")
+        # eval_logger.info(f"Model Score: {model_score_percentage:.1f}%")
+        # eval_logger.info("=========================")
         return round(stats[1] / stats[0] * 100, 1)
     except Exception as e:
         eval_logger.error(f"Error in llava_aggregation: {e}")
