@@ -5,7 +5,6 @@ from typing import Literal, Tuple
 @dataclass
 class Instance:
     request_type: Literal["loglikelihood", "loglikelihood_rolling", "generate_until"]
-    doc: dict
     arguments: tuple
     idx: int
     metadata: Tuple[str, int, int] = field(default_factory=lambda: (None, None, None))  # TODO: better typehints here
@@ -16,6 +15,7 @@ class Instance:
     task_name: str = None
     doc_id: str = None
     repeats: str = None
+    doc: dict = None
 
     def __post_init__(self) -> None:
         # unpack metadata field
