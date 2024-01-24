@@ -489,7 +489,7 @@ def get_datetime_str():
     """
     Gets the current datetime as a string.
     """
-    return datetime.datetime.now().strftime("%Y_%m%d_%H_%M_%S")
+    return datetime.datetime.now().strftime("%m%d_%H%M")
 
 
 def import_function(loader, node):
