@@ -7,10 +7,10 @@ def seed_doc_to_visual(doc):
 
 def seed_doc_to_text(doc):
     question = doc["question"]
-    question += "\n" + f"A.{doc['choice_a']}\n"
-    question += "\n" + f"B.{doc['choice_b']}\n"
-    question += "\n" + f"C.{doc['choice_c']}\n"
-    question += "\n" + f"D.{doc['choice_d']}"
+    question += "\n" + f"A. {doc['choice_a']}\n"
+    question += f"B. {doc['choice_b']}\n"
+    question += f"C. {doc['choice_c']}\n"
+    question += f"D. {doc['choice_d']}"
     return f"{question}\nAnswer with the option's letter from the given choices directly."
 
 
@@ -37,7 +37,7 @@ def seed_aggregation_result_all(results):
     stored_results = []
     for result in results:
         stored_results.append({"question_id": result["question_id"], "prediction": result["pred"]})
-    with open("./seed_submission.json", "r") as f:
+    with open("./seed_submission.json", "w") as f:
         json.dump(stored_results, f, indent=4)
     print("Storing files for seed_submission ...")
 

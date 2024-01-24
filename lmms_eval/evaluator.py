@@ -325,7 +325,7 @@ def evaluate(
                         "doc_id": doc_id,
                         "doc": {k: v for k, v in doc.items() if "image" not in k},  # do not include image
                         "target": target,
-                        "arguments": [req.args[:2] for req in requests],  # do not include image
+                        "arguments": [tuple(a for a in req.args if isinstance(a, (int, str))) for req in requests],  # do not include image
                         "resps": [req.resps for req in requests],
                         "filtered_resps": [req.filtered_resps[key] for req in requests],
                     }
