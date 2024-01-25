@@ -1,5 +1,5 @@
 import os
-import re
+import yaml
 import sys
 import json
 import logging
@@ -26,6 +26,7 @@ def _handle_non_serializable(o):
 
 def parse_eval_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("--config", default="", help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified")
     parser.add_argument("--model", default="hf", help="Name of model e.g. `hf`")
     parser.add_argument(
         "--tasks",
@@ -109,14 +110,12 @@ def parse_eval_args() -> argparse.Namespace:
         default="INFO",
         help="Log error when tasks are not registered.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    return args
 
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
-    if not args:
-        # we allow for args to be passed externally, else we parse them ourselves
-        args = parse_eval_args()
-
     eval_logger = utils.eval_logger
     eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
     eval_logger.info(f"Verbosity set to {args.verbosity}")
@@ -204,11 +203,40 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                     filename.open("w").write(samples_dumped)
                     eval_logger.info(f"Saved samples to {filename}")
 
-        print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
-        print(evaluator.make_table(results))
-        if "groups" in results:
-            print(evaluator.make_table(results, "groups"))
+        return results
+    return None
+
+
+def print_results(args, results):
+    print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+    print(evaluator.make_table(results))
+    if "groups" in results:
+        print(evaluator.make_table(results, "groups"))
 
 
 if __name__ == "__main__":
-    cli_evaluate()
+    args = parse_eval_args()
+    args_list = []
+    results_list = []
+    if args.config and os.path.exists(args.config):
+        with open(args.config, "r") as file:
+            config_args = yaml.safe_load(file)
+        config_args = [config_args] if type(config_args) != list else config_args
+        # multiple configs, create args list first
+        for config in config_args:
+            args_copy = argparse.Namespace(**vars(args))
+            for key, value in config.items():
+                setattr(args_copy, key, value)
+            args_list.append(args_copy)
+    else:
+        args_list.append(args)
+
+    # run each config
+    for args in args_list:
+        results = cli_evaluate(args)
+        results_list.append(results)
+    # print results
+    for args, results in zip(args_list, results_list):
+        # cli_evaluate will return none if the process is not the main process (rank 0)
+        if results is not None:
+            print_results(args, results)
