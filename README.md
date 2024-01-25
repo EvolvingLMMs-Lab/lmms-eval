@@ -14,8 +14,8 @@ pip install -e .
 ```
 
 ```bash
-accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks gqa  --batch_size 1 --log_samples --log_samples_sufix debug --output_path ./logs/ # Eactly reproduce llava results
-accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks mme  --batch_size 1 --log_samples --log_samples_sufix debug --output_path ./logs/ # Eactly reproduce llava results
+accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks mme  --batch_size 1 --log_samples --log_samples_suffix debug --output_path ./logs/ # Eactly reproduce llava results
+accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Eactly reproduce llava results
 ```
 ## Current models
 
