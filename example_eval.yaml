@@ -1,0 +1,15 @@
+- model: llava
+  model_args: pretrained=liuhaotian/llava-v1.5-7b
+  tasks: mme
+  batch_size: 1
+  log_samples: true
+  log_samples_suffix: debug
+  output_path: "./logs/"
+
+- model: llava
+  model_args: pretrained=liuhaotian/llava-v1.5-13b
+  tasks: mme
+  batch_size: 1
+  log_samples: true
+  log_samples_suffix: debug
+  output_path: "./logs/"
