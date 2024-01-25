@@ -1,11 +1,14 @@
-def sqa_doc_to_text(doc):
+def sqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
     context, question, choices = doc["hint"], doc["question"], doc["choices"]
     len_choices = len(choices)
     options = [chr(ord("A") + i) for i in range(len_choices)]
     choices_str = "\n".join([f"{option}. {choice}" for option, choice in zip(options, choices)])
     if context:
         context = f"Context: {context}\n"
-    return f"{context}{question}\n{choices_str}\nAnswer with the option's letter from the given choices directly."
+
+    post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+    return f"{pre_prompt}{context}{question}\n{choices_str}{post_prompt}"
 
 
 def sqa_doc_to_visual(doc):
