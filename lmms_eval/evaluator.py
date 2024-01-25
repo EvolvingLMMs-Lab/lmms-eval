@@ -94,7 +94,7 @@ def simple_evaluate(
         },
     )
 
-    task_dict = lmms_eval.tasks.get_task_dict(tasks)
+    task_dict = lmms_eval.tasks.get_task_dict(tasks, model_name=model)
     for task_name in task_dict.keys():
         task_obj = task_dict[task_name]
         if type(task_obj) == tuple:
