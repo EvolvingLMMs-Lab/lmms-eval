@@ -89,6 +89,9 @@ class TaskConfig(dict):
 
     metadata: Union[str, list] = None  # by default, not used in the code. allows for users to pass arbitrary info to tasks
 
+    model_specific_prompt_kwargs: dict = None
+    model_specific_generation_kwargs: dict = None
+
     def __post_init__(self) -> None:
         if self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):
             import inspect
@@ -495,9 +498,13 @@ class ConfigurableTask(Task):
     OUTPUT_TYPE = None
     CONFIG = None
 
-    def __init__(self) -> None:  # TODO no super() call here
+    def __init__(self, model_name) -> None:  # TODO no super() call here
         # Get pre-configured attributes
         self._config = self.CONFIG
+        # different model requires different prompt, we have to take those into account.
+
+        self.model_name = model_name
+        self._prepare_model_specific_config()
 
         assert self.config.output_type in ALL_OUTPUT_TYPES
         self.OUTPUT_TYPE = self.config.output_type
@@ -578,6 +585,23 @@ class ConfigurableTask(Task):
                     eval_logger.warning(f'Both target_delimiter and target choice: "{choice}" have whitespace')
                 elif (not delimiter_has_whitespace) and (not choice_has_whitespace):
                     eval_logger.warning(f'Both target_delimiter "{self.config.target_delimiter}" and target choice: "{choice}" do not have whitespace, ignore if the language you are evaluating on does not require/use whitespace')
+
+    def _prepare_model_specific_config(self):
+        self.model_specific_prompt_kwargs = self.config.model_specific_prompt_kwargs
+        if self.model_specific_prompt_kwargs is not None:
+            if self.model_name in self.model_specific_prompt_kwargs:
+                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs[self.model_name]
+            else:
+                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs["default"]
+
+        self.model_specific_generation_kwargs = self.config.model_specific_generation_kwargs
+        if self.model_specific_generation_kwargs is not None:
+            if self.model_name in self.model_specific_generation_kwargs:
+                self.model_specific_generation_kwargs = self.model_specific_generation_kwargs[self.model_name]
+            else:
+                self.model_specific_generation_kwargs = self.model_specific_generation_kwargs["default"]
+
+            self.config.generation_kwargs.update(self.model_specific_generation_kwargs)
 
     def _prepare_metric_and_aggregation(self):
         self._metric_fn_list = {}
@@ -764,7 +788,13 @@ class ConfigurableTask(Task):
                 else:
                     return text_string
         elif callable(doc_to_text):
-            return doc_to_text(doc)
+            return (
+                doc_to_text(doc, self.model_specific_prompt_kwargs)
+                if self.model_specific_prompt_kwargs is not None
+                else doc_to_text(
+                    doc,
+                )
+            )
         # Used when applying a Promptsource template
         elif hasattr(doc_to_text, "apply"):
             applied_prompt = doc_to_text.apply(doc)
