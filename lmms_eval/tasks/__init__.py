@@ -116,9 +116,9 @@ def initialize_tasks(verbosity="INFO"):
     include_path(task_dir)
 
 
-def get_task(task_name):
+def get_task(task_name, model_name):
     try:
-        return TASK_REGISTRY[task_name]()
+        return TASK_REGISTRY[task_name](model_name=model_name)
     except KeyError:
         eval_logger.info("Available tasks:")
         eval_logger.info(list(TASK_REGISTRY) + list(GROUP_REGISTRY))
@@ -136,7 +136,7 @@ def get_task_name_from_object(task_object):
 
 
 # TODO: pass num_fewshot and other cmdline overrides in a better way
-def get_task_dict(task_name_list: List[Union[str, Dict, Task]]):
+def get_task_dict(task_name_list: List[Union[str, Dict, Task]], model_name: str):
     all_task_dict = {}
 
     if type(task_name_list) != list:
@@ -167,7 +167,7 @@ def get_task_dict(task_name_list: List[Union[str, Dict, Task]]):
             if task_name not in all_task_dict:
                 all_task_dict = {
                     **all_task_dict,
-                    task_name: get_task(task_name=task_element),
+                    task_name: get_task(task_name=task_element, model_name=model_name),
                 }
 
     return all_task_dict
