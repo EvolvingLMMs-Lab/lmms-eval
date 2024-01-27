@@ -1,6 +1,6 @@
 group: refcocog
 task:
-- refcoco_seg_test
-- refcoco_seg_val
-- refcoco_bbox_test
-- refcoco_bbox_val
+- refcocog_seg_test
+- refcocog_seg_val
+- refcocog_bbox_test
+- refcocog_bbox_val
