@@ -86,9 +86,10 @@ def nocaps_aggregation_result(results, metric):
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 
-    if not os.path.exists("./captions_nocaps_val_alg_results.json"):
+    os.makedirs("./submissions", exist_ok=True)
+    if not os.path.exists("./submissions/captions_nocaps_val_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_nocaps_val_alg_results.json", "w") as f:
+        with open("./submissions/captions_nocaps_val_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     return score
@@ -142,9 +143,10 @@ def nocaps_test_aggregation_result(results):
     for result in results:
         stored_results.append({"image_id": int(result["image_id"]), "caption": result["pred"]})
 
-    if not os.path.exists("./captions_nocaps_test_alg_results.json"):
+    os.makedirs("./submissions", exist_ok=True)
+    if not os.path.exists("./submissions/nocaps_captions_nocaps_test_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_nocaps_test_alg_results.json", "w") as f:
+        with open("./submissions/nocaps_captions_nocaps_test_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     eval_logger.info("Your test result has been stored. Make sure you also have the val result stored to submit to the server on https://codalab.lisn.upsaclay.fr/competitions/7404#participate.")

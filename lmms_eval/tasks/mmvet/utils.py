@@ -132,7 +132,7 @@ def mmvet_process_results(doc, results):
     }
 
 
-cap_columns = pd.DataFrame(["rec", "ocr", "know", "gen", "spat", "math", "total"])
+cap_columns = pd.DataFrame(["rec", "ocr", "know", "gen", "spat", "math"])
 cap_details_columns = pd.DataFrame(
     [
         "rec_gen_know",
@@ -151,7 +151,6 @@ cap_details_columns = pd.DataFrame(
         "rec_spat_know",
         "spat_gen_ocr",
         "rec_spat_math_ocr",
-        "total",
     ]
 )
 

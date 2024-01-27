@@ -311,7 +311,9 @@ def evaluate(
         for key in task.instances[0].filtered_resps.keys():
             doc_iterator = itertools.islice(enumerate(task.test_docs()), lm.rank, limit, lm.world_size) if task.has_test_docs() else itertools.islice(enumerate(task.validation_docs()), lm.rank, limit, lm.world_size)
             # Instead of converting the iterator to a list, use `itertools.tee` to create a parallel iterator for counting
-            doc_iterator, doc_iterator_for_counting = itertools.tee(doc_iterator)
+            # doc_iterator, doc_iterator_for_counting = itertools.tee(doc_iterator)
+            # Don't use above one, this would crash if doc_iterator_for_counting contains too many objects and very slow
+            doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), lm.rank, limit, lm.world_size) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), lm.rank, limit, lm.world_size)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
             pbar = tqdm(total=total_docs, desc="Postprocessing")
             for doc_id, doc in doc_iterator:
