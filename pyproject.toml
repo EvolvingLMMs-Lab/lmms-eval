@@ -22,8 +22,9 @@ requires-python = ">=3.8"
 license = { "text" = "MIT" }
 dependencies = [
     "accelerate>=0.21.0",
-    "evaluate",
+    "black==24.1.0",
     "datasets==2.16.1",
+    "evaluate",
     "evaluate>=0.4.0",
     "jsonlines",
     "numexpr",
@@ -42,7 +43,6 @@ dependencies = [
     "zstandard",
     "pillow",
     "pyyaml",
-    "black",
     "sympy",
     "mpmath",
     "Jinja2",
@@ -60,8 +60,8 @@ lmms-eval = "lmms_eval.__main__:cli_evaluate"
 lmms_eval = "lmms_eval.__main__:cli_evaluate"
 
 [project.urls]
-Homepage = "Null"
-Repository = "Null"
+Homepage = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
 
 [project.optional-dependencies]
 dev = ["black", "flake8", "pre-commit", "pytest", "pytest-cov"]
