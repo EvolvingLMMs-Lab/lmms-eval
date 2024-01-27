@@ -1,0 +1,8 @@
+group: mmbench_cn
+task:
+  - mmbench_cn_dev
+  - mmbench_cn_test
+  - mmbench_cn_cc
+metadata:
+  version: 0.0
+  sys_prompt: "有如下几个选项："

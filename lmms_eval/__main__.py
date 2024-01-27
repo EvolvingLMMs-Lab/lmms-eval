@@ -111,11 +111,43 @@ def parse_eval_args() -> argparse.Namespace:
         help="Log error when tasks are not registered.",
     )
     args = parser.parse_args()
-
     return args
 
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
+    if args is None:
+        args = parse_eval_args()
+
+    args_list = []
+    results_list = []
+    if args.config:
+        if not os.path.exists(args.config):
+            raise ValueError(f"Config file does not exist: {args.config}")
+
+        with open(args.config, "r") as file:
+            config_args = yaml.safe_load(file)
+        config_args = [config_args] if type(config_args) != list else config_args
+        # multiple configs, create args list first
+        for config in config_args:
+            args_copy = argparse.Namespace(**vars(args))
+            for key, value in config.items():
+                setattr(args_copy, key, value)
+            args_list.append(args_copy)
+    else:
+        args_list.append(args)
+
+    # run each config
+    for args in args_list:
+        results = cli_evaluate_single(args)
+        results_list.append(results)
+    # print results
+    for args, results in zip(args_list, results_list):
+        # cli_evaluate will return none if the process is not the main process (rank 0)
+        if results is not None:
+            print_results(args, results)
+
+
+def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     eval_logger = utils.eval_logger
     eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
     eval_logger.info(f"Verbosity set to {args.verbosity}")
@@ -160,9 +192,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         # if path json then get parent dir
         elif path.suffix in (".json", ".jsonl"):
             output_path_file = path
-            path.mkdir(parents=True, exist_ok=True)
         else:
-            path.mkdir(parents=True, exist_ok=True)
             output_path_file = path.joinpath("results.json")
     elif args.log_samples and not args.output_path:
         assert args.output_path, "Specify --output_path"
@@ -184,6 +214,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     )
 
     if results is not None:
+        path.mkdir(parents=True, exist_ok=True)
         if args.log_samples:
             samples = results.pop("samples")
         dumped = json.dumps(results, indent=4, default=_handle_non_serializable)

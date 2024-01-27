@@ -1,4 +1,4 @@
-dataset_path: nlphuji/flickr30k
+dataset_path: lmms-lab/flickr30k
 dataset_kwargs:
   token: True
 task : "flickr30k"
