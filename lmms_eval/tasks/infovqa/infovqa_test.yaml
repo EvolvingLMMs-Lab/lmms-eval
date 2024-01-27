@@ -1,0 +1,23 @@
+dataset_path: lmms-lab/DocVQA
+dataset_name: InfographicVQA
+dataset_kwargs:
+  token: True
+task: "infovqa_val"
+test_split: validation
+output_type: generate_until
+doc_to_visual: !function utils.infovqa_doc_to_visual
+doc_to_text: !function utils.infovqa_doc_to_text
+doc_to_target: "answers"
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: False
+process_results: !function utils.infovqa_test_process_results
+metric_list:
+  - metric: anls
+    aggregation: !function utils.infovqa_test_aggregate_results
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
+  
