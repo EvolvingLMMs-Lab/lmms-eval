@@ -7,4 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: psf/black@stable
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install specific version of Black
+        run: pip install black==24.1.0
+      - name: Run Black
+        run: black --check .
