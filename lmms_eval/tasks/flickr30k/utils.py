@@ -85,9 +85,10 @@ def flickr_aggregation_result(results, metric):
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 
-    if not os.path.exists("./captions_val2014_alg_results.json"):
+    os.makedirs("./submissions", exist_ok=True)
+    if not os.path.exists("./submissions/flickr30k_captions_val2014_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_val2014_alg_results.json", "w") as f:
+        with open("./submissions/flickr30k_captions_val2014_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     return score

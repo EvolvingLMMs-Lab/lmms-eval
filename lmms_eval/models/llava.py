@@ -16,6 +16,10 @@ from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_i
 from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from llava.conversation import conv_templates, SeparatorStyle
 
+import warnings
+
+warnings.filterwarnings("ignore")
+
 
 @register_model("llava")
 class Llava(lmms):
@@ -257,17 +261,17 @@ class Llava(lmms):
 
             # encode, pad, and truncate contexts for this batch
             if visuals:
-                image = process_images(visuals, self._image_processor, self._config)
-                if type(image) is list:
-                    image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
+                image_tensor = process_images(visuals, self._image_processor, self._config)
+                if type(image_tensor) is list:
+                    image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
                 else:
-                    image = image.to(dtype=torch.float16, device=self.device)
+                    image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
             else:
-                image = None
+                image_tensor = None
 
             prompts_input = contexts[0]
 
-            if image is not None and len(image) != 0 and DEFAULT_IMAGE_TOKEN not in prompts_input:
+            if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in prompts_input:
                 """
                 Three senarios:
                 1. No image, and there for, no image token should be added.
@@ -285,11 +289,7 @@ class Llava(lmms):
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
 
             # preconfigure gen_kwargs with defaults
-            if "image_sizes" not in gen_kwargs:
-                try:
-                    gen_kwargs["image_sizes"] = [visuals[0].size]
-                except:
-                    gen_kwargs["image_sizes"] = None
+            gen_kwargs["image_sizes"] = [visuals[0].size]
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -308,7 +308,7 @@ class Llava(lmms):
                     input_ids,
                     attention_mask=attention_mask,
                     pad_token_id=pad_token_id,
-                    images=image,
+                    images=image_tensor,
                     image_sizes=gen_kwargs["image_sizes"],
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
                     temperature=gen_kwargs["temperature"],
@@ -316,12 +316,11 @@ class Llava(lmms):
                     num_beams=gen_kwargs["num_beams"],
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                     use_cache=self.use_cache,
-                    # kwargs=gen_kwargs
                 )
             except Exception as e:
-                print(e)
                 print("Error in generating")
                 cont = ""
+                raise e
 
             cont_toks_list = cont.tolist()
             for cont_toks, context in zip(cont_toks_list, contexts):
