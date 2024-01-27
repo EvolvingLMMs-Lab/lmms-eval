@@ -2,7 +2,6 @@ from lmms_eval.api.filter import Filter
 
 
 class DecontaminationFilter(Filter):
-
     """
     A filter which evaluates
     """
