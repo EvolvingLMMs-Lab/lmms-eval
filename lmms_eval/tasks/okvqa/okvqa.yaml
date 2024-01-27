@@ -1,11 +1,9 @@
-task: "vqav2"
-dataset_path: lmms-lab/VQAv2
-dataset_kwargs:
-  token: True
-test_split: testdev
+task: okvqa
+dataset_path: lmms-lab/OK-VQA
+test_split: val2014
 output_type: generate_until
-doc_to_visual: !function utils.vqav2_doc_to_visual
-doc_to_text: !function utils.vqav2_doc_to_text
+doc_to_visual: !function utils.okvqa_doc_to_visual
+doc_to_text: !function utils.okvqa_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
   until:
@@ -17,8 +15,9 @@ metric_list:
     ignore_case: true
     ignore_punctuation: true
   - metric: submission
-    aggregation: !function utils.vqav2_aggreate_submissions
+    aggregation: !function utils.okvqa_aggreate_submissions
     higher_is_better: true
 metadata:
   - version: 0.0
-process_results: !function utils.vqav2_process_results
+  - have_ocr_reference: false
+process_results: !function utils.okvqa_process_results

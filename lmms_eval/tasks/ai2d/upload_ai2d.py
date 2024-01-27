@@ -69,10 +69,10 @@ class AI2D(datasets.GeneratorBasedBuilder):
         # dl_manager is a datasets.download.DownloadManager that can be used to download and extract URLS
         # It can accept any type or nested list/dict and will give back the same structure with the url replaced with path to local files.
         # By default the archives will be extracted and a path to a cached folder where they are extracted is returned instead of the archive
-        image_path = "/home/yhzhang/ai2d/images"
-        annotation_path = "/home/yhzhang/ai2d/questions"
+        image_path = "/path/to/ai2d/images"
+        annotation_path = "/path/to/ai2d/questions"
         # wget https://ofasys-wlcb.oss-cn-wulanchabu.aliyuncs.com/Qwen-VL/evaluation/ai2diagram/test.jsonl
-        test_annotation_path = "/home/yhzhang/Qwen-VL/data/ai2diagram/test.jsonl"
+        test_annotation_path = "/path/to/Qwen-VL/data/ai2diagram/test.jsonl"
         return [
             datasets.SplitGenerator(
                 name=datasets.Split.TEST,
@@ -112,6 +112,6 @@ if __name__ == "__main__":
     from datasets import load_dataset
 
     data = load_dataset(
-        "/home/yhzhang/lmms-eval/lmms_eval/tasks/ai2d/upload_ai2d.py",
+        "/path/to/lmms-eval/lmms_eval/tasks/ai2d/upload_ai2d.py",
     )
     data.push_to_hub("lmms-lab/ai2d", private=True)

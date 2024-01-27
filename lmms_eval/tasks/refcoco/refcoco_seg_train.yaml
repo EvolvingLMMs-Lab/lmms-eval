@@ -1,4 +1,3 @@
-group: refcoco_seg
 task: refcoco_seg_train
 test_split: train
 include: _default_template_seg_yaml
