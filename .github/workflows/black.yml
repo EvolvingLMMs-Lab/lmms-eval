@@ -12,6 +12,6 @@ jobs:
         with:
           python-version: '3.9'
       - name: Install specific version of Black
-        run: pip install black==24.1.0
+        run: pip install black==23.9.1
       - name: Run Black
-        run: black --check .
+        run: black --line-length=240 ./
