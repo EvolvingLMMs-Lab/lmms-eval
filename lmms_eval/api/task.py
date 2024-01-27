@@ -348,7 +348,7 @@ class Task(abc.ABC):
         doc_id_iterator = utils.create_iterator([i for i in range(len(docs))], rank, world_size, limit)
         doc_id_iterator, doc_id_iterator_counting = itertools.tee(doc_id_iterator)
         total_docs = sum(1 for _ in doc_id_iterator_counting)
-        pbar = tqdm(total=total_docs, desc="Building context")
+        pbar = tqdm(total=total_docs, desc=f"Building context {rank}", position=rank)
         for doc_id in doc_id_iterator:
             # sample fewshot context #TODO: need to offset doc_id by rank now!
             fewshot_ctx = self.fewshot_context(doc_id, 0 if self.config.num_fewshot is None else self.config.num_fewshot, self.config.training_split if self.has_training_docs() else split)
