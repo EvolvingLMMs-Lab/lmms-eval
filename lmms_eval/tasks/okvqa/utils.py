@@ -9,7 +9,7 @@ import statistics
 
 eval_logger = logging.getLogger("lmms-eval")
 
-with open(pathlib.Path(__file__).parent / "textvqa.yaml", "r") as f:
+with open(pathlib.Path(__file__).parent / "okvqa.yaml", "r") as f:
     raw_data = f.readlines()
     for i in range(len(raw_data)):
         raw_data[i] = raw_data[i].replace("!function", "function")
@@ -194,6 +194,7 @@ class EvalAIAnswerProcessor:
     def word_tokenize(self, word):
         word = word.lower()
         word = word.replace(",", "").replace("?", "").replace("'s", " 's")
+        word = word.replace("\n", " ").replace("\t", " ").strip()
         return word.strip()
 
     def process_punctuation(self, in_text):
@@ -223,17 +224,16 @@ class EvalAIAnswerProcessor:
 
     def __call__(self, item):
         item = self.word_tokenize(item)
-        item = item.replace("\n", " ").replace("\t", " ").strip()
         item = self.process_punctuation(item)
         item = self.process_digit_article(item)
         return item
 
 
-def textvqa_doc_to_visual(doc):
+def okvqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def textvqa_process_results(doc, result):
+def okvqa_process_results(doc, result):
     eval_ai_processor = EvalAIAnswerProcessor()
     assert len(result) == 1, f"The result should be a list of length 1, but got {len(result)}."
     resAns = eval_ai_processor(result[0])
@@ -261,18 +261,14 @@ def textvqa_process_results(doc, result):
     }
 
 
-def textvqa_doc_to_text(doc):
-    ocr_ref = ""
-    if "have_ocr_reference" in config["metadata"] and config["metadata"]["have_ocr_prompt"] and doc["ocr_tokens"]:
-        ocr_ref = f"Reference OCR token: {', '.join(doc['ocr_tokens'])}\n"
-    text = f"{doc['question'].capitalize()}\n{ocr_ref}Answer the question using a single word or phrase."
+def okvqa_doc_to_text(doc):
+    text = f"{doc['question'].capitalize()}\n Answer the question using a single word or phrase."
     return text
 
 
-def textvqa_aggreate_submissions(results):
+def okvqa_aggreate_submissions(results):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    os.makedirs("./submissions", exist_ok=True)
-    submission_file_name = f"./submissions/textvqa_submission_{now_date_time}.json"
+    submission_file_name = f"okvqa-submission-{now_date_time}.json"
     path = os.path.abspath(submission_file_name)
     with open(path, "w") as f:
         json.dump(results, f)

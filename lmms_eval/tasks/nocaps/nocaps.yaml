@@ -1,3 +1,4 @@
 group : nocaps
 task:
-  - nocaps_caption
+  - nocaps_test
+  - nocaps_val

@@ -1,4 +1,8 @@
 group: refcoco+
 task:
-- refcoco+_bbox
-- refcoco+_seg
+- refcoco_seg_val
+- refcoco_seg_testA
+- refcoco_seg_testB
+- refcoco_bbox_val
+- refcoco_bbox_testA
+- refcoco_bbox_testB

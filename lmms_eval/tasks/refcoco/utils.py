@@ -60,13 +60,15 @@ def refcoco_aggregation_result(results, metric):
     # 'images' however only need the image id which is contained in the file name
     dataset = {"annotations": [], "images": []}
     idx = 0
+    ann_id = 0
     for result in results:
-        stored_results.append({"image_id": int(result["ann_id"]), "caption": result["pred"]})
+        stored_results.append({"image_id": idx, "caption": result["pred"]})
         for s in result["answer"]:
-            dataset["annotations"].append({"image_id": int(result["ann_id"]), "caption": s, "id": idx})
-            idx += 1
+            dataset["annotations"].append({"image_id": idx, "caption": s, "id": ann_id})
+            ann_id += 1
 
-        dataset["images"].append({"id": int(result["ann_id"])})
+        dataset["images"].append({"id": idx})
+        idx += 1
 
     coco = COCO()
     # Manually create index here
