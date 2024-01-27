@@ -19,7 +19,7 @@ def coco_doc_to_visual(doc):
 
 def coco_doc_to_text(doc):
     question = doc["question"]
-    return f"{question}\nAnswer the question using a single word or phrase."
+    return f"{question}\nAnswer the question with a short phrase."
 
 
 def coco_process_result(doc, result):
@@ -88,9 +88,10 @@ def coco_aggregation_result(results, metric):
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 
-    if not os.path.exists("./captions_val2014_alg_results.json"):
+    os.makedirs("./submissions", exist_ok=True)
+    if not os.path.exists("./submissions/coco_captions_val2014_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_val2014_alg_results.json", "w") as f:
+        with open("./submissions/coco_captions_val2014_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     return score
@@ -147,9 +148,10 @@ def coco_test_aggregation_result(results):
     for result in results:
         stored_results.append({"image_id": int(result["image_id"]), "caption": result["pred"]})
 
-    if not os.path.exists("./captions_test2014_alg_results.json"):
+    os.makedirs("./submissions", exist_ok=True)
+    if not os.path.exists("./submissions/captions_test2014_alg_results.json"):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_test2014_alg_results.json", "w") as f:
+        with open("./submissions/captions_test2014_alg_results.json", "w") as f:
             json.dump(stored_results, f, indent=4)
 
     eval_logger.info("Your test result has been stored. Make sure you also have the val result stored to submit to the server on https://codalab.lisn.upsaclay.fr/competitions/7404#participate.")
