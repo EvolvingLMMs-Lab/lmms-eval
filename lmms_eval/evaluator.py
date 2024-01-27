@@ -315,7 +315,7 @@ def evaluate(
             # Don't use above one, this would crash if doc_iterator_for_counting contains too many objects and very slow
             doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), lm.rank, limit, lm.world_size) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), lm.rank, limit, lm.world_size)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
-            pbar = tqdm(total=total_docs, desc="Postprocessing")
+            pbar = tqdm(total=total_docs, desc="Postprocessing", position=lm.rank)
             for doc_id, doc in doc_iterator:
                 # subset instances to only this document id ; sort by idx
                 requests = list(filter(lambda x: x.doc_id == doc_id, task.instances))
