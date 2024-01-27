@@ -13,8 +13,10 @@ import datasets
 import numpy as np
 from PIL import ImageFile
 
+from datasets import DownloadConfig
 from typing import Union, List, Any
 from collections.abc import Callable
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from lmms_eval import utils
 from lmms_eval.api import samplers
@@ -654,10 +656,15 @@ class ConfigurableTask(Task):
                     eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. " f"using default " f"higher_is_better={is_higher_better(metric_name)}")
                     self._higher_is_better[metric_name] = is_higher_better(metric_name)
 
+    @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
     def download(self, dataset_kwargs=None) -> None:
+        download_config = DownloadConfig()
+        download_config.max_retries = dataset_kwargs.get("max_retries", 3) if dataset_kwargs is not None else 3
+        download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
+            download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
 
