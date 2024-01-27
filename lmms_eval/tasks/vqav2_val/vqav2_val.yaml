@@ -1,8 +1,8 @@
-task: "vqav2"
+task: "vqav2_val"
 dataset_path: lmms-lab/VQAv2
 dataset_kwargs:
   token: True
-test_split: testdev
+test_split: validation
 output_type: generate_until
 doc_to_visual: !function utils.vqav2_doc_to_visual
 doc_to_text: !function utils.vqav2_doc_to_text
