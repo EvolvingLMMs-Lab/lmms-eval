@@ -267,8 +267,9 @@ def okvqa_doc_to_text(doc):
 
 
 def okvqa_aggreate_submissions(results):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"okvqa-submission-{now_date_time}.json"
+    now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
+    os.makedirs("submissions", exist_ok=True)
+    submission_file_name = f"./submissions/okvqa-submission-{now_date_time}.json"
     path = os.path.abspath(submission_file_name)
     with open(path, "w") as f:
         json.dump(results, f)
