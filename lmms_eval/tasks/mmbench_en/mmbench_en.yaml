@@ -1,0 +1,15 @@
+group: mmbench_en
+task:
+  - mmbench_en_dev
+  - mmbench_en_test
+metadata:
+  version: 0.0
+  sys_prompt: "There are several options:"
+
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original

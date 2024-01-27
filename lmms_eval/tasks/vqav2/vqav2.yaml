@@ -1,8 +1,8 @@
 task: "vqav2"
-dataset_path: HuggingFaceM4/VQAv2
+dataset_path: lmms-lab/VQAv2
 dataset_kwargs:
-  revision: "refs/convert/parquet"
-test_split: test
+  token: True
+test_split: testdev
 output_type: generate_until
 doc_to_visual: !function utils.vqav2_doc_to_visual
 doc_to_text: !function utils.vqav2_doc_to_text

@@ -1,4 +1,3 @@
-group: refcoco+_bbox
 task: refcoco+_bbox_train
 include: _default_template_bbox_yaml
 test_split: train
