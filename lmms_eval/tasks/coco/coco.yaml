@@ -1,3 +1,4 @@
 group : coco
 task:
-  - coco_caption
+  - coco_val
+  - coco_test

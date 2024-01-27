@@ -264,7 +264,8 @@ def vqav2_doc_to_text(doc):
 
 def vqav2_aggreate_submissions(results):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"vqav2-submission-{now_date_time}.json"
+    os.makedirs("./submissions", exist_ok=True)
+    submission_file_name = f"./submissions/vqav2-submission-{now_date_time}.json"
     path = os.path.abspath(submission_file_name)
     with open(path, "w") as f:
         json.dump(results, f)
