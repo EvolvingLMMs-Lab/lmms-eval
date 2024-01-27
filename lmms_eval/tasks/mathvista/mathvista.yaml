@@ -1,0 +1,8 @@
+group: mathvista
+task:
+  - mathvista_testmini
+  - mathvista_test
+metadata:
+  version: 0.0
+  gpt_eval_model_name: "gpt-4-0613"
+  quick_extract: false
