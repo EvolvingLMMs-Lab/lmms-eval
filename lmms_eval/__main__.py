@@ -1,18 +1,22 @@
 import os
 import yaml
 import sys
+import copy
 import json
 import logging
 import argparse
 import numpy as np
 
+from accelerate import Accelerator
 from pathlib import Path
 from typing import Union
 import hashlib
+import wandb
 
 from lmms_eval import evaluator, utils
-from lmms_eval.tasks import initialize_tasks, include_path
+from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict
 from lmms_eval.api.registry import ALL_TASKS
+from lmms_eval.api.wandb import log_eval_result
 
 
 def _handle_non_serializable(o):
@@ -110,11 +114,16 @@ def parse_eval_args() -> argparse.Namespace:
         default="INFO",
         help="Log error when tasks are not registered.",
     )
+    parser.add_argument(
+        "--wandb_args",
+        default="",
+        help="Comma separated string arguments passed to wandb.init, e.g. `project=lmms-eval,job_type=eval",
+    )
     args = parser.parse_args()
     return args
 
 
-def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
+def cli_evaluate(args: Union[argparse.Namespace, None], wandb_run) -> None:
     if args is None:
         args = parse_eval_args()
 
@@ -145,6 +154,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
             print_results(args, results)
+            # Add W&B logic
+            if args.wandb_args:
+                wandb_results = copy.deepcopy(results)
+                log_eval_result(wandb_run, wandb_results)
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
@@ -166,24 +179,39 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     elif args.tasks == "list":
         eval_logger.info("Available Tasks:\n - {}".format(f"\n - ".join(sorted(ALL_TASKS))))
         sys.exit()
+    elif args.tasks == "list_tasks_num":
+        log_message = (
+            "\n" + "=" * 70 + "\n" + "\n\tYou are trying to check all the numbers in each task." + "\n\tThis action will download the complete dataset." + "\n\tIf the results are not clear initially, call this again." + "\n\n" + "=" * 70
+        )
+        eval_logger.info(log_message)
+        task_dict = get_task_dict([task for task in sorted(ALL_TASKS)], model_name=args.model)
+        for task_name in task_dict.keys():
+            task_obj = task_dict[task_name]
+            if type(task_obj) == tuple:
+                group, task_obj = task_obj
+                if task_obj is None:
+                    continue
+            eval_logger.info(f"\nTask : {task_obj.config.task}\n - #num : {len(task_obj.test_docs()) if task_obj.has_test_docs() else task_obj.validation_docs()}")
+        sys.exit()
     else:
         tasks_list = args.tasks.split(",")
+        eval_logger.info(f"Evaluating on {len(tasks_list)} tasks.")
         task_names = utils.pattern_match(tasks_list, ALL_TASKS)
         task_missing = [task for task in tasks_list if task not in task_names and "*" not in task]  # we don't want errors if a wildcard ("*") task name was used
 
         if task_missing:
             missing = ", ".join(task_missing)
             eval_logger.error(
-                f"Tasks were not found: {missing}\n" f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
+                f"Tasks were not found: {missing}. Try `lmms-eval --tasks list` for list of available tasks",
             )
-            raise ValueError(f"Tasks {missing} were not found. Try `lmms-eval --tasks list` for list of available tasks.")
+            # eval_logger.warn(f"Tasks {missing} were not found. Try `lmms-eval --tasks list` for list of available tasks.")
 
     if args.output_path:
         hash_input = f"{args.model_args}_{args.tasks}".encode("utf-8")
         hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
         datetime_str = utils.get_datetime_str()
         path = Path(args.output_path)
-        path = path.expanduser().resolve().joinpath(f"{args.model}_{datetime_str}_{hash_output}")
+        path = path.expanduser().resolve().joinpath(f"{args.model}_{datetime_str}_{hash_output}_{args.log_samples_suffix}")
         # check if file or 'dir/results.json' exists
         if path.is_file() or path.joinpath("results.json").is_file():
             eval_logger.warning(f"File already exists at {path}. Results will be overwritten.")
@@ -262,12 +290,20 @@ if __name__ == "__main__":
     else:
         args_list.append(args)
 
+    # initialize Accelerator
+    accelerator = Accelerator()
+
+    if accelerator.is_main_process:
+        # initialize a W&B run only on rank 0
+        wandb_args_dict = utils.simple_parse_args_string(args.wandb_args)
+        wandb_run = wandb.init(**wandb_args_dict)
+        is_main_process = True
+    else:
+        wandb_run = None
+        is_main_process = False
+
     # run each config
+    args.is_main_process = is_main_process
     for args in args_list:
-        results = cli_evaluate(args)
+        results = cli_evaluate(args, wandb_run)
         results_list.append(results)
-    # print results
-    for args, results in zip(args_list, results_list):
-        # cli_evaluate will return none if the process is not the main process (rank 0)
-        if results is not None:
-            print_results(args, results)

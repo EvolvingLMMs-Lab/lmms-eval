@@ -1,7 +1,8 @@
 import os
 import yaml
 
-splits = ["train", "test", "val"]
+# splits = ["train", "test", "val"]
+splits = ["test", "val"]
 tasks = ["seg", "bbox"]
 
 if __name__ == "__main__":
