@@ -18,8 +18,8 @@ def nocaps_doc_to_visual(doc):
 
 
 def nocaps_doc_to_text(doc):
-    question = "Please carefully observe the image and come up with a caption for the image"
-    return f"{question}\nAnswer the question with a short phrase."
+    # question = "Please carefully observe the image and come up with a caption for the image"
+    return f"Provide a one-sentence caption for the provided image."
 
 
 def nocaps_process_result(doc, result):
