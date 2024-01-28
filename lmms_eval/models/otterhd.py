@@ -72,7 +72,7 @@ class OtterHD(lmms):
             toks = self.tok_encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(total=len(requests), desc="Model Responding")
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
