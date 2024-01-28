@@ -1,4 +1,5 @@
 import json
+import os
 
 
 def infovqa_doc_to_visual(doc):
@@ -20,6 +21,7 @@ def infovqa_test_process_results(doc, results):
 
 def infovqa_test_aggregate_results(results):
     # save results as json
-    with open("infovqa_test_for_submission.json", "w") as f:
+    os.makedirs("./submissions", exist_ok=True)
+    with open("./submissions/infovqa_test_for_submission.json", "w") as f:
         json.dump(results, f)
     return -1

@@ -1,5 +1,6 @@
 task: vizwizvqa_val
 dataset_path: lmms-lab/VizWiz-VQA
+dataset_kwargs:
   token: True
 test_split: val
 output_type: generate_until
