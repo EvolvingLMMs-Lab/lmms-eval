@@ -9,7 +9,7 @@ import statistics
 
 eval_logger = logging.getLogger("lmms-eval")
 
-with open(pathlib.Path(__file__).parent / "vizwizvqa.yaml", "r") as f:
+with open(pathlib.Path(__file__).parent / "vizwizvqa_val.yaml", "r") as f:
     raw_data = f.readlines()
     for i in range(len(raw_data)):
         raw_data[i] = raw_data[i].replace("!function", "function")
@@ -265,7 +265,8 @@ def vizwizvqa_doc_to_text(doc):
 
 def vizwizvqa_aggreate_submissions(results):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"vizwizvqa-submission-{now_date_time}.json"
+    os.makedirs("./submissions", exist_ok=True)
+    submission_file_name = f"./submissions/vizwizvqa-val-submission-{now_date_time}.json"
     path = os.path.abspath(submission_file_name)
     with open(path, "w") as f:
         json.dump(results, f)

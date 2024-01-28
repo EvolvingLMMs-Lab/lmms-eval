@@ -124,7 +124,7 @@ def llava_process_results(doc, result):
         model_name = "Failed Request"
         scores = [-1, -1]
 
-    metric = f"gpt_eval_llava_{doc.get('category', 'unknown')}"
+    metric = f"gpt_eval_llava_{doc.get('category', 'all')}"
     review_dict = {
         "question": question,
         "ans1": ans1,
@@ -172,5 +172,5 @@ def llava_aggregation(results, category):
         # eval_logger.info("=========================")
         return round(stats[1] / stats[0] * 100, 1)
     except Exception as e:
-        eval_logger.error(f"Error in llava_aggregation: {e}")
+        eval_logger.info(f"Error in llava_aggregation: {e}, and in category: {category}")
         return None
