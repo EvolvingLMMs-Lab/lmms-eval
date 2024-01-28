@@ -315,7 +315,7 @@ def evaluate(
             # Don't use above one, this would crash if doc_iterator_for_counting contains too many objects and very slow
             doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), lm.rank, limit, lm.world_size) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), lm.rank, limit, lm.world_size)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
-            pbar = tqdm(total=total_docs, desc="Postprocessing", position=lm.rank)
+            pbar = tqdm(total=total_docs, desc=f"Postprocessing {lm.rank}", position=lm.rank)
             for doc_id, doc in doc_iterator:
                 # subset instances to only this document id ; sort by idx
                 requests = list(filter(lambda x: x.doc_id == doc_id, task.instances))
@@ -336,6 +336,8 @@ def evaluate(
                 for metric, value in metrics.items():
                     vals[(task_name, key, metric)].append(value)
                 pbar.update(1)
+
+            pbar.close()
 
     if lm.world_size > 1:
         # if multigpu, then gather data across all ranks
