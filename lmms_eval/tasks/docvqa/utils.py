@@ -1,4 +1,5 @@
 import json
+import os
 
 
 def docvqa_doc_to_visual(doc):
@@ -20,7 +21,7 @@ def docvqa_test_process_results(doc, results):
 
 def docvqa_test_aggregate_results(results):
     # save results as json
-
-    with open("docvqa_test_for_submission.json", "w") as f:
+    os.makedirs("./submissions", exist_ok=True)
+    with open("./submissions/docvqa_test_for_submission.json", "w") as f:
         json.dump(results, f)
     return -1
