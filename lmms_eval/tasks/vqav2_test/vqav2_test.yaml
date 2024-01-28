@@ -11,11 +11,6 @@ generation_kwargs:
   until:
     - "ASSISTANT:"
 metric_list:
-  - metric: exact_match
-    aggregation: mean
-    higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
   - metric: submission
     aggregation: !function utils.vqav2_aggreate_submissions
     higher_is_better: true

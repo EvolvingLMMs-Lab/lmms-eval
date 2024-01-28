@@ -1,5 +1,5 @@
 dataset_path: lmms-lab/MMMU
-task: "mmmu"
+task: "mmmu_val"
 test_split: validation
 output_type: generate_until
 doc_to_visual: !function utils.mmmu_doc_to_visual
