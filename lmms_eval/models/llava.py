@@ -255,7 +255,7 @@ class Llava(lmms):
                 elif not isinstance(until, list):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
-            if "image_aspect_ratio" in gen_kwargs.keys():
+            if "image_aspect_ratio" in gen_kwargs.keys() and "image_aspect_ratio" not in self._config.__dict__:
                 # here we should pop it out of gen_kwargs so that it doesn't get passed to the model for next step of generation
                 self._config.image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio")
 
