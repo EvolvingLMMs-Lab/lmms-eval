@@ -18,8 +18,8 @@ def textcaps_doc_to_visual(doc):
 
 
 def textcaps_doc_to_text(doc):
-    question = doc["question"]
-    return f"{question}\nAnswer the question with a short phrase."
+    # question = doc["question"]
+    return f"Provide a one-sentence caption for the provided image."
 
 
 def textcaps_process_result(doc, result):
