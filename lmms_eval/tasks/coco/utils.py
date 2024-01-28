@@ -19,7 +19,7 @@ def coco_doc_to_visual(doc):
 
 def coco_doc_to_text(doc):
     question = doc["question"]
-    return f"{question}\nAnswer the question with a short phrase."
+    return f"{question}\nDescribe this image briefly using a single sentence."
 
 
 def coco_process_result(doc, result):
