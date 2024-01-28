@@ -7,15 +7,6 @@ import logging
 import datetime
 import statistics
 
-eval_logger = logging.getLogger("lmms-eval")
-
-with open(pathlib.Path(__file__).parent / "textvqa.yaml", "r") as f:
-    raw_data = f.readlines()
-    for i in range(len(raw_data)):
-        raw_data[i] = raw_data[i].replace("!function", "function")
-
-    config = yaml.safe_load("".join(raw_data))
-
 
 class EvalAIAnswerProcessor:
     """
@@ -261,12 +252,18 @@ def textvqa_process_results(doc, result):
     }
 
 
-def textvqa_doc_to_text(doc):
+def textvqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    pre_prompt = ""
+    post_prompt = ""
     ocr_ref = ""
-    if "have_ocr_reference" in config["metadata"] and config["metadata"]["have_ocr_prompt"] and doc["ocr_tokens"]:
-        ocr_ref = f"Reference OCR token: {', '.join(doc['ocr_tokens'])}\n"
-    text = f"{doc['question'].capitalize()}\n{ocr_ref}Answer the question using a single word or phrase."
-    return text
+    if model_specific_prompt_kwargs:
+        if "pre_prompt" in model_specific_prompt_kwargs:
+            pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+        if "post_prompt" in model_specific_prompt_kwargs:
+            post_prompt = model_specific_prompt_kwargs["post_prompt"]
+        if "ocr" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["ocr"]:
+            ocr_ref = f"\nReference OCR token: {', '.join(doc['ocr_tokens'])}"
+    return f"{pre_prompt}{doc['question'].capitalize()}{ocr_ref}{post_prompt}"
 
 
 def textvqa_aggreate_submissions(results):

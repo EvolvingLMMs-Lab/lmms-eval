@@ -18,6 +18,7 @@ profile_default/
 ipython_config.py
 logs/
 scripts/
+wandb/
 SimSun.ttf
 submissions/
 
