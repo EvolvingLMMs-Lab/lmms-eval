@@ -7,17 +7,14 @@ import logging
 import datetime
 import statistics
 
-eval_logger = logging.getLogger("lmms-eval")
-
-with open(pathlib.Path(__file__).parent / "vizwizvqa.yaml", "r") as f:
-    raw_data = f.readlines()
-    for i in range(len(raw_data)):
-        raw_data[i] = raw_data[i].replace("!function", "function")
-
-    config = yaml.safe_load("".join(raw_data))
-
 
 class EvalAIAnswerProcessor:
+    """
+    Processes an answer similar to Eval AI
+        copied from
+        https://github.com/facebookresearch/mmf/blob/c46b3b3391275b4181567db80943473a89ab98ab/pythia/tasks/processors.py#L897
+    """
+
     CONTRACTIONS = {
         "aint": "ain't",
         "arent": "aren't",
@@ -188,7 +185,6 @@ class EvalAIAnswerProcessor:
     def word_tokenize(self, word):
         word = word.lower()
         word = word.replace(",", "").replace("?", "").replace("'s", " 's")
-        word = word.replace("\n", " ").replace("\t", " ").strip()
         return word.strip()
 
     def process_punctuation(self, in_text):
@@ -218,16 +214,17 @@ class EvalAIAnswerProcessor:
 
     def __call__(self, item):
         item = self.word_tokenize(item)
+        item = item.replace("\n", " ").replace("\t", " ").strip()
         item = self.process_punctuation(item)
         item = self.process_digit_article(item)
         return item
 
 
-def vizwizvqa_doc_to_visual(doc):
+def textvqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def vizwizvqa_process_results(doc, result):
+def textvqa_process_results(doc, result):
     eval_ai_processor = EvalAIAnswerProcessor()
     assert len(result) == 1, f"The result should be a list of length 1, but got {len(result)}."
     resAns = eval_ai_processor(result[0])
@@ -244,29 +241,35 @@ def vizwizvqa_process_results(doc, result):
             matchingAns = [item for item in otherGTAns if item == resAns]
             acc = min(1, float(len(matchingAns)) / 3)
             gtAcc.append(acc)
-        if gtAcc:
-            accuracy = statistics.mean(gtAcc)
-        else:
-            accuracy = 0
+        accuracy = statistics.mean(gtAcc)
 
     return {
         "exact_match": accuracy,
         "submission": {
-            "image": f"{doc['question_id']}.jpg",
+            "question_id": doc["question_id"],
             "answer": resAns,
         },
     }
 
 
-def vizwizvqa_doc_to_text(doc):
-    text = f"{doc['question'].capitalize()}\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
-    return text
+def textvqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    pre_prompt = ""
+    post_post = ""
+    ocr_ref = ""
+    if model_specific_prompt_kwargs:
+        if "pre_prompt" in model_specific_prompt_kwargs:
+            pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+        if "post_prompt" in model_specific_prompt_kwargs:
+            post_prompt = model_specific_prompt_kwargs["post_prompt"]
+        if "ocr" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["ocr"]:
+            ocr_ref = f"\nReference OCR token: {', '.join(doc['ocr_tokens'])}"
+    return f"{pre_prompt}{doc['question'].capitalize()}{ocr_ref}{post_prompt}"
 
 
-def vizwizvqa_aggreate_submissions(results):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
-    os.makedirs("submissions", exist_ok=True)
-    submission_file_name = f"./submissions/vizwizvqa-submission-{now_date_time}.json"
+def textvqa_aggreate_submissions(results):
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    os.makedirs("./submissions", exist_ok=True)
+    submission_file_name = f"./submissions/textvqa_submission_{now_date_time}.json"
     path = os.path.abspath(submission_file_name)
     with open(path, "w") as f:
         json.dump(results, f)
