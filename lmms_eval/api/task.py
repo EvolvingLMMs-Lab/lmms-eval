@@ -342,8 +342,7 @@ class Task(abc.ABC):
         else:
             assert False, f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!"
 
-        eval_logger.info(f"Building contexts for task on rank {rank}...")
-
+        eval_logger.info(f"Building contexts for task {self.CONFIG.task} on rank {rank}...")
         instances = []
         doc_id_iterator = utils.create_iterator([i for i in range(len(docs))], rank, world_size, limit)
         doc_id_iterator, doc_id_iterator_counting = itertools.tee(doc_id_iterator)
@@ -362,6 +361,7 @@ class Task(abc.ABC):
             instances.extend(inst)
             pbar.update(1)
 
+        pbar.close()
         self._instances = instances
         assert len(self._instances) != 0, "task.build_requests() did not find any docs!"
 
