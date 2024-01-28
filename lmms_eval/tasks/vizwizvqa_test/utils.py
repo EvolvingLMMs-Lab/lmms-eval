@@ -9,7 +9,7 @@ import statistics
 
 eval_logger = logging.getLogger("lmms-eval")
 
-with open(pathlib.Path(__file__).parent / "okvqa.yaml", "r") as f:
+with open(pathlib.Path(__file__).parent / "vizwizvqa_test.yaml", "r") as f:
     raw_data = f.readlines()
     for i in range(len(raw_data)):
         raw_data[i] = raw_data[i].replace("!function", "function")
@@ -18,12 +18,6 @@ with open(pathlib.Path(__file__).parent / "okvqa.yaml", "r") as f:
 
 
 class EvalAIAnswerProcessor:
-    """
-    Processes an answer similar to Eval AI
-        copied from
-        https://github.com/facebookresearch/mmf/blob/c46b3b3391275b4181567db80943473a89ab98ab/pythia/tasks/processors.py#L897
-    """
-
     CONTRACTIONS = {
         "aint": "ain't",
         "arent": "aren't",
@@ -229,11 +223,11 @@ class EvalAIAnswerProcessor:
         return item
 
 
-def okvqa_doc_to_visual(doc):
+def vizwizvqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def okvqa_process_results(doc, result):
+def vizwizvqa_process_results(doc, result):
     eval_ai_processor = EvalAIAnswerProcessor()
     assert len(result) == 1, f"The result should be a list of length 1, but got {len(result)}."
     resAns = eval_ai_processor(result[0])
@@ -250,26 +244,29 @@ def okvqa_process_results(doc, result):
             matchingAns = [item for item in otherGTAns if item == resAns]
             acc = min(1, float(len(matchingAns)) / 3)
             gtAcc.append(acc)
-        accuracy = statistics.mean(gtAcc)
+        if gtAcc:
+            accuracy = statistics.mean(gtAcc)
+        else:
+            accuracy = 0
 
     return {
-        "exact_match": accuracy,
+        # "exact_match": accuracy,
         "submission": {
-            "question_id": doc["question_id"],
+            "image": f"{doc['question_id']}.jpg",
             "answer": resAns,
         },
     }
 
 
-def okvqa_doc_to_text(doc):
-    text = f"{doc['question'].capitalize()}\n Answer the question using a single word or phrase."
+def vizwizvqa_doc_to_text(doc):
+    text = f"{doc['question'].capitalize()}\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
     return text
 
 
-def okvqa_aggreate_submissions(results):
+def vizwizvqa_aggreate_submissions(results):
     now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
     os.makedirs("./submissions", exist_ok=True)
-    submission_file_name = f"./submissions/okvqa-submission-{now_date_time}.json"
+    submission_file_name = f"./submissions/vizwizvqa-test-submission-{now_date_time}.json"
     path = os.path.abspath(submission_file_name)
     with open(path, "w") as f:
         json.dump(results, f)
