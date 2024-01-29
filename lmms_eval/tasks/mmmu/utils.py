@@ -3,6 +3,8 @@ import re
 import ast
 import random
 import numpy as np
+import os
+import json
 
 MULTI_CHOICE_PROMPT = "Answer with the option letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
@@ -59,6 +61,12 @@ def mmmu_process_results(doc, results):
     return {"mmmu_acc": {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}}
 
 
+def mmmu_process_test_results_for_submission(doc, results):
+    pred = results[0]
+    id = doc["id"]
+    return {"mmmu_acc": {id: pred}}
+
+
 def extract_subset_name(input_string):
     # Define a regex pattern to match "validation_" at the beginning and "_<number>" at the end
     split = input_string.split("_")[0]
@@ -68,6 +76,13 @@ def extract_subset_name(input_string):
         return match.group(1)
     else:
         raise ValueError(f'No match found in "{input_string}"')
+
+
+def mmmu_test_aggregate_results_for_submission(results):
+    os.makedirs("./submissions", exist_ok=True)
+    with open("./submissions/mmmu_test_for_submission.json", "w") as f:
+        json.dump(results, f)
+    return -1
 
 
 def mmmu_aggregate_results(results):
