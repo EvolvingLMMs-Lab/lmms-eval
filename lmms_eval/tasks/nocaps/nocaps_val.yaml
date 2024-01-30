@@ -9,9 +9,7 @@ doc_to_visual: !function utils.nocaps_doc_to_visual
 doc_to_text: !function utils.nocaps_doc_to_text
 doc_to_target: "annotations_captions"
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
-  max_new_tokens: 1024
+  max_new_tokens: 64
   temperature: 0
   top_p: 0
   num_beams: 1

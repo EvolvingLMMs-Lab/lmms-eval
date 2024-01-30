@@ -22,18 +22,22 @@ eval_type_dict = {
 }
 
 
-replace_prompt = "Please answer yes or no."
+replace_prompt = " Please answer yes or no."
 
 
 def mme_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def mme_doc_to_text(doc):
-    question = doc["question"]
-    # TODO: This is a hack. We should fix this in the dataset.
-    question = question.replace(replace_prompt, "").strip()
-    return f"{question}\nAnswer the question using a single word or phrase."
+def mme_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    question = doc["question"].strip()
+    if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
+        question = question.replace(replace_prompt, "")
+        question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
+    if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
+        question = question.replace(replace_prompt, "")
+        question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
+    return question
 
 
 def parse_pred_ans(pred_ans):
