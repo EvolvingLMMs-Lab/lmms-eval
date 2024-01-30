@@ -52,7 +52,7 @@ ch = logging.StreamHandler()
 # ch.setLevel(logging.INFO)
 
 # Create a formatter and set it to the handler, ONLY MAKING IT SHOW THE LAST 3 FOLDERS of a path
-formatter = PathFormatter("%(asctime)s,%(msecs)03d %(levelname)-8s [%(pathname)s:%(lineno)d] %(message)s", "%Y-%m-%d:%H:%M:%S")
+formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(message)s", "%m-%d:%H:%M:%S")
 ch.setFormatter(formatter)
 
 eval_logger.addHandler(ch)
