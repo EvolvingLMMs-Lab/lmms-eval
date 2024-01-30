@@ -1,12 +1,12 @@
-dataset_path: lmms-lab/COCO-Caption
+dataset_path: lmms-lab/COCO-Caption2017
 dataset_kwargs:
   token: True
-task: "coco_val"
-group : "coco_caption"
+task: "coco_val2017"
+group : "coco_caption2017"
 test_split: val
 output_type: generate_until
 doc_to_visual: !function utils.coco_doc_to_visual
-doc_to_text: "Provide a one-sentence caption for the provided image."
+doc_to_text: !function utils.coco_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
   max_new_tokens: 64
