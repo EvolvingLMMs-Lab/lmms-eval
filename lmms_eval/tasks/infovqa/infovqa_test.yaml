@@ -3,7 +3,7 @@ dataset_name: InfographicVQA
 dataset_kwargs:
   token: True
 task: "infovqa_test"
-test_split: validation
+test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.infovqa_doc_to_visual
 doc_to_text: !function utils.infovqa_doc_to_text

@@ -6,12 +6,10 @@ group : "coco_caption"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.coco_doc_to_visual
-doc_to_text: !function utils.coco_doc_to_text
+doc_to_text: "Provide a one-sentence caption for the provided image."
 doc_to_target: "answer"
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
-  max_new_tokens: 1024
+  max_new_tokens: 128
   temperature: 0
   top_p: 0
   num_beams: 1
