@@ -262,7 +262,7 @@ def okvqa_process_results(doc, result):
 
 
 def okvqa_doc_to_text(doc):
-    text = f"{doc['question'].capitalize()}\n Answer the question using a single word or phrase."
+    text = f"{doc['question'].capitalize()}\nAnswer the question using a single word."
     return text
 
 
