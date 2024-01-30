@@ -8,8 +8,7 @@ doc_to_visual: !function utils.vqav2_doc_to_visual
 doc_to_text: !function utils.vqav2_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
+  max_new_tokens: 16
 metric_list:
   - metric: submission
     aggregation: !function utils.vqav2_aggreate_submissions
