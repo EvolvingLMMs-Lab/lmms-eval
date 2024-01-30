@@ -9,9 +9,7 @@ doc_to_visual: !function utils.mmbench_doc_to_visual
 doc_to_text: !function utils.mmbench_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
-  max_new_tokens: 1024
+  max_new_tokens: 256
   temperature: 0
   top_p: 0
   num_beams: 1
