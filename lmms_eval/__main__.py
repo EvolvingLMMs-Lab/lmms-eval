@@ -123,7 +123,7 @@ def parse_eval_args() -> argparse.Namespace:
     return args
 
 
-def cli_evaluate(args: Union[argparse.Namespace, None], wandb_run) -> None:
+def cli_evaluate(args: Union[argparse.Namespace, None] = None, wandb_run=None) -> None:
     if args is None:
         args = parse_eval_args()
 
@@ -292,10 +292,22 @@ if __name__ == "__main__":
 
     # initialize Accelerator
     accelerator = Accelerator()
+    all_args_dict = vars(args)
 
     if accelerator.is_main_process:
         # initialize a W&B run only on rank 0
         wandb_args_dict = utils.simple_parse_args_string(args.wandb_args)
+        if "name" not in wandb_args_dict:
+            if "config" not in all_args_dict:
+                # use the model name and task names as run name
+                task_names = args.tasks.replace(",", "_")
+                wandb_args_dict["name"] = f"{args.model}_{task_names}_{args.log_samples_suffix}"
+                if args.num_fewshot:
+                    wandb_args_dict["name"] += f"_{args.num_fewshot}shot"
+            else:
+                # use the name of the config file as run name
+                wandb_args_dict["name"] = all_args_dict["config"].split("/")[-1].split(".")[0]
+
         wandb_run = wandb.init(**wandb_args_dict)
         is_main_process = True
     else:
@@ -307,3 +319,6 @@ if __name__ == "__main__":
     for args in args_list:
         results = cli_evaluate(args, wandb_run)
         results_list.append(results)
+
+    if is_main_process:
+        wandb_run.finish()
