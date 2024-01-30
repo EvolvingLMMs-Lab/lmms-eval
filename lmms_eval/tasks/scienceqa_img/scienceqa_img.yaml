@@ -1,6 +1,6 @@
 dataset_path: lmms-lab/ScienceQA
-dataset_name: ScienceQA-FULL
-task: "scienceqa"
+dataset_name: ScienceQA-IMG
+task: "scienceqa_img"
 dataset_kwargs:
   token: True
 test_split: test
