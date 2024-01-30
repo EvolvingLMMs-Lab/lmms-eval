@@ -307,7 +307,6 @@ if __name__ == "__main__":
             else:
                 # use the name of the config file as run name
                 wandb_args_dict["name"] = all_args_dict["config"].split("/")[-1].split(".")[0]
-
         wandb_run = wandb.init(**wandb_args_dict)
         is_main_process = True
     else:
