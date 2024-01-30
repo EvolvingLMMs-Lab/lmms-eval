@@ -6,8 +6,11 @@ doc_to_visual: !function utils.okvqa_doc_to_visual
 doc_to_text: !function utils.okvqa_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
 metric_list:
   - metric: exact_match
     aggregation: mean
