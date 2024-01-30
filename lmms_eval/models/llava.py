@@ -258,7 +258,7 @@ class Llava(lmms):
             if "image_aspect_ratio" in gen_kwargs.keys() and "image_aspect_ratio" not in self._config.__dict__:
                 # here we should pop it out of gen_kwargs so that it doesn't get passed to the model for next step of generation
                 self._config.image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio")
-
+                eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
             # encode, pad, and truncate contexts for this batch
             if visuals:
                 image_tensor = process_images(visuals, self._image_processor, self._config)
@@ -289,7 +289,7 @@ class Llava(lmms):
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
 
             # preconfigure gen_kwargs with defaults
-            gen_kwargs["image_sizes"] = [visuals[0].size]
+            gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -318,9 +318,11 @@ class Llava(lmms):
                     use_cache=self.use_cache,
                 )
             except Exception as e:
-                print("Error in generating")
+                eval_logger.error(f"Error {e} in generating")
                 cont = ""
-                raise e
+                eval_logger.error(prompt)
+                eval_logger.error(visuals)
+                eval_logger.error(prompts_input)
 
             cont_toks_list = cont.tolist()
             for cont_toks, context in zip(cont_toks_list, contexts):
