@@ -29,7 +29,7 @@ import transformers
 
 from jinja2 import BaseLoader, Environment, StrictUndefined
 from itertools import islice
-
+import pytz
 import logging
 
 
@@ -485,11 +485,15 @@ def get_git_commit_hash():
     return git_hash
 
 
-def get_datetime_str():
+def get_datetime_str(timezone="Asia/Singapore"):
     """
-    Gets the current datetime as a string.
+    Gets the current datetime in UTC+8 timezone as a string.
     """
-    return datetime.datetime.now().strftime("%m%d_%H%M")
+    # Default: UTC+8 timezone
+    tz = pytz.timezone(timezone)
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    local_time = utc_now.astimezone(tz)
+    return local_time.strftime("%m%d_%H%M")
 
 
 def import_function(loader, node):
