@@ -9,16 +9,15 @@ from lmms_eval.api.instance import Instance
 from tqdm import tqdm
 
 
-@register_model("otterhd")
-class OtterHD(lmms):
+@register_model("fuyu")
+class Fuyu(lmms):
     """
-    OtterHD Model
+    Fuyu Model
     """
 
     def __init__(
         self,
-        pretrained: str = "Otter-AI/OtterHD-8B",
-        resolution: str = "360x360",
+        pretrained: str = "adept/fuyu-8b",
         device: Optional[str] = "cuda",
         max_new_tokens: int = 256,
         batch_size: Optional[Union[int, str]] = 1,
@@ -32,12 +31,10 @@ class OtterHD(lmms):
         self.model = FuyuForCausalLM.from_pretrained(pretrained, torch_dtype=torch.bfloat16, device_map=self.device)
         self.model.eval()
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained)
-        height, width = map(int, resolution.split("x"))
-        self.image_processor = FuyuImageProcessor(size={"height": height, "width": width})
+        self.image_processor = FuyuImageProcessor()
         self.processor = FuyuProcessor(image_processor=self.image_processor, tokenizer=self.tokenizer)
         self.max_new_tokens = max_new_tokens
         self.batch_size_per_gpu = int(batch_size)
-        assert self.batch_size_per_gpu == 1, "OtterHD currently does not support batched generation."
 
     @property
     def max_length(self):
@@ -90,8 +87,10 @@ class OtterHD(lmms):
             # if isinstance(visuals[0], list):
             #     visuals = [visuals[idx][0] for idx in range(len(visuals))]  # get the first image in multi-image scenarios.
 
-            formatted_contexts = [f"User: {context} Assistant:" for context in contexts]
-            model_inputs = self.processor(text=[formatted_contexts], images=visuals, device=self.device)
+            # assert len(contexts) == self.batch_size_per_gpu, f"Expected contexts batch size {self.batch_size_per_gpu}, got {len(contexts)}"
+            # assert len(visuals) == self.batch_size_per_gpu, f"Expected visuals batch size {self.batch_size_per_gpu}, got {len(visuals)}"
+            formatted_contexts = [f"{context}\n" for context in contexts]
+            model_inputs = self.processor(text=formatted_contexts, images=visuals, device=self.device)
             for k, v in model_inputs.items():
                 model_inputs[k] = v.to(self.device, non_blocking=True) if isinstance(v, torch.Tensor) else [vv.to(self.device, non_blocking=True) for vv in v]
 
