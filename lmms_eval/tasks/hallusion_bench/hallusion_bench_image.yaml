@@ -9,7 +9,7 @@ doc_to_text: !function evaluate_hb.hb_doc_to_text
 doc_to_target: "gt_answer_details"
 process_results: !function evaluate_hb.hb_process_results
 generation_kwargs:
-  max_new_tokens: 1024
+  max_new_tokens: 128
   temperature: 0
   top_p: 0
   num_beams: 1
@@ -24,14 +24,14 @@ metric_list:
   - metric: fAcc
     aggregation: !function evaluate_hb.hb_aggregation_result_fAcc
     higher_is_better: true
-  # - metric: aAcc
-  #   aggregation: !function evaluate_hb.hb_aggregation_result_aAcc_intern
-  #   higher_is_better: true
-  # - metric: qAcc
-  #   aggregation: !function evaluate_hb.hb_aggregation_result_qAcc_intern
-  #   higher_is_better: true
-  # - metric: fAcc
-  #   aggregation: !function evaluate_hb.hb_aggregation_result_fAcc_intern
-  #   higher_is_better: true
+  #- metric: aAcc
+  #  aggregation: !function evaluate_hb.hb_aggregation_result_aAcc_intern
+  #  higher_is_better: true
+  #- metric: qAcc
+  #  aggregation: !function evaluate_hb.hb_aggregation_result_qAcc_intern
+  #  higher_is_better: true
+  #- metric: fAcc
+  #  aggregation: !function evaluate_hb.hb_aggregation_result_fAcc_intern
+  #  higher_is_better: true
 metadata:
   - version: 0.0
