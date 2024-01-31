@@ -119,6 +119,11 @@ def parse_eval_args() -> argparse.Namespace:
         default="",
         help="Comma separated string arguments passed to wandb.init, e.g. `project=lmms-eval,job_type=eval",
     )
+    parser.add_argument(
+        "--timezone",
+        default="Asia/Singapore",
+        help="Timezone for datetime string, e.g. Asia/Singapore, America/New_York, America/Los_Angeles",
+    )
     args = parser.parse_args()
     return args
 
@@ -206,26 +211,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             )
             # eval_logger.warn(f"Tasks {missing} were not found. Try `lmms-eval --tasks list` for list of available tasks.")
 
-    if args.output_path:
-        hash_input = f"{args.model_args}_{args.tasks}".encode("utf-8")
-        hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
-        datetime_str = utils.get_datetime_str()
-        path = Path(args.output_path)
-        path = path.expanduser().resolve().joinpath(f"{args.model}_{datetime_str}_{hash_output}_{args.log_samples_suffix}")
-        # check if file or 'dir/results.json' exists
-        if path.is_file() or path.joinpath("results.json").is_file():
-            eval_logger.warning(f"File already exists at {path}. Results will be overwritten.")
-            output_path_file = path.joinpath("results.json")
-            assert not path.is_file(), "File already exists"
-        # if path json then get parent dir
-        elif path.suffix in (".json", ".jsonl"):
-            output_path_file = path
-        else:
-            output_path_file = path.joinpath("results.json")
-    elif args.log_samples and not args.output_path:
-        assert args.output_path, "Specify --output_path"
-
     eval_logger.info(f"Selected Tasks: {task_names}")
+
+    # set datetime before evaluation
+    datetime_str = utils.get_datetime_str(timezone=args.timezone)
 
     results = evaluator.simple_evaluate(
         model=args.model,
@@ -241,8 +230,22 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         gen_kwargs=args.gen_kwargs,
     )
 
-    if results is not None:
+    if args.output_path:
+        hash_input = f"{args.model_args}".encode("utf-8")
+        hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
+        path = Path(args.output_path)
+        path = path.expanduser().resolve().joinpath(f"{args.model}").joinpath(f"model_args_{hash_output}").joinpath(f"{datetime_str}")
         path.mkdir(parents=True, exist_ok=True)
+        assert path.is_dir(), f"Output path {path} is not a directory"
+
+        output_path_file = path.joinpath("results.json")
+        if output_path_file.exists():
+            eval_logger.warning(f"Output file {output_path_file} already exists and will be overwritten.")
+
+    elif args.log_samples and not args.output_path:
+        assert args.output_path, "Specify --output_path"
+
+    if results is not None:
         if args.log_samples:
             samples = results.pop("samples")
         dumped = json.dumps(results, indent=4, default=_handle_non_serializable)
@@ -254,7 +257,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
             if args.log_samples:
                 for task_name, config in results["configs"].items():
-                    output_name = f"{args.model}_{task_name}_{args.log_samples_suffix}"
+                    output_name = f"{task_name}_{args.log_samples_suffix}"
                     filename = path.joinpath(f"{output_name}.json")
                     # Structure the data with 'args' and 'logs' keys
                     data_to_dump = {"args": vars(args), "config": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
@@ -293,24 +296,25 @@ if __name__ == "__main__":
     # initialize Accelerator
     accelerator = Accelerator()
     all_args_dict = vars(args)
+    wandb_run = None
 
     if accelerator.is_main_process:
         # initialize a W&B run only on rank 0
         wandb_args_dict = utils.simple_parse_args_string(args.wandb_args)
-        if "name" not in wandb_args_dict:
-            if "config" not in all_args_dict:
-                # use the model name and task names as run name
-                task_names = args.tasks.replace(",", "_")
-                wandb_args_dict["name"] = f"{args.model}_{task_names}_{args.log_samples_suffix}"
-                if args.num_fewshot:
-                    wandb_args_dict["name"] += f"_{args.num_fewshot}shot"
-            else:
-                # use the name of the config file as run name
-                wandb_args_dict["name"] = all_args_dict["config"].split("/")[-1].split(".")[0]
-        wandb_run = wandb.init(**wandb_args_dict)
+        if wandb_args_dict:
+            if "name" not in wandb_args_dict:
+                if "config" not in all_args_dict:
+                    # use the model name and task names as run name
+                    task_names = args.tasks.replace(",", "_")
+                    wandb_args_dict["name"] = f"{args.model}_{task_names}_{args.log_samples_suffix}"
+                    if args.num_fewshot:
+                        wandb_args_dict["name"] += f"_{args.num_fewshot}shot"
+                else:
+                    # use the name of the config file as run name
+                    wandb_args_dict["name"] = all_args_dict["config"].split("/")[-1].split(".")[0]
+            wandb_run = wandb.init(**wandb_args_dict)
         is_main_process = True
     else:
-        wandb_run = None
         is_main_process = False
 
     # run each config
@@ -319,5 +323,5 @@ if __name__ == "__main__":
         results = cli_evaluate(args, wandb_run)
         results_list.append(results)
 
-    if is_main_process:
+    if is_main_process and wandb_run is not None:
         wandb_run.finish()
