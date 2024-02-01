@@ -215,6 +215,15 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
     # set datetime before evaluation
     datetime_str = utils.get_datetime_str(timezone=args.timezone)
+    if args.output_path:
+        hash_input = f"{args.model_args}".encode("utf-8")
+        hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
+        path = Path(args.output_path)
+        path = path.expanduser().resolve().joinpath(f"{args.model}").joinpath(f"model_args_{hash_output}").joinpath(f"{datetime_str}_{args.log_samples_suffix}")
+        args.output_path = path
+
+    elif args.log_samples and not args.output_path:
+        assert args.output_path, "Specify --output_path"
 
     results = evaluator.simple_evaluate(
         model=args.model,
@@ -228,22 +237,8 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         show_task_to_terminal=args.show_task_to_terminal,
         log_samples=args.log_samples,
         gen_kwargs=args.gen_kwargs,
+        cli_args=args,
     )
-
-    if args.output_path:
-        hash_input = f"{args.model_args}".encode("utf-8")
-        hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
-        path = Path(args.output_path)
-        path = path.expanduser().resolve().joinpath(f"{args.model}").joinpath(f"model_args_{hash_output}").joinpath(f"{datetime_str}")
-        path.mkdir(parents=True, exist_ok=True)
-        assert path.is_dir(), f"Output path {path} is not a directory"
-
-        output_path_file = path.joinpath("results.json")
-        if output_path_file.exists():
-            eval_logger.warning(f"Output file {output_path_file} already exists and will be overwritten.")
-
-    elif args.log_samples and not args.output_path:
-        assert args.output_path, "Specify --output_path"
 
     if results is not None:
         if args.log_samples:
@@ -253,12 +248,15 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             print(dumped)
 
         if args.output_path:
-            output_path_file.open("w").write(dumped)
+            args.output_path.mkdir(parents=True, exist_ok=True)
+            result_file_path = path.joinpath("results.json")
+            if result_file_path.exists():
+                eval_logger.warning(f"Output file {result_file_path} already exists and will be overwritten.")
 
+            result_file_path.open("w").write(dumped)
             if args.log_samples:
                 for task_name, config in results["configs"].items():
-                    output_name = f"{task_name}_{args.log_samples_suffix}"
-                    filename = path.joinpath(f"{output_name}.json")
+                    filename = args.output_path.joinpath(f"{task_name}.json")
                     # Structure the data with 'args' and 'logs' keys
                     data_to_dump = {"args": vars(args), "config": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
                     samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable)
