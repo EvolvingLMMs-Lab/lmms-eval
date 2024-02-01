@@ -68,19 +68,21 @@ def mmbench_process_results(doc, results):
     }
 
 
-def mmbench_aggregate_dev_results(results):
+def mmbench_aggregate_dev_results(results, args):
     df = pd.DataFrame(results)
-    os.makedirs("./submissions", exist_ok=True)
-    with pd.ExcelWriter("./submissions/mmbench_cn_dev_results.xlsx") as writer:
+    Path(args.output_path).joinpath("submissions").mkdir(parents=True, exist_ok=True)
+    excel_write_path = Path(args.output_path) / "submissions" / f"mmbench_cn_dev_results.xlsx"
+    with pd.ExcelWriter(excel_write_path) as writer:
         df.to_excel(writer, index=False)
-    eval_logger.info(f"Saved results to mmbench_cn_dev_results.xlsx")
+    eval_logger.info(f"Saved results to {excel_write_path}")
     return 0
 
 
-def mmbench_aggregate_test_results(results):
+def mmbench_aggregate_test_results(results, args):
     df = pd.DataFrame(results)
-    os.makedirs("./submissions", exist_ok=True)
-    with pd.ExcelWriter("./submissions/mmbench_cn_test_results.xlsx") as writer:
+    Path(args.output_path).joinpath("submissions").mkdir(parents=True, exist_ok=True)
+    excel_write_path = Path(args.output_path) / "submissions" / f"mmbench_cn_test_results.xlsx"
+    with pd.ExcelWriter(excel_write_path) as writer:
         df.to_excel(writer, index=False)
-    eval_logger.info(f"Saved results to mmbench_cn_test_results.xlsx")
+    eval_logger.info(f"Saved results to {excel_write_path}")
     return 0

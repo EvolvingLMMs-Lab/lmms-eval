@@ -37,7 +37,6 @@ class OtterHD(lmms):
         self.processor = FuyuProcessor(image_processor=self.image_processor, tokenizer=self.tokenizer)
         self.max_new_tokens = max_new_tokens
         self.batch_size_per_gpu = int(batch_size)
-        assert self.batch_size_per_gpu == 1, "OtterHD currently does not support batched generation."
 
     @property
     def max_length(self):
@@ -91,7 +90,7 @@ class OtterHD(lmms):
             #     visuals = [visuals[idx][0] for idx in range(len(visuals))]  # get the first image in multi-image scenarios.
 
             formatted_contexts = [f"User: {context} Assistant:" for context in contexts]
-            model_inputs = self.processor(text=[formatted_contexts], images=visuals, device=self.device)
+            model_inputs = self.processor(text=formatted_contexts, images=visuals, device=self.device)
             for k, v in model_inputs.items():
                 model_inputs[k] = v.to(self.device, non_blocking=True) if isinstance(v, torch.Tensor) else [vv.to(self.device, non_blocking=True) for vv in v]
 
