@@ -3,6 +3,7 @@ import itertools
 import json
 import collections
 import sys
+import inspect
 from tqdm import tqdm
 
 import torch
@@ -40,6 +41,7 @@ def simple_evaluate(
     show_task_to_terminal: bool = False,
     log_samples: bool = True,
     gen_kwargs: str = None,
+    cli_args=None,  # Bo: put args into more functions (cost 48 Bytes per call)
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -126,6 +128,7 @@ def simple_evaluate(
         bootstrap_iters=bootstrap_iters,
         show_task_to_terminal=show_task_to_terminal,
         log_samples=log_samples,
+        cli_args=cli_args,
     )
 
     if lm.rank == 0:
@@ -156,6 +159,7 @@ def evaluate(
     bootstrap_iters: int = 100000,
     show_task_to_terminal: bool = False,
     log_samples: bool = True,
+    cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -423,7 +427,12 @@ def evaluate(
             else:
                 group_name = None
             agg_fn = task.aggregation()[metric]
-            results[task_name][metric_key] = agg_fn(items)
+            # Bo: for models only need agg items
+            if inspect.getfullargspec(agg_fn).args == ["results"]:
+                results[task_name][metric_key] = agg_fn(items)
+            # Bo: for models that need to know the args to save to correct path
+            elif inspect.getfullargspec(agg_fn).args == ["results", "args"]:
+                results[task_name][metric_key] = agg_fn(items, cli_args)
             results[task_name]["samples"] = len(items)
 
             # hotfix: bleu, chrf, ter seem to be really expensive to bootstrap
