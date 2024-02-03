@@ -42,7 +42,7 @@ class Qwen_VL(lmms):
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
         self.tokenizer.padding_side = "left"
         self.tokenizer.pad_token_id = self.tokenizer.eod_id
-        self.prompt = "<img>{}</img>{} Answer:"
+        self.prompt = "<img>{}</img>{}"
         self._config = self._model.config
         self.model.tie_weights()
         self.batch_size_per_gpu = int(batch_size)
