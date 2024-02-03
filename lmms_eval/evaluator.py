@@ -319,7 +319,7 @@ def evaluate(
             # Don't use above one, this would crash if doc_iterator_for_counting contains too many objects and very slow
             doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), lm.rank, limit, lm.world_size) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), lm.rank, limit, lm.world_size)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
-            pbar = tqdm(total=total_docs, desc=f"Postprocessing {lm.rank}", position=lm.rank)
+            pbar = tqdm(total=total_docs, desc=f"Postprocessing", disable=(lm.rank != 0))
             for doc_id, doc in doc_iterator:
                 # subset instances to only this document id ; sort by idx
                 requests = list(filter(lambda x: x.doc_id == doc_id, task.instances))
@@ -427,12 +427,14 @@ def evaluate(
             else:
                 group_name = None
             agg_fn = task.aggregation()[metric]
-            # Bo: for models only need agg items
-            if inspect.getfullargspec(agg_fn).args == ["results"]:
-                results[task_name][metric_key] = agg_fn(items)
+
             # Bo: for models that need to know the args to save to correct path
-            elif inspect.getfullargspec(agg_fn).args == ["results", "args"]:
+            if inspect.getfullargspec(agg_fn).args == ["results", "args"]:
                 results[task_name][metric_key] = agg_fn(items, cli_args)
+            else:
+                # Bo: for models only need agg items
+                results[task_name][metric_key] = agg_fn(items)
+
             results[task_name]["samples"] = len(items)
 
             # hotfix: bleu, chrf, ter seem to be really expensive to bootstrap
