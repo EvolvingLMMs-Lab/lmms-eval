@@ -93,6 +93,7 @@ class TaskConfig(dict):
 
     model_specific_prompt_kwargs: dict = None
     model_specific_generation_kwargs: dict = None
+    model_specific_target_kwargs: dict = None
 
     def __post_init__(self) -> None:
         if self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):
@@ -347,7 +348,7 @@ class Task(abc.ABC):
         doc_id_iterator = utils.create_iterator([i for i in range(len(docs))], rank, world_size, limit)
         doc_id_iterator, doc_id_iterator_counting = itertools.tee(doc_id_iterator)
         total_docs = sum(1 for _ in doc_id_iterator_counting)
-        pbar = tqdm(total=total_docs, desc=f"Building context {rank}", position=rank)
+        pbar = tqdm(total=total_docs, desc=f"Building context", disable=(rank != 0))
         for doc_id in doc_id_iterator:
             # sample fewshot context #TODO: need to offset doc_id by rank now!
             fewshot_ctx = self.fewshot_context(doc_id, 0 if self.config.num_fewshot is None else self.config.num_fewshot, self.config.training_split if self.has_training_docs() else split)
@@ -594,14 +595,20 @@ class ConfigurableTask(Task):
             if self.model_name in self.model_specific_prompt_kwargs:
                 self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs[self.model_name]
             else:
-                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs["default"]
+                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs.get("default", None)
 
+        self.model_specific_target_kwargs = self.config.model_specific_target_kwargs
+        if self.model_specific_target_kwargs is not None:
+            if self.model_name in self.model_specific_target_kwargs:
+                self.model_specific_target_kwargs = self.model_specific_target_kwargs[self.model_name]
+            else:
+                self.model_specific_target_kwargs = self.model_specific_target_kwargs["default"].get("default", None)
         self.model_specific_generation_kwargs = self.config.model_specific_generation_kwargs
         if self.model_specific_generation_kwargs is not None:
             if self.model_name in self.model_specific_generation_kwargs:
                 self.model_specific_generation_kwargs = self.model_specific_generation_kwargs[self.model_name]
             else:
-                self.model_specific_generation_kwargs = self.model_specific_generation_kwargs["default"]
+                self.model_specific_generation_kwargs = self.model_specific_generation_kwargs.get("default", {})
 
             self.config.generation_kwargs.update(self.model_specific_generation_kwargs)
 
@@ -839,7 +846,7 @@ class ConfigurableTask(Task):
         elif type(doc_to_target) == list:
             return doc_to_target
         elif callable(doc_to_target):
-            return doc_to_target(doc)
+            return doc_to_target(doc, self.model_specific_target_kwargs) if self.model_specific_target_kwargs is not None else doc_to_target(doc)
         # Used when applying a Promptsource template
         elif hasattr(doc_to_target, "apply"):
             applied_prompt = doc_to_target.apply(doc)
