@@ -3,12 +3,20 @@ def sqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
     len_choices = len(choices)
     options = [chr(ord("A") + i) for i in range(len_choices)]
     choices_str = "\n".join([f"{option}. {choice}" for option, choice in zip(options, choices)])
-    if context:
-        context = f"Context: {context}\n"
+    if model_specific_prompt_kwargs["format"] == "default":
+        if context:
+            context = f"Context: {context}\n"
 
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    return f"{pre_prompt}{context}{question}\n{choices_str}{post_prompt}"
+        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+        return f"{pre_prompt}{context}{question}\n{choices_str}{post_prompt}"
+    elif model_specific_prompt_kwargs["format"] == "qwen_vl":
+        prompt = "Context: {}\nQuestion: {}\nOptions: {}\nAnswer:"
+        context = context if context else "N/A"
+        prompt = prompt.format(context, question, choices_str)
+        return prompt
+    else:
+        raise ValueError(f"Unknown prompt format: {model_specific_prompt_kwargs}")
 
 
 def sqa_doc_to_visual(doc):
