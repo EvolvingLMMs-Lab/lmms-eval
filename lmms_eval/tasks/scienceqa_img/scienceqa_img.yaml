@@ -24,8 +24,11 @@ metadata:
 
 model_specific_prompt_kwargs:
   default:
+    format: default
     pre_prompt: ""
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  qwen_vl:
+    format: qwen_vl
 model_specific_generation_kwargs:
   llava:
     image_aspect_ratio: original
