@@ -6,10 +6,10 @@ def infovqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def infovqa_doc_to_text(doc, mdoel_specific_prompt_kwargs):
+def infovqa_doc_to_text(doc, model_specific_prompt_kwargs):
     question = doc["question"]
-    pre_prompt = mdoel_specific_prompt_kwargs["pre_prompt"]
-    post_prompt = mdoel_specific_prompt_kwargs["post_prompt"]
+    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+    post_prompt = model_specific_prompt_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
 

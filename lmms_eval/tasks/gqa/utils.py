@@ -1,6 +1,5 @@
 from datasets import load_dataset
 
-prompt = "\nAnswer the question using a single word or phrase."
 GQA_RAW_IMAGE_DATASET = None
 GQA_ID2IMAGE = None
 
@@ -17,6 +16,8 @@ def gqa_doc_to_visual(doc):
     return [image]
 
 
-def gqa_doc_to_text(doc):
+def gqa_doc_to_text(doc, model_specific_prompt_kwargs):
     question = doc["question"]
-    return f"{question}{prompt}"
+    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+    post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    return f"{pre_prompt}{question}{post_prompt}"
