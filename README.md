@@ -80,12 +80,14 @@ accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Ea
     - refcoco_bbox_testA
     - refcoco_bbox_testB
 - RefCOCO+ (refcoco+)
-    - refcoco+_seg_val
-    - refcoco+_seg_testA
-    - refcoco+_seg_testB
-    - refcoco+_bbox_val
-    - refcoco+_bbox_testA
-    - refcoco+_bbox_testB
+    - refcoco+_seg
+        - refcoco+_seg_val
+        - refcoco+_seg_testA
+        - refcoco+_seg_testB
+    - refcoco+_bbox
+        - refcoco+_bbox_val
+        - refcoco+_bbox_testA
+        - refcoco+_bbox_testB
 - RefCOCOg (refcocog)
     - refcocog_seg_test
     - refcocog_seg_val
