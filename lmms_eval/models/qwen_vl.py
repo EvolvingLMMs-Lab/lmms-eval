@@ -1,4 +1,5 @@
 import torch
+import logging
 from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -9,7 +10,7 @@ from typing import List, Optional, Union, Tuple
 import uuid
 import os
 
-eval_logger = utils.eval_logger
+eval_logger = logging.getLogger("lmms-eval")
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
