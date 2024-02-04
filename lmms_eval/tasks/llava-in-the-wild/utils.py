@@ -77,11 +77,11 @@ def get_eval(content: str, max_tokens: int, retries: int = 3):
             break  # If successful, break out of the loop
 
         except Exception as e:
-            eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
+            eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries - 1:  # If we have retries left, sleep and then continue to next attempt
                 time.sleep(NUM_SECONDS_TO_SLEEP)
             else:  # If this was the last attempt, log and return empty
-                eval_logger.error(f"All {retries} attempts failed. Last error message: {str(e)}")
+                eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
                 return "", ""
     return "", ""
 
@@ -94,11 +94,10 @@ def parse_score(review):
         if len(sp) == 2:
             return [float(sp[0]), float(sp[1])]
         else:
-            eval_logger.debug("error", review)
+            eval_logger.debug(f"Can not split: {review}. Returning [-1, -1]")
             return [-1, -1]
     except Exception as e:
-        eval_logger.debug(e)
-        eval_logger.debug("error", review)
+        eval_logger.debug(f"Error: {e}. Returning [-1, -1]")
         return [-1, -1]
 
 
