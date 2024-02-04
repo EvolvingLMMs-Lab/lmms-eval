@@ -34,6 +34,22 @@ import logging
 
 
 class PathFormatter(logging.Formatter):
+    def __init__(self, fmt=None, datefmt=None, timezone="UTC"):
+        super().__init__(fmt, datefmt)
+        self.timezone = timezone
+
+    def formatTime(self, record, datefmt=None):
+        # Convert to Asia/Singapore timezone
+        ct = datetime.datetime.fromtimestamp(record.created, pytz.timezone(self.timezone))
+        if datefmt:
+            s = ct.strftime(datefmt)
+        else:
+            try:
+                s = ct.isoformat(timespec="milliseconds")
+            except TypeError:
+                s = ct.isoformat()
+        return s
+
     def format(self, record):
         # Extract the pathname from the record
         pathname = record.pathname
@@ -45,17 +61,11 @@ class PathFormatter(logging.Formatter):
         return super(PathFormatter, self).format(record)
 
 
-eval_logger = logging.getLogger("lmms-eval")
-# eval_logger.setLevel(logging.INFO)
-
-ch = logging.StreamHandler()
-# ch.setLevel(logging.INFO)
-
-# Create a formatter and set it to the handler, ONLY MAKING IT SHOW THE LAST 3 FOLDERS of a path
-formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(message)s", "%m-%d:%H:%M:%S")
-ch.setFormatter(formatter)
-
-eval_logger.addHandler(ch)
+# eval_logger = logging.getLogger("lmms-eval")
+# ch = logging.StreamHandler()
+# formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(message)s", "%m-%d:%H:%M:%S")
+# ch.setFormatter(formatter)
+# eval_logger.addHandler(ch)
 
 SPACING = " " * 47
 

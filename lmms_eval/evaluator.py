@@ -7,7 +7,7 @@ import inspect
 from tqdm import tqdm
 
 import torch
-
+import logging
 import numpy as np
 
 import lmms_eval.api
@@ -23,8 +23,9 @@ from lmms_eval.utils import (
     create_iterator,
     get_git_commit_hash,
     simple_parse_args_string,
-    eval_logger,
 )
+
+eval_logger = logging.getLogger("lmms-eval")
 
 
 @positional_deprecated
@@ -244,7 +245,7 @@ def evaluate(
 
         task.build_all_requests(limit=limit, rank=lm.rank, world_size=lm.world_size)
 
-        eval_logger.debug(f"Task: {task_name}; number of requests on this rank: {len(task.instances)}")
+        eval_logger.debug(f"Task: {task_name}; number of requests on rank {lm.rank}: {len(task.instances)}")
 
         if show_task_to_terminal:
             for inst in task.instances:
