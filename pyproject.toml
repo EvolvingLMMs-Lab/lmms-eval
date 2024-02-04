@@ -50,7 +50,7 @@ dependencies = [
     "Levenshtein",
     "hf_transfer",
     "tenacity",
-    "wandb",
+    "wandb>=0.16.0",
 ]
 
 [tool.setuptools.packages.find]
