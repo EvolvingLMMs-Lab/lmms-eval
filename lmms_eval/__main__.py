@@ -16,7 +16,10 @@ import wandb
 from lmms_eval import evaluator, utils
 from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict
 from lmms_eval.api.registry import ALL_TASKS
-from lmms_eval.api.wandb import log_eval_result
+from lmms_eval.logging_utils import WandbLogger
+from lmms_eval.utils import PathFormatter
+
+global eval_logger
 
 
 def _handle_non_serializable(o):
@@ -128,9 +131,20 @@ def parse_eval_args() -> argparse.Namespace:
     return args
 
 
-def cli_evaluate(args: Union[argparse.Namespace, None] = None, wandb_run=None) -> None:
-    if args is None:
+def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
+    if not args:
         args = parse_eval_args()
+
+    # Check if no arguments were passed after parsing
+    if len(sys.argv) == 1:
+        print("┌───────────────────────────────────────────────────────────────────────────────┐")
+        print("│ Please provide arguments to evaluate the model. e.g.                          │")
+        print("│ `lmms-eval --model llava --model_path liuhaotian/llava-v1.6-7b --tasks okvqa` │")
+        print("│ Use `lmms-eval --help` for more information.                                  │")
+        print("└───────────────────────────────────────────────────────────────────────────────┘")
+        sys.exit(1)
+
+    set_loggers(args)
 
     args_list = []
     results_list = []
@@ -150,23 +164,35 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None, wandb_run=None) -
     else:
         args_list.append(args)
 
+    # initialize Accelerator
+    accelerator = Accelerator()
+    if accelerator.is_main_process:
+        is_main_process = True
+    else:
+        is_main_process = False
+
     # run each config
+    args.is_main_process = is_main_process
     for args in args_list:
+        if args.is_main_process:
+            wandb_logger = WandbLogger(args)
         results = cli_evaluate_single(args)
+
+        accelerator.wait_for_everyone()
+        if args.is_main_process:
+            wandb_logger.log_eval_result(results)
+            wandb_logger.write_to_report(results)
+            wandb_logger.finish()
         results_list.append(results)
-    # print results
+
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
             print_results(args, results)
-            # Add W&B logic
-            if args.wandb_args:
-                wandb_results = copy.deepcopy(results)
-                log_eval_result(wandb_run, wandb_results)
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
-    eval_logger = utils.eval_logger
+    eval_logger = logging.getLogger("lmms-eval")
     eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -268,58 +294,19 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def print_results(args, results):
-    print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+    print(f"{args.model} ({args.model_args}),\ngen_kwargs: ({args.gen_kwargs}),\nlimit: {args.limit},\nnum_fewshot: {args.num_fewshot},\nbatch_size: {args.batch_size}")
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))
 
 
+def set_loggers(args):
+    eval_logger = logging.getLogger("lmms-eval")
+    ch = logging.StreamHandler()
+    formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(message)s", "%m-%d:%H:%M:%S", timezone=args.timezone)
+    ch.setFormatter(formatter)
+    eval_logger.addHandler(ch)
+
+
 if __name__ == "__main__":
-    args = parse_eval_args()
-    args_list = []
-    results_list = []
-    if args.config and os.path.exists(args.config):
-        with open(args.config, "r") as file:
-            config_args = yaml.safe_load(file)
-        config_args = [config_args] if type(config_args) != list else config_args
-        # multiple configs, create args list first
-        for config in config_args:
-            args_copy = argparse.Namespace(**vars(args))
-            for key, value in config.items():
-                setattr(args_copy, key, value)
-            args_list.append(args_copy)
-    else:
-        args_list.append(args)
-
-    # initialize Accelerator
-    accelerator = Accelerator()
-    all_args_dict = vars(args)
-    wandb_run = None
-
-    if accelerator.is_main_process:
-        # initialize a W&B run only on rank 0
-        wandb_args_dict = utils.simple_parse_args_string(args.wandb_args)
-        if wandb_args_dict:
-            if "name" not in wandb_args_dict:
-                if "config" not in all_args_dict:
-                    # use the model name and task names as run name
-                    task_names = args.tasks.replace(",", "_")
-                    wandb_args_dict["name"] = f"{args.model}_{task_names}_{args.log_samples_suffix}"
-                    if args.num_fewshot:
-                        wandb_args_dict["name"] += f"_{args.num_fewshot}shot"
-                else:
-                    # use the name of the config file as run name
-                    wandb_args_dict["name"] = all_args_dict["config"].split("/")[-1].split(".")[0]
-            wandb_run = wandb.init(**wandb_args_dict)
-        is_main_process = True
-    else:
-        is_main_process = False
-
-    # run each config
-    args.is_main_process = is_main_process
-    for args in args_list:
-        results = cli_evaluate(args, wandb_run)
-        results_list.append(results)
-
-    if is_main_process and wandb_run is not None:
-        wandb_run.finish()
+    cli_evaluate()

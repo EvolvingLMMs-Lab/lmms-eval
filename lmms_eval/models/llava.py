@@ -1,5 +1,5 @@
 import torch
-
+import logging
 import copy
 from tqdm import tqdm
 from lmms_eval import utils
@@ -9,16 +9,17 @@ from lmms_eval.api.registry import register_model
 from accelerate import Accelerator, DistributedType
 from typing import List, Optional, Union, Tuple
 
-eval_logger = utils.eval_logger
 from lmms_eval.utils import stop_sequences_criteria
 from llava.model.builder import load_pretrained_model
 from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
-from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
 from llava.conversation import conv_templates, SeparatorStyle
 
 import warnings
 
 warnings.filterwarnings("ignore")
+
+eval_logger = logging.getLogger("lmms-eval")
 
 
 @register_model("llava")
@@ -65,7 +66,7 @@ class Llava(lmms):
         self.conv_template = conv_template
         self.use_cache = use_cache
         self.truncate_context = truncate_context
-        assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
+        # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
@@ -111,10 +112,13 @@ class Llava(lmms):
     def max_length(self):
         return self._max_length
 
-    # should be deleted since max_new_tokens is decided by gen_kwargs not a model property
-    # @property
-    # def max_new_tokens(self) -> int:
-    #     return 256
+    def pad_sequence(self, input_ids, batch_first, padding_value):
+        if self.tokenizer.padding_side == "left":
+            input_ids = [torch.flip(_input_ids, [0]) for _input_ids in input_ids]
+        input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=batch_first, padding_value=padding_value)
+        if self.tokenizer.padding_side == "left":
+            input_ids = torch.flip(input_ids, [1])
+        return input_ids
 
     @property
     def batch_size(self):
@@ -228,12 +232,13 @@ class Llava(lmms):
             toks = self.tok_encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
+        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
@@ -269,25 +274,31 @@ class Llava(lmms):
             else:
                 image_tensor = None
 
-            prompts_input = contexts[0]
+            # prompts_input = contexts[0]
 
-            if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in prompts_input:
-                """
-                Three senarios:
-                1. No image, and there for, no image token should be added.
-                2. image token is already specified in the context, so we don't need to add it.
-                3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
-                """
-                image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
-                image_tokens = " ".join(image_tokens)
-                prompts_input = image_tokens + "\n" + contexts[0]
+            question_input = []
 
-            conv = conv_templates[self.conv_template].copy()
-            conv.append_message(conv.roles[0], prompts_input)
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
+            for visual, context in zip(visuals, contexts):
+                if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
+                    """
+                    Three senarios:
+                    1. No image, and there for, no image token should be added.
+                    2. image token is already specified in the context, so we don't need to add it.
+                    3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
+                    """
+                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visual) if isinstance(visual, list) else [DEFAULT_IMAGE_TOKEN]
+                    image_tokens = " ".join(image_tokens)
+                    question = image_tokens + "\n" + context
+                else:
+                    question = context
 
+                conv = conv_templates[self.conv_template].copy()
+                conv.append_message(conv.roles[0], question)
+                conv.append_message(conv.roles[1], None)
+                prompt_question = conv.get_prompt()
+                question_input.append(prompt_question)
+
+            # input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
             # preconfigure gen_kwargs with defaults
             gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
@@ -299,15 +310,17 @@ class Llava(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
+            input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
+            input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=self.tokenizer.pad_token_id).to(self.device)
+            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).to(self.device)
             # These steps are not in LLaVA's original code, but are necessary for generation to work
-            attention_mask = torch.ones_like(input_ids)  # Assuming input_ids is already padded
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+            pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             # TODO: pay attention to this major generation step...
             try:
                 cont = self.model.generate(
                     input_ids,
-                    attention_mask=attention_mask,
-                    pad_token_id=pad_token_id,
+                    attention_mask=attention_masks,
+                    pad_token_id=pad_token_ids,
                     images=image_tensor,
                     image_sizes=gen_kwargs["image_sizes"],
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
@@ -320,29 +333,23 @@ class Llava(lmms):
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
-                eval_logger.error(prompt)
-                eval_logger.error(visuals)
-                eval_logger.error(prompts_input)
 
             cont_toks_list = cont.tolist()
-            for cont_toks, context in zip(cont_toks_list, contexts):
-                # discard context + left-padding toks if using causal decoder-only LMM
-                if self.truncate_context:
-                    cont_toks = cont_toks[input_ids.shape[1] :]
-                text_outputs = self.tokenizer.decode(cont_toks, skip_special_tokens=True).strip()
-
-                # use secondary stop seqs to cut off should-have-been-stopped content post-hoc
-                if self.truncate_context:
-                    for term in until:
-                        if len(term) > 0:
-                            # ignore '' separator,
-                            # for seq2seq case where self.tok_decode(self.eot_token_id) = ''
-                            text_outputs = text_outputs.split(term)[0]
-
-                res.append(text_outputs)
-
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
-                pbar.update(1)
+            # for cont_toks, context in zip(cont_toks_list, contexts):
+            # discard context + left-padding toks if using causal decoder-only LMM
+            # if self.truncate_context:
+            #     cont_toks = cont_toks[input_ids.shape[1] :]
+            text_outputs = self.tokenizer.batch_decode(cont_toks_list, skip_special_tokens=True)
+            # use secondary stop seqs to cut off should-have-been-stopped content post-hoc
+            # if self.truncate_context:
+            #     for term in until:
+            #         if len(term) > 0:
+            #             # ignore '' separator,
+            #             # for seq2seq case where self.tok_decode(self.eot_token_id) = ''
+            #             text_outputs = text_outputs.split(term)[0]
+            res.extend(text_outputs)
+            self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
+            pbar.update(1)
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
