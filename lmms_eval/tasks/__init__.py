@@ -15,7 +15,7 @@ from lmms_eval.api.registry import (
 
 import logging
 
-eval_logger = utils.eval_logger
+eval_logger = logging.getLogger("lmms-eval")
 
 
 def register_configurable_task(config: Dict[str, str]) -> int:
