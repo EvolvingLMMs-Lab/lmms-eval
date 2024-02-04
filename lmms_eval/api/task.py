@@ -602,7 +602,7 @@ class ConfigurableTask(Task):
             if self.model_name in self.model_specific_target_kwargs:
                 self.model_specific_target_kwargs = self.model_specific_target_kwargs[self.model_name]
             else:
-                self.model_specific_target_kwargs = self.model_specific_target_kwargs["default"].get("default", None)
+                self.model_specific_target_kwargs = self.model_specific_target_kwargs.get("default", None)
         self.model_specific_generation_kwargs = self.config.model_specific_generation_kwargs
         if self.model_specific_generation_kwargs is not None:
             if self.model_name in self.model_specific_generation_kwargs:
