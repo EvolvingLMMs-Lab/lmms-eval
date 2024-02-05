@@ -311,10 +311,10 @@ class Llava(lmms):
                 gen_kwargs["num_beams"] = 1
 
             input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
-            input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=self.tokenizer.pad_token_id).to(self.device)
-            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).to(self.device)
-            # These steps are not in LLaVA's original code, but are necessary for generation to work
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+            input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
+            attention_masks = input_ids.ne(pad_token_ids).to(self.device)
+            # These steps are not in LLaVA's original code, but are necessary for generation to work
             # TODO: pay attention to this major generation step...
             try:
                 cont = self.model.generate(
@@ -334,12 +334,12 @@ class Llava(lmms):
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
 
-            cont_toks_list = cont.tolist()
+            # cont_toks_list = cont.tolist()
             # for cont_toks, context in zip(cont_toks_list, contexts):
             # discard context + left-padding toks if using causal decoder-only LMM
             # if self.truncate_context:
             #     cont_toks = cont_toks[input_ids.shape[1] :]
-            text_outputs = self.tokenizer.batch_decode(cont_toks_list, skip_special_tokens=True)
+            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
             # use secondary stop seqs to cut off should-have-been-stopped content post-hoc
             # if self.truncate_context:
             #     for term in until:
