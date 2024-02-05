@@ -171,15 +171,13 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     else:
         is_main_process = False
 
-    # run each config
-    args.is_main_process = is_main_process
     for args in args_list:
-        if args.is_main_process:
+        if is_main_process:
             wandb_logger = WandbLogger(args)
         results = cli_evaluate_single(args)
 
         accelerator.wait_for_everyone()
-        if args.is_main_process:
+        if is_main_process:
             wandb_logger.log_eval_result(results)
             wandb_logger.write_to_report(results)
             wandb_logger.finish()
