@@ -60,7 +60,7 @@ class WandbLogger:
     def init_run(self):
         if "name" not in self.wandb_args:
             if "config" in self.all_args_dict and self.all_args_dict["config"] != "":
-                self.wandb_args["name"] = self.all_args_dict["config"].split("/")[-1].split(".")[0]
+                self.wandb_args["name"] = self.all_args_dict["config"].split("/")[-1].replace(".yaml", "")
             else:
                 task_names = self.args.tasks.replace(",", "/")
                 self.wandb_args["name"] = f"{self.args.model}_{task_names}_{self.args.log_samples_suffix}"
