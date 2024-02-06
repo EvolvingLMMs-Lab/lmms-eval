@@ -261,7 +261,7 @@ class WandbLogger:
         report = self.wr.Report(
             project=self.run.project,
             entity=self.run.entity,
-            title=f"({datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) xxx - Evaluation report",
+            title=f"({datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) {self.run.id} - Evaluation report",
             description=f"Evaluation run by: {self.run.entity} logged to {self.run.url}",
         )
 
@@ -301,3 +301,6 @@ class WandbLogger:
 
     def finish(self):
         self.run.finish()
+
+    def online(self):
+        return self.run.offline is False

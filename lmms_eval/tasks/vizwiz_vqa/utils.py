@@ -9,13 +9,6 @@ import statistics
 
 eval_logger = logging.getLogger("lmms-eval")
 
-with open(pathlib.Path(__file__).parent / "vizwizvqa_test.yaml", "r") as f:
-    raw_data = f.readlines()
-    for i in range(len(raw_data)):
-        raw_data[i] = raw_data[i].replace("!function", "function")
-
-    config = yaml.safe_load("".join(raw_data))
-
 
 class EvalAIAnswerProcessor:
     CONTRACTIONS = {
@@ -223,11 +216,11 @@ class EvalAIAnswerProcessor:
         return item
 
 
-def vizwizvqa_doc_to_visual(doc):
+def vizwiz_vqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def vizwizvqa_process_results(doc, result):
+def vizwiz_vqa_process_results(doc, result):
     eval_ai_processor = EvalAIAnswerProcessor()
     assert len(result) == 1, f"The result should be a list of length 1, but got {len(result)}."
     resAns = eval_ai_processor(result[0])
@@ -250,7 +243,7 @@ def vizwizvqa_process_results(doc, result):
             accuracy = 0
 
     return {
-        # "exact_match": accuracy,
+        "exact_match": accuracy,
         "submission": {
             "image": f"{doc['question_id']}.jpg",
             "answer": resAns,
@@ -258,15 +251,25 @@ def vizwizvqa_process_results(doc, result):
     }
 
 
-def vizwizvqa_doc_to_text(doc):
+def vizwiz_vqa_process_results_test(doc, result):
+    res = vizwiz_vqa_process_results(doc, result)
+    return {"submission": res["submission"]}
+
+
+def vizwiz_vqa_process_results_val(doc, result):
+    res = vizwiz_vqa_process_results(doc, result)
+    return {"exact_match": res["exact_match"]}
+
+
+def vizwiz_vqa_doc_to_text(doc):
     text = f"{doc['question'].capitalize()}\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
     return text
 
 
-def vizwizvqa_aggreate_submissions(results):
+def vizwiz_vqa_aggreate_submissions(results):
     now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
     os.makedirs("./submissions", exist_ok=True)
-    submission_file_name = f"./submissions/vizwizvqa-test-submission-{now_date_time}.json"
+    submission_file_name = f"./submissions/vizwiz_vqa-test-submission-{now_date_time}.json"
     path = os.path.abspath(submission_file_name)
     with open(path, "w") as f:
         json.dump(results, f)
