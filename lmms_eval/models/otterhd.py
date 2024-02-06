@@ -1,3 +1,4 @@
+from accelerate import Accelerator, DistributedType
 from transformers import FuyuForCausalLM, AutoTokenizer, FuyuImageProcessor, FuyuProcessor
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -7,6 +8,13 @@ from typing import List, Optional, Union, Tuple
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from tqdm import tqdm
+
+import warnings
+import logging
+
+warnings.filterwarnings("ignore")
+
+eval_logger = logging.getLogger("lmms-eval")
 
 
 @register_model("otterhd")
@@ -28,28 +36,85 @@ class OtterHD(lmms):
         # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
-        self.device = device if torch.cuda.is_available() else "cpu"
-        self.model = FuyuForCausalLM.from_pretrained(pretrained, torch_dtype=torch.bfloat16, device_map=self.device)
+        accelerator = Accelerator()
+        if accelerator.num_processes > 1:
+            self._device = torch.device(f"cuda:{accelerator.local_process_index}")
+        else:
+            self._device = device
+
+        self._model = FuyuForCausalLM.from_pretrained(pretrained, torch_dtype=torch.bfloat16, device_map=self._device)
         self.model.eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained)
+        self.model.tie_weights()
+        self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
+        self._config = self.model.config
+
         height, width = map(int, resolution.split("x"))
         self.image_processor = FuyuImageProcessor(size={"height": height, "width": width})
         self.processor = FuyuProcessor(image_processor=self.image_processor, tokenizer=self.tokenizer)
         self.max_new_tokens = max_new_tokens
         self.batch_size_per_gpu = int(batch_size)
 
+        if accelerator.num_processes > 1:
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            if accelerator.distributed_type == DistributedType.FSDP:
+                self._model = accelerator.prepare(self.model)
+            else:
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
+            self.accelerator = accelerator
+            if self.accelerator.is_local_main_process:
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
+        else:
+            self.model.to(self._device)
+            self._rank = 0
+            self._word_size = 1
+
+    @property
+    def config(self):
+        # return the associated transformers.AutoConfig for the given pretrained model.
+        return self._config
+
+    @property
+    def tokenizer(self):
+        return self._tokenizer
+
+    @property
+    def model(self):
+        # returns the model, unwrapping it if using Accelerate
+        if hasattr(self, "accelerator"):
+            return self.accelerator.unwrap_model(self._model)
+        else:
+            return self._model
+
+    @property
+    def eot_token_id(self):
+        # we use EOT because end of *text* is more accurate for what we're doing than end of *sentence*
+        return self.tokenizer.eos_token_id
+
     @property
     def max_length(self):
         # Assuming max_length is the sum of max context tokens and max new tokens
         return self.tokenizer.model_max_length
 
-    # @property
-    # def max_gen_toks(self) -> int:
-    #     return self.max_new_tokens
-
     @property
     def batch_size(self):
         return self.batch_size_per_gpu
+
+    @property
+    def device(self):
+        return self._device
+
+    @property
+    def rank(self):
+        return self._rank
+
+    @property
+    def world_size(self):
+        return self._world_size
 
     def flatten(self, input, only_get_first=False):
         new_list = []
