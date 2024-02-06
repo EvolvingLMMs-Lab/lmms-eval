@@ -43,9 +43,11 @@ def seed_aggregation_result_all(results):
 
     return score
 
+
 def seed_doc_to_text_mc(doc):
     question = doc["question"]
     return f"{question} Answer :"
+
 
 def seed_doc_to_choice(doc):
     return [doc["choice_a"], doc["choice_b"], doc["choice_c"], doc["choice_d"]]
