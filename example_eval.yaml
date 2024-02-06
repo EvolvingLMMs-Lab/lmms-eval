@@ -1,6 +1,6 @@
 - model: llava
   model_args: pretrained=liuhaotian/llava-v1.5-7b
-  tasks: docvqa_val,docvqa_test,infovqa_val,infovqa_test
+  tasks: vizwiz_vqa
   batch_size: 1
   log_samples: true
   log_samples_suffix: debug
