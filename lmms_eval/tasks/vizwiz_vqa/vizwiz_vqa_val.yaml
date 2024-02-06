@@ -1,0 +1,14 @@
+group: vizwiz_vqa
+task: vizwiz_vqa_val
+test_split: val
+include: _default_template_vqa_yaml
+process_results: !function utils.vizwiz_vqa_process_results_val
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  # - metric: submission
+  #   aggregation: !function utils.vizwiz_vqa_aggreate_submissions
+  #   higher_is_better: true
