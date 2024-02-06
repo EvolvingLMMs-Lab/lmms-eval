@@ -179,7 +179,8 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         accelerator.wait_for_everyone()
         if is_main_process:
             wandb_logger.log_eval_result(results)
-            wandb_logger.write_to_report(results)
+            if wandb_logger.online():
+                wandb_logger.write_to_report(results)
             wandb_logger.finish()
         results_list.append(results)
 
