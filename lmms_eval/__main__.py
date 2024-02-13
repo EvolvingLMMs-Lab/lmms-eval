@@ -172,17 +172,21 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         is_main_process = False
 
     for args in args_list:
-        if is_main_process:
-            wandb_logger = WandbLogger(args)
-        results = cli_evaluate_single(args)
+        try:
+            if is_main_process and args.wandb_args:
+                wandb_logger = WandbLogger(args)
+            results = cli_evaluate_single(args)
 
-        accelerator.wait_for_everyone()
-        if is_main_process:
-            wandb_logger.log_eval_result(results)
-            if wandb_logger.online():
-                wandb_logger.write_to_report(results)
-            wandb_logger.finish()
-        results_list.append(results)
+            accelerator.wait_for_everyone()
+            if is_main_process and args.wandb_args and results is not None:
+                wandb_logger.log_eval_result(results)
+                if wandb_logger.online():
+                    wandb_logger.write_to_report()
+                wandb_logger.finish()
+            results_list.append(results)
+        except Exception as e:
+            eval_logger.error(f"Error during evaluation: {e}")
+            results_list.append(None)
 
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
@@ -209,7 +213,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     elif args.tasks == "list":
         eval_logger.info("Available Tasks:\n - {}".format(f"\n - ".join(sorted(ALL_TASKS))))
         sys.exit()
-    elif args.tasks == "list_tasks_num":
+    elif args.tasks == "list_with_num":
         log_message = (
             "\n" + "=" * 70 + "\n" + "\n\tYou are trying to check all the numbers in each task." + "\n\tThis action will download the complete dataset." + "\n\tIf the results are not clear initially, call this again." + "\n\n" + "=" * 70
         )
