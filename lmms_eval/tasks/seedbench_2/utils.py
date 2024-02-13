@@ -4,21 +4,23 @@ import json
 def seed_doc_to_visual(doc):
     return [image.convert("RGB") for image in doc["image"]]
 
-def parse_choice_img(choice : str, img_token : str):
+
+def parse_choice_img(choice: str, img_token: str):
     if "jpg" in choice or "png" in choice:
         return img_token
     return choice
 
-def seed_doc_to_text(doc, model_specific_kwargs = None):
+
+def seed_doc_to_text(doc, model_specific_kwargs=None):
     question = doc["question"]
-    question.replace("<img>", model_specific_kwargs['img_token'])
+    question.replace("<img>", model_specific_kwargs["img_token"])
     question += "\n" + f"A. {parse_choice_img(doc['choice_a'], model_specific_kwargs['img_token'])}\n"
     question += f"B. {parse_choice_img(doc['choice_b'], model_specific_kwargs['img_token'])}\n"
     question += f"C. {parse_choice_img(doc['choice_c'], model_specific_kwargs['img_token'])}\n"
     question += f"D. {parse_choice_img(doc['choice_d'], model_specific_kwargs['img_token'])}"
-    if (doc['data_type'] == "Image Generation"):
-        num_img_in_question = len(doc['image']) - 4
-        prepend_tokens = [model_specific_kwargs['img_token']] * num_img_in_question
+    if doc["data_type"] == "Image Generation":
+        num_img_in_question = len(doc["image"]) - 4
+        prepend_tokens = [model_specific_kwargs["img_token"]] * num_img_in_question
         question = " ".join(prepend_tokens) + "\n" + question
     return f"{question}\n{model_specific_kwargs['post_prompt']}"
 
