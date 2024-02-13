@@ -1,0 +1,23 @@
+dataset_path: lmms-lab/MP-DocVQA
+task: "multidocvqa_val"
+test_split: val
+output_type: generate_until
+doc_to_visual: !function utils.multidocvqa_doc_to_visual
+doc_to_text: !function utils.multidocvqa_doc_to_text
+doc_to_target: "answers"
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: False
+process_results: !function utils.multidocvqa_process_results
+metric_list:
+  - metric: anls
+    aggregation: !function utils.multidocvqa_aggregate_results_anls
+    higher_is_better: true
+  - metric: accuracy
+    aggregation: !function utils.multidocvqa_aggregate_results_accuracy
+    higher_is_better: true
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
