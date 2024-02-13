@@ -133,46 +133,30 @@ class Qwen_VL(lmms):
                 name = uuid.uuid4().hex.upper()[0:6]
                 visual.save(f"/tmp/{name}.png")
                 visual_paths.append(f"/tmp/{name}.png")
-                query.append({
-                'image' : f"/tmp/{name}.png"
-                })
-            
+                query.append({"image": f"/tmp/{name}.png"})
+
             # Make a copy for query to save context (text that needs to be masked)
-            context_query = [ _ for _ in query]
-            context_query.append({'text' : contexts})
-            query.append({'text' : contexts + continuation})
-            
+            context_query = [_ for _ in query]
+            context_query.append({"text": contexts})
+            query.append({"text": contexts + continuation})
+
             context_query = self.tokenizer.from_list_format(context_query)
             query = self.tokenizer.from_list_format(query)
-            
+
             raw_contxt_text, context_tokens = make_context(
-                    self.tokenizer,
-                    context_query,
-                    history=None,
-                    system='You are a helpful assistant',
-                    max_window_size=self.model.generation_config.max_window_size,
-                    chat_format=self.model.generation_config.chat_format
-                )
+                self.tokenizer, context_query, history=None, system="You are a helpful assistant", max_window_size=self.model.generation_config.max_window_size, chat_format=self.model.generation_config.chat_format
+            )
             context_tokens = torch.tensor([context_tokens])
-            
+
             raw_continuation_text, continuation_tokens = make_context(
-                    self.tokenizer,
-                    query,
-                    history=None,
-                    system='You are a helpful assistant',
-                    max_window_size=self.model.generation_config.max_window_size,
-                    chat_format=self.model.generation_config.chat_format
-                )
+                self.tokenizer, query, history=None, system="You are a helpful assistant", max_window_size=self.model.generation_config.max_window_size, chat_format=self.model.generation_config.chat_format
+            )
             continuation_tokens = torch.tensor([continuation_tokens]).to(self.model.device)
             attn_mask = torch.ones_like(continuation_tokens).to(self.model.device)
             labels = continuation_tokens.clone().to(self.model.device)
-            labels[:, :context_tokens.shape[1]] = -100
+            labels[:, : context_tokens.shape[1]] = -100
             with torch.inference_mode():
-                outputs = self.model(
-                    input_ids = continuation_tokens,
-                    labels=labels,
-                    attention_mask = attn_mask
-                )
+                outputs = self.model(input_ids=continuation_tokens, labels=labels, attention_mask=attn_mask)
             loss = outputs.loss
             logits = outputs["logits"]
             greedy_tokens = logits.argmax(dim=-1)
@@ -181,10 +165,9 @@ class Qwen_VL(lmms):
             max_equal = (greedy_tokens == cont_toks).all()
             res.append((float(loss.item()), bool(max_equal)))
             pbar.update(1)
-            
+
         pbar.close()
         return res
-            
 
         assert False, "We have not implemented this function for Qwen VL yet"
 

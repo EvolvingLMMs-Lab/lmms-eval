@@ -71,11 +71,6 @@ class WandbLogger:
         # initialize a W&B run
         self.run = wandb.init(**self.wandb_args)
 
-        # call wr inside the init_run method to avoid multiple times logging
-        import wandb.apis.reports as wr
-
-        self.wr = wr
-
     def log_eval_result(self, results):
         # Log configs to wandb
         configs = self.get_config(results)
@@ -217,80 +212,71 @@ class WandbLogger:
         return wandb_summary, _results
 
     def prepare_report_by_task(self, results):
-        task_names = list(results.get("results", {}).keys())
+        import wandb.apis.reports as wr
+
+        task_names = list(self.results.get("results", {}).keys())
         blocks = []
         for task_name in task_names:
-            blocks.append(self.wr.H2(task_name))
+            blocks.append(wr.H2(task_name))
             panels = []
             for metric_name, metric_value in results.items():
                 if task_name in metric_name:
                     panels.append(
-                        self.wr.ScalarChart(
+                        wr.ScalarChart(
                             title=f"{metric_name}",
                             metric=f"{metric_name}",
                             font_size="large",
                         )
                     )
             _results = {
-                "results": {f"{task_name}": results.get("results").get(task_name)},
-                "versions": {f"{task_name}": results.get("versions").get(task_name)},
-                "n-shot": {f"{task_name}": results.get("n-shot").get(task_name)},
+                "results": {f"{task_name}": self.results.get("results").get(task_name)},
+                "versions": {f"{task_name}": self.results.get("versions").get(task_name)},
+                "n-shot": {f"{task_name}": self.results.get("n-shot").get(task_name)},
             }
             results_md = utils.make_table(_results)
-            blocks.extend([self.wr.MarkdownBlock(results_md), self.wr.PanelGrid(panels=panels)])
-            # blocks.extend([
-            #     self.wr.WeaveBlockSummaryTable(
-            #         project=self.run.project,
-            #         entity=self.run.entity,
-            #         table_name=f"{task_name}_eval_results",
-            #     ),
-            #     self.wr.PanelGrid(
-            #         runsets=[
-            #             self.wr.Runset(
-            #                 project=self.run.project, entity=self.run.entity,
-            #             ).set_filters_with_python_expr(f'Name == "{str(self.run.name)}"'),
-            #         ]
-            #     ),
-            # ])
+            blocks.extend([wr.MarkdownBlock(results_md), wr.PanelGrid(panels=panels)])
+            # TODO: Add results table
 
         return blocks
 
-    def write_to_report(self, results):
-        wandb_project = self.run.project
-        wandb_entity = self.run.entity
-        report = self.wr.Report(
+    def write_to_report(self):
+        import wandb.apis.reports as wr
+
+        report = wr.Report(
             project=self.run.project,
             entity=self.run.entity,
             title=f"({datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) {self.run.id} - Evaluation report",
             description=f"Evaluation run by: {self.run.entity} logged to {self.run.url}",
         )
 
-        results_md = utils.make_table(results)
         task_blocks = self.prepare_report_by_task(self.wandb_results)
 
         blocks = (
             [
-                self.wr.TableOfContents(),
-                self.wr.H1("Complete Evaluation Results"),
-                self.wr.WeaveBlockSummaryTable(
+                wr.TableOfContents(),
+                wr.H1("Complete Evaluation Results"),
+                wr.WeaveBlockSummaryTable(
                     project=self.run.project,
                     entity=self.run.entity,
-                    table_name=f"evaluation/eval_results",
+                    table_name="evaluation/eval_results",
                 ),
-                self.wr.PanelGrid(
+                wr.PanelGrid(
                     runsets=[
-                        self.wr.Runset(
+                        wr.Runset(
                             project=self.run.project,
                             entity=self.run.entity,
                         ).set_filters_with_python_expr(f'Name == "{str(self.run.name)}"'),
                     ]
                 ),
-                self.wr.H1("Evaluation Results By Task"),
+                wr.H1("Evaluation Results By Task"),
             ]
             + task_blocks
             + [
-                self.wr.H1("Evaluation Config"),
-                self.wr.CodeBlock(json.dumps(self.results["config"], indent=5).split("\n"), language="json"),
+                wr.H1("Evaluation Config"),
+                wr.CodeBlock(
+                    json.dumps(self.results["config"], indent=5).split("\n"),
+                    language="json",
+                ),
                 # TODO: Add appendix
             ]
         )
