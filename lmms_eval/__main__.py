@@ -145,6 +145,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         sys.exit(1)
 
     set_loggers(args)
+    eval_logger = logging.getLogger("lmms-eval")
+    eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
+    eval_logger.info(f"Verbosity set to {args.verbosity}")
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     args_list = []
     results_list = []
