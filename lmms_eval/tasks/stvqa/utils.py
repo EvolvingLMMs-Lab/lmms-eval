@@ -1,18 +1,22 @@
 import os
 import json
 
+
 def stvqa_doc_to_text(doc, model_specific_prompt_kwargs):
     question = doc["question"]
     pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
+
 def stvqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
+
 
 def stvqa_process_results(doc, results):
     answer = results[0]
     return {"submission": {"question_id": int(doc["question_id"]), "answer": answer}}
+
 
 def stvqa_aggregate_submissions(results):
     os.makedirs("./submissions", exist_ok=True)
