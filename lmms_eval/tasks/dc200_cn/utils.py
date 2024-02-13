@@ -6,6 +6,7 @@ import os
 import yaml
 from pathlib import Path
 from io import BytesIO
+import time
 
 
 def doc_to_visual(doc):
@@ -36,7 +37,7 @@ Do not consider the appropriateness or sensitive descriptors, such as "middle-ag
 Provide a few lines for explanation and the rate number at last after "Final Score:"."""
 
 
-def get_chat_response(base64_image, prompt, max_retries=3):
+def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
@@ -68,8 +69,13 @@ def get_chat_response(base64_image, prompt, max_retries=3):
             return response_data["choices"][0]["message"]["content"]
         except requests.exceptions.RequestException as e:
             eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
+            time.sleep(wait_time)
             if attempt == max_retries - 1:
-                raise
+                eval_logger.error(f"Failed to get response after {max_retries} attempts")
+                return ""
+        except Exception as e:
+            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
+            return ""
 
 
 def image_to_base64(pil_image):
