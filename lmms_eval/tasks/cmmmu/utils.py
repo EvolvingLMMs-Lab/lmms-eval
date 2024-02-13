@@ -6,38 +6,39 @@ import json
 from collections import Counter
 
 PROMPT = {
-    'task_instructions': [
-        '请回答以下多项选择题，并选出正确选项。这些题目可能包括单选和多选题型。如果所提供的信息不足以确定一个明确的答案，那么请根据可用的数据和你的判断来选择最可能正确的选项。',
-        '请回答以下判断题，并根据题目描述和所给的信息来判断问题中陈述的对错。如果信息不完整或不足以作出绝对判断，请运用你的逻辑推理和现有信息来做出最可能的判断。',
-        '请回答以下填空题，并根据题目的要求和所提供的信息来给出最恰当的答案。如果信息不足以确切回答，那么请依据现有的数据和你的推理能力来填写最合理的答案。'
+    "task_instructions": [
+        "请回答以下多项选择题，并选出正确选项。这些题目可能包括单选和多选题型。如果所提供的信息不足以确定一个明确的答案，那么请根据可用的数据和你的判断来选择最可能正确的选项。",
+        "请回答以下判断题，并根据题目描述和所给的信息来判断问题中陈述的对错。如果信息不完整或不足以作出绝对判断，请运用你的逻辑推理和现有信息来做出最可能的判断。",
+        "请回答以下填空题，并根据题目的要求和所提供的信息来给出最恰当的答案。如果信息不足以确切回答，那么请依据现有的数据和你的推理能力来填写最合理的答案。",
     ],
-    'multi_choice_example_format': ['问题：{}\n选项：\n{}\n正确答案：\n'],
-    'T/F_example_format': ['问题：{}\n正确答案：\n'],
-    'short_ans_example_format': ['问题：{}\n正确答案：\n'],
+    "multi_choice_example_format": ["问题：{}\n选项：\n{}\n正确答案：\n"],
+    "T/F_example_format": ["问题：{}\n正确答案：\n"],
+    "short_ans_example_format": ["问题：{}\n正确答案：\n"],
 }
 
+
 def construct_prompt(sample):
-    question = sample['question']
-    task_instructions = PROMPT['task_instructions']
-    
-    if sample['type'] == '选择':
+    question = sample["question"]
+    task_instructions = PROMPT["task_instructions"]
+
+    if sample["type"] == "选择":
         formatted_options = ""
-        start_chr = 'A'
+        start_chr = "A"
         for i in range(1, 5):
             formatted_options += f"({start_chr}) {sample[f'option{i}']}\n"
             start_chr = chr(ord(start_chr) + 1)
-        
-        current_example_template = PROMPT['multi_choice_example_format'][0]
+
+        current_example_template = PROMPT["multi_choice_example_format"][0]
         current_example = current_example_template.format(question, formatted_options)
         final_input_prompt = task_instructions[0] + "\n\n" + current_example
-    
-    elif sample['type'] == '判断':
-        current_example_template = PROMPT['T/F_example_format'][0]
+
+    elif sample["type"] == "判断":
+        current_example_template = PROMPT["T/F_example_format"][0]
         current_example = current_example_template.format(question)
         final_input_prompt = task_instructions[1] + "\n\n" + current_example
-        
+
     else:  # For fill in the blanks questions.
-        current_example_template = PROMPT['short_ans_example_format'][0]
+        current_example_template = PROMPT["short_ans_example_format"][0]
         current_example = current_example_template.format(question)
         final_input_prompt = task_instructions[2] + "\n\n" + current_example
 
@@ -46,8 +47,10 @@ def construct_prompt(sample):
 
     return final_input_prompt
 
+
 def cmmmu_doc_to_text(doc):
     return construct_prompt(doc)
+
 
 def cmmmu_doc_to_visual(doc):
     prompt = construct_prompt(doc)
@@ -56,6 +59,7 @@ def cmmmu_doc_to_visual(doc):
     image_tokens = [image_token.strip("<>").replace(" ", "_").replace("图片", "image") for image_token in image_tokens]
     visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
     return visual
+
 
 def cmmmu_process_results(doc, results):
     pred = results[0]
@@ -67,6 +71,7 @@ def cmmmu_process_results(doc, results):
     else:
         parsed_pred = get_fill_blank_prediction(pred, doc["answer"])
     return {"cmmmu_acc": {"id": doc["id"], "subdomain": doc["subcategory"], "question_type": doc["type"], "answer": doc["answer"], "parsed_pred": parsed_pred}}
+
 
 def cmmmu_aggregate_results(results):
     evaluation_result = {}
@@ -105,16 +110,18 @@ def cmmmu_aggregate_results(results):
     print(printable_results)
     return printable_results["Overall"]["acc"]
 
+
 def cmmmu_process_test_results_for_submission(doc, results):
     response = results[0]
     return {"cmmmu_acc": {"id": doc["id"], "type": doc["type"], "response": response}}
+
 
 def cmmmu_test_aggregate_results_for_submission(results):
     os.makedirs("./submissions", exist_ok=True)
     with open("./submissions/cmmmu_test_for_submission.jsonl", "w") as f:
         for result in results:
             json.dump(result, f, ensure_ascii=False)
-            f.write('\n')
+            f.write("\n")
     return -1
 
 
@@ -128,26 +135,26 @@ DOMAIN_CAT2SUB_CAT = {
     "科学": ["生物", "化学", "地理", "数学", "物理"],
     "健康与医学": ["基础医学", "临床医学", "诊断学与实验室医学", "制药", "公共卫生"],
     "人文社会科学": ["历史", "文献学", "社会学", "心理学"],
-    "技术与工程": ["农业", "建筑学", "计算机科学", "电子学", "能源和电力", "材料", "机械工程"]
+    "技术与工程": ["农业", "建筑学", "计算机科学", "电子学", "能源和电力", "材料", "机械工程"],
 }
 
-def eval_cmmmu(entries):
 
+def eval_cmmmu(entries):
     correct_cnt = 0
     for entry in entries:
-        parsed_pred = entry.get('parsed_pred', '')
+        parsed_pred = entry.get("parsed_pred", "")
         correct = False
-        if entry.get('question_type') == '选择':
-            if parsed_pred == entry['answer']:
+        if entry.get("question_type") == "选择":
+            if parsed_pred == entry["answer"]:
                 correct_cnt += 1
                 correct = True
 
-        elif entry.get('question_type') == '填空':
-            norm_answers = normalize_str(entry['answer'], entry['answer'])
+        elif entry.get("question_type") == "填空":
+            norm_answers = normalize_str(entry["answer"], entry["answer"])
 
             for pred in parsed_pred:
                 # already normalized
-                if isinstance(pred, str): # if it's a string, then find if ans in the pred_i
+                if isinstance(pred, str):  # if it's a string, then find if ans in the pred_i
                     for norm_ans in norm_answers:
                         # only see if the string answer in the string pred
                         # print(norm_ans, pred)
@@ -156,7 +163,7 @@ def eval_cmmmu(entries):
                                 correct_cnt += 1
                                 correct = True
                             break
-                else: # it's a number
+                else:  # it's a number
                     if pred in norm_answers:
                         if not correct:
                             correct_cnt += 1
@@ -164,9 +171,10 @@ def eval_cmmmu(entries):
                         break
 
         else:
-            positive_keywords = ['正确', '对', '准确', '肯定', '对的']
-            negative_keywords = ['不对', '错误', '不正确', '不准确', '不合适', '否定', '错的', '错']
-            ambiguous_keywords = ['对错', '是否正确', '否正确', '或者', '是否', '正确性', '对不']
+            positive_keywords = ["正确", "对", "准确", "肯定", "对的"]
+            negative_keywords = ["不对", "错误", "不正确", "不准确", "不合适", "否定", "错的", "错"]
+            ambiguous_keywords = ["对错", "是否正确", "否正确", "或者", "是否", "正确性", "对不"]
+
             def judge_similarity(pred_list, positive_keywords, negative_keywords):
                 positive_count = 0
                 negative_count = 0
@@ -182,50 +190,43 @@ def eval_cmmmu(entries):
                 elif negative_count > positive_count:
                     return "错"
                 else:
-                    return random.choice(['对', '错'])
-            answer = entry['answer']
+                    return random.choice(["对", "错"])
+
+            answer = entry["answer"]
             parsed_pred = [word for word in parsed_pred if not any(ambiguous in word for ambiguous in ambiguous_keywords)]
             result = judge_similarity(parsed_pred, positive_keywords, negative_keywords)
             if result == answer:
                 correct_cnt += 1
                 correct = True
         if correct:
-            entry['judge'] = '正确'
+            entry["judge"] = "正确"
         else:
-            entry['judge'] = '错误'
+            entry["judge"] = "错误"
 
     if len(entries) == 0:
-        print('entries_num == 0, please check your file')
-        results_count = {
-        'correct_num': 0,
-        'entries_num': 0,
-        'acc': 0
-        }
+        print("entries_num == 0, please check your file")
+        results_count = {"correct_num": 0, "entries_num": 0, "acc": 0}
     else:
-         results_count = {
-        'correct_num': correct_cnt,
-        'entries_num': len(entries),
-        'acc': correct_cnt / len(entries)
-        }
+        results_count = {"correct_num": correct_cnt, "entries_num": len(entries), "acc": correct_cnt / len(entries)}
 
     return results_count
 
 
 def get_multi_choice_prediction(response, all_choices, index2ans):
-    for char in [',', '.', '!', '?', ';', ':',"'"]:
+    for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
-    response = " " + response + " " # add space to avoid partial match
+    response = " " + response + " "  # add space to avoid partial match
 
     candidates = []
 
     for choice in all_choices:  # (A) (B) (C) (D)
         # Add the choice to candidates each time it appears in the response
-        candidates.extend([choice for _ in range(response.count(f'({choice})'))])
+        candidates.extend([choice for _ in range(response.count(f"({choice})"))])
 
     if len(candidates) == 0:
         for choice in all_choices:  # A B C D
             # Similarly, add the choice for each occurrence
-            candidates.extend([choice for _ in range(response.count(f'{choice}'))])
+            candidates.extend([choice for _ in range(response.count(f"{choice}"))])
 
     if len(candidates) == 0 and len(response.split()) >= 1:
         for index, ans in index2ans.items():
@@ -237,7 +238,7 @@ def get_multi_choice_prediction(response, all_choices, index2ans):
         for index, ans in index2ans.items():
             if ans in response:
                 candidates.append(index)
-                index_ans = False # it's content ans.
+                index_ans = False  # it's content ans.
 
     if len(candidates) == 0:  # still not get answer, randomly choose one.
         return random.choice(all_choices)
@@ -251,15 +252,16 @@ def get_multi_choice_prediction(response, all_choices, index2ans):
         most_frequent_candidates = [c for c in all_choices if candidate_counts.get(c, 0) == max_count]
 
         # Combine the most frequent candidates in ABCD order
-        return ''.join(most_frequent_candidates)
+        return "".join(most_frequent_candidates)
+
 
 def extract_numbers(string):
     # Pattern for numbers with Chinese commas
-    pattern_commas = r'-?\d{1,3}(?:，\d{3})+'
+    pattern_commas = r"-?\d{1,3}(?:，\d{3})+"
     # Pattern for scientific notation
-    pattern_scientific = r'-?\d+(?:\.\d+)?[eE][+-]?\d+'
+    pattern_scientific = r"-?\d+(?:\.\d+)?[eE][+-]?\d+"
     # Pattern for simple numbers without Chinese commas
-    pattern_simple = r'-?(?:\d+\.\d+|\.\d+|\d+)(?![eE][+-]?\d+)(?!，\d)'
+    pattern_simple = r"-?(?:\d+\.\d+|\.\d+|\d+)(?![eE][+-]?\d+)(?!，\d)"
 
     # Extract numbers with Chinese commas
     numbers_with_commas = re.findall(pattern_commas, string)
@@ -272,16 +274,19 @@ def extract_numbers(string):
     all_numbers = numbers_with_commas + numbers_scientific + numbers_simple
     return all_numbers
 
+
 def check_is_number(string):
     try:
-        float(string.replace(',', ''))
+        float(string.replace(",", ""))
         return True
     except ValueError:
         # check if there's comma inside
         return False
 
+
 def count_letters(string):
-    return sum(c.isalpha() and 'a' <= c <= 'z' or 'A' <= c <= 'Z' for c in string)
+    return sum(c.isalpha() and "a" <= c <= "z" or "A" <= c <= "Z" for c in string)
+
 
 def normalize_str(string, answer):
     # check if characters in the string
@@ -294,15 +299,16 @@ def normalize_str(string, answer):
     is_number = check_is_number(string)
 
     if is_number:
-        string = string.replace(',', '')
+        string = string.replace(",", "")
         string = float(string)
         # leave 2 decimal
         string = round(string, 2)
         return [string]
-    else: # it's likely to be a string
+    else:  # it's likely to be a string
         if len(string) > len(answer) + 20 or count_letters(string) > count_letters(answer) + 2:
             return []
         return [string]
+
 
 def get_fill_blank_prediction(response, answer):
     """get the prediction from the generated response,
@@ -311,15 +317,14 @@ def get_fill_blank_prediction(response, answer):
     def get_key_subresponses(response):
         key_responses = []
         response = response.strip("。").strip()
-        sub_responses = re.split(r'。|\n', response)
-        indicators_of_keys = ['是', '为', '所以', '等于', '方案', '选择',
-                            '正确答案', '因此', '最后', '答案', '结果']
+        sub_responses = re.split(r"。|\n", response)
+        indicators_of_keys = ["是", "为", "所以", "等于", "方案", "选择", "正确答案", "因此", "最后", "答案", "结果"]
         key_responses = []
         for index, resp in enumerate(sub_responses):
             # if last one, accept it's an equation (the entire response can be just one sentence with equation)
             if index == len(sub_responses) - 1:
-                indicators_of_keys.extend(['='])
-            shortest_key_response = None # the shortest response that may contain the answer (tail part of the response)
+                indicators_of_keys.extend(["="])
+            shortest_key_response = None  # the shortest response that may contain the answer (tail part of the response)
             for indicator in indicators_of_keys:
                 if indicator in resp:
                     if not shortest_key_response:
@@ -327,18 +332,18 @@ def get_fill_blank_prediction(response, answer):
                     else:
                         if len(resp.split(indicator)[-1].strip()) < len(shortest_key_response):
                             shortest_key_response = resp.split(indicator)[-1].strip()
-            
+
             if shortest_key_response:
                 # and it's not trivial
                 if shortest_key_response.strip() not in [":", ",", ".", "!", "?", ";", ":", "'"]:
                     key_responses.append(shortest_key_response)
-        if len(key_responses) == 0: # did not found any
+        if len(key_responses) == 0:  # did not found any
             return [response]
         return key_responses
 
     key_responses = get_key_subresponses(response)
 
-    pred_list = key_responses.copy() # keep the original string response
+    pred_list = key_responses.copy()  # keep the original string response
     for resp in key_responses:
         pred_list.extend(extract_numbers(resp))
 
@@ -352,6 +357,7 @@ def get_fill_blank_prediction(response, answer):
 
     return pred_list
 
+
 def get_TF_prediction(response):
     """get the prediction from the generated response,
     return a list of predicted strings or numbers"""
@@ -359,12 +365,11 @@ def get_TF_prediction(response):
     def get_key_subresponses(response):
         key_responses = []
         response = response.strip("。").strip()
-        sub_responses = re.split(r'。|\n', response)
-        indicators_of_keys = ['是', '为', '所以', '判断',
-                            '陈述', '说法', '表达', '答案', '结果']
+        sub_responses = re.split(r"。|\n", response)
+        indicators_of_keys = ["是", "为", "所以", "判断", "陈述", "说法", "表达", "答案", "结果"]
         key_responses = []
         for index, resp in enumerate(sub_responses):
-            shortest_key_response = None # the shortest response that may contain the answer (tail part of the response)
+            shortest_key_response = None  # the shortest response that may contain the answer (tail part of the response)
             for indicator in indicators_of_keys:
                 if indicator in resp:
                     if not shortest_key_response:
@@ -372,25 +377,25 @@ def get_TF_prediction(response):
                     else:
                         if len(resp.split(indicator)[-1].strip()) < len(shortest_key_response):
                             shortest_key_response = resp.split(indicator)[-1].strip()
-            
+
             if shortest_key_response:
                 # and it's not trivial
                 if shortest_key_response.strip() not in [":", ",", ".", "!", "?", ";", ":", "'"]:
                     key_responses.append(shortest_key_response)
-        if len(key_responses) == 0: # did not found any
+        if len(key_responses) == 0:  # did not found any
             return [response]
         return key_responses
 
     key_responses = get_key_subresponses(response)
 
-    pred_list = key_responses.copy() # keep the original string response
+    pred_list = key_responses.copy()  # keep the original string response
     # remove duplicates
     pred_list = list(set(pred_list))
 
     return pred_list
 
-def get_multi_choice_info(options):
 
+def get_multi_choice_info(options):
     start_chr = "A"
     all_choices = []
     index2ans = {}
@@ -400,8 +405,8 @@ def get_multi_choice_info(options):
 
     return index2ans, all_choices
 
-def calculate_ins_level_acc(results):
 
+def calculate_ins_level_acc(results):
     correct_sum = 0
     entries_sum = 0
     for cat_results in results.values():
