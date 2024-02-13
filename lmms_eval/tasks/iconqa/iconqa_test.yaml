@@ -1,0 +1,23 @@
+dataset_path: lmms-lab/ICON-QA
+dataset_kwargs:
+  token: True
+task: "iconqa_test"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "answers"
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: False
+metric_list:
+  - metric: anls
+    aggregation: mean
+    higher_is_better: true
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    statement: "Given a set of images and a question, please provide the answer to the question.\n"
+    options_statement: "Question: {question}.\nOptions:\n{options}\nPlease answer with the option letter from the given choices directly."
+    freeform_statement: "Question: {question}.\nPlease answer the question using a single word or phrase."
