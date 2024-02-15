@@ -7,6 +7,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from accelerate import Accelerator, DistributedType
+from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
 
 from lmms_eval.utils import stop_sequences_criteria
@@ -71,8 +72,19 @@ class Llava(lmms):
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED
             ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
-            if accelerator.distributed_type == DistributedType.FSDP:
+            # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
+            # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
+            # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
+            if accelerator.distributed_type == DistributedType.DEEPSPEED:
+                kwargs = {
+                    "train_micro_batch_size_per_gpu": self.batch_size_per_gpu,
+                    "train_batch_size" : self.batch_size_per_gpu * accelerator.num_processes,
+                }
+                AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **kwargs)
+                eval_logger.info("Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0")
+            if accelerator.distributed_type == DistributedType.FSDP or accelerator.distributed_type == DistributedType.DEEPSPEED:
                 self._model = accelerator.prepare(self.model)
             else:
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
