@@ -16,6 +16,7 @@ def seed_doc_to_text(doc):
 
 def seed_process_result(doc, result):
     pred = result[0].strip()
+    pred = pred[0]
     answer = doc["answer"]
     data_type = doc["data_type"]
 

@@ -44,3 +44,6 @@ model_specific_prompt_kwargs:
   llava :
     img_token : <image>
     post_prompt : "Answer with the option's letter from the given choices directly."
+  gpt4V :
+    img_token : <image>
+    post_prompt : "Answer with the option's letter from the given choices directly."
