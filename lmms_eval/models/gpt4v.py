@@ -1,4 +1,5 @@
 from io import BytesIO
+from copy import deepcopy
 import os
 import base64
 from typing import List, Tuple
@@ -38,6 +39,10 @@ elif API_TYPE == "azure":
 class GPT4V(lmms):
     def __init__(self, **kwargs) -> None:
         super().__init__()
+        # Manually set a image token for GPT4V so that we can search for it
+        # and split the text and image
+        # Here we just use the same token as llava for convenient
+        self.image_token = "<image>"
 
     # Function to encode the image
     def encode_image(self, image: Image):
@@ -62,13 +67,32 @@ class GPT4V(lmms):
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-
-            payload = {"model": "gpt-4-vision-preview", "messages": [{"role": "user", "content": []}]}
-            payload["messages"][0]["content"].append({"type": "text", "text": contexts})
-
+            imgs = []
             for visual in visuals:
                 img = self.encode_image(visual)
-                payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+                imgs.append(img)
+
+            payload = {"model": "gpt-4-vision-preview", "messages": []}
+            response_json = {"role": "user", "content": []}
+            # When there is no image token in the context, append the image to the text
+            if self.image_token not in contexts:
+                payload["messages"].append(deepcopy(response_json))
+                payload["messages"][0]["content"].append({"type": "text", "text": contexts})
+                for img in imgs:
+                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+            else:
+                contexts = contexts.split(self.image_token)
+                for idx, img in enumerate(imgs):
+                    payload["messages"].append(deepcopy(response_json))
+                    payload["messages"][idx]["content"].append({"type" : "text", "text" : contexts[idx]})
+                    payload["messages"][idx]["content"].append({"type" : "image_url", "image_url" : {"url" : f"data:image/jpeg;base64,{img}"}})
+                
+                # If n image tokens are in the contexts
+                # contexts will be splitted into n+1 chunks
+                # Manually add it into the payload
+                payload["messages"].append(deepcopy(response_json))
+                payload["messages"][-1]["content"].append({"type" : "text", "text" : contexts[-1]})
+                
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -97,6 +121,7 @@ class GPT4V(lmms):
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
                         content = ""
             res.append(content)
+            pbar.update(1)
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
