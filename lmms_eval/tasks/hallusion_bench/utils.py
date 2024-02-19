@@ -81,6 +81,7 @@ def evaluate_by_chatgpt(data, output_entry, correctness_entry, gpt_model="gpt-4"
             gpt_correctness = "2"
 
         sample[correctness_entry] = gpt_correctness
+        sample["gpt_answer"] = prompt + output_text
 
         output.append(sample)
 
