@@ -20,12 +20,11 @@ accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Ea
   - perplexity-based evaluation
 
 - Qwen-VL
+- Fuyu/OtterHD
 
 ## Models to be added
 
 - InstructBLIP
-- OpenFlamingo/Otter
-- Fuyu/OtterHD
 - Emu
 - CogVLM
 
