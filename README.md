@@ -15,12 +15,11 @@ accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Ea
 - GPT4V (API)
   - generation-based evaluation
 
-- Gemini (APi)
-  - generation-based evaluation
-
 - LLaVA-v1.5/v1.6-7B/13B/34B
   - generation-based evaluation
   - perplexity-based evaluation
+
+- Qwen-VL
 
 ## Models to be added
 
@@ -109,13 +108,12 @@ accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Ea
 - VQAv2 (vqav2)
   - VQAv2 Validation (vqav2_val)
   - VQAv2 Test (vqav2_test)
-
-## Datasets to be added and tested
 - CMMMU (cmmmu)
-- Mementos (mementos)
 - Ferret Bench (ferret)
 - ST-VQA (stvqa)
 - Multi-DocVQA (multidocvqa)
+
+## Datasets to be added and tested
 - Winoground (winoground)
 - NLVR2 (nlvr2)
 - RavenIQ-Test (raveniq)
