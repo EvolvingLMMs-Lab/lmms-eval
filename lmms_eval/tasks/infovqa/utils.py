@@ -1,5 +1,11 @@
 import json
 import os
+import logging
+
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+lmms_logger = logging.getLogger("lmms-eval")
 
 
 def infovqa_doc_to_visual(doc):
@@ -16,12 +22,12 @@ def infovqa_doc_to_text(doc, model_specific_prompt_kwargs):
 def infovqa_test_process_results(doc, results):
     pred = results[0]
     questionId = doc["questionId"]
-    return {"anls": {"questionId": int(questionId), "answer": pred}}
+    return {"submission": {"questionId": int(questionId), "answer": pred}}
 
 
-def infovqa_test_aggregate_results(results):
+def infovqa_test_aggregate_results(results, args):
     # save results as json
-    os.makedirs("./submissions", exist_ok=True)
-    with open("./submissions/infovqa_test_for_submission.json", "w") as f:
+    file = generate_submission_file("infovqa_test_for_submission.json", args)
+    with open(file, "w") as f:
         json.dump(results, f)
-    return -1
+    lmms_logger.info(f"Results saved to {file}")

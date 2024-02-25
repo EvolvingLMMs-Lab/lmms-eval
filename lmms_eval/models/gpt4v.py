@@ -84,15 +84,15 @@ class GPT4V(lmms):
                 contexts = contexts.split(self.image_token)
                 for idx, img in enumerate(imgs):
                     payload["messages"].append(deepcopy(response_json))
-                    payload["messages"][idx]["content"].append({"type" : "text", "text" : contexts[idx]})
-                    payload["messages"][idx]["content"].append({"type" : "image_url", "image_url" : {"url" : f"data:image/jpeg;base64,{img}"}})
-                
+                    payload["messages"][idx]["content"].append({"type": "text", "text": contexts[idx]})
+                    payload["messages"][idx]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+
                 # If n image tokens are in the contexts
                 # contexts will be splitted into n+1 chunks
                 # Manually add it into the payload
                 payload["messages"].append(deepcopy(response_json))
-                payload["messages"][-1]["content"].append({"type" : "text", "text" : contexts[-1]})
-                
+                payload["messages"][-1]["content"].append({"type": "text", "text": contexts[-1]})
+
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
