@@ -4,8 +4,11 @@ import sys
 import copy
 import json
 import logging
+import traceback
 import argparse
+import torch
 import numpy as np
+import datetime
 
 import warnings
 import traceback
@@ -23,7 +26,8 @@ from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.logging_utils import WandbLogger
 from lmms_eval.utils import PathFormatter
 
-global eval_logger
+
+eval_logger = logging.getLogger("lmms-eval")
 
 
 def _handle_non_serializable(o):
@@ -145,6 +149,9 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     if not args:
         args = parse_eval_args()
 
+    if args.tasks != "list":
+        torch.distributed.init_process_group(backend="nccl", timeout=datetime.timedelta(seconds=600000))
+
     # Check if no arguments were passed after parsing
     if len(sys.argv) == 1:
         print("┌───────────────────────────────────────────────────────────────────────────────┐")
@@ -203,6 +210,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         except Exception as e:
             traceback.print_exc()
             eval_logger.error(f"Error during evaluation: {e}")
+            traceback.print_exc()
             results_list.append(None)
 
     for args, results in zip(args_list, results_list):
