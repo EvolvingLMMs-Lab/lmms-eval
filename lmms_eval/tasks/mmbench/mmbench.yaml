@@ -1,0 +1,7 @@
+group: mmbench
+task:
+  - mmbench_en_dev
+  - mmbench_en_test
+  - mmbench_cn_dev
+  - mmbench_cn_test
+  - mmbench_cn_cc

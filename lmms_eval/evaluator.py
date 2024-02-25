@@ -427,6 +427,10 @@ def evaluate(
                 group_name, task = task
             else:
                 group_name = None
+
+            if metric not in task.aggregation():
+                continue
+
             agg_fn = task.aggregation()[metric]
 
             # Bo: for models that need to know the args to save to correct path
@@ -476,6 +480,11 @@ def evaluate(
                             metric_score = results[task][metric]
 
                             all_stderr.append(stderr)
+
+                            if metric_score is None:
+                                results[group][metric] = None
+                                results[group][stderr] = 0
+                                continue
 
                             if metric in results[group]:
                                 results[group][metric] = (results[group][metric] * total_size + metric_score * current_size) / (total_size + current_size)

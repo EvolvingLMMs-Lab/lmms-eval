@@ -4,6 +4,8 @@ from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
 
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
 import logging
 
 eval_logger = logging.getLogger("lmms-eval")
@@ -17,9 +19,9 @@ def nocaps_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def nocaps_doc_to_text(doc):
+def nocaps_doc_to_text(doc, model_specific_prompt_kwargs=None):
     # question = "Please carefully observe the image and come up with a caption for the image"
-    return f"Provide a one-sentence caption for the provided image."
+    return model_specific_prompt_kwargs["prompt"]
 
 
 def nocaps_process_result(doc, result):
@@ -39,7 +41,7 @@ def nocaps_process_result(doc, result):
     return {f"nocaps_{metric}": data_dict for metric in NOCAPS_METRICS}
 
 
-def nocaps_aggregation_result(results, metric):
+def nocaps_aggregation_result(results, metric, args=None):
     scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr"), (Spice(), "SPICE")]
     scorers_dict = {s[1]: s for s in scorers}
 
@@ -86,45 +88,45 @@ def nocaps_aggregation_result(results, metric):
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 
-    os.makedirs("./submissions", exist_ok=True)
-    if not os.path.exists("./submissions/captions_nocaps_val_alg_results.json"):
-        eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./submissions/captions_nocaps_val_alg_results.json", "w") as f:
-            json.dump(stored_results, f, indent=4)
+    path = generate_submission_file(f"nocaps_val_{metric}_scores.json", args)
+    eval_logger.info("Storing prediction that can be submitted to the server ...")
+    with open(path, "w") as f:
+        json.dump(stored_results, f, indent=4)
+    eval_logger.info(f"Your result has been saved to {path}.")
 
     return score
 
 
-def nocaps_bleu4(results):
-    return nocaps_aggregation_result(results, "Bleu_4")
+def nocaps_bleu4(results, args=None):
+    return nocaps_aggregation_result(results, "Bleu_4", args)
 
 
-def nocaps_bleu3(results):
-    return nocaps_aggregation_result(results, "Bleu_3")
+def nocaps_bleu3(results, args=None):
+    return nocaps_aggregation_result(results, "Bleu_3", args)
 
 
-def nocaps_bleu2(results):
-    return nocaps_aggregation_result(results, "Bleu_2")
+def nocaps_bleu2(results, args=None):
+    return nocaps_aggregation_result(results, "Bleu_2", args)
 
 
-def nocaps_bleu1(results):
-    return nocaps_aggregation_result(results, "Bleu_1")
+def nocaps_bleu1(results, args=None):
+    return nocaps_aggregation_result(results, "Bleu_1", args)
 
 
-def nocaps_meteor(results):
-    return nocaps_aggregation_result(results, "METEOR")
+def nocaps_meteor(results, args=None):
+    return nocaps_aggregation_result(results, "METEOR", args)
 
 
-def nocaps_rougel(results):
-    return nocaps_aggregation_result(results, "ROUGE_L")
+def nocaps_rougel(results, args=None):
+    return nocaps_aggregation_result(results, "ROUGE_L", args)
 
 
-def nocaps_cider(results):
-    return nocaps_aggregation_result(results, "CIDEr")
+def nocaps_cider(results, args=None):
+    return nocaps_aggregation_result(results, "CIDEr", args)
 
 
-def nocaps_spice(results):
-    return nocaps_aggregation_result(results, "SPICE")
+def nocaps_spice(results, args=None):
+    return nocaps_aggregation_result(results, "SPICE", args)
 
 
 def nocaps_test_process_result(doc, result):
@@ -138,16 +140,14 @@ def nocaps_test_process_result(doc, result):
     return {"nocaps_passthrough": {"pred": result[0], "image_id": doc["image_id"]}}
 
 
-def nocaps_test_aggregation_result(results):
+def nocaps_test_aggregation_result(results, args=None):
     stored_results = []
     for result in results:
         stored_results.append({"image_id": int(result["image_id"]), "caption": result["pred"]})
 
-    os.makedirs("./submissions", exist_ok=True)
-    if not os.path.exists("./submissions/nocaps_captions_nocaps_test_alg_results.json"):
-        eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./submissions/nocaps_captions_nocaps_test_alg_results.json", "w") as f:
-            json.dump(stored_results, f, indent=4)
+    path = generate_submission_file("nocaps_captions_nocaps_test_alg_results.json", args)
+    eval_logger.info("Storing prediction that can be submitted to the server ...")
+    with open(path, "w") as f:
+        json.dump(stored_results, f, indent=4)
 
-    eval_logger.info("Your test result has been stored. Make sure you also have the val result stored to submit to the server on https://codalab.lisn.upsaclay.fr/competitions/7404#participate.")
-    return -1
+    eval_logger.info(f"Your test result has been stored in {path}. Make sure you also have the val result stored to submit to the server on https://codalab.lisn.upsaclay.fr/competitions/7404#participate.")
