@@ -1,0 +1,4 @@
+group: docvqa
+task:
+- docvqa_val
+- docvqa_test

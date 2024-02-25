@@ -1,0 +1,3 @@
+group: ok_vqa
+task:
+- ok_vqa_val2014
