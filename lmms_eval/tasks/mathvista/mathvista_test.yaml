@@ -17,7 +17,7 @@ generation_kwargs:
   do_sample: false
 process_results: !function utils.mathvista_process_results
 metric_list:
-  - metric: gpt_eval_score
+  - metric: submission
     aggregation: !function utils.mathvista_aggregate_results
     higher_is_better: true
 
