@@ -8,6 +8,10 @@ doc_to_visual: !function evaluate_hb.hb_doc_to_visual
 doc_to_text: !function evaluate_hb.hb_doc_to_text
 doc_to_target: "gt_answer_details"
 process_results: !function evaluate_hb.hb_process_results
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
 generation_kwargs:
   max_new_tokens: 128
   temperature: 0
@@ -24,13 +28,13 @@ metric_list:
   - metric: fAcc
     aggregation: !function evaluate_hb.hb_aggregation_result_fAcc
     higher_is_better: true
-  #- metric: aAcc
+  # - metric: aAcc
   #  aggregation: !function evaluate_hb.hb_aggregation_result_aAcc_intern
   #  higher_is_better: true
-  #- metric: qAcc
+  # - metric: qAcc
   #  aggregation: !function evaluate_hb.hb_aggregation_result_qAcc_intern
   #  higher_is_better: true
-  #- metric: fAcc
+  # - metric: fAcc
   #  aggregation: !function evaluate_hb.hb_aggregation_result_fAcc_intern
   #  higher_is_better: true
 metadata:

@@ -1,0 +1,24 @@
+dataset_path: lmms-lab/OK-VQA
+output_type: generate_until
+doc_to_visual: !function utils.ok_vqa_doc_to_visual
+doc_to_text: !function utils.ok_vqa_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: submission
+    aggregation: !function utils.ok_vqa_aggreate_submissions
+    higher_is_better: true
+process_results: !function utils.ok_vqa_process_results
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
+metadata:
+  - version: 0.0

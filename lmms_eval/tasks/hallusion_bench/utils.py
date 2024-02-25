@@ -30,12 +30,12 @@ eval_logger = logging.getLogger("lmms-eval")
 
 
 def evaluate_by_chatgpt(data, output_entry, correctness_entry, gpt_model="gpt-4", load_json=False, save_json_path="./hallusion_output.json", retries=3):
-    # if load_json and os.path.exists(save_json_path):
-    #     with open(save_json_path, "r") as f:
-    #         output = json.load(f)
-    # else:
-    output = []
-    for sample in tqdm(data, desc="Eval by GPT"):
+    if load_json and os.path.exists(save_json_path):
+        with open(save_json_path, "r") as f:
+            output = json.load(f)
+    else:
+        output = []
+    for sample in tqdm(data[len(output) :], desc="Eval by GPT"):
         prompt = "Imagine you are an intelligent teacher. Thoroughly read the question, reference answer and the prediction answer to ensure a clear understanding of the information provided. Assess the correctness of the predictions. "
         prompt += 'If the prediction answer does not conflict with the reference answer, please generate “correct”. If the prediction answer conflict with the reference answer, please generate “incorrect”. If the prediction answer is unclear about the answer, please generate "unclear". \n\n Question:'
         prompt += sample["question"]
