@@ -113,6 +113,8 @@ accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Ea
 - Multi-DocVQA (multidocvqa)
 
 ## Datasets to be added and tested
+- TallyQA (tallyqa)
+- VSR (vsr)
 - Winoground (winoground)
 - NLVR2 (nlvr2)
 - RavenIQ-Test (raveniq)
