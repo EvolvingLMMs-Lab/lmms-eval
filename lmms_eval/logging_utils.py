@@ -6,7 +6,9 @@ import os
 import json
 import glob
 import pandas as pd
+import numpy as np
 from datetime import datetime
+from typing import Any, Dict, List, Literal, Tuple, Union
 
 from packaging.version import Version
 
@@ -15,20 +17,14 @@ import tenacity
 
 logger = logging.getLogger(__name__)
 
-IS_WANDB_AVAILABLE = False
-
-
 try:
     import wandb
 
-    assert Version(wandb.__version__) >= Version("0.16.0")
-    # if Version(wandb.__version__) < Version("0.16.0"):
-    #     wandb.require("report-editing:v0")
-
-    IS_WANDB_AVAILABLE = True
+    assert Version(wandb.__version__) >= Version("0.13.6")
+    if Version(wandb.__version__) < Version("0.13.6"):
+        wandb.require("report-editing:v0")
 except Exception as e:
-    logger.warning("To use the wandb reporting functionality please install wandb>=0.16.0.\n" "To install the latest version of wandb run `pip install wandb --upgrade`\n" f"{e}")
-    IS_WANDB_AVAILABLE = False
+    logger.warning("To use the wandb reporting functionality please install wandb>=0.13.6.\n" "To install the latest version of wandb run `pip install wandb --upgrade`\n" f"{e}")
 
 
 def remove_none_pattern(input_string):
@@ -44,11 +40,41 @@ def remove_none_pattern(input_string):
     return result, removed
 
 
+def _handle_non_serializable(o: Any) -> Union[int, str, list]:
+    """Handle non-serializable objects by converting them to serializable types.
+
+    Args:
+        o (Any): The object to be handled.
+
+    Returns:
+        Union[int, str, list]: The converted object. If the object is of type np.int64 or np.int32,
+            it will be converted to int. If the object is of type set, it will be converted
+            to a list. Otherwise, it will be converted to str.
+    """
+    if isinstance(o, np.int64) or isinstance(o, np.int32):
+        return int(o)
+    elif isinstance(o, set):
+        return list(o)
+    else:
+        return str(o)
+
+
+def get_wandb_printer() -> Literal["Printer"]:
+    """Returns a wandb printer instance for pretty stdout."""
+    from wandb.sdk.lib.printer import get_printer
+    from wandb.sdk.wandb_settings import Settings
+
+    printer = get_printer(Settings()._jupyter)
+    return printer
+
+
+# class WandbLogger:
 class WandbLogger:
     def __init__(self, args):
         self.wandb_args = utils.simple_parse_args_string(args.wandb_args)
         self.args = args
         self.all_args_dict = vars(args)
+        self.printer = get_wandb_printer()
         try:
             self.init_run()
         except Exception as e:
@@ -60,7 +86,7 @@ class WandbLogger:
     def init_run(self):
         if "name" not in self.wandb_args:
             if "config" in self.all_args_dict and self.all_args_dict["config"] != "":
-                self.wandb_args["name"] = self.all_args_dict["config"].split("/")[-1].replace(".yaml", "") + self.args.log_samples_suffix
+                self.wandb_args["name"] = self.all_args_dict["config"].split("/")[-1].replace(".yaml", "") + "_" + self.args.log_samples_suffix
             else:
                 task_names = self.args.tasks.replace(",", "/")
                 self.wandb_args["name"] = f"{self.args.model}_{task_names}_{self.args.log_samples_suffix}"
@@ -71,117 +97,29 @@ class WandbLogger:
         # initialize a W&B run
         self.run = wandb.init(**self.wandb_args)
 
-    def log_eval_result(self, results):
-        # Log configs to wandb
-        configs = self.get_config(results)
-        self.run.config.update(configs)
-        self.results = results
+    def post_init(self, results: Dict[str, Any]) -> None:
+        self.results: Dict[str, Any] = copy.deepcopy(results)
+        self.task_names: List[str] = list(results.get("results", {}).keys())
+        self.group_names: List[str] = list(results.get("groups", {}).keys())
 
-        wandb_summary, self.wandb_results = self.sanitize_results_dict()
-        # update wandb.run.summary with items that were removed
-        self.run.summary.update(wandb_summary)
-        # Log the evaluation metrics to wandb
-        self.run.log(self.wandb_results)
-        # Log the evaluation metrics as Table
-        self.get_eval_wandb_table()
-
-    def get_eval_wandb_table(self):
-        columns = ["Model Args", "Task", "Version", "Filter", "num_fewshot", "Metric", "Value", "Stderr"]
-        table = wandb.Table(columns=columns)
-        results = copy.deepcopy(self.results)
-        model_args = results.get("config").get("model_args")
-        for k, dic in results.get("results").items():
-            version = results.get("versions").get(k)
-            n = results.get("n-shot").get(k)
-
-            if "alias" in dic:
-                k = dic.pop("alias")
-
-            for (mf), v in dic.items():
-                m, _, f = mf.partition(",")
-                if m.endswith("_stderr"):
-                    continue
-
-                if m + "_stderr" + "," + f in dic:
-                    se = dic[m + "_stderr" + "," + f]
-                    if se != "N/A":
-                        se = "%.4f" % se
-                    table.add_data(*[model_args, k, version, f, n, m, v, se])
-                else:
-                    table.add_data(*[model_args, k, version, f, n, m, v, ""])
-
-        # log the table to W&B
-        self.run.log({f"evaluation/eval_results": table})
-
-    def generate_dataset(self, data, config):
-        """Generate a Zeno dataset from evaluation data.
-
-        Args:
-            data: The data to generate a dataset for.
-            config: The configuration of the task.
-
-        Returns:
-            pd.Dataframe: A dataframe that is ready to be uploaded to Zeno.
-        """
-        ids = [x["doc_id"] for x in data]
-        labels = [x["target"] for x in data]
-        instance = [""] * len(ids)
-
-        metrics_list = config["metric_list"]
-        metrics = {}
-        for metric in metrics_list:
-            metric = metric.get("metric")
-            metrics[metric] = [x[metric] for x in data]
-
-        if config["output_type"] == "loglikelihood":
-            instance = [x["arguments"][0][0] for x in data]
-            labels = [x["arguments"][0][1] for x in data]
-        elif config["output_type"] == "multiple_choice":
-            instance = [x["arguments"][0][0] + "\n\n" + "\n".join([f"- {y[1]}" for y in x["arguments"]]) for x in data]
-        elif config["output_type"] == "loglikelihood_rolling":
-            instance = [x["arguments"][0][0] for x in data]
-        elif config["output_type"] == "generate_until":
-            instance = [x["arguments"][0][0] for x in data]
-
-        df_data = {
-            "id": ids,
-            "data": instance,
-            "input_len": [len(x) for x in instance],
-            "labels": labels,
-            "output_type": config["output_type"],
-        }
-        df_data.update(metrics)
-
-        return pd.DataFrame(df_data)
-
-    def log_eval_samples(self, samples):
-        task_names = list(self.results.get("results", {}).keys())
-        for task_name in task_names:
-            eval_preds = samples[task_name]
-            df = self.generate_dataset(eval_preds, self.task_configs.get(task_name))
-            self.run.log({f"{task_name}_eval_results": df})
-
-    def get_config(self, results):
-        task_configs = results.get("configs", {})
-        cli_configs = results.get("config", {})
+    def _get_config(self) -> Dict[str, Any]:
+        """Get configuration parameters."""
+        self.task_configs = self.results.get("configs", {})
+        cli_configs = self.results.get("config", {})
         configs = {
-            "task_configs": task_configs,
+            "task_configs": self.task_configs,
             "cli_configs": cli_configs,
         }
 
         return configs
 
-    def sanitize_results_dict(self):
-        """
-        Remove string valued keys from the results dict as they don't render in the workspace.
-        Log these key-value pairs to wandb.summary.
-        """
+    def _sanitize_results_dict(self) -> Tuple[Dict[str, str], Dict[str, Any]]:
+        """Sanitize the results dictionary."""
         _results = copy.deepcopy(self.results.get("results", dict()))
 
-        task_names = list(self.results.get("results", {}).keys())
         # Remove None from the metric string name
         tmp_results = copy.deepcopy(_results)
-        for task_name in task_names:
+        for task_name in self.task_names:
             task_result = tmp_results.get(task_name, dict())
             for metric_name, metric_value in task_result.items():
                 _metric_name, removed = remove_none_pattern(metric_name)
@@ -191,7 +129,7 @@ class WandbLogger:
 
         # remove string valued keys from the results dict
         wandb_summary = {}
-        for task in task_names:
+        for task in self.task_names:
             task_result = _results.get(task, dict())
             for metric_name, metric_value in task_result.items():
                 if isinstance(metric_value, str):
@@ -206,87 +144,212 @@ class WandbLogger:
             for metric_name, metric_value in task_results.items():
                 _results[f"{task_name}/{metric_name}"] = metric_value
                 _results[task_name].pop(metric_name)
-        for task in task_names:
+        for task in self.task_names:
             _results.pop(task)
 
         return wandb_summary, _results
 
-    def prepare_report_by_task(self, results):
-        import wandb.apis.reports as wr
+    def _log_results_as_table(self) -> None:
+        """Generate and log evaluation results as a table to W&B."""
+        columns = [
+            "Version",
+            "Filter",
+            "num_fewshot",
+            "Metric",
+            "Value",
+            "Stderr",
+        ]
 
-        task_names = list(self.results.get("results", {}).keys())
-        blocks = []
+        def make_table(columns: List[str], key: str = "results"):
+            table = wandb.Table(columns=columns)
+            results = copy.deepcopy(self.results)
+
+            for k, dic in results.get(key).items():
+                if k in self.group_names and not key == "groups":
+                    continue
+                version = results.get("versions").get(k)
+                if version == "N/A":
+                    version = None
+                n = results.get("n-shot").get(k)
+
+                for (mf), v in dic.items():
+                    m, _, f = mf.partition(",")
+                    if m.endswith("_stderr"):
+                        continue
+                    if m == "alias":
+                        continue
+
+                    if m + "_stderr" + "," + f in dic:
+                        se = dic[m + "_stderr" + "," + f]
+                        if se != "N/A":
+                            se = "%.4f" % se
+                        table.add_data(*[k, version, f, n, m, str(v), str(se)])
+                    else:
+                        table.add_data(*[k, version, f, n, m, str(v), ""])
+
+            return table
+
+        # log the complete eval result to W&B Table
+        table = make_table(["Tasks"] + columns, "results")
+        self.run.log({"evaluation/eval_results": table})
+
+        if "groups" in self.results.keys():
+            table = make_table(["Groups"] + columns, "groups")
+            self.run.log({"evaluation/group_eval_results": table})
+
+    def _log_results_as_artifact(self) -> None:
+        """Log results as JSON artifact to W&B."""
+        dumped = json.dumps(self.results, indent=2, default=_handle_non_serializable, ensure_ascii=False)
+        artifact = wandb.Artifact("results", type="eval_results")
+        with artifact.new_file("results.json", mode="w", encoding="utf-8") as f:
+            f.write(dumped)
+        self.run.log_artifact(artifact)
+
+    def log_eval_result(self) -> None:
+        """Log evaluation results to W&B."""
+        # Log configs to wandb
+        configs = self._get_config()
+        self.run.config.update(configs)
+
+        wandb_summary, self.wandb_results = self._sanitize_results_dict()
+        # update wandb.run.summary with items that were removed
+        self.run.summary.update(wandb_summary)
+        # Log the evaluation metrics to wandb
+        self.run.log(self.wandb_results)
+        # Log the evaluation metrics as W&B Table
+        self._log_results_as_table()
+        # Log the results dict as json to W&B Artifacts
+        self._log_results_as_artifact()
+
+    def _generate_dataset(self, data: List[Dict[str, Any]], config: Dict[str, Any]) -> pd.DataFrame:
+        """Generate a dataset from evaluation data.
+
+        Args:
+            data (List[Dict[str, Any]]): The data to generate a dataset for.
+            config (Dict[str, Any]): The configuration of the task.
+
+        Returns:
+            pd.DataFrame: A dataframe that is ready to be uploaded to W&B.
+        """
+        ids = [x["doc_id"] for x in data]
+        labels = [x["target"] for x in data]
+        instance = [""] * len(ids)
+        resps = [""] * len(ids)
+        filtered_resps = [""] * len(ids)
+        model_outputs = {}
+
+        metrics_list = config["metric_list"]
+        metrics = {}
+        for metric in metrics_list:
+            metric = metric.get("metric")
+            if metric in ["word_perplexity", "byte_perplexity", "bits_per_byte"]:
+                metrics[f"{metric}_loglikelihood"] = [x[metric][0] for x in data]
+                if metric in ["byte_perplexity", "bits_per_byte"]:
+                    metrics[f"{metric}_bytes"] = [x[metric][1] for x in data]
+                else:
+                    metrics[f"{metric}_words"] = [x[metric][1] for x in data]
+            else:
+                metrics[metric] = [x[metric] for x in data]
+
+        if config["output_type"] == "loglikelihood":
+            instance = [x["arguments"][0][0] for x in data]
+            labels = [x["arguments"][0][1] for x in data]
+            resps = [f'log probability of continuation is {x["resps"][0][0][0]} ' + "\n\n" + "continuation will {} generated with greedy sampling".format("not be" if not x["resps"][0][0][1] else "be") for x in data]
+            filtered_resps = [f'log probability of continuation is {x["filtered_resps"][0][0]} ' + "\n\n" + "continuation will {} generated with greedy sampling".format("not be" if not x["filtered_resps"][0][1] else "be") for x in data]
+        elif config["output_type"] == "multiple_choice":
+            instance = [x["arguments"][0][0] for x in data]
+            choices = ["\n".join([f"{idx}. {y[1]}" for idx, y in enumerate(x["arguments"])]) for x in data]
+            resps = [np.argmax([n[0][0] for n in x["resps"]]) for x in data]
+            filtered_resps = [np.argmax([n[0] for n in x["filtered_resps"]]) for x in data]
+        elif config["output_type"] == "loglikelihood_rolling":
+            instance = [x["arguments"][0][0] for x in data]
+            resps = [x["resps"][0][0] for x in data]
+            filtered_resps = [x["filtered_resps"][0] for x in data]
+        elif config["output_type"] == "generate_until":
+            instance = [x["arguments"][0][0] for x in data]
+            resps = [x["resps"][0][0] for x in data]
+            filtered_resps = [x["filtered_resps"][0] for x in data]
+
+        model_outputs["raw_predictions"] = resps
+        model_outputs["filtered_predictions"] = filtered_resps
+
+        df_data = {
+            "id": ids,
+            "data": instance,
+        }
+        if config["output_type"] == "multiple_choice":
+            df_data["choices"] = choices
+
+        tmp_data = {
+            "input_len": [len(x) for x in instance],
+            "labels": labels,
+            "output_type": config["output_type"],
+        }
+        df_data.update(tmp_data)
+        df_data.update(model_outputs)
+        df_data.update(metrics)
+
+        return pd.DataFrame(df_data)
+
+    def _log_samples_as_artifact(self, data: List[Dict[str, Any]], task_name: str) -> None:
+        # log the samples as an artifact
+        dumped = json.dumps(
+            data,
+            indent=2,
+            default=_handle_non_serializable,
+            ensure_ascii=False,
+        )
+        artifact = wandb.Artifact(f"{task_name}", type="samples_by_task")
+        with artifact.new_file(f"{task_name}_eval_samples.json", mode="w", encoding="utf-8") as f:
+            f.write(dumped)
+        self.run.log_artifact(artifact)
+        # artifact.wait()
+
+    def log_eval_samples(self, samples: Dict[str, List[Dict[str, Any]]]) -> None:
+        """Log evaluation samples to W&B.
+
+        Args:
+            samples (Dict[str, List[Dict[str, Any]]]): Evaluation samples for each task.
+        """
+        task_names: List[str] = [x for x in self.task_names if x not in self.group_names]
+
+        ungrouped_tasks = []
+        tasks_by_groups = {}
+
         for task_name in task_names:
-            blocks.append(wr.H2(task_name))
-            panels = []
-            for metric_name, metric_value in results.items():
-                if task_name in metric_name:
-                    panels.append(
-                        wr.ScalarChart(
-                            title=f"{metric_name}",
-                            metric=f"{metric_name}",
-                            font_size="large",
-                        )
-                    )
-            _results = {
-                "results": {f"{task_name}": self.results.get("results").get(task_name)},
-                "versions": {f"{task_name}": self.results.get("versions").get(task_name)},
-                "n-shot": {f"{task_name}": self.results.get("n-shot").get(task_name)},
-            }
-            results_md = utils.make_table(_results)
-            blocks.extend([wr.MarkdownBlock(results_md), wr.PanelGrid(panels=panels)])
-            # TODO: Add results table
+            group_names = self.task_configs[task_name].get("group", None)
+            if group_names:
+                if isinstance(group_names, str):
+                    group_names = [group_names]
 
-        return blocks
+                for group_name in group_names:
+                    if not tasks_by_groups.get(group_name):
+                        tasks_by_groups[group_name] = [task_name]
+                    else:
+                        tasks_by_groups[group_name].append(task_name)
+            else:
+                ungrouped_tasks.append(task_name)
 
-    def write_to_report(self):
-        import wandb.apis.reports as wr
+        for task_name in ungrouped_tasks:
+            eval_preds = samples[task_name]
 
-        report = wr.Report(
-            project=self.run.project,
-            entity=self.run.entity,
-            title=f"({datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) {self.run.id} - Evaluation report",
-            description=f"Evaluation run by: {self.run.entity} logged to {self.run.url}",
-        )
+            # log the samples as a W&B Table
+            df = self._generate_dataset(eval_preds, self.task_configs.get(task_name))
+            self.run.log({f"{task_name}_eval_results": df})
 
-        task_blocks = self.prepare_report_by_task(self.wandb_results)
+            # log the samples as a json file as W&B Artifact
+            self._log_samples_as_artifact(eval_preds, task_name)
 
-        blocks = (
-            [
-                wr.TableOfContents(),
-                wr.H1("Complete Evaluation Results"),
-                wr.WeaveBlockSummaryTable(
-                    project=self.run.project,
-                    entity=self.run.entity,
-                    table_name="evaluation/eval_results",
-                ),
-                wr.PanelGrid(
-                    runsets=[
-                        wr.Runset(
-                            project=self.run.project,
-                            entity=self.run.entity,
-                        ).set_filters_with_python_expr(f'Name == "{str(self.run.name)}"'),
-                    ]
-                ),
-                wr.H1("Evaluation Results By Task"),
-            ]
-            + task_blocks
-            + [
-                wr.H1("Evaluation Config"),
-                wr.CodeBlock(
-                    json.dumps(self.results["config"], indent=5).split("\n"),
-                    language="json",
-                ),
-                # TODO: Add appendix
-            ]
-        )
+        for group, grouped_tasks in tasks_by_groups.items():
+            grouped_df = pd.DataFrame()
+            for task_name in grouped_tasks:
+                eval_preds = samples[task_name]
+                df = self._generate_dataset(eval_preds, self.task_configs.get(task_name))
+                df["group"] = group
+                df["task"] = task_name
+                grouped_df = pd.concat([grouped_df, df], ignore_index=True)
 
-        report.blocks = blocks
-        report.save()
-        wandb.termlog(f"📝 Check out the autogenerated report at: {report.url}")
+                # log the samples as a json file as W&B Artifact
+                self._log_samples_as_artifact(eval_preds, task_name)
 
-    def finish(self):
-        self.run.finish()
-
-    def online(self):
-        return self.run.offline is False
+            self.run.log({f"{group}_eval_results": grouped_df})

@@ -11,6 +11,11 @@ from typing import List, Optional, Union, Tuple
 import uuid
 import os
 
+import warnings
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+
 eval_logger = logging.getLogger("lmms-eval")
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
