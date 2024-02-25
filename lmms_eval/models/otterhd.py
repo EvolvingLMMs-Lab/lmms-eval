@@ -1,3 +1,8 @@
+import warnings
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+
 from accelerate import Accelerator, DistributedType
 from transformers import FuyuForCausalLM, AutoTokenizer, FuyuImageProcessor, FuyuProcessor
 from lmms_eval.api.model import lmms
@@ -9,10 +14,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from tqdm import tqdm
 
-import warnings
 import logging
-
-warnings.filterwarnings("ignore")
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -27,6 +29,7 @@ class OtterHD(lmms):
         self,
         pretrained: str = "Otter-AI/OtterHD-8B",
         resolution: str = "360x360",
+        conv_template: str = "otterhd",
         device: Optional[str] = "cuda",
         max_new_tokens: int = 256,
         batch_size: Optional[Union[int, str]] = 1,
@@ -47,6 +50,7 @@ class OtterHD(lmms):
         self.model.tie_weights()
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
         self._config = self.model.config
+        self.conv_template = conv_template
 
         height, width = map(int, resolution.split("x"))
         self.image_processor = FuyuImageProcessor(size={"height": height, "width": width})
@@ -154,8 +158,11 @@ class OtterHD(lmms):
             # if isinstance(visuals[0], list):
             #     visuals = [visuals[idx][0] for idx in range(len(visuals))]  # get the first image in multi-image scenarios.
 
-            formatted_contexts = [f"User: {context} Assistant:" for context in contexts]
-            model_inputs = self.processor(text=formatted_contexts, images=visuals, device=self.device)
+            if self.conv_template == "otterhd":
+                formatted_contexts = [f"User: {context} Assistant:" for context in contexts]
+            elif self.conv_template == "fuyu":
+                formatted_contexts = [f"{context}" for context in contexts]
+            model_inputs = self.processor(text=formatted_contexts[0], images=visuals, device=self.device)
             for k, v in model_inputs.items():
                 model_inputs[k] = v.to(self.device, non_blocking=True) if isinstance(v, torch.Tensor) else [vv.to(self.device, non_blocking=True) for vv in v]
 
@@ -163,9 +170,8 @@ class OtterHD(lmms):
                 model_inputs["image_patches"][index] = model_inputs["image_patches"][index].to(dtype=next(self.model.parameters()).dtype)
 
             # preconfigure gen_kwargs with defaults
-            gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 1024
+                gen_kwargs["max_new_tokens"] = 256
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
             if "top_p" not in gen_kwargs:
@@ -175,9 +181,11 @@ class OtterHD(lmms):
             generation_output = self.model.generate(
                 **model_inputs, temperature=gen_kwargs["temperature"], max_new_tokens=gen_kwargs["max_new_tokens"], top_p=gen_kwargs["top_p"], num_beams=gen_kwargs["num_beams"], pad_token_id=self.tokenizer.eos_token_id
             )
+            # generation_output = self.model.generate(**model_inputs, max_new_tokens=gen_kwargs["max_new_tokens"])
             generation_texts = self.processor.batch_decode(generation_output, skip_special_tokens=True)
             response = [gen_text.split("\x04")[1].strip(" ").strip("\n") for gen_text in generation_texts]
             res.extend(response)
+            self.cache_hook.add_partial("generate_until", (contexts, gen_kwargs), response)
             pbar.update(1)
 
         pbar.close()
