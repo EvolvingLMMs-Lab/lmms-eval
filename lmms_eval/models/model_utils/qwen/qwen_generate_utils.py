@@ -4,6 +4,10 @@
 # LICENSE file in the root directory of this source tree.
 
 """Generation support."""
+import warnings
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
 
 from typing import Tuple, List, Union, Iterable
 

@@ -7,11 +7,15 @@ import logging
 import argparse
 import numpy as np
 
+import warnings
+import traceback
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+
 from accelerate import Accelerator
 from pathlib import Path
 from typing import Union
 import hashlib
-import wandb
 
 from lmms_eval import evaluator, utils
 from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict
@@ -89,6 +93,12 @@ def parse_eval_args() -> argparse.Namespace:
         help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis",
     )
     parser.add_argument(
+        "--wandb_log_samples",
+        action="store_true",
+        default=False,
+        help="If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis to Weights and Biases",
+    )
+    parser.add_argument(
         "--log_samples_suffix",
         type=str,
         default="",
@@ -145,6 +155,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         sys.exit(1)
 
     set_loggers(args)
+    eval_logger = logging.getLogger("lmms-eval")
+    eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
+    eval_logger.info(f"Verbosity set to {args.verbosity}")
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     args_list = []
     results_list = []
@@ -173,18 +187,21 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     for args in args_list:
         try:
-            if is_main_process and args.wandb_args:
+            if is_main_process and args.wandb_args:  # thoughtfully we should only init wandb once, instead of multiple ranks to avoid network traffics and unwanted behaviors.
                 wandb_logger = WandbLogger(args)
-            results = cli_evaluate_single(args)
+
+            results, samples = cli_evaluate_single(args)
+            results_list.append(results)
 
             accelerator.wait_for_everyone()
-            if is_main_process and args.wandb_args and results is not None:
-                wandb_logger.log_eval_result(results)
-                if wandb_logger.online():
-                    wandb_logger.write_to_report()
-                wandb_logger.finish()
-            results_list.append(results)
+            if is_main_process:
+                wandb_logger.post_init(results)
+                wandb_logger.log_eval_result()
+                if args.wandb_log_samples and samples is not None:
+                    wandb_logger.log_eval_samples(samples)
+
         except Exception as e:
+            traceback.print_exc()
             eval_logger.error(f"Error during evaluation: {e}")
             results_list.append(None)
 
@@ -292,8 +309,8 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
                     filename.open("w").write(samples_dumped)
                     eval_logger.info(f"Saved samples to {filename}")
 
-        return results
-    return None
+        return results, samples
+    return None, None
 
 
 def print_results(args, results):
@@ -306,7 +323,7 @@ def print_results(args, results):
 def set_loggers(args):
     eval_logger = logging.getLogger("lmms-eval")
     ch = logging.StreamHandler()
-    formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(message)s", "%m-%d:%H:%M:%S", timezone=args.timezone)
+    formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(levelname)s %(message)s", "%m-%d %H:%M:%S", timezone=args.timezone)
     ch.setFormatter(formatter)
     eval_logger.addHandler(ch)
 
