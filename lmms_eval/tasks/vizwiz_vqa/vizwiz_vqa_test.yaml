@@ -2,7 +2,7 @@ group: vizwiz_vqa
 task: vizwiz_vqa_test
 test_split: test
 include: _default_template_vqa_yaml
-process_results: !function utils.vizwiz_vqa_process_results_test
+process_results: !function utils.vizwiz_vqa_process_results
 metric_list:
   # - metric: exact_match
   #   aggregation: mean

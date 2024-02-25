@@ -5,6 +5,11 @@ import random
 import numpy as np
 import os
 import json
+import logging
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+lmms_logger = logging.getLogger("lmms-eval")
 
 MULTI_CHOICE_PROMPT = "Answer with the option letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
@@ -58,13 +63,14 @@ def mmmu_process_results(doc, results):
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
     else:
         parsed_pred = parse_open_response(pred)
-    return {"mmmu_acc": {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}}
-
-
-def mmmu_process_test_results_for_submission(doc, results):
-    pred = results[0]
     id = doc["id"]
-    return {"mmmu_acc": {id: pred}}
+    mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}
+    return {
+        "mmmu_acc": mmmu_acc,
+        "submission": {
+            id: pred,
+        },
+    }
 
 
 def extract_subset_name(input_string):
@@ -78,11 +84,11 @@ def extract_subset_name(input_string):
         raise ValueError(f'No match found in "{input_string}"')
 
 
-def mmmu_test_aggregate_results_for_submission(results):
-    os.makedirs("./submissions", exist_ok=True)
-    with open("./submissions/mmmu_test_for_submission.json", "w") as f:
+def mmmu_test_aggregate_results_for_submission(results, args):
+    path = generate_submission_file("mmmu_test_for_submission.json", args)
+    with open(path, "w") as f:
         json.dump(results, f)
-    return -1
+    lmms_logger.info(f"Results saved to {path}.")
 
 
 def mmmu_aggregate_results(results):

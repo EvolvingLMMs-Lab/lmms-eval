@@ -37,9 +37,7 @@ class ContextSampler:
                     + (
                         str(self.doc_to_target(doc)[0])
                         if type(self.doc_to_target(doc)) is list
-                        else self.doc_to_target(doc)
-                        if (self.config.doc_to_choice is None or type(self.doc_to_target(doc)) is str)
-                        else str(self.doc_to_choice(doc)[self.doc_to_target(doc)])
+                        else self.doc_to_target(doc) if (self.config.doc_to_choice is None or type(self.doc_to_target(doc)) is str) else str(self.doc_to_choice(doc)[self.doc_to_target(doc)])
                     )
                     for doc in selected_docs
                 ]
