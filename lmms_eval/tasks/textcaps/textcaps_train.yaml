@@ -45,3 +45,4 @@ metric_list:
   #  higher_is_better : true
 metadata:
   - version: 0.0
+include: _default_template_textcaps_yaml
