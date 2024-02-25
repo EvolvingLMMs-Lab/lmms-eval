@@ -1,4 +1,14 @@
 from collections import defaultdict
+import os
+import datetime
+import json
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+import logging
+
+eval_logger = logging.getLogger("lmms-eval")
+
+dir_name = os.path.dirname(os.path.abspath(__file__))
 
 eval_type_dict = {
     "Perception": [
@@ -57,7 +67,7 @@ def parse_pred_ans(pred_ans):
     return pred_label
 
 
-def mme_process_results(doc, results):
+def mme_process_result(doc, results):
     """
     Args:
         doc: a instance of the eval dataset
@@ -105,6 +115,6 @@ def mme_aggregate_results(results):
         avg_score = total_score / len(question2scores)
         category2avg_score[category] = avg_score
     for category, avg_score in category2avg_score.items():
-        print(f"{category}: {avg_score:.2f}")
+        eval_logger.info(f"{category}: {avg_score:.2f}")
     total_score = sum(category2avg_score.values())
     return total_score

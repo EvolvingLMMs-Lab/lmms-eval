@@ -1,0 +1,29 @@
+dataset_path: lmms-lab/DC100_EN
+dataset_kwargs:
+  token: True
+task: "dc100_en"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function dc100_en_utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text # Such that {{prompt}} will be replaced by doc["question"]
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function dc100_en_utils.process_results # apply gpt eval here
+metric_list:
+  - metric: gpt_eval_info
+    aggregation: !function dc100_en_utils.dc100_en_aggregate_info
+    higher_is_better: false
+  - metric: gpt_eval_avg_score
+    aggregation: !function dc100_en_utils.dc100_en_aggregate_avg_score
+    higher_is_better: true
+metadata:
+  version: 0.0
+  gpt_eval_model_name: "gpt-4-vision-preview"
+include: _default_template_internal_eval_yaml
