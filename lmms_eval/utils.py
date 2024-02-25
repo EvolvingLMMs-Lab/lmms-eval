@@ -23,6 +23,11 @@ from typing import (
     Union,
 )
 
+import warnings
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+
 import gc
 import torch
 import transformers
@@ -60,12 +65,6 @@ class PathFormatter(logging.Formatter):
             record.pathname = os.sep.join(folders[-3:])
         return super(PathFormatter, self).format(record)
 
-
-# eval_logger = logging.getLogger("lmms-eval")
-# ch = logging.StreamHandler()
-# formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(message)s", "%m-%d:%H:%M:%S")
-# ch.setFormatter(formatter)
-# eval_logger.addHandler(ch)
 
 SPACING = " " * 47
 
