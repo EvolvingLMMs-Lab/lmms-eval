@@ -105,8 +105,12 @@ def ferret_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def ferret_doc_to_text(doc):
-    question = doc["question"]
+def ferret_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    if model_specific_prompt_kwargs is None:
+        model_specific_prompt_kwargs = {}
+    pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
+    post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
+    question = f"{pre_prompt}{doc['question']}{post_prompt}"
     return question
 
 

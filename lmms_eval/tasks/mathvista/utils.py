@@ -7,6 +7,7 @@ import json
 
 eval_logger = logging.getLogger("lmms-eval")
 from lmms_eval.tasks.mathvista.mathvista_evals import MathVistaEvaluator
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
     raw_data = f.readlines()
@@ -57,24 +58,27 @@ def mathvista_process_results(doc, results):
     # set test set answer to None
     true_false = mathvista_evaluator.safe_equal(prediction, problem["answer"]) if problem["answer"] is not None else False
 
+    result = {
+        "question_id": doc["pid"],
+        "query": doc["question"],
+        "choices": doc["choices"],
+        "answer": doc["answer"] if "answer" in doc else None,
+        "extraction": extraction,
+        "prediction": prediction,
+        "true_false": true_false,
+        "question_type": doc["question_type"],
+        "answer_type": doc["answer_type"],
+        "precision": doc["precision"] if "precision" in doc else 0,
+        "metadata": doc["metadata"],
+    }
+
     return {
-        "gpt_eval_score": {
-            "question_id": doc["pid"],
-            "query": doc["question"],
-            "choices": doc["choices"],
-            "answer": doc["answer"] if "answer" in doc else None,
-            "extraction": extraction,
-            "prediction": prediction,
-            "true_false": true_false,
-            "question_type": doc["question_type"],
-            "answer_type": doc["answer_type"],
-            "precision": doc["precision"] if "precision" in doc else 0,
-            "metadata": doc["metadata"],
-        }
+        "gpt_eval_score": result,
+        "submission": result,
     }
 
 
-def mathvista_aggregate_results(results, calculate_gain=False, random_scores=None):
+def mathvista_aggregate_results(results, args, *, calculate_gain=False, random_scores=None):
     split_flag = results[0]["metadata"]["split"]
     full_pids = [result["question_id"] for result in results]
     total = len(results)
@@ -108,8 +112,10 @@ def mathvista_aggregate_results(results, calculate_gain=False, random_scores=Non
                     gain = round(float(scores[key][sub_key]["accuracy"]) - float(random_scores[key][sub_key]["accuracy"]), 2)
                     scores[key][sub_key]["acc_gain"] = gain
 
-    os.makedirs("./submissions", exist_ok=True)
-    eval_logger.info(f"Saved results to mathvista_{split_flag}_scores.json")
-    with open(f"./submissions/mathvista_{split_flag}_scores.json", "w") as f:
+    path = generate_submission_file(f"mathvista_{split_flag}_scores.json", args)
+    with open(path, "w") as f:
         json.dump(results_dict, f, indent=4)
+    eval_logger.info(f"Saved results to {path}")
+    if scores["average"]["accuracy"] == 0:
+        return None
     return scores["average"]["accuracy"]
