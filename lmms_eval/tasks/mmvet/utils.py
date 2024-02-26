@@ -200,3 +200,13 @@ def mmvet_aggregate_results(results):
         eval_logger.info(f"Score for {detail}: {cap_details_scores[detail]:.2f}")
 
     return overall_score
+
+
+def doc_to_text(doc, model_specific_prompt_kwargs=None):
+    if model_specific_prompt_kwargs is None:
+        return doc["question"]
+    question = doc["question"]
+    pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
+    post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
+
+    return f"{pre_prompt}{question}{post_prompt}"
