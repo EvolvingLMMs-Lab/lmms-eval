@@ -1,0 +1,15 @@
+dataset_path: lmms-lab/DocVQA
+dataset_name: InfographicVQA
+dataset_kwargs:
+  token: True
+doc_to_target: "answers"
+doc_to_visual: !function utils.infovqa_doc_to_visual
+doc_to_text: !function utils.infovqa_doc_to_text
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: False
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."

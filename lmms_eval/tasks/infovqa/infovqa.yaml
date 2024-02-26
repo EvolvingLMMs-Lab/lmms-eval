@@ -1,0 +1,4 @@
+group: infovqa
+task:
+- infovqa_val
+- infovqa_test
