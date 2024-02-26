@@ -1,0 +1,44 @@
+dataset_path: lmms-lab/flickr30k
+dataset_kwargs:
+  token: True
+task : "flickr30k_test"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.flickr_doc_to_visual
+doc_to_text: !function utils.flickr_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.flickr_process_result
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: flickr_Bleu_4 
+    aggregation : !function utils.flickr_bleu4
+    higher_is_better : true
+  - metric: flickr_Bleu_3
+    aggregation : !function utils.flickr_bleu3
+    higher_is_better : true
+  - metric: flickr_Bleu_2
+    aggregation : !function utils.flickr_bleu2
+    higher_is_better : true
+  - metric: flickr_Bleu_1
+    aggregation : !function utils.flickr_bleu1
+    higher_is_better : true
+  - metric: flickr_METEOR
+    aggregation : !function utils.flickr_meteor
+    higher_is_better : true
+  - metric: flickr_ROUGE_L
+    aggregation : !function utils.flickr_rougel
+    higher_is_better : true
+  - metric: flickr_CIDEr
+    aggregation : !function utils.flickr_cider
+    higher_is_better : true
+  #- metric: flickr_SPICE
+  #  aggregation : !function utils.flickr_spice
+  #  higher_is_better : true
+metadata:
+  - version: 0.0

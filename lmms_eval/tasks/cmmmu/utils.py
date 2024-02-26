@@ -3,7 +3,11 @@ import re
 import random
 import os
 import json
+import logging
 from collections import Counter
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+eval_logger = logging.getLogger("lmms-eval")
 
 PROMPT = {
     "task_instructions": [
@@ -113,16 +117,16 @@ def cmmmu_aggregate_results(results):
 
 def cmmmu_process_test_results_for_submission(doc, results):
     response = results[0]
-    return {"cmmmu_acc": {"id": doc["id"], "type": doc["type"], "response": response}}
+    return {"submission": {"id": doc["id"], "type": doc["type"], "response": response}}
 
 
-def cmmmu_test_aggregate_results_for_submission(results):
-    os.makedirs("./submissions", exist_ok=True)
-    with open("./submissions/cmmmu_test_for_submission.jsonl", "w") as f:
+def cmmmu_test_aggregate_results_for_submission(results, args):
+    file = generate_submission_file("cmmmu_test_for_submission.jsonl", args)
+    with open(file, "w") as f:
         for result in results:
             json.dump(result, f, ensure_ascii=False)
             f.write("\n")
-    return -1
+    eval_logger.info(f"Submission file saved to {file}")
 
 
 ##################
