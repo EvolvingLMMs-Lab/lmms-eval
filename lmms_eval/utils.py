@@ -23,6 +23,11 @@ from typing import (
     Union,
 )
 
+import warnings
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+
 import gc
 import torch
 import transformers
@@ -60,12 +65,6 @@ class PathFormatter(logging.Formatter):
             record.pathname = os.sep.join(folders[-3:])
         return super(PathFormatter, self).format(record)
 
-
-# eval_logger = logging.getLogger("lmms-eval")
-# ch = logging.StreamHandler()
-# formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(message)s", "%m-%d:%H:%M:%S")
-# ch.setFormatter(formatter)
-# eval_logger.addHandler(ch)
 
 SPACING = " " * 47
 
@@ -410,13 +409,20 @@ def make_table(result_dict, column: str = "results"):
             if m.endswith("_stderr"):
                 continue
 
+            points = "N/A"
+            if v is not None:
+                points = "%.4f" % v
+
             if m + "_stderr" + "," + f in dic:
-                se = dic[m + "_stderr" + "," + f]
+                if v is None:
+                    se = "N/A"
+                else:
+                    se = dic[m + "_stderr" + "," + f]
                 if se != "N/A":
                     se = "%.4f" % se
-                values.append([k, version, f, n, m, "%.4f" % v, "±", se])
+                values.append([k, version, f, n, m, points, "±", se])
             else:
-                values.append([k, version, f, n, m, "%.4f" % v, "", ""])
+                values.append([k, version, f, n, m, points, "", ""])
             k = ""
             version = ""
     md_writer.value_matrix = values
