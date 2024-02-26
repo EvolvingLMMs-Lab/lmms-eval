@@ -1,0 +1,4 @@
+group: ok_vqa
+task: ok_vqa_val2014
+test_split: val2014
+include: _default_template_vqa_yaml
