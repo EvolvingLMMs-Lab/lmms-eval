@@ -16,16 +16,10 @@ def doc_to_visual(doc):
     image_list = []
     if "query_image" in doc:
         image_list.append(doc["query_image"].convert("RGB"))
-    if "choice_image_0" in doc:
-        image_list.append(doc["choice_image_0"].convert("RGB"))
-    if "choice_image_1" in doc:
-        image_list.append(doc["choice_image_1"].convert("RGB"))
-    if "choice_image_2" in doc:
-        image_list.append(doc["choice_image_2"].convert("RGB"))
-    if "choice_image_3" in doc:
-        image_list.append(doc["choice_image_3"].convert("RGB"))
-    if "choice_image_4" in doc:
-        image_list.append(doc["choice_image_4"].convert("RGB"))
+    for i in range(5):
+        id = f"choice_image_{i}"
+        if id in doc and doc[id] is not None:
+            image_list.append(doc[id].convert("RGB"))
     assert len(image_list) < 6, "Maximum 5 images allowed for ICON-QA"
     return image_list
 
@@ -58,5 +52,6 @@ def doc_to_text(doc, model_specific_prompt_kwargs):
 
 def test_process_results(doc, results):
     pred = results[0]
-    questionId = doc["questionId"]
-    return {"anls": {"questionId": int(questionId), "answer": pred}}
+    questionId = doc["question_id"]
+    answer = doc["answer"]
+    return {"anls": {"questionId": int(questionId), "answer": answer, "pred_answer": pred}}

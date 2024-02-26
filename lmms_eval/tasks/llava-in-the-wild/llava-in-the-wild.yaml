@@ -1,7 +1,7 @@
 dataset_path: lmms-lab/llava-bench-in-the-wild
 dataset_kwargs:
   token: True
-task: "llava-in-the-wild"
+task: "llava_in_the_wild"
 test_split: train
 output_type: generate_until
 doc_to_visual: !function utils.llava_doc_to_visual
@@ -33,3 +33,7 @@ metric_list:
 metadata:
   version: 0.0
   gpt_eval_model_name: "gpt-4-0314"
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
