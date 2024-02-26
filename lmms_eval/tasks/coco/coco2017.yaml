@@ -1,4 +1,0 @@
-group : coco2017
-task:
-  - coco_val2017
-  - coco_test2017
