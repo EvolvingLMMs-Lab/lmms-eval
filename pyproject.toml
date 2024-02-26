@@ -52,7 +52,8 @@ dependencies = [
     "tenacity",
     "wandb>=0.16.0",
     "transformers-stream-generator",
-    "tiktoken"
+    "tiktoken",
+    "pre-commit",
 ]
 
 [tool.setuptools.packages.find]

@@ -108,9 +108,12 @@ def llava_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def llava_doc_to_text(doc):
-    question = doc["question"]
-    return question
+def llava_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    if model_specific_prompt_kwargs is None:
+        model_specific_prompt_kwargs = {}
+    pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
+    post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
+    return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 
 def llava_process_results(doc, result):
@@ -123,7 +126,7 @@ def llava_process_results(doc, result):
     """
     try:
         question = doc.get("question", "")
-        ans1 = doc.get("gpt_answer", "")
+        ans1 = doc.get("answer", "")
         ans2 = result[0] if result else ""
         captions = doc.get("caption", [])
         context = "\n".join(captions) if isinstance(captions, list) else captions
@@ -142,16 +145,7 @@ def llava_process_results(doc, result):
         scores = [-1, -1]
 
     metric = f"gpt_eval_llava_{doc.get('category', 'unknown')}"
-    category_review_dict = {
-        "question": question,
-        "ans1": ans1,
-        "ans2": ans2,
-        "context": context,
-        "category": category,
-        "review": review,
-        "scores": scores,
-        "eval_model": model_name,
-    }
+    category_review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name, "content": content}
 
     non_category_review_dict = deepcopy(category_review_dict)
     non_category_review_dict["scores"] = [-999, -999]
