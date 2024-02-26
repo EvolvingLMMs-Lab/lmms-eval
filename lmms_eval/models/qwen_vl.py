@@ -11,6 +11,11 @@ from typing import List, Optional, Union, Tuple
 import uuid
 import os
 
+import warnings
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
+
 eval_logger = logging.getLogger("lmms-eval")
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -230,7 +235,18 @@ class Qwen_VL(lmms):
                 elif not isinstance(until, list):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
-            questions = [self.prompt.format(visual_path, context) for visual_path, context in zip(visual_paths, contexts)]
+            # Similar to llava, is visual paths has len 0
+            # Then nothing will be executed
+            query = []
+            for visual_path, context in zip(visual_paths, contexts):
+                query.append({"image": visual_path})
+                query.append({"text": context})
+
+            if len(visual_paths) == 0:
+                for context in contexts:
+                    query.append({"text": context})
+
+            questions = self.tokenizer.from_list_format(query)
             input_ids = self.tokenizer(questions, return_tensors="pt", padding="longest")
 
             # preconfigure gen_kwargs with defaults

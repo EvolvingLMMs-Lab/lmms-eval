@@ -16,8 +16,12 @@ metric = ["aAcc", "fAcc", "qAcc"]
 eval_logger = logging.getLogger("lmms-eval")
 
 
-def hb_doc_to_text(doc):
-    return doc["question"]  # + "\nAnswer using yes or no."
+def hb_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    if model_specific_prompt_kwargs is None:
+        model_specific_prompt_kwargs = {}
+    pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
+    post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
+    return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 
 def hb_doc_to_visual(doc):
