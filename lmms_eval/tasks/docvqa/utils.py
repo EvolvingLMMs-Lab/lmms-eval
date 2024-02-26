@@ -1,5 +1,10 @@
 import json
 import os
+import logging
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+logger = logging.getLogger("lmms-eval")
 
 
 def docvqa_doc_to_visual(doc):
@@ -16,12 +21,12 @@ def docvqa_doc_to_text(doc, model_specific_prompt_kwargs):
 def docvqa_test_process_results(doc, results):
     pred = results[0]
     questionId = doc["questionId"]
-    return {"anls": {"questionId": int(questionId), "answer": pred}}
+    return {"anls": {"questionId": int(questionId), "answer": pred}, "submission": {"questionId": int(questionId), "answer": pred}}
 
 
-def docvqa_test_aggregate_results(results):
+def docvqa_test_aggregate_results(results, args):
     # save results as json
-    os.makedirs("./submissions", exist_ok=True)
-    with open("./submissions/docvqa_test_for_submission.json", "w") as f:
+    path = generate_submission_file("docvqa_test_for_submission.json", args)
+    with open(path, "w") as f:
         json.dump(results, f)
-    return -1
+    logger.info(f"Results saved to {path}")
