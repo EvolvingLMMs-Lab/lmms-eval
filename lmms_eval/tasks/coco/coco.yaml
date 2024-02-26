@@ -1,4 +1,0 @@
-group : coco
-task:
-  - coco_val
-  - coco_test

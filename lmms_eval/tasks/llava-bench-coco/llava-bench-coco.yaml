@@ -1,7 +1,7 @@
 dataset_path: lmms-lab/llava-bench-coco
 dataset_kwargs:
   token: True
-task: "llava-bench-coco"
+task: "llava_bench_coco"
 test_split: train
 output_type: generate_until
 doc_to_visual: !function utils.llava_doc_to_visual
@@ -32,3 +32,7 @@ metric_list:
 metadata:
   version: 0.0
   gpt_eval_model_name: "gpt-4-0314"
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
