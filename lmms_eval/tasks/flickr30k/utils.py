@@ -3,6 +3,8 @@ import json
 from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import datetime
 
 import logging
 
@@ -137,17 +139,3 @@ def flickr_test_process_result(doc, result):
     # The question id in our dataset is the image file itself
     image_id = doc["img_id"]
     return {"flickr_passthrough": {"pred": result, "image_id": image_id}}
-
-
-def flickr_test_aggregation_result(results):
-    stored_results = []
-    for result in results:
-        stored_results.append({"image_id": int(result["image_id"]), "caption": result["pred"]})
-
-    if not os.path.exists("./captions_test2014_alg_results.json"):
-        eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./captions_test2014_alg_results.json", "w") as f:
-            json.dump(stored_results, f, indent=4)
-
-    eval_logger.info("Your test result has been stored. Make sure you also have the val result stored to submit to the server on https://codalab.lisn.upsaclay.fr/competitions/7404#participate.")
-    return -1

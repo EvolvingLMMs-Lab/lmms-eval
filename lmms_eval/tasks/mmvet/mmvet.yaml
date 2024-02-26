@@ -5,7 +5,7 @@ task: "mmvet"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.mmvet_doc_to_visual
-doc_to_text: "{{question}}" # Such that {{question}} will be replaced by doc["question"]
+doc_to_text: !function utils.doc_to_text # Such that {{question}} will be replaced by doc["question"]
 doc_to_target: "{{answer}}"
 generation_kwargs:
   until:
@@ -23,3 +23,7 @@ metric_list:
 metadata:
   version: 0.0
   gpt_eval_model_name: "gpt-4"
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
