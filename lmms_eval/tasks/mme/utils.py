@@ -67,7 +67,7 @@ def parse_pred_ans(pred_ans):
     return pred_label
 
 
-def mme_process_result(doc, results):
+def mme_process_results(doc, results):
     """
     Args:
         doc: a instance of the eval dataset
