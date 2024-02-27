@@ -201,11 +201,13 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             results_list.append(results)
 
             accelerator.wait_for_everyone()
-            if is_main_process:
+            if is_main_process and args.wandb_args:
                 wandb_logger.post_init(results)
                 wandb_logger.log_eval_result()
                 if args.wandb_log_samples and samples is not None:
                     wandb_logger.log_eval_samples(samples)
+
+                wandb_logger.finish()
 
         except Exception as e:
             traceback.print_exc()
@@ -312,7 +314,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
                 for task_name, config in results["configs"].items():
                     filename = args.output_path.joinpath(f"{task_name}.json")
                     # Structure the data with 'args' and 'logs' keys
-                    data_to_dump = {"args": vars(args), "config": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
+                    data_to_dump = {"args": vars(args), "model_configs": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
                     samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable)
                     filename.open("w").write(samples_dumped)
                     eval_logger.info(f"Saved samples to {filename}")
