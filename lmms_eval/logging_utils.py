@@ -82,6 +82,9 @@ class WandbLogger:
             os.environ["WANDB_MODE"] = "offline"
             self.init_run()
 
+    def finish(self):
+        self.run.finish()
+
     @tenacity.retry(wait=tenacity.wait_fixed(5), stop=tenacity.stop_after_attempt(5))
     def init_run(self):
         if "name" not in self.wandb_args:
@@ -152,6 +155,9 @@ class WandbLogger:
     def _log_results_as_table(self) -> None:
         """Generate and log evaluation results as a table to W&B."""
         columns = [
+            "Model",
+            "Args",
+            "Tasks",
             "Version",
             "Filter",
             "num_fewshot",
@@ -163,6 +169,9 @@ class WandbLogger:
         def make_table(columns: List[str], key: str = "results"):
             table = wandb.Table(columns=columns)
             results = copy.deepcopy(self.results)
+
+            model_name = results.get("model_configs").get("model")
+            model_args = results.get("model_configs").get("model_args")
 
             for k, dic in results.get(key).items():
                 if k in self.group_names and not key == "groups":
@@ -183,14 +192,14 @@ class WandbLogger:
                         se = dic[m + "_stderr" + "," + f]
                         if se != "N/A":
                             se = "%.4f" % se
-                        table.add_data(*[k, version, f, n, m, str(v), str(se)])
+                        table.add_data(*[model_name, model_args, k, version, f, n, m, str(v), str(se)])
                     else:
-                        table.add_data(*[k, version, f, n, m, str(v), ""])
+                        table.add_data(*[model_name, model_args, k, version, f, n, m, str(v), ""])
 
             return table
 
         # log the complete eval result to W&B Table
-        table = make_table(["Tasks"] + columns, "results")
+        table = make_table(columns, "results")
         self.run.log({"evaluation/eval_results": table})
 
         if "groups" in self.results.keys():
@@ -209,7 +218,7 @@ class WandbLogger:
         """Log evaluation results to W&B."""
         # Log configs to wandb
         configs = self._get_config()
-        self.run.config.update(configs)
+        self.run.config.update(configs, allow_val_change=True)
 
         wandb_summary, self.wandb_results = self._sanitize_results_dict()
         # update wandb.run.summary with items that were removed
