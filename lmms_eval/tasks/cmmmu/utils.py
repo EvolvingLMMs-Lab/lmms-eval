@@ -122,7 +122,7 @@ def cmmmu_process_test_results_for_submission(doc, results):
 
 def cmmmu_test_aggregate_results_for_submission(results, args):
     file = generate_submission_file("cmmmu_test_for_submission.jsonl", args)
-    with open(file, "w") as f:
+    with open(file, "w", encoding='utf8') as f:
         for result in results:
             json.dump(result, f, ensure_ascii=False)
             f.write("\n")
