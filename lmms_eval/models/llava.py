@@ -9,6 +9,7 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
 
 from accelerate import Accelerator, DistributedType
+from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
 import warnings
 
@@ -61,25 +62,12 @@ class Llava(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
         else:
             self._device = device
-        try:
-            (
-                self._tokenizer,
-                self._model,
-                self._image_processor,
-                self._max_length,
-            ) = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self._device)
-            is_deepspeed = False
-        except Exception as e:
-            eval_logger.info(f"Encounter error : \n {e} \n Trying again with loading without low_mem_usage = True and device_map for deep speed")
-            if is_deepspeed_zero3_enabled():
-                unset_hf_deepspeed_config()
-                is_deepspeed = True
-            (
-                self._tokenizer,
-                self._model,
-                self._image_processor,
-                self._max_length,
-            ) = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self._device)
+        (
+            self._tokenizer,
+            self._model,
+            self._image_processor,
+            self._max_length,
+        ) = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self._device)
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -89,8 +77,22 @@ class Llava(lmms):
         self.use_cache = use_cache
         self.truncate_context = truncate_context
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
-        if accelerator.num_processes > 1 and not is_deepspeed:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+        if accelerator.num_processes > 1:
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
+            # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
+            # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
+            if accelerator.distributed_type == DistributedType.DEEPSPEED:
+                kwargs = {
+                    "train_micro_batch_size_per_gpu": self.batch_size_per_gpu,
+                    "train_batch_size" : self.batch_size_per_gpu * accelerator.num_processes,
+                }
+                AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **kwargs)
+                eval_logger.info("Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0")
             if accelerator.distributed_type == DistributedType.FSDP or accelerator.distributed_type == DistributedType.DEEPSPEED:
                 self._model = accelerator.prepare(self.model)
             else:
@@ -364,16 +366,17 @@ class Llava(lmms):
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                     use_cache=self.use_cache,
                 )
+                text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
+                text_outputs = [""]
 
             # cont_toks_list = cont.tolist()
             # for cont_toks, context in zip(cont_toks_list, contexts):
             # discard context + left-padding toks if using causal decoder-only LMM
             # if self.truncate_context:
             #     cont_toks = cont_toks[input_ids.shape[1] :]
-            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
             # use secondary stop seqs to cut off should-have-been-stopped content post-hoc
             # if self.truncate_context:
             #     for term in until:
