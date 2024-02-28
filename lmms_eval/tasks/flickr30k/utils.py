@@ -40,7 +40,7 @@ def flickr_process_result(doc, result):
     return {f"flickr_{metric}": data_dict for metric in FLICKR_METRICS}
 
 
-def flickr_aggregation_result(results, metric):
+def flickr_aggregation_result(results, metric, args):
     scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr"), (Spice(), "SPICE")]
     scorers_dict = {s[1]: s for s in scorers}
 
@@ -87,45 +87,45 @@ def flickr_aggregation_result(results, metric):
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 
-    os.makedirs("./submissions", exist_ok=True)
-    if not os.path.exists("./submissions/flickr30k_captions_val2014_alg_results.json"):
-        eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./submissions/flickr30k_captions_val2014_alg_results.json", "w") as f:
-            json.dump(stored_results, f, indent=4)
+    path = generate_submission_file(f"flickr30k_captions_val2014_alg_results_{metric}.json", args)
+
+    eval_logger.info("Storing prediction that can be submitted to the server ...")
+    with open(path, "w") as f:
+        json.dump(stored_results, f, indent=4)
 
     return score
 
 
-def flickr_bleu4(results):
-    return flickr_aggregation_result(results, "Bleu_4")
+def flickr_bleu4(results, args):
+    return flickr_aggregation_result(results, "Bleu_4", args)
 
 
-def flickr_bleu3(results):
-    return flickr_aggregation_result(results, "Bleu_3")
+def flickr_bleu3(results, args):
+    return flickr_aggregation_result(results, "Bleu_3", args)
 
 
-def flickr_bleu2(results):
-    return flickr_aggregation_result(results, "Bleu_2")
+def flickr_bleu2(results, args):
+    return flickr_aggregation_result(results, "Bleu_2", args)
 
 
-def flickr_bleu1(results):
-    return flickr_aggregation_result(results, "Bleu_1")
+def flickr_bleu1(results, args):
+    return flickr_aggregation_result(results, "Bleu_1", args)
 
 
-def flickr_meteor(results):
-    return flickr_aggregation_result(results, "METEOR")
+def flickr_meteor(results, args):
+    return flickr_aggregation_result(results, "METEOR", args)
 
 
-def flickr_rougel(results):
-    return flickr_aggregation_result(results, "ROUGE_L")
+def flickr_rougel(results, args):
+    return flickr_aggregation_result(results, "ROUGE_L", args)
 
 
-def flickr_cider(results):
-    return flickr_aggregation_result(results, "CIDEr")
+def flickr_cider(results, args):
+    return flickr_aggregation_result(results, "CIDEr", args)
 
 
-def flickr_spice(results):
-    return flickr_aggregation_result(results, "SPICE")
+def flickr_spice(results, args):
+    return flickr_aggregation_result(results, "SPICE", args)
 
 
 def flickr_test_process_result(doc, result):

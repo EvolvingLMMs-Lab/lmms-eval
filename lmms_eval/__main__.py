@@ -16,6 +16,7 @@ import traceback
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
 from accelerate import Accelerator
+from accelerate.utils import InitProcessGroupKwargs
 from pathlib import Path
 from typing import Union
 import hashlib
@@ -149,9 +150,6 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     if not args:
         args = parse_eval_args()
 
-    if args.tasks != "list":
-        torch.distributed.init_process_group(backend="nccl", timeout=datetime.timedelta(seconds=600000))
-
     # Check if no arguments were passed after parsing
     if len(sys.argv) == 1:
         print("┌───────────────────────────────────────────────────────────────────────────────┐")
@@ -186,7 +184,8 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         args_list.append(args)
 
     # initialize Accelerator
-    accelerator = Accelerator()
+    kwargs_handler = InitProcessGroupKwargs(timeout=datetime.timedelta(seconds=60000))
+    accelerator = Accelerator(kwargs_handlers=[kwargs_handler])
     if accelerator.is_main_process:
         is_main_process = True
     else:
