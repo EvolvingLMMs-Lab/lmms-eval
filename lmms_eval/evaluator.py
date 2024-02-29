@@ -314,7 +314,15 @@ def evaluate(
         # TODO: make it possible to use a different metric per filter
         # iterate over different filters used
         for key in task.instances[0].filtered_resps.keys():
-            doc_iterator = itertools.islice(enumerate(task.test_docs()), lm.rank, limit, lm.world_size) if task.has_test_docs() else itertools.islice(enumerate(task.validation_docs()), lm.rank, limit, lm.world_size)
+            # hack: remove image columns to speed avoid loading images and speed up postprocessing
+            # reason: doc_iterator will actually load image if it's in the doc.
+            docs = task.test_docs() if task.has_test_docs() else task.validation_docs()
+            column_names = docs.column_names
+            image_column = [col for col in column_names if "image" in col.lower()]
+            # remove image column from docs
+            if image_column:
+                docs = docs.remove_columns(image_column)
+            doc_iterator = itertools.islice(enumerate(docs), lm.rank, limit, lm.world_size)
             # Instead of converting the iterator to a list, use `itertools.tee` to create a parallel iterator for counting
             # doc_iterator, doc_iterator_for_counting = itertools.tee(doc_iterator)
             # Don't use above one, this would crash if doc_iterator_for_counting contains too many objects and very slow
@@ -330,8 +338,8 @@ def evaluate(
                     target = task.doc_to_target(doc)
                     example = {
                         "doc_id": doc_id,
-                        "doc": {k: v for k, v in doc.items() if "image" not in k},  # do not include image
                         "target": target,
+                        "doc": doc,
                         "arguments": [tuple(a for a in req.args if isinstance(a, (int, str))) for req in requests],  # do not include image
                         "resps": [req.resps for req in requests],
                         "filtered_resps": [req.filtered_resps[key] for req in requests],

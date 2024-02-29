@@ -239,6 +239,19 @@ class Task(abc.ABC):
             cache_dir=cache_dir,
             download_mode=download_mode,
         )
+        self.dataset_no_image = datasets.load_dataset(
+            path=self.DATASET_PATH,
+            name=self.DATASET_NAME,
+            data_dir=data_dir,
+            cache_dir=cache_dir,
+            download_mode=download_mode,
+        )
+        for doc_name in self.dataset_no_image:
+            column_names = self.dataset_no_image[doc_name].column_names
+            image_column = [col for col in column_names if "image" in col.lower()]
+            # remove image column from docs
+            if image_column:
+                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(image_column)
 
     @property
     def config(self):
@@ -455,7 +468,7 @@ class Task(abc.ABC):
         assert rnd is not None, "A `random.Random` generator argument must be provided to `rnd`"
 
         description = description if description else ""
-        doc = self.dataset[split][doc_id]
+        doc = self.dataset_no_image[split][doc_id]
 
         if num_fewshot == 0:
             labeled_examples = ""
@@ -674,6 +687,18 @@ class ConfigurableTask(Task):
             download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
+        self.dataset_no_image =  datasets.load_dataset(
+            path=self.DATASET_PATH,
+            name=self.DATASET_NAME,
+            download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+            **dataset_kwargs if dataset_kwargs is not None else {},
+        )
+        for doc_name in self.dataset_no_image:
+            column_names = self.dataset_no_image[doc_name].column_names
+            image_column = [col for col in column_names if "image" in col.lower()]
+            # remove image column from docs
+            if image_column:
+                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(image_column)
 
     def has_training_docs(self) -> bool:
         if self.config.training_split is not None:
@@ -731,7 +756,7 @@ class ConfigurableTask(Task):
         :returns: str
             The fewshot context.
         """
-        doc = self.dataset[split][doc_id]
+        doc = self.dataset_no_image[split][doc_id]
         if num_fewshot == 0:
             # always prepend the (possibly empty) task description
             labeled_examples = self.config.description
