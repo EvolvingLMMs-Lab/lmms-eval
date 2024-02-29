@@ -12,3 +12,6 @@ model_specific_prompt_kwargs:
     pre_prompt: ""
     post_prompt: "\nAnswer the question using a single word or phrase."
     ocr: false
+  qwen_vl:
+    pre_prompt: ""
+    post_prompt: " Answer:"
