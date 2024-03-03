@@ -30,7 +30,7 @@ def mmbench_cn_cc_doc_to_text(doc, model_specific_prompt_kwargs=None):
     options_prompt, options_dict = mmbench_evaluator.create_options_prompt(doc, option_candidate)
 
     data = {
-        "img": doc["image"],
+        # "img": doc["image"],
         "question": doc["question"],
         "answer": doc.get("answer", None),
         "options": options_prompt,
