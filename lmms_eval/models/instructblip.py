@@ -107,7 +107,6 @@ class InstructBLIP(lmms):
     def max_length(self):
         return self._max_length
 
-
     @property
     def batch_size(self):
         return self.batch_size_per_gpu

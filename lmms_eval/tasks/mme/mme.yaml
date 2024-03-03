@@ -1,4 +1,4 @@
-dataset_path: Otter-AI/MME
+dataset_path: lmms-lab/MME
 dataset_kwargs:
   token: True
 task: "mme"
@@ -32,6 +32,6 @@ model_specific_prompt_kwargs:
     post_prompt: " Answer:"
   otterhd:
     pre_prompt: ""
-    post_prompt: ""
+    post_prompt: " Answer:"
 metadata:
   - version: 0.0

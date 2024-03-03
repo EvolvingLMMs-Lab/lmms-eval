@@ -244,14 +244,14 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             "\n" + "=" * 70 + "\n" + "\n\tYou are trying to check all the numbers in each task." + "\n\tThis action will download the complete dataset." + "\n\tIf the results are not clear initially, call this again." + "\n\n" + "=" * 70
         )
         eval_logger.info(log_message)
-        task_dict = get_task_dict([task for task in sorted(ALL_TASKS)], model_name=args.model)
+        task_dict = get_task_dict([task for task in sorted(ALL_TASKS)], model_name="llava")
         for task_name in task_dict.keys():
             task_obj = task_dict[task_name]
             if type(task_obj) == tuple:
                 group, task_obj = task_obj
                 if task_obj is None:
                     continue
-            eval_logger.info(f"\nTask : {task_obj.config.task}\n - #num : {len(task_obj.test_docs()) if task_obj.has_test_docs() else task_obj.validation_docs()}")
+            eval_logger.info(f"\nTask : {task_obj.config.task}\n - #num : {len(task_obj.test_docs()) if task_obj.has_test_docs() else len(task_obj.validation_docs())}")
         sys.exit()
     else:
         tasks_list = args.tasks.split(",")

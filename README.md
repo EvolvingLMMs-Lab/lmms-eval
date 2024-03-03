@@ -1,34 +1,103 @@
-# lmms-eval
+<p align="center" width="100%">
+<img src="https://i.postimg.cc/g0QRgMVv/WX20240228-113337-2x.png"  width="100%" height="80%">
+</p>
 
-## How to run
+# Large-scale Multi-modality Models Evaluation Suite
 
+> Accelerating the development of large-scale multi-modality models (LMMs) with `lmms-eval`
+
+📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
+
+# Annoucement
+
+## v0.1.0 Released
+
+The first version of the `lmms-eval` is released. We are working on providing an one-command evaluation API for accelerating the development of LMMs. 
+
+> In [LLaVA Next](https://llava-vl.github.io/blog/2024-01-30-llava-next/) development, we internally utilize this API to evaluate the model's performance on various model versions and datasets. It significantly accelerates the model development cycle for it's easy integration and fast evaluation speed. The main feature includes:
+
+### One-command evaluation, with detailed logs and samples.
+You can evaluate the models on multiple datasets with a single command. No model/data preparation is needed, just one command line, few minutes, and get the results. Not just a result number, but also the detailed logs and samples, including the model args, input question, model response, and ground truth answer.
+
+### Accelerator support and Tasks grouping.
+We support the usage of `accelerate` to wrap the model for distributed evaluation, supporting multi-gpu and tensor parallelism. With **Task Grouping**, all instances from all tasks are grouped and evaluated in parallel, which significantly improves the throughput of the evaluation.
+
+### Efficiency benchmark
+Below are the total runtime on different datasets using 4 x A100 40G.
+|Dataset|LLaVA-v1.5-7b|LLaVA-v1.5-13b|
+|-------|-------------|--------------|
+|mme    | 2 mins 43 seconds | 3 mins 27 seconds |
+|gqa    | 10 mins 43 seconds | 14 mins 23 seconds |
+|scienceqa_img| 1 mins 58 seconds | 2 mins 52 seconds |
+|ai2d   | 3 mins 17 seconds | 4 mins 12 seconds |
+|coco2017_cap_val| 14 mins 13 seconds | 19 mins 58 seconds |
+
+### Prepared HF datasets.
+We are hosting more than 40 (and it's increasing) datasets on [huggingface/lmms-lab](https://huggingface.co/lmms-lab), we carefully converted these datasets from original sources and included all variants, versions and splits. Now they can be directly accessed without any burden of data preprocessing. They also serve for the purpose of visualizing the data and grasping the sense of evaluation tasks distribution.
+
+<p align="center" width="100%">
+<img src="https://i.postimg.cc/8PXFW9sk/WX20240228-123110-2x.png"  width="100%" height="80%">
+</p>
+
+### Detailed YAML task configuration
+Including prompt pre-processing, output post-processing, answer extraction, model specific args and more.
+
+### Reproducible results (for LLaVA series models) and Logging Utilites.
+We provide a set of pre-defined configurations & environments for llava-1.5, which can be directly used to reproduce the results in the paper.
+
+With `lmms-eval`, all evaluation details will be recorded including log samples and results, generating report tables to terminal output and to Weights & Biases Runs/Tables.
+
+> Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
+
+# Installation
+
+For formal usage, you can install the package from PyPI by running the following command:
 ```bash
+pip install lmms-eval
+```
+
+For development, you can install the package by cloning the repository and running the following command:
+```bash
+git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
+cd lmms-eval
 pip install -e .
 ```
 
-```bash
-accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-13b"   --tasks mme  --batch_size 1 --log_samples --log_samples_suffix debug --output_path ./logs/ # Eactly reproduce llava results
-accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Eactly reproduce llava results
+If you wanted to test llava, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
 ```
-## Current models
+git clone https://github.com/haotian-liu/LLaVA
+cd LLaVA
+pip install -e .
+```
 
-- GPT4V (API)
-  - generation-based evaluation
+If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0 ` to let pycocoeval api to work. If you don't have it, you can install by using conda
+```
+conda install openjdk=8
+```
+you can then check your java version by `java -version` 
 
-- LLaVA-v1.5/v1.6-7B/13B/34B
-  - generation-based evaluation
-  - perplexity-based evaluation
+# Usage
+```bash
+# Evaluating LLaVA on MME
+accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-7b"   --tasks mme  --batch_size 1 --log_samples --log_samples_suffix llava_v1.5_mme --output_path ./logs/ 
 
-- Qwen-VL
-- Fuyu/OtterHD
+# Evaluating LLaVA on multiple datasets
+accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-7b"   --tasks mme,mmbench_en --batch_size 1 --log_samples --log_samples_suffix llava_v1.5_mme_mmbenchen --output_path ./logs/ #
 
-## Models to be added
+# From a predefined configuration, supporting evaluation of multiple models and datasets
+accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml 
+```
+## Supported models
 
-- InstructBLIP
-- Emu
-- CogVLM
+- GPT4V (API, only generation-based evaluation)
+- LLaVA-v1.5/v1.6-7B/13B/34B (ppl-based, generation-based)
+- Qwen-VL series (ppl-based, generation-based)
+- Fuyu series (ppl-based, generation-based)
+- InstructBLIP series (generation-based)
 
-## Current datasets
+## Supported datasets
+> () indicates the task name in the lmms_eval. The task name is also used to specify the dataset in the configuration file.
+
 - AI2D (ai2d)
 - ChartQA (chartqa)
 - CMMMU (cmmmu)
@@ -134,12 +203,16 @@ accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml # Ea
 - IconQA (iconqa)
 - VistBench (vistbench)
 
+# Add Customized Model and Dataset
 
-## Acknowledgement
+Please refer to our [documentation](docs/README.md).
 
-The API, togegher with many code blocks of this project come from [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). **Please read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) before contributing to this project**. Please do not commit to this project directly. Instead, push your changes to another branch and create a pull request.
+# Acknowledgement
+
+The API, togegher with many code blocks of this project come from [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). We recommend you to read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) for relevant informations. 
 
 Below are the changes we made to the original API:
 
+- Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness other wise the memory would explode.
 - Instance.args (lmms_eval/api/instance.py) now contains a list of images to be inputted to lmms.
-- lm-eval-harness supports all HF LMM as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
+- lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
