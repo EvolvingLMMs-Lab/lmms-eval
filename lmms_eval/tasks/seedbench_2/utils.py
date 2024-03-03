@@ -19,7 +19,7 @@ def seed_doc_to_text(doc, model_specific_kwargs=None):
     question += f"C. {parse_choice_img(doc['choice_c'], model_specific_kwargs['img_token'])}\n"
     question += f"D. {parse_choice_img(doc['choice_d'], model_specific_kwargs['img_token'])}"
     if doc["data_type"] == "Image Generation":
-        num_img_in_question = len(doc["image"]) - 4
+        num_img_in_question = len(doc["data_id"]) - 4
         prepend_tokens = [model_specific_kwargs["img_token"]] * num_img_in_question
         question = " ".join(prepend_tokens) + "\n" + question
     return f"{question}\n{model_specific_kwargs['post_prompt']}"
