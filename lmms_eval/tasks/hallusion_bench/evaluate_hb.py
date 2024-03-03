@@ -6,8 +6,6 @@ from tqdm import tqdm
 from lmms_eval.tasks.hallusion_bench.utils import evaluate_by_chatgpt, check_same_by_chatgpt, assign_correctness, get_eval_all, get_eval_fig, get_eval_pair_all
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
-save_json_path_vd = f"{cur_dir}/hallusion_output_vd_model.json"
-save_json_path_vs = f"{cur_dir}/hallusion_output_vs_model.json"
 output_entry = "model_prediction"
 correctness_entry = "gpt4v_output_gpt_check"
 
@@ -30,12 +28,12 @@ def hb_doc_to_visual(doc):
 
 def hb_process_results(doc, result):
     sample = doc
-    doc.pop("image")
+    # doc.pop("image")
     sample["model_prediction"] = result[0]
     return {k: sample for k in metric}
 
 
-def hb_aggregation_result(results, metric):
+def hb_aggregation_result(results, metric, args):
     data_vd = []
     data_vs = []
     for data in tqdm(results, desc="Split vd and vs"):
@@ -44,6 +42,10 @@ def hb_aggregation_result(results, metric):
         if data["category"] == "VS":
             data_vs.append(data)
     eval_logger.info("Do gpt eval vd ...")
+    path = os.path.join(args.output_path, "gpt_response")
+    os.makedirs(path, exist_ok=True)
+    save_json_path_vd = f"{path}/hallusion_output_vd_model.json"
+    save_json_path_vs = f"{path}/hallusion_output_vs_model.json"
     data_vd = evaluate_by_chatgpt(data_vd, output_entry=output_entry, correctness_entry=correctness_entry, load_json=True, save_json_path=save_json_path_vd)
     # data_vd = check_same_by_chatgpt(data_vd, output_entry=output_entry, load_json=True, save_json_path=save_json_path_vd)
     data_vd = assign_correctness(data_vd, correctness_entry=correctness_entry)
@@ -64,16 +66,16 @@ def hb_aggregation_result(results, metric):
         return round(100 * all_data["correct"] / all_data["total"], 4)
 
 
-def hb_aggregation_result_qAcc(results):
-    return hb_aggregation_result(results, "qAcc")
+def hb_aggregation_result_qAcc(results, args):
+    return hb_aggregation_result(results, "qAcc", args)
 
 
-def hb_aggregation_result_fAcc(results):
-    return hb_aggregation_result(results, "fAcc")
+def hb_aggregation_result_fAcc(results, args):
+    return hb_aggregation_result(results, "fAcc", args)
 
 
-def hb_aggregation_result_aAcc(results):
-    return hb_aggregation_result(results, "aAcc")
+def hb_aggregation_result_aAcc(results, args):
+    return hb_aggregation_result(results, "aAcc", args)
 
 
 def hb_aggregation_result_intern(results, metric):
