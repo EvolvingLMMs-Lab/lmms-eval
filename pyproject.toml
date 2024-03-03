@@ -24,7 +24,6 @@ dependencies = [
     "accelerate>=0.21.0",
     "black==24.1.0",
     "datasets==2.16.1",
-    "evaluate",
     "evaluate>=0.4.0",
     "jsonlines",
     "numexpr",
@@ -35,7 +34,7 @@ dependencies = [
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
     "sqlitedict",
-    "torch>=1.8",
+    "torch>=1.8",  # Note the version specification here for torch
     "openai>=1.0.0",
     "pycocoevalcap",
     "tqdm-multiprocess",
@@ -54,6 +53,44 @@ dependencies = [
     "transformers-stream-generator",
     "tiktoken",
     "pre-commit",
+    "llava@git+https://github.com/haotian-liu/LLaVA",
+]
+
+[project.optional-dependencies]
+llava_repr = [
+    "accelerate>=0.21.0",
+    "black==24.1.0",
+    "datasets==2.16.1",
+    "evaluate>=0.4.0",
+    "jsonlines",
+    "numexpr",
+    "peft>=0.2.0",
+    "pybind11>=2.6.2",
+    "pytablewriter",
+    "rouge-score>=0.0.4",
+    "sacrebleu>=1.5.0",
+    "scikit-learn>=0.24.1",
+    "sqlitedict",
+    "openai>=1.0.0",
+    "pycocoevalcap",
+    "tqdm-multiprocess",
+    "transformers>=4.36.2",
+    "zstandard",
+    "pillow",
+    "pyyaml",
+    "sympy",
+    "mpmath",
+    "Jinja2",
+    "openpyxl",
+    "Levenshtein",
+    "hf_transfer",
+    "tenacity",
+    "wandb>=0.16.0",
+    "transformers-stream-generator",
+    "tiktoken",
+    "pre-commit",
+    "torch==2.0.1",  # Specific version for llava_repr
+    "llava@git+https://github.com/haotian-liu/LLaVA",
 ]
 
 [tool.setuptools.packages.find]
@@ -70,17 +107,3 @@ lmms_eval = "lmms_eval.__main__:cli_evaluate"
 [project.urls]
 Homepage = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
-
-[project.optional-dependencies]
-dev = ["black", "flake8", "pre-commit", "pytest", "pytest-cov"]
-linting = ["flake8", "pylint", "mypy", "pre-commit"]
-testing = ["pytest", "pytest-cov", "pytest-xdist"]
-multilingual = ["nagisa>=0.2.7", "jieba>=0.42.1", "pycountry"]
-math = ["sympy>=1.12", "antlr4-python3-runtime==4.11"]
-sentencepiece = ["sentencepiece>=0.1.98", "protobuf>=4.22.1"]
-gptq = ["auto-gptq[triton] @ git+https://github.com/PanQiWei/AutoGPTQ"]
-anthropic = ["anthropic"]
-openai = ["openai==1.3.9"]
-vllm = ["vllm"]
-ifeval = ["langdetect", "immutabledict"]
-all = ["lmms_eval[dev]", "lmms_eval[testing]", "lmms_eval[linting]"]
