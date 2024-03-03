@@ -9,6 +9,7 @@ from tqdm import tqdm
 import torch
 import logging
 import numpy as np
+from datasets import Image, Sequence
 
 import lmms_eval.api
 import lmms_eval.tasks
@@ -317,11 +318,17 @@ def evaluate(
             # hack: remove image columns to speed avoid loading images and speed up postprocessing
             # reason: doc_iterator will actually load image if it's in the doc.
             docs = task.test_docs() if task.has_test_docs() else task.validation_docs()
-            column_names = docs.column_names
-            image_column = [col for col in column_names if "image" in col.lower()]
-            # remove image column from docs
-            if image_column:
-                docs = docs.remove_columns(image_column)
+            if "d170" not in task_name or "dc100" not in task_name or "dc200" not in task_name:
+                remove_cols = []
+                features = docs.features
+                # If it is an Image instance or a Sequence of Image instance. Remove it
+                for feature in features:
+                    if isinstance(features[feature], Image):
+                        remove_cols.append(feature)
+                    elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
+                        remove_cols.append(feature)
+                if remove_cols:
+                    docs = docs.remove_columns(remove_cols)
             doc_iterator = itertools.islice(enumerate(docs), lm.rank, limit, lm.world_size)
             # Instead of converting the iterator to a list, use `itertools.tee` to create a parallel iterator for counting
             # doc_iterator, doc_iterator_for_counting = itertools.tee(doc_iterator)

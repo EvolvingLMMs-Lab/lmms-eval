@@ -10,6 +10,7 @@ import random
 from tqdm import tqdm
 
 import datasets
+from datasets import Image, Sequence
 import numpy as np
 from PIL import ImageFile
 
@@ -247,11 +248,16 @@ class Task(abc.ABC):
             download_mode=download_mode,
         )
         for doc_name in self.dataset_no_image:
-            column_names = self.dataset_no_image[doc_name].column_names
-            image_column = [col for col in column_names if "image" in col.lower()]
-            # remove image column from docs
-            if image_column:
-                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(image_column)
+            remove_cols = []
+            features = self.dataset_no_image[doc_name].features
+            # If it is an Image instance or a Sequence of Image instance. Remove it
+            for feature in features:
+                if isinstance(features[feature], Image):
+                    remove_cols.append(feature)
+                elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
+                    remove_cols.append(feature)
+            for remove_col in remove_cols:
+                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
 
     @property
     def config(self):
@@ -694,11 +700,16 @@ class ConfigurableTask(Task):
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
         for doc_name in self.dataset_no_image:
-            column_names = self.dataset_no_image[doc_name].column_names
-            image_column = [col for col in column_names if "image" in col.lower()]
-            # remove image column from docs
-            if image_column:
-                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(image_column)
+            remove_cols = []
+            features = self.dataset_no_image[doc_name].features
+            # If it is an Image instance or a Sequence of Image instance. Remove it
+            for feature in features:
+                if isinstance(features[feature], Image):
+                    remove_cols.append(feature)
+                elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
+                    remove_cols.append(feature)
+            for remove_col in remove_cols:
+                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
 
     def has_training_docs(self) -> bool:
         if self.config.training_split is not None:
