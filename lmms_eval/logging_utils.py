@@ -192,9 +192,15 @@ class WandbLogger:
                         se = dic[m + "_stderr" + "," + f]
                         if se != "N/A":
                             se = "%.4f" % se
-                        table.add_data(*[model_name, model_args, k, version, f, n, m, str(v), str(se)])
+                        data = [model_name, model_args, k, version, f, n, m, str(v), str(se)]
+                        if key == "groups":
+                            data = [self.group_names] + data
+                        table.add_data(*data)
                     else:
-                        table.add_data(*[model_name, model_args, k, version, f, n, m, str(v), ""])
+                        data = [model_name, model_args, k, version, f, n, m, str(v), ""]
+                        if key == "groups":
+                            data = [self.group_names] + data
+                        table.add_data(*data)
 
             return table
 
