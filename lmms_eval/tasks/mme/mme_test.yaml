@@ -1,4 +1,4 @@
-dataset_path: Otter-AI/MME
+dataset_path: lmms-lab/MME
 dataset_kwargs:
   token: True
 task: "mme_test"
