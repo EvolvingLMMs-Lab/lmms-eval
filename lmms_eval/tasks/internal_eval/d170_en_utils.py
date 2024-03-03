@@ -110,6 +110,8 @@ def process_results(doc, results):
             "prediction": pred,
             "ground_truth": answer,
             "eval_model": model_name,
+            "prompt" : gpt_query_prompt,
+            "response" : response
         },
         "gpt_eval_avg_score": {
             "score": score,
