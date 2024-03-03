@@ -11,7 +11,6 @@ from typing import List, Optional, Union, Tuple
 from transformers import AutoModel, AutoTokenizer
 
 
-
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -104,7 +103,6 @@ class MiniCPM_V(lmms):
     @property
     def max_length(self):
         return self._max_length
-
 
     @property
     def batch_size(self):
