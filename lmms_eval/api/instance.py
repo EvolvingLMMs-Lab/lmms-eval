@@ -4,7 +4,7 @@ from typing import Literal, Tuple
 
 @dataclass
 class Instance:
-    request_type: Literal["loglikelihood", "loglikelihood_rolling", "generate_until"]
+    request_type: Literal["loglikelihood", "generate_until"]
     arguments: tuple
     idx: int
     metadata: Tuple[str, int, int] = field(default_factory=lambda: (None, None, None))  # TODO: better typehints here

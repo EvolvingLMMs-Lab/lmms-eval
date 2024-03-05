@@ -22,18 +22,17 @@ You can evaluate the models on multiple datasets with a single command. No model
 ### Accelerator support and Tasks grouping.
 We support the usage of `accelerate` to wrap the model for distributed evaluation, supporting multi-gpu and tensor parallelism. With **Task Grouping**, all instances from all tasks are grouped and evaluated in parallel, which significantly improves the throughput of the evaluation.
 
-### Efficiency benchmark
 Below are the total runtime on different datasets using 4 x A100 40G.
-|Dataset|LLaVA-v1.5-7b|LLaVA-v1.5-13b|
+|Dataset (#num)|LLaVA-v1.5-7b|LLaVA-v1.5-13b|
 |-------|-------------|--------------|
-|mme    | 2 mins 43 seconds | 3 mins 27 seconds |
-|gqa    | 10 mins 43 seconds | 14 mins 23 seconds |
-|scienceqa_img| 1 mins 58 seconds | 2 mins 52 seconds |
-|ai2d   | 3 mins 17 seconds | 4 mins 12 seconds |
-|coco2017_cap_val| 14 mins 13 seconds | 19 mins 58 seconds |
+|mme (2374)    | 2 mins 43 seconds | 3 mins 27 seconds |
+|gqa (12578)   | 10 mins 43 seconds | 14 mins 23 seconds |
+|scienceqa_img (2017) | 1 mins 58 seconds | 2 mins 52 seconds |
+|ai2d (3088)  | 3 mins 17 seconds | 4 mins 12 seconds |
+|coco2017_cap_val (5000) | 14 mins 13 seconds | 19 mins 58 seconds |
 
 ### Prepared HF datasets.
-We are hosting more than 40 (and it's increasing) datasets on [huggingface/lmms-lab](https://huggingface.co/lmms-lab), we carefully converted these datasets from original sources and included all variants, versions and splits. Now they can be directly accessed without any burden of data preprocessing. They also serve for the purpose of visualizing the data and grasping the sense of evaluation tasks distribution.
+We are hosting more than 40 (and increasing) datasets on [huggingface/lmms-lab](https://huggingface.co/lmms-lab), we carefully converted these datasets from original sources and included all variants, versions and splits. Now they can be directly accessed without any burden of data preprocessing. They also serve for the purpose of visualizing the data and grasping the sense of evaluation tasks distribution.
 
 <p align="center" width="100%">
 <img src="https://i.postimg.cc/8PXFW9sk/WX20240228-123110-2x.png"  width="100%" height="80%">
@@ -44,6 +43,8 @@ Including prompt pre-processing, output post-processing, answer extraction, mode
 
 ### Reproducible results (for LLaVA series models) and Logging Utilites.
 We provide a set of pre-defined configurations & environments for llava-1.5, which can be directly used to reproduce the results in the paper.
+
+You can refer to the [repr_scripts.sh](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/dev/readme/miscs/repr_scripts.sh) we provide to see how to build and set-up the enviroments to reproduce the results from the paper. However, this environment is not recommended when you try to evaluating your own model or other models since it only install packages necessary to run llava and has a lower pytorch version that may results in a lower speed.
 
 With `lmms-eval`, all evaluation details will be recorded including log samples and results, generating report tables to terminal output and to Weights & Biases Runs/Tables.
 
@@ -69,6 +70,8 @@ git clone https://github.com/haotian-liu/LLaVA
 cd LLaVA
 pip install -e .
 ```
+
+You can check the [environment install script](miscs/repr_scripts.sh) and [torch environment info](miscs/repr_torch_envs.txt) to reproduce LLaVA-1.5's paper results. We found torch/cuda versions difference would cause small variations in the results, we provide the [results check](miscs/llava_result_check.md) with different environments.
 
 If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0 ` to let pycocoeval api to work. If you don't have it, you can install by using conda
 ```
@@ -209,10 +212,10 @@ Please refer to our [documentation](docs/README.md).
 
 # Acknowledgement
 
-The API, togegher with many code blocks of this project come from [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). We recommend you to read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) for relevant informations. 
+lmms_eval is a fork of [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). We recommend you to read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) for relevant information. 
 
 Below are the changes we made to the original API:
 
-- Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness other wise the memory would explode.
+- Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness other wise the cpu memory would explode.
 - Instance.args (lmms_eval/api/instance.py) now contains a list of images to be inputted to lmms.
 - lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
