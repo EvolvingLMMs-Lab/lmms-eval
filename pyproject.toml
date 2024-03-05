@@ -19,7 +19,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.8"
-license = { "text" = "MIT" }
+license = { text = "MIT" }
 dependencies = [
     "accelerate>=0.21.0",
     "black==24.1.0",
@@ -34,11 +34,11 @@ dependencies = [
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
     "sqlitedict",
-    "torch>=1.8",  # Note the version specification here for torch
+    "torch>=1.8",
     "openai>=1.0.0",
     "pycocoevalcap",
     "tqdm-multiprocess",
-    "transformers>=4.36.2",
+    "transformers>=4.31.0",
     "zstandard",
     "pillow",
     "pyyaml",
@@ -53,50 +53,11 @@ dependencies = [
     "transformers-stream-generator",
     "tiktoken",
     "pre-commit",
-    "llava@git+https://github.com/haotian-liu/LLaVA",
-]
-
-[project.optional-dependencies]
-llava_repr = [
-    "accelerate>=0.21.0",
-    "black==24.1.0",
-    "datasets==2.16.1",
-    "evaluate>=0.4.0",
-    "jsonlines",
-    "numexpr",
-    "peft>=0.2.0",
-    "pybind11>=2.6.2",
-    "pytablewriter",
-    "rouge-score>=0.0.4",
-    "sacrebleu>=1.5.0",
-    "scikit-learn>=0.24.1",
-    "sqlitedict",
-    "openai>=1.0.0",
-    "pycocoevalcap",
-    "tqdm-multiprocess",
-    "transformers>=4.36.2",
-    "zstandard",
-    "pillow",
-    "pyyaml",
-    "sympy",
-    "mpmath",
-    "Jinja2",
-    "openpyxl",
-    "Levenshtein",
-    "hf_transfer",
-    "tenacity",
-    "wandb>=0.16.0",
-    "transformers-stream-generator",
-    "tiktoken",
-    "pre-commit",
-    "torch==2.0.1",  # Specific version for llava_repr
-    "llava@git+https://github.com/haotian-liu/LLaVA",
 ]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
 
-# required to include yaml files in pip installation
 [tool.setuptools.package-data]
 lmms_eval = ["**/*.yaml", "tasks/**/*"]
 
