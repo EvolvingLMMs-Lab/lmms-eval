@@ -174,11 +174,7 @@ class Qwen_VL(lmms):
         pbar.close()
         return res
 
-        assert False, "We have not implemented this function for Qwen VL yet"
 
-    def loglikelihood_rolling(self, requests: List[Instance]) -> List[float]:
-        # TODO
-        assert False, "We have not implemented this function for Qwen VL yet"
 
     def flatten(self, input):
         new_list = []

@@ -42,7 +42,7 @@ def coco_process_result(doc, result):
     return {f"coco_{metric}": data_dict for metric in COCO_METRICS}
 
 
-def coco_aggregation_result(results, metric):
+def coco_aggregation_result(results, metric, args):
     scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr"), (Spice(), "SPICE")]
     scorers_dict = {s[1]: s for s in scorers}
 
@@ -89,45 +89,45 @@ def coco_aggregation_result(results, metric):
         n = int(metric.split("_")[-1])
         score = score[n - 1]
 
-    os.makedirs("./submissions", exist_ok=True)
-    if not os.path.exists("./submissions/coco_captions_val2014_alg_results.json"):
+    path = generate_submission_file("coco_captions_val2014_alg_results.json", args)
+    if not os.path.exists(path):
         eval_logger.info("Storing prediction that can be submitted to the server ...")
-        with open("./submissions/coco_captions_val2014_alg_results.json", "w") as f:
+        with open(path, "w") as f:
             json.dump(stored_results, f, indent=4)
 
     return score
 
 
-def coco_bleu4(results):
-    return coco_aggregation_result(results, "Bleu_4")
+def coco_bleu4(results, args):
+    return coco_aggregation_result(results, "Bleu_4", args)
 
 
-def coco_bleu3(results):
-    return coco_aggregation_result(results, "Bleu_3")
+def coco_bleu3(results, args):
+    return coco_aggregation_result(results, "Bleu_3", args)
 
 
-def coco_bleu2(results):
-    return coco_aggregation_result(results, "Bleu_2")
+def coco_bleu2(results, args):
+    return coco_aggregation_result(results, "Bleu_2", args)
 
 
-def coco_bleu1(results):
-    return coco_aggregation_result(results, "Bleu_1")
+def coco_bleu1(results, args):
+    return coco_aggregation_result(results, "Bleu_1", args)
 
 
-def coco_meteor(results):
-    return coco_aggregation_result(results, "METEOR")
+def coco_meteor(results, args):
+    return coco_aggregation_result(results, "METEOR", args)
 
 
-def coco_rougel(results):
-    return coco_aggregation_result(results, "ROUGE_L")
+def coco_rougel(results, args):
+    return coco_aggregation_result(results, "ROUGE_L", args)
 
 
-def coco_cider(results):
-    return coco_aggregation_result(results, "CIDEr")
+def coco_cider(results, args):
+    return coco_aggregation_result(results, "CIDEr", args)
 
 
-def coco_spice(results):
-    return coco_aggregation_result(results, "SPICE")
+def coco_spice(results, args):
+    return coco_aggregation_result(results, "SPICE", args)
 
 
 def coco_test_process_result(doc, result):
