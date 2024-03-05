@@ -135,10 +135,6 @@ class MiniCPM_V(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "We have not implemented this function for MiniCPM_V yet"
-        
-    def loglikelihood_rolling(self, requests: List[Instance]) -> List[float]:
-        # TODO
-        assert False, "We have not implemented this function for MiniCPM_V yet"
 
     def flatten(self, input):
         new_list = []
