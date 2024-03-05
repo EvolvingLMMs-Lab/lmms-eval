@@ -60,6 +60,7 @@ def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, max_tokens=512, patienc
                 API_URL,
                 headers=headers,
                 json=payload,
+                timeout=60,
             )
             response.raise_for_status()
             response_data = response.json()
@@ -105,14 +106,7 @@ def process_results(doc, results):
         score = 0  # Assign score 0 if the score wasn't parsed correctly
 
     return {
-        "gpt_eval_info": {
-            "question_id": doc["question_id"],
-            "prediction": pred,
-            "ground_truth": answer,
-            "eval_model": model_name,
-            "prompt" : gpt_query_prompt,
-            "response" : response
-        },
+        "gpt_eval_info": {"question_id": doc["question_id"], "prediction": pred, "ground_truth": answer, "eval_model": model_name, "prompt": gpt_query_prompt, "response": response},
         "gpt_eval_avg_score": {
             "score": score,
         },

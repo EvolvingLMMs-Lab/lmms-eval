@@ -13,7 +13,7 @@ from copy import deepcopy
 eval_logger = logging.getLogger("lmms-eval")
 NUM_SECONDS_TO_SLEEP = 0.5
 
-LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_conv"]
+LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_complex"]
 
 rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule.json"), "r"))
 
@@ -69,7 +69,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 3):
 
     for attempt in range(retries):
         try:
-            response = requests.post(API_URL, headers=headers, json=payload)
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
             response.raise_for_status()
             response_data = response.json()
 
