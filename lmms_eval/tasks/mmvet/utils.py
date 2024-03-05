@@ -58,6 +58,7 @@ def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, temperature=0.0, max_to
                 API_URL,
                 headers=headers,
                 json=payload,
+                timeout=60,
             )
             response.raise_for_status()
             response_data = response.json()
@@ -67,7 +68,7 @@ def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, temperature=0.0, max_to
                 return content, response_data["model"]
 
         except Exception as e:
-            eval_logger.info(f"Error in response: {response.json()['error']['message']}")
+            eval_logger.error(f"Error: {e}")
             if "Rate limit" in str(e):
                 eval_logger.info("Sleeping due to rate limit...")
                 time.sleep(sleep_time)
