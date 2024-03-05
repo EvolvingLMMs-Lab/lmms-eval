@@ -37,7 +37,6 @@ from lmms_eval.api.registry import (
 ALL_OUTPUT_TYPES = [
     "loglikelihood",
     "multiple_choice",
-    "loglikelihood_rolling",
     "generate_until",
 ]
 
@@ -439,11 +438,6 @@ class Task(abc.ABC):
     def count_bytes(cls, doc):
         """Used for byte-level perplexity metrics in rolling loglikelihood"""
         return len(doc.encode("utf-8"))
-
-    @classmethod
-    def count_words(cls, doc):
-        """Downstream loglikelihood_rolling perplexity tasks with custom word boundaries should override this!"""
-        return len(re.split(r"\s+", doc))
 
     @utils.positional_deprecated
     def fewshot_context(
@@ -931,8 +925,6 @@ class ConfigurableTask(Task):
         kwargs.pop("split")
         if self.OUTPUT_TYPE == "loglikelihood":
             arguments = (ctx, self.doc_to_target, self.doc_to_visual, doc_id, self.config.task, split)
-        elif self.OUTPUT_TYPE == "loglikelihood_rolling":
-            arguments = (self.doc_to_target,)
         elif self.OUTPUT_TYPE == "multiple_choice":
             doc = self.dataset[split][doc_id]
             choices = self.doc_to_choice(doc)
@@ -992,15 +984,6 @@ class ConfigurableTask(Task):
             return {
                 **({"perplexity": ll} if "perplexity" in use_metric else {}),
                 **({"acc": int(is_greedy)} if "acc" in use_metric else {}),
-            }
-        elif self.OUTPUT_TYPE == "loglikelihood_rolling":
-            (loglikelihood,) = results
-            _words = self.count_words(self.doc_to_target(doc))
-            _bytes = self.count_bytes(self.doc_to_target(doc))
-            return {
-                **({"word_perplexity": (loglikelihood, _words)} if "word_perplexity" in use_metric else {}),
-                **({"byte_perplexity": (loglikelihood, _bytes)} if "byte_perplexity" in use_metric else {}),
-                **({"bits_per_byte": (loglikelihood, _bytes)} if "bits_per_byte" in use_metric else {}),
             }
         elif self.OUTPUT_TYPE == "multiple_choice":
             lls, is_greedy = zip(*results)
@@ -1123,7 +1106,7 @@ class ConfigurableTask(Task):
         else:
             raise ValueError(
                 f"Passed invalid output_type '{self.OUTPUT_TYPE}' ! Please use one of ",
-                "'loglikelihood', 'loglikelihood_rolling', 'generate_until' or 'multiple_choice'",
+                "'loglikelihood','generate_until' or 'multiple_choice'",
             )
 
         return result_dict
