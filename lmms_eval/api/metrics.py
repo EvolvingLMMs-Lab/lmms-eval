@@ -166,25 +166,6 @@ def perplexity_fn(items):  # This is a passthrough function
     return items
 
 
-@register_metric(
-    metric="word_perplexity",
-    higher_is_better=False,
-    output_type="loglikelihood_rolling",
-    aggregation="weighted_perplexity",
-)
-def word_perplexity_fn(items):  # This is a passthrough function
-    return items
-
-
-@register_metric(
-    metric="byte_perplexity",
-    higher_is_better=False,
-    output_type="loglikelihood_rolling",
-    aggregation="weighted_perplexity",
-)
-def byte_perplexity_fn(items):  # This is a passthrough function
-    return items
-
 
 def levenshtein_distance(s1, s2):
     if len(s1) > len(s2):
@@ -230,16 +211,6 @@ def anls(
     if question_result < thresh_hold:
         question_result = 0
     return {"anls": question_result}
-
-
-@register_metric(
-    metric="bits_per_byte",
-    higher_is_better=False,
-    output_type="loglikelihood_rolling",
-    aggregation="bits_per_byte",
-)
-def bits_per_byte_fn(items):  # This is a passthrough function
-    return items
 
 
 def pop_stddev(arr):

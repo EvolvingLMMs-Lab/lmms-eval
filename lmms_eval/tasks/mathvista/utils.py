@@ -47,7 +47,7 @@ def mathvista_process_results(doc, results):
     problem = {
         "question_type": doc["question_type"],
         "answer_type": doc["answer_type"],
-        "query": doc["question"],
+        "query": doc["query"],
         "choices": doc["choices"],
         "answer": doc["answer"] if "answer" in doc else None,
         "precision": doc["precision"] if "precision" in doc else 0,
@@ -60,7 +60,7 @@ def mathvista_process_results(doc, results):
 
     result = {
         "question_id": doc["pid"],
-        "query": doc["question"],
+        "query": doc["query"],
         "choices": doc["choices"],
         "answer": doc["answer"] if "answer" in doc else None,
         "extraction": extraction,
