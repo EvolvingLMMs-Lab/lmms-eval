@@ -107,7 +107,7 @@ class GPT4V(lmms):
 
             for attempt in range(5):
                 try:
-                    response = url_requests.post(API_URL, headers=headers, json=payload)
+                    response = url_requests.post(API_URL, headers=headers, json=payload, timeout=20)
                     response_data = response.json()
 
                     content = response_data["choices"][0]["message"]["content"].strip()
@@ -128,6 +128,4 @@ class GPT4V(lmms):
         # TODO
         assert False, "GPT4V not support"
 
-    def loglikelihood_rolling(self, requests: List[Instance]) -> List[float]:
-        # TODO
-        assert False, "GPT4V not support"
+
