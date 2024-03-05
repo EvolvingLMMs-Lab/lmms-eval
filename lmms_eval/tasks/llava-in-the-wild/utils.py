@@ -11,9 +11,9 @@ from pathlib import Path
 from copy import deepcopy
 
 eval_logger = logging.getLogger("lmms-eval")
-NUM_SECONDS_TO_SLEEP = 0.5
+NUM_SECONDS_TO_SLEEP = 5
 
-LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_conv"]
+LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_complex"]
 
 rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule.json"), "r"))
 
@@ -47,7 +47,7 @@ elif API_TYPE == "azure":
     }
 
 
-def get_eval(content: str, max_tokens: int, retries: int = 3):
+def get_eval(content: str, max_tokens: int, retries: int = 5):
     global headers
 
     messages = [
@@ -67,7 +67,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 3):
 
     for attempt in range(retries):
         try:
-            response = requests.post(API_URL, headers=headers, json=payload)
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
             response.raise_for_status()
             response_data = response.json()
 
@@ -78,7 +78,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 3):
 
         except Exception as e:
             eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
-            if attempt < retries - 1:  # If we have retries left, sleep and then continue to next attempt
+            if attempt < retries:  # If we have retries left, sleep and then continue to next attempt
                 time.sleep(NUM_SECONDS_TO_SLEEP)
             else:  # If this was the last attempt, log and return empty
                 eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
