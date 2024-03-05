@@ -27,7 +27,8 @@ def seed_doc_to_text(doc, model_specific_kwargs=None):
 
 def seed_process_result(doc, result):
     pred = result[0].strip()
-    pred = pred[0]
+    if len(pred) > 1:
+        pred = pred[0]
     answer = doc["answer"]
     data_type = doc["data_type"].split(" ")
     data_type = "_".join(data_type)
