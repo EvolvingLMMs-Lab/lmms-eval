@@ -232,10 +232,6 @@ class Llava(lmms):
         pbar.close()
         return res
 
-    def loglikelihood_rolling(self, requests: List[Instance]) -> List[float]:
-        # TODO
-        assert False, "We have not implemented this function for llava yet"
-
     def flatten(self, input):
         new_list = []
         for i in input:
