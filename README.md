@@ -6,7 +6,7 @@
 
 > Accelerating the development of large-scale multi-modality models (LMMs) with `lmms-eval`
 
-📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
+🏠 [Homepage](https://lmms-lab.github.io/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
 
 # Annoucement
 
