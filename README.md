@@ -12,9 +12,9 @@
 
 ## v0.1.0 Released
 
-The first version of the `lmms-eval` is released. We are working on providing an one-command evaluation API for accelerating the development of LMMs. 
+The first version of the `lmms-eval` is released. We are working on providing an one-command evaluation suite for accelerating the development of LMMs. 
 
-> In [LLaVA Next](https://llava-vl.github.io/blog/2024-01-30-llava-next/) development, we internally utilize this API to evaluate the model's performance on various model versions and datasets. It significantly accelerates the model development cycle for it's easy integration and fast evaluation speed. The main feature includes:
+> In [LLaVA Next](https://llava-vl.github.io/blog/2024-01-30-llava-next/) development, we internally utilize this suite to evaluate the model's performance on various model versions and datasets. It significantly accelerates the model development cycle for it's easy integration and fast evaluation speed. The main feature includes:
 
 ### One-command evaluation, with detailed logs and samples.
 You can evaluate the models on multiple datasets with a single command. No model/data preparation is needed, just one command line, few minutes, and get the results. Not just a result number, but also the detailed logs and samples, including the model args, input question, model response, and ground truth answer.
