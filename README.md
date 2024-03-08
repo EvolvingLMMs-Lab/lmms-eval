@@ -1,5 +1,5 @@
 <p align="center" width="100%">
-<img src="https://i.postimg.cc/g0QRgMVv/WX20240228-113337-2x.png"  width="100%" height="80%">
+<img src="https://i.postimg.cc/g0QRgMVv/WX20240228-113337-2x.png"  width="100%" height="70%">
 </p>
 
 # Large-scale Multi-modality Models Evaluation Suite
@@ -33,11 +33,15 @@ The first version of the `lmms-eval` is released. We are working on providing an
 
 > In [LLaVA Next](https://llava-vl.github.io/blog/2024-01-30-llava-next/) development, we internally utilize this suite to evaluate the model's performance on various model versions and datasets. It significantly accelerates the model development cycle for it's easy integration and fast evaluation speed. The main feature includes:
 
+<p align="center" width="100%">
+<img src="https://i.postimg.cc/sgzNmJx7/teaser.png"  width="100%" height="80%">
+</p>
+
 ### One-command evaluation, with detailed logs and samples.
 You can evaluate the models on multiple datasets with a single command. No model/data preparation is needed, just one command line, few minutes, and get the results. Not just a result number, but also the detailed logs and samples, including the model args, input question, model response, and ground truth answer.
 
 ### Accelerator support and Tasks grouping.
-We support the usage of `accelerate` to wrap the model for distributed evaluation, supporting multi-gpu and tensor parallelism. With **Task Grouping**, all instances from all tasks are grouped and evaluated in parallel, which significantly improves the throughput of the evaluation.
+We support the usage of `accelerate` to wrap the model for distributed evaluation, supporting multi-gpu and tensor parallelism. With **Task Grouping**, all instances from all tasks are grouped and evaluated in parallel, which significantly improves the throughput of the evaluation. After evaluation, all instances are sent to postprocessing module for metric calcuations and potential GPT4-eval queries.
 
 Below are the total runtime on different datasets using 4 x A100 40G.
 |Dataset (#num)|LLaVA-v1.5-7b|LLaVA-v1.5-13b|
