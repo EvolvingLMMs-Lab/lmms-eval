@@ -2,7 +2,7 @@
 <img src="https://i.postimg.cc/g0QRgMVv/WX20240228-113337-2x.png"  width="100%" height="70%">
 </p>
 
-# Large-scale Multi-modality Models Evaluation Suite
+# Large Multimoal Models Evaluation Suite
 
 > Accelerating the development of large-scale multi-modality models (LMMs) with `lmms-eval`
 
@@ -15,7 +15,7 @@ To surmount this, a broad spectrum of datasets is proposed and used to assess mo
 
 In the field of language models, there has been a valuable precedent set by the work of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). They offer integrated data and model interfaces, enabling rapid evaluation of language models and serving as the backend support framework for the [open-llm-leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard), and has gradually become the underlying ecosystem of the era of foundation models.
 
-However, the evaluation of multi-modality models is still in its infancy, and there is no unified evaluation framework that can be used to evaluate multi-modality models across a wide range of datasets. To address this challenge, we introduce **lmms-eval**, an evaluation framework meticulously crafted for consistent and efficient evaluation of Large-scale Multi-modality Models (LMMs).
+However, the evaluation of multi-modality models is still in its infancy, and there is no unified evaluation framework that can be used to evaluate multi-modality models across a wide range of datasets. To address this challenge, we introduce **lmms-eval**, an evaluation framework meticulously crafted for consistent and efficient evaluation of Large Multimoal Models (LMMs).
 
 We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). Building upon its foundation, we implemented our `lmms-eval` framework with performance optimizations specifically for LMMs.
 
@@ -263,7 +263,7 @@ We also thank:
 
 ```shell
 @misc{lmms_eval2024,
-    title={LMMs-Eval: Accelerating the Development of Large-scale Multi-modality Models},
+    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
     url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
     author={Bo Li*, Peiyuan Zhang*, Kaicheng Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Yue Xiang, Chunyuan Li and Ziwei Liu},
     publisher    = {Zenodo},
