@@ -21,9 +21,7 @@ We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness]
 
 ## Necessity of lmms-eval
 
-We believe our effort is pivotal, providing an efficient interface for the detailed comparison of publicly available models to discern their strengths and weaknesses. It also offers substantial value to research institutions and production-oriented companies to accelerate the development of large-scale multi-modality models.
-
-With the aid of `lmms-eval`, we can proudly say that we have significantly accelerated the lifecycle of model iteration. Inside the LLaVA team, the utilization of `lmms-eval` largely improves the efficiency of the model development cycle, as we are able to quickly identify the strengths and weaknesses of our hundreds of checkpoints produced eack week and evaluate them on 20-30 datasets, and then make targeted improvements.
+We believe our effort could provide an efficient interface for the detailed comparison of publicly available models to discern their strengths and weaknesses. It's also useful for research institutions and production-oriented companies to accelerate the development of large-scale multi-modality models. With the `lmms-eval`, we have significantly accelerated the lifecycle of model iteration. Inside the LLaVA team, the utilization of `lmms-eval` largely improves the efficiency of the model development cycle, as we are able to evaluate weekly trained hundreds of checkpoints on 20-30 datasets, identifying the strengths and weaknesses, and then make targeted improvements.
 
 # Annoucement
 
