@@ -174,8 +174,6 @@ class Qwen_VL(lmms):
         pbar.close()
         return res
 
-
-
     def flatten(self, input):
         new_list = []
         for i in input:

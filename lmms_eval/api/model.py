@@ -54,7 +54,6 @@ class lmms(abc.ABC):
         """
         pass
 
-
     # TODO: Add an optional max length
     @abc.abstractmethod
     def generate_until(self, requests) -> List[str]:
