@@ -44,30 +44,44 @@ You can evaluate the models on multiple datasets with a single command. No model
 We support the usage of `accelerate` to wrap the model for distributed evaluation, supporting multi-gpu and tensor parallelism. With **Task Grouping**, all instances from all tasks are grouped and evaluated in parallel, which significantly improves the throughput of the evaluation. After evaluation, all instances are sent to postprocessing module for metric calcuations and potential GPT4-eval queries.
 
 Below are the total runtime on different datasets using 4 x A100 40G.
-|Dataset (#num)|LLaVA-v1.5-7b|LLaVA-v1.5-13b|
-|-------|-------------|--------------|
-|mme (2374)    | 2 mins 43 seconds | 3 mins 27 seconds |
-|gqa (12578)   | 10 mins 43 seconds | 14 mins 23 seconds |
-|scienceqa_img (2017) | 1 mins 58 seconds | 2 mins 52 seconds |
-|ai2d (3088)  | 3 mins 17 seconds | 4 mins 12 seconds |
-|coco2017_cap_val (5000) | 14 mins 13 seconds | 19 mins 58 seconds |
 
-### Prepared HF datasets.
+| Dataset (#num)          | LLaVA-v1.5-7b      | LLaVA-v1.5-13b     |
+| :---------------------- | :----------------- | :----------------- |
+| mme (2374)              | 2 mins 43 seconds  | 3 mins 27 seconds  |
+| gqa (12578)             | 10 mins 43 seconds | 14 mins 23 seconds |
+| scienceqa_img (2017)    | 1 mins 58 seconds  | 2 mins 52 seconds  |
+| ai2d (3088)             | 3 mins 17 seconds  | 4 mins 12 seconds  |
+| coco2017_cap_val (5000) | 14 mins 13 seconds | 19 mins 58 seconds |
+
+### All-In-One HF dataset hubs.
+
 We are hosting more than 40 (and increasing) datasets on [huggingface/lmms-lab](https://huggingface.co/lmms-lab), we carefully converted these datasets from original sources and included all variants, versions and splits. Now they can be directly accessed without any burden of data preprocessing. They also serve for the purpose of visualizing the data and grasping the sense of evaluation tasks distribution.
 
 <p align="center" width="100%">
-<img src="https://i.postimg.cc/8PXFW9sk/WX20240228-123110-2x.png"  width="100%" height="80%">
+<img src="https://i.postimg.cc/8PXFW9sk/WX20240228-123110_2x.png"  width="100%" height="80%">
 </p>
 
-### Detailed YAML task configuration
-Including prompt pre-processing, output post-processing, answer extraction, model specific args and more.
+### Detailed Logging Utilites
 
-### Reproducible results (for LLaVA series models) and Logging Utilites.
-We provide a set of pre-defined configurations & environments for llava-1.5, which can be directly used to reproduce the results in the paper.
+We provide detailed logging utilities to help you understand the evaluation process and results. The logs include the model args, generation parameters, input question, model response, and ground truth answer. You can also record every details and visualize them inside runs on Weights & Biases.
 
-You can refer to the [repr_scripts.sh](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/dev/readme/miscs/repr_scripts.sh) we provide to see how to build and set-up the enviroments to reproduce the results from the paper. However, this environment is not recommended when you try to evaluating your own model or other models since it only install packages necessary to run llava and has a lower pytorch version that may results in a lower speed.
+{% include figure.liquid loading="eager" path="assets/img/wandb_table.png" class="img-fluid rounded z-depth-1" zoomable=true %}
 
-With `lmms-eval`, all evaluation details will be recorded including log samples and results, generating report tables to terminal output and to Weights & Biases Runs/Tables.
+<p align="center" width="100%">
+<img src="https://i.postimg.cc/W1c1vBDJ/Wechat-IMG1993.png"  width="100%" height="80%">
+</p>
+
+## Model Results
+
+As demonstrated by the extensive table below, we aim to provide detailed information for readers to understand the datasets included in lmms-eval and some specific details about these datasets (we remain grateful for any corrections readers may have during our evaluation process).
+
+We provide a Google Sheet for the detailed results of the LLaVA series models on different datasets. You can access the sheet [here](https://docs.google.com/spreadsheets/d/1a5ImfdKATDI8T7Cwh6eH-bEsnQFzanFraFUgcS9KHWc/edit?usp=sharing). It's a live sheet, and we are updating it with new results.
+
+<p align="center" width="100%">
+<img src="https://i.postimg.cc/jdw497NS/WX20240307-162526-2x.png"  width="100%" height="80%">
+</p>
+
+We also provide the raw data exported from Weights & Biases for the detailed results of the LLaVA series models on different datasets. You can access the raw data [here](https://docs.google.com/spreadsheets/d/1AvaEmuG4csSmXaHjgu4ei1KBMmNNW8wflOD_kkTDdv8/edit?usp=sharing).
 
 > Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
 
