@@ -9,7 +9,7 @@
 🏠 [Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
 
 In an era where people pursue AGI (Artificial General Intelligence) with the zeal akin to 1960s moon landing mission. 
-Evaluating the core of AGI, which fundamentally entails assessing large-scale language models (LLMs) and multi-modality models (LMMs) with unprecedented capabilities, has become a pivotal challenge. These foundation models are at the heart of AGI's development, representing critical milestones in our quest to achieve intelligent systems that can understand, learn, and interact across a broad range of human tasks. 
+Evaluating the core of AGI, the large-scale language models (LLMs) and multi-modality models (LMMs) with unprecedented capabilities, has become a pivotal challenge. These foundation models are at the heart of AGI's development, representing critical milestones in our quest to achieve intelligent systems that can understand, learn, and interact across a broad range of human tasks. 
 
 To surmount this, a broad spectrum of datasets is proposed and used to assess model capabilities across various dimensions, creating a comprehensive capability chart that reveals the true performance of models. However, evaluation of models has become quite hard since there are countless evaluation benchmarks and datasets organized in various ways, scattered across the internet, sleeping in somebody's Google Drive, Dropbox, and other websites hosted by schools or research labs.
 
