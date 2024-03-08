@@ -17,7 +17,7 @@ In the field of language models, there has been a valuable precedent set by the 
 
 However, the evaluation of multi-modality models is still in its infancy, and there is no unified evaluation framework that can be used to evaluate multi-modality models across a wide range of datasets. To address this challenge, we introduce **lmms-eval**<d-cite key="lmms_eval2024"></d-cite>, an evaluation framework meticulously crafted for consistent and efficient evaluation of Large-scale Multi-modality Models (LMMs).
 
-We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). Building upon its foundation, we implemented our lmms-eval framework with performance optimizations specifically for LMMs.
+We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). Building upon its foundation, we implemented our `lmms-eval` framework with performance optimizations specifically for LMMs.
 
 ## Necessity of lmms-eval
 
