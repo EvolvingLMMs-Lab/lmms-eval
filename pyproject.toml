@@ -53,6 +53,7 @@ dependencies = [
     "transformers-stream-generator",
     "tiktoken",
     "pre-commit",
+    "pydantic",
 ]
 
 [tool.setuptools.packages.find]
