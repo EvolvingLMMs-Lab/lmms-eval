@@ -11,7 +11,7 @@ AVAILABLE_MODELS = {
 
 for model_name, model_class in AVAILABLE_MODELS.items():
     try:
-        globals()[model_class] = getattr(__import__(model_name, fromlist=[model_class]), model_class)
+        exec(f"from .{model_name} import {model_class}")
     except ImportError:
         pass
 
