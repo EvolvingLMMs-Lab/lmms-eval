@@ -15,7 +15,7 @@ To surmount this, a broad spectrum of datasets is proposed and used to assess mo
 
 In the field of language models, there has been a valuable precedent set by the work of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). They offer integrated data and model interfaces, enabling rapid evaluation of language models and serving as the backend support framework for the [open-llm-leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard), and has gradually become the underlying ecosystem of the era of foundation models.
 
-However, the evaluation of multi-modality models is still in its infancy, and there is no unified evaluation framework that can be used to evaluate multi-modality models across a wide range of datasets. To address this challenge, we introduce **lmms-eval**<d-cite key="lmms_eval2024"></d-cite>, an evaluation framework meticulously crafted for consistent and efficient evaluation of Large-scale Multi-modality Models (LMMs).
+However, the evaluation of multi-modality models is still in its infancy, and there is no unified evaluation framework that can be used to evaluate multi-modality models across a wide range of datasets. To address this challenge, we introduce **lmms-eval**, an evaluation framework meticulously crafted for consistent and efficient evaluation of Large-scale Multi-modality Models (LMMs).
 
 We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). Building upon its foundation, we implemented our `lmms-eval` framework with performance optimizations specifically for LMMs.
 
@@ -39,6 +39,11 @@ The first version of the `lmms-eval` is released. We are working on providing an
 
 ### One-command evaluation, with detailed logs and samples.
 You can evaluate the models on multiple datasets with a single command. No model/data preparation is needed, just one command line, few minutes, and get the results. Not just a result number, but also the detailed logs and samples, including the model args, input question, model response, and ground truth answer.
+
+```python
+# Evaluating LLaVA on multiple datasets
+accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-7b"   --tasks mme,mmbench_en --batch_size 1 --log_samples --log_samples_suffix llava_v1.5_mme_mmbenchen --output_path ./logs/ #
+```
 
 ### Accelerator support and Tasks grouping.
 We support the usage of `accelerate` to wrap the model for distributed evaluation, supporting multi-gpu and tensor parallelism. With **Task Grouping**, all instances from all tasks are grouped and evaluated in parallel, which significantly improves the throughput of the evaluation. After evaluation, all instances are sent to postprocessing module for metric calcuations and potential GPT4-eval queries.
@@ -106,7 +111,7 @@ cd LLaVA
 pip install -e .
 ```
 
-You can check the [environment install script](miscs/repr_scripts.sh) and [torch environment info](miscs/repr_torch_envs.txt) to reproduce LLaVA-1.5's paper results. We found torch/cuda versions difference would cause small variations in the results, we provide the [results check](miscs/llava_result_check.md) with different environments.
+You can check the [environment install script](miscs/repr_scripts.sh) and [torch environment info](miscs/repr_torch_envs.txt) to **reproduce LLaVA-1.5's paper results**. We found torch/cuda versions difference would cause small variations in the results, we provide the [results check](miscs/llava_result_check.md) with different environments.
 
 If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0 ` to let pycocoeval api to work. If you don't have it, you can install by using conda
 ```
