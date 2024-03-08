@@ -127,6 +127,10 @@ accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pr
 # Evaluating LLaVA on multiple datasets
 accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-7b"   --tasks mme,mmbench_en --batch_size 1 --log_samples --log_samples_suffix llava_v1.5_mme_mmbenchen --output_path ./logs/ #
 
+# For other variants llava. Note that `conv_template` is an arg of the init function of llava in `lmms_eval/models/llava.py`
+accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.6-mistral-7b,conv_template=mistral_instruct"   --tasks mme,mmbench_en --batch_size 1 --log_samples --log_samples_suffix llava_v1.5_mme_mmbenchen --output_path ./logs/ #
+accelerate launch --num_processes=8 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.6-34b,conv_template=mistral_direct"   --tasks mme,mmbench_en --batch_size 1 --log_samples --log_samples_suffix llava_v1.5_mme_mmbenchen --output_path ./logs/ #
+
 # From a predefined configuration, supporting evaluation of multiple models and datasets
 accelerate launch --num_processes=8 -m lmms_eval --config example_eval.yaml 
 ```
