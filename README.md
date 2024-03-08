@@ -8,6 +8,23 @@
 
 🏠 [Homepage](https://lmms-lab.github.io/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
 
+In an era where people pursue AGI (Artificial General Intelligence) with the zeal akin to 1960s moon landing mission. 
+Evaluating the core of AGI, which fundamentally entails assessing large-scale language models (LLMs) and multi-modality models (LMMs) with unprecedented capabilities, has become a pivotal challenge. These foundational models are at the heart of AGI's development, representing critical milestones in our quest to achieve intelligent systems that can understand, learn, and interact across a broad range of human tasks. 
+
+To surmount this, a broad spectrum of datasets is proposed and used to assess model capabilities across various dimensions, creating a comprehensive capability chart that reveals the true performance of models. However, evaluation of models has become quite hard since there are countless evaluation benchmarks and datasets organized in various ways, scattered across the internet, sleeping in somebody's Google Drive, Dropbox, and other websites hosted by schools or research labs.
+
+In the field of language models, there has been a valuable precedent set by the work of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). They offer integrated data and model interfaces, enabling rapid evaluation of language models and serving as the backend support framework for the [open-llm-leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard), and has gradually become the underlying ecosystem of the era of large models.
+
+However, the evaluation of multi-modality models is still in its infancy, and there is no unified evaluation framework that can be used to evaluate multi-modality models across a wide range of datasets. To address this challenge, we introduce **lmms-eval**<d-cite key="lmms_eval2024"></d-cite>, an evaluation framework meticulously crafted for consistent and efficient evaluation of Large-scale Multi-modality Models (LMMs).
+
+We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). Building upon its foundation, we implemented our lmms-eval framework with performance optimizations specifically for LMMs.
+
+## Necessity of lmms-eval
+
+We believe our effort is pivotal, providing an efficient interface for the detailed comparison of publicly available models to discern their strengths and weaknesses. It also offers substantial value to research institutions and production-oriented companies to accelerate the development of large-scale multi-modality models.
+
+With the aid of `lmms-eval`, we can proudly say that we have significantly accelerated the lifecycle of model iteration. Inside the LLaVA team, the utilization of `lmms-eval` largely improves the efficiency of the model development cycle, as we are able to quickly identify the strengths and weaknesses of our hundreds of checkpoints produced eack week and evaluate them on 20-30 datasets, and then make targeted improvements.
+
 # Annoucement
 
 ## v0.1.0 Released
