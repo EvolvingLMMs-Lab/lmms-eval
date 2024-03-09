@@ -29,7 +29,7 @@ We believe our effort could provide an efficient interface for the detailed comp
 
 The first version of the `lmms-eval` is released. We are working on providing an one-command evaluation suite for accelerating the development of LMMs. 
 
-> In [LLaVA Next](https://llava-vl.github.io/blog/2024-01-30-llava-next/) development, we internally utilize this suite to evaluate the model's performance on various model versions and datasets. It significantly accelerates the model development cycle for it's easy integration and fast evaluation speed.
+> In [LLaVA Next](https://llava-vl.github.io/blog/2024-01-30-llava-next/) development, we internally utilize this suite to evaluate the multiple different model versions on various datasets. It significantly accelerates the model development cycle for it's easy integration and fast evaluation speed.
 
 The main feature includes:
 
