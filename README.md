@@ -269,7 +269,7 @@ We also thank:
 @misc{lmms_eval2024,
     title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
     url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
-    author={Bo Li*, Peiyuan Zhang*, Kaicheng Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Yue Xiang, Chunyuan Li and Ziwei Liu},
+    author={Bo Li*, Peiyuan Zhang*, Kaicheng Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
     publisher    = {Zenodo},
     version      = {v0.1.0},
     month={March},
