@@ -6,7 +6,7 @@
 
 > Accelerating the development of large multimodal models (LMMs) with `lmms-eval`
 
-🏠 [Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
+🏠 [Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/lmms-eval-0.1/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
 
 In an era where people pursue AGI (Artificial General Intelligence) with the zeal akin to 1960s moon landing mission. 
 Evaluating the core of AGI, the large language models (LLMs) and large multimodal models (LMMs) with unprecedented capabilities that can understand, learn, and interact across a broad range of human tasks, has become a pivotal challenge.
