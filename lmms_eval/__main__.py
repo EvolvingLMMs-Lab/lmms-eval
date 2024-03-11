@@ -274,7 +274,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         hash_input = f"{args.model_args}".encode("utf-8")
         hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
         path = Path(args.output_path)
-        path = path.expanduser().resolve().joinpath(f"{args.model}").joinpath(f"model_args_{hash_output}").joinpath(f"{datetime_str}_{args.log_samples_suffix}")
+        path = path.expanduser().resolve().joinpath(f"{datetime_str}_{args.log_samples_suffix}_{args.model}_model_args_{hash_output}")
         args.output_path = path
 
     elif args.log_samples and not args.output_path:
