@@ -32,7 +32,7 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4-613"
+  gpt_eval_model_name: "gpt-4-0613"
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
