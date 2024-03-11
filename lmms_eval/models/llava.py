@@ -52,7 +52,7 @@ class Llava(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = False,
         revision=None,
-        use_flash_attention_2=True,
+        use_flash_attention_2=False,
         device_map="",
         conv_template="vicuna_v1",
         use_cache=True,
