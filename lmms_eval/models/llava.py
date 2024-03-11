@@ -52,7 +52,9 @@ class Llava(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = False,
         revision=None,
-        attn_implementation="eager",  # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
+        attn_implementation="sdpa"
+        if torch.__version__ > "2.1.2"
+        else "eager",  # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
         device_map="",
         conv_template="vicuna_v1",
         use_cache=True,
