@@ -253,8 +253,6 @@ class Fuyu(lmms):
         pbar.close()
         return res
 
-
-
     def tok_encode(self, string: str, left_truncate_len=None, add_special_tokens=None) -> List[int]:
         """ """
         add_special_tokens = False if add_special_tokens is None else add_special_tokens
