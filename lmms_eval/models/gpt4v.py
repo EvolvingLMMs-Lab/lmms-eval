@@ -127,5 +127,3 @@ class GPT4V(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "GPT4V not support"
-
-

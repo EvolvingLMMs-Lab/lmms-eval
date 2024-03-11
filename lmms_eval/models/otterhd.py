@@ -195,7 +195,6 @@ class OtterHD(lmms):
         # TODO
         assert False, "We have not implemented this function for llava yet"
 
-
     def tok_encode(self, string: str, left_truncate_len=None, add_special_tokens=None) -> List[int]:
         """ """
         add_special_tokens = False if add_special_tokens is None else add_special_tokens

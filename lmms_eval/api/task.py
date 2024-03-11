@@ -687,7 +687,7 @@ class ConfigurableTask(Task):
             download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
-        self.dataset_no_image =  datasets.load_dataset(
+        self.dataset_no_image = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
