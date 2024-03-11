@@ -52,7 +52,7 @@ class Llava(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = False,
         revision=None,
-        use_flash_attention_2=False,
+        attn_implementation="eager",  # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
         device_map="",
         conv_template="vicuna_v1",
         use_cache=True,
@@ -72,7 +72,7 @@ class Llava(lmms):
             self._device = torch.device(device)
             self.device_map = device_map
 
-        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, use_flash_attention_2=use_flash_attention_2)
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, attn_implementation=attn_implementation)
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
