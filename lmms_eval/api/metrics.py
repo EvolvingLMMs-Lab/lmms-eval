@@ -166,7 +166,6 @@ def perplexity_fn(items):  # This is a passthrough function
     return items
 
 
-
 def levenshtein_distance(s1, s2):
     if len(s1) > len(s2):
         s1, s2 = s2, s1
