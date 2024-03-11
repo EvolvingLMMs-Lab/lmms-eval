@@ -170,7 +170,7 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 - Infographic VQA (info_vqa)
   - Infographic VQA Validation (info_vqa_val)
   - Infographic VQA Test (info_vqa_test)
-- LLaVA-Bench (llava_bench_wild)
+- LLaVA-Bench (llava_in_the_wild)
 - LLaVA-Bench-COCO (llava_bench_coco)
 - MathVista (mathvista)
   - MathVista Validation (mathvista_testmini)
