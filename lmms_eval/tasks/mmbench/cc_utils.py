@@ -62,7 +62,7 @@ def mmbench_cn_cc_process_results(doc, results):
     }
     option_candidate = ["A", "B", "C", "D", "E"]
     for c in option_candidate:
-        data[c] = doc.get(c, None)
+        data[c] = doc.get(c, "nan")
     return data
 
 
