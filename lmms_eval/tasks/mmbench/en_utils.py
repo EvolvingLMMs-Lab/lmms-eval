@@ -69,7 +69,7 @@ def mmbench_process_results(doc, results):
     }
     option_candidate = ["A", "B", "C", "D", "E"]
     for c in option_candidate:
-        data[c] = doc.get(c, "nan")
+        data["submission"][c] = doc.get(c, "nan")
     return data
 
 
