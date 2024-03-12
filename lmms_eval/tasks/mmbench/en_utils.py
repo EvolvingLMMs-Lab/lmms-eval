@@ -54,7 +54,7 @@ def mmbench_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
 def mmbench_process_results(doc, results):
     model_response = results[0].strip()
-    return {
+    data = {
         "submission": {
             "index": doc["index"],
             "question": doc["question"],
@@ -67,6 +67,10 @@ def mmbench_process_results(doc, results):
             "L2-category": doc["l2-category"],
         }
     }
+    option_candidate = ["A", "B", "C", "D", "E"]
+    for c in option_candidate:
+        data[c] = doc.get(c, None)
+    return data
 
 
 def mmbench_aggregate_dev_results(results, args):
