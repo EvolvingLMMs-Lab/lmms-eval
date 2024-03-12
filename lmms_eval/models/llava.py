@@ -191,6 +191,7 @@ class Llava(lmms):
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
+            image_sizes = [[visual.size[0], visual.size[1]] for visual in visuals]
             if visuals:
                 image = process_images(visuals, self._image_processor, self._config)
                 if type(image) is list:
@@ -228,7 +229,7 @@ class Llava(lmms):
             # Context part no need to calculate for loss
             labels[0, : contxt_id.shape[1]] = -100
             with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True)
+                outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, image_sizes=image_sizes)
             loss = outputs["loss"]
             # loss = torch.exp(loss)
             logits = outputs["logits"]
