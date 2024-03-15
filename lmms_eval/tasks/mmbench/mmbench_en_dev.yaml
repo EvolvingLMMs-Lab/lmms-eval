@@ -1,6 +1,6 @@
 task: "mmbench_en_dev"
 test_split: dev
-include: _default_template_mmbench_en.yaml
+include: _default_template_mmbench_en_yaml
 metric_list:
   - metric: submission
     aggregation: !function en_utils.mmbench_aggregate_dev_results
