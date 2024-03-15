@@ -1,0 +1,12 @@
+dataset_path: lmms-lab/MMBench
+dataset_kwargs:
+  token: True
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+doc_to_target: "answer"
