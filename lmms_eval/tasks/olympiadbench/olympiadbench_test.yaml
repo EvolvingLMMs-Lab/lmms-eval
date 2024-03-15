@@ -1,0 +1,25 @@
+dataset_path: lmms-lab/OlympiadBench
+dataset_kwargs:
+  token: True
+task : "olympiad_bench"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.olympiadbench_doc_to_visual
+doc_to_text: !function utils.olympiadbench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.olympiadbench_process_result
+metric_list:
+  - metric: human_eval
+    aggregation: !function utils.human_eval
+    higher_is_better: True
+  - metric: auto_scoring
+    aggregation: !function utils.auto_scoring
+    higher_is_better: True
+metadata:
+  - version: 0.0
