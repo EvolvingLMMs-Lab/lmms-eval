@@ -17,6 +17,7 @@ metadata:
   version: 0.0
   gpt_eval_model_name: "gpt-3.5-turbo"
   quick_extract: true
+  sys_prompt: "有如下几个选项："
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
