@@ -83,8 +83,7 @@ def mmbench_aggregate_dev_results(results, args):
 
 def mmbench_aggregate_test_results(results, args):
     df = pd.DataFrame(results)
-    Path(args.output_path).joinpath("submissions").mkdir(parents=True, exist_ok=True)
-    excel_write_path = Path(args.output_path) / "submissions" / f"mmbench_en_test_results.xlsx"
+    excel_write_path = generate_submission_file("mmbench_en_test_results.xlsx", args)
     with pd.ExcelWriter(excel_write_path) as writer:
         df.to_excel(writer, index=False)
     eval_logger.info(f"Saved results to {excel_write_path}")
