@@ -1,0 +1,14 @@
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+doc_to_visual: !function en_utils.mmbench_doc_to_visual
+doc_to_text: !function en_utils.mmbench_doc_to_text
+doc_to_target: "answer"
+process_results: !function en_utils.mmbench_process_results
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
+output_type: generate_until
+include: _default_template_mmbench.yaml
+dataset_name: "en"

@@ -36,7 +36,7 @@ def mmbench_doc_to_text(doc, model_specific_prompt_kwargs=None):
         "answer": doc.get("answer", None),
         "options": options_prompt,
         "category": doc["category"],
-        "L2-category": doc["l2-category"],
+        "L2-category": doc["L2-category"],
         "options_dict": options_dict,
         "index": doc["index"],
         "hint": doc["hint"],
@@ -44,11 +44,11 @@ def mmbench_doc_to_text(doc, model_specific_prompt_kwargs=None):
         "split": doc["split"],
     }
 
-    query_prompt = f"{data['hint']} {data['question']} {data['options']}" if pd.notna(data["hint"]) else f"{data['question']} {data['options']}"
+    query_prompt = f"{data['hint']} {data['question']} {data['options']}" if pd.notna(data["hint"]) and data["hint"] != "nan" else f"{data['question']} {data['options']}"
 
     if model_specific_prompt_kwargs:
         query_prompt = f"{query_prompt}\n{model_specific_prompt_kwargs['post_prompt']}"
-
+    
     return query_prompt
 
 
@@ -64,7 +64,7 @@ def mmbench_process_results(doc, results):
             "source": doc["source"],
             "split": doc["split"],
             "category": doc["category"],
-            "L2-category": doc["l2-category"],
+            "L2-category": doc["L2-category"],
         }
     }
     option_candidate = ["A", "B", "C", "D", "E"]

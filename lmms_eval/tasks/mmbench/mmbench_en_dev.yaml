@@ -1,23 +1,7 @@
-dataset_path: lmms-lab/MMBench_EN
-dataset_kwargs:
-  token: True
 task: "mmbench_en_dev"
 test_split: dev
-output_type: generate_until
-doc_to_visual: !function en_utils.mmbench_doc_to_visual
-doc_to_text: !function en_utils.mmbench_doc_to_text
-doc_to_target: "answer"
-generation_kwargs:
-  until:
-    - "ASSISTANT:"
-  max_new_tokens: 1024
-  temperature: 0
-  top_p: 0
-  num_beams: 1
-  do_sample: false
-process_results: !function en_utils.mmbench_process_results
+include: _default_template_mmbench_en.yaml
 metric_list:
   - metric: submission
     aggregation: !function en_utils.mmbench_aggregate_dev_results
-metadata:
-  version: 0.0
+    higher_is_better: true
