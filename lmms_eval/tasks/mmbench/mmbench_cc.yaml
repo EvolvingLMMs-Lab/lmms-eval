@@ -1,9 +1,8 @@
-dataset_path: lmms-lab/MMBench_CN
+dataset_path: lmms-lab/MMBench
+dataset_name: cc
 dataset_kwargs:
   token: True
-group: mmbench_cn
 task: "mmbench_cn_cc"
-dataset_name: "chinese_culture"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function cc_utils.mmbench_doc_to_visual
