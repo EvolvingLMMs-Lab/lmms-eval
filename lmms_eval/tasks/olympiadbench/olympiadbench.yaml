@@ -1,3 +1,5 @@
-group: flickr30k
+group: olympiadbench
 task:
-- flickr30k_test
+- olympiadbench_test
+metadata:
+  - version: 0.0

@@ -5,13 +5,13 @@ from sympy.parsing.latex import parse_latex
 import math
 
 # how to use
-# scorer = AutoScoringJudge()
+# scorer = OlympiadBenchEvaluator()
 # exp1 = "10^{10^{10^{10}}}"
 # exp2 = "10^{10}"
 # precision = 1e-4
 # res = scorer.judge(exp1, exp2, precision)
 
-class AutoScoringJudge:
+class OlympiadBenchEvaluator:
     def __init__(self):
         # Map of special symbols to their replacements
         self.special_signal_map = {

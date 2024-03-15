@@ -1,43 +1,30 @@
 import os
 import json
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
-from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-from pycocotools.coco import COCO
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 import datetime
+from lmms_eval.tasks.olympiadbench.olympiadbench_evals import OlympiadBenchEvaluator
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 import logging
-
 eval_logger = logging.getLogger("lmms-eval")
-
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
-
+olympiadbench_evaluator = OlympiadBenchEvaluator()
 
 def olympiadbench_doc_to_visual(doc):
-    return [doc["image"].convert("RGB")]
-
+    return [image.convert("RGB") for image in doc["images"]]
 
 def olympiadbench_doc_to_text(doc):
-    # question = "Please carefully observe the image and come up with a caption for the image"
-    return f"Provide a one-sentence caption for the provided image."
+    problem = {
+        "question_type": doc["question_type"],
+        "answer_type": doc["answer_type"]
+    }
+    pass
 
+def olympiadbench_process_results(doc, result):
+    pass
 
-def olympiadbench_process_result(doc, result):
-    """
-    Args:
-        doc: a instance of the eval dataset
-        results: [pred]
-    Returns:
-        a dictionary with key: metric name, value: metric value
-    """
-    pred = result[0] if len(result) > 0 else ""
-    image_id = int(doc["img_id"])
+def olympiadbench_aggregation_results(results, metric, args):
+    pass
 
-    data_dict = {"answer": doc["caption"], "pred": pred, "image_id": image_id}
-
-    return {f"flickr_{metric}": data_dict for metric in FLICKR_METRICS}
-
-
-def olympiadbench_aggregation_result(results, metric, args):
+def auto_scoring(results, metric, args):
     pass
