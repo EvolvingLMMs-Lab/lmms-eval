@@ -7,6 +7,7 @@ import json
 
 eval_logger = logging.getLogger("lmms-eval")
 from lmms_eval.tasks.mmbench.mmbench_evals import MMBench_Evaluator
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 with open(Path(__file__).parent / "mmbench_cn.yaml", "r") as f:
     raw_data = f.readlines()
@@ -66,9 +67,9 @@ def mmbench_cn_cc_process_results(doc, results):
     return data
 
 
-def mmbench_cn_cc_aggregate_results(results):
+def mmbench_cn_cc_aggregate_results(results, args):
     df = pd.DataFrame(results)
-    os.makedirs("./submissions", exist_ok=True)
-    with pd.ExcelWriter("./submissions/mmbench_cn_cc_results.xlsx") as writer:
+    file = generate_submission_file("mmbench_cn_cc_results.xlsx", args)
+    with pd.ExcelWriter(file) as writer:
         df.to_excel(writer, index=False)
-    eval_logger.info(f"Saved results to mmbench_cn_cc_results.xlsx")
+    eval_logger.info(f"Saved results to {file}")
