@@ -18,11 +18,14 @@ generation_kwargs:
 process_results: !function utils.olympiadbench_process_results
 metric_list:
   - metric: submission
-    aggregation: !function utils.mathvista_aggregate_results
+    aggregation: !function utils.olympiadbench_aggregation_submissions
     higher_is_better: true
-  - metric: auto_scoring
-    aggregation: !function utils.auto_scoring
-    higher_is_better: True
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+process_results: !function utils.olympiadbench_process_results
 
 model_specific_prompt_kwargs:
   default:

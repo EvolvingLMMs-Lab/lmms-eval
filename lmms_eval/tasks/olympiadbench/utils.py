@@ -53,7 +53,6 @@ def olympiadbench_doc_to_text(doc):
     final_question = pre_prompt + question + '\n' + post_prompt
     return final_question
 
-#TODO
 def olympiadbench_process_results(doc, results):
     precision = doc["precision"]
     answer_type = doc["answer_type"]
@@ -63,21 +62,22 @@ def olympiadbench_process_results(doc, results):
 
     if answer_type == "Need_human_evaluate":
         return {
-            "human_eval": prediction,
             "submission": prediction
         }
     else:
         prediction = prediction.split(" final answer is")
         prediction = prediction.replace("\n", "").replace(" ", "").replace(".", "")
-        olympiadbench_evaluator.judge(prediction, doc["final_answer"][0], precision)
+        accuracy = olympiadbench_evaluator.judge(prediction, doc["final_answer"][0], precision)
+        accuracy = int(accuracy)
         return {
-            "eval_score": prediction,
-            "prediction": prediction
+            "exact_match": accuracy
         }
 
-#TODO
-def olympiadbench_aggregation_results(results, metric, args):
-    pass
-
-def auto_scoring(results, metric, args):
-    pass
+def olympiadbench_aggregation_submissions(results, args):
+    now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
+    submission_file_name = f"olympiadbench-test-submission-{now_date_time}.json"
+    path = generate_submission_file(submission_file_name, args)
+    with open(path, "w") as f:
+        json.dump(results, f)
+    print(f"Submission file saved to {path}")
+    
