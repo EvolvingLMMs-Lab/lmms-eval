@@ -1,25 +1,32 @@
 dataset_path: lmms-lab/OlympiadBench
 dataset_kwargs:
   token: True
-task : "olympiad_bench"
+task : "olympiadbench_test"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.olympiadbench_doc_to_visual
 doc_to_text: !function utils.olympiadbench_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
-  max_new_tokens: 64
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
   temperature: 0
   top_p: 0
   num_beams: 1
   do_sample: false
-process_results: !function utils.olympiadbench_process_result
+process_results: !function utils.olympiadbench_process_results
 metric_list:
-  - metric: human_eval
-    aggregation: !function utils.human_eval
-    higher_is_better: True
+  - metric: submission
+    aggregation: !function utils.mathvista_aggregate_results
+    higher_is_better: true
   - metric: auto_scoring
     aggregation: !function utils.auto_scoring
     higher_is_better: True
-metadata:
-  - version: 0.0
+
+model_specific_prompt_kwargs:
+  default:
+    shot_type: "format-prompt" # can be "reason-first", "solution", "step-by-step"
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
