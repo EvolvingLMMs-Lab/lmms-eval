@@ -90,7 +90,6 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
                 # the user defines the appropriate verbosity.
                 except ModuleNotFoundError as e:
                     eval_logger.debug(f"{yaml_path}: {e}. Config will not be added to registry.")
-                    print(f"{yaml_path}: {e}. Config will not be added to registry.")
                 except Exception as error:
                     import traceback
                     
