@@ -1,0 +1,22 @@
+dataset_path: lmms-lab/MMBench
+dataset_kwargs:
+  token: True
+doc_to_target: "answer"
+dataset_name: "cn"
+output_type: generate_until
+doc_to_visual: !function cn_utils.mmbench_doc_to_visual
+doc_to_text: !function cn_utils.mmbench_doc_to_text
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function cn_utils.mmbench_process_results
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\n请直接使用所提供的选项字母作为答案回答。"
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
