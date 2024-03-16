@@ -92,7 +92,7 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
                     eval_logger.debug(f"{yaml_path}: {e}. Config will not be added to registry.")
                 except Exception as error:
                     import traceback
-                    
+
                     eval_logger.debug(f"Failed to load config in {yaml_path}. Config will not be added to registry\n" f"Error: {error}\n" f"Traceback: {traceback.format_exc()}")
     return 0
 
