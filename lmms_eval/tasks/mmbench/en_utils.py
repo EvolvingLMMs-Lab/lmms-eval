@@ -48,7 +48,7 @@ def mmbench_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
     if model_specific_prompt_kwargs:
         query_prompt = f"{query_prompt}\n{model_specific_prompt_kwargs['post_prompt']}"
-    
+
     return query_prompt
 
 
