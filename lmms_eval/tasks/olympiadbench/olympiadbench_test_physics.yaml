@@ -1,0 +1,6 @@
+group: olympiadbench_test_physics
+task:
+- olympiadbench_test_physics_en_comp
+- olympiadbench_test_physics_zh_cee
+metadata:
+  - version: 0.0
