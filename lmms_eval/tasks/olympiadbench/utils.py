@@ -68,7 +68,6 @@ def olympiadbench_process_results(doc, results):
         prediction = prediction.split("final answer is")[-1]
         prediction = prediction.split("所以最终答案是")[-1]
         prediction = prediction.replace('"', "").replace("\n", "").replace(" ", "").strip(".")
-        print(doc["question_id"], prediction)
         accuracy = olympiadbench_evaluator.judge(prediction, doc["final_answer"][0], precision)
         accuracy = int(accuracy)
         return {
