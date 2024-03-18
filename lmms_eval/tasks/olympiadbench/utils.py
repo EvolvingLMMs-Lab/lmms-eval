@@ -48,7 +48,7 @@ def olympiadbench_doc_to_text(doc):
         if not mul_ans:
             post_prompt += '"所以最终答案是\\boxed{答案}。"\n'
         else:
-            post_prompt += '"所以最终答案是\boxed{用英⽂逗号连接的多个答案}。"\n'
+            post_prompt += '"所以最终答案是\\boxed{用英⽂逗号连接的多个答案}。"\n'
 
     final_question = pre_prompt + question + '\n' + post_prompt
     return final_question
@@ -67,7 +67,7 @@ def olympiadbench_process_results(doc, results):
     else:
         prediction = prediction.split("final answer is")[-1]
         prediction = prediction.split("所以最终答案是")[-1]
-        prediction = prediction.replace('"', "").replace("\n", "").replace(" ", "").strip(".")
+        prediction = prediction.replace('"', "").replace("\n", "").replace(" ", "").strip(".").strip("。")
         accuracy = olympiadbench_evaluator.judge(prediction, doc["final_answer"][0], precision)
         accuracy = int(accuracy)
         return {
@@ -79,6 +79,6 @@ def olympiadbench_aggregate_results(results, args):
     submission_file_name = f"olympiadbench-test-submission-{now_date_time}.json"
     path = generate_submission_file(submission_file_name, args)
     with open(path, "w") as f:
-        json.dump(results, f)
+        json.dump(results, f, ensure_ascii=False)
     print(f"Submission file saved to {path}")
     
