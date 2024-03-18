@@ -20,7 +20,7 @@ def olympiadbench_doc_to_text(doc):
     mul_ans = doc["is_multiple_answer"]
     ans_type = doc["answer_type"]
     if ans_type == "Need_human_evaluate":
-        ans_type == "proof based"
+        ans_type = "proof based"
 
     pre_prompt = ""
     if language == "en":
@@ -54,7 +54,7 @@ def olympiadbench_doc_to_text(doc):
     return final_question
 
 def olympiadbench_process_results(doc, results):
-    precision = doc["precision"]
+    precision = doc["error"]
     answer_type = doc["answer_type"]
     if precision is None:
         precision = 0
@@ -65,15 +65,17 @@ def olympiadbench_process_results(doc, results):
             "submission": prediction
         }
     else:
-        prediction = prediction.split(" final answer is")
-        prediction = prediction.replace("\n", "").replace(" ", "").replace(".", "")
+        prediction = prediction.split("final answer is")[-1]
+        prediction = prediction.split("所以最终答案是")[-1]
+        prediction = prediction.replace('"', "").replace("\n", "").replace(" ", "").strip(".")
+        print(doc["question_id"], prediction)
         accuracy = olympiadbench_evaluator.judge(prediction, doc["final_answer"][0], precision)
         accuracy = int(accuracy)
         return {
             "exact_match": accuracy
         }
 
-def olympiadbench_aggregation_submissions(results, args):
+def olympiadbench_aggregate_results(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
     submission_file_name = f"olympiadbench-test-submission-{now_date_time}.json"
     path = generate_submission_file(submission_file_name, args)
