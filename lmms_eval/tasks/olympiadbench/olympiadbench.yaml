@@ -1,5 +1,6 @@
 group: olympiadbench
 task:
 - olympiadbench_test
+- olympiadbench_test_auto_scoring
 metadata:
   - version: 0.0
