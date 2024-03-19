@@ -1,7 +1,0 @@
-group: olympiadbench_test_math
-task:
-- olympiadbench_test_math_en_comp
-- olympiadbench_test_math_zh_comp
-- olympiadbench_test_math_zh_cee
-metadata:
-  - version: 0.0
