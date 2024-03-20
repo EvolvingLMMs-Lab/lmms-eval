@@ -18,6 +18,8 @@ def olympiadbench_doc_to_text(doc):
     subject = doc["subfield"]
     language = "en" if "English" in doc["classification"] else "zh"
     mul_ans = doc["is_multiple_answer"]
+    if mul_ans is None:
+        mul_ans = False
     ans_type = doc["answer_type"]
     if ans_type == "Need_human_evaluate":
         ans_type = "proof based"
