@@ -1,3 +1,9 @@
+import logging
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+logger = logging.getLogger("lmms-eval")
+
 # Add the following functions to your existing utils.py file
 OCRBench_score = {
     "Regular Text Recognition": 0,
@@ -59,7 +65,7 @@ def ocrbench_process_results(doc, results):
     }
 
 
-def ocrbench_aggregate_accuracy(results):
+def ocrbench_aggregate_accuracy(results, args):
     for result in results:
         OCRBench_score[result["question_type"]] += result["score"]
     recognition_score = (
@@ -71,24 +77,27 @@ def ocrbench_aggregate_accuracy(results):
         + OCRBench_score["Non-Semantic Text Recognition"]
     )
     Final_score = recognition_score + OCRBench_score["Scene Text-centric VQA"] + OCRBench_score["Doc-oriented VQA"] + OCRBench_score["Key Information Extraction"] + OCRBench_score["Handwritten Mathematical Expression Recognition"]
-    print("###########################OCRBench##############################")
-    print(f"Text Recognition(Total 300):{recognition_score}")
-    print("------------------Details of Recognition Score-------------------")
-    print(f"Regular Text Recognition(Total 50): {OCRBench_score['Regular Text Recognition']}")
-    print(f"Irregular Text Recognition(Total 50): {OCRBench_score['Irregular Text Recognition']}")
-    print(f"Artistic Text Recognition(Total 50): {OCRBench_score['Artistic Text Recognition']}")
-    print(f"Handwriting Recognition(Total 50): {OCRBench_score['Handwriting Recognition']}")
-    print(f"Digit String Recognition(Total 50): {OCRBench_score['Digit String Recognition']}")
-    print(f"Non-Semantic Text Recognition(Total 50): {OCRBench_score['Non-Semantic Text Recognition']}")
-    print("----------------------------------------------------------------")
-    print(f"Scene Text-centric VQA(Total 200): {OCRBench_score['Scene Text-centric VQA']}")
-    print("----------------------------------------------------------------")
-    print(f"Doc-oriented VQA(Total 200): {OCRBench_score['Doc-oriented VQA']}")
-    print("----------------------------------------------------------------")
-    print(f"Key Information Extraction(Total 200): {OCRBench_score['Key Information Extraction']}")
-    print("----------------------------------------------------------------")
-    print(f"Handwritten Mathematical Expression Recognition(Total 100): {OCRBench_score['Handwritten Mathematical Expression Recognition']}")
-    print("----------------------Final Score-------------------------------")
-    print(f"Final Score(Total 1000): {Final_score}")
+    file_name = generate_submission_file("ocrbench_results.txt", args, subpath="results")
+    with open(file_name, "w") as f:
+        print("######################### OCRBench #############################", file=f)
+        print(f"Text Recognition(Total 300): {recognition_score}", file=f)
+        print("---------------- Details of Recognition Score ------------------", file=f)
+        print(f"Regular Text Recognition(Total 50): {OCRBench_score['Regular Text Recognition']}", file=f)
+        print(f"Irregular Text Recognition(Total 50): {OCRBench_score['Irregular Text Recognition']}", file=f)
+        print(f"Artistic Text Recognition(Total 50): {OCRBench_score['Artistic Text Recognition']}", file=f)
+        print(f"Handwriting Recognition(Total 50): {OCRBench_score['Handwriting Recognition']}", file=f)
+        print(f"Digit String Recognition(Total 50): {OCRBench_score['Digit String Recognition']}", file=f)
+        print(f"Non-Semantic Text Recognition(Total 50): {OCRBench_score['Non-Semantic Text Recognition']}", file=f)
+        print("----------------------------------------------------------------", file=f)
+        print(f"Scene Text-centric VQA(Total 200): {OCRBench_score['Scene Text-centric VQA']}", file=f)
+        print("----------------------------------------------------------------", file=f)
+        print(f"Doc-oriented VQA(Total 200): {OCRBench_score['Doc-oriented VQA']}", file=f)
+        print("----------------------------------------------------------------", file=f)
+        print(f"Key Information Extraction(Total 200): {OCRBench_score['Key Information Extraction']}", file=f)
+        print("----------------------------------------------------------------")
+        print(f"Handwritten Mathematical Expression Recognition(Total 100): {OCRBench_score['Handwritten Mathematical Expression Recognition']}", file=f)
+        print("----------------------Final Score-------------------------------", file=f)
+        print(f"Final Score(Total 1000): {Final_score}", file=f)
+    logger.info(f"OCR Bench results saved to {file_name}")
     # return {"Final Score":Final_score,"Text Recognition":recognition_score,'Scene Text-centric VQA':OCRBench_score['Scene Text-centric VQA'],'Doc-oriented VQA':OCRBench_score['Doc-oriented VQA'],'Key Information Extraction':OCRBench_score['Key Information Extraction'],'Handwritten Mathematical Expression Recognition':OCRBench_score['Handwritten Mathematical Expression Recognition']}
     return Final_score
