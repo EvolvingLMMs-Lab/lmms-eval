@@ -96,7 +96,7 @@ def ocrbench_aggregate_accuracy(results, args):
         print(f"Key Information Extraction(Total 200): {OCRBench_score['Key Information Extraction']}", file=f)
         print("----------------------------------------------------------------")
         print(f"Handwritten Mathematical Expression Recognition(Total 100): {OCRBench_score['Handwritten Mathematical Expression Recognition']}", file=f)
-        print("----------------------Final Score-------------------------------", file=f)
+        print("--------------------- Final Score ------------------------------", file=f)
         print(f"Final Score(Total 1000): {Final_score}", file=f)
     logger.info(f"OCR Bench results saved to {file_name}")
     # return {"Final Score":Final_score,"Text Recognition":recognition_score,'Scene Text-centric VQA':OCRBench_score['Scene Text-centric VQA'],'Doc-oriented VQA':OCRBench_score['Doc-oriented VQA'],'Key Information Extraction':OCRBench_score['Key Information Extraction'],'Handwritten Mathematical Expression Recognition':OCRBench_score['Handwritten Mathematical Expression Recognition']}
