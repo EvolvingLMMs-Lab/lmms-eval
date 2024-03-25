@@ -23,14 +23,18 @@ from datasets import Dataset, Features
 import pandas as pd
 from tqdm import tqdm
 import io
+
 # Find for instance the citation on arxiv or on the dataset repo/website
 _CITATION = """https://arxiv.org/abs/2305.07895"""
 _DESCRIPTION = "OCRBench is a comprehensive evaluation benchmark designed to assess the OCR capabilities of Large Multimodal Models."
+
+
 def image2byte(image):
     img_bytes = io.BytesIO()
     image.save(img_bytes, format="JPEG")
     image_bytes = img_bytes.getvalue()
     return image_bytes
+
 
 def get_builder_config(VERSION):
     builder_config = [
@@ -42,16 +46,19 @@ def get_builder_config(VERSION):
     ]
     return builder_config
 
+
 ocrbench_json = "pathto/OCRBench/OCRBench.json"
 img_dir = "pathto/OCRBench_Images/"
 
-dataset_features = Features({
-    "dataset": datasets.Value("string"),
-    "question": datasets.Value("string"),
-    "question_type": datasets.Value("string"),
-    "answer": datasets.features.Sequence(datasets.Value("string")),
-    "image": datasets.Image(),
-})
+dataset_features = Features(
+    {
+        "dataset": datasets.Value("string"),
+        "question": datasets.Value("string"),
+        "question_type": datasets.Value("string"),
+        "answer": datasets.features.Sequence(datasets.Value("string")),
+        "image": datasets.Image(),
+    }
+)
 
 df_items = {
     "dataset": [],
@@ -61,25 +68,25 @@ df_items = {
     "image": [],
 }
 # img_feature = datasets.Image(decode=False)
-with open(ocrbench_json,"r") as f:
+with open(ocrbench_json, "r") as f:
     data = json.load(f)
 for i in tqdm(range(len(data))):
-    dataset_name = data[i]['dataset_name']
-    image_path = img_dir + data[i]['image_path']
-    question = data[i]['question']
-    answers = data[i]['answers']
-    question_type = data[i]['type']
-    if type(answers)==str:
-        answers=[answers]
+    dataset_name = data[i]["dataset_name"]
+    image_path = img_dir + data[i]["image_path"]
+    question = data[i]["question"]
+    answers = data[i]["answers"]
+    question_type = data[i]["type"]
+    if type(answers) == str:
+        answers = [answers]
     img = PIL_Image.open(image_path).convert("RGB")
     byte_data = image2byte(img)
-    image = {"bytes":  byte_data, "path": ""}
+    image = {"bytes": byte_data, "path": ""}
     df_items["image"].append(image)
     df_items["question"].append(str(question))
     df_items["answer"].append(answers)
     df_items["question_type"].append(str(question_type))
     df_items["dataset"].append(str(dataset_name))
-    
+
 df_items = pd.DataFrame(df_items)
 df_items.head()
 dataset = Dataset.from_pandas(df_items, features=dataset_features)

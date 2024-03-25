@@ -1,7 +1,17 @@
 # Add the following functions to your existing utils.py file
-OCRBench_score = {"Regular Text Recognition":0,"Irregular Text Recognition":0,"Artistic Text Recognition":0,"Handwriting Recognition":0,
-"Digit String Recognition":0,"Non-Semantic Text Recognition":0,"Scene Text-centric VQA":0,"Doc-oriented VQA":0,
-"Key Information Extraction":0,"Handwritten Mathematical Expression Recognition":0}
+OCRBench_score = {
+    "Regular Text Recognition": 0,
+    "Irregular Text Recognition": 0,
+    "Artistic Text Recognition": 0,
+    "Handwriting Recognition": 0,
+    "Digit String Recognition": 0,
+    "Non-Semantic Text Recognition": 0,
+    "Scene Text-centric VQA": 0,
+    "Doc-oriented VQA": 0,
+    "Key Information Extraction": 0,
+    "Handwritten Mathematical Expression Recognition": 0,
+}
+
 
 def ocrbench_doc_to_visual(doc):
     # Assuming the 'doc' dictionary has a key 'image' with image data
@@ -21,27 +31,27 @@ def ocrbench_process_results(doc, results):
 
     score = 0
     if dataset_name == "HME100k":
-        if type(gt_ans)==list:
+        if type(gt_ans) == list:
             for j in range(len(gt_ans)):
-                answer = gt_ans[j].strip().replace("\n"," ").replace(" ","")
-                predict = pred.strip().replace("\n"," ").replace(" ","")
+                answer = gt_ans[j].strip().replace("\n", " ").replace(" ", "")
+                predict = pred.strip().replace("\n", " ").replace(" ", "")
                 if answer in predict:
                     score = 1
         else:
-            answer = gt_ans.strip().replace("\n"," ").replace(" ","")
-            predict = pred.strip().replace("\n"," ").replace(" ","")
+            answer = gt_ans.strip().replace("\n", " ").replace(" ", "")
+            predict = pred.strip().replace("\n", " ").replace(" ", "")
             if answer in predict:
                 score = 1
     else:
-        if type(gt_ans)==list:
+        if type(gt_ans) == list:
             for j in range(len(gt_ans)):
-                answer = gt_ans[j].lower().strip().replace("\n"," ")
-                predict = pred.lower().strip().replace("\n"," ")
+                answer = gt_ans[j].lower().strip().replace("\n", " ")
+                predict = pred.lower().strip().replace("\n", " ")
                 if answer in predict:
                     score = 1
         else:
-            answer = gt_ans.lower().strip().replace("\n"," ")
-            predict = pred.lower().strip().replace("\n"," ")
+            answer = gt_ans.lower().strip().replace("\n", " ")
+            predict = pred.lower().strip().replace("\n", " ")
             if answer in predict:
                 score = 1
     return {
@@ -51,9 +61,16 @@ def ocrbench_process_results(doc, results):
 
 def ocrbench_aggregate_accuracy(results):
     for result in results:
-        OCRBench_score[result['question_type']] += result['score']
-    recognition_score = OCRBench_score['Regular Text Recognition']+OCRBench_score['Irregular Text Recognition']+OCRBench_score['Artistic Text Recognition']+OCRBench_score['Handwriting Recognition']+OCRBench_score['Digit String Recognition']+OCRBench_score['Non-Semantic Text Recognition']
-    Final_score = recognition_score+OCRBench_score['Scene Text-centric VQA']+OCRBench_score['Doc-oriented VQA']+OCRBench_score['Key Information Extraction']+OCRBench_score['Handwritten Mathematical Expression Recognition']
+        OCRBench_score[result["question_type"]] += result["score"]
+    recognition_score = (
+        OCRBench_score["Regular Text Recognition"]
+        + OCRBench_score["Irregular Text Recognition"]
+        + OCRBench_score["Artistic Text Recognition"]
+        + OCRBench_score["Handwriting Recognition"]
+        + OCRBench_score["Digit String Recognition"]
+        + OCRBench_score["Non-Semantic Text Recognition"]
+    )
+    Final_score = recognition_score + OCRBench_score["Scene Text-centric VQA"] + OCRBench_score["Doc-oriented VQA"] + OCRBench_score["Key Information Extraction"] + OCRBench_score["Handwritten Mathematical Expression Recognition"]
     print("###########################OCRBench##############################")
     print(f"Text Recognition(Total 300):{recognition_score}")
     print("------------------Details of Recognition Score-------------------")
