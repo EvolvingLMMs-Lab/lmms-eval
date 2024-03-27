@@ -562,7 +562,7 @@ class ConfigurableTask(Task):
             try:
                 random_seed = self.config.fewshot_config.get("random_seed", 1234)
                 sampler_constructor = samplers.get_sampler(self.config.fewshot_config.get("sampler", "default") if self.config.fewshot_config else "default")
-                self.sampler = sampler_constructor(list(self.fewshot_docs()), self, rnd=random.Random(random_seed))
+                self.sampler = sampler_constructor(self.fewshot_docs(), self, rnd=random.Random(random_seed))
             except Exception as e:
                 eval_logger.error(f"Error in fewshot_config: {e}")
 
@@ -762,7 +762,7 @@ class ConfigurableTask(Task):
                 dataset_path=fewshot_dataset_config["dataset_path"],
                 dataset_name=fewshot_dataset_config.get("dataset_name", None),
                 split=fewshot_dataset_config["split"],
-                fewshot_dataset_config=fewshot_dataset_config.get("dataset_kwargs", {}),
+                dataset_kwargs=fewshot_dataset_config.get("dataset_kwargs", {}),
             )
         else:
             if (self.config.num_fewshot is not None) and (self.config.num_fewshot > 0):
