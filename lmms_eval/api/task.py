@@ -553,9 +553,12 @@ class ConfigurableTask(Task):
         if self.config.task == "flickr30k_test":
             pass  # TODO: for test, will delete later
         if self.config.fewshot_config is not None:
-            random_seed = self.config.fewshot_config.get("random_seed", 1234)
-            sampler_function = samplers.get_sampler(self.config.fewshot_config.get("sampler", "default") if self.config.fewshot_config else "default")
-            self.sampler = sampler_function(list(self.fewshot_docs()), self, rnd=random.Random(random_seed))
+            try:
+                random_seed = self.config.fewshot_config.get("random_seed", 1234)
+                sampler_constructor = samplers.get_sampler(self.config.fewshot_config.get("sampler", "default") if self.config.fewshot_config else "default")
+                self.sampler = sampler_constructor(list(self.fewshot_docs()), self, rnd=random.Random(random_seed))
+            except Exception as e:
+                eval_logger.error(f"Error in fewshot_config: {e}")
 
         if self.has_test_docs():
             self.task_docs = self.test_docs()
