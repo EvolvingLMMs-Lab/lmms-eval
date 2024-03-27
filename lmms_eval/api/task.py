@@ -22,6 +22,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
+from lmms_eval.api.samplers import FewShotDataset
 
 from lmms_eval.filters import build_filter_ensemble
 from lmms_eval.api.registry import (
@@ -305,13 +306,13 @@ class Task(abc.ABC):
             A iterable of any object, that doc_to_text can handle
         """
         if self.has_training_docs():
-            return self.training_docs()
+            return FewShotDataset(self.training_docs())
         elif self.has_validation_docs():
-            return self.validation_docs()
+            return FewShotDataset(self.validation_docs())
         else:
             if self.config.num_fewshot is not None:
                 eval_logger.warning("has_training_docs and has_validation_docs are False" ", using test_docs as fewshot_docs but this is not recommended.")
-            return self.test_docs()
+            return FewShotDataset(self.test_docs())
 
     def _process_doc(self, doc):
         """
@@ -550,8 +551,13 @@ class ConfigurableTask(Task):
                 self._filters.append(filter_pipeline)
         else:
             self._filters = [build_filter_ensemble("none", [["take_first", None]])]
+        ##########################################
+        # TODO: for test, will delete later
         if self.config.task == "flickr30k_test":
-            pass  # TODO: for test, will delete later
+            pass
+        else:
+            pass
+        ###########################################
         if self.config.fewshot_config is not None:
             try:
                 random_seed = self.config.fewshot_config.get("random_seed", 1234)
@@ -749,14 +755,14 @@ class ConfigurableTask(Task):
             return self.dataset[self.config.test_split]
 
     def fewshot_docs(self):
+
         if "fewshot_dataset" in self.config.fewshot_config:
             fewshot_dataset_config = self.config.fewshot_config["fewshot_dataset"]
-            return datasets.load_dataset(
-                path=fewshot_dataset_config["dataset_path"],
-                name=fewshot_dataset_config.get("dataset_name", None),
-                split=fewshot_dataset_config["fewshot_split"],
-                download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-                **fewshot_dataset_config["dataset_kwargs"] if "dataset_kwargs" in fewshot_dataset_config else {},
+            return FewShotDataset(
+                dataset_path=fewshot_dataset_config["dataset_path"],
+                dataset_name=fewshot_dataset_config.get("dataset_name", None),
+                split=fewshot_dataset_config["split"],
+                fewshot_dataset_config=fewshot_dataset_config.get("dataset_kwargs", {}),
             )
         else:
             if (self.config.num_fewshot is not None) and (self.config.num_fewshot > 0):

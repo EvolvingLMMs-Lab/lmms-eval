@@ -1,3 +1,22 @@
+import datasets
+
+
+class FewShotDataset(object):
+    def __init__(self, dataset=None, *, dataset_path: str = None, dataset_name: str = None, split: str = None, dataset_kwargs: dict = None):
+        if dataset is not None and (dataset_path is not None or dataset_name is not None or split is not None or dataset_kwargs is not None):
+            raise ValueError("Cannot provide both `dataset` and other dataset arguments!")
+        self.dataset_path = dataset_path
+        self.dataset_name = dataset_name
+        self.split = split
+        self.dataset = dataset
+        self.dataset_kwargs = dataset_kwargs if dataset_kwargs is not None else {}
+
+    def get_dataset(self):
+        if self.dataset is None:
+            self.dataset = datasets.load_dataset(path=self.dataset_path, name=self.dataset_name, split=self.split, download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS, **self.dataset_kwargs)
+        return self.dataset
+
+
 class ContextSampler:
     def __init__(self, docs, task, fewshot_indices=None, rnd=None) -> None:
         self.rnd = rnd
