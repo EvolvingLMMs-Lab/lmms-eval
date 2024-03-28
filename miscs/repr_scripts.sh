@@ -11,4 +11,4 @@ pip install -r llava_repr_requirements.txt
 
 # Run and exactly reproduce llava_v1.5 results!
 # mme as an example
-accelerate launch --num_processes=1 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-7b,use_flash_attention_2=False"   --tasks mme  --batch_size 1 --log_samples --log_samples_sufix reproduce --output_path ./logs/
+accelerate launch --num_processes=1 -m lmms_eval --model llava   --model_args pretrained="liuhaotian/llava-v1.5-7b,use_flash_attention_2=False,device_map=auto"   --tasks mme  --batch_size 1 --log_samples --log_samples_suffix reproduce --output_path ./logs/
