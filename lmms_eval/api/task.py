@@ -312,7 +312,7 @@ class Task(abc.ABC):
         else:
             if self.config.num_fewshot is not None:
                 eval_logger.warning("has_training_docs and has_validation_docs are False" ", using test_docs as fewshot_docs but this is not recommended.")
-            return FewShotDataset(self.test_docs())
+            return FewShotDataset(self.test_docs(), same_as_eval=True)
 
     def _process_doc(self, doc):
         """
@@ -758,11 +758,15 @@ class ConfigurableTask(Task):
 
         if "fewshot_dataset" in self.config.fewshot_config:
             fewshot_dataset_config = self.config.fewshot_config["fewshot_dataset"]
+            if "dataset_path" not in fewshot_dataset_config:
+                fewshot_dataset_config["dataset_path"] = self.config.dataset_path
+            same_as_eval = self.config.dataset_path == fewshot_dataset_config["dataset_path"] and self.config.dataset_name == fewshot_dataset_config.get("dataset_name", None) and self.config.test_split == fewshot_dataset_config["split"]
             return FewShotDataset(
                 dataset_path=fewshot_dataset_config["dataset_path"],
                 dataset_name=fewshot_dataset_config.get("dataset_name", None),
                 split=fewshot_dataset_config["split"],
                 dataset_kwargs=fewshot_dataset_config.get("dataset_kwargs", {}),
+                same_as_eval=same_as_eval,
             )
         else:
             if (self.config.num_fewshot is not None) and (self.config.num_fewshot > 0):
