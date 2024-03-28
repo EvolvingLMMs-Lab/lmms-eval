@@ -6,12 +6,12 @@
 
 > Accelerating the development of large multimodal models (LMMs) with `lmms-eval`
 
-🏠 [Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/lmms-eval-0.1/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab)
+🏠 [Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/lmms-eval-0.1/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/ebAMGSsS)
 
-In an era where people pursue AGI (Artificial General Intelligence) with the zeal akin to 1960s moon landing mission. 
-Evaluating the core of AGI, the large language models (LLMs) and large multimodal models (LMMs) with unprecedented capabilities that can understand, learn, and interact across a broad range of human tasks, has become a pivotal challenge.
 
-To surmount this, a broad spectrum of evaluation datasets is proposed and used to assess model capabilities across various dimensions, creating a comprehensive capability chart that reveals the true performance of models. However, evaluation of models has become quite hard since there are countless evaluation benchmarks and datasets organized in various ways, scattered across the internet, sleeping in somebody's Google Drive, Dropbox, and other websites hosted by schools or research labs.
+In today's world, we're on a thrilling quest for Artificial General Intelligence (AGI), driven by a passion that reminds us of the excitement surrounding the 1960s moon landing. At the heart of this adventure are the incredible large language models (LLMs) and large multimodal models (LMMs). These models are like brilliant minds that can understand, learn, and interact with a vast array of human tasks, marking a significant leap toward our goal.
+
+To truly understand how capable these models are, we've started to create and use a wide variety of evaluation benchmarks. These benchmarks help us map out a detailed chart of abilities, showing us how close we are to achieving true AGI. However, this journey is not without its challenges. The sheer number of benchmarks and datasets we need to look at is overwhelming. They're all over the place - tucked away in someone's Google Drive, scattered across Dropbox, and hidden in the corners of various school and research lab websites. It's like embarking on a treasure hunt where the maps are spread far and wide.
 
 In the field of language models, there has been a valuable precedent set by the work of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). They offer integrated data and model interfaces, enabling rapid evaluation of language models and serving as the backend support framework for the [open-llm-leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard), and has gradually become the underlying ecosystem of the era of foundation models.
 
@@ -24,6 +24,10 @@ We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness]
 We believe our effort could provide an efficient interface for the detailed comparison of publicly available models to discern their strengths and weaknesses. It's also useful for research institutions and production-oriented companies to accelerate the development of large multimodal models. With the `lmms-eval`, we have significantly accelerated the lifecycle of model iteration. Inside the LLaVA team, the utilization of `lmms-eval` largely improves the efficiency of the model development cycle, as we are able to evaluate weekly trained hundreds of checkpoints on 20-30 datasets, identifying the strengths and weaknesses, and then make targeted improvements.
 
 # Annoucement
+
+## Contribution Guidance
+
+We've added guidance on contributing new datasets and models. Please refer to our [documentation](docs/README.md). If you need assistance, you can contact us via [discord/lmms-eval](https://discord.gg/ebAMGSsS).
 
 ## v0.1.0 Released
 

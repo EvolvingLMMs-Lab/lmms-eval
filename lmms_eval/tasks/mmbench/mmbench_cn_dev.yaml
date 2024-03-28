@@ -1,33 +1,7 @@
-dataset_path: lmms-lab/MMBench_CN
-dataset_kwargs:
-  token: True
-group: mmbench_cn
 task: "mmbench_cn_dev"
-dataset_name: "default"
 test_split: "dev"
-output_type: generate_until
-doc_to_visual: !function cn_utils.mmbench_doc_to_visual
-doc_to_text: !function cn_utils.mmbench_doc_to_text
-doc_to_target: "answer"
-generation_kwargs:
-  max_new_tokens: 256
-  temperature: 0
-  top_p: 0
-  num_beams: 1
-  do_sample: false
-process_results: !function cn_utils.mmbench_process_results
 metric_list:
   - metric: submission
+    higher_is_better: true
     aggregation: !function cn_utils.mmbench_aggregate_dev_results
-metadata:
-  version: 0.0
-  gpt_eval_model_name: "gpt-3.5-turbo"
-  quick_extract: true
-
-model_specific_prompt_kwargs:
-  default:
-    pre_prompt: ""
-    post_prompt: "\n请直接使用所提供的选项字母作为答案回答。"
-model_specific_generation_kwargs:
-  llava:
-    image_aspect_ratio: original
+include: _default_template_mmbench_cn_yaml
