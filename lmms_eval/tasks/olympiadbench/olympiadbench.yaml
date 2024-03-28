@@ -1,9 +1,6 @@
 group: olympiadbench
 task:
-# - olympiadbench_test_math_en_comp
-# - olympiadbench_test_math_zh_comp
-- olympiadbench_test_math_zh_cee
-# - olympiadbench_test_physics_en_comp
-# - olympiadbench_test_physics_zh_cee
+- olympiadbench_test_en
+- olympiadbench_test_cn
 metadata:
   - version: 0.0
