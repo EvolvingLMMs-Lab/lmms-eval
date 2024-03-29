@@ -19,7 +19,7 @@ class FewShotDataset(object):
             if self.fewshot_indices:
                 self.dataset = self.dataset.select(self.fewshot_indices)
         return self.dataset
-    
+
     def sample(self, n, rnd):
         indices = rnd.sample(range(len(self.get_dataset())), n)
         return self.get_dataset().select(indices)
