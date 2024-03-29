@@ -1,0 +1,6 @@
+group: olympiadbench
+task:
+- olympiadbench_test_en
+- olympiadbench_test_cn
+metadata:
+  - version: 0.0
