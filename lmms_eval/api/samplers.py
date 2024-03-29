@@ -19,6 +19,10 @@ class FewShotDataset(object):
             if self.fewshot_indices:
                 self.dataset = self.dataset.select(self.fewshot_indices)
         return self.dataset
+    
+    def sample(self, n, rnd):
+        indices = rnd.sample(range(len(self.get_dataset())), n)
+        return self.get_dataset().select(indices)
 
     def __getitem__(self, item):
         return self.get_dataset()[item]
@@ -78,7 +82,7 @@ class ContextSampler:
         Draw `n` samples from our fewshot docs. This method should be overridden by subclasses.
         """
 
-        return self.rnd.sample(self.docs.get_dataset(), n)
+        return self.docs.sample(n)
 
 
 class FirstNSampler(ContextSampler):

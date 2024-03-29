@@ -553,7 +553,7 @@ class ConfigurableTask(Task):
             self._filters = [build_filter_ensemble("none", [["take_first", None]])]
         ##########################################
         # TODO: for test, will delete later
-        if self.config.task == "flickr30k_test":
+        if self.config.task == "textvqa_test":
             pass
         else:
             pass
