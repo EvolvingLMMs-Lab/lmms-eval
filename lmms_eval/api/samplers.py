@@ -82,7 +82,7 @@ class ContextSampler:
         Draw `n` samples from our fewshot docs. This method should be overridden by subclasses.
         """
 
-        return self.docs.sample(n)
+        return self.docs.sample(n, self.rnd)
 
 
 class FirstNSampler(ContextSampler):
