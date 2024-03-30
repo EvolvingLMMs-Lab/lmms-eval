@@ -26,8 +26,8 @@ class Context(object):
 
         self.contexts = []
 
-    def get_question(self, doc, model_specific_prompt_kwargs=None):
-        text = self.doc_to_text(doc, model_specific_prompt_kwargs)
+    def get_question(self, doc):
+        text = self.doc_to_text(doc)
         return text if (self.doc_to_choice is None or isinstance(text, str)) else self.doc_to_choice(doc)[text]
 
     def get_target(self, doc):
@@ -37,8 +37,8 @@ class Context(object):
             else self.doc_to_target(doc) if (self.config.doc_to_choice is None or type(self.doc_to_target(doc)) is str) else str(self.doc_to_choice(doc)[self.doc_to_target(doc)])
         )
 
-    def add_in_context_example(self, doc, model_specific_prompt_kwargs=None, data_frame=None, index=None):
-        question = self.get_question(doc, model_specific_prompt_kwargs)
+    def add_in_context_example(self, doc, data_frame=None, index=None):
+        question = self.get_question(doc)
         if data_frame and index:
             visual = LazyLoadedImages(data_frame, index)
         else:
@@ -51,8 +51,8 @@ class Context(object):
         self.contexts.append(target)
         self.contexts.append(self.few_shot_delimiter)
 
-    def add_question(self, doc, model_specific_prompt_kwargs=None, data_frame=None, index=None):
-        question = self.doc_to_text(doc, model_specific_prompt_kwargs)
+    def add_question(self, doc, data_frame=None, index=None):
+        question = self.get_question(doc)
         if data_frame and index:
             visual = LazyLoadedImages(data_frame, index)
         else:
