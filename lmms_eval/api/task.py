@@ -788,20 +788,20 @@ class ConfigurableTask(Task):
         doc = self.dataset_no_image[split][doc_id]
         if num_fewshot == 0:
             # always prepend the (possibly empty) task description
-            labeled_examples = self.config.description
+            labeled_examples = [self.config.description]
         else:
-            labeled_examples = self.config.description + self.sampler.get_context(doc, num_fewshot)
+            labeled_examples = [self.config.description] + self.sampler.get_context(doc, num_fewshot).contexts
         example = self.doc_to_text(doc)
         if type(example) == str:
-            return labeled_examples + example
+            return labeled_examples + [example]
         elif type(example) == list:
-            return [labeled_examples + ex for ex in example]
+            return labeled_examples + [ex for ex in example]
         elif type(example) == int:
             if self.config.doc_to_choice is not None:
                 choices = self.doc_to_choice(doc)
-                return labeled_examples + choices[example]
+                return labeled_examples + [choices[example]]
             else:
-                return labeled_examples + str(example)
+                return labeled_examples + [str(example)]
 
     def apply_filters(self):
         if hasattr(self, "_filters"):

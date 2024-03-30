@@ -12,7 +12,7 @@ class LazyLoadedImages(object):
 
 
 class Context(object):
-    def __init__(self, task, few_shot_delimiter: str = "\n\n", target_delimiter: str = "\n"):
+    def __init__(self, task, few_shot_delimiter: str = "\n\n", target_delimiter: str = "\n", description = None):
         self.task = task
         self.config = task._config
 
@@ -25,6 +25,12 @@ class Context(object):
         self.few_shot_delimiter = few_shot_delimiter
 
         self.contexts = []
+        
+        if description:
+            self.add_description(description)
+    
+    def add_description(self, description):
+        self.contexts = [description] + self.contexts
 
     def get_question(self, doc):
         text = self.doc_to_text(doc)
@@ -109,7 +115,7 @@ class ContextSampler:
         if fewshot_indices:  # subset few-shot docs from
             self.docs.fewshot_indices = fewshot_indices
 
-    def get_context(self, doc, num_fewshot):
+    def get_context(self, doc, num_fewshot) -> Context:
         # draw an extra fewshot sample if using same split as evaluating on
         n_samples = num_fewshot + 1 if self.docs.same_as_eval else num_fewshot
 
