@@ -27,7 +27,8 @@ class Context(object):
         self.contexts = []
 
     def get_question(self, doc, model_specific_prompt_kwargs=None):
-        return self.doc_to_text(doc, model_specific_prompt_kwargs) if (self.doc_to_choice is None or type(self.doc_to_text(doc)) is str) else self.doc_to_choice(doc)[self.doc_to_text(doc)]
+        text = self.doc_to_text(doc, model_specific_prompt_kwargs)
+        return text if (self.doc_to_choice is None or isinstance(text, str)) else self.doc_to_choice(doc)[text]
 
     def get_target(self, doc):
         return (
