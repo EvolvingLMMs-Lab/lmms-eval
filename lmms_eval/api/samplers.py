@@ -109,7 +109,7 @@ class ContextSampler:
         if fewshot_indices:  # subset few-shot docs from
             self.docs.fewshot_indices = fewshot_indices
 
-    def get_context(self, doc, num_fewshot, model_specific_prompt_kwargs=None):
+    def get_context(self, doc, num_fewshot):
         # draw an extra fewshot sample if using same split as evaluating on
         n_samples = num_fewshot + 1 if self.docs.same_as_eval else num_fewshot
 
@@ -123,7 +123,7 @@ class ContextSampler:
         labeled_examples = Context(self.task, self.fewshot_delimiter, self.target_delimiter)
 
         for idx, doc in selected_docs:
-            labeled_examples.add_in_context_example(doc, model_specific_prompt_kwargs, self.docs, idx)
+            labeled_examples.add_in_context_example(doc, self.docs, idx)
 
         return labeled_examples
 
