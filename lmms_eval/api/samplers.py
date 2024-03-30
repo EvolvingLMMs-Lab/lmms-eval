@@ -12,7 +12,7 @@ class LazyLoadedImages(object):
 
 
 class Context(object):
-    def __init__(self, task, few_shot_delimiter: str = "\n\n", target_delimiter: str = "\n", description = None):
+    def __init__(self, task, few_shot_delimiter: str = "\n\n", target_delimiter: str = "\n", description=None):
         self.task = task
         self.config = task._config
 
@@ -25,10 +25,10 @@ class Context(object):
         self.few_shot_delimiter = few_shot_delimiter
 
         self.contexts = []
-        
+
         if description:
             self.add_description(description)
-    
+
     def add_description(self, description):
         self.contexts = [description] + self.contexts
 
