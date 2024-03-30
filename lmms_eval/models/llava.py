@@ -272,6 +272,14 @@ class Llava(lmms):
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
+            ############### for debugging ###################
+            # TODO: remove this block
+            if len(visuals) > 1:
+                for i in range(len(visuals)):
+                    path = f"./logs/llava/{i}.png"
+                    visuals[i].save(path)
+                pass
+            #################################################
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
