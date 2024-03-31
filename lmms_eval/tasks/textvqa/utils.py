@@ -1,5 +1,6 @@
 import re
 import os
+import random
 import json
 import yaml
 import pathlib
@@ -66,3 +67,7 @@ def textvqa_aggreate_submissions(results, args):
         json.dump(results, f)
     # print(f"Submission file saved to {path}")
     eval_logger.info(f"Submission file saved to {path}")
+
+def textvqa_doc_to_target(doc):
+    answers = doc["answers"]
+    return random.choice(answers) if isinstance(answers, list) else answers
