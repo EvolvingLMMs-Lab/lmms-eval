@@ -271,7 +271,7 @@ class Llava(lmms):
             task = task[0]
             split = split[0]
             # batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
-            contexts_texts, batched_visuals = zip(*[context.get_text(image_tokens=DEFAULT_IMAGE_TOKEN ,lazy=False) for context in contexts])  # [B, N]
+            contexts_texts, batched_visuals = zip(*[context.get_text(image_tokens=DEFAULT_IMAGE_TOKEN, lazy=False) for context in contexts])  # [B, N]
             flattened_visuals = self.flatten(batched_visuals)  # [B*N]
             # batched_visuals = context.get_visions()  # [B, N]
             # flattened_visuals = contexts[0].get_visions()  # [B*N]
