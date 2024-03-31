@@ -90,9 +90,14 @@ class Context(object):
             self.contexts.extend(context.contexts)
         else:
             raise ValueError(f"Cannot extend context with object of type {type(context)}")
-    
+
     def append(self, context):
         self.contexts.append(context)
+
+    def __lt__(self, other):
+        if not isinstance(other, Context):
+            return NotImplemented
+        return self.get_text() < other.get_text()
 
 
 class FewShotDataset(object):
