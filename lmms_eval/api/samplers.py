@@ -71,6 +71,13 @@ class Context(object):
     def get_text(self, *, image_tokens="<image>", lazy=True):
         texts = []
         vision = []
+        already_have_images = False
+        for context in self.contexts:
+            if isinstance(context, str) and image_tokens in context:
+                already_have_images = True
+                break
+        if already_have_images:
+            image_tokens = ""
         for context in self.contexts:
             if isinstance(context, LazyLoadedImages):
                 if isinstance(image_tokens, str):
