@@ -316,8 +316,7 @@ class Llava(lmms):
 
             question_input = []
 
-            for visual, context in zip(batched_visuals, contexts_texts):
-                question = context
+            for context in contexts_texts:
                 # if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
                 #     """
                 #     Three senarios:
@@ -333,11 +332,12 @@ class Llava(lmms):
                 # else:
                 #     question = context
 
-                conv = conv_templates[self.conv_template].copy()
-                conv.append_message(conv.roles[0], question)
-                conv.append_message(conv.roles[1], None)
-                prompt_question = conv.get_prompt()
-                question_input.append(prompt_question)
+                # conv = conv_templates[self.conv_template].copy()
+                # conv.append_message(conv.roles[0], question)
+                # conv.append_message(conv.roles[1], None)
+                # prompt_question = conv.get_prompt()
+                # question_input.append(prompt_question)
+                question_input.append(contexts)
 
             # The above for loop has bugs. When there is no visuals, e.g. pure text,
             # there will be no for loop execute resulting in an empty question_input (because no visuals)

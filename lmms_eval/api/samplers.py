@@ -10,6 +10,15 @@ class LazyLoadedImages(object):
     def get_images(self, doc_to_visual):
         return doc_to_visual(self.data_frame[self.index])
 
+from abc import ABC, abstractmethod
+
+class ContextProcessors(ABC):
+    @abstractmethod
+    def process(self, question, answer = None):
+        raise NotImplementedError
+    
+    def __call__(self, question, answer = None):
+        return self.process(question, answer)
 
 class Context(object):
     def __init__(self, task, few_shot_delimiter: str = "\n\n", target_delimiter: str = "\n", description=None):
@@ -43,7 +52,7 @@ class Context(object):
             else self.doc_to_target(doc) if (self.config.doc_to_choice is None or type(self.doc_to_target(doc)) is str) else str(self.doc_to_choice(doc)[self.doc_to_target(doc)])
         )
 
-    def add_in_context_example(self, doc, data_frame=None, index=None):
+    def add_in_context_example(self, doc, data_frame=None, index=None, context_processors: Optional[ContextProcessors] = None):
         question = self.get_question(doc)
         if data_frame and index:
             visual = LazyLoadedImages(data_frame, index)
@@ -52,12 +61,14 @@ class Context(object):
         target = self.doc_to_target(doc)
         if visual:
             self.contexts.append(visual)
+        if context_processors:
+            question, target = context_processors(question, target)
         self.contexts.append(question)
         self.contexts.append(self.target_delimiter)
         self.contexts.append(target)
         self.contexts.append(self.few_shot_delimiter)
 
-    def add_question(self, doc, data_frame=None, index=None):
+    def add_question(self, doc, data_frame=None, index=None, context_processors: Optional[ContextProcessors] = None):
         question = self.get_question(doc)
         if data_frame and index:
             visual = LazyLoadedImages(data_frame, index)
@@ -65,6 +76,8 @@ class Context(object):
             visual = None
         if visual:
             self.contexts.append(visual)
+        if context_processors:
+            question, _ = context_processors(question)
         self.contexts.append(question)
         self.contexts.append(self.target_delimiter)
 
