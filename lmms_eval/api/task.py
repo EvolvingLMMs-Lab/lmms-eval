@@ -791,17 +791,8 @@ class ConfigurableTask(Task):
         labeled_examples = Context(self, self.config.fewshot_delimiter, self.config.target_delimiter, self.config.description)
         if num_fewshot != 0:
             labeled_examples.extend(self.sampler.get_context(doc, num_fewshot))
-        example = self.doc_to_text(doc)
-        if type(example) == str:
-            return labeled_examples + [example]
-        elif type(example) == list:
-            return labeled_examples + [ex for ex in example]
-        elif type(example) == int:
-            if self.config.doc_to_choice is not None:
-                choices = self.doc_to_choice(doc)
-                return labeled_examples + [choices[example]]
-            else:
-                return labeled_examples + [str(example)]
+        labeled_examples.add_question(doc)
+        return labeled_examples
 
     def apply_filters(self):
         if hasattr(self, "_filters"):
