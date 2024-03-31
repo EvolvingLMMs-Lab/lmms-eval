@@ -68,6 +68,7 @@ def textvqa_aggreate_submissions(results, args):
     # print(f"Submission file saved to {path}")
     eval_logger.info(f"Submission file saved to {path}")
 
+
 def textvqa_doc_to_target(doc):
     answers = doc["answers"]
     return random.choice(answers) if isinstance(answers, list) else answers

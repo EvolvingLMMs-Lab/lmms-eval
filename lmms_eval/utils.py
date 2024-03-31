@@ -820,7 +820,9 @@ class Collator:
         Yields:
         List: Yields reordered elements one by one.
         """
-        arr = sorted(arr, key=lambda x: self.fn(x[1]))
+        from lmms_eval.api.samplers import Context
+
+        arr = sorted(arr, key=lambda x: self.fn(x[1].get_text() if isinstance(x, Context) else x[1]))
         self.reorder_indices.extend([x[0] for x in arr])
         yield from [x[1] for x in arr]
 

@@ -785,12 +785,12 @@ class ConfigurableTask(Task):
         :returns: str
             The fewshot context.
         """
+        from lmms_eval.api.samplers import Context
+
         doc = self.dataset_no_image[split][doc_id]
-        if num_fewshot == 0:
-            # always prepend the (possibly empty) task description
-            labeled_examples = [self.config.description]
-        else:
-            labeled_examples = [self.config.description] + self.sampler.get_context(doc, num_fewshot).contexts
+        labeled_examples = Context(self, self.config.fewshot_delimiter, self.config.target_delimiter, self.config.description)
+        if num_fewshot != 0:
+            labeled_examples.extend(self.sampler.get_context(doc, num_fewshot))
         example = self.doc_to_text(doc)
         if type(example) == str:
             return labeled_examples + [example]

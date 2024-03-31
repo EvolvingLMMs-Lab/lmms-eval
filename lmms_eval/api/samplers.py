@@ -1,5 +1,5 @@
 import datasets
-from typing import Callable
+from typing import Callable, Iterable, Optional
 
 
 class LazyLoadedImages(object):
@@ -67,6 +67,29 @@ class Context(object):
             self.contexts.append(visual)
         self.contexts.append(question)
         self.contexts.append(self.target_delimiter)
+
+    def get_text(self, image_tokens="<image>"):
+        texts = []
+        for context in self.contexts:
+            if isinstance(context, LazyLoadedImages):
+                if isinstance(image_tokens, str):
+                    texts.append(image_tokens)
+                else:
+                    texts.append(image_tokens(context))
+            else:
+                texts.append(context)
+        return "".join(texts)
+
+    def get_visions(self):
+        return [context.get_images() for context in self.contexts if isinstance(context, LazyLoadedImages)]
+
+    def extend(self, context):
+        if isinstance(context, list):
+            self.contexts.extend(context)
+        elif isinstance(context, Context):
+            self.contexts.extend(context.contexts)
+        else:
+            raise ValueError(f"Cannot extend context with object of type {type(context)}")
 
 
 class FewShotDataset(object):
