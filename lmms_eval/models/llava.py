@@ -256,7 +256,7 @@ class Llava(lmms):
             #   padded context length. this is useful to simplify the batching logic and more importantly to make
             #   automatic adaptive batches much much easier to implement
             # - any OOMs will happen right away rather than near the end
-            toks = self.tok_encode(x[0])
+            toks = self.tok_encode(str(x[0]))
             return -len(toks), x[0]
 
         # we group requests by their generation_kwargs,
@@ -270,8 +270,11 @@ class Llava(lmms):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
+            # batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
+            contexts_texts, batched_visuals = zip(*[context.get_text(lazy=False) for context in contexts])  # [B, N]
             flattened_visuals = self.flatten(batched_visuals)  # [B*N]
+            # batched_visuals = context.get_visions()  # [B, N]
+            # flattened_visuals = contexts[0].get_visions()  # [B*N]
             ############### for debugging ###################
             # TODO: remove this block
             # if len(visuals) > 1:
@@ -313,7 +316,7 @@ class Llava(lmms):
 
             question_input = []
 
-            for visual, context in zip(batched_visuals, contexts):
+            for visual, context in zip(batched_visuals, contexts_texts):
                 if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
                     """
                     Three senarios:

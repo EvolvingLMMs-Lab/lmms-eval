@@ -68,20 +68,29 @@ class Context(object):
         self.contexts.append(question)
         self.contexts.append(self.target_delimiter)
 
-    def get_text(self, image_tokens="<image>"):
+    def get_text(self, *, image_tokens="<image>", lazy=True):
         texts = []
+        vision = []
         for context in self.contexts:
             if isinstance(context, LazyLoadedImages):
                 if isinstance(image_tokens, str):
-                    texts.append(image_tokens)
+                    if lazy:
+                        texts.append(image_tokens)
+                    else:
+                        now_vision = context.get_images(self.doc_to_visual)
+                        vision.extend(now_vision)
+                        texts.append(image_tokens * len(now_vision))
                 else:
                     texts.append(image_tokens(context))
             else:
                 texts.append(context)
-        return "".join(texts)
+        if lazy:
+            return "".join(texts)
+        else:
+            return "".join(texts), vision
 
     def get_visions(self):
-        return [context.get_images() for context in self.contexts if isinstance(context, LazyLoadedImages)]
+        return [context.get_images(self.doc_to_visual) for context in self.contexts if isinstance(context, LazyLoadedImages)]
 
     def extend(self, context):
         if isinstance(context, list):
@@ -93,6 +102,9 @@ class Context(object):
 
     def append(self, context):
         self.contexts.append(context)
+
+    def __str__(self):
+        return self.get_text()
 
     def __lt__(self, other):
         if not isinstance(other, Context):
