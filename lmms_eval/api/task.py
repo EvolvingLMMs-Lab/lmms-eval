@@ -22,7 +22,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
-from lmms_eval.api.samplers import FewShotDataset
+from lmms_eval.api.samplers import FewShotDataset, Context
 
 from lmms_eval.filters import build_filter_ensemble
 from lmms_eval.api.registry import (
@@ -935,7 +935,7 @@ class ConfigurableTask(Task):
         else:
             raise TypeError
 
-    def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
+    def construct_requests(self, doc_id: int, ctx: Context, **kwargs) -> Union[List[Instance], Instance]:
         split = kwargs.get("split")
         kwargs.pop("split")
         if self.OUTPUT_TYPE == "loglikelihood":
