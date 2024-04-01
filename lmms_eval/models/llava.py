@@ -402,6 +402,7 @@ class Llava(lmms):
                 text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
+                e.with_traceback()
                 cont = ""
                 text_outputs = [""]
 
