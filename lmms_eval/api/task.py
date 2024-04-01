@@ -552,11 +552,11 @@ class ConfigurableTask(Task):
         else:
             self._filters = [build_filter_ensemble("none", [["take_first", None]])]
         ##########################################
-        # TODO: for test, will delete later
-        if self.config.task == "textvqa_test":
-            pass
-        else:
-            pass
+        # # TODO: for test, will delete later
+        # if self.config.task == "textvqa_test":
+        #     pass
+        # else:
+        #     pass
         ###########################################
         if self.config.fewshot_config is not None:
             try:
