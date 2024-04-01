@@ -271,7 +271,8 @@ class Llava(lmms):
             task = task[0]
             split = split[0]
             # batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
-            contexts_texts, batched_visuals = zip(*[context.get_text(image_tokens=DEFAULT_IMAGE_TOKEN, lazy=False) for context in contexts])  # [B, N]
+            batched_visuals = [context.get_visions() for context in contexts]  # [B, N]
+            # contexts_texts, batched_visuals = zip(*[context.get_text(image_tokens=DEFAULT_IMAGE_TOKEN, lazy=False) for context in contexts])  # [B, N]
             flattened_visuals = self.flatten(batched_visuals)  # [B*N]
             # batched_visuals = context.get_visions()  # [B, N]
             # flattened_visuals = contexts[0].get_visions()  # [B*N]
@@ -316,7 +317,7 @@ class Llava(lmms):
 
             question_input = []
 
-            for context in contexts_texts:
+            for context in contexts:
                 # if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
                 #     """
                 #     Three senarios:
@@ -332,12 +333,24 @@ class Llava(lmms):
                 # else:
                 #     question = context
 
-                # conv = conv_templates[self.conv_template].copy()
+                conv = conv_templates[self.conv_template].copy()
+
+                num_image_tokens = 0
+                from lmms_eval.api.samplers import LazyLoadedImages, QAPairs
+                for obj in context.contexts:
+                    if isinstance(obj, LazyLoadedImages):
+                        num_image_tokens += obj.get_num_images()
+                    elif isinstance(obj, QAPairs):
+                        question = " ".join(num_image_tokens * [DEFAULT_IMAGE_TOKEN]) + "\n" + obj.question
+                        answer = obj.answer
+                        conv.append_message(conv.roles[0], question)
+                        conv.append_message(conv.roles[1], answer)
+                        
+
                 # conv.append_message(conv.roles[0], question)
                 # conv.append_message(conv.roles[1], None)
-                # prompt_question = conv.get_prompt()
-                # question_input.append(prompt_question)
-                question_input.append(contexts)
+                prompt_question = conv.get_prompt()
+                question_input.append(prompt_question)
 
             # The above for loop has bugs. When there is no visuals, e.g. pure text,
             # there will be no for loop execute resulting in an empty question_input (because no visuals)
