@@ -2,13 +2,15 @@ import datasets
 from typing import Callable, Iterable, Optional
 from abc import ABC, abstractmethod
 
+
 class ContextObject(ABC):
     @abstractmethod
     def get_text(self):
         raise NotImplementedError
-    
+
     def __str__(self):
-        return self.get_text() 
+        return self.get_text()
+
 
 class QAPairs(ContextObject):
     def __init__(self, question: str, answer: Optional[str] = None, delimiter="\n", role_question: str = "USER: ", role_answer: str = "ASSISTANT: "):
@@ -17,12 +19,13 @@ class QAPairs(ContextObject):
         self.delimiter = delimiter
         self.role_question = role_question
         self.role_answer = role_answer
-    
+
     def get_text(self):
         if self.answer is None:
             return self.role_question + self.question + self.delimiter
         else:
             return self.role_question + self.question + self.delimiter + self.role_answer + self.answer
+
 
 class LazyLoadedImages(ContextObject):
     def __init__(self, data_frame, index, doc_to_visual: Callable, image_tokens="<image>"):
@@ -41,7 +44,7 @@ class LazyLoadedImages(ContextObject):
         if lazy_save:
             self.images = images
         return images
-    
+
     def get_num_images(self, lazy_save=False):
         if self.image_lens is None:
             images = self.get_images(self.doc_to_visual)
@@ -50,16 +53,17 @@ class LazyLoadedImages(ContextObject):
             self.image_lens = len(images)
         return self.image_lens
 
-    def clear(self, clear_all = False):
+    def clear(self, clear_all=False):
         self.images = None
         if clear_all:
             self.image_lens = None
-    
+
     def get_text(self, lazy: bool = True):
         if lazy:
             return self.image_tokens
         else:
             return " ".join([self.image_tokens] * self.get_num_images())
+
 
 class Context(object):
     def __init__(self, task, few_shot_delimiter: str = "\n\n", target_delimiter: str = "\n", description=None):
@@ -145,7 +149,7 @@ class Context(object):
             return "".join(texts), vision
 
     def get_visions(self):
-        return sum([context.get_images(self.doc_to_visual) for context in self.contexts if isinstance(context, LazyLoadedImages)], start = [])
+        return sum([context.get_images(self.doc_to_visual) for context in self.contexts if isinstance(context, LazyLoadedImages)], start=[])
 
     def extend(self, context):
         if isinstance(context, list):
