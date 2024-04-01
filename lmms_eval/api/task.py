@@ -791,7 +791,7 @@ class ConfigurableTask(Task):
         labeled_examples = Context(self, self.config.fewshot_delimiter, self.config.target_delimiter, self.config.description)
         if num_fewshot != 0:
             labeled_examples.extend(self.sampler.get_context(doc, num_fewshot))
-        labeled_examples.add_question(doc)
+        labeled_examples.add_question(doc, self.test_docs(), doc_id)
         return labeled_examples
 
     def apply_filters(self):

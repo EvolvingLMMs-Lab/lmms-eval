@@ -118,7 +118,7 @@ class Context(object):
         if visual:
             self.contexts.append(visual)
         self.contexts.append(QAPairs(question))
-        self.contexts.append(self.target_delimiter)
+        # self.contexts.append(self.target_delimiter)
 
     def get_text(self, *, image_tokens="<image>", lazy=True):
         texts = []
