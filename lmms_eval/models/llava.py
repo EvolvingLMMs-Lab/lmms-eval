@@ -335,21 +335,20 @@ class Llava(lmms):
 
                 conv = conv_templates[self.conv_template].copy()
 
-                num_image_tokens = 0
                 from lmms_eval.api.samplers import LazyLoadedImages, QAPairs
 
+                already_have_image_token = context.already_have_image_token(DEFAULT_IMAGE_TOKEN)
+                
                 for obj in context.contexts:
-                    if isinstance(obj, LazyLoadedImages):
-                        num_image_tokens += obj.get_num_images()
-                    elif isinstance(obj, QAPairs):
-                        if num_image_tokens == 0:
-                            question = obj.question
-                        else:
-                            question = " ".join(num_image_tokens * [DEFAULT_IMAGE_TOKEN]) + "\n" + obj.question
-                        answer = obj.answer
-                        conv.append_message(conv.roles[0], question)
-                        conv.append_message(conv.roles[1], answer)
-                        num_image_tokens = 0
+                    if already_have_image_token or obj.num_images() == 0:
+                        question = obj.question
+                    else:
+                        question = " ".join(obj.num_images() * [DEFAULT_IMAGE_TOKEN]) + "\n" + obj.question
+                    if context.description:
+                        question = context.description + "\n" + question
+                    answer = obj.answer
+                    conv.append_message(conv.roles[0], question)
+                    conv.append_message(conv.roles[1], answer)
 
                 # conv.append_message(conv.roles[0], question)
                 # conv.append_message(conv.roles[1], None)
