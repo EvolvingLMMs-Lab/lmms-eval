@@ -12,6 +12,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval import utils
+from lmms_eval.api.samplers import Context
 
 from PIL import Image
 
@@ -65,17 +66,19 @@ class GPT4V(lmms):
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            visuals = self.flatten(visuals)
-            imgs = []
-            for visual in visuals:
-                img = self.encode_image(visual)
-                imgs.append(img)
+            # visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+            # visuals = contexts.get_visions()
+            # visuals = self.flatten(visuals)
+            # imgs = []
+            # for visual in visuals:
+            #     img = self.encode_image(visual)
+            #     imgs.append(img)
 
             payload = {"model": "gpt-4-vision-preview", "messages": []}
             response_json = {"role": "user", "content": []}
             # When there is no image token in the context, append the image to the text
-            if self.image_token not in contexts:
+            image_token_in_context = contexts.already_have_image_token(self.image_token)
+            if image_token_in_context:
                 payload["messages"].append(deepcopy(response_json))
                 payload["messages"][0]["content"].append({"type": "text", "text": contexts})
                 for img in imgs:

@@ -73,6 +73,12 @@ class Llava(lmms):
             self.device_map = device_map
 
         self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, use_flash_attention_2=use_flash_attention_2)
+        if self._image_processor is None:
+            vision_tower = self._model.get_vision_tower()
+            if not vision_tower.is_loaded:
+                vision_tower.load_model()
+            vision_tower.to(device=device, dtype=torch.float16)
+            self._image_processor = vision_tower.image_processor
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
