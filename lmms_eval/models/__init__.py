@@ -1,16 +1,21 @@
-from .llava import Llava
-from .otterhd import OtterHD
-from .qwen_vl import Qwen_VL
-from .fuyu import Fuyu
-from .gpt4v import GPT4V
-from .instructblip import InstructBLIP
-from .minicpm_v import MiniCPM_V
 import os
 
-try:
-    # enabling faster model download
-    import hf_transfer
+AVAILABLE_MODELS = {
+    "llava": "Llava",
+    "qwen_vl": "Qwen_VL",
+    "fuyu": "Fuyu",
+    "gpt4v": "GPT4V",
+    "instructblip": "InstructBLIP",
+    "minicpm_v": "MiniCPM_V",
+}
 
-    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
-except ImportError:
-    pass
+for model_name, model_class in AVAILABLE_MODELS.items():
+    try:
+        exec(f"from .{model_name} import {model_class}")
+    except ImportError:
+        pass
+
+
+import hf_transfer
+
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"

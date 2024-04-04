@@ -7,9 +7,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
-    { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@gmail.com" },
+    { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@outlook.com" },
 ]
 description = "A framework for evaluating large multi-modality language models"
 readme = "README.md"
@@ -38,7 +38,7 @@ dependencies = [
     "openai>=1.0.0",
     "pycocoevalcap",
     "tqdm-multiprocess",
-    "transformers>=4.31.0",
+    "transformers",
     "zstandard",
     "pillow",
     "pyyaml",
@@ -53,6 +53,7 @@ dependencies = [
     "transformers-stream-generator",
     "tiktoken",
     "pre-commit",
+    "pydantic",
 ]
 
 [tool.setuptools.packages.find]
@@ -66,5 +67,5 @@ lmms-eval = "lmms_eval.__main__:cli_evaluate"
 lmms_eval = "lmms_eval.__main__:cli_evaluate"
 
 [project.urls]
-Homepage = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+Homepage = "https://lmms-lab.github.io/lmms-eval-blog/"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"

@@ -54,7 +54,7 @@ def mmbench_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
 def mmbench_process_results(doc, results):
     model_response = results[0].strip()
-    return {
+    data = {
         "submission": {
             "index": doc["index"],
             "question": doc["question"],
@@ -67,6 +67,10 @@ def mmbench_process_results(doc, results):
             "L2-category": doc["L2-category"],
         }
     }
+    option_candidate = ["A", "B", "C", "D", "E"]
+    for c in option_candidate:
+        data["submission"][c] = doc.get(c, "nan")
+    return data
 
 
 def mmbench_aggregate_dev_results(results, args):
@@ -79,8 +83,7 @@ def mmbench_aggregate_dev_results(results, args):
 
 def mmbench_aggregate_test_results(results, args):
     df = pd.DataFrame(results)
-    Path(args.output_path).joinpath("submissions").mkdir(parents=True, exist_ok=True)
-    excel_write_path = Path(args.output_path) / "submissions" / f"mmbench_cn_test_results.xlsx"
+    excel_write_path = generate_submission_file("mmbench_cn_test_results.xlsx", args)
     with pd.ExcelWriter(excel_write_path) as writer:
         df.to_excel(writer, index=False)
     eval_logger.info(f"Saved results to {excel_write_path}")
