@@ -204,12 +204,14 @@ class LlavaHf(lmms):
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
-            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0].strip()
+            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]#.strip()
+            text_outputs = text_outputs.split("ASSISTANT:")[1].strip()
             res.append(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
             pbar.update(1)
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
+        res = re_ords.get_foriginal(res)
 
         pbar.close()
         return res
