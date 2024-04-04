@@ -74,27 +74,46 @@ class GPT4V(lmms):
             #     img = self.encode_image(visual)
             #     imgs.append(img)
 
-            payload = {"model": "gpt-4-vision-preview", "messages": []}
-            response_json = {"role": "user", "content": []}
+            # response_json = {"role": "user", "content": []}
             # When there is no image token in the context, append the image to the text
-            image_token_in_context = contexts.already_have_image_token(self.image_token)
-            if image_token_in_context:
-                payload["messages"].append(deepcopy(response_json))
-                payload["messages"][0]["content"].append({"type": "text", "text": contexts})
-                for img in imgs:
-                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
-            else:
-                contexts = contexts.split(self.image_token)
-                for idx, img in enumerate(imgs):
-                    payload["messages"].append(deepcopy(response_json))
-                    payload["messages"][idx]["content"].append({"type": "text", "text": contexts[idx]})
-                    payload["messages"][idx]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+            messages = []
+            if contexts.description:
+                messages.append({"type": "system", "text": contexts.description})
 
-                # If n image tokens are in the contexts
-                # contexts will be splitted into n+1 chunks
-                # Manually add it into the payload
-                payload["messages"].append(deepcopy(response_json))
-                payload["messages"][-1]["content"].append({"type": "text", "text": contexts[-1]})
+            for qa in contexts.contexts:
+                # content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+                # payload["messages"][idx]["content"].append({"type": "text", "text": contexts[idx]})
+                content = []
+                questions = qa.get_question_list(self.image_token)
+                for q in questions:
+                    if isinstance(q, str):
+                        content.append({"type": "text", "text": q})
+                    elif isinstance(q, Image.Image):
+                        img = self.encode_image(q)
+                        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+                messages.append({"role": "user", "content": content})
+                if qa.answer:
+                    messages.append({"role": "assistant", "content": [{"type": "text", "text": qa.answer}]})
+
+            payload = {"model": "gpt-4-vision-preview", "messages": messages}
+
+            # if image_token_in_context:
+            #     payload["messages"].append(deepcopy(response_json))
+            #     payload["messages"][0]["content"].append({"type": "text", "text": contexts})
+            #     for img in imgs:
+            #         payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+            # else:
+            #     contexts = contexts.split(self.image_token)
+            #     for idx, img in enumerate(imgs):
+            #         payload["messages"].append(deepcopy(response_json))
+            #         payload["messages"][idx]["content"].append({"type": "text", "text": contexts[idx]})
+            #         payload["messages"][idx]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+
+            # If n image tokens are in the contexts
+            # contexts will be splitted into n+1 chunks
+            # Manually add it into the payload
+            # payload["messages"].append(deepcopy(response_json))
+            # payload["messages"][-1]["content"].append({"type": "text", "text": contexts[-1]})
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -112,6 +131,9 @@ class GPT4V(lmms):
                 try:
                     response = url_requests.post(API_URL, headers=headers, json=payload, timeout=20)
                     response_data = response.json()
+                    
+                    if "error" in response_data:
+                        raise Exception(f"Error: {response_data['error']['message']}")
 
                     content = response_data["choices"][0]["message"]["content"].strip()
                     break  # If successful, break out of the loop

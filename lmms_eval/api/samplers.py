@@ -95,7 +95,7 @@ class QAPairs(object):
             return self.role_question + self.question + self.delimiter
         else:
             return self.role_question + self.question + self.delimiter + self.role_answer + self.answer
-    
+
     def __str__(self):
         return self.get_text()
 
@@ -104,7 +104,7 @@ class QAPairs(object):
             return self.vision.get_images()
         else:
             return []
-    
+
     def already_have_image_token(self, image_token):
         return image_token in self.question or (self.answer and image_token in self.answer)
 
@@ -113,6 +113,25 @@ class QAPairs(object):
             return self.vision.get_num_images()
         else:
             return 0
+
+    def get_question_list(self, image_token, image_in_front=False):
+        questions = []
+        visions = self.get_visions()
+        if visions and self.already_have_image_token(image_token):
+            q_list = self.question.split(image_token)
+            for q, img in zip(q_list[:-1], visions):
+                if q != "":
+                    questions.append(q)
+                questions.append(img)
+            if q_list[-1] != "":
+                questions.append(q_list[-1])
+        else:
+            if image_in_front and visions:
+                questions.extend(visions)
+            questions.append(self.question)
+            if not image_in_front and visions:
+                questions.extend(visions)
+        return questions
 
 
 class Context(object):
@@ -134,7 +153,7 @@ class Context(object):
 
     def add_description(self, description):
         self.description = description
-    
+
     def add_in_context_example(self, doc, data_frame, index):
         # question = self.get_question(doc)
         # if data_frame and index:
@@ -182,7 +201,7 @@ class Context(object):
             )
         )
         # self.contexts.append(self.target_delimiter)
-    
+
     def already_have_image_token(self, image_token):
         for context in self.contexts:
             if context.already_have_image_token(image_token):

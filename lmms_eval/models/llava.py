@@ -344,7 +344,7 @@ class Llava(lmms):
                 from lmms_eval.api.samplers import LazyLoadedImages, QAPairs
 
                 already_have_image_token = context.already_have_image_token(DEFAULT_IMAGE_TOKEN)
-                
+
                 for obj in context.contexts:
                     if already_have_image_token or obj.num_images() == 0:
                         question = obj.question
