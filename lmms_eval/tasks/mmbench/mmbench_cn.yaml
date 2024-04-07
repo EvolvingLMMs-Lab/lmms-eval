@@ -5,6 +5,5 @@ task:
   - mmbench_cn_cc
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-3.5-turbo"
-  quick_extract: true
+  gpt_eval_model_name: "gpt-3.5-turbo-0613"
   sys_prompt: "有如下几个选项："
