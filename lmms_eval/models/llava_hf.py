@@ -5,7 +5,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.constants import DEFAULT_IMAGE_TOKEN, DEFAULT_CHAT_TEMPLATE
+from lmms_eval.constants import DEFAULT_IMAGE_TOKEN, VICUNA_CHAT_TEMPLATE
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -49,14 +49,14 @@ class LlavaHf(lmms):
             self.device_map = device_map
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
-        self.dtype = dtype
-        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=self.dtype, device_map=self.device_map)
+        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map)
         self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._image_processor.tokenizer.padding_side = "left"
         self._tokenizer = self._image_processor.tokenizer
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
+        self.chat_template = chat_template 
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -234,16 +234,22 @@ class LlavaHf(lmms):
             if DEFAULT_IMAGE_TOKEN not in context:
                 context = f"{DEFAULT_IMAGE_TOKEN}\n{context}"
             messages = [{"role": "user", "content": context}]
-            if self.tokenizer.chat_template is not None:
+            # Apply chat template if provided
+            if self.chat_template is not None:
+                self.tokenizer.chat_template = self.chat_template
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            # Else default to the tokenizer's template
+            elif self.tokenizer.chat_template is not None:
+                text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            # Finally default to the Vicuna chat template
             else:
-                self.tokenizer.chat_template = DEFAULT_CHAT_TEMPLATE
+                self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
                 
-            inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self.dtype)
+            inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self._model.dtype)
 
             gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
