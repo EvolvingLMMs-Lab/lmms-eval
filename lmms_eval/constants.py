@@ -1,0 +1,2 @@
+DEFAULT_IMAGE_TOKEN = "<image>"
+DEFAULT_CHAT_TEMPLATE = "{% for message in messages %}{% if message['role'] == 'user' %}USER: {{ message['content'] }}\n{% else %}ASSISTANT: {{ message['content'] }}\n{% endif %}{% endfor %}"

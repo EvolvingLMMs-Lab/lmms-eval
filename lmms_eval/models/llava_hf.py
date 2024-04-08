@@ -5,6 +5,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.constants import DEFAULT_IMAGE_TOKEN, DEFAULT_CHAT_TEMPLATE
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -20,7 +21,8 @@ eval_logger = logging.getLogger("lmms-eval")
 @register_model("llava_hf")
 class LlavaHf(lmms):
     """
-    Llava HF Model
+    Llava Model for Hugging Face Transformers
+    https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava
     """
 
     def __init__(
@@ -28,8 +30,10 @@ class LlavaHf(lmms):
         pretrained: str = "llava-hf/llava-1.5-7b-hf",
         revision=None,
         device: Optional[str] = "cuda",
-        dtype: Optional[Union[str, torch.dtype]] = torch.float16,
+        dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
+        device_map="",
+        chat_template: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -37,18 +41,23 @@ class LlavaHf(lmms):
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         accelerator = Accelerator()
-        if accelerator.num_processes > 1:
+        if accelerator.num_processes > 1 and device_map == "":
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
+            self.device_map = f"cuda:{accelerator.local_process_index}"
         else:
-            self._device = device
-        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype)
+            self._device = torch.device(device)
+            self.device_map = device_map
+        if isinstance(dtype, str) and dtype != "auto":
+            dtype = getattr(torch, dtype)
+        self.dtype = dtype
+        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=self.dtype, device_map=self.device_map)
         self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision)
+        # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
+        self._image_processor.tokenizer.padding_side = "left"
         self._tokenizer = self._image_processor.tokenizer
         self._config = self._model.config
-        self._model.eval()
-        self._model.tie_weights()
         self.batch_size_per_gpu = int(batch_size)
-        if accelerator.num_processes > 1:
+        if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
@@ -69,7 +78,12 @@ class LlavaHf(lmms):
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
+        elif accelerator.num_processes == 1 and device_map == "auto":
+            eval_logger.info(f"Using {accelerator.num_processes} devices with pipeline parallelism")
+            self._rank = 0
+            self._word_size = 1
         else:
+            eval_logger.info(f"Using single device: {self._device}")
             self.model.to(self._device)
             self._rank = 0
             self._word_size = 1
@@ -129,8 +143,42 @@ class LlavaHf(lmms):
         return self.tokenizer.decode(tokens)
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        # TODO
-        assert False, "We have not implemented this function for LlavaHf yet"
+        res = []
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+
+        for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+            # encode, pad, and truncate contexts for this batch
+            if type(doc_to_target) == str:
+                continuation = doc_to_target
+            else:
+                continuation = doc_to_target(self.task_dict[task][split][doc_id])
+            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+            visuals = self.flatten(visuals)
+            formatted_contexts = [f"{contexts}\n"]
+            formatted_continuation = [f"{contexts}\n{continuation}"]
+            model_inputs = self.processor(text=formatted_continuation, images=visuals, device=self.device)
+            for k, v in model_inputs.items():
+                model_inputs[k] = v.to(self.device, non_blocking=True) if isinstance(v, torch.Tensor) else [vv.to(self.device, non_blocking=True) for vv in v]
+
+            for index in range(len(model_inputs["image_patches"])):
+                model_inputs["image_patches"][index] = model_inputs["image_patches"][index].to(dtype=next(self.model.parameters()).dtype)
+
+            labels = model_inputs["input_ids"].clone()
+            contxt_id = self.processor(text=formatted_contexts, return_tensors="pt")["input_ids"]
+            labels[: len(contxt_id)] = -100
+            with torch.inference_mode():
+                outputs = self.model(**model_inputs, labels=labels)
+            loss = outputs["loss"]
+            logits = outputs["logits"]
+            greedy_tokens = logits.argmax(dim=-1)
+            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] :]  # [1, seq]
+            greedy_tokens = greedy_tokens[:, contxt_id.shape[1] : model_inputs["input_ids"].shape[1]]  # [1, seq]
+            max_equal = (greedy_tokens == cont_toks).all()
+            res.append((float(loss.item()), bool(max_equal)))
+            pbar.update(1)
+
+        pbar.close()
+        return res
 
     def flatten(self, input):
         new_list = []
@@ -183,18 +231,19 @@ class LlavaHf(lmms):
             context = contexts[0]
 
             # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
-            if "<image>" not in context:
-                context = f"<image>\n{context}"
+            if DEFAULT_IMAGE_TOKEN not in context:
+                context = f"{DEFAULT_IMAGE_TOKEN}\n{context}"
+            messages = [{"role": "user", "content": context}]
             if self.tokenizer.chat_template is not None:
-                messages = [{"role": "user", "content": context}]
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             else:
-                text = f"USER: {context}\nASSISTANT:"
+                self.tokenizer.chat_template = DEFAULT_CHAT_TEMPLATE
+                text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
                 
-            inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, torch.float16)
+            inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self.dtype)
 
             gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
@@ -218,7 +267,7 @@ class LlavaHf(lmms):
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
-            text_outputs = text_outputs.split("ASSISTANT:")[1].strip()
+            text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
