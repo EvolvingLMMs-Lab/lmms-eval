@@ -16,12 +16,14 @@ generation_kwargs:
   do_sample: false
 process_results: !function cc_utils.mmbench_cn_cc_process_results
 metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function cc_utils.mmbench_cn_cc_aggregate_dev_results_eval
+    higher_is_better: true
   - metric: submission
     aggregation: !function cc_utils.mmbench_cn_cc_aggregate_results
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-3.5-turbo"
-  quick_extract: true
+  gpt_eval_model_name: "gpt-3.5-turbo-0613"
 
 model_specific_prompt_kwargs:
   default:
