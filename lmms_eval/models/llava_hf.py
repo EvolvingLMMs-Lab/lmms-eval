@@ -233,15 +233,13 @@ class LlavaHf(lmms):
             # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
             if DEFAULT_IMAGE_TOKEN not in context:
                 context = f"{DEFAULT_IMAGE_TOKEN}\n{context}"
+            # Apply chat template    
             messages = [{"role": "user", "content": context}]
-            # Apply chat template if provided
             if self.chat_template is not None:
                 self.tokenizer.chat_template = self.chat_template
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            # Else default to the tokenizer's template
             elif self.tokenizer.chat_template is not None:
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            # Finally default to the Vicuna chat template
             else:
                 self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
