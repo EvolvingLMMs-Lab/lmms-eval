@@ -259,11 +259,9 @@ class LlavaHf(lmms):
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             elif self.tokenizer.chat_template is not None:
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-                eval_logger.warning("Using the tokenizer's chat template to format the prompt.")
             else:
                 self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-                eval_logger.warning("No chat template provided or set in the tokenizer. Using the default Vicuna chat template.")
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
