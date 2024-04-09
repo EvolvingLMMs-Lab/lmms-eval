@@ -24,6 +24,16 @@ class LlavaHf(lmms):
     Llava Model for Hugging Face Transformers: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava
 
     Adapted from the InstructBLIP model in lmms_eval/models/instructblip.py
+
+    Example usage:
+
+    accelerate launch --num_processes=8 -m lmms_eval \
+        --model llava_hf \
+        --model_args pretrained=llava-hf/llava-1.5-7b-hf \
+        --tasks mme \
+        --batch_size 1 \
+        --output_path ./logs/ \
+        --log_samples
     """
 
     def __init__(
