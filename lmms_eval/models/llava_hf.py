@@ -37,6 +37,7 @@ class LlavaHf(lmms):
         attn_implementation: Optional[str] = "flash_attention_2",
         device_map: str = "",
         chat_template: Optional[str] = None,
+        use_cache: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -60,6 +61,7 @@ class LlavaHf(lmms):
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
         self.chat_template = chat_template
+        self.use_cache = use_cache
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -177,7 +179,7 @@ class LlavaHf(lmms):
 
             formatted_contexts = [prompt]
             formatted_continuation = [prompt_and_continuation]
-            model_inputs = self._image_processor(text=formatted_continuation, images=visuals).to(self._device, self._model.dtype)
+            model_inputs = self._image_processor(text=formatted_continuation, images=visuals).to(self._device, self.model.dtype)
             labels = model_inputs["input_ids"].clone()
             contxt_id = self._image_processor(text=formatted_contexts, return_tensors="pt")["input_ids"]
             labels[: len(contxt_id)] = -100
@@ -266,7 +268,7 @@ class LlavaHf(lmms):
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
 
-            inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self._model.dtype)
+            inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self.model.dtype)
 
             gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
@@ -278,13 +280,14 @@ class LlavaHf(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
             try:
-                cont = self._model.generate(
+                cont = self.model.generate(
                     **inputs,
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
                     temperature=gen_kwargs["temperature"],
                     top_p=gen_kwargs["top_p"],
                     num_beams=gen_kwargs["num_beams"],
                     max_new_tokens=gen_kwargs["max_new_tokens"],
+                    use_cache=self.use_cache,
                 )
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
