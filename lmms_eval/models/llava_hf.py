@@ -21,18 +21,21 @@ eval_logger = logging.getLogger("lmms-eval")
 @register_model("llava_hf")
 class LlavaHf(lmms):
     """
-    Llava Model for Hugging Face Transformers
-    https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava
+    Llava Model for Hugging Face Transformers: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava
+
+    Adapted from the InstructBLIP model in lmms_eval/models/instructblip.py
     """
 
     def __init__(
         self,
         pretrained: str = "llava-hf/llava-1.5-7b-hf",
-        revision=None,
-        device: Optional[str] = "cuda",
+        revision: str = "main",
+        device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
-        batch_size: Optional[Union[int, str]] = 1,
-        device_map="",
+        batch_size: Union[int, str] = 1,
+        trust_remote_code: Optional[bool] = False,
+        attn_implementation: Optional[str] = "flash_attention_2",
+        device_map: str ="",
         chat_template: Optional[str] = None,
         **kwargs,
     ) -> None:
@@ -49,8 +52,8 @@ class LlavaHf(lmms):
             self.device_map = device_map
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
-        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map)
-        self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision)
+        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+        self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._image_processor.tokenizer.padding_side = "left"
         self._tokenizer = self._image_processor.tokenizer
@@ -146,7 +149,7 @@ class LlavaHf(lmms):
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+        for context, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
             if type(doc_to_target) == str:
                 continuation = doc_to_target
@@ -154,18 +157,35 @@ class LlavaHf(lmms):
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            formatted_contexts = [f"{contexts}\n"]
-            formatted_continuation = [f"{contexts}\n{continuation}"]
-            model_inputs = self.processor(text=formatted_continuation, images=visuals, device=self.device)
-            for k, v in model_inputs.items():
-                model_inputs[k] = v.to(self.device, non_blocking=True) if isinstance(v, torch.Tensor) else [vv.to(self.device, non_blocking=True) for vv in v]
 
-            for index in range(len(model_inputs["image_patches"])):
-                model_inputs["image_patches"][index] = model_inputs["image_patches"][index].to(dtype=next(self.model.parameters()).dtype)
 
+            image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
+            image_tokens = " ".join(image_tokens)
+            context = f"{image_tokens}\n{context}"
+            # Apply chat template    
+            messages = [{"role": "user", "content": context}, {"role": "assistant", "content": continuation}]
+            if self.chat_template is not None:
+                self.tokenizer.chat_template = self.chat_template
+                prompt = self.tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
+                prompt_and_continuation = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+            elif self.tokenizer.chat_template is not None:
+                prompt = self.tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
+                prompt_and_continuation = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+            else:
+                self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
+                prompt = self.tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
+                prompt_and_continuation = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+
+            formatted_contexts = [prompt]
+            formatted_continuation = [prompt_and_continuation]
+            model_inputs = self._image_processor(text=formatted_continuation, images=visuals).to(self._device, self._model.dtype)
             labels = model_inputs["input_ids"].clone()
-            contxt_id = self.processor(text=formatted_contexts, return_tensors="pt")["input_ids"]
+            contxt_id = self._image_processor(text=formatted_contexts, return_tensors="pt")["input_ids"]
             labels[: len(contxt_id)] = -100
+
+            if self.accelerator.is_main_process and doc_id % 100 == 0:
+                eval_logger.info(f"Prompt and continuation for doc ID {doc_id}:\n\n{formatted_continuation[0]}\n")
+
             with torch.inference_mode():
                 outputs = self.model(**model_inputs, labels=labels)
             loss = outputs["loss"]
@@ -240,9 +260,11 @@ class LlavaHf(lmms):
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             elif self.tokenizer.chat_template is not None:
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+                eval_logger.warning("Using the tokenizer's chat template to format the prompt.")
             else:
                 self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+                eval_logger.warning("No chat template provided or set in the tokenizer. Using the default Vicuna chat template.")
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
@@ -279,7 +301,7 @@ class LlavaHf(lmms):
             res.append(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
             pbar.update(1)
-            # reorder this group of results back to original unsorted form
+        # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
         pbar.close()
