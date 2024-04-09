@@ -35,7 +35,7 @@ class LlavaHf(lmms):
         batch_size: Union[int, str] = 1,
         trust_remote_code: Optional[bool] = False,
         attn_implementation: Optional[str] = "flash_attention_2",
-        device_map: str ="",
+        device_map: str = "",
         chat_template: Optional[str] = None,
         **kwargs,
     ) -> None:
@@ -59,7 +59,7 @@ class LlavaHf(lmms):
         self._tokenizer = self._image_processor.tokenizer
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
-        self.chat_template = chat_template 
+        self.chat_template = chat_template
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -158,11 +158,10 @@ class LlavaHf(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
 
-
             image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
             image_tokens = " ".join(image_tokens)
             context = f"{image_tokens}\n{context}"
-            # Apply chat template    
+            # Apply chat template
             messages = [{"role": "user", "content": context}, {"role": "assistant", "content": continuation}]
             if self.chat_template is not None:
                 self.tokenizer.chat_template = self.chat_template
@@ -253,7 +252,7 @@ class LlavaHf(lmms):
             # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
             if DEFAULT_IMAGE_TOKEN not in context:
                 context = f"{DEFAULT_IMAGE_TOKEN}\n{context}"
-            # Apply chat template    
+            # Apply chat template
             messages = [{"role": "user", "content": context}]
             if self.chat_template is not None:
                 self.tokenizer.chat_template = self.chat_template
@@ -268,7 +267,7 @@ class LlavaHf(lmms):
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
-                
+
             inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self._model.dtype)
 
             gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
