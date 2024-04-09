@@ -195,6 +195,7 @@ class LlavaHf(lmms):
             labels[: len(contxt_id)] = -100
 
             if self.accelerator.is_main_process and doc_id % 100 == 0:
+                eval_logger.info(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
                 eval_logger.info(f"Prompt and continuation for doc ID {doc_id}:\n\n{formatted_continuation[0]}\n")
 
             with torch.inference_mode():
