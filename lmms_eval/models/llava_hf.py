@@ -5,7 +5,6 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.constants import DEFAULT_IMAGE_TOKEN, VICUNA_CHAT_TEMPLATE
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -16,6 +15,11 @@ import warnings
 warnings.filterwarnings("ignore")
 
 eval_logger = logging.getLogger("lmms-eval")
+
+DEFAULT_IMAGE_TOKEN = "<image>"
+
+# Default chat for llava-hf/llava-1.5 models: https://huggingface.co/collections/llava-hf/llava-15-65f762d5b6941db5c2ba07e0
+VICUNA_CHAT_TEMPLATE = "{% for message in messages %}{% if loop.index0 == 0 %}A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER: {{ message['content'] }} {% elif message['role'] == 'user' %}USER: {{ message['content'] }} {% else %} ASSISTANT: {{ message['content'] }}{{ eos_token }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}"
 
 
 @register_model("llava_hf")
