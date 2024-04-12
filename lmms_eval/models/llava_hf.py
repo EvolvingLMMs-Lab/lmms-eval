@@ -280,7 +280,7 @@ class LlavaHf(lmms):
                 self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
-            if self.accelerator.is_main_process and doc_id[0] % 1 == 0:
+            if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
 
             inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self.model.dtype)
