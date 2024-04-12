@@ -411,6 +411,8 @@ def make_table(result_dict, column: str = "results"):
 
             points = "N/A"
             if v is not None:
+                if 0 <= v <= 1:
+                    v *= 100
                 points = "%.4f" % v
 
             if m + "_stderr" + "," + f in dic:
