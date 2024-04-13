@@ -72,7 +72,11 @@ class Llava(lmms):
             self._device = torch.device(device)
             self.device_map = device_map
 
-        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, use_flash_attention_2=use_flash_attention_2)
+        llava_model_args = {}
+        llava_model_args["attn_implementation"] = attn_implementation
+        llava_model_args["customized_config"] = customized_config
+        llava_model_args["use_flash_attention_2"] = False
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, **llava_model_args)
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
