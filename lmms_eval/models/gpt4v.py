@@ -40,6 +40,7 @@ class GPT4V(lmms):
     def __init__(
         self,
         model_version: str = "gpt-4-vision-preview",
+        **kwargs,
     ) -> None:
         super().__init__()
         # Manually set a image token for GPT4V so that we can search for it
