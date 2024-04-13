@@ -35,19 +35,23 @@ elif API_TYPE == "azure":
     }
 
 
-@register_model("gpt4V")
+@register_model("gpt4v")
 class GPT4V(lmms):
-    def __init__(self, **kwargs) -> None:
+    def __init__(
+        self,
+        model_version: str = "gpt-4-vision-preview",
+    ) -> None:
         super().__init__()
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
+        self.model_version = model_version
         self.image_token = "<image>"
 
     # Function to encode the image
     def encode_image(self, image: Image):
         output_buffer = BytesIO()
-        image.save(output_buffer, format="JPEG")
+        image.save(output_buffer, format="PNG")
         byte_data = output_buffer.getvalue()
         base64_str = base64.b64encode(byte_data).decode("utf-8")
         return base64_str
@@ -72,7 +76,7 @@ class GPT4V(lmms):
                 img = self.encode_image(visual)
                 imgs.append(img)
 
-            payload = {"model": "gpt-4-vision-preview", "messages": []}
+            payload = {"model": self.model_version, "messages": []}
             response_json = {"role": "user", "content": []}
             # When there is no image token in the context, append the image to the text
             if self.image_token not in contexts:
