@@ -96,10 +96,8 @@ class LlavaSglang(lmms):
         num_iters = len(requests) // self.parallel if len(requests) % self.parallel == 0 else len(requests) // self.parallel + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         for chunk in chunks:
-            contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-            task = task[0]
-            split = split[0]
-            batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
+            contexts, all_gen_kwargs, doc_to_visuals, doc_id, tasks, splits = zip(*chunk)
+            batched_visuals = [doc_to_visual(self.task_dict[task][split][ids]) for ids,task,split,doc_to_visual in zip(doc_id, tasks, splits, doc_to_visuals)]  # [B, N]
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
