@@ -36,6 +36,11 @@ from transformers.integrations.deepspeed import (
     unset_hf_deepspeed_config,
 )
 
+if torch.__version__ > "2.1.2":
+    best_fit_attn_implementation = "sdpa"
+else:
+    best_fit_attn_implementation = "eager"
+
 
 @register_model("llava")
 class Llava(lmms):
@@ -52,11 +57,13 @@ class Llava(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = False,
         revision=None,
+        attn_implementation=best_fit_attn_implementation,
         use_flash_attention_2=True,
         device_map="",
         conv_template="vicuna_v1",
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
+        customized_config=None,
         **kwargs,
     ) -> None:
         super().__init__()
