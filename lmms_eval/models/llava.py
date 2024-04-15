@@ -59,7 +59,7 @@ class Llava(lmms):
         revision=None,
         attn_implementation=best_fit_attn_implementation,
         use_flash_attention_2=True,
-        device_map="",
+        device_map="auto",
         conv_template="vicuna_v1",
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
