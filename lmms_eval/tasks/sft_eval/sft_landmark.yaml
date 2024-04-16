@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_landmark_cn_eval
+test_split: sft_landmark
+dataset_name: sft_landmark
+include: _default_sft_eval_rest_template_yaml

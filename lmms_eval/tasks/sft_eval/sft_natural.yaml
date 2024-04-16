@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_natural_cn_eval
+test_split: sft_natural
+dataset_name: sft_natural
+include: _default_sft_eval_rest_template_yaml

@@ -1,0 +1,20 @@
+dataset_path: lmms-lab/sft-eval
+output_type: generate_until
+doc_to_visual: !function utils.sft_eval_doc_to_visual
+doc_to_text: !function utils.sft_eval_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 128
+  until:
+    - "ASSISTANT:"
+process_results: !function utils.process_result_rest
+metric_list:
+  - metric: fuzzy_match 
+    aggregation : !function utils.sft_eval_acc_agg
+    higher_is_better : true
+metadata:
+  version: '0.0'
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

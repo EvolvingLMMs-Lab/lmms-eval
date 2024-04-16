@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_position_cn_eval
+test_split: sft_position
+dataset_name: sft_position
+include: _default_sft_eval_rest_template_yaml

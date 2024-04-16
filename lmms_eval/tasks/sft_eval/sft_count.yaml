@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_count_cn_eval
+test_split: sft_count
+dataset_name: sft_count
+include: _default_sft_eval_rest_template_yaml

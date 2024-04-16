@@ -11,6 +11,7 @@ import math
 # precision = 1e-4
 # res = scorer.judge(exp1, exp2, precision)
 
+
 class OlympiadBenchEvaluator:
     def __init__(self):
         # Map of special symbols to their replacements
@@ -46,8 +47,8 @@ class OlympiadBenchEvaluator:
                 start_idx = i + 1
 
         if start_idx < len(expr):
-            splitted_expr.append(expr[start_idx:].strip())   
-        
+            splitted_expr.append(expr[start_idx:].strip())
+
         return splitted_expr
 
     def trans_plus_minus_sign(self, expr_list: list):
@@ -59,9 +60,9 @@ class OlympiadBenchEvaluator:
                 new_expr_list.append(expr.replace("\\pm", "-"))
             else:
                 new_expr_list.append(expr)
-        
+
         return new_expr_list
-    
+
     def judge(self, expression1, expression2, precision=1e-8):
         # Judge if two expressions are equal (expression1 is considered as the Ground Truth)
         # Default precision is a list for supporting multiple expressions
@@ -74,11 +75,11 @@ class OlympiadBenchEvaluator:
         if expression1 == expression2:
             # print("Exactly equal")
             return True
-        
+
         # Remove Chinese characters from the string, as answers like "yes" or "no" in Chinese have been considered
-        expression1 = re.sub(r'[\u4e00-\u9fff]+', '', expression1)
-        expression2 = re.sub(r'[\u4e00-\u9fff]+', '', expression2)
-        
+        expression1 = re.sub(r"[\u4e00-\u9fff]+", "", expression1)
+        expression2 = re.sub(r"[\u4e00-\u9fff]+", "", expression2)
+
         expression1 = self.split_by_comma(expression1)
         expression2 = self.split_by_comma(expression2)
 
@@ -88,7 +89,6 @@ class OlympiadBenchEvaluator:
         # Set up a list for allowed errors
         if len(precision) <= 1:
             precision = precision * len(temp_list1)
-        
         if len(temp_list1) != len(temp_list2):
             return False
 
@@ -112,7 +112,7 @@ class OlympiadBenchEvaluator:
 
         # If all elements are matched, return True
         return True
-    
+
     def is_interval(self, expr):
         # Checks if an expression is an interval
         return expr.startswith(("(", "[")) and expr.endswith((")", "]"))
@@ -120,7 +120,7 @@ class OlympiadBenchEvaluator:
     def sympy_sub_pi(self, expression_sympy):
         # Replaces the symbol for pi in sympy expressions with its numerical value
         return expression_sympy.subs(self.pi, math.pi)
-    
+
     def is_equal(self, expression1, expression2):
         # Default first expression is ground truth. Check if expressions are equal in different aspects
         if expression1 == expression2 and expression1 != "" and expression2 != "":
@@ -143,7 +143,6 @@ class OlympiadBenchEvaluator:
                 return True
         except:
             pass
-        
         # Then check if expressions are mathematically equal
         try:
             if self.expression_equal(expression1, expression2) and not ("=" in expression1 and "=" in expression2):
@@ -151,7 +150,6 @@ class OlympiadBenchEvaluator:
                 return True
         except:
             pass
-            
         # Lastly, check for equation equality
         try:
             if self.equation_equal(expression1, expression2):
@@ -159,7 +157,6 @@ class OlympiadBenchEvaluator:
                 return True
         except:
             pass
-            
         return False
 
     def numerical_equal(self, expression1: str, expression2: str, include_percentage: bool = True):
@@ -167,17 +164,14 @@ class OlympiadBenchEvaluator:
         # Includes possible percentage cases
         reference = float(expression1)
         prediction = float(expression2)
-        
         if include_percentage:
             gt_result = [reference / 100, reference, reference * 100]
         else:
             gt_result = [reference]
-        
         for item in gt_result:
             if abs(item - prediction) <= self.precision * 1.01:
                 return True
         return False
-    
 
     def expression_equal(self, exp1, exp2):
         # Check if two expressions are mathematically equivalent
@@ -186,7 +180,7 @@ class OlympiadBenchEvaluator:
             if "=" in expression:
                 expression = expression.split("=")[1]
             return expression.strip()
-        
+
         exp1 = extract_expression(exp1)
         exp2 = extract_expression(exp2)
 
@@ -204,7 +198,7 @@ class OlympiadBenchEvaluator:
             elif not expr1_sym.has(sp.Symbol) and not expr2_sym.has(sp.Symbol):
                 try:
                     if not (self.can_compute_power(expr1_sym) and self.can_compute_power(expr2_sym)):
-                        print(f"These two numbers cannot be calculated by the current computer for: \"{str(expr1_sym)}\" and \"{str(expr2_sym)}\"")
+                        print(f'These two numbers cannot be calculated by the current computer for: "{str(expr1_sym)}" and "{str(expr2_sym)}"')
                         return False
 
                     if abs(expr1_sym.evalf() - expr2_sym.evalf()) <= self.precision * 1.01:
@@ -218,7 +212,6 @@ class OlympiadBenchEvaluator:
                     simplified_expr = simplify(expr1_sym - expr2_sym)
 
                     num_value = simplified_expr.evalf()
-                    
                     return abs(num_value) < 1e-3
                 except:
                     return False
@@ -227,7 +220,7 @@ class OlympiadBenchEvaluator:
         # Check if two equations are mathematically equivalent
         # Simplify equations and use sympy for equivalence checking
         def simplify_equation(latex_eq):
-            lhs, rhs = latex_eq.split('=')
+            lhs, rhs = latex_eq.split("=")
 
             lhs_expr = parse_latex(lhs)
             rhs_expr = parse_latex(rhs)
@@ -254,18 +247,18 @@ class OlympiadBenchEvaluator:
         def compare_two_interval(inter1, inter2):
             if inter1[0] != inter2[0] or inter1[-1] != inter2[-1]:
                 return False
-            
-            inter1 = inter1.strip('[]()')
-            inter2 = inter2.strip('[]()')
 
-            items_1 = inter1.split(',')
-            items_2 = inter2.split(',')
+            inter1 = inter1.strip("[]()")
+            inter2 = inter2.strip("[]()")
+
+            items_1 = inter1.split(",")
+            items_2 = inter2.split(",")
 
             for item_1, item_2 in zip(items_1, items_2):
                 if not self.expression_equal(item_1, item_2):
                     return False
             return True
-            
+
         interval1 = expression1
         interval2 = expression2
 
@@ -274,7 +267,6 @@ class OlympiadBenchEvaluator:
         else:
             inter_list1 = interval1.split("\\cup")
             inter_list2 = interval2.split("\\cup")
-            
             if len(inter_list1) != len(inter_list2):
                 return False
             else:
@@ -286,7 +278,7 @@ class OlympiadBenchEvaluator:
     def preprocess(self, expression1, expression2):
         # Preprocess expressions to extract and replace special symbols
         def extract_boxed_content(latex_str):
-            boxed_matches = re.finditer(r'\\boxed{', latex_str)
+            boxed_matches = re.finditer(r"\\boxed{", latex_str)
             results = ""
 
             for match in boxed_matches:
@@ -295,14 +287,14 @@ class OlympiadBenchEvaluator:
                 stack = 1
 
                 while stack > 0 and end_index < len(latex_str):
-                    if latex_str[end_index] == '{':
+                    if latex_str[end_index] == "{":
                         stack += 1
-                    elif latex_str[end_index] == '}':
+                    elif latex_str[end_index] == "}":
                         stack -= 1
                     end_index += 1
 
                 if stack == 0:
-                    content = latex_str[start_index:end_index - 1]
+                    content = latex_str[start_index : end_index - 1]
                     results += content + ","
                 else:
                     raise ValueError("Mismatched braces in LaTeX string.")
@@ -317,28 +309,28 @@ class OlympiadBenchEvaluator:
                         results += ans + ","
                 else:
                     results = latex_str
-                
+
             return results
-        
+
         def sepcial_symbol_replace(expression):
             if "\\in " in expression:
                 expression = expression.split("\\in ")[1]
-            
+
             for signal in self.special_signal_map:
                 expression = expression.replace(signal, self.special_signal_map[signal])
 
             expression = expression.strip("\n$,.:;^_=+`!@#$%^&*~，。")
 
-            pattern = r'\\(?:mathrm|mathbf)\{~?([^}]*)\}'
-            expression = re.sub(pattern, r'\1', expression)
+            pattern = r"\\(?:mathrm|mathbf)\{~?([^}]*)\}"
+            expression = re.sub(pattern, r"\1", expression)
 
             return expression
-        
+
         exp1, exp2 = extract_boxed_content(expression1), extract_boxed_content(expression2)
         exp1, exp2 = sepcial_symbol_replace(exp1), sepcial_symbol_replace(exp2)
 
         return exp1, exp2
-    
+
     def can_compute_power(self, expr):
         # Checks if a power expression can be computed
         if isinstance(expr, Pow):
