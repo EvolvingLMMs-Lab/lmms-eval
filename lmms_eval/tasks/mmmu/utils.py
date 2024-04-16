@@ -16,11 +16,11 @@ OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 
 
 def replace_images_tokens(input_string):
-    for i in range(1, 8):
-        question_text = f"<image {i}>"
-        query_text = "<image>"
-        if question_text in input_string:
-            input_string = input_string.replace(question_text, query_text)
+    # for i in range(1, 8):
+    #     question_text = f"<image {i}>"
+    #     query_text = "<image>"
+    #     if question_text in input_string:
+    #         input_string = input_string.replace(question_text, query_text)
     return input_string
 
 
@@ -51,7 +51,7 @@ def mmmu_doc_to_visual(doc):
     prompt = construct_prompt(doc)
     image_tokens = re.findall(r"<image \d+>", prompt)
     # Remove <> and  swap space as _
-    image_tokens = [image_token.strip("<>").replace(" ", "_") for image_token in image_tokens]
+    image_tokens = sorted(list(set([image_token.strip("<>").replace(" ", "_") for image_token in image_tokens])))
     visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
     return visual
 

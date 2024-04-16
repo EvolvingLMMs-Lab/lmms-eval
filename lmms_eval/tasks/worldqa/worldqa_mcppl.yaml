@@ -1,0 +1,11 @@
+dataset_name: "MC_PPL"
+task: "worldqa_mc_ppl"
+test_split: test
+output_type: multiple_choice
+doc_to_visual: !function utils.worldqa_doc_to_visual
+doc_to_text: "question"
+doc_to_target: !function utils.worldqa_doc_to_answer_mc_ppl
+doc_to_choice: !function utils.worldqa_doc_to_choice
+metric_list:
+  - metric: acc
+include: _default_template_yaml

@@ -1,0 +1,10 @@
+dataset_path: lmms-lab/worldqa
+dataset_kwargs:
+  token: True
+  video: True
+  builder_script: multi-hop-reasoning.py
+  cache_dir: multi-hop-reasoning 
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

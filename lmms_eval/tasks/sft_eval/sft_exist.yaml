@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_exist_cn_eval
+test_split: sft_exist
+dataset_name: sft_exist
+include: _default_sft_eval_rest_template_yaml

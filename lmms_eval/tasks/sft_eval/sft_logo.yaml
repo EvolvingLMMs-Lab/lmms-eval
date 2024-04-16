@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft-logo
+test_split: sft_logo
+dataset_name: sft_logo
+include: _default_sft_eval_rest_template_yaml

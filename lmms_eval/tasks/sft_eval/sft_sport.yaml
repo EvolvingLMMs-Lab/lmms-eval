@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_sport_cn_eval
+test_split: sft_sport
+dataset_name: sft_sport
+include: _default_sft_eval_rest_template_yaml

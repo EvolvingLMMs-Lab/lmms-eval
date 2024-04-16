@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_arts_cn_eval
+test_split: sft_arts
+dataset_name: sft_arts
+include: _default_sft_eval_rest_template_yaml

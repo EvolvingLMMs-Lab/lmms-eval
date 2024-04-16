@@ -1,0 +1,5 @@
+group: sft_eval
+task: sft_body_cn_eval
+test_split: sft_body
+dataset_name: sft_body
+include: _default_sft_eval_rest_template_yaml
