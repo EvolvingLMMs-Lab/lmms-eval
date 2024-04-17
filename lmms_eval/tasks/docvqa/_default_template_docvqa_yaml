@@ -22,4 +22,4 @@ fewshot_config:
   fewshot_dataset:
     dataset_path: lmms-lab/DocVQA
     dataset_name: DocVQA
-    split: val
+    split: validation
