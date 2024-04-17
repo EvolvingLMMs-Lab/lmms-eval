@@ -88,7 +88,7 @@ class Llava(lmms):
         self.use_cache = use_cache
         self.truncate_context = truncate_context
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
-        if accelerator.num_processes > 1 and device_map == "":
+        if accelerator.num_processes > 1 and device_map == "auto":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
