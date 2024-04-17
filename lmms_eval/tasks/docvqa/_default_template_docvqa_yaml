@@ -17,3 +17,9 @@ model_specific_prompt_kwargs:
   qwen_vl:
     pre_prompt: ""
     post_prompt: " Answer:"
+fewshot_config:
+  fewshot_sampler: default
+  fewshot_dataset:
+    dataset_path: lmms-lab/DocVQA
+    dataset_name: DocVQA
+    split: val
