@@ -9,7 +9,7 @@ eval_logger = logging.getLogger("lmms-eval")
 from lmms_eval.tasks.mmbench.mmbench_evals import MMBench_Evaluator
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-with open(Path(__file__).parent / "mmbench_en.yaml", "r") as f:
+with open(Path(__file__).parent / "mmbench.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):
@@ -19,7 +19,18 @@ with open(Path(__file__).parent / "mmbench_en.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-mmbench_evaluator = MMBench_Evaluator(sys_prompt=config["metadata"]["sys_prompt"])
+GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
+API_TYPE = os.getenv("API_TYPE", "openai")
+
+if API_TYPE == "openai":
+    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+elif API_TYPE == "azure":
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+
+
+mmbench_evaluator = MMBench_Evaluator(sys_prompt=config["metadata"]["sys_prompt"], API_KEY=API_KEY, API_URL=API_URL, model_version=GPT_EVAL_MODEL_NAME)
 
 
 def mmbench_doc_to_visual(doc):
@@ -55,6 +66,17 @@ def mmbench_doc_to_text(doc, model_specific_prompt_kwargs=None):
 def mmbench_process_results(doc, results):
     model_response = results[0].strip()
     data = {
+        "gpt_eval_score": {
+            "index": doc["index"],
+            "question": doc["question"],
+            "answer": doc["answer"],
+            "prediction": model_response,
+            "hint": doc["hint"],
+            "source": doc["source"],
+            "split": doc["split"],
+            "category": doc["category"],
+            "L2-category": doc["L2-category"],
+        },
         "submission": {
             "index": doc["index"],
             "question": doc["question"],
@@ -65,15 +87,30 @@ def mmbench_process_results(doc, results):
             "split": doc["split"],
             "category": doc["category"],
             "L2-category": doc["L2-category"],
-        }
+        },
     }
     option_candidate = ["A", "B", "C", "D", "E"]
     for c in option_candidate:
         data["submission"][c] = doc.get(c, "nan")
+        data["gpt_eval_score"][c] = doc.get(c, "nan")
     return data
 
 
-def mmbench_aggregate_dev_results(results, args):
+def mmbench_aggregate_dev_results_eval(results, args):
+    print(f"============= MMBench-EN(Dev) Detailed Results =============")
+    overall_acc, category_acc, l2_category_acc = mmbench_evaluator.eval_result(results, eval_method="openai")
+    file = generate_submission_file("mmbench_en_dev_results.json", args)
+    details_info = {
+        "overall_acc": overall_acc,
+        "category_acc": category_acc,
+        "l2_category_acc": l2_category_acc,
+    }
+    with open(file, "w") as f:
+        json.dump(details_info, f)
+    return overall_acc * 100
+
+
+def mmbench_aggregate_dev_results_submission(results, args):
     df = pd.DataFrame(results)
     excel_write_path = generate_submission_file("mmbench_en_dev_results.xlsx", args)
     with pd.ExcelWriter(excel_write_path) as writer:

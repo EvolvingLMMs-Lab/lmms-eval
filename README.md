@@ -201,14 +201,21 @@ We also provide the raw data exported from Weights & Biases for the detailed res
   - OKVQA Validation 2014 (ok_vqa_val2014)
 - POPE (pope)
 - RefCOCO (refcoco)
-    - refcoco_seg_test
-    - refcoco_seg_val
-    - refcoco_seg_testA
-    - refcoco_seg_testB
-    - refcoco_bbox_test
-    - refcoco_bbox_val
-    - refcoco_bbox_testA
-    - refcoco_bbox_testB
+    - refcoco_seg
+      - refcoco_seg_test
+      - refcoco_seg_val
+      - refcoco_seg_testA
+      - refcoco_seg_testB
+    - refcoco_bbox
+      - refcoco_bbox_test
+      - refcoco_bbox_val
+      - refcoco_bbox_testA
+      - refcoco_bbox_testB
+    - refcoco_bbox_rec
+      - refcoco_bbox_rec_test 
+      - refcoco_bbox_rec_val
+      - refcoco_bbox_rec_testA
+      - refcoco_bbox_rec_testB
 - RefCOCO+ (refcoco+)
     - refcoco+_seg
         - refcoco+_seg_val
@@ -218,11 +225,20 @@ We also provide the raw data exported from Weights & Biases for the detailed res
         - refcoco+_bbox_val
         - refcoco+_bbox_testA
         - refcoco+_bbox_testB
+    - refcoco+_bbox_rec
+        - refcoco+_bbox_rec_val
+        - refcoco+_bbox_rec_testA
+        - refcoco+_bbox_rec_testB
 - RefCOCOg (refcocog)
-    - refcocog_seg_test
-    - refcocog_seg_val
-    - refcocog_bbox_test
-    - refcocog_bbox_val
+    - refcocog_seg
+      - refcocog_seg_test
+      - refcocog_seg_val
+    - refcocog_bbox
+      - refcocog_bbox_test
+      - refcocog_bbox_val
+    - refcocog_bbox_rec
+      - refcocog_bbox_rec_test 
+      - refcocog_bbox_rec_val
 - ScienceQA (scienceqa_full)
   - ScienceQA Full (scienceqa)
   - ScienceQA IMG (scienceqa_img)
