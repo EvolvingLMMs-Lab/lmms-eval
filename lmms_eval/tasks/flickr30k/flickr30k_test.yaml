@@ -1,7 +1,7 @@
 dataset_path: lmms-lab/flickr30k
 dataset_kwargs:
   token: True
-task : "flickr30k_test"
+task: "flickr30k_test"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.flickr_doc_to_visual
@@ -40,5 +40,12 @@ metric_list:
   #- metric: flickr_SPICE
   #  aggregation : !function utils.flickr_spice
   #  higher_is_better : true
+fewshot_config:
+  fewshot_sampler: default
+  fewshot_dataset:
+    dataset_path: lmms-lab/flickr30k
+    # dataset_name: 
+    split: train
+  # random_seed: 1234
 metadata:
   - version: 0.0

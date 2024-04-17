@@ -73,6 +73,12 @@ class Llava(lmms):
             self.device_map = device_map
 
         self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, use_flash_attention_2=use_flash_attention_2)
+        if self._image_processor is None:
+            vision_tower = self._model.get_vision_tower()
+            if not vision_tower.is_loaded:
+                vision_tower.load_model()
+            vision_tower.to(device=device, dtype=torch.float16)
+            self._image_processor = vision_tower.image_processor
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -82,7 +88,7 @@ class Llava(lmms):
         self.use_cache = use_cache
         self.truncate_context = truncate_context
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
-        if accelerator.num_processes > 1 and device_map == "":
+        if accelerator.num_processes > 1 and device_map == "auto":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
@@ -256,7 +262,7 @@ class Llava(lmms):
             #   padded context length. this is useful to simplify the batching logic and more importantly to make
             #   automatic adaptive batches much much easier to implement
             # - any OOMs will happen right away rather than near the end
-            toks = self.tok_encode(x[0])
+            toks = self.tok_encode(str(x[0]))
             return -len(toks), x[0]
 
         # we group requests by their generation_kwargs,
@@ -270,8 +276,20 @@ class Llava(lmms):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            visuals = self.flatten(visuals)
+            # batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
+            batched_visuals = [context.get_visions() for context in contexts]  # [B, N]
+            # contexts_texts, batched_visuals = zip(*[context.get_text(image_tokens=DEFAULT_IMAGE_TOKEN, lazy=False) for context in contexts])  # [B, N]
+            flattened_visuals = self.flatten(batched_visuals)  # [B*N]
+            # batched_visuals = context.get_visions()  # [B, N]
+            # flattened_visuals = contexts[0].get_visions()  # [B*N]
+            ############### for debugging ###################
+            # TODO: remove this block
+            # if len(visuals) > 1:
+            #     for i in range(len(visuals)):
+            #         path = f"./logs/llava/{i}.png"
+            #         visuals[i].save(path)
+            #     pass
+            #################################################
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
@@ -292,8 +310,8 @@ class Llava(lmms):
                 self._config.image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio")
                 eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
             # encode, pad, and truncate contexts for this batch
-            if visuals:
-                image_tensor = process_images(visuals, self._image_processor, self._config)
+            if flattened_visuals:
+                image_tensor = process_images(flattened_visuals, self._image_processor, self._config)
                 if type(image_tensor) is list:
                     image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
                 else:
@@ -305,41 +323,62 @@ class Llava(lmms):
 
             question_input = []
 
-            for visual, context in zip(visuals, contexts):
-                if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
-                    """
-                    Three senarios:
-                    1. No image, and there for, no image token should be added.
-                    2. image token is already specified in the context, so we don't need to add it.
-                    3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
-                    """
-                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visual) if isinstance(visual, list) else [DEFAULT_IMAGE_TOKEN]
-                    image_tokens = " ".join(image_tokens)
-                    question = image_tokens + "\n" + context
-                else:
-                    question = context
+            for context in contexts:
+                # if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
+                #     """
+                #     Three senarios:
+                #     1. No image, and there for, no image token should be added.
+                #     2. image token is already specified in the context, so we don't need to add it.
+                #     3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
+                #     """
+                #     image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visual) if isinstance(visual, list) else [DEFAULT_IMAGE_TOKEN]
+                #     image_tokens = " ".join(image_tokens)
+                #     if isinstance(context, list):
+                #         context = "".join(context)
+                #     question = image_tokens + "\n" + context
+                # else:
+                #     question = context
 
                 conv = conv_templates[self.conv_template].copy()
-                conv.append_message(conv.roles[0], question)
-                conv.append_message(conv.roles[1], None)
+
+                from lmms_eval.api.samplers import LazyLoadedImages, QAPairs
+
+                already_have_image_token = context.already_have_image_token(DEFAULT_IMAGE_TOKEN)
+
+                for obj in context.contexts:
+                    if already_have_image_token or obj.num_images() == 0:
+                        question = obj.question
+                    else:
+                        question = " ".join(obj.num_images() * [DEFAULT_IMAGE_TOKEN]) + "\n" + obj.question
+                    if context.description:
+                        question = context.description + "\n" + question
+                    answer = obj.answer
+                    conv.append_message(conv.roles[0], question)
+                    conv.append_message(conv.roles[1], answer)
+
+                # conv.append_message(conv.roles[0], question)
+                # conv.append_message(conv.roles[1], None)
                 prompt_question = conv.get_prompt()
                 question_input.append(prompt_question)
 
             # The above for loop has bugs. When there is no visuals, e.g. pure text,
             # there will be no for loop execute resulting in an empty question_input (because no visuals)
             # Scenario 1 won't even be execute
-            if len(visuals) == 0:
-                for context in contexts:
-                    question = context
-                    conv = conv_templates[self.conv_template].copy()
-                    conv.append_message(conv.roles[0], question)
-                    conv.append_message(conv.roles[1], None)
-                    prompt_question = conv.get_prompt()
-                    question_input.append(prompt_question)
+            # if len(flattened_visuals) == 0:
+            #     for context in contexts:
+            #         question = context
+            #         conv = conv_templates[self.conv_template].copy()
+            #         conv.append_message(conv.roles[0], question)
+            #         conv.append_message(conv.roles[1], None)
+            #         try:
+            #             prompt_question = conv.get_prompt()
+            #         except Exception as e:
+            #             pass
+            #         question_input.append(prompt_question)
 
             # input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
             # preconfigure gen_kwargs with defaults
-            gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
+            gen_kwargs["image_sizes"] = [flattened_visuals[idx].size for idx in range(len(flattened_visuals))]
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -372,6 +411,7 @@ class Llava(lmms):
                 text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
+                e.with_traceback()
                 cont = ""
                 text_outputs = [""]
 

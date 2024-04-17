@@ -2,7 +2,7 @@ dataset_path: lmms-lab/textvqa
 output_type: generate_until
 doc_to_visual: !function utils.textvqa_doc_to_visual
 doc_to_text: !function utils.textvqa_doc_to_text
-doc_to_target: "answer"
+doc_to_target: !function utils.textvqa_doc_to_target
 generation_kwargs:
   until:
     - "ASSISTANT:"
@@ -15,3 +15,10 @@ model_specific_prompt_kwargs:
   qwen_vl:
     pre_prompt: ""
     post_prompt: " Answer:"
+fewshot_config:
+  fewshot_sampler: default
+  fewshot_dataset:
+    # dataset_path: lmms-lab/flickr30k
+    # dataset_name: 
+    split: train
+  # random_seed: 1234

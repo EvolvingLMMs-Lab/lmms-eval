@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Literal, Tuple
+from typing import Literal, Tuple, Iterable, Callable
 
 
 @dataclass

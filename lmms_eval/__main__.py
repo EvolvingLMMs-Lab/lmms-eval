@@ -211,7 +211,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         except Exception as e:
             traceback.print_exc()
             eval_logger.error(f"Error during evaluation: {e}")
-            traceback.print_exc()
+            # traceback.print_exc()
             results_list.append(None)
 
     for args, results in zip(args_list, results_list):

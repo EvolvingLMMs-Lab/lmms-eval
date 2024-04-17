@@ -22,6 +22,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
+from lmms_eval.api.samplers import FewShotDataset, Context
 
 from lmms_eval.filters import build_filter_ensemble
 from lmms_eval.api.registry import (
@@ -64,7 +65,7 @@ class TaskConfig(dict):
     training_split: str = None
     validation_split: str = None
     test_split: str = None
-    fewshot_split: str = None  # TODO: assert that this not None if num_fewshot > 0. (?) assert if this is same split as one evaling (?)
+    # fewshot_split: str = None  # TODO: assert that this not None if num_fewshot > 0. (?) assert if this is same split as one evaling (?)
     # formatting / prompting options.
     # see docs/advanced_task_guide.md for more info
     process_docs: Callable = None
@@ -305,13 +306,13 @@ class Task(abc.ABC):
             A iterable of any object, that doc_to_text can handle
         """
         if self.has_training_docs():
-            return self.training_docs()
+            return FewShotDataset(self.training_docs())
         elif self.has_validation_docs():
-            return self.validation_docs()
+            return FewShotDataset(self.validation_docs())
         else:
             if self.config.num_fewshot is not None:
                 eval_logger.warning("has_training_docs and has_validation_docs are False" ", using test_docs as fewshot_docs but this is not recommended.")
-            return self.test_docs()
+            return FewShotDataset(self.test_docs(), same_as_eval=True)
 
     def _process_doc(self, doc):
         """
@@ -550,8 +551,20 @@ class ConfigurableTask(Task):
                 self._filters.append(filter_pipeline)
         else:
             self._filters = [build_filter_ensemble("none", [["take_first", None]])]
+        ##########################################
+        # # TODO: for test, will delete later
+        # if self.config.task == "textvqa_test":
+        #     pass
+        # else:
+        #     pass
+        ###########################################
         if self.config.fewshot_config is not None:
-            self.sampler = samplers.get_sampler(self.config.fewshot_config.get("sampler", "default") if self.config.fewshot_config else "default")(list(self.fewshot_docs()), self, rnd=random.Random(1234))
+            try:
+                random_seed = self.config.fewshot_config.get("random_seed", 1234)
+                sampler_constructor = samplers.get_sampler(self.config.fewshot_config.get("sampler", "default") if self.config.fewshot_config else "default")
+                self.sampler = sampler_constructor(self.fewshot_docs(), self, rnd=random.Random(random_seed))
+            except Exception as e:
+                eval_logger.error(f"Error in fewshot_config: {e}")
 
         if self.has_test_docs():
             self.task_docs = self.test_docs()
@@ -739,8 +752,19 @@ class ConfigurableTask(Task):
             return self.dataset[self.config.test_split]
 
     def fewshot_docs(self):
-        if self.config.fewshot_split is not None:
-            return self.dataset[self.config.fewshot_split]
+
+        if "fewshot_dataset" in self.config.fewshot_config:
+            fewshot_dataset_config = self.config.fewshot_config["fewshot_dataset"]
+            if "dataset_path" not in fewshot_dataset_config:
+                fewshot_dataset_config["dataset_path"] = self.config.dataset_path
+            same_as_eval = self.config.dataset_path == fewshot_dataset_config["dataset_path"] and self.config.dataset_name == fewshot_dataset_config.get("dataset_name", None) and self.config.test_split == fewshot_dataset_config["split"]
+            return FewShotDataset(
+                dataset_path=fewshot_dataset_config["dataset_path"],
+                dataset_name=fewshot_dataset_config.get("dataset_name", None),
+                split=fewshot_dataset_config["split"],
+                dataset_kwargs=fewshot_dataset_config.get("dataset_kwargs", {}),
+                same_as_eval=same_as_eval,
+            )
         else:
             if (self.config.num_fewshot is not None) and (self.config.num_fewshot > 0):
                 eval_logger.warning(f"Task '{self.config.task}': " "num_fewshot > 0 but fewshot_split is None. " "using preconfigured rule.")
@@ -758,23 +782,14 @@ class ConfigurableTask(Task):
         :returns: str
             The fewshot context.
         """
+        from lmms_eval.api.samplers import Context
+
         doc = self.dataset_no_image[split][doc_id]
-        if num_fewshot == 0:
-            # always prepend the (possibly empty) task description
-            labeled_examples = self.config.description
-        else:
-            labeled_examples = self.config.description + self.sampler.get_context(doc, num_fewshot)
-        example = self.doc_to_text(doc)
-        if type(example) == str:
-            return labeled_examples + example
-        elif type(example) == list:
-            return [labeled_examples + ex for ex in example]
-        elif type(example) == int:
-            if self.config.doc_to_choice is not None:
-                choices = self.doc_to_choice(doc)
-                return labeled_examples + choices[example]
-            else:
-                return labeled_examples + str(example)
+        labeled_examples = Context(self, self.config.fewshot_delimiter, self.config.target_delimiter, self.config.description)
+        if num_fewshot != 0:
+            labeled_examples.extend(self.sampler.get_context(doc, num_fewshot))
+        labeled_examples.add_question(doc, self.test_docs(), doc_id)
+        return labeled_examples
 
     def apply_filters(self):
         if hasattr(self, "_filters"):
@@ -917,7 +932,7 @@ class ConfigurableTask(Task):
         else:
             raise TypeError
 
-    def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
+    def construct_requests(self, doc_id: int, ctx: Context, **kwargs) -> Union[List[Instance], Instance]:
         split = kwargs.get("split")
         kwargs.pop("split")
         if self.OUTPUT_TYPE == "loglikelihood":
