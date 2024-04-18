@@ -92,9 +92,12 @@ class Llava(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         llava_model_args = {}
-        llava_model_args["attn_implementation"] = attn_implementation
-        llava_model_args["customized_config"] = customized_config
-        llava_model_args["use_flash_attention_2"] = False
+        if customized_config is not None:
+            llava_model_args["customized_config"] = customized_config
+        if attn_implementation is not None:
+            llava_model_args["attn_implementation"] = attn_implementation
+        if "use_flash_attention_2" in kwargs:
+            llava_model_args["use_flash_attention_2"] = kwargs["use_flash_attention_2"]
         self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, **llava_model_args)
         self._config = self._model.config
         self.model.eval()
