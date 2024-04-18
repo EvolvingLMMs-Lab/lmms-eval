@@ -56,6 +56,13 @@ def parse_pred_ans(pred_ans):
     pred_label = None
     if pred_ans in ["yes", "no"]:
         pred_label = pred_ans
+    elif len(pred_ans) == 1:
+        if pred_ans == "y":
+            pred_label = "yes"
+        elif pred_ans == "n":
+            pred_label = "no"
+        else:
+            pred_label = "other"
     else:
         prefix_pred_ans = pred_ans[:4]
         if "yes" in prefix_pred_ans:
