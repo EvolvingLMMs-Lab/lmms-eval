@@ -1,0 +1,11 @@
+dataset_path: lmms-lab/llava-wilder
+dataset_name: Full
+dataset_kwargs:
+  token: True
+task: "llava_wilder_full"
+test_split: test
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+include: _default_template_wilder_yaml

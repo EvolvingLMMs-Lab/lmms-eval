@@ -318,7 +318,7 @@ def evaluate(
             # hack: remove image columns to speed avoid loading images and speed up postprocessing
             # reason: doc_iterator will actually load image if it's in the doc.
             docs = task.test_docs() if task.has_test_docs() else task.validation_docs()
-            if "d170" not in task_name and "dc100" not in task_name and "dc200" not in task_name:
+            if "d170" not in task_name and "dc100" not in task_name and "dc200" not in task_name and "llava_wilder" not in task_name:
                 remove_cols = []
                 features = docs.features
                 # If it is an Image instance or a Sequence of Image instance. Remove it
