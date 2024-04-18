@@ -10,13 +10,12 @@ import numpy as np
 from http import HTTPStatus
 from io import BytesIO
 
-
 eval_logger = logging.getLogger("lmms-eval")
 
 try:
     import dashscope
 except:
-    eval_logger("Dashcope not found, make sure you install dashscope to use qwen vl")
+    eval_logger.debug("Dashcope not found, make sure you install dashscope to use qwen vl")
 
 NUM_SECONDS_TO_SLEEP = 5
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -43,7 +42,7 @@ if API_TYPE == "openai":
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
-    
+
 elif API_TYPE == "azure":
     API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
@@ -59,6 +58,7 @@ elif API_TYPE == "qwen_vl":
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
+
 
 def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
     headers = {
@@ -95,10 +95,10 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             time.sleep(wait_time)
             if attempt == max_retries - 1:
                 eval_logger.error(f"Failed to get response after {max_retries} attempts")
-                return "" , GPT_EVAL_MODEL_NAME
+                return "", GPT_EVAL_MODEL_NAME
         except Exception as e:
             eval_logger.error(f"Error on attempt {attempt+1}: {e}")
-            return "" , GPT_EVAL_MODEL_NAME
+            return "", GPT_EVAL_MODEL_NAME
 
 
 def image_to_base64(pil_image):
@@ -106,22 +106,13 @@ def image_to_base64(pil_image):
     pil_image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
+
 def qwen_multimodal_conversation_call(text_content, image_content, retries=5):
-    """Simple single round multimodal conversation call.
-    """
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"image": image_content},
-                {"text": text_content}
-            ]
-        }
-    ]
+    """Simple single round multimodal conversation call."""
+    messages = [{"role": "user", "content": [{"image": image_content}, {"text": text_content}]}]
     for attempt in range(retries):
         try:
-            response_data = dashscope.MultiModalConversation.call(model=GPT_EVAL_MODEL_NAME,
-                                                            messages=messages)
+            response_data = dashscope.MultiModalConversation.call(model=GPT_EVAL_MODEL_NAME, messages=messages)
             # The response status_code is HTTPStatus.OK indicate success,
             # otherwise indicate request is failed, you can get error code
             # and message from code and message.
@@ -138,6 +129,7 @@ def qwen_multimodal_conversation_call(text_content, image_content, retries=5):
                 return "", ""
     return "", ""
 
+
 def parse_score(review):
     try:
         score_pair = review.split("\n")[0]
@@ -151,6 +143,7 @@ def parse_score(review):
     except Exception as e:
         eval_logger.debug(f"Error: {e}. Returning [-1, -1]")
         return [-1, -1]
+
 
 def llava_process_results(doc, result):
     """
@@ -185,7 +178,8 @@ def llava_process_results(doc, result):
 
     data_dict = {"question": question, "ans1": ans1, "ans2": ans2, "review": review, "scores": scores, "eval_model": model_name, "content": content}
     # return {"gpt_eval_llava_all": review_dict}
-    return {"gpt_eval_llava_all" : data_dict}
+    return {"gpt_eval_llava_all": data_dict}
+
 
 def llava_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
@@ -223,4 +217,3 @@ def llava_aggregation(results, category):
     except Exception as e:
         eval_logger.info(f"Error in llava_aggregation: {e}, and in category: {category}")
         return None
-
