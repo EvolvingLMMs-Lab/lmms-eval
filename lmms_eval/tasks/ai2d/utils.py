@@ -10,6 +10,10 @@ def ai2d_doc_to_text(doc, model_specific_prompt_kwargs=None):
     elif model_specific_prompt_kwargs["prompt_format"] == "qa":
         options = "\n".join(choices)
         return f"{pre_prompt}{question}{options}{post_prompt}"
+    elif model_specific_prompt_kwargs["prompt_format"] == "mcq_xcomposer":
+        options = [chr(ord("A") + i) for i in range(len_choices)]
+        choices_str = " ".join([f"{option}. {choice}" for option, choice in zip(options, choices)])
+        return f"{pre_prompt}{question}\nContext: N/A\n{choices_str}{post_prompt}"
     else:
         raise ValueError(f"Unknown prompt format: {model_specific_prompt_kwargs['prompt_format']}")
 

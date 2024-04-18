@@ -30,6 +30,10 @@ model_specific_prompt_kwargs:
     prompt_format: qa
     pre_prompt: ""
     post_prompt: " Answer:"
+  xcomposer2_4khd:
+    prompt_format: mcq_xcomposer
+    pre_prompt: "[UNUSED_TOKEN_146]user\nQuestion: "
+    post_prompt: "[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\nThe answer is"
 
 model_specific_target_kwargs:
   default: "mcq"
