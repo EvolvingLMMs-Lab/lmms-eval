@@ -678,6 +678,22 @@ class ConfigurableTask(Task):
 
     @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
     def download(self, dataset_kwargs=None) -> None:
+        # If the dataset is a video dataset,
+        # Recursively search whether their is a zip and unzip it to the huggingface home
+        if dataset_kwargs is not None and "video" in dataset_kwargs and dataset_kwargs["video"]:
+            hf_home = os.environ["HF_HOME"]
+            cache_dir = dataset_kwargs["cache_dir"]
+            dataset_kwargs.pop("cache_dir")
+            cache_dir = os.path.join(hf_home, cache_dir)
+            cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")
+            zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
+            if not os.path.exists(cache_dir):
+                for zip_file in zip_files:
+                    shutil.unpack_archive(zip_file, cache_dir)
+            builder_script = dataset_kwargs["builder_script"]
+            self.DATASET_PATH = os.path.join(cache_path, builder_script)
+            dataset_kwargs.pop("video")
+            dataset_kwargs.pop("builder_script")
         download_config = DownloadConfig()
         download_config.max_retries = dataset_kwargs.get("max_retries", 3) if dataset_kwargs is not None else 3
         download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
@@ -970,6 +986,8 @@ class ConfigurableTask(Task):
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
     def process_results(self, doc, results):
+        if self.OUTPUT_TYPE == "generate_until":
+            results[0] = results[0].strip()
         if callable(self.config.process_results):
             return self.config.process_results(doc, results)
 
