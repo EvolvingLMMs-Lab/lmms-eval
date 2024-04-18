@@ -684,7 +684,7 @@ class ConfigurableTask(Task):
         # If the dataset is a video dataset,
         # Recursively search whether their is a zip and unzip it to the huggingface home
         if dataset_kwargs is not None and "video" in dataset_kwargs and dataset_kwargs["video"]:
-            hf_home = os.environ["HF_HOME"]
+            hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
             cache_dir = dataset_kwargs["cache_dir"]
 
             cache_dir = os.path.join(hf_home, cache_dir)
