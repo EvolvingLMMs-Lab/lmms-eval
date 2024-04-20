@@ -1,5 +1,4 @@
 import logging
-from multiprocessing import context
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -299,10 +298,18 @@ class LlavaVid(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             videos = []
-            for visual in visuals:
-                video = self.load_video(visual, self.for_get_frames_num)
-                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
-                videos.append(video)
+            try:
+                for visual in visuals:
+                    video = self.load_video(visual, self.for_get_frames_num)
+                    video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
+                    videos.append(video)
+            except Exception as e:
+                eval_logger.info(f"{e}")
+                eval_logger.info(f"Video {visuals} can not load, check the source")
+                video_path = "\n".join(visuals)
+                res.append(f"Video {video_path} can not load, check the source")
+                pbar.update(1)
+                continue
 
             qs = contexts
             if self.model.config.mm_use_im_start_end:

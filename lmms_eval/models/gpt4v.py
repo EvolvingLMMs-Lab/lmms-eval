@@ -40,6 +40,7 @@ class GPT4V(lmms):
     def __init__(
         self,
         model_version: str = "gpt-4-vision-preview",
+        timeout: int = 120,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -48,6 +49,7 @@ class GPT4V(lmms):
         # Here we just use the same token as llava for convenient
         self.model_version = model_version
         self.image_token = "<image>"
+        self.timeout = timeout
 
     # Function to encode the image
     def encode_image(self, image: Image):
@@ -112,7 +114,7 @@ class GPT4V(lmms):
 
             for attempt in range(5):
                 try:
-                    response = url_requests.post(API_URL, headers=headers, json=payload, timeout=20)
+                    response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
                     response_data = response.json()
 
                     content = response_data["choices"][0]["message"]["content"].strip()
