@@ -6,7 +6,7 @@ generation_kwargs:
   until:
     - "ASSISTANT:"
   image_aspect_ratio: original
-  max_new_tokens: 1024
+  max_new_tokens: 4096
   temperature: 0
   top_p: 0
   num_beams: 1
