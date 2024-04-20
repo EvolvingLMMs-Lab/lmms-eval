@@ -36,6 +36,11 @@ from transformers.integrations.deepspeed import (
     unset_hf_deepspeed_config,
 )
 
+if torch.__version__ > "2.1.2":
+    best_fit_attn_implementation = "sdpa"
+else:
+    best_fit_attn_implementation = "eager"
+
 
 @register_model("llava")
 class Llava(lmms):
@@ -52,11 +57,13 @@ class Llava(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = False,
         revision=None,
+        attn_implementation=best_fit_attn_implementation,
         use_flash_attention_2=True,
-        device_map="",
+        device_map="auto",
         conv_template="vicuna_v1",
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
+        customized_config=None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -72,7 +79,12 @@ class Llava(lmms):
             self._device = torch.device(device)
             self.device_map = device_map
 
-        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, use_flash_attention_2=use_flash_attention_2)
+        llava_model_args = {}
+        llava_model_args["attn_implementation"] = attn_implementation
+        if customized_config:
+            llava_model_args["customized_config"] = customized_config
+        llava_model_args["use_flash_attention_2"] = False
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, **llava_model_args)
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -198,7 +210,7 @@ class Llava(lmms):
             else:
                 image = None
 
-            prompts_input = contexts[0]
+            prompts_input = contexts[0] if isinstance(contexts, list) else contexts
 
             if image is not None and len(image) != 0 and DEFAULT_IMAGE_TOKEN not in prompts_input:
                 """
@@ -209,7 +221,7 @@ class Llava(lmms):
                 """
                 image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
                 image_tokens = " ".join(image_tokens)
-                prompts_input = image_tokens + "\n" + contexts[0]
+                prompts_input = image_tokens + "\n" + (contexts[0] if isinstance(contexts, list) else contexts)
 
             conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], prompts_input)

@@ -2,6 +2,8 @@ import os
 
 AVAILABLE_MODELS = {
     "llava": "Llava",
+    "llava_hf": "LlavaHf",
+    "llava_sglang": "LlavaSglang",
     "qwen_vl": "Qwen_VL",
     "fuyu": "Fuyu",
     "gpt4v": "GPT4V",
