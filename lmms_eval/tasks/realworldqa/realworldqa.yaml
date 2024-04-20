@@ -38,5 +38,8 @@ model_specific_prompt_kwargs:
   gpt4v:
     pre_prompt: ""
     post_prompt: ""
+  xcomposer2_4khd:
+    pre_prompt: "[UNUSED_TOKEN_146]user\nQuestion: "
+    post_prompt: "[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\nThe answer is"
 metadata:
   - version: 0.0
