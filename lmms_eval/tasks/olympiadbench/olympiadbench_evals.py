@@ -1,7 +1,11 @@
 import re
 import sympy as sp
-from sympy import simplify, Eq, sympify, Pow
-from sympy.parsing.latex import parse_latex
+
+try:
+    from sympy import simplify, Eq, sympify, Pow
+    from sympy.parsing.latex import parse_latex
+except ImportError as e:
+    print("Please install sympy package by running 'pip install sympy' if you want to use OlympiadBenchEvaluator.")
 import math
 
 # how to use
