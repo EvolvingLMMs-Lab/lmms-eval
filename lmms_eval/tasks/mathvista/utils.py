@@ -44,11 +44,6 @@ def mathvista_doc_to_text(doc, model_specific_prompt_kwargs=None):
         shot_type=model_specific_prompt_kwargs["shot_type"],
         use_caption=model_specific_prompt_kwargs["use_caption"],
         use_ocr=model_specific_prompt_kwargs["use_ocr"],
-        use_choices=model_specific_prompt_kwargs["use_choices"],
-        use_unit=model_specific_prompt_kwargs["use_unit"],
-        use_question=model_specific_prompt_kwargs["use_question"],
-        use_answer=model_specific_prompt_kwargs["use_answer"],
-        use_ocr=model_specific_prompt_kwargs["use_ocr"],
     )
     return query_prompt
 
