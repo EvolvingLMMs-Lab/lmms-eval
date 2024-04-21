@@ -24,8 +24,8 @@ metric_list:
 model_specific_prompt_kwargs:
   default:
     shot_type: "solution" # can be "reason-first", "solution", "step-by-step"
-    shot: 2
-    use_caption: True
+    shot: 0
+    use_caption: False
     use_ocr: False
 model_specific_generation_kwargs:
   llava:
