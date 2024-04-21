@@ -23,7 +23,10 @@ metric_list:
   
 model_specific_prompt_kwargs:
   default:
-    shot_type: "format-prompt" # can be "reason-first", "solution", "step-by-step"
+    shot_type: "solution" # can be "reason-first", "solution", "step-by-step"
+    shot: 2
+    use_caption: True
+    use_ocr: False
 model_specific_generation_kwargs:
   llava:
     image_aspect_ratio: original
