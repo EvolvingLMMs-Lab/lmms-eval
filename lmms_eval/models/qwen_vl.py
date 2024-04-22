@@ -230,7 +230,7 @@ class Qwen_VL(lmms):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
             for i in range(len(contexts)):
                 if "<image>" in contexts[i]:
-                    context[i] = contexts[i].replace("<image>", "")
+                    contexts[i] = contexts[i].replace("<image>", "")
             questions = [self.prompt.format(visual_path, context) for visual_path, context in zip(visual_paths, contexts)]
 
             # Similar to llava, is visual paths has len 0
