@@ -239,13 +239,14 @@ class Qwen_VL(lmms):
             # Similar to llava, is visual paths has len 0
             # Then nothing will be executed
             query = []
-            for visual_path, context in zip(visual_paths, contexts):
-                query.append({"image": visual_path})
-                query.append({"text": context})
-
             if len(visual_paths) == 0:
                 for context in contexts:
                     query.append({"text": context})
+            else: 
+                for visual_path, context in zip(visual_paths, contexts):
+                    query.append({"image": visual_path})
+                    query.append({"text": context})
+
 
             questions = self.tokenizer.from_list_format(query)
             input_ids = self.tokenizer(questions, return_tensors="pt", padding="longest")
