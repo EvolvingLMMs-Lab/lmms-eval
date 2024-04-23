@@ -998,7 +998,6 @@ class ConfigurableTask(Task):
     def process_results(self, doc, results):
         if self.OUTPUT_TYPE == "generate_until":
             results[0] = results[0].strip()
-
         if callable(self.config.process_results):
             return self.config.process_results(doc, results)
 
