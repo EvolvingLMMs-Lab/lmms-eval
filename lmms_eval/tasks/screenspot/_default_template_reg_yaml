@@ -1,0 +1,15 @@
+dataset_path: rootsautomation/ScreenSpot
+output_type: generate_until
+doc_to_visual: !function utils.screenspot_bbox_doc_to_visual
+doc_to_text: !function utils.screenspot_doc_to_text
+doc_to_target: "instruction"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+process_results: !function utils.screenspot_process_result
+metric_list:
+  - metric: screenspot_CIDEr
+    aggregation : !function utils.screenspot_cider
+    higher_is_better : true
+metadata:
+  version: '0.0'
