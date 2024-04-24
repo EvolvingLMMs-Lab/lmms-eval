@@ -1,3 +1,6 @@
+from lmms_eval.filters.extraction import SimpleMultiChoiceRegexFilter
+
+
 def ai2d_doc_to_text(doc, model_specific_prompt_kwargs=None):
     question, choices = doc["question"], doc["options"]
     len_choices = len(choices)

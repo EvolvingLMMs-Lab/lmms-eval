@@ -23,7 +23,7 @@ metric_list:
   
 model_specific_prompt_kwargs:
   default:
-    shot_type: "solution" # can be "reason-first", "solution", "step-by-step"
+    shot_type: "format-prompt" # can be "reason-first", "solution", "step-by-step"
     shot: 0
     use_caption: False
     use_ocr: False

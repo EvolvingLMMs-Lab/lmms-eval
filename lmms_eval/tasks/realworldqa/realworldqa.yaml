@@ -18,6 +18,7 @@ generation_kwargs:
 filter_list:
   - name: "flexible-extract"
     filter:
+      - function: !function utils.NumberWordsToDigitsFilter
       - function: !function utils.MultiChoiceRegexFilter
         group_select: 0
         ignore_case: true
