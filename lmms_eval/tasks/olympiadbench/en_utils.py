@@ -12,7 +12,6 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 try:
     olympiadbench_evaluator = OlympiadBenchEvaluator()
 except:
-    print(f"Error loading OlympiadBenchEvaluator from {dir_name}")
     pass
 
 

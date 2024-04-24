@@ -22,8 +22,8 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4"
+  gpt_eval_model_name: "gpt-4-0613"
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: ""
+    pre_prompt: "Please think step by step and try to provide best answer to the following question: \n\n"
     post_prompt: ""
