@@ -4,7 +4,12 @@
 
 ScreenSpot is an evaluation benchmark for GUI grounding, comprising over 1200 instructions from iOS, Android, macOS, Windows and Web environments, along with annotated element types (Text or Icon/Widget).
 
-This evaluation allows for both:
+
+## Groups
+
+- `screenspot`: This group bundles both the original grounding task and the new instruction generation task.
+
+## Tasks
 - `screenspot_rec_test`: the original evaluation of `{img} {instruction} --> {bounding box}` called grounding or Referring Expression Completion (REC);
 - `screenspot_reg_test`: the new evaluation of `{img} {bounding box} --> {instruction}` called instruction generation or Referring Expression Generation (REG).
 
