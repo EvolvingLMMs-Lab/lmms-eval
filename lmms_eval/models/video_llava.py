@@ -27,11 +27,12 @@ try:
 except ImportError:
     eval_logger.error("Video-LLaVA is not installed. Please install Video-LLaVA to use this model.")
 
+
 @register_model("video_llava")
 class VideoLLaVA(lmms):
     def __init__(
         self,
-        pretrained: str = 'LanguageBind/Video-LLaVA-7B',
+        pretrained: str = "LanguageBind/Video-LLaVA-7B",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
@@ -46,7 +47,7 @@ class VideoLLaVA(lmms):
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
         **kwargs,
-        ) -> None:
+    ) -> None:
         super().__init__()
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
         accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
@@ -63,7 +64,7 @@ class VideoLLaVA(lmms):
         self.pretrained = pretrained
         self.model_name = get_model_name_from_path(pretrained)
         self._tokenizer, self._model, self.processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map)
-        self.video_processor = self.processor['video']
+        self.video_processor = self.processor["video"]
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -162,10 +163,10 @@ class VideoLLaVA(lmms):
         if left_truncate_len:
             encoding = encoding[-left_truncate_len:]
         return encoding
-    
+
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         return super().loglikelihood(requests)
-    
+
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -182,36 +183,29 @@ class VideoLLaVA(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             assert len(visuals) == 1
-            video_tensors = self.video_processor(visuals[0], return_tensors='pt')['pixel_values']
-            
+            video_tensors = self.video_processor(visuals[0], return_tensors="pt")["pixel_values"]
+
             if type(video_tensors) is list:
                 tensor = [video.to(self.model.device, dtype=torch.float16) for video in video_tensors]
             else:
                 tensor = video_tensors.to(self.model.device, dtype=torch.float16)
-            
+
             conv = conv_templates[self.conv_template].copy()
             roles = conv.roles
-            inp = ' '.join([DEFAULT_IMAGE_TOKEN] * self.model.get_video_tower().config.num_frames) + '\n' + contexts
+            inp = " ".join([DEFAULT_IMAGE_TOKEN] * self.model.get_video_tower().config.num_frames) + "\n" + contexts
             conv.append_message(conv.roles[0], inp)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
             stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
 
             with torch.inference_mode():
-                output_ids = self.model.generate(
-                    input_ids,
-                    images=tensor,
-                    do_sample=True,
-                    temperature=0.1,
-                    max_new_tokens=1024,
-                    use_cache=True,
-                    stopping_criteria=[stopping_criteria])
+                output_ids = self.model.generate(input_ids, images=tensor, do_sample=True, temperature=0.1, max_new_tokens=1024, use_cache=True, stopping_criteria=[stopping_criteria])
 
-            outputs = self.tokenizer.decode(output_ids[0, input_ids.shape[1]:]).strip()
+            outputs = self.tokenizer.decode(output_ids[0, input_ids.shape[1] :]).strip()
             res.append(outputs)
             pbar.update(1)
-        return res    
+        return res

@@ -51,7 +51,7 @@ class LLaMAVid(lmms):
         use_cache=True,
         truncate_context=False,
         **kwargs,
-        ) -> None:
+    ) -> None:
         super().__init__()
 
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
@@ -75,9 +75,13 @@ class LLaMAVid(lmms):
             os.makedirs(cache_path, exist_ok=True)
             subprocess.run(["wget https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/eva_vit_g.pth -O ./model_zoo/LAVIS/eva_vit_g.pth"], shell=True)
 
-
         accelerator.wait_for_everyone()
-        self._tokenizer, self._model, self.image_processor, self._max_length = load_pretrained_model(self.model_path, None, self.model_name, device_map=self.device_map,)
+        self._tokenizer, self._model, self.image_processor, self._max_length = load_pretrained_model(
+            self.model_path,
+            None,
+            self.model_name,
+            device_map=self.device_map,
+        )
 
         self._config = self._model.config
         self.model.eval()
@@ -118,14 +122,14 @@ class LLaMAVid(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
-    
+
     def download_file(self, url, folder_path):
         # Create the folder if it doesn't exist
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
-        
+
         # Extract filename from URL
-        filename = url.split('/')[-1]
+        filename = url.split("/")[-1]
 
         # Define path to save the file
         file_path = os.path.join(folder_path, filename)
@@ -136,12 +140,12 @@ class LLaMAVid(lmms):
         # Check if request was successful (status code 200)
         if response.status_code == 200:
             # Save the file to the specified folder
-            with open(file_path, 'wb') as f:
+            with open(file_path, "wb") as f:
                 f.write(response.content)
             print(f"File downloaded successfully to {file_path}")
         else:
             print(f"Failed to download file. Status code: {response.status_code}")
-    
+
     def load_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
@@ -184,17 +188,17 @@ class LLaMAVid(lmms):
         if left_truncate_len:
             encoding = encoding[-left_truncate_len:]
         return encoding
-    
+
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
-    
+
     def flatten(self, input):
         new_list = []
         for i in input:
             for j in i:
                 new_list.append(j)
         return new_list
-    
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -206,21 +210,21 @@ class LLaMAVid(lmms):
             videos = []
             for visual in visuals:
                 video = self.load_video(visual)
-                video = self.image_processor.preprocess(video, return_tensors='pt')['pixel_values'].half().cuda()
+                video = self.image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
                 video = [video]
                 videos += video
             qs = contexts
             if self.model.config.mm_use_im_start_end:
-                qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + qs
+                qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
-                qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
+                qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
 
             conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], qs)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
 
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
@@ -229,33 +233,24 @@ class LLaMAVid(lmms):
             cur_prompt = contexts
             with torch.inference_mode():
                 self.model.update_prompt([[cur_prompt]])
-                output_ids = self.model.generate(
-                    input_ids,
-                    images=video,
-                    do_sample=True,
-                    temperature=0.2,
-                    max_new_tokens=1024,
-                    use_cache=True,
-                    stopping_criteria=[stopping_criteria])
+                output_ids = self.model.generate(input_ids, images=video, do_sample=True, temperature=0.2, max_new_tokens=1024, use_cache=True, stopping_criteria=[stopping_criteria])
 
             input_token_len = input_ids.shape[1]
             n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()
             if n_diff_input_output > 0:
-                print(f'[Warning] {n_diff_input_output} output_ids are not the same as the input_ids')
+                print(f"[Warning] {n_diff_input_output} output_ids are not the same as the input_ids")
             outputs = self.tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
             outputs = outputs.strip()
             if outputs.endswith(stop_str):
-                outputs = outputs[:-len(stop_str)]
+                outputs = outputs[: -len(stop_str)]
             outputs = outputs.strip()
             pbar.update(1)
             res.append(outputs)
 
         return res
-    
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         return super().loglikelihood(requests)
-    
 
     @property
     def batch_size(self):
@@ -272,4 +267,3 @@ class LLaMAVid(lmms):
     @property
     def world_size(self):
         return self._world_size
-    

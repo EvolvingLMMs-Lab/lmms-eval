@@ -20,7 +20,7 @@ from typing import Optional, Sequence, List, Tuple, Union
 import re
 from tqdm import tqdm
 
-pattern = re.compile(r'[A-Z]')
+pattern = re.compile(r"[A-Z]")
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -32,6 +32,7 @@ meta_instruction = """You are an AI assistant whose name is InternLM-XComposer (
 - InternLM-XComposer (浦语·灵笔) is capable of comprehending and articulating responses\
  effectively based on the provided image."""
 
+
 @register_model("xcomposer2_4khd")
 class XComposer2_4KHD(lmms):
     def __init__(
@@ -40,11 +41,11 @@ class XComposer2_4KHD(lmms):
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
         device_map="cuda:0",
-        need_bos : bool = True,
-        padding : bool = False,
-        half : bool = False,
-        **kwargs
-        ) -> None:
+        need_bos: bool = True,
+        padding: bool = False,
+        half: bool = False,
+        **kwargs,
+    ) -> None:
         super().__init__()
 
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
@@ -97,7 +98,6 @@ class XComposer2_4KHD(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
-    
 
     @property
     def config(self):
@@ -115,7 +115,7 @@ class XComposer2_4KHD(lmms):
             return self.accelerator.unwrap_model(self._model)
         else:
             return self._model
-    
+
     @property
     def batch_size(self):
         return self.batch_size_per_gpu
@@ -131,14 +131,14 @@ class XComposer2_4KHD(lmms):
     @property
     def world_size(self):
         return self._world_size
-    
+
     def flatten(self, input):
         new_list = []
         for i in input:
             for j in i:
                 new_list.append(j)
         return new_list
-    
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -148,17 +148,17 @@ class XComposer2_4KHD(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
 
-            if 'hd_num' not in gen_kwargs:
-                if listinstr(['docvqa_test', 'infovqa_test'], task.lower()):
+            if "hd_num" not in gen_kwargs:
+                if listinstr(["docvqa_test", "infovqa_test"], task.lower()):
                     self.model.hd_num = 65
-                elif listinstr(['docvqa_val', 'infovqa_val', 'OCRBench'], task.lower()):
+                elif listinstr(["docvqa_val", "infovqa_val", "OCRBench"], task.lower()):
                     self.model.hd_num = 55
-                elif listinstr(['mmmu', 'mmbench', 'mmvet'], task.lower()):
+                elif listinstr(["mmmu", "mmbench", "mmvet"], task.lower()):
                     self.model.hd_num = 16
                 else:
                     self.model.hd_num = 25
             else:
-                self.model.hd_num = gen_kwargs.pop('hd_num')
+                self.model.hd_num = gen_kwargs.pop("hd_num")
 
             pt1 = 0
             embeds = []
@@ -200,44 +200,34 @@ class XComposer2_4KHD(lmms):
                 gen_kwargs["repetition_penalty"] = 1.0
 
             outputs = self.model.generate(
-                inputs_embeds=embeds, 
+                inputs_embeds=embeds,
                 im_mask=im_mask,
-                temperature=gen_kwargs["temperature"], 
-                max_new_tokens=gen_kwargs["max_new_tokens"], 
+                temperature=gen_kwargs["temperature"],
+                max_new_tokens=gen_kwargs["max_new_tokens"],
                 num_beams=gen_kwargs["num_beams"],
-                do_sample=gen_kwargs["do_sample"], 
-                repetition_penalty=gen_kwargs["repetition_penalty"])
+                do_sample=gen_kwargs["do_sample"],
+                repetition_penalty=gen_kwargs["repetition_penalty"],
+            )
             output_token = outputs[0]
             if output_token[0] == 0 or output_token[0] == 1:
                 output_token = output_token[1:]
             output_text = self.model.tokenizer.decode(output_token, add_special_tokens=False)
-            output_text = output_text.split('[UNUSED_TOKEN_145]')[0].strip()
+            output_text = output_text.split("[UNUSED_TOKEN_145]")[0].strip()
             output_text = output_text.split("<|im_end|>")[0].strip()
             if DATASET_TYPE(task) == "multi-choice":
                 output_text = pattern.findall(output_text)
                 if len(output_text) == 0:
-                    print('Error:', output_text)
-                    output_text = 'Z'
+                    print("Error:", output_text)
+                    output_text = "Z"
                 if type(output_text) == list:
                     output_text = output_text[0]
             res.append(output_text)
             pbar.update(1)
-        pbar.close() 
+        pbar.close()
         return res
-    
+
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         return super().loglikelihood(requests)
-    
-
-
-    
-
-    
-
-
-
-
-
 
 
 def padding_336(b):
@@ -259,7 +249,7 @@ def HD_transform(img, im_num=16):
         img = img.transpose(Image.TRANSPOSE)
         trans = True
         width, height = img.size
-    ratio = (width / height)
+    ratio = width / height
     scale = 1
     while scale * np.ceil(scale / ratio) <= im_num:
         scale += 1
@@ -267,7 +257,10 @@ def HD_transform(img, im_num=16):
     new_w = int(scale * 336)
     new_h = int(new_w / ratio)
 
-    img = transforms.functional.resize(img, [new_h, new_w],)
+    img = transforms.functional.resize(
+        img,
+        [new_h, new_w],
+    )
     img = padding_336(img)
     width, height = img.size
     assert width * height <= im_num * 336 * 336
@@ -276,6 +269,7 @@ def HD_transform(img, im_num=16):
 
     return img
 
+
 def listinstr(lst, s):
     assert isinstance(lst, list)
     for item in lst:
@@ -283,17 +277,17 @@ def listinstr(lst, s):
             return True
     return False
 
+
 def DATASET_TYPE(dataset):
     # Dealing with Custom Dataset
     dataset = dataset.lower()
-    if listinstr(['mmbench', 'seedbench', 'ccbench', 'mmmu', 'scienceqa', 'ai2d', 'mmstar'], dataset):
-        return 'multi-choice'
-    elif listinstr(['mme', 'hallusion'], dataset):
-        return 'Y/N'
-    elif 'coco' in dataset:
-        return 'Caption'
-    elif listinstr(['ocrvqa', 'textvqa', 'chartqa', 'mathvista', 'docvqa', 'infovqa', 'llavabench',
-                    'mmvet', 'ocrbench'], dataset):
-        return 'VQA'
+    if listinstr(["mmbench", "seedbench", "ccbench", "mmmu", "scienceqa", "ai2d", "mmstar"], dataset):
+        return "multi-choice"
+    elif listinstr(["mme", "hallusion"], dataset):
+        return "Y/N"
+    elif "coco" in dataset:
+        return "Caption"
+    elif listinstr(["ocrvqa", "textvqa", "chartqa", "mathvista", "docvqa", "infovqa", "llavabench", "mmvet", "ocrbench"], dataset):
+        return "VQA"
     else:
-        return 'QA'
+        return "QA"
