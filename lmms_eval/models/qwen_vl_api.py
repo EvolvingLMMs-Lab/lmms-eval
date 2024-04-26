@@ -6,7 +6,7 @@ from typing import List, Tuple, Union
 from tqdm import tqdm
 import requests as url_requests
 import time
-import logging 
+import logging
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -31,18 +31,18 @@ class Qwen_VL_API(lmms):
     def __init__(
         self,
         model_version: str = "qwen-vl-max",
-        image_token: str = "<image>", # Use to separate interleaved image and text
-        system_prompt: str = "", # Whether you want some special system prompt here
-        tmp_folder: str = "./tmp", # Due to qwen's api restriction, 
+        image_token: str = "<image>",  # Use to separate interleaved image and text
+        system_prompt: str = "",  # Whether you want some special system prompt here
+        tmp_folder: str = "./tmp",  # Due to qwen's api restriction,
         **kwargs,
     ) -> None:
         super().__init__()
-    
+
         self.model_version = model_version
         self.image_token = image_token
         self.system_prompt = system_prompt
         self.tmp_folder = tmp_folder
-    
+
     @property
     def rank(self):
         return self._rank
@@ -66,12 +66,7 @@ class Qwen_VL_API(lmms):
                 visual.save(os.path.join(self.tmp_folder, f"tmp_{idx}_{self.rank}_{self.world_size}.jpg"))
                 imgs.append(os.path.join(self.tmp_folder, f"tmp_{idx}_{self.rank}_{self.world_size}.jpg"))
 
-            messages = [
-                {
-                    "role": "user",
-                    "content": []
-                }
-            ] 
+            messages = [{"role": "user", "content": []}]
 
             if self.image_token not in contexts:
                 for img in imgs:
@@ -82,9 +77,8 @@ class Qwen_VL_API(lmms):
 
                 for idx, img in enumerate(imgs):
                     messages[0]["content"].append({"text": contexts[idx]})
-                    messages[0]["content"].append({"image": img}) 
-                messages[0]["content"].append({"text" : contexts[-1]})
-            
+                    messages[0]["content"].append({"image": img})
+                messages[0]["content"].append({"text": contexts[-1]})
 
             if "max_new_tokens" not in gen_kwargs or gen_kwargs["max_new_tokens"] > 1500:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -94,15 +88,10 @@ class Qwen_VL_API(lmms):
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
-            
+
             for attempt in range(5):
                 try:
-                    response_data = dashscope.MultiModalConversation.call(
-                        model=self.model_version,
-                        messages=messages,
-                        api_key=API_KEY,
-                        max_length = gen_kwargs["max_new_tokens"]
-                        )
+                    response_data = dashscope.MultiModalConversation.call(model=self.model_version, messages=messages, api_key=API_KEY, max_length=gen_kwargs["max_new_tokens"])
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
@@ -112,22 +101,21 @@ class Qwen_VL_API(lmms):
                         res.append("")
                         pbar.update(1)
                         continue
-            try: 
+            try:
                 res.append(response_data["output"]["choices"][0]["message"]["content"][0]["text"].strip())
             except Exception as e:
                 eval_logger.error(f"Error {e} happens when parsing input.")
                 eval_logger.error(f"{response_data}")
                 res.append("")
             pbar.update(1)
-        
+
         pbar.close()
 
-        return res 
-            
-    
+        return res
+
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "Not supported for claude"
-    
+
     def flatten(self, input):
         new_list = []
         for i in input:
