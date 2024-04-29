@@ -91,7 +91,9 @@ class Llava(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
-        llava_model_args = {}
+        llava_model_args = {
+            "multimodal": True,
+        }
         if customized_config is not None:
             llava_model_args["customized_config"] = customized_config
         if attn_implementation is not None:
