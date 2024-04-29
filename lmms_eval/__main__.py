@@ -305,6 +305,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             print(dumped)
 
         if args.output_path:
+            last_part = args.output_path.name
+            last_part = "..." + last_part[-15:] if len(last_part) > 15 else last_part
+            args.output_path = args.output_path.parent / last_part
+
             args.output_path.mkdir(parents=True, exist_ok=True)
             result_file_path = path.joinpath("results.json")
             if result_file_path.exists():
