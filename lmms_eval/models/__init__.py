@@ -15,6 +15,7 @@ AVAILABLE_MODELS = {
     "claude": "Claude",
     "qwen_vl_api": "Qwen_VL_API",
     "llava_sglang": "LlavaSglang",
+    "idefics2": "Idefics2",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():

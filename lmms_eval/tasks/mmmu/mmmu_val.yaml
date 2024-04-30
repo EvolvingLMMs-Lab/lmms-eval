@@ -10,7 +10,9 @@ process_results: !function utils.mmmu_process_results
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 generation_kwargs:
   max_new_tokens: 16
-  image_aspect_ratio: original
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
 metric_list:
   - metric: mmmu_acc
     aggregation: !function utils.mmmu_aggregate_results
