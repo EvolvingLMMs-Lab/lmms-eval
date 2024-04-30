@@ -160,15 +160,9 @@ class MultiChoiceRegexFilter(ExtendedRegexFilter):
             without_paren_fallback_regexes = []
             without_paren_to_target = {}
 
-            options_prompt = ""
-            for idx, option in enumerate(doc["options"]):
-                char_idx = chr(ord("A") + idx)
-                option = option.strip()
-                options_prompt += f"{char_idx}. {option}\n"
-            options_prompt = options_prompt.rstrip("\n")
             # Regex to extract multiple choice options from the question
             multiple_choices_regex = re.compile(r"\b([A-Z])\.\s+([^\n]*)")
-            matches = multiple_choices_regex.findall(options_prompt)
+            matches = multiple_choices_regex.findall(doc["question"])
 
             # Build regex patterns and mappings for each choice
             for m in matches:

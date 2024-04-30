@@ -7,3 +7,8 @@ model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""
+  gpt4v:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
+    post_prompt: ""
+metadata:
+  modality: video
