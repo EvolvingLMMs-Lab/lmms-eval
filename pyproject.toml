@@ -55,6 +55,7 @@ dependencies = [
     "pre-commit",
     "pydantic",
     "packaging",
+    "decord",
 ]
 
 [tool.setuptools.packages.find]
