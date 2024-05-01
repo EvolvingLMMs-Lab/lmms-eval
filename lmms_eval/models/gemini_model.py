@@ -148,7 +148,7 @@ class GeminiModel(lmms):
             ########################## Implement the following code snippet ##########################
 
             # input = [("text", "what does this video describe?"), ("image_bytes", image_png_bytes), ("image_bytes", image_png_bytes), ("image_bytes", image_png_bytes), ....]
-            gemini_input_content = {"example_id": "placeholder", "request_content": [("text", contexts)]}
+            gemini_input_content = {"example_id": f"{doc_id:06d}", "request_content": [("text", contexts)]}
             gemini_input_content["request_content"].extend([("image_bytes", img) for img in imgs])
 
             gemini_output_content = self.model_call(gemini_input_content)
