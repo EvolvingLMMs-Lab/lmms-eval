@@ -14,6 +14,9 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval import utils
 
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+
 try:
     from decord import VideoReader, cpu
 except ImportError:
@@ -60,6 +63,18 @@ class GPT4V(lmms):
         self.max_frames_for_video = max_frames_for_video
         self.image_token = "<image>"
         self.timeout = timeout
+
+        accelerator = Accelerator()
+        # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
+        if accelerator.num_processes > 1:
+            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            self.accelerator = accelerator
+            if self.accelerator.is_local_main_process:
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
+
+        self.device = self.accelerator.device
 
     # Function to encode the image
     def encode_image(self, image: Image):
