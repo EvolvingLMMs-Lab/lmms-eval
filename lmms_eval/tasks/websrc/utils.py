@@ -39,11 +39,17 @@ def websrc_process_results(doc, results):
     pred = results[0]
     parsed_pred = pred
     id = doc["page_id"]
-    websrc_ans = {"id": id, "domain": doc['domain'], "answer": doc["answer"], "parsed_pred": parsed_pred}
+    websrc_ans = {"id": id, "domain": doc['domain'], "parsed_pred": parsed_pred}
+    if "answer" in doc:
+        websrc_ans["answer"] = doc["answer"]
+
+    if 'id' in doc:
+        websrc_ans['question_id'] = doc['id']
+
     return {
         "websrc_squad_f1": websrc_ans,
         "submission": {
-            id: pred,
+            websrc_ans['question_id']: pred,
         },
     }
 
@@ -51,7 +57,10 @@ def websrc_process_results(doc, results):
 def websrc_test_aggregate_results_for_submission(results, args):
     path = generate_submission_file("websrc_test_for_submission.json", args)
     with open(path, "w") as f:
-        json.dump(results, f)
+        out = {}
+        for result in results:
+            out.update(result)
+        json.dump(out, f, indent=4)
     lmms_logger.info(f"Results saved to {path}.")
 
 
