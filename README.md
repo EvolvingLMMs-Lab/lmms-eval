@@ -260,6 +260,9 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 - VQAv2 (vqav2)
   - VQAv2 Validation (vqav2_val)
   - VQAv2 Test (vqav2_test)
+- WebSRC (websrc)
+  - WebSRC Validation (websrc_val)
+  - WebSRC Test (websrc_test)
 
 ## Datasets to be added and tested
 - TallyQA (tallyqa)
