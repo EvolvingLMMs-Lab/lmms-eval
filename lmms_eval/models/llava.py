@@ -1,4 +1,3 @@
-import ast
 import torch
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -17,6 +16,7 @@ from lmms_eval.utils import stop_sequences_criteria
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
+from packaging import version
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -46,7 +46,7 @@ from transformers.utils import is_flash_attn_2_available
 # if is_flash_attn_2_available:
 #     best_fit_attn_implementation = "flash_attention_2" # flash_attn has a bug that says: ERROR Error query and key must have the same dtype in generating
 
-if torch.__version__ > "2.1.2":
+if version.parse(torch.__version__) > version.parse("2.1.2"):
     best_fit_attn_implementation = "sdpa"
 else:
     best_fit_attn_implementation = "eager"
@@ -100,7 +100,15 @@ class Llava(lmms):
             llava_model_args["attn_implementation"] = attn_implementation
         if "use_flash_attention_2" in kwargs:
             llava_model_args["use_flash_attention_2"] = kwargs["use_flash_attention_2"]
-        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, **llava_model_args)
+
+        try:
+            # Try to load the model with the multimodal argument
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, **llava_model_args)
+        except TypeError:
+            # for older versions of LLaVA that don't have multimodal argument
+            llava_model_args.pop("multimodal", None)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, **llava_model_args)
+
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
