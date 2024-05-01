@@ -5,16 +5,18 @@ output_type: generate_until
 doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
 doc_to_text: !function utils.mix_evals_video2text_doc_to_text
 doc_to_target: "{{target}}"
-# process_results: !function utils.mix_evals_video2text_process_results_freeform
+
 metric_list:
-  - metric: exact_match
+  - metric: anls
     aggregation: mean
     higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
+    
 include: _default_template_yaml
 
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
+    post_prompt: "Answer the question using a single word or phrase."
+  gpt4v:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
     post_prompt: "Answer the question using a single word or phrase."
