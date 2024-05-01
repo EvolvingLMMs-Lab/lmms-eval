@@ -19,7 +19,6 @@ OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 
 def construct_prompt(doc):
     question = doc["question"]
-    # question = f"{question}\n{OPEN_ENDED_PROMPT}"
     question = f"{OPEN_ENDED_PROMPT}\n{question}"
     return question
 
