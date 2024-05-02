@@ -8,6 +8,10 @@ import json
 import logging
 import yaml
 from pathlib import Path
+import requests
+import time
+
+NUM_SECONDS_TO_SLEEP=5
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -18,6 +22,84 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
             safe_data.append(line)
 
     config = yaml.safe_load("".join(safe_data))
+
+GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
+
+API_TYPE = os.getenv("API_TYPE", "openai")
+
+if API_TYPE == "openai":
+    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+elif API_TYPE == "azure":
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+
+eval_prompt = """You are an AI assistant who will help me to evaluate the quality of the candidate responses belonging to a question. The quality of the responses should be referred to the ground truth response.
+
+Some criterion
+- Response that perfectly reflect the key points in the ground truth: 1 point
+- Response that reflect none of the key points in the ground truth: 0 point
+- Some part in the response are correct but other parts in the response are contrast to the ground truth: 0.3 point
+- Some part in the response are correct but some parts in the ground truth are not mentioned in the response: 0.5 point
+- Some part in the response are correct but other parts in the response are not mentioned in the ground truth: 0.5 point
+
+Your output should be in the following format:
+Keypoint in the ground truth response:
+XXX
+Rationale:
+XXXX
+Point:
+1/0.5/0.3/0
+
+Let's begin this task:
+question: {question}
+ground truth: {answer}
+candidate: {candidate}"""
+
+
+def get_eval(question: str, ground_truth : str, candidate : str, max_tokens: int, retries: int = 5):
+    global headers
+
+    content = eval_prompt.format(question=question, answer=ground_truth, candidate=candidate)
+
+    messages = [
+        {"role": "user", "content": content},
+    ]
+
+    payload = {
+        "model": GPT_EVAL_MODEL_NAME,
+        "messages": messages,
+        "temperature": 0.2,
+        "max_tokens": max_tokens,
+    }
+
+    for attempt in range(retries):
+        try:
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()
+            response_data = response.json()
+
+            content = response_data["choices"][0]["message"]["content"].strip()
+            if content != "":
+                return content, response_data["model"]
+            break  # If successful, break out of the loop
+
+        except Exception as e:
+            eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
+            if attempt < retries:  # If we have retries left, sleep and then continue to next attempt
+                time.sleep(NUM_SECONDS_TO_SLEEP)
+            else:  # If this was the last attempt, log and return empty
+                eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+                return "", ""
+    return "", ""
 
 # A bit ugly here
 # But the idea is that we will unzip all the zip files
@@ -84,7 +166,9 @@ def worldqa_doc_to_answer_mc_ppl(doc):
 # Your metric name should have the same key name in your return dict
 def worldqa_process_results(doc, result):
     pred = result[0]
-    return {"submission": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"]}}
+    eval_answer = get_eval(question=doc["question"], ground_truth=doc["answer"], candidate=pred, max_tokens=1024)
+    return {"submission": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer" : eval_answer}}
+
 
 
 def worldqa_aggregate_submissions(results, args, task):
