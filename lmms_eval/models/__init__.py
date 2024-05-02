@@ -16,6 +16,8 @@ AVAILABLE_MODELS = {
     "qwen_vl_api": "Qwen_VL_API",
     "llava_sglang": "LlavaSglang",
     "idefics2": "Idefics2",
+    "gemini_api": "GeminiAPI",
+    "gemini_model": "GeminiModel",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():

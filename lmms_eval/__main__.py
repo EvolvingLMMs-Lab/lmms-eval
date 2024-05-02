@@ -106,7 +106,7 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "--log_samples_suffix",
         type=str,
-        default="",
+        default="model_outputs",
         help="Specify a suffix for the log_samples file name.",
     )
     parser.add_argument(
