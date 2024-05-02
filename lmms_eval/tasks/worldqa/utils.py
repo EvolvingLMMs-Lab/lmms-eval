@@ -166,8 +166,12 @@ def worldqa_doc_to_answer_mc_ppl(doc):
 # Your metric name should have the same key name in your return dict
 def worldqa_process_results(doc, result):
     pred = result[0]
-    eval_answer = get_eval(question=doc["question"], ground_truth=doc["answer"], candidate=pred, max_tokens=1024)
-    return {"submission": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer" : eval_answer}}
+    content = eval_prompt.format(question=doc["question"], answer=doc["answer"], candidate=pred)
+    eval_answer, model_name = get_eval(question=doc["question"], ground_truth=doc["answer"], candidate=pred, max_tokens=1024)
+    return {
+        "submission": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer" : eval_answer, "gpt_prompt" : content},
+        "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer" : eval_answer, "gpt_prompt" : content},
+    }
 
 
 
@@ -178,6 +182,19 @@ def worldqa_aggregate_submissions(results, args, task):
     with open(path, "w") as f:
         json.dump(results, f)
     eval_logger.info(f"Submission file saved to {path}")
+
+def worldq_gen_gpt_eval(results, args):
+    score = 0
+    for result in results:
+        eval_answer = result["eval_answer"]
+        eval_score = eval_answer.split("\n")[-1].strip()
+        try:
+            eval_score = float(eval_score)
+        except:
+            eval_score = 0.0
+        score += eval_score
+    
+    return score / len(results)
 
 
 # Factory into different aggregate
@@ -191,6 +208,9 @@ def worldqa_aggregate_mc(results, args):
 
 def worldqa_aggregate_mc_ppl(results, args):
     worldqa_aggregate_submissions(results, args, "MC_PPL")
+
+def worldqa_aggregate_gen_eval(results, args):
+    return 
 
 
 def worldqa_doc_to_choice(doc):
