@@ -11,7 +11,7 @@ from pathlib import Path
 import requests
 import time
 
-NUM_SECONDS_TO_SLEEP=5
+NUM_SECONDS_TO_SLEEP = 5
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -65,7 +65,7 @@ ground truth: {answer}
 candidate: {candidate}"""
 
 
-def get_eval(question: str, ground_truth : str, candidate : str, max_tokens: int, retries: int = 5):
+def get_eval(question: str, ground_truth: str, candidate: str, max_tokens: int, retries: int = 5):
     global headers
 
     content = eval_prompt.format(question=question, answer=ground_truth, candidate=candidate)
@@ -100,6 +100,7 @@ def get_eval(question: str, ground_truth : str, candidate : str, max_tokens: int
                 eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
                 return "", ""
     return "", ""
+
 
 # A bit ugly here
 # But the idea is that we will unzip all the zip files
@@ -169,10 +170,9 @@ def worldqa_process_results(doc, result):
     content = eval_prompt.format(question=doc["question"], answer=doc["answer"], candidate=pred)
     eval_answer, model_name = get_eval(question=doc["question"], ground_truth=doc["answer"], candidate=pred, max_tokens=1024)
     return {
-        "submission": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer" : eval_answer, "gpt_prompt" : content},
-        "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer" : eval_answer, "gpt_prompt" : content},
+        "submission": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer": eval_answer, "gpt_prompt": content},
+        "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer": eval_answer, "gpt_prompt": content},
     }
-
 
 
 def worldqa_aggregate_submissions(results, args, task):
@@ -182,6 +182,7 @@ def worldqa_aggregate_submissions(results, args, task):
     with open(path, "w") as f:
         json.dump(results, f)
     eval_logger.info(f"Submission file saved to {path}")
+
 
 def worldq_gen_gpt_eval(results, args):
     score = 0
@@ -193,7 +194,7 @@ def worldq_gen_gpt_eval(results, args):
         except:
             eval_score = 0.0
         score += eval_score
-    
+
     return score / len(results)
 
 
@@ -209,8 +210,9 @@ def worldqa_aggregate_mc(results, args):
 def worldqa_aggregate_mc_ppl(results, args):
     worldqa_aggregate_submissions(results, args, "MC_PPL")
 
+
 def worldqa_aggregate_gen_eval(results, args):
-    return 
+    return
 
 
 def worldqa_doc_to_choice(doc):
