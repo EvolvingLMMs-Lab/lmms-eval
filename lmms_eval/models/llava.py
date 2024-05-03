@@ -29,10 +29,7 @@ try:
     from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
     from llava.conversation import conv_templates, SeparatorStyle
 except ImportError:
-    import traceback
-
-    traceback.print_exc()
-    # eval_logger.error("LLaVA is not installed. Please install LLaVA to use this model.")
+    eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.")
 
 from transformers.integrations.deepspeed import (
     is_deepspeed_zero3_enabled,
@@ -403,7 +400,7 @@ class Llava(lmms):
             input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
             attention_masks = input_ids.ne(pad_token_ids).to(self.device)
             # These steps are not in LLaVA's original code, but are necessary for generation to work
-            # TODO: pay attention to this major generation step...
+            # TODO: attention to this major generation step...
             try:
                 cont = self.model.generate(
                     input_ids,
