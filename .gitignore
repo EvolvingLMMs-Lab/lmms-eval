@@ -26,3 +26,5 @@ lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
 zk.log
 cache_dir
 ckpt
+pretrained/
+LLaVA/
