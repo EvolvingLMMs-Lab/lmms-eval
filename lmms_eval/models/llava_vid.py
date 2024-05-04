@@ -24,7 +24,7 @@ try:
     from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
     from llavavid.conversation import conv_templates, SeparatorStyle
 except ImportError:
-    eval_logger.error("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
+    eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
 
 
 @register_model("llavavid")
