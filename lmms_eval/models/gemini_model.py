@@ -96,7 +96,7 @@ class GeminiModel(lmms):
         for frame in frames:
             img = Image.fromarray(frame)
             output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
+            img.save(output_buffer, format="JPEG")
             byte_data = output_buffer.getvalue()
             base64_str = base64.b64encode(byte_data).decode("utf-8")
             base64_frames.append(base64_str)
