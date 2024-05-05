@@ -59,6 +59,43 @@ class InternVLChat(lmms):
     main_input_name = "pixel_values"
     _no_split_modules = ["InternVisionEncoderLayer", "LlamaDecoderLayer"]
 
+    """
+    How to Install InternVL:
+    1. Clone the InternVL repository:
+    git clone https://github.com/OpenGVLab/InternVL.git
+
+    2. Install the requirements:
+    pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
+
+    3. Install flash-attn==2.3.6:
+    pip install flash-attn==2.3.6 --no-build-isolation
+    """
+
+    """
+    How to download the pretrained model:
+    1. Download the pretrained model from hugginface:
+    cd pretrained/
+    # pip install -U huggingface_hub
+    huggingface-cli download --resume-download --local-dir-use-symlinks False OpenGVLab/InternVL-Chat-V1-5 --local-dir InternVL-Chat-V1-5
+
+    2. the pretrained model should be in the following directory:
+    pretrained
+    └── InternVL-Chat-V1-5
+    """
+    
+    """
+    InternVL-Chat-V1-5 Model for OpenGVLab https://github.com/OpenGVLab/InternVL/blob/main/internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py
+    Example usage:
+
+    accelerate launch --num_processes=8 -m lmms_eval \
+        --model internvl \
+        --model_args pretrained=pretrained/InternVL-Chat-V1-5 \
+        --tasks mme \
+        --batch_size 1 \
+        --output_path ./logs/ \
+        --log_samples
+    """
+
     def __init__(
         self,
         config: Optional[InternVLChatConfig] = None,
