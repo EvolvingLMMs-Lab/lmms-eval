@@ -179,7 +179,7 @@ def worldqa_process_results(doc, result):
 def worldqa_process_results_mc(doc, result):
     pred = result[0] 
     data = {
-        "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "option" : doc["option"] },
+        "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "option" : doc["option"], "question" : doc["question"] },
     }  
     return data
 
