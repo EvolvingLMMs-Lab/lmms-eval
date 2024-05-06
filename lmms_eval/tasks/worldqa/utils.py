@@ -62,7 +62,8 @@ Point:
 Let's begin this task:
 question: {question}
 ground truth: {answer}
-candidate: {candidate}"""
+candidate: {candidate}
+"""
 
 
 def get_eval(question: str, ground_truth: str, candidate: str, max_tokens: int, retries: int = 5):
