@@ -12,3 +12,5 @@ model_specific_prompt_kwargs:
     post_prompt: ""
 metadata:
   modality: video
+  version: 0.0
+  gpt_eval_model_name: "gpt-3.5-turbo"

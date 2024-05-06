@@ -199,20 +199,6 @@ def worldq_gen_gpt_eval(results, args):
     return score / len(results)
 
 
-def worldq_gen_gpt_eval(results, args):
-    score = 0
-    for result in results:
-        eval_answer = result["eval_answer"]
-        eval_score = eval_answer.split("\n")[-1].strip()
-        try:
-            eval_score = float(eval_score)
-        except:
-            eval_score = 0.0
-        score += eval_score
-
-    return score / len(results)
-
-
 # Factory into different aggregate
 def worldqa_aggregate_gen(results, args):
     worldqa_aggregate_submissions(results, args, "Generation")
@@ -224,10 +210,6 @@ def worldqa_aggregate_mc(results, args):
 
 def worldqa_aggregate_mc_ppl(results, args):
     worldqa_aggregate_submissions(results, args, "MC_PPL")
-
-
-def worldqa_aggregate_gen_eval(results, args):
-    return
 
 
 def worldqa_aggregate_gen_eval(results, args):
