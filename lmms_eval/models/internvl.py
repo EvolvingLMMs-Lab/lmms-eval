@@ -51,7 +51,7 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
 from transformers import AutoTokenizer
 import re
-
+from huggingface_hub import snapshot_download
 
 @register_model("internvl")
 class InternVLChat(lmms):
@@ -60,9 +60,15 @@ class InternVLChat(lmms):
     _no_split_modules = ["InternVisionEncoderLayer", "LlamaDecoderLayer"]
 
     """
+    0. Install lmms-eval
+    cd lmms-eval
+    pip install -e .
+
     How to Install InternVL:
     1. Clone the InternVL repository:
     git clone https://github.com/OpenGVLab/InternVL.git
+    cd InternVL/internvl_chat
+    pip install -e .
 
     2. Install the requirements:
     pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
@@ -82,14 +88,19 @@ class InternVLChat(lmms):
     pretrained
     └── InternVL-Chat-V1-5
     """
+
+    # 
+    # The above steps can be optional, I add snapshot download, so now can just use hf repo_id
+    # model_args pretrained=OpenGVLab/InternVL-Chat-V1-5
+    #
     
     """
     InternVL-Chat-V1-5 Model for OpenGVLab https://github.com/OpenGVLab/InternVL/blob/main/internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py
     Example usage:
 
-    accelerate launch --num_processes=8 -m lmms_eval \
+    accelerate launch --num_processes=8 --main_process_port 12345 -m lmms_eval \
         --model internvl \
-        --model_args pretrained=pretrained/InternVL-Chat-V1-5 \
+        --model_args pretrained=OpenGVLab/InternVL-Chat-V1-5 \
         --tasks mme \
         --batch_size 1 \
         --output_path ./logs/ \
@@ -136,10 +147,15 @@ class InternVLChat(lmms):
 
         self.dynamic = dynamic  # dynamic image_size
         self.max_num = max_num
-
-        config = InternVLChatConfig.from_pretrained(pretrained)
-        tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=True, use_fast=False)
-        model = InternVLChatModel.from_pretrained(pretrained, low_cpu_mem_usage=True, config=config, torch_dtype=torch.bfloat16, load_in_8bit=load_in_8bit).eval()
+        if accelerator.is_main_process:
+            cache_dir = snapshot_download(repo_id=pretrained, cache_dir="cache_dir", local_dir="cache_dir", local_dir_use_symlinks=False)
+        accelerator.wait_for_everyone()
+        # So what I did is that I let main process to download the repo, and then
+        # other process can just simply read from this repo
+        cache_dir = snapshot_download(repo_id=pretrained, cache_dir="cache_dir", local_dir="cache_dir", local_dir_use_symlinks=False)
+        config = InternVLChatConfig.from_pretrained(cache_dir)
+        tokenizer = AutoTokenizer.from_pretrained(cache_dir, trust_remote_code=True, use_fast=False)
+        model = InternVLChatModel.from_pretrained(cache_dir, low_cpu_mem_usage=True, config=config, torch_dtype=torch.bfloat16, load_in_8bit=load_in_8bit).eval()
         if not load_in_8bit:
             model = model.cuda()
         # self.model=model
@@ -263,7 +279,7 @@ class InternVLChat(lmms):
             history = []
             image_tokens = ""
             image_bs = pixel_values.shape[0]
-            print(f"dynamic ViT batch size: {image_bs}, image_counts: {image_counts}")
+            # print(f"dynamic ViT batch size: {image_bs}, image_counts: {image_counts}")
             for idx, image_count in enumerate(image_counts):
                 image_tokens += f"<image {idx+1}> (图{idx+1}):" + IMG_START_TOKEN + IMG_CONTEXT_TOKEN * self.num_image_token * image_count + IMG_END_TOKEN
             question = image_tokens + "\n" + question
@@ -287,7 +303,7 @@ class InternVLChat(lmms):
             return response, history
         else:
             query_to_print = query.replace(image_tokens, "<image>")
-            print(query_to_print, response)
+            # print(query_to_print, response)
             return response
         return response
 
