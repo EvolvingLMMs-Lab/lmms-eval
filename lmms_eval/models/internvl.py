@@ -99,7 +99,7 @@ class InternVLChat(lmms):
     accelerate launch --num_processes=8 --main_process_port 12345 -m lmms_eval \
         --model internvl \
         --model_args pretrained=OpenGVLab/InternVL-Chat-V1-5 \
-        --tasks mme \
+        --tasks llava_wilder_small,llava_wilder_medium \
         --batch_size 1 \
         --output_path ./logs/ \
         --log_samples
@@ -447,12 +447,21 @@ class InternVLChat(lmms):
             pixel_values = self.load_image(flattened_visuals, self.image_size).cuda().to(torch.bfloat16)
             gen_kwargs = all_gen_kwargs[0]
 
+            if "max_new_tokens" not in gen_kwargs:
+                gen_kwargs["max_new_tokens"] = 1024
+            if "temperature" not in gen_kwargs:
+                gen_kwargs["temperature"] = 0
+            if "top_p" not in gen_kwargs:
+                gen_kwargs["top_p"] = None
+            if "num_beams" not in gen_kwargs:
+                gen_kwargs["num_beams"] = 1
+
             generation_config = dict(
                 do_sample=False,
                 top_k=50,
-                top_p=0.9,
-                num_beams=5,
-                max_new_tokens=20,
+                top_p=gen_kwargs["top_p"],
+                num_beams=gen_kwargs["num_beams"],
+                max_new_tokens=gen_kwargs["max_new_tokens"],
                 eos_token_id=self.tokenizer.eos_token_id,
             )
             question = contexts[0]
