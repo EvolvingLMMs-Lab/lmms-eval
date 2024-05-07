@@ -25,7 +25,7 @@ try:
     import sglang as sgl
     from sglang.lang.chat_template import get_chat_template
 except ImportError:
-    eval_logger.error("SGLang is not installed. If you want to use llava_sglang, please install it using pip install 'sglang[all]' ")
+    eval_logger.debug("SGLang is not installed. If you want to use llava_sglang, please install it using pip install 'sglang[all]' ")
 
 if torch.__version__ > "2.1.2":
     best_fit_attn_implementation = "sdpa"
@@ -66,7 +66,6 @@ class LlavaSglang(lmms):
         raise NotImplementedError("Llava-sglang does not support loglikelihood evaluation yet")
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
-
         runtime = sgl.Runtime(model_path=self.pretrained, tokenizer_path=self.tokenizer, tp_size=self.tp_size)
         runtime.endpoint.chat_template = get_chat_template(self.conv_template)
         sgl.set_default_backend(runtime)
