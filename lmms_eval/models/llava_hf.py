@@ -76,6 +76,7 @@ class LlavaHf(lmms):
             eval_logger.info("Not sure whether you use 1.5 or 1.6. Use 1.5 by default. This might cause bugs if you are actually using 1.6")
             self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
 
+        self.pretrained = pretrained
         self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._image_processor.tokenizer.padding_side = "left"
@@ -317,7 +318,12 @@ class LlavaHf(lmms):
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
-            text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
+            if "1.5" in self.pretrained:
+                text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
+            elif "1.6" in self.pretrained:
+                text_outputs = text_outputs.split("[/INST]")[-1].strip() 
+            else:
+                text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.info(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
