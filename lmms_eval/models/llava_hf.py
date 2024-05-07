@@ -8,7 +8,7 @@ from lmms_eval.api.registry import register_model
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
-from transformers import LlavaForConditionalGeneration, AutoProcessor
+from transformers import LlavaForConditionalGeneration, LlavaNextForConditionalGeneration, AutoProcessor
 
 import warnings
 
@@ -67,7 +67,15 @@ class LlavaHf(lmms):
             self.device_map = device_map
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
-        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+
+        if "1.5" in pretrained:
+            self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+        elif "1.6" in pretrained:
+            self._model = LlavaNextForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+        else:
+            eval_logger.info("Not sure whether you use 1.5 or 1.6. Use 1.5 by default. This might cause bugs if you are actually using 1.6")
+            self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+
         self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._image_processor.tokenizer.padding_side = "left"
@@ -106,6 +114,7 @@ class LlavaHf(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._word_size = 1
+        self.accelerator = accelerator
 
     @property
     def config(self):
