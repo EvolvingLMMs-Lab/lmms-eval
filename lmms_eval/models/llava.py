@@ -226,6 +226,8 @@ class Llava(lmms):
             # This is much safer for llama3, as we now have some object type in it
             if "llama_3" in self.conv_template:
                 conv = copy.deepcopy(conv_templates[self.conv_template])
+                # conv.messages gets casted as a tuple, so this is correcting it
+                conv.messages = list(conv.messages)
             else:
                 conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], prompts_input)
@@ -338,6 +340,8 @@ class Llava(lmms):
                 # This is much safer for llama3, as we now have some object type in it
                 if "llama_3" in self.conv_template:
                     conv = copy.deepcopy(conv_templates[self.conv_template])
+                    # conv.messages gets casted as a tuple, so this is correcting it
+                    conv.messages = list(conv.messages)
                 else:
                     conv = conv_templates[self.conv_template].copy()
                 conv.append_message(conv.roles[0], question)
