@@ -6,4 +6,7 @@ dataset_kwargs:
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+metadata:
+  version: 0.0
+  gpt_eval_model_name: "gpt-4-0613"
