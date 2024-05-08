@@ -112,7 +112,7 @@ def initialize_tasks(verbosity="INFO"):
 
 def get_task(task_name, model_name):
     try:
-        return TASK_REGISTRY[task_name](model_name=model_name)
+        return TASK_REGISTRY[task_name](model_name=model_name)  # TODO choiszt the return result need to check " 'mmeConfigurableTask' object has no attribute '_instances'. Did you mean: 'instances'?"
     except KeyError:
         eval_logger.info("Available tasks:")
         eval_logger.info(list(TASK_REGISTRY) + list(GROUP_REGISTRY))

@@ -1,4 +1,7 @@
 import os
+import hf_transfer
+
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 AVAILABLE_MODELS = {
     "llava": "Llava",
@@ -16,6 +19,7 @@ AVAILABLE_MODELS = {
     "qwen_vl_api": "Qwen_VL_API",
     "llava_sglang": "LlavaSglang",
     "idefics2": "Idefics2",
+    "internvl": "InternVLChat",
     "gemini_api": "GeminiAPI",
     "gemini_model": "GeminiModel",
 }
@@ -25,7 +29,3 @@ for model_name, model_class in AVAILABLE_MODELS.items():
         exec(f"from .{model_name} import {model_class}")
     except ImportError:
         pass
-
-import hf_transfer
-
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"

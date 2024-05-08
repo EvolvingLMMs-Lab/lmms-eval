@@ -3,7 +3,7 @@ dataset_name: Small
 dataset_kwargs:
   token: True
 task: "llava_wilder_small"
-test_split: test
+test_split: train 
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
