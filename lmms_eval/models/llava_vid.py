@@ -24,7 +24,7 @@ try:
     from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
     from llavavid.conversation import conv_templates, SeparatorStyle
 except ImportError:
-    eval_logger.error("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
+    eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
 
 
 @register_model("llavavid")
@@ -219,7 +219,7 @@ class LlavaVid(lmms):
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
         spare_frames = vr.get_batch(frame_idx).asnumpy()
-        return spare_frames
+        return spare_frames  # (frames, height, width, channels)
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
@@ -340,8 +340,8 @@ class LlavaVid(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
             with torch.inference_mode():
-                self.model.update_prompt([[cur_prompt]])
-                # import pdb;pdb.set_trace()
+                # self.model.update_prompt([[cur_prompt]])
+                # # import pdb;pdb.set_trace()
                 output_ids = self.model.generate(
                     inputs=input_ids,
                     images=videos,

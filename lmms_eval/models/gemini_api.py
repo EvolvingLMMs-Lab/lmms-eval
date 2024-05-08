@@ -18,54 +18,50 @@ from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 
 try:
-    from decord import VideoReader, cpu
+    from decord import VideoReader, AudioReader, cpu
 except ImportError:
     pass
 
 from PIL import Image
 
-API_TYPE = os.getenv("API_TYPE", "openai")
-NUM_SECONDS_TO_SLEEP = 5
 eval_logger = logging.getLogger("lmms-eval")
 
-if API_TYPE == "openai":
+NUM_SECONDS_TO_SLEEP = 5
+API_TYPE = os.getenv("API_TYPE", "openai")
+if API_TYPE == "openai":  # FIXME: Please modify this to support other type of API
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
+else:
+    eval_logger.error("API_TYPE not supported")
 
 
-@register_model("gpt4v")
-class GPT4V(lmms):
+@register_model("gemini_api")
+class GeminiAPI(lmms):
     def __init__(
         self,
-        model_version: str = "gpt-4-vision-preview",
-        modality: str = "image",
-        max_frames_for_video: int = 10,
+        model_version: str = "gpt-4-turbo",  # FIXME: Please modify this to support real gemini model version
+        modality: str = "video",
+        max_frames_for_video: int = -1,
+        frame_rate: int = -1,
         timeout: int = 120,
         **kwargs,
     ) -> None:
         super().__init__()
-        # Manually set a image token for GPT4V so that we can search for it
-        # and split the text and image
-        # Here we just use the same token as llava for convenient
         self.model_version = model_version
         self.modality = modality
         self.max_frames_for_video = max_frames_for_video
-        self.image_token = "<image>"
+        self.frame_rate = frame_rate
+        assert self.modality in ["image", "video"], "Modality must be either image or video"
+        assert self.max_frames_for_video == -1 or self.frame_rate == -1, "max_frames_for_video and frame_rate cannot be provided at the same time"
+        assert self.max_frames_for_video == -1 if self.frame_rate != -1 else True, "max_frames_for_video must be -1 if frame_rate > 0"
+        self.image_token = "<image>"  # In case the question contains <image> token for placeholder
         self.timeout = timeout
 
-        accelerator = Accelerator()
-        # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
+        accelerator = Accelerator()  # This is not neccessary, it is only used to get the rank and world size
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
@@ -74,7 +70,7 @@ class GPT4V(lmms):
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
 
-        self.device = self.accelerator.device
+            self.device = self.accelerator.device
 
     # Function to encode the image
     def encode_image(self, image: Image):
@@ -85,23 +81,39 @@ class GPT4V(lmms):
         return base64_str
 
     # Function to encode the video
-    def encode_video(self, video_path, for_get_frames_num):
+    def encode_video(self, video_path, for_get_frames_num=-1, frame_rate=-1):
+        assert for_get_frames_num != -1 or frame_rate != -1, "Either for_get_frames_num or frame_rate must be provided"
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
+        if for_get_frames_num != -1:
+            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+            frame_idx = uniform_sampled_frames.tolist()
+        else:
+            frame_idx = range(0, total_frame_num, frame_rate)
         frames = vr.get_batch(frame_idx).asnumpy()
 
         base64_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
             output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
+            img.save(output_buffer, format="JPEG")
             byte_data = output_buffer.getvalue()
             base64_str = base64.b64encode(byte_data).decode("utf-8")
             base64_frames.append(base64_str)
 
-        return base64_frames
+        # Extract audio
+        try:
+            ar = AudioReader(video_path, sample_rate=44100, mono=False, ctx=cpu(0))
+            audio = ar.get_batch(frame_idx).asnumpy()
+            audio_buffer = BytesIO()
+            audio.save(audio_buffer, format="mp3")
+            audio_byte_data = audio_buffer.getvalue()
+            base64_audio = base64.b64encode(audio_byte_data).decode("utf-8")
+        except Exception as e:
+            eval_logger.error(f"Error extracting audio or no audio found for video: {video_path}")
+            base64_audio = None
+
+        return base64_frames, base64_audio
 
     def flatten(self, input):
         new_list = []
@@ -124,7 +136,7 @@ class GPT4V(lmms):
                     img = self.encode_image(visual)
                     imgs.append(img)
                 elif self.modality == "video":
-                    frames = self.encode_video(visual, self.max_frames_for_video)
+                    frames, audio = self.encode_video(visual, self.max_frames_for_video, self.frame_rate)  # FIXME: I am not sure how to put audio information into query, please modify this
                     imgs.extend(frames)
 
             payload = {"model": self.model_version, "messages": []}
@@ -152,10 +164,6 @@ class GPT4V(lmms):
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
-            if "num_beams" not in gen_kwargs:
-                gen_kwargs["num_beams"] = 1
 
             payload["max_tokens"] = gen_kwargs["max_new_tokens"]
             payload["temperature"] = gen_kwargs["temperature"]
@@ -181,4 +189,4 @@ class GPT4V(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
-        assert False, "GPT4V not support"
+        assert False, "Gemini API not support"

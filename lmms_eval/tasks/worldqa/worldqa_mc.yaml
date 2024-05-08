@@ -8,4 +8,14 @@ doc_to_target: !function utils.worldqa_doc_to_answer_mc
 metric_list:
   - metric: exact_match
     higher_is_better: true
+
+filter_list:
+  - name: "flexible-extract"
+    filter:
+      - function: !function utils.MultiChoiceRegexFilter
+        group_select: 0
+        ignore_case: true
+        ignore_punctuation: true
+        regex_pattern: "(\\([A-Z]\\))"
+
 include: _default_template_yaml

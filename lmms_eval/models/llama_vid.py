@@ -29,7 +29,7 @@ try:
     from llamavid.model.builder import load_pretrained_model
     from llava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
 except ImportError:
-    eval_logger.error("LLaMA-Video is not installed. Please install LLaMA-Video to use this model.")
+    eval_logger.debug("LLaMA-Video is not installed. Please install LLaMA-Video to use this model.")
 
 
 @register_model("llama_vid")

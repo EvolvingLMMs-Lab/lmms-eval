@@ -20,6 +20,8 @@ AVAILABLE_MODELS = {
     "llava_sglang": "LlavaSglang",
     "idefics2": "Idefics2",
     "internvl": "InternVLChat",
+    "gemini_api": "GeminiAPI",
+    "gemini_model": "GeminiModel",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():

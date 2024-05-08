@@ -54,6 +54,8 @@ dependencies = [
     "tiktoken",
     "pre-commit",
     "pydantic",
+    "packaging",
+    "decord",
 ]
 
 [tool.setuptools.packages.find]

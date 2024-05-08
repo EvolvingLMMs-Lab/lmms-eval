@@ -25,7 +25,7 @@ try:
     from videollava.utils import disable_torch_init
     from videollava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
 except ImportError:
-    eval_logger.error("Video-LLaVA is not installed. Please install Video-LLaVA to use this model.")
+    eval_logger.debug("Video-LLaVA is not installed. Please install Video-LLaVA to use this model.")
 
 
 @register_model("video_llava")
