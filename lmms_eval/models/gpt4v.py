@@ -73,6 +73,10 @@ class GPT4V(lmms):
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
+        else:
+            self.accelerator = accelerator
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
 
         self.device = self.accelerator.device
 
