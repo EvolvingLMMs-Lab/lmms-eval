@@ -55,7 +55,7 @@ from huggingface_hub import snapshot_download
 
 @register_model("internvl")
 class InternVLChat(lmms):
-    config_class = InternVLChatConfig
+    #config_class = InternVLChatConfig
     main_input_name = "pixel_values"
     _no_split_modules = ["InternVisionEncoderLayer", "LlamaDecoderLayer"]
 
@@ -99,7 +99,7 @@ class InternVLChat(lmms):
     accelerate launch --num_processes=8 --main_process_port 12345 -m lmms_eval \
         --model internvl \
         --model_args pretrained=OpenGVLab/InternVL-Chat-V1-5 \
-        --tasks llava_wilder_small,llava_wilder_medium \
+        --tasks llava_wilder_small \
         --batch_size 1 \
         --output_path ./logs/ \
         --log_samples
@@ -107,7 +107,7 @@ class InternVLChat(lmms):
 
     def __init__(
         self,
-        config: Optional[InternVLChatConfig] = None,
+        config = None,
         pretrained: str = "OpenGVLab/InternVL-Chat-V1-5",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
