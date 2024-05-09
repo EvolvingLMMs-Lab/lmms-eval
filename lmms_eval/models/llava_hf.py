@@ -313,6 +313,7 @@ class LlavaHf(lmms):
                     num_beams=gen_kwargs["num_beams"],
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                     use_cache=self.use_cache,
+                    pad_token_id=self.tokenizer.eos_token_id,
                 )
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
@@ -320,7 +321,7 @@ class LlavaHf(lmms):
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
             if "1.5" in self.pretrained:
                 text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
-            elif "1.6" in self.pretrained:
+            elif "mistral" in self.pretrained:
                 text_outputs = text_outputs.split("[/INST]")[-1].strip() 
             else:
                 text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
