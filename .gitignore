@@ -28,3 +28,4 @@ cache_dir
 ckpt
 pretrained/
 LLaVA/
+*logs
