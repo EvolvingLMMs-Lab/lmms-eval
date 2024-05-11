@@ -31,10 +31,10 @@ class LlavaHf(lmms):
 
     Example usage:
 
-    accelerate launch --num_processes=8 -m lmms_eval \
+    accelerate launch --num_processes=8 --main_process_port 12345 -m lmms_eval \
         --model llava_hf \
         --model_args pretrained=llava-hf/llava-1.5-7b-hf \
-        --tasks mme \
+        --tasks seedbench \
         --batch_size 1 \
         --output_path ./logs/ \
         --log_samples
@@ -278,7 +278,9 @@ class LlavaHf(lmms):
 
             # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
             if DEFAULT_IMAGE_TOKEN not in context:
-                context = f"{DEFAULT_IMAGE_TOKEN}\n{context}"
+                image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
+                image_tokens = " ".join(image_tokens)
+                context = f"{image_tokens}\n{context}"
             # Apply chat template
             messages = [{"role": "user", "content": context}]
             if self.chat_template is not None:
