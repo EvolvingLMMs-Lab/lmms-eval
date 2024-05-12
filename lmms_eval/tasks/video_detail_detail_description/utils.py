@@ -38,12 +38,13 @@ if API_TYPE == "openai":
 # But the idea is that we will unzip all the zip files
 # To HF HOME cache dir
 # And load it here
-HF_HOME = os.environ['HF_HOME']
-cache_dir = config['dataset_kwargs']["cache_dir"]
-cache_dir = os.path.join(HF_HOME, cache_dir)
+HF_HOME = os.environ["HF_HOME"]
+cache_dir = config["dataset_kwargs"]["cache_dir"]
+cache_dir = os.path.join(HF_HOME, "datasets", cache_dir)
 cache_dir = os.path.join(cache_dir, "evaluation/Test_Videos")
 
 eval_logger = logging.getLogger("lmms-eval")
+
 
 # Pass in video path here
 # Can only work correctly with video llm
@@ -60,6 +61,7 @@ def video_detail_description_doc_to_visual(doc):
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
+
 # format the question
 def video_detail_description_doc_to_text(doc, model_specific_prompt_kwargs=None):
     if model_specific_prompt_kwargs is None:
@@ -70,24 +72,26 @@ def video_detail_description_doc_to_text(doc, model_specific_prompt_kwargs=None)
         pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     if "post_prompt" in model_specific_prompt_kwargs:
         post_prompt = model_specific_prompt_kwargs["post_prompt"]
-    
-    question = doc['question']
-    if 'question_1' in doc:
-        for op in doc['option']:
+
+    question = doc["question"]
+    if "question_1" in doc:
+        for op in doc["option"]:
             question += "\n" + op
         post_prompt = "\nAnswer with the option's letter from the given choices directly."
-    
+
     return f"{pre_prompt}{question}{post_prompt}"
 
 
 def video_detail_description_doc_to_answer(doc):
     return doc["answer"]
 
+
 # Process result for evaluation in generic task
 def video_detail_description_process_results_generic(doc, result):
     pred = result[0]
 
-    return {"submission" : {"video_name" : doc["video_name"], "Q" : doc["question"], "A" : doc["answer"], "pred" : pred}}
+    return {"submission": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
+
 
 def video_detail_description_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -98,13 +102,13 @@ def video_detail_description_aggregate_submissions(results, args):
         json.dump(results, f, indent=4)
 
     eval_logger.info(f"Submission file saved to {path}")
-    
+
     return path
 
 
 def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int = 5):
     global headers
-    
+
     messages = [
         {
             "role": "system",
@@ -130,7 +134,7 @@ def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int
         },
     ]
 
-    print(messages) 
+    print(messages)
     payload = {
         "model": GPT_EVAL_MODEL_NAME,
         "messages": messages,
@@ -150,22 +154,22 @@ def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int
             content = response_data["choices"][0]["message"]["content"].strip()
             if content != "":
                 return content, response_data["model"]
-        # Handle HTTP errors separately 
+        # Handle HTTP errors separately
         except requests.exceptions.HTTPError as e:
             eval_logger.error(f"HTTP error on attempt {attempt + 1}: {e}")
-        # Handle other requests-related errors 
+        # Handle other requests-related errors
         except requests.exceptions.RequestException as e:
             eval_logger.error(f"Request exception on attempt {attempt + 1}: {e}")
         except Exception as e:
             eval_logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
-            
+
         # Handle other unexpected errors
         if attempt < retries - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
         else:  # If this was the last attempt, log and return empty
             eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
             return "", ""
-        
+
     return "", ""
 
 
@@ -173,7 +177,7 @@ def parse_score(review):
     try:
         # Convert the string representation of a dictionary to an actual dictionary
         review_dict = ast.literal_eval(review)
-        score = review_dict.get('score', 0)
+        score = review_dict.get("score", 0)
         return float(score)
     except SyntaxError as e:
         eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
@@ -185,11 +189,12 @@ def parse_score(review):
         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
         return 0
 
+
 def print_scores(eval_file_path, args):
     # Load the predictions from the result file
-    with open(eval_file_path, 'r') as file:
+    with open(eval_file_path, "r") as file:
         evaluated_list = json.load(file)
-        
+
     score_file_name = "scores.json"
     path = file_utils.generate_submission_file(score_file_name, args)
 
@@ -208,11 +213,10 @@ def print_scores(eval_file_path, args):
 
     # Write the processed data to the scores file
     with open(path, "w") as f:
-        json.dump({
-            "average_score": average_score
-        }, f, indent=4)
+        json.dump({"average_score": average_score}, f, indent=4)
 
     eval_logger.info(f"Score file saved to {path}")
+
 
 def gpt_eval(result_file_path, args, task):
     """
@@ -222,20 +226,19 @@ def gpt_eval(result_file_path, args, task):
     Args:
         result_file_path: path to the JSON file with results to be evaluated
     """
-        
+
     eval_file_name = "gpt_eval_result.json"
-    eval_file_path = file_utils.generate_submission_file(eval_file_name, args) 
-    
+    eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
+
     # Load the predictions from the result file
-    with open(result_file_path, 'r') as file:
+    with open(result_file_path, "r") as file:
         result_list = json.load(file)
 
     evaluated_results = []
-        
-    # Load the predictions from the result file
-    with open(result_file_path, 'r') as file:
-        result_list = json.load(file)
 
+    # Load the predictions from the result file
+    with open(result_file_path, "r") as file:
+        result_list = json.load(file)
 
     for data_dict in result_list:
         try:
@@ -263,12 +266,13 @@ def gpt_eval(result_file_path, args, task):
         evaluated_results.append(updated_dict)
 
     # Save the evaluated results to a new JSON file
-    with open(eval_file_path, 'w') as f:
+    with open(eval_file_path, "w") as f:
         json.dump(evaluated_results, f, indent=4)
-        
+
     return eval_file_path
 
-def video_detail_description_aggregate_correctness(results, args):
+
+def video_detail_description_aggregate_generic(results, args):
     result_file_path = video_detail_description_aggregate_submissions(results, args)
     eval_file_path = gpt_eval(result_file_path, args)
     print_scores(eval_file_path, args)
