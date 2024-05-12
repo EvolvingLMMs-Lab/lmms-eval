@@ -87,6 +87,7 @@ class LlavaVid(lmms):
             overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
             overwrite_config["mm_spatial_pool_out_channels"] = self.mm_spatial_pool_out_channels
             overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
+            overwrite_config["mm_resampler_location"] = "before"
             overwrite_config["patchify_video_feature"] = False
 
             cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
@@ -358,6 +359,7 @@ class LlavaVid(lmms):
                 # output_ids = model.generate(inputs=input_ids, images=video, attention_mask=attention_masks, modalities="video", do_sample=True, temperature=0.2, use_cache=True, stopping_criteria=[stopping_criteria])
 
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+            print(outputs)
             res.append(outputs)
             pbar.update(1)
         return res
