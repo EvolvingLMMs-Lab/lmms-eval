@@ -8,6 +8,8 @@
         "answer": "A",
         "topic_difficulty": "Easy",
         "question_type": "multiple-choice",
+        "discipline": "Business",
+        "subject": "Accounting",
         "subfield": "Investment"
     },
     {
@@ -19,6 +21,8 @@
         "answer": "B",
         "topic_difficulty": "Medium",
         "question_type": "multiple-choice",
+        "discipline": "Art and Design",
+        "subject": "Music",
         "subfield": "Music"
     },
     {
@@ -30,6 +34,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -41,6 +47,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -52,6 +60,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -63,6 +73,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -74,6 +86,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -85,6 +99,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -96,6 +112,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -107,6 +125,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -118,6 +138,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -129,6 +151,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -140,6 +164,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -151,6 +177,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -162,6 +190,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -173,6 +203,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -184,6 +216,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -195,6 +229,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -206,6 +242,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -217,6 +255,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -228,6 +268,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     },
     {
@@ -239,6 +281,8 @@
         "answer": "",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
+        "discipline": "",
+        "subject": "",
         "subfield": ""
     }
 ]

@@ -20,6 +20,8 @@ def generate_placeholder_data(num_entries):
         "answer": "A",
         "topic_difficulty": "Easy",
         "question_type": "multiple-choice",
+        "discipline": "Business",
+        "subject": "Accounting",
         "subfield": "Investment"
     }
     data.append(example_1)
@@ -34,6 +36,8 @@ def generate_placeholder_data(num_entries):
         "answer": "B",
         "topic_difficulty": "Medium",
         "question_type": "multiple-choice",
+        "discipline": "Art and Design",
+        "subject": "Music",
         "subfield": "Music"
     }
     data.append(example_2)
@@ -48,6 +52,8 @@ def generate_placeholder_data(num_entries):
             "answer": "",
             "topic_difficulty": "",
             "question_type": "multiple-choice",
+            "discipline": "",
+            "subject": "",
             "subfield": ""
         }
         data.append(entry)
