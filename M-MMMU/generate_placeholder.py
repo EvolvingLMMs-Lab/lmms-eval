@@ -22,7 +22,8 @@ def generate_placeholder_data(num_entries):
         "question_type": "multiple-choice",
         "discipline": "Business",
         "subject": "Accounting",
-        "subfield": "Investment"
+        "subfield": "Investment",
+        "language": "English"
     }
     data.append(example_1)
 
@@ -38,7 +39,8 @@ def generate_placeholder_data(num_entries):
         "question_type": "multiple-choice",
         "discipline": "Art and Design",
         "subject": "Music",
-        "subfield": "Music"
+        "subfield": "Music",
+        "language": "English"
     }
     data.append(example_2)
 
@@ -54,7 +56,8 @@ def generate_placeholder_data(num_entries):
             "question_type": "multiple-choice",
             "discipline": "",
             "subject": "",
-            "subfield": ""
+            "subfield": "",
+            "language": "",
         }
         data.append(entry)
     return data
@@ -82,6 +85,6 @@ for name in ['akari','anjali','graham','lintang','simran']:
     filename = f'M-MMMU/submit/{name}/week1.json'
     data = generate_placeholder_data(num_entries)
     write_json(filename, data)
-    create_image_folders(data)
+    # create_image_folders(data)
 
 print(f"Generated {num_entries} placeholders in {filename} and created corresponding folders.")
