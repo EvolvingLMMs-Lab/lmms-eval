@@ -1,0 +1,12 @@
+task: "video_detail_description"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.video_detail_description_doc_to_visual
+doc_to_text: !function utils.video_detail_description_doc_to_text
+doc_to_target: !function utils.video_detail_description_doc_to_answer
+process_results: !function utils.video_detail_description_process_results_generic
+metric_list:
+  - metric: submission
+    aggregation: !function utils.video_detail_description_aggregate_generic
+    higher_is_better: true
+include: _default_template_yaml
