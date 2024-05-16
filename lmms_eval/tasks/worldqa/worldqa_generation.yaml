@@ -10,7 +10,7 @@ metric_list:
   - metric: submission
     aggregation: !function utils.worldqa_aggregate_gen
     higher_is_better: true
-  - metric: gpt_eval 
+  - metric: gpt_eval
     aggregation: !function utils.worldq_gen_gpt_eval
-    higher_is_better: true  
+    higher_is_better: true
 include: _default_template_yaml

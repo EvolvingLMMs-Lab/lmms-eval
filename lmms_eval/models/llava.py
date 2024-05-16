@@ -28,8 +28,8 @@ try:
     from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
     from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
     from llava.conversation import conv_templates, SeparatorStyle
-except ImportError:
-    eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.")
+except Exception as e:
+    eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.\nError: %s" % e)
 
 from transformers.integrations.deepspeed import (
     is_deepspeed_zero3_enabled,
@@ -43,7 +43,7 @@ from transformers.utils import is_flash_attn_2_available
 # if is_flash_attn_2_available:
 #     best_fit_attn_implementation = "flash_attention_2" # flash_attn has a bug that says: ERROR Error query and key must have the same dtype in generating
 
-if version.parse(torch.__version__) > version.parse("2.1.2"):
+if version.parse(torch.__version__) >= version.parse("2.1.2"):
     best_fit_attn_implementation = "sdpa"
 else:
     best_fit_attn_implementation = "eager"

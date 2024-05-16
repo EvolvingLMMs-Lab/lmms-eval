@@ -10,12 +10,19 @@ import numpy as np
 from http import HTTPStatus
 from io import BytesIO
 
+# Set up a logger
 eval_logger = logging.getLogger("lmms-eval")
+
+# Create a static variable to track if the message has been logged
+if not hasattr(eval_logger, "dashcope_warning_logged"):
+    eval_logger.dashcope_warning_logged = False
 
 try:
     import dashscope
-except:
-    eval_logger.debug("Dashcope not found, make sure you install dashscope to use qwen vl")
+except ImportError:
+    if not eval_logger.dashcope_warning_logged:
+        eval_logger.debug("Dashcope not found, make sure you install dashscope to use qwen vl")
+        eval_logger.dashcope_warning_logged = True
 
 NUM_SECONDS_TO_SLEEP = 5
 dir_path = os.path.dirname(os.path.realpath(__file__))
