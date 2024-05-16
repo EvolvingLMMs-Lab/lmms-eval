@@ -196,6 +196,7 @@ class Idefics2(lmms):
             gen_kwargs = all_gen_kwargs[0]
             # 
             until = gen_kwargs.pop("until", None)
+            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio",  None)
             prompts = []
             for context, visual in zip(contexts, visuals):
                 content = []
