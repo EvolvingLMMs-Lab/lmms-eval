@@ -6,6 +6,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.tasks.mmmu.utils_group_img import process_images
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -187,7 +188,13 @@ class InstructBLIP(lmms):
             if "<image>" in context:
                 # instruct blip does not expect the <image> tag
                 context = context.replace("<image>", "")
-            inputs = self._image_processor(images=visuals, text=context, return_tensors="pt").to(self.device)
+            # Set trunction equals true here, the max length for qformer tokenizer is 512
+            # if not truncate, some questions will cause size mismatch
+            # The transformer implementation can't handle multi images for blip
+            # Concat it into one image
+            if len(visuals) > 1:
+                visuals = [process_images(visuals)]
+            inputs = self._image_processor(images=visuals, text=context, return_tensors="pt", truncation=True).to(self.device)
 
             gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
