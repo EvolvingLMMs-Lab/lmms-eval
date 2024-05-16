@@ -26,8 +26,10 @@ wd = Path(__file__).parent.parent.parent.resolve()
 import sys
 
 sys.path.append(os.path.join(str(wd), "InternVL", "internvl_chat"))
-
 eval_logger = logging.getLogger("lmms-eval")
+
+if not hasattr(eval_logger, "internvl_warning_logged"):
+    eval_logger.internvl_warning_logged = False
 
 try:
     from internvl.model.internlm2.modeling_internlm2 import InternLM2ForCausalLM
@@ -36,7 +38,10 @@ try:
     from internvl.model.internvl_chat import InternVLChatModel
     from internvl.train.dataset import build_transform, dynamic_preprocess
 except ImportError:
-    eval_logger.error("InternVL is not installed. Please install InternVL to use this model.")
+    eval_logger.debug("InternVL is not installed. Please install InternVL to use this model.")
+    if not eval_logger.internvl_warning_logged:
+        eval_logger.debug("InternVL is not installed. Please install InternVL to use this model.")
+        eval_logger.internvl_warning_logged = True
 
 import warnings
 from typing import Any, List, Optional, Tuple, Union
@@ -53,9 +58,10 @@ from transformers import AutoTokenizer
 import re
 from huggingface_hub import snapshot_download
 
+
 @register_model("internvl")
 class InternVLChat(lmms):
-    #config_class = InternVLChatConfig
+    # config_class = InternVLChatConfig
     main_input_name = "pixel_values"
     _no_split_modules = ["InternVisionEncoderLayer", "LlamaDecoderLayer"]
 
@@ -87,11 +93,11 @@ class InternVLChat(lmms):
     └── InternVL-Chat-V1-5
     """
 
-    # 
+    #
     # The above steps can be optional, I add snapshot download, so now can just use hf repo_id
     # model_args pretrained=OpenGVLab/InternVL-Chat-V1-5
     #
-    
+
     """
     InternVL-Chat-V1-5 Model for OpenGVLab https://github.com/OpenGVLab/InternVL/blob/main/internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py
     Example usage:
@@ -107,7 +113,7 @@ class InternVLChat(lmms):
 
     def __init__(
         self,
-        config = None,
+        config=None,
         pretrained: str = "OpenGVLab/InternVL-Chat-V1-5",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",

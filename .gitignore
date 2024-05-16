@@ -29,3 +29,4 @@ ckpt
 pretrained/
 LLaVA/
 *logs
+temp/

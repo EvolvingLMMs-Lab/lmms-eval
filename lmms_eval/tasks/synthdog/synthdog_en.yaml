@@ -1,0 +1,22 @@
+dataset_path: naver-clova-ix/synthdog-en
+dataset_kwargs:
+  token: True
+task: "synthdog_en"
+test_split: validation
+output_type: generate_until
+doc_to_visual: !function utils.synthdog_doc_to_visual
+doc_to_text: OCR this image section by section, from top to bottom, and left to right. Do not insert line breaks in the output text. If a word is split due to a line break in the image, use a space instead.
+doc_to_target: !function utils.synthdog_doc_to_target
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.synthdog_process_results
+metric_list:
+  - metric: tree_edit_distance
+    aggregation: !function utils.synthdog_aggregate_ted
+    higher_is_better: true
+metadata:
+  - version: 0.0

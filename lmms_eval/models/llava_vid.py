@@ -8,7 +8,7 @@ from decord import VideoReader, cpu
 import numpy as np
 import math
 from datetime import timedelta
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoModelForCausalLM
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -25,6 +25,12 @@ try:
     from llavavid.conversation import conv_templates, SeparatorStyle
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
+
+from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+from llavavid.model.language_model.llava_llama import LlavaConfig
+
+AutoConfig.register("llava_qwen", LlavaQwenConfig)
+AutoConfig.register("llava_llama", LlavaConfig)
 
 
 @register_model("llavavid")
@@ -43,13 +49,13 @@ class LlavaVid(lmms):
         trust_remote_code: Optional[bool] = False,
         revision=None,
         attn_implementation=(
-            "sdpa" if torch.__version__ > "2.1.2" else "eager"
+            "sdpa" if torch.__version__ >= "2.1.2" else "eager"
         ),  # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
         device_map="cuda:0",
         conv_template="vicuna_v1",
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
-        for_get_frames_num: int = 3,
+        max_frames_num: int = 3,
         mm_resampler_type: str = "spatial_pool",
         mm_spatial_pool_stride: int = 2,
         mm_spatial_pool_out_channels: int = 1024,
@@ -74,13 +80,13 @@ class LlavaVid(lmms):
 
         self.pretrained = pretrained
         self.model_name = get_model_name_from_path(pretrained)
-        self._config = AutoConfig.from_pretrained(self.pretrained)
+        # self._config = AutoConfig.from_pretrained(self.pretrained)
         self.overwrite = overwrite
         self.mm_resampler_type = mm_resampler_type
         self.mm_spatial_pool_stride = int(mm_spatial_pool_stride)
         self.mm_spatial_pool_out_channels = int(mm_spatial_pool_out_channels)
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
-        self.for_get_frames_num = int(for_get_frames_num)
+        self.max_frames_num = int(max_frames_num)
         if self.overwrite == True:
             overwrite_config = {}
             overwrite_config["mm_resampler_type"] = self.mm_resampler_type
@@ -89,14 +95,15 @@ class LlavaVid(lmms):
             overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
             overwrite_config["mm_resampler_location"] = "before"
             overwrite_config["patchify_video_feature"] = False
+            overwrite_config["attn_implementation"] = attn_implementation
 
             cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
             if "224" in cfg_pretrained.mm_vision_tower:
                 # suppose the length of text tokens is around 1000, from bo's report
-                least_token_number = self.for_get_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
+                least_token_number = self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
             else:
-                least_token_number = self.for_get_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
+                least_token_number = self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
 
             scaling_factor = math.ceil(least_token_number / 4096)
             if scaling_factor >= 2:
@@ -212,12 +219,12 @@ class LlavaVid(lmms):
             encoding = encoding[-left_truncate_len:]
         return encoding
 
-    def load_video(self, video_path, for_get_frames_num):
+    def load_video(self, video_path, max_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
         # fps = round(vr.get_avg_fps())
         # frame_idx = [i for i in range(0, len(vr), fps)]
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         return spare_frames  # (frames, height, width, channels)
@@ -239,7 +246,7 @@ class LlavaVid(lmms):
             visuals = self.flatten(visuals)
             videos = []
             for visual in visuals:
-                video = self.load_video(visual, self.for_get_frames_num)
+                video = self.load_video(visual, self.max_frames_num)
                 video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
                 videos.append(video)
 
@@ -301,7 +308,7 @@ class LlavaVid(lmms):
             videos = []
             try:
                 for visual in visuals:
-                    video = self.load_video(visual, self.for_get_frames_num)
+                    video = self.load_video(visual, self.max_frames_num)
                     video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
                     videos.append(video)
             except Exception as e:
@@ -359,7 +366,6 @@ class LlavaVid(lmms):
                 # output_ids = model.generate(inputs=input_ids, images=video, attention_mask=attention_masks, modalities="video", do_sample=True, temperature=0.2, use_cache=True, stopping_criteria=[stopping_criteria])
 
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-            print(outputs)
             res.append(outputs)
             pbar.update(1)
         return res

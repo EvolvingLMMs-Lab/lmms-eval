@@ -68,7 +68,7 @@ class Claude(lmms):
         return img_size
 
     # The max file size is 5MB for claude
-    def shrink_image_to_file_size(self, img: Image, max_file_size=5242880) -> Image:
+    def shrink_image_to_file_size(self, img: Image, max_file_size=4838990) -> Image:
         # Get the current size of the image
         original_size = self.get_image_size(img)
 
@@ -79,14 +79,14 @@ class Claude(lmms):
         # Calculate the ratio to shrink the image
         # Somehow I found out sqrt ratio is not enough to shrink the image
         # below threshold, so I guess we do more
-        shrink_ratio = max_file_size / original_size
+        shrink_ratio = min(0.9, max_file_size / original_size)
 
         # Resize the image with the calculated ratio
         new_width = int(img.width * shrink_ratio)
         new_height = int(img.height * shrink_ratio)
         img = img.resize((new_width, new_height), Image.LANCZOS)
 
-        return img
+        return self.shrink_image_to_file_size(img, max_file_size)
 
     def generate_until(self, requests) -> List[str]:
         client = anthropic.Anthropic()

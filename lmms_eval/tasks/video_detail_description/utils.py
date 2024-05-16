@@ -1,5 +1,7 @@
 from decord import VideoReader, cpu
-import numpy as np
+import requests
+import time
+import ast
 import os
 import sys
 import datetime
@@ -90,7 +92,7 @@ def video_detail_description_doc_to_answer(doc):
 def video_detail_description_process_results_generic(doc, result):
     pred = result[0]
 
-    return {"submission": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
+    return {"gpt_eval": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
 
 
 def video_detail_description_aggregate_submissions(results, args):
@@ -103,10 +105,8 @@ def video_detail_description_aggregate_submissions(results, args):
 
     eval_logger.info(f"Submission file saved to {path}")
 
-    return path
 
-
-def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int = 5):
+def get_eval_generic(question, answer, pred, max_tokens: int, retries: int = 5):
     global headers
 
     messages = [
@@ -130,16 +130,16 @@ def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int
             "Provide your evaluation only as a detail orientation score where the detail orientation score is an integer value between 0 and 5, with 5 indicating the highest level of detail orientation. "
             "Please generate the response in the form of a Python dictionary string with keys 'score', where its value is the detail orientation score in INTEGER, not STRING."
             "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
-            "For example, your response should look like this: {''score': 4.8}.",
+            "For example, your response should look like this: {'score': 4.8}.",
         },
     ]
 
-    print(messages)
     payload = {
         "model": GPT_EVAL_MODEL_NAME,
         "messages": messages,
         "temperature": 0,
         "max_tokens": max_tokens,
+        # "response_format": {"type": "json_object"},
     }
 
     for attempt in range(retries):
@@ -167,7 +167,7 @@ def get_eval_generic(question, answer, pred, task, max_tokens: int, retries: int
         if attempt < retries - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
         else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+            eval_logger.error(f"All {retries} attempts failed.")
             return "", ""
 
     return "", ""
@@ -190,69 +190,22 @@ def parse_score(review):
         return 0
 
 
-def print_scores(eval_file_path, args):
-    # Load the predictions from the result file
-    with open(eval_file_path, "r") as file:
-        evaluated_list = json.load(file)
-
-    score_file_name = "scores.json"
-    path = file_utils.generate_submission_file(score_file_name, args)
-
-    # Compute average score
-    total_score = 0
-
-    # Iterate over the results to sum scores
-    for result_dict in evaluated_list:
-        total_score += result_dict["score"]
-
-    # Calculate accuracy and average score
-    average_score = total_score / len(evaluated_list) if evaluated_list else 0
-
-    # Print the results
-    print(f"Average Score: {average_score}")
-
-    # Write the processed data to the scores file
-    with open(path, "w") as f:
-        json.dump({"average_score": average_score}, f, indent=4)
-
-    eval_logger.info(f"Score file saved to {path}")
-
-
-def gpt_eval(result_file_path, args, task):
-    """
-    Process the result file containing predictions, score them using GPT,
-    and save the results with added scores and correctness fields to a new file.
-
-    Args:
-        result_file_path: path to the JSON file with results to be evaluated
-    """
-
-    eval_file_name = "gpt_eval_result.json"
-    eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
-
-    # Load the predictions from the result file
-    with open(result_file_path, "r") as file:
-        result_list = json.load(file)
-
+def gpt_eval(results):
     evaluated_results = []
 
-    # Load the predictions from the result file
-    with open(result_file_path, "r") as file:
-        result_list = json.load(file)
-
-    for data_dict in result_list:
+    for data_dict in results:
         try:
             question = data_dict.get("Q", "")
             answer = data_dict.get("A", "")
             pred = data_dict.get("pred", "")
 
             # Assume get_eval returns a review and the model name, and parse_score parses this review
-            review, model_name = get_eval_generic(question, answer, pred, task, 64)
+            review, model_name = get_eval_generic(question, answer, pred, 64)
             score = parse_score(review)
         except Exception as e:
             eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
             review = "Failed to Get a Proper Review."
-            model_name = "Failed Request"
+            model_name = ""
             score = 0
 
         # Update the dictionary with the new entries
@@ -265,14 +218,18 @@ def gpt_eval(result_file_path, args, task):
         }
         evaluated_results.append(updated_dict)
 
-    # Save the evaluated results to a new JSON file
-    with open(eval_file_path, "w") as f:
-        json.dump(evaluated_results, f, indent=4)
-
-    return eval_file_path
+    return evaluated_results
 
 
-def video_detail_description_aggregate_generic(results, args):
-    result_file_path = video_detail_description_aggregate_submissions(results, args)
-    eval_file_path = gpt_eval(result_file_path, args)
-    print_scores(eval_file_path, args)
+def video_detail_description_gen_gpt_eval(results, args):
+    eval_results = gpt_eval(results)
+    score = 0
+    for result in eval_results:
+        eval_score = result["score"]
+        try:
+            eval_score = float(eval_score)
+        except:
+            eval_score = 0.0
+        score += eval_score
+
+    return score / len(results)

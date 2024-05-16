@@ -181,6 +181,7 @@ class GPT4V(lmms):
                         content = ""
             res.append(content)
             pbar.update(1)
+        pbar.close()
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
