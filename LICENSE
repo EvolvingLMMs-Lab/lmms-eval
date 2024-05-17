@@ -1,4 +1,5 @@
-# For Main Pipeline Structure Related Code. We keep original license provided with lm-evaluation-harness.
+# For the main pipeline structure-related code, we maintain the original license provided with lm-evaluation-harness, which is the MIT License.
+
 MIT License
 
 Copyright (c) 2024 LMMs-Lab
@@ -21,7 +22,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-# For Our Added Multimodal Models and Datasets (defined as code in lmms_eval/tasks and lmms_eval/models folder). We apply Apache License.
+# For the multimodal models and datasets that we have added (defined as code in the lmms_eval/tasks and lmms_eval/models folders), we apply the Apache License.
+
 Apache 2.0 License
 
 Copyright (c) 2024 LMMs-Lab
