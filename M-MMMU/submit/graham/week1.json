@@ -1,171 +1,143 @@
 [
     {
-        "id": "example_1",
-        "question": "Donna Donie, CFA, has a client who believes the common stock price of TRT Materials (currently $58 per share) could move substantially in either direction in reaction to an expected court decision involving the company. The client currently owns no TRT shares, but asks Donie for advice about implementing a strangle strategy to capitalize on the possible stock price movement. A strangle is a portfolio of a put and a call with different exercise prices but the same expiration date. Donie gathers the TRT option-pricing data: <image 1> Calculate, at expiration for long strangle strategy, the Maximum possible loss per share.",
-        "options": "['$9.00', '$5.00', 'the Maximum possible loss is unlimited']",
+        "id": "1",
+        "question": "<image 1> このER図の中で、外部キーになっているのはどれでしょう？",
+        "options": "['ID', '管理者ID', '配送先ID', '商品ジャンルID']",
         "explanation": "",
-        "img_type": "['Tables']",
-        "answer": "A",
+        "img_type": "['Diagram']",
+        "answer": "D",
         "topic_difficulty": "Easy",
         "question_type": "multiple-choice",
-        "discipline": "Business",
-        "subject": "Accounting",
-        "subfield": "Investment",
-        "language": "English"
-    },
-    {
-        "id": "example_2",
-        "question": "Among the following rests, which one does not have a compound dotted duration?",
-        "options": "['<image 1>', '<image 2>', '<image 3>', '<image 4>']",
-        "explanation": "",
-        "img_type": "['Sheet Music']",
-        "answer": "B",
-        "topic_difficulty": "Medium",
-        "question_type": "multiple-choice",
-        "discipline": "Art and Design",
-        "subject": "Music",
-        "subfield": "Music",
-        "language": "English"
-    },
-    {
-        "id": "1",
-        "question": "<image 1> ",
-        "options": [],
-        "explanation": "",
-        "img_type": [],
-        "answer": "",
-        "topic_difficulty": "",
-        "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
-        "subfield": "",
-        "language": ""
+        "discipline": "Engineering",
+        "subject": "Computer Science",
+        "subfield": "Database Management",
+        "language": "Japanese"
     },
     {
         "id": "2",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "<image 1> この図はRAIDのどのレベルを表しているでしょうか？",
+        "options": "['RAID1', 'RAID4', 'RAID5', 'RAID6']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
-        "topic_difficulty": "",
+        "img_type": "['Diagram']",
+        "answer": "C",
+        "topic_difficulty": "Medium",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
-        "subfield": "",
-        "language": ""
+        "discipline": "Engineering",
+        "subject": "Computer Science",
+        "subfield": "Database Management",
+        "language": "Japanese"
     },
     {
         "id": "3",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "このソースコードが終了する条件は何でしょう？ <image 1>",
+        "options": "['hasMoreData()がtrueを返す', 'hasMoreData()がfalseを返す', 'getData()がnullを返す', 'getData()が空のリストを返す']",
         "explanation": "",
-        "img_type": [],
+        "img_type": "['Source Code']",
         "answer": "",
-        "topic_difficulty": "",
+        "topic_difficulty": "Easy",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
-        "subfield": "",
-        "language": ""
+        "discipline": "Engineering",
+        "subject": "Comptuer Science",
+        "subfield": "Database Management",
+        "language": "Japanese"
     },
     {
         "id": "4",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "この楽器は日本のどの時代に発明されたでしょう？ <image 1>",
+        "options": "['明治', '大正', '昭和', '平成']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
+        "img_type": "['Image']",
+        "answer": "3",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
+        "discipline": "Arts",
+        "subject": "Music",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "5",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "この建物に拠点を置く政党の政治的傾向に関して、どれが当てはまるでしょう？ <image 1>",
+        "options": "['リベラル', '保守', '中道', '極右']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
-        "topic_difficulty": "",
+        "img_type": "['Image']",
+        "answer": "A",
+        "topic_difficulty": "Medium",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
+        "discipline": "Social Science",
+        "subject": "Political Science",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "6",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "<image 1> この画像に表される伝統芸能はどこが発祥地でしょう？",
+        "options": "['東京', '京都', '大阪', '福岡']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
-        "topic_difficulty": "",
+        "img_type": "['Image']",
+        "answer": "C",
+        "topic_difficulty": "Medium",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
+        "discipline": "Art",
+        "subject": "Performing Arts",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "7",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "この絵を描いた浮世絵師は誰でしょう？ <image 1>",
+        "options": "['宮川 長春', '葛飾 北斎', '歌川 広重', '北尾 重政']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
+        "img_type": "['Image']",
+        "answer": "D",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
+        "discipline": "Art",
+        "subject": "Fine Art",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "8",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "この絵を描いた浮世絵師は誰でしょう？ <image 1>",
+        "options": "['宮川 長春', '葛飾 北斎', '歌川 広重', '北尾 重政']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
+        "img_type": "['Image']",
+        "answer": "C",
         "topic_difficulty": "",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
+        "discipline": "Art",
+        "subject": "Fine Art",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "9",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "この行列演算の答えは何でしょう？ <image 1>",
+        "options": "['<image 2>', '<image 3>', '<image 4>', '<image 5>']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
-        "topic_difficulty": "",
+        "img_type": "['Math']",
+        "answer": "A",
+        "topic_difficulty": "Easy",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
+        "discipline": "Mathematics",
+        "subject": "Linear Algebra",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "10",
         "question": "<image 1> ",
-        "options": [],
+        "options": "['2', '3', '4', '5']",
         "explanation": "",
-        "img_type": [],
-        "answer": "",
-        "topic_difficulty": "",
+        "img_type": "['Math']",
+        "answer": "B",
+        "topic_difficulty": "Easy",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
+        "discipline": "Mathematics",
+        "subject": "Algebra",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "11",
@@ -179,7 +151,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "12",
@@ -193,7 +165,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "13",
@@ -207,7 +179,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "14",
@@ -221,7 +193,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "15",
@@ -235,7 +207,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "16",
@@ -249,7 +221,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "17",
@@ -263,7 +235,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "18",
@@ -277,7 +249,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "19",
@@ -291,7 +263,7 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     },
     {
         "id": "20",
@@ -305,6 +277,6 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "Japanese"
     }
 ]
