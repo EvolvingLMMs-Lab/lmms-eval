@@ -143,12 +143,16 @@ def livebench_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
 
 def livebench_process_results(doc, results):
-    global dataset
-    if dataset is None:
-        dataset = load_dataset("lmms-lab/LiveBench", "default", split="test")
-        for doc in tqdm(dataset, desc="Processing dataset"):
-            _images[doc["id"]] = doc["images"]
-    base64_images = [image_to_base64(image) for image in _images[doc["id"]]]
+
+    # Global here actually can't make it process only once, very prone to error D:
+
+    # global dataset
+    # if dataset is None:
+    #     dataset = load_dataset("lmms-lab/LiveBench", "default", split="test")
+    #     for doc in tqdm(dataset, desc="Processing dataset"):
+    #         _images[doc["id"]] = doc["images"]
+    # base64_images = [image_to_base64(image) for image in _images[doc["id"]]]
+    base64_images = [image_to_base64(image) for image in livebench_doc_to_visual(doc)]
     rating, explanation, model_name = get_chat_response(base64_images=base64_images, question=doc["question"], ground_truth_answer=doc["answer"], answer=results[0] if results else "")
     if rating:
         return {"gpt4_eval_score": {"rating": rating, "explanation": explanation, "model_name": model_name}}
