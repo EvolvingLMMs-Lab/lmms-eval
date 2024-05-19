@@ -15,18 +15,18 @@
         "source": "https://www.ipa.go.jp/shiken/mondai-kaiotu/2022r04.html#aki_ap"
     },
     {
-        "id": "example_2",
-        "question": "Among the following rests, which one does not have a compound dotted duration?",
-        "options": "['<image 1>', '<image 2>', '<image 3>', '<image 4>']",
+        "id": "2",
+        "question": "<image 1>で示された法令は何年に誰に向けて制定されたものか。",
+        "options": "['1615年に諸大名に対して', '1682年に一般庶民に対して', '1734年に諸大名に対して', '1615年に天皇及び公家に対して']",
         "explanation": "",
-        "img_type": "['Sheet Music']",
-        "answer": "B",
+        "img_type": "['Image']",
+        "answer": "D",
         "topic_difficulty": "Medium",
         "question_type": "multiple-choice",
-        "discipline": "Art and Design",
-        "subject": "Music",
-        "subfield": "Music",
-        "language": "English"
+        "discipline": "History",
+        "subject": "Japanese History",
+        "subfield": "Edo",
+        "language": "Japanese"
     },
     {
         "id": "1",
