@@ -1,17 +1,18 @@
 [
     {
-        "id": "example_1",
-        "question": "Donna Donie, CFA, has a client who believes the common stock price of TRT Materials (currently $58 per share) could move substantially in either direction in reaction to an expected court decision involving the company. The client currently owns no TRT shares, but asks Donie for advice about implementing a strangle strategy to capitalize on the possible stock price movement. A strangle is a portfolio of a put and a call with different exercise prices but the same expiration date. Donie gathers the TRT option-pricing data: <image 1> Calculate, at expiration for long strangle strategy, the Maximum possible loss per share.",
-        "options": "['$9.00', '$5.00', 'the Maximum possible loss is unlimited']",
+        "id": "1",
+        "question": "<image 1>の中で、入力XとYの値が同じ時だけ出力Zに1を出力する回路はどれか。",
+        "options": "['ア', 'イ', 'ウ', 'エ']",
         "explanation": "",
-        "img_type": "['Tables']",
-        "answer": "A",
+        "img_type": "['Diagram']",
+        "answer": "C",
         "topic_difficulty": "Easy",
         "question_type": "multiple-choice",
-        "discipline": "Business",
-        "subject": "Accounting",
-        "subfield": "Investment",
-        "language": "English"
+        "discipline": "Engineering",
+        "subject": "Computer Science",
+        "subfield": "Logic gates",
+        "language": "Japanese",
+        "source": "https://www.ipa.go.jp/shiken/mondai-kaiotu/2022r04.html#aki_ap"
     },
     {
         "id": "example_2",
