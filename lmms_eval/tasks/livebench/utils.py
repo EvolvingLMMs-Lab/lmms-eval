@@ -10,6 +10,7 @@ import json
 from io import BytesIO
 from datasets import load_dataset
 from tqdm import tqdm
+import pandas as pd
 
 
 eval_logger = logging.getLogger("lmms-eval")
@@ -141,31 +142,40 @@ def livebench_doc_to_text(doc, model_specific_prompt_kwargs=None):
     post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
+SUBTASKS = ("basic understanding", "contextual analysis", "deeper implications", "broader implications", "further insights")
 
 def livebench_process_results(doc, results):
-
-    # Global here actually can't make it process only once, very prone to error D:
-
-    # global dataset
-    # if dataset is None:
-    #     dataset = load_dataset("lmms-lab/LiveBench", "default", split="test")
-    #     for doc in tqdm(dataset, desc="Processing dataset"):
-    #         _images[doc["id"]] = doc["images"]
-    # base64_images = [image_to_base64(image) for image in _images[doc["id"]]]
     base64_images = [image_to_base64(image) for image in livebench_doc_to_visual(doc)]
+    subtask = doc["subtask"]
+    if subtask not in SUBTASKS:
+        subtask = "further insights"
+    if not results:
+        return {"gpt4_eval_score": {"rating": -1, "explanation": "No response", "model_name": "N/A", "subtask": subtask}}
     rating, explanation, model_name = get_chat_response(base64_images=base64_images, question=doc["question"], ground_truth_answer=doc["answer"], answer=results[0] if results else "")
     if rating:
-        return {"gpt4_eval_score": {"rating": rating, "explanation": explanation, "model_name": model_name}}
+        return {"gpt4_eval_score": {"rating": rating, "explanation": explanation, "model_name": model_name, "subtask": subtask}}
     else:
-        return {"gpt4_eval_score": {"rating": -1, "explanation": "No response", "model_name": "N/A"}}
+        return {"gpt4_eval_score": {"rating": -1, "explanation": "No response", "model_name": "N/A", "subtask": subtask}}
 
 
 def livebench_aggregate_results(results):
-    sum, count = 0, 0
+    sum_score, count = 0, 0
+    score = {}
+    for subtask in SUBTASKS:
+        score[subtask] = []
     for result in results:
-        if result["rating"] != -1:
-            sum += (result["rating"] - 1) / 4
-            count += 1
+        if result["rating"] == -1:
+            continue
+        sum_score += (result["rating"] - 1) / 4
+        count += 1
+        subtask = result["subtask"]
+        if subtask not in SUBTASKS:
+            subtask = "further insights"
+        score[result["subtask"]].append((result["rating"] - 1) / 4)
+    res = pd.DataFrame([(subtask, len(score[subtask]), sum(score[subtask]) / len(score[subtask]) * 100) for subtask in SUBTASKS], columns=["Subtask", "Count", "Average Score"])
+    print("=" * 50)
+    print(res)
+    print("=" * 50)
     if count == 0:
         eval_logger.warning("No valid scores to aggregate")
-    return sum / count if count > 0 else None
+    return sum_score / count if count > 0 else None
