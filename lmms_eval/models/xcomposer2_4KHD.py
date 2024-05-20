@@ -216,13 +216,13 @@ class XComposer2_4KHD(lmms):
             output_text = self.model.tokenizer.decode(output_token, add_special_tokens=False)
             output_text = output_text.split("[UNUSED_TOKEN_145]")[0].strip()
             output_text = output_text.split("<|im_end|>")[0].strip()
-            if DATASET_TYPE(task) == "multi-choice":
-                output_text = pattern.findall(output_text)
-                if len(output_text) == 0:
-                    print("Error:", output_text)
-                    output_text = "Z"
-                if type(output_text) == list:
-                    output_text = output_text[0]
+            # if DATASET_TYPE(task) == "multi-choice":
+            #     output_text = pattern.findall(output_text)
+            #     if len(output_text) == 0:
+            #         print("Error:", output_text)
+            #         output_text = "Z"
+            #     if type(output_text) == list:
+            #         output_text = output_text[0]
             res.append(output_text)
             pbar.update(1)
         pbar.close()
