@@ -45,17 +45,17 @@
     },
     {
         "id": "4",
-        "question": "<image 1> ",
-        "options": [],
+        "question": "<image 1>で示された都市が首都であったのは中国のどの歴代王朝か。",
+        "options": "['唐', '漢', 明', '清']",
         "explanation": "",
         "img_type": [],
-        "answer": "",
-        "topic_difficulty": "",
+        "answer": "A",
+        "topic_difficulty": "Medium",
         "question_type": "multiple-choice",
-        "discipline": "",
-        "subject": "",
-        "subfield": "",
-        "language": "",
+        "discipline": "History",
+        "subject": "World History",
+        "subfield": "Dynasties of China",
+        "language": "Japanese",
         "soource": "https://math0.pm.tokushima-u.ac.jp/~ohyama/lecture/vector_analysis/Vec11_u.pdf"
     },
     {
@@ -84,7 +84,8 @@
         "discipline": "",
         "subject": "",
         "subfield": "",
-        "language": ""
+        "language": "",
+        "source": "https://math0.pm.tokushima-u.ac.jp/~ohyama/lecture/vector_analysis/Vec11_u.pdf"
     },
     {
         "id": "7",
