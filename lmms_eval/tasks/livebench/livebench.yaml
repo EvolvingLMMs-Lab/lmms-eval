@@ -3,6 +3,7 @@ dataset_kwargs:
   token: True
 task: "livebench"
 test_split: test
+dataset_name: 2024-05
 output_type: generate_until
 doc_to_visual: !function utils.livebench_doc_to_visual
 doc_to_text: !function utils.livebench_doc_to_text
