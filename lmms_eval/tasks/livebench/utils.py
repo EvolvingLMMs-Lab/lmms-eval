@@ -11,6 +11,7 @@ from io import BytesIO
 from datasets import load_dataset
 from tqdm import tqdm
 import pandas as pd
+import numpy as np
 
 
 eval_logger = logging.getLogger("lmms-eval")
@@ -58,6 +59,7 @@ _PROMPT_WITH_IMAGE = """\
 [System]
 Rate whether the assistant response correctly matches the ground truth, in regards to the image above.
 The rating should be 1-5, where 1 is incorrect and 5 is correct.
+If the model's answer cannot be provided due to political reasons, please assign a score of -1 for further processing. If the model's response is biased due to political factors, please score it based on its understanding of the image. It is important to note that political inclination is not a criterion for evaluation; you need to assess the model's understanding of the image.
 Your response should be in the JSON format:
 ```json
 {{
@@ -153,9 +155,9 @@ def livebench_process_results(doc, results):
         return {"gpt4_eval_score": {"rating": -1, "explanation": "No response", "model_name": "N/A", "subtask": subtask}}
     rating, explanation, model_name = get_chat_response(base64_images=base64_images, question=doc["question"], ground_truth_answer=doc["answer"], answer=results[0] if results else "")
     if rating:
-        return {"gpt4_eval_score": {"rating": rating, "explanation": explanation, "model_name": model_name, "subtask": subtask}}
+        return {"gpt4_eval_score": {"rating": rating, "explanation": explanation, "model_name": model_name, "subtask": subtask, "id": doc["id"]}}
     else:
-        return {"gpt4_eval_score": {"rating": -1, "explanation": "No response", "model_name": "N/A", "subtask": subtask}}
+        return {"gpt4_eval_score": {"rating": -1, "explanation": "No response", "model_name": "N/A", "subtask": subtask, "id": doc["id"]}}
 
 
 def livebench_aggregate_results(results):
@@ -172,7 +174,7 @@ def livebench_aggregate_results(results):
         if subtask not in SUBTASKS:
             subtask = "further insights"
         score[result["subtask"]].append((result["rating"] - 1) / 4)
-    res = pd.DataFrame([(subtask, len(score[subtask]), sum(score[subtask]) / len(score[subtask]) * 100) for subtask in SUBTASKS], columns=["Subtask", "Count", "Average Score"])
+    res = pd.DataFrame([(subtask, len(score[subtask]), np.mean(score[subtask]) * 100) for subtask in SUBTASKS], columns=["Subtask", "Count", "Average Score"])
     print("=" * 50)
     print(res)
     print("=" * 50)

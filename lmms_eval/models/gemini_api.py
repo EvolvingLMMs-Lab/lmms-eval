@@ -13,7 +13,7 @@ from lmms_eval.api.instance import Instance
 
 eval_logger = logging.getLogger("lmms-eval")
 
-NUM_SECONDS_TO_SLEEP = 5
+NUM_SECONDS_TO_SLEEP = 30
 GOOGLE_API_KEY=os.getenv('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 
