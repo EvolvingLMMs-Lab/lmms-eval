@@ -209,8 +209,8 @@ class LlavaHf(lmms):
             labels[: len(contxt_id)] = -100
 
             if self.accelerator.is_main_process and doc_id % 100 == 0:
-                eval_logger.info(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
-                eval_logger.info(f"Prompt and continuation for doc ID {doc_id}:\n\n{formatted_continuation[0]}\n")
+                eval_logger.debug(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
+                eval_logger.debug(f"Prompt and continuation for doc ID {doc_id}:\n\n{formatted_continuation[0]}\n")
 
             with torch.inference_mode():
                 outputs = self.model(**model_inputs, labels=labels)
@@ -293,7 +293,7 @@ class LlavaHf(lmms):
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
-                eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
+                eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
 
             inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self.model.dtype)
 
@@ -329,7 +329,7 @@ class LlavaHf(lmms):
                 text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
-                eval_logger.info(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
+                eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
 
             res.append(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
