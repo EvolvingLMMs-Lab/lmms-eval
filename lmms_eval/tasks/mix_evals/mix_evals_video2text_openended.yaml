@@ -15,7 +15,7 @@ metric_list:
 model_specific_prompt_kwargs:
   default:
     pre_prompt: "These are frames from a video. Please answer the following questions about the video."
-    post_prompt: "Answer with the option’s letter from the given choices directly."
+    post_prompt: "Answer with the option's letter from the given choices directly."
   gpt4v:
     pre_prompt: "These are frames from a video. Please answer the following questions about the video."
-    post_prompt: "Answer with the option’s letter from the given choices directly."
+    post_prompt: "Answer with the option's letter from the given choices directly."
