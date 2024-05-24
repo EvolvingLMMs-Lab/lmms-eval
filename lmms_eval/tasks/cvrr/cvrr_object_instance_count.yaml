@@ -1,0 +1,14 @@
+dataset_name: "continuity_and_object_instance_count"
+task: "cvrr_continuity_and_object_instance_count"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.cvrr_doc_to_visual
+doc_to_text: !function utils.cvrr_doc_to_text
+doc_to_target: !function utils.cvrr_doc_to_answer
+process_results: !function utils.cvrr_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.cvrr_aggregate_results
+    higher_is_better: true
+include: _default_template_yaml
+

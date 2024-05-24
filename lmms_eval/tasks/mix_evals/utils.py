@@ -239,62 +239,28 @@ def mix_evals_video2text_aggregate_gen(results, args):
 
 class MultiChoiceRegexFilter(ExtendedRegexFilter):
     def __init__(self, *args, **kwargs):
-        """
-        regex_pattern: The basic regex pattern to use. If fails to match, we will use the customized match procedure
-                        - step 1 : We parse the choices between ([A-Z])s then try to find these choices in the response.
-                        - step 2 : We parse the choice with regex :[\s]*([A-?]), where ? varies by number of choices.
-        group_select: Selects the (group_select)th match from the findall result.
-        ignore_case: Ignores the case during step 1 matching
-        ignore_punctuation: Remove the punctuation during step 1 matching
-        regexes_to_ignore: Remove these regexes during step 1 matching
-        """
         super().__init__(*args, **kwargs)
 
     def apply(self, resps, docs):
-        # here, we assume we have a list, in which each element is
-        # a list of model responses for some particular input/target pair.
-        # so we process each of these (same input/target response sets)
-        # independently (and keep them a list.)
-
         filtered_resps = []
 
         for r, doc in zip(resps, docs):
-            fallback_regexes = []
-            choice_to_alpha = {}
-            next_alpha = "A"
-
-            without_paren_fallback_regexes = []
-            without_paren_to_target = {}
-
-            # Regex to extract multiple choice options from the question
-            multiple_choices_regex = re.compile(r"\b([A-Z])\.\s+([^\n]*)")
-            matches = multiple_choices_regex.findall(doc["question"])
-
-            # Build regex patterns and mappings for each choice
-            for m in matches:
-                choice_text = m[1].strip()
-                fallback_regexes.append(f"{re.escape(choice_text)}")
-                choice_to_alpha[choice_text] = next_alpha
-
-                next_alpha = chr(ord(next_alpha) + 1)
-
-            # Compile regex to match any of the extracted choices
-            fallback_regex = re.compile("|".join(fallback_regexes))
+            # Regex to directly extract the option letter from the model response
+            option_letter_regex = re.compile(r"\b([A-Z])\.\s+([^\n]*)")
 
             # Process each response
             filtered = []
             for resp in r:
-                # Remove any punctuation and extra spaces
-                cleaned_resp = re.sub(r"[^\w\s]", "", resp).strip()
-                # Try to match cleaned response with the choice text
-                match = fallback_regex.search(cleaned_resp)
-                if match and match.group() in choice_to_alpha:
-                    # Map the matched choice text back to its corresponding letter
-                    filtered.append(choice_to_alpha[match.group()])
+                # Try to match the option letter at the start of the response
+                match = option_letter_regex.match(resp)
+                if match:
+                    # If a match is found, append the matched letter
+                    filtered.append(match.group(1))
                 else:
-                    # If no match, return the cleaned response
-                    filtered.append(cleaned_resp)
+                    # If no match, return the original response
+                    filtered.append(resp)
 
+            # Assuming we need the first response that matches or the original response
             filtered_resps.append(filtered[0])
 
         return filtered_resps

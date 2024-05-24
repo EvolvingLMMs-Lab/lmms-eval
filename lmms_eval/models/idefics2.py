@@ -198,7 +198,7 @@ class Idefics2(lmms):
             gen_kwargs = all_gen_kwargs[0]
             #
             until = gen_kwargs.pop("until", None)
-            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio",  None)
+            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:

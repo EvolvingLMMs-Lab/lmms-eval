@@ -10,6 +10,7 @@ import random
 from glob import glob
 import shutil
 from tqdm import tqdm
+import subprocess
 
 import datasets
 from datasets import Image, Sequence
@@ -19,7 +20,7 @@ from PIL import ImageFile
 from datasets import DownloadConfig
 from typing import Union, List, Any
 from collections.abc import Callable
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed, stop_after_delay
 from huggingface_hub import snapshot_download
 
 from lmms_eval import utils
@@ -679,19 +680,20 @@ class ConfigurableTask(Task):
                     eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. " f"using default " f"higher_is_better={is_higher_better(metric_name)}")
                     self._higher_is_better[metric_name] = is_higher_better(metric_name)
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
+    @retry(stop=(stop_after_attempt(5) | stop_after_delay(60)), wait=wait_fixed(2))
     def download(self, dataset_kwargs=None) -> None:
         # If the dataset is a video dataset,
         # Recursively search whether their is a zip and unzip it to the huggingface home
         if dataset_kwargs is not None and "video" in dataset_kwargs and dataset_kwargs["video"]:
             hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
             cache_dir = dataset_kwargs["cache_dir"]
-
             cache_dir = os.path.join(hf_home, cache_dir)
+
             cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")
             zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
-            if not os.path.exists(cache_dir):
+            if not os.path.exists(cache_dir) and len(zip_files) > 0:
                 for zip_file in zip_files:
+                    print(f"Unzipping {zip_file} to {cache_dir}")
                     shutil.unpack_archive(zip_file, cache_dir)
 
             if "builder_script" in dataset_kwargs:
@@ -995,6 +997,7 @@ class ConfigurableTask(Task):
             arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual, doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
+    @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
     def process_results(self, doc, results):
         if self.OUTPUT_TYPE == "generate_until":
             results[0] = results[0].strip()

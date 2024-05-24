@@ -24,6 +24,6 @@ model_specific_prompt_kwargs:
     pre_prompt: ""
     post_prompt: ""
 metadata:
-  version: 0.0
+  version: "2024-05"
   api_type : openai
   gpt_eval_model_name: "gpt-4-turbo"

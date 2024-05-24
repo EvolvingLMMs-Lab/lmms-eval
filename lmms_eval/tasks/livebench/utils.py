@@ -144,7 +144,9 @@ def livebench_doc_to_text(doc, model_specific_prompt_kwargs=None):
     post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
+
 SUBTASKS = ("basic understanding", "contextual analysis", "deeper implications", "broader implications", "further insights")
+
 
 def livebench_process_results(doc, results):
     base64_images = [image_to_base64(image) for image in livebench_doc_to_visual(doc)]

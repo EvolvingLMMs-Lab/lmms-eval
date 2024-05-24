@@ -5,12 +5,16 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Union
 
 import torch
-import zss
 from datasets import load_dataset
 from nltk import edit_distance
 from torch.utils.data import Dataset
 from transformers.modeling_utils import PreTrainedModel
-from zss import Node
+
+try:
+    import zss
+    from zss import Node
+except ImportError:
+    print("Please install zss library. You can install it by running 'pip install zss'")
 
 
 class JSONParseEvaluator:

@@ -163,6 +163,10 @@ def get_eval_generic(question, answer, pred, max_tokens: int, retries: int = 5):
         except Exception as e:
             eval_logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
 
+        if "Sorry! We've encountered an issue with repetitive patterns in your prompt. Please try again with a different prompt." in json.loads(response.content)["error"]["message"]:
+            eval_logger.error(f"Repetitive patterns in prompt. Drop this data.")
+            return "", ""
+
         # Handle other unexpected errors
         if attempt < retries - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
