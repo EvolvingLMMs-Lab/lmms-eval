@@ -13,6 +13,8 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval import utils
 
+from accelerate import Accelerator, DistributedType
+
 from PIL import Image
 
 NUM_SECONDS_TO_SLEEP = 5
@@ -40,6 +42,21 @@ class Claude(lmms):
         self.model_version = model_version
         self.image_token = image_token
         self.system_prompt = system_prompt
+
+        accelerator = Accelerator()
+        if accelerator.num_processes > 1:
+            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            self.accelerator = accelerator
+            if self.accelerator.is_local_main_process:
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
+        else:
+            self.accelerator = accelerator
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
+
+        self.device = self.accelerator.device
 
     def encode_image(self, image):
         output_buffer = BytesIO()
