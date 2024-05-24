@@ -26,10 +26,8 @@ try:
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
 
-from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
 from llavavid.model.language_model.llava_llama import LlavaConfig
 
-AutoConfig.register("llava_qwen", LlavaQwenConfig)
 AutoConfig.register("llava_llama", LlavaConfig)
 
 
