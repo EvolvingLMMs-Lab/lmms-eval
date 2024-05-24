@@ -21,7 +21,6 @@ filter_list:
         group_select: 0
         ignore_case: true
         ignore_punctuation: true
-        regex_pattern: "(\\([A-Z]\\))"
 
 model_specific_prompt_kwargs:
   default:

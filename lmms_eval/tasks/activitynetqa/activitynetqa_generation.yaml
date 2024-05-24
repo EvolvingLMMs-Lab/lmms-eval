@@ -1,0 +1,25 @@
+dataset_name: "Generation"
+task: "activitynetqa"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.activitynetqa_doc_to_visual
+doc_to_text: !function utils.activitynetqa_doc_to_text
+doc_to_target: !function utils.activitynetqa_doc_to_answer
+process_results: !function utils.activitynetqa_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.activitynetqa_aggregate
+    higher_is_better: true
+  - metric: exact_match
+    higher_is_better: true
+include: _default_template_yaml
+
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  image_aspect_ratio: original
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false

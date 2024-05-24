@@ -85,7 +85,7 @@ class Fuyu(lmms):
             self._rank = 0
             self._word_size = 1
 
-        '''if accelerator.num_processes > 1:
+        """if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
@@ -98,7 +98,7 @@ class Fuyu(lmms):
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
-            self._world_size = self.accelerator.num_processes'''
+            self._world_size = self.accelerator.num_processes"""
 
     @property
     def config(self):

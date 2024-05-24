@@ -2,7 +2,6 @@ import io
 import os
 import time
 import logging
-import google.generativeai as genai
 
 from PIL import Image
 from typing import List, Tuple
@@ -13,9 +12,16 @@ from lmms_eval.api.instance import Instance
 
 eval_logger = logging.getLogger("lmms-eval")
 
-NUM_SECONDS_TO_SLEEP = 30
-GOOGLE_API_KEY=os.getenv('GOOGLE_API_KEY')
-genai.configure(api_key=GOOGLE_API_KEY)
+try:
+    import google.generativeai as genai
+
+    NUM_SECONDS_TO_SLEEP = 5
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+    genai.configure(api_key=GOOGLE_API_KEY)
+
+except Exception as e:
+    eval_logger.error(f"Error importing generativeai: {str(e)}")
+    genai = None
 
 
 @register_model("gemini_api")
@@ -37,7 +43,19 @@ class GeminiAPI(lmms):
             for j in i:
                 new_list.append(j)
         return new_list
-    
+
+    def get_image_size(self, image):
+        # Create a BytesIO object to store the image bytes
+        img_byte_array = io.BytesIO()
+
+        # Save the image to the BytesIO object
+        image.save(img_byte_array, format="PNG")
+
+        # Get the size of the BytesIO object
+        img_size = img_byte_array.tell()
+
+        return img_size
+
     def get_image_size(self, image):
         # Create a BytesIO object to store the image bytes
         img_byte_array = io.BytesIO()
@@ -67,7 +85,7 @@ class GeminiAPI(lmms):
 
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            
+
             message = [contexts] + visuals
 
             for attempt in range(5):

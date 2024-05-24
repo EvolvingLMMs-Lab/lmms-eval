@@ -7,6 +7,7 @@ AVAILABLE_MODELS = {
     "llava": "Llava",
     "qwen_vl": "Qwen_VL",
     "fuyu": "Fuyu",
+    "batch_gpt4": "BatchGPT4",
     "gpt4v": "GPT4V",
     "instructblip": "InstructBLIP",
     "minicpm_v": "MiniCPM_V",

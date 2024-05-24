@@ -25,7 +25,7 @@ except ImportError:
 from PIL import Image
 
 API_TYPE = os.getenv("API_TYPE", "openai")
-NUM_SECONDS_TO_SLEEP = 5
+NUM_SECONDS_TO_SLEEP = 30
 eval_logger = logging.getLogger("lmms-eval")
 
 if API_TYPE == "openai":
@@ -178,6 +178,7 @@ class GPT4V(lmms):
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
+                        eval_logger.error(f"Response: {response}")
                         content = ""
             res.append(content)
             pbar.update(1)

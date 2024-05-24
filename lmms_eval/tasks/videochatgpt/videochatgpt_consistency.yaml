@@ -1,0 +1,24 @@
+dataset_name: "Consistency"
+task: "videochatgpt_consistency"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.videochatgpt_doc_to_visual
+doc_to_text: !function utils.videochatgpt_doc_to_text_consistency
+doc_to_target: !function utils.videochatgpt_doc_to_answer
+process_results: !function utils.videochatgpt_process_results_consistency
+metric_list:
+  - metric: submission
+    aggregation: !function utils.videochatgpt_aggregate_consistency
+    higher_is_better: true
+include: _default_template_yaml
+
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  image_aspect_ratio: original
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+  

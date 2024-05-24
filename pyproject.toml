@@ -36,9 +36,11 @@ dependencies = [
     "sqlitedict",
     "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
     "openai>=1.0.0",
+    "google-generativeai",
     "pycocoevalcap",
     "tqdm-multiprocess",
     "transformers>=4.37.2",
+    "transformers-stream-generator",
     "zstandard",
     "pillow",
     "pyyaml",
@@ -50,12 +52,12 @@ dependencies = [
     "hf_transfer",
     "tenacity",
     "wandb>=0.16.0",
-    "transformers-stream-generator",
     "tiktoken",
     "pre-commit",
     "pydantic",
     "packaging",
     "decord",
+    "zss",
 ]
 
 [tool.setuptools.packages.find]
