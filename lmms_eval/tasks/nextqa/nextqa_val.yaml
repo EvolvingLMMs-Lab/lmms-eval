@@ -1,0 +1,12 @@
+task: "nextqa_val"
+test_split: validation
+output_type: generate_until
+doc_to_visual: !function utils.nextqa_doc_to_visual
+doc_to_text: !function utils.nextqa_doc_to_text
+doc_to_target: !function utils.nextqa_doc_to_target
+process_results: !function utils.nextqa_process_results
+metric_list:
+  - metric: WUPS
+    aggregation: !function utils.nextqa_aggregate_results
+    higher_is_better: true
+include: _default_template_yaml

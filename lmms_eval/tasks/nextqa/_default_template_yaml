@@ -1,0 +1,9 @@
+dataset_path: lmms-lab/NExTQA
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: nextqa
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer a question using a short phrase or sentence."

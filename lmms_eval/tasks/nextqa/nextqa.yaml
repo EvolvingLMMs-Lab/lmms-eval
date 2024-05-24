@@ -1,0 +1,4 @@
+group: nextqa
+task:
+- nextqa_test
+- nextqa_val
