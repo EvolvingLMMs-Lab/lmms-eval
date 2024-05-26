@@ -108,9 +108,6 @@ class LlavaSglang(lmms):
                 gen_kwargs["top_p"] = 1.0
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
-            if gen_kwargs["top_p"] == 0.0:
-                gen_kwargs["top_p"] = 1.0
-                gen_kwargs["temperature"] = 0.0
             assert gen_kwargs["num_beams"] == 1
 
             def save_image_to_temp_file(image):
