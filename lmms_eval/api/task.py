@@ -691,10 +691,14 @@ class ConfigurableTask(Task):
 
             cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")
             zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
-            if not os.path.exists(cache_dir) and len(zip_files) > 0:
+            
+            from accelerate import Accelerator
+            accelerator = Accelerator()
+            if not os.path.exists(cache_dir) and len(zip_files) > 0 and accelerator.is_main_process:
                 for zip_file in zip_files:
-                    print(f"Unzipping {zip_file} to {cache_dir}")
+                    eval_logger.info(f"Unzipping {zip_file} to {cache_dir}")
                     shutil.unpack_archive(zip_file, cache_dir)
+            accelerator.wait_for_everyone()
 
             if "builder_script" in dataset_kwargs:
                 builder_script = dataset_kwargs["builder_script"]
