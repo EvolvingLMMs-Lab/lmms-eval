@@ -11,6 +11,7 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
+from google.generativeai.types import HarmBlockThreshold
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -138,11 +139,18 @@ class GeminiAPI(lmms):
 
             for attempt in range(5):
                 try:
-                    content = self.model.generate_content(message, generation_config=config)
+                    content = self.model.generate_content(message, generation_config=config, safety_settings=HarmBlockThreshold.BLOCK_NONE)
                     content = content.text
                     break
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
+                    if isinstance(e, ValueError):
+                        try:
+                            eval_logger.info(f"Prompt feed_back: {content.prompt_feedback}")
+                            eval_logger.info(f"finish reason: {content.candidates[0].finish_reason}")
+                            eval_logger.info(f"safety ratings: {content.candidates[0].safety_ratings}")
+                        except Exception as e:
+                            pass
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
