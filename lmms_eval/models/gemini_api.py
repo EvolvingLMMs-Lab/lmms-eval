@@ -149,6 +149,8 @@ class GeminiAPI(lmms):
                             eval_logger.info(f"Prompt feed_back: {content.prompt_feedback}")
                             eval_logger.info(f"finish reason: {content.candidates[0].finish_reason}")
                             eval_logger.info(f"safety ratings: {content.candidates[0].safety_ratings}")
+                            content = ""
+                            break
                         except Exception as e:
                             pass
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
