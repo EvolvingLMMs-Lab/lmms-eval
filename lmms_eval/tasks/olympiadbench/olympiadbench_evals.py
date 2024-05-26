@@ -1,11 +1,14 @@
 import re
 import sympy as sp
 
+import logging
+eval_logger = logging.getLogger("lmms-eval")
+
 try:
     from sympy import simplify, Eq, sympify, Pow
     from sympy.parsing.latex import parse_latex
 except ImportError as e:
-    print("Please install sympy package by running 'pip install sympy' if you want to use OlympiadBenchEvaluator.")
+    eval_logger.debug("Please install sympy package by running 'pip install sympy' if you want to use OlympiadBenchEvaluator.")
 import math
 
 # how to use
