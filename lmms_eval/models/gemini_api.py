@@ -129,8 +129,8 @@ class GeminiAPI(lmms):
             message = [contexts] + visuals
 
             if self.continual_mode is True and self.cache_mode == "resume":
-                if doc_id in self.response_cache:
-                    doc_uuid = str(doc_id)
+                doc_uuid = str(doc_id)
+                if doc_uuid in self.response_cache:
                     content = self.response_cache[doc_uuid]
                     if content:
                         res.append(content)
