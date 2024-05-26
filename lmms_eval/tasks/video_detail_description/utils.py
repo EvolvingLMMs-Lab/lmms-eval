@@ -215,10 +215,11 @@ def gpt_eval(results):
         # Update the dictionary with the new entries
         updated_dict = {
             "video_name": data_dict["video_name"],
+            "review": review,
             "score": score,
-            "Q": question,
-            "A": answer,
-            "pred": pred,
+            # "Q": question,
+            # "A": answer,
+            # "pred": pred,
         }
         evaluated_results.append(updated_dict)
 

@@ -13,7 +13,7 @@ generation_kwargs:
     - "ASSISTANT:"
   max_new_tokens: 1024
   temperature: 0
-  top_p: 0
+  top_p: 1.0
   num_beams: 1
   do_sample: false
 process_results: !function utils.textcaps_process_result
