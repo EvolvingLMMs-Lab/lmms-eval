@@ -131,9 +131,10 @@ class GeminiAPI(lmms):
                 if doc_id in self.response_cache:
                     doc_uuid = str(doc_id)
                     content = self.response_cache[doc_uuid]
-                    res.append(content)
-                    pbar.update(1)
-                    continue
+                    if content:
+                        res.append(content)
+                        pbar.update(1)
+                        continue
 
             for attempt in range(5):
                 try:
