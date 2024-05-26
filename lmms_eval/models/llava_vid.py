@@ -20,17 +20,21 @@ eval_logger = logging.getLogger("lmms-eval")
 
 try:
     from llavavid.model.language_model.llava_llama import LlavaConfig
-    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
     from llavavid.model.builder import load_pretrained_model
     from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
     from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
     from llavavid.conversation import conv_templates, SeparatorStyle
 
     AutoConfig.register("llava_llama", LlavaConfig)
-    AutoConfig.register("llava_qwen", LlavaQwenConfig)
 
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
+
+try:
+    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+    AutoConfig.register("llava_qwen", LlavaQwenConfig)
+except:
+    eval_logger.debug("No llava vid qwen yet for llavavid")
 
 
 @register_model("llavavid")
