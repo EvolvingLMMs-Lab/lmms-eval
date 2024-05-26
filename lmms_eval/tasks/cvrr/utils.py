@@ -41,25 +41,47 @@ if API_TYPE == "openai":
         "Content-Type": "application/json",
     }
 
-# Unzip all the zip files to HF HOME cache dir
-HF_HOME = os.environ["HF_HOME"]
-cache_dir = config["dataset_kwargs"]["cache_dir"]
-cache_dir = os.path.join(HF_HOME, cache_dir)
-cache_dir = os.path.join(cache_dir, "CVRR-ES/continuity_and_object_instance_count")
-
 
 # Pass in video path here
 # Can only work correctly with video llm
 def cvrr_doc_to_visual(doc):
-    video_path = doc["VideoID"]
+
+    # Unzip all the zip files to HF HOME cache dir
+    HF_HOME = os.environ["HF_HOME"]
+    cache_dir = config["dataset_kwargs"]["cache_dir"]
+    cache_dir = os.path.join(HF_HOME, cache_dir)
+    cache_dir = os.path.join(cache_dir, "CVRR-ES")
 
     if doc["DimensionName"] == "Continuity and Object Instance Count":
+        cache_dir = os.path.join(cache_dir, "continuity_and_object_instance_count")
+    elif doc["DimensionName"] == "Fine-grained action understanding":
+        cache_dir = os.path.join(cache_dir, "fine_grained_action_understanding")
+    elif doc["DimensionName"] == "Interpretation of social context":
+        cache_dir = os.path.join(cache_dir, "interpretation_of_social_context")
+    elif doc["DimensionName"] == "Interpretation of visual context":
+        cache_dir = os.path.join(cache_dir, "interpretation_of_visual_context")
+    elif doc["DimensionName"] == "Multiple actions in a single video":
+        cache_dir = os.path.join(cache_dir, "multiple_actions_in_a_single_video")
+    elif doc["DimensionName"] == "Non-existent actions with existent scene depictions":
+        cache_dir = os.path.join(cache_dir, "non_existent_actions_with_existent_scene_depictions")
+    elif doc["DimensionName"] == "Non-existent actions with non-existent scene depictions":
+        cache_dir = os.path.join(cache_dir, "non_existent_actions_with_non_existent_scene_depictions")
+    elif doc["DimensionName"] == "Partial actions":
+        cache_dir = os.path.join(cache_dir, "partial_actions")
+    elif doc["DimensionName"] == "Time order understanding":
+        cache_dir = os.path.join(cache_dir, "time_order_understanding")
+    elif doc["DimensionName"] == "Understanding of emotional context":
+        cache_dir = os.path.join(cache_dir, "understanding_emotional_context")
+    elif doc["DimensionName"] == "Unusual and Physically Anomalous activities":
+        cache_dir = os.path.join(cache_dir, "unusual_and_physically_anomalous_activities")
 
-        video_path = os.path.join(cache_dir, video_path)
-        if os.path.exists(video_path):
-            video_path = video_path
-        else:
-            sys.exit(f"video path:{video_path} does not exist, please check")
+    video_path = doc["VideoID"]
+    video_path = os.path.join(cache_dir, video_path)
+    if os.path.exists(video_path):
+        video_path = video_path
+    else:
+        sys.exit(f"video path:{video_path} does not exist, please check")
+
     return [video_path]
 
 
@@ -109,34 +131,31 @@ def cvrr_aggregate_submissions(results, args, task):
     return path
 
 
-def get_eval(question, answer, pred, task, max_tokens: int, retries: int = 5):
+def get_eval(question, answer, pred, max_tokens: int, retries: int = 5):
     global headers
 
-    if task == "continuity_and_object_instance_count":
-        messages = [
-            {
-                "role": "system",
-                "content": "You are an intelligent chatbot designed for evaluating the correctness of AI assistant predictions for question-answer pairs. "
-                "Your task is to compare the predicted answer with the ground-truth answer and determine if the predicted answer is correct or not. Here's how you can accomplish the task:"
-                "------"
-                "##INSTRUCTIONS: "
-                "- Focus on the correctness and accuracy of the predicted answer with the ground-truth.\n"
-                "- Consider predictions with less specific details as correct evaluation, unless such details are explicitly asked in the question.\n",
-            },
-            {
-                "role": "user",
-                "content": "Please evaluate the following video-based question-answer pair:\n\n"
-                f"Question: {question}\n"
-                f"Ground truth correct Answer: {answer}\n"
-                f"Predicted Answer: {pred}\n\n"
-                "Provide your evaluation as a correct/incorrect prediction along with the score where the score is an integer value between 0 (fully wrong) and 5 (fully correct). The middle score provides the percentage of correctness."
-                "Please generate the response in the form of a Python dictionary string with keys 'pred', 'score' and 'reason', where value of 'pred' is  a string of 'correct' or 'incorrect', value of 'score' is in INTEGER, not STRING and value of 'reason' should provide the reason behind the decision."
-                "Only provide the Python dictionary string."
-                "For example, your response should look like this: {'pred': 'correct', 'score': 4.8, 'reason': reason}.",
-            },
-        ]
-
-    print(messages)
+    messages = [
+        {
+            "role": "system",
+            "content": "You are an intelligent chatbot designed for evaluating the correctness of AI assistant predictions for question-answer pairs. "
+            "Your task is to compare the predicted answer with the ground-truth answer and determine if the predicted answer is correct or not. Here's how you can accomplish the task:"
+            "------"
+            "##INSTRUCTIONS: "
+            "- Focus on the correctness and accuracy of the predicted answer with the ground-truth.\n"
+            "- Consider predictions with less specific details as correct evaluation, unless such details are explicitly asked in the question.\n",
+        },
+        {
+            "role": "user",
+            "content": "Please evaluate the following video-based question-answer pair:\n\n"
+            f"Question: {question}\n"
+            f"Ground truth correct Answer: {answer}\n"
+            f"Predicted Answer: {pred}\n\n"
+            "Provide your evaluation as a correct/incorrect prediction along with the score where the score is an integer value between 0 (fully wrong) and 5 (fully correct). The middle score provides the percentage of correctness."
+            "Please generate the response in the form of a Python dictionary string with keys 'pred', 'score' and 'reason', where value of 'pred' is  a string of 'correct' or 'incorrect', value of 'score' is in INTEGER, not STRING and value of 'reason' should provide the reason behind the decision."
+            "Only provide the Python dictionary string."
+            'For example, your response should look like this: {"pred": "correct", "score": 4.8, "reason": reason}.',
+        },
+    ]
 
     payload = {
         "model": GPT_EVAL_MODEL_NAME,
@@ -179,6 +198,7 @@ def get_eval(question, answer, pred, task, max_tokens: int, retries: int = 5):
 def parse_score(review):
     try:
         # Convert the string representation of a dictionary to an actual dictionary
+        # Escape single quotes inside the dictionary string to prevent parsing errors
         review_dict = ast.literal_eval(review)
         correctness = review_dict.get("pred", "incorrect")
         score = review_dict.get("score", 0)
@@ -203,38 +223,28 @@ def cvrr_print_scores(eval_file_path, args):
     score_file_name = "scores.json"
     path = file_utils.generate_submission_file(score_file_name, args)
 
-    # Compute average score and final accuracy
-    # Initialize counters
-    yes_count = 0
-    no_count = 0
+    # Compute average score
     total_score = 0
 
-    # Iterate over the results to count correctness and sum scores
+    # Iterate over the results to sum scores
     for result_list in evaluated_list:
         eval_dict = result_list[0]
         total_score += eval_dict["score"]
 
-        if eval_dict["Correctness"] == "yes":
-            yes_count += 1
-        else:
-            no_count += 1
-
     # Calculate accuracy and average score
-    accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
     average_score = total_score / len(evaluated_list) if evaluated_list else 0
 
     # Print the results
-    print(f"Accuracy: {accuracy}")
     print(f"Average Score: {average_score}")
 
     # Write the processed data to the scores file
     with open(path, "w") as f:
-        json.dump({"accuracy": accuracy, "average_score": average_score}, f, indent=4)
+        json.dump({"average_score": average_score}, f, indent=4)
 
     eval_logger.info(f"Score file saved to {path}")
 
 
-def cvrr_gpt_eval(result_file_path, args, task):
+def cvrr_gpt_eval(result_file_path, args):
     """
     Process the result file containing predictions, score them using GPT,
     and save the results with added scores and correctness fields to a new file.
@@ -264,7 +274,7 @@ def cvrr_gpt_eval(result_file_path, args, task):
             pred = data_dict.get("pred", "")
 
             # Assume get_eval returns a review and the model name, and parse_score parses this review
-            review, model_name = get_eval(question, answer, pred, task, 64)
+            review, model_name = get_eval(question, answer, pred, 512)
             correctness, score, reason = parse_score(review)
         except Exception as e:
             eval_logger.error(f"Error for Video Name: {data_dict.get('VideoID', 'Unknown')}: {e}")
@@ -295,7 +305,67 @@ def cvrr_gpt_eval(result_file_path, args, task):
     return eval_file_path
 
 
-def cvrr_aggregate_results(results, args):
+def cvrr_aggregate_results_dim1(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "continuity_and_object_instance_count")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "continuity_and_object_instance_count")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim2(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "fine_grained_action_understanding")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim3(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_social_context")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim4(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_visual_context")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim5(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "multiple_actions_in_a_single_video")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim6(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_existent_scene_depictions")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim7(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_non_existent_scene_depictions")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim8(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "partial_actions")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim9(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "time_order_understanding")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim10(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "understanding_emotional_context")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
+    cvrr_print_scores(eval_file_path, args)
+
+
+def cvrr_aggregate_results_dim11(results, args):
+    result_file_path = cvrr_aggregate_submissions(results, args, "unusual_and_physically_anomalous_activities")
+    eval_file_path = cvrr_gpt_eval(result_file_path, args)
     cvrr_print_scores(eval_file_path, args)

@@ -32,6 +32,7 @@ except ImportError:
 
 try:
     from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+
     AutoConfig.register("llava_qwen", LlavaQwenConfig)
 except:
     eval_logger.debug("No llava vid qwen yet for llavavid")
@@ -346,7 +347,7 @@ class LlavaVid(lmms):
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
+                gen_kwargs["temperature"] = 0.2
             if "top_p" not in gen_kwargs:
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
