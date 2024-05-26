@@ -112,6 +112,15 @@ class GeminiAPI(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+            if self.continual_mode is True and self.cache_mode == "resume":
+                doc_uuid = str(doc_id)
+                if doc_uuid in self.response_cache:
+                    content = self.response_cache[doc_uuid]
+                    if content:
+                        res.append(content)
+                        pbar.update(1)
+                        continue
+
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -127,15 +136,6 @@ class GeminiAPI(lmms):
             visuals = self.convert_video(visuals)
 
             message = [contexts] + visuals
-
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = str(doc_id)
-                if doc_uuid in self.response_cache:
-                    content = self.response_cache[doc_uuid]
-                    if content:
-                        res.append(content)
-                        pbar.update(1)
-                        continue
 
             for attempt in range(5):
                 try:
