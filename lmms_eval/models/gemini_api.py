@@ -11,7 +11,7 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
-from google.generativeai.types import HarmBlockThreshold
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -139,7 +139,7 @@ class GeminiAPI(lmms):
 
             for attempt in range(5):
                 try:
-                    content = self.model.generate_content(message, generation_config=config, safety_settings=HarmBlockThreshold.BLOCK_NONE)
+                    content = self.model.generate_content(message, generation_config=config, safety_settings={HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE})
                     content = content.text
                     break
                 except Exception as e:
