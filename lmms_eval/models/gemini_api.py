@@ -94,6 +94,7 @@ class GeminiAPI(lmms):
 
     def encode_video(self, video_path):
         uploaded_obj = genai.upload_file(path=video_path)
+        time.sleep(5)
         return uploaded_obj
 
     def convert_video(self, images):
