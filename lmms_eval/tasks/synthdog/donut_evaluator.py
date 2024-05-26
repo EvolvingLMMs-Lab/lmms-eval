@@ -10,11 +10,15 @@ from nltk import edit_distance
 from torch.utils.data import Dataset
 from transformers.modeling_utils import PreTrainedModel
 
+
+import logging
+eval_logger = logging.getLogger("lmms-eval")
+
 try:
     import zss
     from zss import Node
 except ImportError:
-    print("Please install zss library. You can install it by running 'pip install zss'")
+    eval_logger.debug("Please install zss library. You can install it by running 'pip install zss'")
 
 
 class JSONParseEvaluator:
