@@ -140,7 +140,7 @@ class GeminiAPI(lmms):
                 try:
                     content = self.model.generate_content(message, generation_config=config)
                     content = content.text
-
+                    break
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
