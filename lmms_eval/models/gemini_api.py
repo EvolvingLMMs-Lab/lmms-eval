@@ -151,7 +151,7 @@ class GeminiAPI(lmms):
                             eval_logger.info(f"safety ratings: {content.candidates[0].safety_ratings}")
                             content = ""
                             break
-                        except Exception as e:
+                        except Exception:
                             pass
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
                         time.sleep(NUM_SECONDS_TO_SLEEP)
