@@ -2,6 +2,7 @@ import io
 import os
 import time
 import logging
+import json
 
 from PIL import Image
 from typing import List, Tuple
@@ -11,13 +12,12 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
 
-
 eval_logger = logging.getLogger("lmms-eval")
 
 try:
     import google.generativeai as genai
 
-    NUM_SECONDS_TO_SLEEP = 5
+    NUM_SECONDS_TO_SLEEP = 30
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
     genai.configure(api_key=GOOGLE_API_KEY)
 
@@ -33,15 +33,31 @@ class GeminiAPI(lmms):
         model_version: str = "gemini-1.5-flash-latest",
         modality: str = "image",
         timeout: int = 120,
+        continual_mode: bool = False,
+        response_persistent_folder: str = None,  # We will cache the Gemini API response in this path and use it for future requests
         **kwargs,
     ) -> None:
         super().__init__()
         self.model_version = model_version
         self.timeout = timeout
         self.model = genai.GenerativeModel(model_version)
+        self.continual_mode = continual_mode
+        if self.continual_mode and response_persistent_folder is None:
+            raise ValueError("Continual mode requires a persistent path for the response. We will cache the Gemini API response in this path and use it for future requests. Please provide a valid path.")
+        self.response_persistent_folder = response_persistent_folder
+        self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+
+        if os.path.exists(self.response_persistent_file):
+            with open(self.response_persistent_file, "r") as f:
+                self.response_cache = json.load(f)
+            self.cache_mode = "resume"
+        else:
+            self.response_cache = {}
+            self.cache_mode = "start"
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
+            assert self.continual_mode is False, "Continual mode is not supported with distributed inference."
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
@@ -77,7 +93,9 @@ class GeminiAPI(lmms):
         return img_size
 
     def encode_video(self, video_path):
-        return genai.upload_file(path=video_path)
+        uploaded_obj = genai.upload_file(path=video_path)
+        time.sleep(5)
+        return uploaded_obj
 
     def convert_video(self, images):
         for idx, img in enumerate(images):
@@ -109,6 +127,14 @@ class GeminiAPI(lmms):
 
             message = [contexts] + visuals
 
+            if self.continual_mode is True and self.cache_mode == "resume":
+                if doc_id in self.response_cache:
+                    doc_uuid = str(doc_id)
+                    content = self.response_cache[doc_uuid]
+                    res.append(content)
+                    pbar.update(1)
+                    continue
+
             for attempt in range(5):
                 try:
                     content = self.model.generate_content(message, generation_config=config)
@@ -123,6 +149,13 @@ class GeminiAPI(lmms):
                         content = ""
             res.append(content)
             pbar.update(1)
+
+            if self.continual_mode is True:  # Cache the response
+                doc_uuid = str(doc_id)
+                self.response_cache[doc_uuid] = content
+                with open(self.response_persistent_file, "w") as f:
+                    json.dump(self.response_cache, f)
+
         pbar.close()
         return res
 

@@ -10,7 +10,7 @@ doc_to_target: !function utils.synthdog_doc_to_target
 generation_kwargs:
   max_new_tokens: 1024
   temperature: 0
-  top_p: 0
+  top_p: 1.0
   num_beams: 1
   do_sample: false
 process_results: !function utils.synthdog_process_results
