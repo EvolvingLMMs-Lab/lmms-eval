@@ -12,6 +12,7 @@ from transformers.modeling_utils import PreTrainedModel
 
 
 import logging
+
 eval_logger = logging.getLogger("lmms-eval")
 
 try:
