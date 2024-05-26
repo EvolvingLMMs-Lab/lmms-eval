@@ -1,0 +1,44 @@
+dataset_path: "floschne/xm3600"
+task: "xm3600_ja"
+test_split: ja
+output_type: generate_until
+doc_to_visual: !function utils.xm_doc_to_visual
+doc_to_text: !function utils.xm_doc_to_text
+doc_to_target: "captions"
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.xm_process_result
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: xm_Bleu_4 
+    aggregation : !function utils.xm_bleu4
+    higher_is_better : true
+  - metric: xm_Bleu_3
+    aggregation : !function utils.xm_bleu3
+    higher_is_better : true
+  - metric: xm_Bleu_2
+    aggregation : !function utils.xm_bleu2
+    higher_is_better : true
+  - metric: xm_Bleu_1
+    aggregation : !function utils.xm_bleu1
+    higher_is_better : true
+  - metric: xm_METEOR
+    aggregation : !function utils.xm_meteor
+    higher_is_better : true
+  - metric: xm_ROUGE_L
+    aggregation : !function utils.xm_rougel
+    higher_is_better : true
+  - metric: xm_CIDEr
+    aggregation : !function utils.xm_cider
+    higher_is_better : true
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\n提供された画像のキャプションを 1 文で入力します。 日本語で答えてください。"
+metadata:
+  - version: 0.0
