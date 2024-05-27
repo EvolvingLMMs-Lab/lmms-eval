@@ -1,0 +1,11 @@
+group: m3exam
+task:
+- m3exam_chinese
+- m3exam_english
+- m3exam_afrikaans
+- m3exam_italian
+- m3exam_javanese
+- m3exam_portuguese
+- m3exam_swahili
+- m3exam_thai
+- m3exam_vietnamese
