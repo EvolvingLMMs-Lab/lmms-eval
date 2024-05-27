@@ -691,8 +691,9 @@ class ConfigurableTask(Task):
 
             cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")
             zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
-            
+
             from accelerate import Accelerator
+
             accelerator = Accelerator()
             if not os.path.exists(cache_dir) and len(zip_files) > 0 and accelerator.is_main_process:
                 for zip_file in zip_files:
