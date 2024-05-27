@@ -8,6 +8,7 @@ from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from huggingface_hub import snapshot_download
 import torch
+from PIL import Image
 
 from datetime import timedelta
 import logging
@@ -15,12 +16,13 @@ from typing import List, Tuple, Optional, Union
 from tqdm import tqdm
 
 try:
-    from video_chatgpt.eval.model_utils import load_video, initialize_model
-    from video_chatgpt.inference import video_chatgpt_infer, video_chatgpt_infer_ppl, get_spatio_temporal_features_torch
+    from lmms_eval.models.video_chatgpt.eval.model_utils import load_video, initialize_model
+    from lmms_eval.models.video_chatgpt.inference import video_chatgpt_infer, video_chatgpt_infer_ppl, get_spatio_temporal_features_torch
 except ImportError:
     eval_logger = logging.getLogger("lmms-eval")
     eval_logger.info("Failed to import video_chatgpt modules")
 
+from lmms_eval.models.model_utils.load_video import read_video_pyav
 eval_logger = logging.getLogger("lmms-eval")
 
 
@@ -103,12 +105,21 @@ class VideoChatGPT(lmms):
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            videos = []
+            # videos = []
             for visual in visuals:
-                video_frames = load_video(visual, num_frm=self.num_frm)
+                video_frames = read_video_pyav(visual, num_frm=self.num_frm)
+                target_h, target_w = 224, 224
+                # If image shape is not as target, resize it
+                if video_frames.shape[-3] != target_h or video_frames.shape[-2] != target_w:
+                    video_frames = torch.from_numpy(video_frames).permute(0, 3, 1, 2).float()
+                    video_frames = torch.nn.functional.interpolate(video_frames, size=(target_h, target_w))
+                    video_frames = video_frames.permute(0, 2, 3, 1).to(torch.uint8).numpy()
+                video_frames = [Image.fromarray(frame) for frame in video_frames]
+                if len(video_frames) > self.num_frm:
+                    video_frames = video_frames[: self.num_frm]
                 # VideoChatGPT load video return a list of PIL Image
-                videos += video_frames
-
+                # videos += video_frames
+            
             output = video_chatgpt_infer(
                 video_frames, contexts, conv_mode="video-chatgpt_v1", model=self.model, vision_tower=self.vision_tower, tokenizer=self.tokenizer, image_processor=self.image_processor, video_token_len=self.video_token_len
             )
