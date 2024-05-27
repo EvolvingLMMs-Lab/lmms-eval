@@ -11,12 +11,12 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 eval_logger = logging.getLogger("lmms-eval")
 
 try:
     import google.generativeai as genai
+    from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
     NUM_SECONDS_TO_SLEEP = 30
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
