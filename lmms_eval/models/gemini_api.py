@@ -139,7 +139,16 @@ class GeminiAPI(lmms):
 
             for attempt in range(5):
                 try:
-                    content = self.model.generate_content(message, generation_config=config, safety_settings={HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE})
+                    content = self.model.generate_content(
+                        message,
+                        generation_config=config,
+                        safety_settings={
+                            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                        },
+                    )
                     content = content.text
                     break
                 except Exception as e:
