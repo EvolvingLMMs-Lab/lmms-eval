@@ -2,7 +2,7 @@ dataset_path: lmms-lab/VideoDetailDescription
 dataset_kwargs:
   token: True
   video: True
-  cache_dir: video-chatgpt
+  cache_dir: videochatgpt
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""

@@ -215,12 +215,13 @@ def parse_score(review):
         return "incorrect", float(0), ""
 
 
-def cvrr_print_scores(eval_file_path, args):
+def cvrr_print_scores(eval_file_path, args, task):
     # Load the predictions from the result file
     with open(eval_file_path, "r") as file:
         evaluated_list = json.load(file)
 
-    score_file_name = "scores.json"
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    score_file_name = f"gpt_eval_result_cvrr_{task}_{now_date_time}.json"
     path = file_utils.generate_submission_file(score_file_name, args)
 
     # Compute average score
@@ -234,17 +235,16 @@ def cvrr_print_scores(eval_file_path, args):
     # Calculate accuracy and average score
     average_score = total_score / len(evaluated_list) if evaluated_list else 0
 
-    # Print the results
-    print(f"Average Score: {average_score}")
-
     # Write the processed data to the scores file
     with open(path, "w") as f:
         json.dump({"average_score": average_score}, f, indent=4)
 
     eval_logger.info(f"Score file saved to {path}")
 
+    return average_score
 
-def cvrr_gpt_eval(result_file_path, args):
+
+def cvrr_gpt_eval(result_file_path, args, task):
     """
     Process the result file containing predictions, score them using GPT,
     and save the results with added scores and correctness fields to a new file.
@@ -253,7 +253,8 @@ def cvrr_gpt_eval(result_file_path, args):
         result_file_path: path to the JSON file with results to be evaluated
     """
 
-    eval_file_name = "gpt_eval_result.json"
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    eval_file_name = f"gpt_eval_result_cvrr_{task}_{now_date_time}.json"
     eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
 
     # Load the predictions from the result file
@@ -307,65 +308,76 @@ def cvrr_gpt_eval(result_file_path, args):
 
 def cvrr_aggregate_results_dim1(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "continuity_and_object_instance_count")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "continuity_and_object_instance_count")
+    average_score = cvrr_print_scores(eval_file_path, args, "continuity_and_object_instance_count")
+    return average_score
 
 
 def cvrr_aggregate_results_dim2(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "fine_grained_action_understanding")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "fine_grained_action_understanding")
+    average_score = cvrr_print_scores(eval_file_path, args, "fine_grained_action_understanding")
+    return average_score
 
 
 def cvrr_aggregate_results_dim3(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_social_context")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "interpretation_of_social_context")
+    average_score = cvrr_print_scores(eval_file_path, args, "interpretation_of_social_context")
+    return average_score
 
 
 def cvrr_aggregate_results_dim4(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_visual_context")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "interpretation_of_visual_context")
+    average_score = cvrr_print_scores(eval_file_path, args, "interpretation_of_visual_context")
+    return average_score
 
 
 def cvrr_aggregate_results_dim5(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "multiple_actions_in_a_single_video")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "multiple_actions_in_a_single_video")
+    average_score = cvrr_print_scores(eval_file_path, args, "multiple_actions_in_a_single_video")
+    return average_score
 
 
 def cvrr_aggregate_results_dim6(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_existent_scene_depictions")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "non_existent_actions_with_existent_scene_depictions")
+    average_score = cvrr_print_scores(eval_file_path, args, "non_existent_actions_with_existent_scene_depictions")
+    return average_score
 
 
 def cvrr_aggregate_results_dim7(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_non_existent_scene_depictions")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "non_existent_actions_with_non_existent_scene_depictions")
+    average_score = cvrr_print_scores(eval_file_path, args, "non_existent_actions_with_non_existent_scene_depictions")
+    return average_score
 
 
 def cvrr_aggregate_results_dim8(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "partial_actions")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "partial_actions")
+    average_score = cvrr_print_scores(eval_file_path, args, "partial_actions")
+    return average_score
 
 
 def cvrr_aggregate_results_dim9(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "time_order_understanding")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "time_order_understanding")
+    average_score = cvrr_print_scores(eval_file_path, args, "time_order_understanding")
+    return average_score
 
 
 def cvrr_aggregate_results_dim10(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "understanding_emotional_context")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "understanding_emotional_context")
+    average_score = cvrr_print_scores(eval_file_path, args, "understanding_emotional_context")
+    return average_score
 
 
 def cvrr_aggregate_results_dim11(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "unusual_and_physically_anomalous_activities")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args)
-    cvrr_print_scores(eval_file_path, args)
+    eval_file_path = cvrr_gpt_eval(result_file_path, args, "unusual_and_physically_anomalous_activities")
+    average_score = cvrr_print_scores(eval_file_path, args, "unusual_and_physically_anomalous_activities")
+    return average_score
