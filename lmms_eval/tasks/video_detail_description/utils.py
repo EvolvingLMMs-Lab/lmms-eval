@@ -40,12 +40,17 @@ if API_TYPE == "openai":
 # But the idea is that we will unzip all the zip files
 # To HF HOME cache dir
 # And load it here
-HF_HOME = os.environ["HF_HOME"]
-cache_dir = config["dataset_kwargs"]["cache_dir"]
-cache_dir = os.path.join(HF_HOME, "datasets", cache_dir)
-cache_dir = os.path.join(cache_dir, "evaluation/Test_Videos")
+# HF_HOME = os.environ["HF_HOME"]
+# cache_dir = config["dataset_kwargs"]["cache_dir"]
+# cache_dir = os.path.join(HF_HOME, "datasets", cache_dir)
+# cache_dir = os.path.join(cache_dir, "evaluation/Test_Videos")
 
 eval_logger = logging.getLogger("lmms-eval")
+
+HF_HOME = os.environ["HF_HOME"]
+cache_dir = config["dataset_kwargs"]["cache_dir"]
+cache_dir = os.path.join(HF_HOME, cache_dir)
+cache_dir = os.path.join(cache_dir, "Test_Videos")
 
 
 # Pass in video path here
@@ -227,7 +232,18 @@ def gpt_eval(results):
 
 
 def video_detail_description_gen_gpt_eval(results, args):
+    # Save the raw inference results to a new JSON file
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    submission_file_name = f"video_detail_description_{now_date_time}.json"
+    path = file_utils.generate_submission_file(submission_file_name, args)
+
+    with open(path, "w") as f:
+        json.dump(results, f, indent=4)
+
+    eval_logger.info(f"Submission file saved to {path}")
+
     eval_results = gpt_eval(results)
+
     score = 0
     for result in eval_results:
         eval_score = result["score"]
@@ -237,4 +253,22 @@ def video_detail_description_gen_gpt_eval(results, args):
             eval_score = 0.0
         score += eval_score
 
-    return score / len(results)
+    average_score = score / len(results)
+
+    # Save the evaluated results to a new JSON file
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    eval_file_name = f"gpt_eval_result_video_detail_description_{now_date_time}.json"
+    eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
+
+    with open(eval_file_path, "w") as f:
+        json.dump(eval_results, f, indent=4)
+
+    # Save the scores to a new JSON file
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    score_file_name = f"scores_video_detail_description_{now_date_time}.json"
+    path = file_utils.generate_submission_file(score_file_name, args)
+
+    with open(path, "w") as f:
+        json.dump({"average_score": average_score}, f, indent=4)
+
+    return average_score
