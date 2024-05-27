@@ -2,6 +2,7 @@ import re
 import sympy as sp
 
 import logging
+
 eval_logger = logging.getLogger("lmms-eval")
 
 try:

@@ -11,6 +11,7 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -111,6 +112,15 @@ class GeminiAPI(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+            if self.continual_mode is True and self.cache_mode == "resume":
+                doc_uuid = str(doc_id)
+                if doc_uuid in self.response_cache:
+                    content = self.response_cache[doc_uuid]
+                    if content:
+                        res.append(content)
+                        pbar.update(1)
+                        continue
+
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -127,21 +137,29 @@ class GeminiAPI(lmms):
 
             message = [contexts] + visuals
 
-            if self.continual_mode is True and self.cache_mode == "resume":
-                if doc_id in self.response_cache:
-                    doc_uuid = str(doc_id)
-                    content = self.response_cache[doc_uuid]
-                    res.append(content)
-                    pbar.update(1)
-                    continue
-
             for attempt in range(5):
                 try:
-                    content = self.model.generate_content(message, generation_config=config)
+                    content = self.model.generate_content(
+                        message,
+                        generation_config=config,
+                        safety_settings={
+                            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                        },
+                    )
                     content = content.text
-
+                    break
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
+                    if isinstance(e, ValueError):
+                        try:
+                            eval_logger.info(f"Prompt feed_back: {content.prompt_feedback}")
+                            content = ""
+                            break
+                        except Exception:
+                            pass
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
