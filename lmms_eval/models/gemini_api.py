@@ -156,8 +156,6 @@ class GeminiAPI(lmms):
                     if isinstance(e, ValueError):
                         try:
                             eval_logger.info(f"Prompt feed_back: {content.prompt_feedback}")
-                            eval_logger.info(f"finish reason: {content.candidates[0].finish_reason}")
-                            eval_logger.info(f"safety ratings: {content.candidates[0].safety_ratings}")
                             content = ""
                             break
                         except Exception:
