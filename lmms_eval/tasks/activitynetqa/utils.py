@@ -204,9 +204,9 @@ def activitynetqa_process_results(doc, result):
     return data_dict
 
 
-def activitynetqa_aggregate_submissions(results, args, task):
+def activitynetqa_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"activitynetqa-{task}-{now_date_time}.json"
+    submission_file_name = f"activitynetqa_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     with open(path, "w") as f:
@@ -222,7 +222,8 @@ def activitynetqa_print_scores(eval_file_path, args):
     with open(eval_file_path, "r") as file:
         evaluated_list = json.load(file)
 
-    score_file_name = "scores.json"
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    score_file_name = f"scores_activitynetqa_{now_date_time}.json"
     path = file_utils.generate_submission_file(score_file_name, args)
 
     # Compute average score and final accuracy
@@ -253,6 +254,8 @@ def activitynetqa_print_scores(eval_file_path, args):
 
     eval_logger.info(f"Score file saved to {path}")
 
+    return accuracy, average_score
+
 
 # we process answer and gpt_eval seperately, in case gpt is not stable
 # so we obtained a submission file for answer first
@@ -269,7 +272,8 @@ def activitynetqa_gpt_eval(result_file_path, args):
         eval_file_path: path to save the JSON file with evaluated results
     """
 
-    eval_file_name = "gpt_eval_result.json"
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    eval_file_name = f"gpt_eval_result_activitynetqa_{now_date_time}.json"
     eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
 
     # Load the predictions from the result file
@@ -307,6 +311,7 @@ def activitynetqa_gpt_eval(result_file_path, args):
 
 # Factory into different aggregate
 def activitynetqa_aggregate(results, args):
-    result_file_path = activitynetqa_aggregate_submissions(results, args, "Generation")
+    result_file_path = activitynetqa_aggregate_submissions(results, args)
     eval_file_path = activitynetqa_gpt_eval(result_file_path, args)
-    activitynetqa_print_scores(eval_file_path, args)
+    accuracy, average_score = activitynetqa_print_scores(eval_file_path, args)
+    return "acc: " + str(accuracy) + " score: " + str(average_score)
