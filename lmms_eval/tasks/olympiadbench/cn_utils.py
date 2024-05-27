@@ -9,7 +9,10 @@ import logging
 eval_logger = logging.getLogger("lmms-eval")
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
-olympiadbench_evaluator = OlympiadBenchEvaluator()
+try:
+    olympiadbench_evaluator = OlympiadBenchEvaluator()
+except:
+    pass
 
 
 def olympiadbench_doc_to_visual(doc):

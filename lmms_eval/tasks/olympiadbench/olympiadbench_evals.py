@@ -1,7 +1,15 @@
 import re
 import sympy as sp
-from sympy import simplify, Eq, sympify, Pow
-from sympy.parsing.latex import parse_latex
+
+import logging
+
+eval_logger = logging.getLogger("lmms-eval")
+
+try:
+    from sympy import simplify, Eq, sympify, Pow
+    from sympy.parsing.latex import parse_latex
+except ImportError as e:
+    eval_logger.debug("Please install sympy package by running 'pip install sympy' if you want to use OlympiadBenchEvaluator.")
 import math
 
 # how to use
@@ -89,7 +97,6 @@ class OlympiadBenchEvaluator:
         # Set up a list for allowed errors
         if len(precision) <= 1:
             precision = precision * len(temp_list1)
-
         if len(temp_list1) != len(temp_list2):
             return False
 
@@ -144,7 +151,6 @@ class OlympiadBenchEvaluator:
                 return True
         except:
             pass
-
         # Then check if expressions are mathematically equal
         try:
             if self.expression_equal(expression1, expression2) and not ("=" in expression1 and "=" in expression2):
@@ -152,7 +158,6 @@ class OlympiadBenchEvaluator:
                 return True
         except:
             pass
-
         # Lastly, check for equation equality
         try:
             if self.equation_equal(expression1, expression2):
@@ -160,7 +165,6 @@ class OlympiadBenchEvaluator:
                 return True
         except:
             pass
-
         return False
 
     def numerical_equal(self, expression1: str, expression2: str, include_percentage: bool = True):
@@ -168,12 +172,10 @@ class OlympiadBenchEvaluator:
         # Includes possible percentage cases
         reference = float(expression1)
         prediction = float(expression2)
-
         if include_percentage:
             gt_result = [reference / 100, reference, reference * 100]
         else:
             gt_result = [reference]
-
         for item in gt_result:
             if abs(item - prediction) <= self.precision * 1.01:
                 return True
@@ -218,7 +220,6 @@ class OlympiadBenchEvaluator:
                     simplified_expr = simplify(expr1_sym - expr2_sym)
 
                     num_value = simplified_expr.evalf()
-
                     return abs(num_value) < 1e-3
                 except:
                     return False
@@ -274,7 +275,6 @@ class OlympiadBenchEvaluator:
         else:
             inter_list1 = interval1.split("\\cup")
             inter_list2 = interval2.split("\\cup")
-
             if len(inter_list1) != len(inter_list2):
                 return False
             else:
