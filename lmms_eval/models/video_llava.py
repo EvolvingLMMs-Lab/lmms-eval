@@ -17,22 +17,24 @@ from lmms_eval.utils import stop_sequences_criteria
 
 eval_logger = logging.getLogger("lmms-eval")
 
-try:
-    import torch
-    from videollava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN
-    from videollava.conversation import conv_templates, SeparatorStyle
-    from videollava.model.builder import load_pretrained_model
-    from videollava.utils import disable_torch_init
-    from videollava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-except ImportError:
-    eval_logger.debug("Video-LLaVA is not installed. Please install Video-LLaVA to use this model.")
+# try:
+#     import torch
+#     from videollava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN
+#     from videollava.conversation import conv_templates, SeparatorStyle
+#     from videollava.model.builder import load_pretrained_model
+#     from videollava.utils import disable_torch_init
+#     from videollava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
+# except ImportError:
+#     eval_logger.debug("Video-LLaVA is not installed. Please install Video-LLaVA to use this model.")
 
+from transformers import VideoLlavaProcessor, VideoLlavaForConditionalGeneration
+from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 @register_model("video_llava")
 class VideoLLaVA(lmms):
     def __init__(
         self,
-        pretrained: str = "LanguageBind/Video-LLaVA-7B",
+        pretrained: str = "LanguageBind/Video-LLaVA-7B-hf",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
@@ -45,7 +47,8 @@ class VideoLLaVA(lmms):
         device_map="cuda:0",
         conv_template="llava_v1",
         use_cache=True,
-        truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
+        truncate_context=False,
+        num_frames: int = 8,  # whether to truncate the context in generation, set it False for LLaVA-1.6
         **kwargs,
     ) -> None:
         super().__init__()
@@ -62,9 +65,14 @@ class VideoLLaVA(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         self.pretrained = pretrained
-        self.model_name = get_model_name_from_path(pretrained)
-        self._tokenizer, self._model, self.processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map)
-        self.video_processor = self.processor["video"]
+        self._model = VideoLlavaForConditionalGeneration.from_pretrained(pretrained)
+        self._processor = VideoLlavaProcessor.from_pretrained(pretrained)
+        self.prompt = "USER: <video>{}? ASSISTANT:"
+        self.num_frames = num_frames
+        assert num_frames == 8, "num_frames must be 8 https://github.com/huggingface/transformers/blob/bdb9106f247fca48a71eb384be25dbbd29b065a8/src/transformers/models/video_llava/modeling_video_llava.py#L379"
+        # self.model_name = get_model_name_from_path(pretrained)
+        # self._tokenizer, self._model, self.processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map)
+        # self.video_processor = self.processor["video"]
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -183,29 +191,28 @@ class VideoLLaVA(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             assert len(visuals) == 1
-            video_tensors = self.video_processor(visuals[0], return_tensors="pt")["pixel_values"]
+            clip = read_video_pyav(visuals[0], self.num_frames)
 
-            if type(video_tensors) is list:
-                tensor = [video.to(self.model.device, dtype=torch.float16) for video in video_tensors]
-            else:
-                tensor = video_tensors.to(self.model.device, dtype=torch.float16)
+            inputs = self._processor(text=self.prompt.format(contexts), videos=clip, return_tensors="pt")
+            pixel_values_videos = inputs["pixel_values_videos"]
+            if pixel_values_videos.shape[1] != self.num_frames:
+                empty_frames = torch.zeros((1, self.num_frames - pixel_values_videos.shape[1], *pixel_values_videos.shape[2:]), dtype=pixel_values_videos.dtype)
+                pixel_values_videos = torch.cat([pixel_values_videos, empty_frames], dim=1)
+                inputs["pixel_values_videos"] = pixel_values_videos
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-            conv = conv_templates[self.conv_template].copy()
-            roles = conv.roles
-            inp = " ".join([DEFAULT_IMAGE_TOKEN] * self.model.get_video_tower().config.num_frames) + "\n" + contexts
-            conv.append_message(conv.roles[0], inp)
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
+            if "max_new_tokens" not in gen_kwargs:
+                gen_kwargs["max_new_tokens"] = 1024
+            if "temperature" not in gen_kwargs:
+                gen_kwargs["temperature"] = 0
+            if "top_p" not in gen_kwargs:
+                gen_kwargs["top_p"] = None
+            if "num_beams" not in gen_kwargs:
+                gen_kwargs["num_beams"] = 1
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
-            stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
-            keywords = [stop_str]
-            stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
+            generate_ids = self.model.generate(**inputs, max_length=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
 
-            with torch.inference_mode():
-                output_ids = self.model.generate(input_ids, images=tensor, do_sample=True, temperature=0.1, max_new_tokens=1024, use_cache=True, stopping_criteria=[stopping_criteria])
-
-            outputs = self.tokenizer.decode(output_ids[0, input_ids.shape[1] :]).strip()
+            outputs = self._processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].split("ASSISTANT:")[-1].strip()
             res.append(outputs)
             pbar.update(1)
         return res
