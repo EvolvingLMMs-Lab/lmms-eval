@@ -30,12 +30,6 @@ try:
 except ImportError:
     eval_logger.error("LLaVA is not installed. Please install LLaVA to use this model.")
 
-from transformers.integrations.deepspeed import (
-    is_deepspeed_zero3_enabled,
-    set_hf_deepspeed_config,
-    unset_hf_deepspeed_config,
-)
-
 if torch.__version__ > "2.1.2":
     best_fit_attn_implementation = "sdpa"
 else:
@@ -94,8 +88,9 @@ class Llava(lmms):
             # Try to load the model with the multimodal argument
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
         except TypeError:
-            # for older versions of LLaVA that don't have multimodal argument
+            # for older versions of LLaVA that don't have multimodal and attn_implementation arguments
             llava_model_args.pop("multimodal", None)
+            llava_model_args.pop("attn_implementation", None)
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
 
         self._config = self._model.config
