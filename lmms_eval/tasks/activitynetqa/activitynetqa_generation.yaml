@@ -10,8 +10,6 @@ metric_list:
   - metric: submission
     aggregation: !function utils.activitynetqa_aggregate
     higher_is_better: true
-  - metric: exact_match
-    higher_is_better: true
 include: _default_template_yaml
 
 generation_kwargs:
