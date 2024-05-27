@@ -1,5 +1,5 @@
 dataset_name: "Generic"
-task: "videochatgpt_context"
+task: "videochatgpt_gen"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.videochatgpt_doc_to_visual
@@ -7,7 +7,13 @@ doc_to_text: !function utils.videochatgpt_doc_to_text
 doc_to_target: !function utils.videochatgpt_doc_to_answer
 process_results: !function utils.videochatgpt_process_results_generic
 metric_list:
-  - metric: submission
+  - metric: correctness
+    aggregation: !function utils.videochatgpt_aggregate_correctness
+    higher_is_better: true
+  - metric: detailed_orientation
+    aggregation: !function utils.videochatgpt_aggregate_detailed_orientation
+    higher_is_better: true
+  - metric: context
     aggregation: !function utils.videochatgpt_aggregate_context
     higher_is_better: true
 include: _default_template_yaml

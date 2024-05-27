@@ -23,6 +23,7 @@ except ImportError:
     eval_logger.info("Failed to import video_chatgpt modules")
 
 from lmms_eval.models.model_utils.load_video import read_video_pyav
+
 eval_logger = logging.getLogger("lmms-eval")
 
 
@@ -119,7 +120,7 @@ class VideoChatGPT(lmms):
                     video_frames = video_frames[: self.num_frm]
                 # VideoChatGPT load video return a list of PIL Image
                 # videos += video_frames
-            
+
             output = video_chatgpt_infer(
                 video_frames, contexts, conv_mode="video-chatgpt_v1", model=self.model, vision_tower=self.vision_tower, tokenizer=self.tokenizer, image_processor=self.image_processor, video_token_len=self.video_token_len
             )

@@ -30,6 +30,7 @@ eval_logger = logging.getLogger("lmms-eval")
 from transformers import VideoLlavaProcessor, VideoLlavaForConditionalGeneration
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
+
 @register_model("video_llava")
 class VideoLLaVA(lmms):
     def __init__(

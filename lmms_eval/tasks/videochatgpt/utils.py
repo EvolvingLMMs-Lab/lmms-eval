@@ -113,7 +113,11 @@ def videochatgpt_doc_to_answer(doc):
 def videochatgpt_process_results_generic(doc, result):
     pred = result[0]
 
-    return {"submission": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
+    return {
+        "correctness": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred},
+        "detailed_orientation": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred},
+        "context": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred},
+    }
 
 
 # Process result for evaluation in temporal task
@@ -137,7 +141,7 @@ def videochatgpt_process_results_consistency(doc, result):
 
 def videochatgpt_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"videochatgpt_{task}_{now_date_time}.json"
+    submission_file_name = f"inference_results_videochatgpt_{task}_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     with open(path, "w") as f:
