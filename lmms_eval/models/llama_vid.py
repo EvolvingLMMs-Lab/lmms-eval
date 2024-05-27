@@ -18,6 +18,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
+from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 import subprocess
 
@@ -50,6 +51,7 @@ class LLaMAVid(lmms):
         conv_template="vicuna_v1",
         use_cache=True,
         truncate_context=False,
+        num_frames: int = 100,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -69,6 +71,7 @@ class LLaMAVid(lmms):
         self.pretrained = pretrained
         self.model_path = snapshot_download(self.pretrained)
         self.model_name = get_model_name_from_path(pretrained)
+        self.num_frames = num_frames
         if not os.path.exists("./model_zoo/LAVIS/eva_vit_g.pth") and accelerator.is_main_process:
             eval_logger.info("\n\n Eva Encoder is not found for LLaMA-VID. Download automatically to the folder ./model_zoo/LAVIS")
             cache_path = "model_zoo/LAVIS"
@@ -146,13 +149,6 @@ class LLaMAVid(lmms):
         else:
             print(f"Failed to download file. Status code: {response.status_code}")
 
-    def load_video(self, video_path):
-        vr = VideoReader(video_path, ctx=cpu(0))
-        total_frame_num = len(vr)
-        fps = round(vr.get_avg_fps())
-        frame_idx = [i for i in range(0, len(vr), fps)]
-        spare_frames = vr.get_batch(frame_idx).asnumpy()
-        return spare_frames
 
     @property
     def config(self):
@@ -209,7 +205,7 @@ class LLaMAVid(lmms):
             visuals = self.flatten(visuals)
             videos = []
             for visual in visuals:
-                video = self.load_video(visual)
+                video = read_video_pyav(visual, num_frm=self.num_frames)
                 video = self.image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
                 video = [video]
                 videos += video
