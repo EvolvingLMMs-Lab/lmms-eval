@@ -9,7 +9,7 @@ def read_video_pyav(video_path, num_frm=8):
     # sample uniformly 8 frames from the video
     total_frames = container.streams.video[0].frames
     num_frm = min(total_frames, num_frm)
-    indices = np.arange(0, total_frames, total_frames / num_frm).astype(int)
+    indices = np.linspace(0, total_frames - 1, num_frm, dtype=int)
     container.seek(0)
     start_index = indices[0]
     end_index = indices[-1]
