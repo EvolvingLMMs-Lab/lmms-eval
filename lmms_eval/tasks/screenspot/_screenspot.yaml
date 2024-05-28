@@ -1,0 +1,4 @@
+group: screenspot
+task:
+- screenspot_reg_test
+- screenspot_rec_test

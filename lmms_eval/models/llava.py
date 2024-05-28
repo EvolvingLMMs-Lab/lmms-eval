@@ -57,6 +57,7 @@ class Llava(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = False,
         revision=None,
+        model_name=None,
         attn_implementation=best_fit_attn_implementation,
         use_flash_attention_2=True,
         device_map="auto",
@@ -83,8 +84,20 @@ class Llava(lmms):
         llava_model_args["attn_implementation"] = attn_implementation
         if customized_config:
             llava_model_args["customized_config"] = customized_config
-        llava_model_args["use_flash_attention_2"] = False
-        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, get_model_name_from_path(pretrained), device_map=self.device_map, **llava_model_args)
+        if attn_implementation is not None:
+            llava_model_args["attn_implementation"] = attn_implementation
+        if "use_flash_attention_2" in kwargs:
+            llava_model_args["use_flash_attention_2"] = kwargs["use_flash_attention_2"]
+
+        model_name = model_name if model_name is not None else get_model_name_from_path(pretrained)
+        try:
+            # Try to load the model with the multimodal argument
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
+        except TypeError:
+            # for older versions of LLaVA that don't have multimodal argument
+            llava_model_args.pop("multimodal", None)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
+
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -223,7 +236,11 @@ class Llava(lmms):
                 image_tokens = " ".join(image_tokens)
                 prompts_input = image_tokens + "\n" + (contexts[0] if isinstance(contexts, list) else contexts)
 
-            conv = conv_templates[self.conv_template].copy()
+            # This is much safer for llama3, as we now have some object type in it
+            if "llama_3" in self.conv_template:
+                conv = copy.deepcopy(conv_templates[self.conv_template])
+            else:
+                conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], prompts_input)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
@@ -331,7 +348,11 @@ class Llava(lmms):
                 else:
                     question = context
 
-                conv = conv_templates[self.conv_template].copy()
+                # This is much safer for llama3, as we now have some object type in it
+                if "llama_3" in self.conv_template:
+                    conv = copy.deepcopy(conv_templates[self.conv_template])
+                else:
+                    conv = conv_templates[self.conv_template].copy()
                 conv.append_message(conv.roles[0], question)
                 conv.append_message(conv.roles[1], None)
                 prompt_question = conv.get_prompt()
