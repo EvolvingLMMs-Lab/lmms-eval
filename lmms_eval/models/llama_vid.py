@@ -187,6 +187,14 @@ class LLaMAVid(lmms):
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
+    
+    def load_video(self, video_path):
+        vr = VideoReader(video_path, ctx=cpu(0))
+        total_frame_num = len(vr)
+        fps = round(vr.get_avg_fps())
+        frame_idx = [i for i in range(0, len(vr), fps)]
+        spare_frames = vr.get_batch(frame_idx).asnumpy()
+        return spare_frames
 
     def flatten(self, input):
         new_list = []
