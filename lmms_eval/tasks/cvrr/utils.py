@@ -1,4 +1,3 @@
-from decord import VideoReader, cpu
 import numpy as np
 import os
 import sys
@@ -14,6 +13,7 @@ import openai
 from openai import OpenAI
 import time
 import ast
+from tqdm import tqdm
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -268,7 +268,7 @@ def cvrr_gpt_eval(result_file_path, args, task):
         result_list = json.load(file)
 
     # Process each result to generate scores
-    for data_dict in result_list:
+    for data_dict in tqdm(result_list, desc="GPT-Eval"):
         try:
             question = data_dict.get("Q", "")
             answer = data_dict.get("A", "")
