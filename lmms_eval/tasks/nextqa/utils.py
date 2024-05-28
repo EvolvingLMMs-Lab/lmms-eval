@@ -198,13 +198,13 @@ def nextqa_aggregate_results(results):
             wups0[qtype] = 0
             wups9[qtype] = 0
 
-    num_e = over_num["C"]
-    num_t = over_num["T"]
-    num_c = over_num["D"]
+    # num_e = over_num["C"]
+    # num_t = over_num["T"]
+    # num_c = over_num["D"]
 
-    wups0_e /= num_e
-    wups0_t /= num_t
-    wups0_c /= num_c
+    # wups0_e /= num_e
+    # wups0_t /= num_t
+    # wups0_c /= num_c
 
     wups0_all /= ref_num
     wups9_all /= ref_num
@@ -213,9 +213,9 @@ def nextqa_aggregate_results(results):
         wups0[k] = wups0[k] * 100
         wups9[k] = wups9[k] * 100
 
-    wups0_e *= 100
-    wups0_t *= 100
-    wups0_c *= 100
+    # wups0_e *= 100
+    # wups0_t *= 100
+    # wups0_c *= 100
     wups0_all *= 100
 
     return wups0_all

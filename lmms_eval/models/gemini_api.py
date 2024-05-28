@@ -110,10 +110,13 @@ class GeminiAPI(lmms):
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        
+        def get_uuid(task, split, doc_id):
+            return f"{task}___{split}___{doc_id}"
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = str(doc_id)
+                doc_uuid = get_uuid(task, split, doc_id)
                 if doc_uuid in self.response_cache:
                     content = self.response_cache[doc_uuid]
                     if content:
@@ -169,7 +172,7 @@ class GeminiAPI(lmms):
             pbar.update(1)
 
             if self.continual_mode is True:  # Cache the response
-                doc_uuid = str(doc_id)
+                doc_uuid = get_uuid(task, split, doc_id)
                 self.response_cache[doc_uuid] = content
                 with open(self.response_persistent_file, "w") as f:
                     json.dump(self.response_cache, f)
