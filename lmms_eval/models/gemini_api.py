@@ -110,7 +110,7 @@ class GeminiAPI(lmms):
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
-        
+
         def get_uuid(task, split, doc_id):
             return f"{task}___{split}___{doc_id}"
 
