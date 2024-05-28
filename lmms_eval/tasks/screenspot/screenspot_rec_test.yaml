@@ -1,0 +1,4 @@
+group: screenspot_rec
+task: screenspot_rec_test
+include: _default_template_rec_yaml
+test_split: test

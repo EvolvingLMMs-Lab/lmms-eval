@@ -242,6 +242,9 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 - ScienceQA (scienceqa_full)
   - ScienceQA Full (scienceqa)
   - ScienceQA IMG (scienceqa_img)
+- ScreenSpot (screenspot)
+  - ScreenSpot REC / Grounding (screenspot_rec)
+  - ScreenSpot REG / Instruction Generation (screenspot_reg)
 - SeedBench (seedbench)
 - SeedBench 2 (seedbench_2)
 - ST-VQA (stvqa)
@@ -257,6 +260,9 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 - VQAv2 (vqav2)
   - VQAv2 Validation (vqav2_val)
   - VQAv2 Test (vqav2_test)
+- WebSRC (websrc)
+  - WebSRC Validation (websrc_val)
+  - WebSRC Test (websrc_test)
 
 ## Datasets to be added and tested
 - TallyQA (tallyqa)
