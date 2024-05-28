@@ -206,7 +206,7 @@ def activitynetqa_process_results(doc, result):
 
 def activitynetqa_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"activitynetqa_{now_date_time}.json"
+    submission_file_name = f"inference_results_activitynetqa_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     with open(path, "w") as f:

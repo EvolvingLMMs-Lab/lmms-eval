@@ -102,7 +102,7 @@ def video_detail_description_process_results_generic(doc, result):
 
 def video_detail_description_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"video_detail_description-{now_date_time}.json"
+    submission_file_name = f"inference_results_video_detail_description_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     with open(path, "w") as f:
@@ -234,7 +234,7 @@ def gpt_eval(results):
 def video_detail_description_gen_gpt_eval(results, args):
     # Save the raw inference results to a new JSON file
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"video_detail_description_{now_date_time}.json"
+    submission_file_name = f"inference_results_video_detail_description_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     with open(path, "w") as f:
