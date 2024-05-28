@@ -120,7 +120,7 @@ def cvrr_process_results(doc, result):
 
 def cvrr_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"cvrr-{task}-{now_date_time}.json"
+    submission_file_name = f"inference_results_cvrr_{task}_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     with open(path, "w") as f:
@@ -221,7 +221,7 @@ def cvrr_print_scores(eval_file_path, args, task):
         evaluated_list = json.load(file)
 
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    score_file_name = f"gpt_eval_result_cvrr_{task}_{now_date_time}.json"
+    score_file_name = f"scores_cvrr_{task}_{now_date_time}.json"
     path = file_utils.generate_submission_file(score_file_name, args)
 
     # Compute average score

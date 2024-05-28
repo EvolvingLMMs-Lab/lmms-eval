@@ -110,7 +110,7 @@ def egoschema_process_results_generation(doc, result):
 
 def egoschema_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"egoschema-{task}-{now_date_time}.json"
+    submission_file_name = f"inference_results_egoschema_{task}_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     # results is a list of 5031 dict,
