@@ -11,6 +11,7 @@ AVAILABLE_MODELS = {
     "minicpm_v": "MiniCPM_V",
     "idefics2": "Idefics2",
     "qwen_vl_api": "Qwen_VL_API",
+    "phi3v": "Phi3v",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():

@@ -17,7 +17,7 @@ LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_lla
 
 rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule.json"), "r"))
 
-with open(Path(__file__).parent / "llava-in-the-wild.yaml", "r") as f:
+with open(Path(__file__).parent / "_default_template.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):
