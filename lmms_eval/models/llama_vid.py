@@ -149,7 +149,6 @@ class LLaMAVid(lmms):
         else:
             print(f"Failed to download file. Status code: {response.status_code}")
 
-
     @property
     def config(self):
         # return the associated transformers.AutoConfig for the given pretrained model.
