@@ -10,13 +10,13 @@ import random
 from glob import glob
 import shutil
 from tqdm import tqdm
-import subprocess
 
 import datasets
 from datasets import Image, Sequence
 import numpy as np
 from PIL import ImageFile
 
+from accelerate import Accelerator
 from datasets import DownloadConfig
 from typing import Union, List, Any
 from collections.abc import Callable
@@ -688,17 +688,16 @@ class ConfigurableTask(Task):
             hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
             cache_dir = dataset_kwargs["cache_dir"]
             cache_dir = os.path.join(hf_home, cache_dir)
-
-            cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")
-            zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
-
-            from accelerate import Accelerator
-
             accelerator = Accelerator()
-            if not os.path.exists(cache_dir) and len(zip_files) > 0 and accelerator.is_main_process:
-                for zip_file in zip_files:
-                    eval_logger.info(f"Unzipping {zip_file} to {cache_dir}")
-                    shutil.unpack_archive(zip_file, cache_dir)
+            if accelerator.is_main_process:
+                cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")
+                zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
+
+                if not os.path.exists(cache_dir) and len(zip_files) > 0:
+                    for zip_file in zip_files:
+                        eval_logger.info(f"Unzipping {zip_file} to {cache_dir}")
+                        shutil.unpack_archive(zip_file, cache_dir)
+
             accelerator.wait_for_everyone()
 
             if "builder_script" in dataset_kwargs:
