@@ -148,13 +148,14 @@ def mmupdbench_results_eval(results, args, upd_type, question_type):
     file_json = generate_submission_file(f"mmupdbench_results_{upd_type}_{question_type}.json", args)
 
     details_info = {
+        "overall_acc_dual": overall_acc_dual,
+        "category_acc_dual": category_acc_dual,
         "overall_acc_standard": overall_acc_standard,
         "category_acc_standard": category_acc_standard,
         "overall_acc_upd": overall_acc_upd,
         "category_acc_upd": category_acc_upd,
-        "overall_acc_dual": overall_acc_dual,
-        "category_acc_dual": category_acc_dual,
     }
+
     with open(file_json, "w") as f:
         json.dump(details_info, f)
 
