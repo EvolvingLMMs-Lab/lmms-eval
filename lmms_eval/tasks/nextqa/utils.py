@@ -1,6 +1,7 @@
 import os
 import yaml
 import logging
+import random
 import pandas as pd
 
 from pathlib import Path
@@ -17,6 +18,9 @@ from lmms_eval.tasks._task_utils.video_loader import get_cache_dir, get_video
 from nltk.tokenize import word_tokenize
 from nltk.corpus import wordnet
 import numpy as np
+
+
+OPTIONS = ["A", "B", "C", "D", "E"]
 
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -47,6 +51,90 @@ def nextqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
     return question
 
 
+def nextqa_doc_to_text_mc(doc, model_specific_prompt_kwargs=None):
+    if model_specific_prompt_kwargs is None:
+        model_specific_prompt_kwargs = {}
+    question = [doc["question"].strip()]
+    for i in range(5):
+        question.append(f"{OPTIONS[i]}. {doc[f'a{i}'].strip()}")
+    question = "\n".join(question)
+    if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
+        question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
+    if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
+        question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
+    return question
+
+
+def nextqa_mc_process_results(doc, results):
+    pred = results[0]
+    index2ans, all_choices = get_multi_choice_info(doc)
+    parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
+    return {
+        "exact_match": parsed_pred == OPTIONS[doc["answer"]],
+    }
+
+
+def parse_multi_choice_response(response, all_choices, index2ans):
+    """
+    Parse the prediction from the generated response.
+    Return the predicted index e.g., A, B, C, D.
+    https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
+    """
+    for char in [",", ".", "!", "?", ";", ":", "'"]:
+        response = response.strip(char)
+    response = " " + response + " "  # add space to avoid partial match
+
+    index_ans = True
+    ans_with_brack = False
+    candidates = []
+    for choice in all_choices:  # e.g., (A) (B) (C) (D)
+        if f"({choice})" in response:
+            candidates.append(choice)
+            ans_with_brack = True
+
+    if len(candidates) == 0:
+        for choice in all_choices:  # e.g., A B C D
+            if f"{choice} " in response:
+                candidates.append(choice)
+
+    if len(candidates) == 0:
+        for choice in all_choices:  # e.g., A. B. C. D.
+            if f"{choice}." in response:
+                candidates.append(choice)
+
+    # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
+    if len(candidates) == 0 and len(response.split()) > 5:
+        for index, ans in index2ans.items():
+            if ans.lower() in response.lower():
+                candidates.append(index)
+                index_ans = False  # it's content ans.
+
+    if len(candidates) == 0:  # still not get answer, randomly choose one.
+        pred_index = random.choice(all_choices)
+    elif len(candidates) > 1:
+        start_indexes = []
+        if index_ans:
+            if ans_with_brack:
+                for can in candidates:
+                    index = response.rfind(f"({can})")
+                    start_indexes.append(index)  # -1 will be ignored anyway
+                # start_indexes = [generated_response.index(f'({can})') for can in candidates]
+            else:
+                for can in candidates:
+                    index = response.rfind(f" {can} ")
+                    start_indexes.append(index)
+        else:
+            for can in candidates:
+                index = response.lower().rfind(index2ans[can].lower())
+                start_indexes.append(index)
+        # get the last one
+        pred_index = candidates[np.argmax(start_indexes)]
+    else:  # if only one candidate, use it.
+        pred_index = candidates[0]
+
+    return pred_index
+
+
 def nextqa_doc_to_target(doc):
     return doc["answer"]
 
@@ -56,6 +144,16 @@ def remove_stop(sentence):
     words = lemmatize_sentence(sentence)
     words = [w for w in words if not w in stopwords]
     return " ".join(words)
+
+
+def get_multi_choice_info(doc):
+    all_choices = []
+    index2ans = {}
+    for i in range(5):
+        index2ans[OPTIONS[i]] = doc[f"a{i}"].strip()
+        all_choices.append(OPTIONS[i])
+
+    return index2ans, all_choices
 
 
 ####################### WUPS ################################

@@ -21,7 +21,7 @@ def read_video_pyav(video_path, num_frm=8):
                 frames.append(frame)
     else:
         # https://github.com/PyAV-Org/PyAV/issues/1269
-        context = CodecContext.create('libvpx-vp9', 'r')
+        context = CodecContext.create("libvpx-vp9", "r")
         for packet in container.demux(video=0):
             for frame in context.decode(packet):
                 frames.append(frame)
