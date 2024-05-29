@@ -1,7 +1,0 @@
-task: "mmiasdbench_instruction"
-test_split: test
-include: _default_template_mmiasdbench_instruction_yaml
-metric_list:
-  - metric: gpt_eval_score
-    aggregation: !function utils.mmiasdbench_instruction
-    higher_is_better: true

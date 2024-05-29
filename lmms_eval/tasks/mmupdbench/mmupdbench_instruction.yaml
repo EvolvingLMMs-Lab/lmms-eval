@@ -1,9 +1,0 @@
-group: mmupdbench_instruction
-task:
-  - mmaadbench_instruction
-  - mmiasdbench_instruction
-  - mmivqdbench_instruction
-metadata:
-  version: 0.0
-  sys_prompt: ""
-  gpt_eval_model_name: "gpt-3.5-turbo-0613"
