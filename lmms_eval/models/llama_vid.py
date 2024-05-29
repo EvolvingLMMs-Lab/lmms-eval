@@ -186,7 +186,7 @@ class LLaMAVid(lmms):
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
-    
+
     def load_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)

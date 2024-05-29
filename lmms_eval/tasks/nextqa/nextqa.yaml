@@ -1,4 +1,5 @@
 group: nextqa
 task:
-- nextqa_test
-- nextqa_val
+- nextqa_oe_test
+- nextqa_oe_val
+- nextqa_mc_test

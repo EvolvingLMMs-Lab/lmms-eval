@@ -1,4 +1,5 @@
-task: "nextqa_val"
+task: "nextqa_oe_val"
+dataset_name: OE
 test_split: validation
 output_type: generate_until
 doc_to_visual: !function utils.nextqa_doc_to_visual
@@ -10,3 +11,7 @@ metric_list:
     aggregation: !function utils.nextqa_aggregate_results
     higher_is_better: true
 include: _default_template_yaml
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer a question using a short phrase or sentence."

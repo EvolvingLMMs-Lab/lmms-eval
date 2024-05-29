@@ -10,6 +10,8 @@ def get_cache_dir(config, sub_dir="videos"):
 
 
 def _get_video_file(prefix: str, video_name: str, suffix: str):
+    if not isinstance(video_name, str):
+        video_name = str(video_name)
     if not video_name.endswith(suffix):
         video_name = f"{video_name}.{suffix}"
     video_path = os.path.join(prefix, video_name)
