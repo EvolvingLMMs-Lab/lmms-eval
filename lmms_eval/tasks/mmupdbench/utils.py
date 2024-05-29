@@ -89,7 +89,8 @@ def mmupdbench_process_results(doc, results):
             "source": doc["source"],
             "split": doc["split"],
             "category": doc["category"],
-            "type": doc["type"]
+            "type": doc["type"],
+            "masked_answer": doc["masked_answer"]
         },
     }
     option_candidate = ["A", "B", "C", "D", "E"]
