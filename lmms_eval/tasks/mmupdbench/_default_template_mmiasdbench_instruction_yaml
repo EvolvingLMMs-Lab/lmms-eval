@@ -1,0 +1,23 @@
+dataset_path: MM-UPD/MM-UPD
+doc_to_target: "answer"
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nIf all the options are incorrect, answer \"F. None of the above\"."
+doc_to_visual: !function utils.mmupdbench_doc_to_visual
+doc_to_text: !function utils.mmupdbench_doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.mmupdbench_process_results
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
+output_type: generate_until
+dataset_name: mmiasd_base
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
