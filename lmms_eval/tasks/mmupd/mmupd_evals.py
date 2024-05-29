@@ -453,7 +453,7 @@ class MMUPD_Evaluator:
             return ret, item['prediction'], answer_option
 
         while retry:
-            ans = self.get_chat_response(prompt, temperature=0.9)
+            ans = self.get_chat_response(prompt, temperature=0.7)
             if 'Failed to obtain answer via API' in ans:
                 msg = 'GPT API failed to answer. '
                 eval_logger.info(msg)
