@@ -1,8 +1,8 @@
-group: mmupdbench_base
+group: mmupd_base
 task:
-  - mmaadbench_base
-  - mmiasdbench_base
-  - mmivqdbench_base
+  - mmaad_base
+  - mmiasd_base
+  - mmivqd_base
 metadata:
   version: 0.0
   sys_prompt: ""

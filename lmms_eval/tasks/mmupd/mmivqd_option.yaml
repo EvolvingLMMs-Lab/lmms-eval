@@ -1,0 +1,7 @@
+task: "mmivqd_option"
+test_split: test
+include: _default_template_mmivqd_option_yaml
+metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function utils.mmivqd_option
+    higher_is_better: true
