@@ -185,23 +185,24 @@ def activitynetqa_process_results(doc, result):
     Returns:
         a dictionary
     """
-    # try:
-    #     question = doc.get("question", "")
-    #     answer = doc.get("answer", "")
-    #     pred = result[0]
+    try:
+        question = doc.get("Q", "")
+        answer = doc.get("A", "")
+        pred = result[0]
 
-    #     review, model_name = get_eval(question, answer, pred, 64)
-    #     scores = parse_score(review)
-    # except Exception as e:
-    #     eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
-    #     review = "Failed to Get a Proper Review."
-    #     model_name = "Failed Request"
-    #     scores = ['no', 0]
-    pred = result[0]
+        # Assume get_eval returns a review and the model name, and parse_score parses this review
+        review, model_name = get_eval(question, answer, pred, 64)
+        scores = parse_score(review)
+    except Exception as e:
+        eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
+        review = "Failed to Get a Proper Review."
+        model_name = "Failed Request"
+        scores = ["no", 0]
 
-    data_dict = {"submission": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "question_id": doc["question_id"], "type": doc["type"]}}
-
-    return data_dict
+    return {
+        "gpt_eval_score": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "question_id": doc["question_id"], "type": doc["type"], "Correctness": scores[0], "score": scores[1]},
+        "gpt_eval_accuracy": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "question_id": doc["question_id"], "type": doc["type"], "Correctness": scores[0], "score": scores[1]},
+    }
 
 
 def activitynetqa_aggregate_submissions(results, args):
@@ -217,52 +218,12 @@ def activitynetqa_aggregate_submissions(results, args):
     return path
 
 
-def activitynetqa_print_scores(eval_file_path, args):
-    # Load the predictions from the result file
-    with open(eval_file_path, "r") as file:
-        evaluated_list = json.load(file)
-
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    score_file_name = f"scores_activitynetqa_{now_date_time}.json"
-    path = file_utils.generate_submission_file(score_file_name, args)
-
-    # Compute average score and final accuracy
-    # Initialize counters
-    yes_count = 0
-    no_count = 0
-    total_score = 0
-
-    # Iterate over the results to count correctness and sum scores
-    for result_dict in evaluated_list:
-        if result_dict["Correctness"] == "yes":
-            yes_count += 1
-        else:
-            no_count += 1
-        total_score += result_dict["score"]
-
-    # Calculate accuracy and average score
-    accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
-    average_score = total_score / len(evaluated_list) if evaluated_list else 0
-
-    # Print the results
-    print(f"Accuracy: {accuracy}")
-    print(f"Average Score: {average_score}")
-
-    # Write the processed data to the scores file
-    with open(path, "w") as f:
-        json.dump({"accuracy": accuracy, "average_score": average_score}, f, indent=4)
-
-    eval_logger.info(f"Score file saved to {path}")
-
-    return accuracy, average_score
-
-
 # we process answer and gpt_eval seperately, in case gpt is not stable
 # so we obtained a submission file for answer first
 # and then feed the submission file to gpt for scoring
 
 
-def activitynetqa_gpt_eval(result_file_path, args):
+def activitynetqa_gpt_eval(results, args):
     """
     Process the result file containing predictions, score them using GPT,
     and save the results with added scores and correctness fields to a new file.
@@ -272,18 +233,18 @@ def activitynetqa_gpt_eval(result_file_path, args):
         eval_file_path: path to save the JSON file with evaluated results
     """
 
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    eval_file_name = f"gpt_eval_result_activitynetqa_{now_date_time}.json"
-    eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
+    # now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    # eval_file_name = f"gpt_eval_result_activitynetqa_{now_date_time}.json"
+    # eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
 
-    # Load the predictions from the result file
-    with open(result_file_path, "r") as file:
-        result_list = json.load(file)
+    # # Load the predictions from the result file
+    # with open(result_file_path, "r") as file:
+    #     result_list = json.load(file)
 
     evaluated_results = []
 
     # Process each result to generate scores
-    for data_dict in result_list:
+    for data_dict in results:
         try:
             question = data_dict.get("Q", "")
             answer = data_dict.get("A", "")
@@ -302,16 +263,49 @@ def activitynetqa_gpt_eval(result_file_path, args):
         updated_dict = {"video_name": data_dict["video_name"], "Correctness": scores[0], "score": scores[1], "Q": question, "A": answer, "pred": pred, "question_id": data_dict.get("question_id"), "type": data_dict.get("type")}
         evaluated_results.append(updated_dict)
 
-    # Save the evaluated results to a new JSON file
-    with open(eval_file_path, "w") as f:
-        json.dump(evaluated_results, f, indent=4)
-
-    return eval_file_path
+    return evaluated_results
 
 
 # Factory into different aggregate
-def activitynetqa_aggregate(results, args):
-    result_file_path = activitynetqa_aggregate_submissions(results, args)
-    eval_file_path = activitynetqa_gpt_eval(result_file_path, args)
-    accuracy, average_score = activitynetqa_print_scores(eval_file_path, args)
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+def activitynetqa_aggregate_score(results, args):
+    # result_file_path = activitynetqa_aggregate_submissions(results, args)
+    yes_count = 0
+    no_count = 0
+    total_score = 0
+
+    # Iterate over the results to count correctness and sum scores
+    for result_dict in results:
+        if result_dict["Correctness"] == "yes":
+            yes_count += 1
+        else:
+            no_count += 1
+        total_score += result_dict["score"]
+
+    # Calculate accuracy and average score
+    accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
+    average_score = total_score / len(results) if results else 0
+    eval_logger.info(f"Accuracy: {accuracy}")
+    eval_logger.info(f"Average Score: {average_score}")
+    return average_score
+
+
+def activitynetqa_aggregate_accuracy(results, args):
+    # result_file_path = activitynetqa_aggregate_submissions(results, args)
+    yes_count = 0
+    no_count = 0
+    total_score = 0
+
+    # Iterate over the results to count correctness and sum scores
+    for result_dict in results:
+        if result_dict["Correctness"] == "yes":
+            yes_count += 1
+        else:
+            no_count += 1
+        total_score += result_dict["score"]
+
+    # Calculate accuracy and average score
+    accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
+    average_score = total_score / len(results) if results else 0
+    eval_logger.info(f"Accuracy: {accuracy}")
+    eval_logger.info(f"Average Score: {average_score}")
+    return accuracy * 100

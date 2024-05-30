@@ -5,8 +5,8 @@ dataset_kwargs:
   cache_dir: activitynetqa
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: ""
-    post_prompt: ""
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
+    post_prompt: "Answer the question using a single word or phrase."
 
 metadata:
   version: 0.0
