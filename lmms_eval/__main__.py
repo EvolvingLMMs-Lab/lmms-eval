@@ -323,7 +323,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
                     filename = args.output_path.joinpath(f"{task_name}.json")
                     # Structure the data with 'args' and 'logs' keys
                     data_to_dump = {"args": vars(args), "model_configs": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
-                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable)
+                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable, ensure_ascii=False)
                     filename.open("w").write(samples_dumped)
                     eval_logger.info(f"Saved samples to {filename}")
 

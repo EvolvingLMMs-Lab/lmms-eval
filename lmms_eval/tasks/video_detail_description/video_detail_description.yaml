@@ -1,4 +1,4 @@
-task: "vdd_499"
+task: "video_dc499"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.video_detail_description_doc_to_visual

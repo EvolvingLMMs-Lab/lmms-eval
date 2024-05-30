@@ -1,4 +1,3 @@
-from decord import VideoReader, cpu
 import requests
 import time
 import ast
@@ -40,17 +39,12 @@ if API_TYPE == "openai":
 # But the idea is that we will unzip all the zip files
 # To HF HOME cache dir
 # And load it here
-# HF_HOME = os.environ["HF_HOME"]
-# cache_dir = config["dataset_kwargs"]["cache_dir"]
-# cache_dir = os.path.join(HF_HOME, "datasets", cache_dir)
-# cache_dir = os.path.join(cache_dir, "evaluation/Test_Videos")
-
-eval_logger = logging.getLogger("lmms-eval")
-
 HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "Test_Videos")
+
+eval_logger = logging.getLogger("lmms-eval")
 
 
 # Pass in video path here
@@ -94,15 +88,11 @@ def video_detail_description_doc_to_answer(doc):
 
 
 # Process result for evaluation in generic task
-def video_detail_description_process_results_generic(doc, result):
-    pred = result[0]
-
-    return {"gpt_eval": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
 
 
 def video_detail_description_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_video_detail_description_{now_date_time}.json"
+    submission_file_name = f"video_detail_description-{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     with open(path, "w") as f:
@@ -199,53 +189,46 @@ def parse_score(review):
         return 0
 
 
-def gpt_eval(results):
+def gpt_eval(data_dict):
     evaluated_results = []
 
-    for data_dict in results:
-        try:
-            question = data_dict.get("Q", "")
-            answer = data_dict.get("A", "")
-            pred = data_dict.get("pred", "")
+    try:
+        question = data_dict.get("Q", "")
+        answer = data_dict.get("A", "")
+        pred = data_dict.get("pred", "")
 
-            # Assume get_eval returns a review and the model name, and parse_score parses this review
-            review, model_name = get_eval_generic(question, answer, pred, 64)
-            score = parse_score(review)
-        except Exception as e:
-            eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
-            review = "Failed to Get a Proper Review."
-            model_name = ""
-            score = 0
+        # Assume get_eval returns a review and the model name, and parse_score parses this review
+        review, model_name = get_eval_generic(question, answer, pred, 64)
+        score = parse_score(review)
+    except Exception as e:
+        eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
+        review = "Failed to Get a Proper Review."
+        model_name = ""
+        score = 0
 
-        # Update the dictionary with the new entries
-        updated_dict = {
-            "video_name": data_dict["video_name"],
-            "review": review,
-            "score": score,
-            # "Q": question,
-            # "A": answer,
-            # "pred": pred,
-        }
-        evaluated_results.append(updated_dict)
+    # Update the dictionary with the new entries
+    updated_dict = {
+        "video_name": data_dict["video_name"],
+        "review": review,
+        "score": score,
+        # "Q": question,
+        # "A": answer,
+        # "pred": pred,
+    }
 
-    return evaluated_results
+    return updated_dict
+
+
+def video_detail_description_process_results_generic(doc, result):
+    pred = result[0]
+    eval_results = gpt_eval(doc)
+
+    return {"gpt_eval": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "score": eval_results["score"], "review": eval_results["review"]}}
 
 
 def video_detail_description_gen_gpt_eval(results, args):
-    # Save the raw inference results to a new JSON file
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_video_detail_description_{now_date_time}.json"
-    path = file_utils.generate_submission_file(submission_file_name, args)
-
-    with open(path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    eval_logger.info(f"Submission file saved to {path}")
-
-    eval_results = gpt_eval(results)
-
     score = 0
-    for result in eval_results:
+    for result in results:
         eval_score = result["score"]
         try:
             eval_score = float(eval_score)
@@ -253,22 +236,4 @@ def video_detail_description_gen_gpt_eval(results, args):
             eval_score = 0.0
         score += eval_score
 
-    average_score = score / len(results)
-
-    # Save the evaluated results to a new JSON file
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    eval_file_name = f"gpt_eval_result_video_detail_description_{now_date_time}.json"
-    eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
-
-    with open(eval_file_path, "w") as f:
-        json.dump(eval_results, f, indent=4)
-
-    # Save the scores to a new JSON file
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    score_file_name = f"scores_video_detail_description_{now_date_time}.json"
-    path = file_utils.generate_submission_file(score_file_name, args)
-
-    with open(path, "w") as f:
-        json.dump({"average_score": average_score}, f, indent=4)
-
-    return average_score
+    return score / len(results)
