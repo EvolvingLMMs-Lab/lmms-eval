@@ -91,7 +91,7 @@ def videochatgpt_doc_to_text_consistency(doc, model_specific_prompt_kwargs=None)
     if "post_prompt" in model_specific_prompt_kwargs:
         post_prompt = model_specific_prompt_kwargs["post_prompt"]
 
-    if "question_1" in doc:
+    if doc["question_1"] != "None":
         question = doc["question_1"]
     else:
         question = doc["question_2"]
@@ -124,7 +124,7 @@ def videochatgpt_process_results_generic(doc, result):
 def videochatgpt_process_results_temporal(doc, result):
     pred = result[0]
 
-    return {"submission": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
+    return {"temporal": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
 
 
 # Process result for generation in consistency task
@@ -134,9 +134,9 @@ def videochatgpt_process_results_consistency(doc, result):
     # if it is question_1, then assign prediction for the 1st question
     # else assign prediction for the 2nd question
     if doc["question_1"] != "None":
-        return {"submission": {"video_name": doc["video_name"], "Q1": doc["question_1"], "A": doc["answer"], "pred1": pred}}
+        return {"consistency": {"video_name": doc["video_name"], "Q1": doc["question_1"], "A": doc["answer"], "pred1": pred}}
     else:
-        return {"submission": {"video_name": doc["video_name"], "Q2": doc["question_2"], "A": doc["answer"], "pred2": pred}}
+        return {"consistency": {"video_name": doc["video_name"], "Q2": doc["question_2"], "A": doc["answer"], "pred2": pred}}
 
 
 def videochatgpt_aggregate_submissions(results, args, task):
@@ -158,21 +158,29 @@ def videochatgpt_aggregate_submissions_consistency(results, args, task):
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     combined_results = []
+    processed_indices = set()
 
-    # Iterate over the results list in steps of 2
-    for i in range(0, len(results), 2):
-        # Merge the current dict with the next one
+    # iterate through results to find pairs
+    # avoid multiprocess bugs
+    for i in range(len(results)):
+        if i in processed_indices:
+            continue
+
         first_dict = results[i]
-        second_dict = results[i + 1] if i + 1 < len(results) else {}
+        video_name = first_dict.get("video_name")
 
-        # If 'video_name' is the same in both and is the key we use to match them
-        if first_dict.get("video_name") == second_dict.get("video_name"):
-            # Combine q2 and pred2 from the even dict into the odd dict
-            first_dict["Q2"] = second_dict.get("Q2")
-            first_dict["pred2"] = second_dict.get("pred2")
-            combined_results.append(first_dict)
+        for j in range(i + 1, len(results)):
+            if j in processed_indices:
+                continue
 
-    # Save the combined results to a file
+            second_dict = results[j]
+            if video_name == second_dict.get("video_name"):
+                first_dict.update({"Q2": second_dict.get("Q2"), "pred2": second_dict.get("pred2")})
+                processed_indices.add(i)
+                processed_indices.add(j)
+                combined_results.append(first_dict)
+                break
+
     with open(path, "w") as f:
         json.dump(combined_results, f, indent=4)
 
