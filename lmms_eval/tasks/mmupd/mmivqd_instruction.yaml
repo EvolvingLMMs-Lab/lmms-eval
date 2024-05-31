@@ -1,6 +1,11 @@
 task: "mmivqd_instruction"
 test_split: test
-include: _default_template_mmivqd_instruction_yaml
+dataset_name: mmivqd_base
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nIf the given image is irrelevant to the question, answer \"F. The image and question are irrelevant.\"."
+include: _default_template_mmupd_yaml
 metric_list:
   - metric: gpt_eval_score
     aggregation: !function utils.mmivqd_instruction
