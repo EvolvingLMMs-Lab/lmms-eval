@@ -216,7 +216,7 @@ def video_detail_description_process_results_generic(doc, result):
     doc["pred"] = pred
     eval_results = gpt_eval(doc)
 
-    return {"gpt_eval": {"video_name": doc["video_name"], "question": doc["question"], "answer": doc["answer"], "pred": pred, "score": eval_results["score"], "review": eval_results["review"]}}
+    return {"gpt_eval_score": {"video_name": doc["video_name"], "question": doc["question"], "answer": doc["answer"], "pred": pred, "score": eval_results["score"], "review": eval_results["review"]}}
 
 
 def video_detail_description_aggregate_score(results, args):
@@ -227,6 +227,7 @@ def video_detail_description_aggregate_score(results, args):
             eval_score = int(eval_score)
         except:
             eval_score = 0.0
+
         score += eval_score
 
     return score / len(results)
