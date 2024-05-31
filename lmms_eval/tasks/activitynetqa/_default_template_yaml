@@ -6,7 +6,7 @@ dataset_kwargs:
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: ""
+    post_prompt: " Answer the question using a single word or phrase."
 
 metadata:
   version: 0.0
