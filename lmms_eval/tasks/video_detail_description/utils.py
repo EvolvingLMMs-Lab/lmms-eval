@@ -219,7 +219,7 @@ def video_detail_description_process_results_generic(doc, result):
     return {"gpt_eval": {"video_name": doc["video_name"], "question": doc["question"], "answer": doc["answer"], "pred": pred, "score": eval_results["score"], "review": eval_results["review"]}}
 
 
-def video_detail_description_gen_gpt_eval(results, args):
+def video_detail_description_aggregate_score(results, args):
     score = 0
     for result in results:
         eval_score = result["score"]
