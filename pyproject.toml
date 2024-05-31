@@ -58,6 +58,7 @@ dependencies = [
     "packaging",
     "decord",
     "zss",
+    "pywsd",
 ]
 
 [tool.setuptools.packages.find]
