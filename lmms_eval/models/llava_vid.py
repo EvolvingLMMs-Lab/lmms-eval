@@ -353,8 +353,6 @@ class LlavaVid(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
             with torch.inference_mode():
-                # self.model.update_prompt([[cur_prompt]])
-                # # import pdb;pdb.set_trace()
                 output_ids = self.model.generate(
                     inputs=input_ids,
                     images=videos,
