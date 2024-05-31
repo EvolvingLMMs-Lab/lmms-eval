@@ -7,6 +7,6 @@ doc_to_target: !function utils.video_detail_description_doc_to_answer
 process_results: !function utils.video_detail_description_process_results_generic
 metric_list:
   - metric: gpt_eval
-    aggregation: !function utils.video_detail_description_gen_gpt_eval
+    aggregation: !function utils.video_detail_description_aggregate_score
     higher_is_better: true
 include: _default_template_yaml
