@@ -11,8 +11,7 @@ eval_logger = logging.getLogger("lmms-eval")
 try:
     from pywsd.utils import lemmatize_sentence
 except ImportError:
-    eval_logger.debug("pywsd not installed. Please install pywsd to use this module.")
-    eval_logger.debug("You can install it by running 'pip install pywsd'")
+    eval_logger.debug("pywsd not installed. Please install pywsd to use this module. You can install it by running 'pip install pywsd'")
 
 from lmms_eval.tasks._task_utils.video_loader import get_cache_dir, get_video
 from nltk.tokenize import word_tokenize

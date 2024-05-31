@@ -15,7 +15,6 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
-from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -67,7 +66,6 @@ class LlavaVid(lmms):
         mm_spatial_pool_out_channels: int = 1024,
         mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
-        video_decode_backend: str = "decord",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -87,7 +85,6 @@ class LlavaVid(lmms):
 
         self.pretrained = pretrained
         self.model_name = get_model_name_from_path(pretrained)
-        self.video_decode_backend = video_decode_backend
         # self._config = AutoConfig.from_pretrained(self.pretrained)
         self.overwrite = overwrite
         self.mm_resampler_type = mm_resampler_type
@@ -107,18 +104,18 @@ class LlavaVid(lmms):
 
             cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
-            if "224" in cfg_pretrained.mm_vision_tower:
-                # suppose the length of text tokens is around 1000, from bo's report
-                least_token_number = self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
-            else:
-                least_token_number = self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
+            if cfg_pretrained.architectures[0] == "LlavaLlamaForCausalLM":  # Ugly code, only used in  vicuna that needs ROPE
+                if "224" in cfg_pretrained.mm_vision_tower:
+                    least_token_number = self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
+                else:
+                    least_token_number = self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
 
-            scaling_factor = math.ceil(least_token_number / 4096)
-            if scaling_factor >= 2:
-                print(float(scaling_factor))
-                overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
-                overwrite_config["max_sequence_length"] = 4096 * scaling_factor
-                overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
+                scaling_factor = math.ceil(least_token_number / 4096)
+                if scaling_factor >= 2:
+                    overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
+                    overwrite_config["max_sequence_length"] = 4096 * scaling_factor
+                    overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
+
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, overwrite_config=overwrite_config)
         else:
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
@@ -316,10 +313,7 @@ class LlavaVid(lmms):
             videos = []
             try:
                 for visual in visuals:
-                    if self.video_decode_backend == "decord":
-                        video = self.load_video(visual, self.max_frames_num)
-                    elif self.video_decode_backend == "pyav":
-                        video = read_video_pyav(visual, num_frm=self.max_frames_num)
+                    video = self.load_video(visual, self.max_frames_num)
                     video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
                     videos.append(video)
             except Exception as e:

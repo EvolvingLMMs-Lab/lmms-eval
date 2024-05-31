@@ -404,7 +404,7 @@ def parse_score(review):
         # Convert the string representation of a dictionary to an actual dictionary
         review_dict = ast.literal_eval(review)
         score = review_dict.get("score", 0)
-        return float(score)
+        return int(score)
     except SyntaxError as e:
         eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
         return 0
