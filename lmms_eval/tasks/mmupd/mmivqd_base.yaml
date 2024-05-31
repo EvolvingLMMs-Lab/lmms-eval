@@ -1,6 +1,11 @@
 task: "mmivqd_base"
 test_split: test
-include: _default_template_mmivqd_base_yaml
+dataset_name: mmivqd_base
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\n"
+include: _default_template_mmupd_yaml
 metric_list:
   - metric: gpt_eval_score
     aggregation: !function utils.mmivqd_base

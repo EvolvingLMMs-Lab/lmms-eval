@@ -1,6 +1,11 @@
 task: "mmaad_instruction"
 test_split: test
-include: _default_template_mmaad_instruction_yaml
+dataset_name: mmaad_base
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nIf all the options are incorrect, answer \"F. None of the above\"."
+include: _default_template_mmupd_yaml
 metric_list:
   - metric: gpt_eval_score
     aggregation: !function utils.mmaad_instruction

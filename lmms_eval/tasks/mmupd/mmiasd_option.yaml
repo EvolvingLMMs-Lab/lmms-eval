@@ -1,6 +1,11 @@
 task: "mmiasd_option"
 test_split: test
-include: _default_template_mmiasd_option_yaml
+dataset_name: mmiasd_option
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+include: _default_template_mmupd_yaml
 metric_list:
   - metric: gpt_eval_score
     aggregation: !function utils.mmiasd_option
