@@ -23,6 +23,7 @@ AVAILABLE_MODELS = {
     "internvl": "InternVLChat",
     "gemini_api": "GeminiAPI",
     "gemini_model": "GeminiModel",
+    "from_log": "FromLog",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():

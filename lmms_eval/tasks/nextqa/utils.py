@@ -250,12 +250,28 @@ def nextqa_process_results(doc, results):
     qtype = doc["type"]
     if qtype == "TP":
         qtype = "TN"
-    if qtype == "DC" or qtype == "DB":
-        cur_0 = 1 if pred_ans == gt_ans else 0
-        cur_9 = cur_0
+    add_ref_ans = doc["additional_ref_answer"] 
+    if add_ref_ans:
+        add_ref_ans = remove_stop(add_ref_ans)
+        if qtype == "DC" or qtype == "DB":
+            cur_0 = 1 if pred_ans == gt_ans or pred_ans == add_ref_ans else 0
+            cur_9 = cur_0
+        else:
+            cur_0 = max(
+                get_wups(pred_ans, gt_ans, 0), 
+                get_wups(pred_ans, add_ref_ans, 0)
+            )
+            cur_9 = max(
+                get_wups(pred_ans, gt_ans, 0.9),
+                get_wups(pred_ans, add_ref_ans, 0)
+            )
     else:
-        cur_0 = get_wups(pred_ans, gt_ans, 0)
-        cur_9 = get_wups(pred_ans, gt_ans, 0.9)
+        if qtype == "DC" or qtype == "DB":
+            cur_0 = 1 if pred_ans == gt_ans else 0
+            cur_9 = cur_0
+        else:
+            cur_0 = get_wups(pred_ans, gt_ans, 0)
+            cur_9 = get_wups(pred_ans, gt_ans, 0.9)
     return {"WUPS": {"0": cur_0, "0.9": cur_9, "qtype": qtype}}
 
 

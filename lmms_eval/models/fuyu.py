@@ -21,8 +21,6 @@ import logging
 
 eval_logger = logging.getLogger("lmms-eval")
 
-eval_logger = logging.getLogger("lmms-eval")
-
 
 @register_model("fuyu")
 class Fuyu(lmms):
