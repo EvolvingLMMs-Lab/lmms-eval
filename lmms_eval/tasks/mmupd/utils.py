@@ -57,7 +57,7 @@ def mmupd_doc_to_text(doc, model_specific_prompt_kwargs=None):
         "split": doc["split"],
     }
 
-    query_prompt = f"{data['hint']} {data['question']} {data['options']}" if pd.notna(data["hint"]) and data["hint"] != "nan" else f"{data['question']} {data['options']}"
+    query_prompt = f"{data['hint']}\n{data['question']}{data['options']}" if pd.notna(data["hint"]) and data["hint"] != "nan" else f"{data['question']}{data['options']}"
 
     if model_specific_prompt_kwargs:
         query_prompt = f"{query_prompt}{model_specific_prompt_kwargs['post_prompt']}"
