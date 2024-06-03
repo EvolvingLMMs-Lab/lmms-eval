@@ -19,7 +19,8 @@ def xm_doc_to_visual(doc):
 
 
 def xm_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    return ""
+    
+    return model_specific_prompt_kwargs['post_prompt']
 
 
 def xm_process_result(doc, result):

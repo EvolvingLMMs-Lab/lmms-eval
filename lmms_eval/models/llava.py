@@ -388,25 +388,25 @@ class Llava(lmms):
             attention_masks = input_ids.ne(pad_token_ids).to(self.device)
             # These steps are not in LLaVA's original code, but are necessary for generation to work
             # TODO: pay attention to this major generation step...
-            try:
-                cont = self.model.generate(
-                    input_ids,
-                    attention_mask=attention_masks,
-                    pad_token_id=pad_token_ids,
-                    images=image_tensor,
-                    image_sizes=gen_kwargs["image_sizes"],
-                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                    temperature=gen_kwargs["temperature"],
-                    top_p=gen_kwargs["top_p"],
-                    num_beams=gen_kwargs["num_beams"],
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                    use_cache=self.use_cache,
-                )
-                text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
-            except Exception as e:
-                eval_logger.error(f"Error {e} in generating")
-                cont = ""
-                text_outputs = [""]
+            # try:
+            cont = self.model.generate(
+                input_ids,
+                attention_mask=attention_masks,
+                pad_token_id=pad_token_ids,
+                images=image_tensor,
+                image_sizes=gen_kwargs["image_sizes"],
+                do_sample=True if gen_kwargs["temperature"] > 0 else False,
+                temperature=gen_kwargs["temperature"],
+                top_p=gen_kwargs["top_p"],
+                num_beams=gen_kwargs["num_beams"],
+                max_new_tokens=gen_kwargs["max_new_tokens"],
+                use_cache=self.use_cache,
+            )
+            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
+            # except Exception as e:
+            #     eval_logger.error(f"Error {e} in generating")
+            #     cont = ""
+            #     text_outputs = [""]
 
             # cont_toks_list = cont.tolist()
             # for cont_toks, context in zip(cont_toks_list, contexts):

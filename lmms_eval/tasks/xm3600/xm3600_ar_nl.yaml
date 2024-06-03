@@ -1,5 +1,5 @@
 dataset_path: "floschne/xm3600"
-task: "xm3600_ar"
+task: "xm3600_ar_nl"
 test_split: ar
 output_type: generate_until
 doc_to_visual: !function utils.xm_doc_to_visual
@@ -39,9 +39,6 @@ metric_list:
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "\nأدخل تعليقًا من جملة واحدة للصورة المقدمة.   الرجاء الإجابة باللغة العربية."
-  paligemma:
-    pre_prompt: ""
-    post_prompt: "caption ar"
+    post_prompt: "\nأدخل تعليقًا من جملة واحدة للصورة المقدمة. الرجاء الإجابة باللغة العربية. كن وصفيًا قدر الإمكان."
 metadata:
   - version: 0.0

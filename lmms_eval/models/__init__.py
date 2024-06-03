@@ -7,17 +7,18 @@ AVAILABLE_MODELS = {
     "qwen_vl": "Qwen_VL",
     "fuyu": "Fuyu",
     "gpt4v": "GPT4V",
-    "instructblip": "InstructBLIP",
     "minicpm_v": "MiniCPM_V",
     "idefics2": "Idefics2",
     "qwen_vl_api": "Qwen_VL_API",
+    "paligemma": "PaliGemma"
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
-    try:
-        exec(f"from .{model_name} import {model_class}")
-    except ImportError:
-        pass
+    # try:
+    exec(f"from .{model_name} import {model_class}")
+    # except ImportError:
+    #     print(model_name)
+    #     pass
 
 
 import hf_transfer

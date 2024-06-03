@@ -40,5 +40,8 @@ model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAdjon meg egy egymondatos feliratot a képhez.   Kérem magyarul válaszoljon."
+  paligemma:
+    pre_prompt: ""
+    post_prompt: "caption hu"
 metadata:
   - version: 0.0
