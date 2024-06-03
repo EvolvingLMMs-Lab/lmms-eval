@@ -15,16 +15,16 @@ eval_logger = logging.getLogger("lmms-eval")
 class FromLog(lmms):
     def __init__(
         self,
-        log_file = "",
+        log_file="",
         **kwargs,
     ) -> None:
         super().__init__()
-        
+
         self.logs = {}
 
         with open(log_file, "r") as f:
             log_data = json.load(f)
-            
+
         for data in log_data["logs"]:
             id = data["doc_id"]
             response = data["resps"][0]
