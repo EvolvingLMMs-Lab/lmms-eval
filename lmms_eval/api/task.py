@@ -1001,12 +1001,17 @@ class ConfigurableTask(Task):
             arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual, doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
+    # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
-    def process_results(self, doc, results):
+    def process_results(self, doc, results, full_docs=None):
         if self.OUTPUT_TYPE == "generate_until":
             results[0] = results[0].strip()
+
+        kwargs = {}
+        if full_docs is not None:
+            kwargs["full_docs"] = full_docs
         if callable(self.config.process_results):
-            return self.config.process_results(doc, results)
+            return self.config.process_results(doc, results, **kwargs)
 
         result_dict = {}
         use_metric = list(self._metric_fn_list.keys())
