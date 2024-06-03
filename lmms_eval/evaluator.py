@@ -17,6 +17,8 @@ import lmms_eval.models
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
 
+import re
+
 from lmms_eval.utils import (
     positional_deprecated,
     run_task_tests,
@@ -329,6 +331,13 @@ def evaluate(
                         remove_cols.append(feature)
                 if remove_cols:
                     docs = docs.remove_columns(remove_cols)
+
+            ####################### Processing with Full Docs Mode #######################
+            if task_name in ["videochatgpt_consistency"]:
+                full_docs = True
+            else:
+                full_docs = False
+
             doc_iterator = itertools.islice(enumerate(docs), lm.rank, limit, lm.world_size)
             # Instead of converting the iterator to a list, use `itertools.tee` to create a parallel iterator for counting
             # doc_iterator, doc_iterator_for_counting = itertools.tee(doc_iterator)
@@ -340,7 +349,10 @@ def evaluate(
                 # subset instances to only this document id ; sort by idx
                 requests = list(filter(lambda x: x.doc_id == doc_id, task.instances))
                 requests.sort(key=lambda x: x.idx)
-                metrics = task.process_results(doc, [req.filtered_resps[key] for req in requests])
+                if full_docs:
+                    metrics = task.process_results(doc, [req.filtered_resps[key] for req in requests], full_docs=docs)
+                else:
+                    metrics = task.process_results(doc, [req.filtered_resps[key] for req in requests])
                 if log_samples:
                     target = task.doc_to_target(doc)
                     example = {
@@ -502,11 +514,22 @@ def evaluate(
                                 continue
 
                             if metric in results[group]:
-                                results[group][metric] = (results[group][metric] * total_size + metric_score * current_size) / (total_size + current_size)
-                                # $$s_z^2 = \frac{(n-1) s_x^2 + (m-1) s_y^2}{n+m-1} + \frac{nm(\bar x - \bar y)^2}{(n+m)(n+m-1)}.$$
-                                results[group][stderr] = ((total_size - 1) * results[group][stderr] + (current_size - 1) * var_score) / (total_size + current_size - 1) + total_size * current_size / (
-                                    (total_size + current_size) * (total_size + current_size - 1)
-                                ) * (results[group][metric] - metric_score) ** 2
+                                if isinstance(results[group][metric], str) == False:
+                                    results[group][metric] = (results[group][metric] * total_size + metric_score * current_size) / (total_size + current_size)
+                                    # $$s_z^2 = \frac{(n-1) s_x^2 + (m-1) s_y^2}{n+m-1} + \frac{nm(\bar x - \bar y)^2}{(n+m)(n+m-1)}.$$
+                                    results[group][stderr] = ((total_size - 1) * results[group][stderr] + (current_size - 1) * var_score) / (total_size + current_size - 1) + total_size * current_size / (
+                                        (total_size + current_size) * (total_size + current_size - 1)
+                                    ) * (results[group][metric] - metric_score) ** 2
+                                else:
+                                    # accuracy = re.search(r'acc: ([\d.]+)%', results[group][metric]).group(1)
+                                    # score = re.search(r'score: ([\d.]+)', results[group][metric]).group(1)
+                                    # group_accuracy = float(accuracy)
+                                    # group_score = float(score)
+                                    # group_accuracy = (group_accuracy * total_size + metric_score * current_size) / total_size
+                                    # group_score = (group_score * total_size + metric_score * current_size) / total_size
+                                    # results[group][metric] = "Acc: " + str(group_accuracy) + " Score: " + str(group_score)
+                                    results[group][metric] = "group_results"
+                                    results[group][stderr] = 0
                             else:
                                 results[group][metric] = metric_score
                                 results[group][stderr] = var_score

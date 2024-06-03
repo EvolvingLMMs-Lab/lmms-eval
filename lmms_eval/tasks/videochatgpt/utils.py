@@ -14,6 +14,7 @@ import openai
 from openai import OpenAI
 import time
 import ast
+from tqdm import tqdm
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -111,32 +112,77 @@ def videochatgpt_doc_to_answer(doc):
 
 # Process result for evaluation in generic task
 def videochatgpt_process_results_generic(doc, result):
-    pred = result[0]
+    """
+    Args:
+        doc: a instance of the eval dataset
+        results: [pred]
+    Returns:
+        a dictionary
+    """
+    try:
+        question = doc["question"]
+        answer = doc["answer"]
+        pred = result[0]
+
+        # Assume get_eval returns a review and the model name, and parse_score parses this review
+        review_correctness, model_name = get_eval_generic(question, answer, pred, "correctness", 64)
+        score_correctness = parse_score(review_correctness)
+        review_detailed_orientation, model_name = get_eval_generic(question, answer, pred, "detailed_orientation", 64)
+        score_detailed_orientation = parse_score(review_detailed_orientation)
+        review_context, model_name = get_eval_generic(question, answer, pred, "context", 64)
+        score_context = parse_score(review_context)
+        
+    except Exception as e:
+        eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
+        review = "Failed to Get a Proper Review."
+        model_name = "Failed Request"
+        score_correctness = 0
+        score_detailed_orientation = 0
+        score_context = 0
 
     return {
-        "correctness": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred},
-        "detailed_orientation": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred},
-        "context": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred},
+        "gpt_eval_score_correctness": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "score": score_correctness},
+        "gpt_eval_score_detailed_orientation": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "score": score_detailed_orientation},
+        "gpt_eval_score_context": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "score": score_context},
     }
 
 
 # Process result for evaluation in temporal task
 def videochatgpt_process_results_temporal(doc, result):
-    pred = result[0]
+    """
+    Args:
+        doc: a instance of the eval dataset
+        results: [pred]
+    Returns:
+        a dictionary
+    """
+    try:
+        question = doc["question"]
+        answer = doc["answer"]
+        pred = result[0]
 
-    return {"temporal": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred}}
+        # Assume get_eval returns a review and the model name, and parse_score parses this review
+        review, model_name = get_eval_generic(question, answer, pred, "temporal", 64)
+        score = parse_score(review)
+    except Exception as e:
+        eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
+        review = "Failed to Get a Proper Review."
+        model_name = "Failed Request"
+        score = 0
+
+    return {"gpt_eval_score_temporal": {"video_name": doc["video_name"], "Q": doc["question"], "A": doc["answer"], "pred": pred, "score": score}}
 
 
 # Process result for generation in consistency task
-def videochatgpt_process_results_consistency(doc, result):
+def videochatgpt_process_results_consistency(doc, result, full_docs=None):
     pred = result[0]
-
+    
     # if it is question_1, then assign prediction for the 1st question
     # else assign prediction for the 2nd question
     if doc["question_1"] != "None":
-        return {"consistency": {"video_name": doc["video_name"], "Q1": doc["question_1"], "A": doc["answer"], "pred1": pred}}
+        return {"gpt_eval_score_consistency": {"video_name": doc["video_name"], "Q1": doc["question_1"], "A": doc["answer"], "pred1": pred}}
     else:
-        return {"consistency": {"video_name": doc["video_name"], "Q2": doc["question_2"], "A": doc["answer"], "pred2": pred}}
+        return {"gpt_eval_score_consistency": {"video_name": doc["video_name"], "Q2": doc["question_2"], "A": doc["answer"], "pred2": pred}}
 
 
 def videochatgpt_aggregate_submissions(results, args, task):
@@ -469,7 +515,7 @@ def videochatgpt_gpt_eval(result_file_path, args, task):
     # Process each result to generate scores
     # If task is consistency (2 questions with 2 answers)
     if task == "consistency":
-        for data_dict in result_list:
+        for data_dict in tqdm(result_list, desc="GPT-Eval-for-Consistency"):
             try:
                 question1 = data_dict.get("Q1", "")
                 question2 = data_dict.get("Q2", "")
@@ -565,4 +611,17 @@ def videochatgpt_aggregate_consistency(results, args):
     result_file_path = videochatgpt_aggregate_submissions_consistency(results, args, "consistency")
     eval_file_path = videochatgpt_gpt_eval(result_file_path, args, "consistency")
     average_score = videochatgpt_print_scores(eval_file_path, args, "consistency")
+    return average_score
+
+
+# Factory into different aggregate
+def videochatgpt_aggregate_score(results, args):
+    total_score = 0
+
+    # Iterate over the results to sum scores
+    for result_dict in results:
+        total_score += result_dict["score"]
+        
+    average_score = total_score / len(results) if results else 0
+    eval_logger.info(f"Average Score: {average_score}")
     return average_score

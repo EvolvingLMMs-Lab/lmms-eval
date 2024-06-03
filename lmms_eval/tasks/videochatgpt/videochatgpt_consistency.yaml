@@ -7,7 +7,7 @@ doc_to_text: !function utils.videochatgpt_doc_to_text_consistency
 doc_to_target: !function utils.videochatgpt_doc_to_answer
 process_results: !function utils.videochatgpt_process_results_consistency
 metric_list:
-  - metric: consistency
+  - metric: gpt_eval_score_consistency
     aggregation: !function utils.videochatgpt_aggregate_consistency
     higher_is_better: true
 include: _default_template_yaml

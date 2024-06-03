@@ -174,9 +174,6 @@ def parse_score(review):
         return ["no", 0]
 
 
-# we process answer and gpt_eval seperately, in case gpt is not stable
-# so we obtained a submission file for answer first
-# and then feed the submission file to gpt for scoring
 def activitynetqa_process_results(doc, result):
     """
     Args:

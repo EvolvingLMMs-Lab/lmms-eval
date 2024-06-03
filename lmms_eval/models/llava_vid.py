@@ -15,6 +15,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
+from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -66,6 +67,7 @@ class LlavaVid(lmms):
         mm_spatial_pool_out_channels: int = 1024,
         mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
+        video_decode_backend: str = "decord",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -85,6 +87,7 @@ class LlavaVid(lmms):
 
         self.pretrained = pretrained
         self.model_name = get_model_name_from_path(pretrained)
+        self.video_decode_backend = video_decode_backend
         # self._config = AutoConfig.from_pretrained(self.pretrained)
         self.overwrite = overwrite
         self.mm_resampler_type = mm_resampler_type
@@ -313,7 +316,11 @@ class LlavaVid(lmms):
             videos = []
             try:
                 for visual in visuals:
-                    video = self.load_video(visual, self.max_frames_num)
+                    if self.video_decode_backend == "decord":
+                        video = self.load_video(visual, self.max_frames_num)
+                    elif self.video_decode_backend == "pyav":
+                        video = read_video_pyav(visual, num_frm=self.max_frames_num)
+                    # video = self.load_video(visual, self.max_frames_num)
                     video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
                     videos.append(video)
             except Exception as e:

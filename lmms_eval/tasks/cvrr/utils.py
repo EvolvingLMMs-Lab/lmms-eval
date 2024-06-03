@@ -106,18 +106,6 @@ def cvrr_doc_to_answer(doc):
     return doc["A"]
 
 
-# Note: we process answer and gpt_eval seperately, in case gpt is not stable
-# so we obtained a submission file for answer first
-# and then feed the submission file to gpt for scoring
-
-
-# Process result for evaluation
-def cvrr_process_results(doc, result):
-    pred = result[0]
-
-    return {"gpt_eval": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"]}}
-
-
 def cvrr_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     submission_file_name = f"inference_results_cvrr_{task}_{now_date_time}.json"
@@ -203,16 +191,16 @@ def parse_score(review):
         correctness = review_dict.get("pred", "incorrect")
         score = review_dict.get("score", 0)
         reason = review_dict.get("reason", "")
-        return correctness, float(score), reason
+        return correctness, int(score), reason
     except SyntaxError as e:
         eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
-        return "incorrect", float(0), ""
+        return "incorrect", int(0), ""
     except ValueError as e:
         eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
-        return "incorrect", float(0), ""
+        return "incorrect", int(0), ""
     except Exception as e:
         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
-        return "incorrect", float(0), ""
+        return "incorrect", int(0), ""
 
 
 def cvrr_print_scores(eval_file_path, args, task):
@@ -241,11 +229,8 @@ def cvrr_print_scores(eval_file_path, args, task):
 
     # Calculate accuracy and average score
     accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
+    accuracy = accuracy * 100
     average_score = total_score / len(evaluated_list) if evaluated_list else 0
-
-    # Print the results
-    print(f"Accuracy: {accuracy}")
-    print(f"Average Score: {average_score}")
 
     # Write the processed data to the scores file
     with open(path, "w") as f:
@@ -254,6 +239,36 @@ def cvrr_print_scores(eval_file_path, args, task):
     eval_logger.info(f"Score file saved to {path}")
 
     return accuracy, average_score
+
+# Process result for evaluation in temporal task
+def cvrr_process_results(doc, result):
+    """
+    Args:
+        doc: a instance of the eval dataset
+        results: [pred]
+    Returns:
+        a dictionary
+    """
+    try:
+        question = doc["Q"]
+        answer = doc["A"]
+        pred = result[0]
+
+        # Assume get_eval returns a review and the model name, and parse_score parses this review
+        review, model_name = get_eval(question, answer, pred, 512)
+        correctness, score, reason = parse_score(review)
+    except Exception as e:
+        eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
+        review = "Failed to Get a Proper Review."
+        model_name = "Failed Request"
+        score = 0
+        correctness = "incorrect"
+        reason = ""
+
+    return {
+        "gpt_eval_score": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"], "correctness": correctness, "score": score, "reason": reason},
+        "gpt_eval_accuracy": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"], "correctness": correctness, "score": score, "reason": reason}
+        }
 
 
 def cvrr_gpt_eval(result_file_path, args, task):
@@ -322,74 +337,105 @@ def cvrr_aggregate_results_dim1(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "continuity_and_object_instance_count")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "continuity_and_object_instance_count")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "continuity_and_object_instance_count")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim2(results, args):
+    print("aggregate submissions")
     result_file_path = cvrr_aggregate_submissions(results, args, "fine_grained_action_understanding")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "fine_grained_action_understanding")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "fine_grained_action_understanding")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim3(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_social_context")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "interpretation_of_social_context")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "interpretation_of_social_context")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim4(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_visual_context")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "interpretation_of_visual_context")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "interpretation_of_visual_context")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim5(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "multiple_actions_in_a_single_video")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "multiple_actions_in_a_single_video")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "multiple_actions_in_a_single_video")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim6(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_existent_scene_depictions")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "non_existent_actions_with_existent_scene_depictions")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "non_existent_actions_with_existent_scene_depictions")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim7(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_non_existent_scene_depictions")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "non_existent_actions_with_non_existent_scene_depictions")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "non_existent_actions_with_non_existent_scene_depictions")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim8(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "partial_actions")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "partial_actions")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "partial_actions")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim9(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "time_order_understanding")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "time_order_understanding")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "time_order_understanding")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim10(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "understanding_emotional_context")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "understanding_emotional_context")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "understanding_emotional_context")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 def cvrr_aggregate_results_dim11(results, args):
     result_file_path = cvrr_aggregate_submissions(results, args, "unusual_and_physically_anomalous_activities")
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "unusual_and_physically_anomalous_activities")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "unusual_and_physically_anomalous_activities")
-    return "acc: " + str(accuracy) + " score: " + str(average_score)
+    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
+
+# Factory into different aggregate
+def cvrr_aggregate_score(results, args):
+    total_score = 0
+
+    # Iterate over the results to sum scores
+    for result_dict in results:
+        total_score += result_dict["score"]
+
+    # Calculate average score
+    average_score = total_score / len(results) if results else 0
+    eval_logger.info(f"Average Score: {average_score}")
+    return average_score
+
+
+def cvrr_aggregate_accuracy(results, args):
+    yes_count = 0
+    no_count = 0
+
+    # Iterate over the results to count correctness
+    for result_dict in results:
+        if result_dict["correctness"] == "correct":
+            yes_count += 1
+        else:
+            no_count += 1
+
+    # Calculate accuracy and average score
+    accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
+    eval_logger.info(f"Accuracy: {accuracy}")
+    return accuracy * 100

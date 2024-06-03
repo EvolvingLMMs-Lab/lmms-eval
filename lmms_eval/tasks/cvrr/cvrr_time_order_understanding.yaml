@@ -7,8 +7,11 @@ doc_to_text: !function utils.cvrr_doc_to_text
 doc_to_target: !function utils.cvrr_doc_to_answer
 process_results: !function utils.cvrr_process_results
 metric_list:
-  - metric: submission
-    aggregation: !function utils.cvrr_aggregate_results_dim9
+  - metric: gpt_eval_accuracy
+    aggregation: !function utils.cvrr_aggregate_accuracy
+    higher_is_better: true
+  - metric: gpt_eval_score
+    aggregation: !function utils.cvrr_aggregate_score
     higher_is_better: true
 include: _default_template_yaml
 

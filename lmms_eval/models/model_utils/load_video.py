@@ -7,7 +7,7 @@ def read_video_pyav(video_path, num_frm=8):
     frames = []
     container = av.open(video_path)
 
-    if "webm" not in video_path:
+    if "webm" not in video_path and "mkv" not in video_path:
         total_frames = container.streams.video[0].frames
         num_frm = min(total_frames, num_frm)
         indices = np.linspace(0, total_frames - 1, num_frm, dtype=int)
