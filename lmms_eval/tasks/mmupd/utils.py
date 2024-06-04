@@ -145,7 +145,7 @@ def mmupd_results_eval(results, args, upd_type, question_type):
 
     overall_acc_dual, category_acc_dual, dual_results_df = mmupd_evaluator.calculate_dual_acc(standard_results_df, upd_results_df)
 
-    file_json = generate_submission_file(f"mmupd_results_{upd_type}_{question_type}.json", args)
+    file_json = generate_submission_file(f"mmupd_{upd_type}_{question_type}_dual_results.json", args)
 
     details_info = {
         "overall_acc_dual": overall_acc_dual,
@@ -159,7 +159,10 @@ def mmupd_results_eval(results, args, upd_type, question_type):
     with open(file_json, "w") as f:
         json.dump(details_info, f)
 
-    file_excel = generate_submission_file(f"mmupd_results_{upd_type}_{question_type}_dual.xlsx", args)
+    file_excel = generate_submission_file(f"mmupd_{upd_type}_{question_type}_dual_results_detail.xlsx", args)
     dual_results_df.to_excel(file_excel, index=False)
+
+    file_json = generate_submission_file(f"mmupd_{upd_type}_{question_type}_dual_results_detail.json", args)
+    dual_results_df.to_json(file_json, orient="records", indent=2)  # for huggingface leaderboard submission
 
     return overall_acc_dual * 100
