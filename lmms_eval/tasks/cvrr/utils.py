@@ -240,6 +240,7 @@ def cvrr_print_scores(eval_file_path, args, task):
 
     return accuracy, average_score
 
+
 # Process result for evaluation in temporal task
 def cvrr_process_results(doc, result):
     """
@@ -267,8 +268,8 @@ def cvrr_process_results(doc, result):
 
     return {
         "gpt_eval_score": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"], "correctness": correctness, "score": score, "reason": reason},
-        "gpt_eval_accuracy": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"], "correctness": correctness, "score": score, "reason": reason}
-        }
+        "gpt_eval_accuracy": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"], "correctness": correctness, "score": score, "reason": reason},
+    }
 
 
 def cvrr_gpt_eval(result_file_path, args, task):
@@ -409,6 +410,7 @@ def cvrr_aggregate_results_dim11(results, args):
     eval_file_path = cvrr_gpt_eval(result_file_path, args, "unusual_and_physically_anomalous_activities")
     accuracy, average_score = cvrr_print_scores(eval_file_path, args, "unusual_and_physically_anomalous_activities")
     return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
+
 
 # Factory into different aggregate
 def cvrr_aggregate_score(results, args):

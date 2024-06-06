@@ -131,7 +131,7 @@ def videochatgpt_process_results_generic(doc, result):
         score_detailed_orientation = parse_score(review_detailed_orientation)
         review_context, model_name = get_eval_generic(question, answer, pred, "context", 64)
         score_context = parse_score(review_context)
-        
+
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
@@ -176,7 +176,7 @@ def videochatgpt_process_results_temporal(doc, result):
 # Process result for generation in consistency task
 def videochatgpt_process_results_consistency(doc, result, full_docs=None):
     pred = result[0]
-    
+
     # if it is question_1, then assign prediction for the 1st question
     # else assign prediction for the 2nd question
     if doc["question_1"] != "None":
@@ -621,7 +621,7 @@ def videochatgpt_aggregate_score(results, args):
     # Iterate over the results to sum scores
     for result_dict in results:
         total_score += result_dict["score"]
-        
+
     average_score = total_score / len(results) if results else 0
     eval_logger.info(f"Average Score: {average_score}")
     return average_score

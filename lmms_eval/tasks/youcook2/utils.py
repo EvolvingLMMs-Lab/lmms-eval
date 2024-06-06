@@ -75,8 +75,8 @@ def youcook2_aggregate_results(results, metric, **kwargs):
         if result["video"] not in vid2capid:
             vid2capid[result["video"]] = []
         vid2capid[result["video"]].append(uid)
-        cur_gts[uid] = [{'caption': result["answer"]}]
-        cur_res[uid] = [{'caption': result["pred"]}]
+        cur_gts[uid] = [{"caption": result["answer"]}]
+        cur_res[uid] = [{"caption": result["pred"]}]
         uid += 1
 
     eval_logger.info("tokenization...")
