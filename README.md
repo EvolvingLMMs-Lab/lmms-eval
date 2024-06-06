@@ -163,6 +163,7 @@ We also provide the raw data exported from Weights & Biases for the detailed res
   - COCO 2017 Caption (coco2017_cap)
     - COCO 2017 Caption MiniVal (coco2017_cap_val)
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
+- [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
 - DOCVQA (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
