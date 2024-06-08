@@ -1,11 +1,11 @@
-dataset_name: "multi-choice"
-task: "tempcompass_multi_choice"
+dataset_name: "caption_matching"
+task: "tempcompass_caption_matching"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.tempcompass_doc_to_visual
-doc_to_text: !function utils.tempcompass_doc_to_text_multi_choice
+doc_to_text: !function utils.tempcompass_doc_to_text_caption_matching
 doc_to_target: !function utils.tempcompass_doc_to_answer
-process_results: !function utils.tempcompass_process_results_multi_choice
+process_results: !function utils.tempcompass_process_results_caption_matching
 metric_list:
   - metric: avg_accuracy
     aggregation: !function utils.tempcompass_aggregate_rating

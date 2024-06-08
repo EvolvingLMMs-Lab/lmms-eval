@@ -202,24 +202,6 @@ def activitynetqa_process_results(doc, result):
     }
 
 
-def activitynetqa_aggregate_submissions(results, args):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_activitynetqa_{now_date_time}.json"
-    path = file_utils.generate_submission_file(submission_file_name, args)
-
-    with open(path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    eval_logger.info(f"Submission file saved to {path}")
-
-    return path
-
-
-# we process answer and gpt_eval seperately, in case gpt is not stable
-# so we obtained a submission file for answer first
-# and then feed the submission file to gpt for scoring
-
-
 def activitynetqa_gpt_eval(results, args):
     """
     Process the result file containing predictions, score them using GPT,
@@ -229,14 +211,6 @@ def activitynetqa_gpt_eval(results, args):
         result_file_path: path to the JSON file with results to be evaluated
         eval_file_path: path to save the JSON file with evaluated results
     """
-
-    # now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    # eval_file_name = f"gpt_eval_result_activitynetqa_{now_date_time}.json"
-    # eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
-
-    # # Load the predictions from the result file
-    # with open(result_file_path, "r") as file:
-    #     result_list = json.load(file)
 
     evaluated_results = []
 
@@ -265,7 +239,7 @@ def activitynetqa_gpt_eval(results, args):
 
 # Factory into different aggregate
 def activitynetqa_aggregate_score(results, args):
-    # result_file_path = activitynetqa_aggregate_submissions(results, args)
+
     yes_count = 0
     no_count = 0
     total_score = 0
@@ -287,7 +261,6 @@ def activitynetqa_aggregate_score(results, args):
 
 
 def activitynetqa_aggregate_accuracy(results, args):
-    # result_file_path = activitynetqa_aggregate_submissions(results, args)
     yes_count = 0
     no_count = 0
     total_score = 0

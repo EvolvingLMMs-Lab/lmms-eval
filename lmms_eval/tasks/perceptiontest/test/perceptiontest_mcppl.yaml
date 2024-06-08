@@ -1,5 +1,5 @@
 dataset_name: "mc_question"
-task: "perceptiontest_mcppl"
+task: "perceptiontest_test_mcppl"
 test_split: test
 output_type: multiple_choice
 doc_to_visual: !function utils.perceptiontest_doc_to_visual

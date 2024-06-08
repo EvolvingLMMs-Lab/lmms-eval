@@ -32,7 +32,7 @@ eval_logger = logging.getLogger("lmms-eval")
 
 # Pass in video path here
 # Can only work correctly with video llm
-def perceptiontest_doc_to_visual(doc):
+def perceptiontest_val_doc_to_visual(doc):
     video_path = doc["video_name"] + ".mp4"
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
@@ -45,7 +45,7 @@ def perceptiontest_doc_to_visual(doc):
 
 
 # This is the place where you format your question
-def perceptiontest_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def perceptiontest_val_doc_to_text(doc, model_specific_prompt_kwargs=None):
     if model_specific_prompt_kwargs is None:
         model_specific_prompt_kwargs = {}
     pre_prompt = ""
@@ -67,18 +67,16 @@ def perceptiontest_doc_to_text(doc, model_specific_prompt_kwargs=None):
                 question += "\n" + "C. " + op
             index += 1
         post_prompt = "\nAnswer with the option's letter from the given choices directly."
-    print("question\n")
-    print(question)
 
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def perceptiontest_doc_to_answer_mc(doc):
-    return ""  # pseudo answer
+def perceptiontest_val_doc_to_answer(doc):
+    return doc["answer_id"]
 
 
 # Process result for mc_ppl
-def perceptiontest_process_results_mc_ppl(doc, result):
+def perceptiontest_val_process_results_mc_ppl(doc, result):
     # Initialize minimum value and index
     min_value = float("inf")
     min_index = -1
@@ -90,40 +88,45 @@ def perceptiontest_process_results_mc_ppl(doc, result):
             min_index = i
 
     # Return the result with the index of the lowest value
-    return {"submission": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred_id": min_index}}
+    return {
+        "accuracy": {
+            "video_name": doc["video_name"],
+            "question": doc["question"],
+            "question_id": doc["question_id"],
+            "pred_id": min_index,
+            "answer_id": doc["answer_id"],
+            "area": doc["area"],
+            "reasoning": doc["reasoning"],
+            "tag": doc["tag"],
+        }
+    }
 
 
 # Process result for generation
-def perceptiontest_process_results_mc(doc, result):
-    pred = result[0]# string prediction "A", "B", "C"
+def perceptiontest_val_process_results_mc(doc, result):
+    pred = result[0]  # string prediction "A", "B", "C"
 
     # Map the prediction to an index
     pred_to_index = {"A": 0, "B": 1, "C": 2}
     index = pred_to_index.get(pred, -1)  # Default to -1 if the prediction is not found
 
-    return {"submission": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred_id": index}}
+    return {
+        "accuracy": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred_id": index, "answer_id": doc["answer_id"], "area": doc["area"], "reasoning": doc["reasoning"], "tag": doc["tag"]}
+    }
 
 
-def perceptiontest_aggregate_submissions(results, args, task):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_perceptiontest_{task}_{now_date_time}.json"
-    path = file_utils.generate_submission_file(submission_file_name, args)
+def perceptiontest_val_aggregate_accuracy(results, args):
+    yes_count = 0
 
-    with open(path, "w") as f:
-        json.dump(results, f, indent=4)
+    # results is a list of dict
+    for answer_dict in results:
+        if str(answer_dict["answer_id"]) == str(answer_dict["pred_id"]):
+            yes_count = yes_count + 1
 
-    eval_logger.info(f"Submission file saved to {path}")
+    accuracy = yes_count / len(results)
 
-
-# Factory into different aggregate
-def perceptiontest_aggregate_mc(results, args):
-    perceptiontest_aggregate_submissions(results, args, "MC")
+    return accuracy
 
 
-def perceptiontest_aggregate_mc_ppl(results, args):
-    perceptiontest_aggregate_submissions(results, args, "MC_PPL")
-
-
-def perceptiontest_doc_to_choice(doc):
-    #return [op.split(".")[1].strip() for op in doc["options"]]
+def perceptiontest_val_doc_to_choice(doc):
     return [op for op in doc["options"]]

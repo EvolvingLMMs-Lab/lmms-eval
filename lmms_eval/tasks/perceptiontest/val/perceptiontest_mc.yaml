@@ -1,5 +1,5 @@
 dataset_name: "mc_question_val"
-task: "perceptiontest_val"
+task: "perceptiontest_val_mc"
 test_split: validation
 output_type: generate_until
 doc_to_visual: !function utils.perceptiontest_val_doc_to_visual
