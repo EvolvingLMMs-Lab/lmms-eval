@@ -82,20 +82,6 @@ def video_detail_description_doc_to_answer(doc):
     return doc["answer"]
 
 
-# Process result for evaluation in generic task
-
-
-def video_detail_description_aggregate_submissions(results, args):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"video_detail_description-{now_date_time}.json"
-    path = file_utils.generate_submission_file(submission_file_name, args)
-
-    with open(path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    eval_logger.info(f"Submission file saved to {path}")
-
-
 def get_eval_generic(question, answer, pred, max_tokens: int, retries: int = 5):
     global headers
 
@@ -211,6 +197,7 @@ def gpt_eval(data_dict):
     return updated_dict
 
 
+# Process result for evaluation in generic task
 def video_detail_description_process_results_generic(doc, result):
     pred = result[0]
     doc["pred"] = pred

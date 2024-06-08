@@ -106,20 +106,7 @@ def cvrr_doc_to_answer(doc):
     return doc["A"]
 
 
-def cvrr_aggregate_submissions(results, args, task):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_cvrr_{task}_{now_date_time}.json"
-    path = file_utils.generate_submission_file(submission_file_name, args)
-
-    with open(path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    eval_logger.info(f"Submission file saved to {path}")
-
-    return path
-
-
-def get_eval(question, answer, pred, max_tokens: int, retries: int = 5):
+def get_gpt_eval(question, answer, pred, max_tokens: int, retries: int = 5):
     global headers
 
     messages = [
@@ -203,44 +190,6 @@ def parse_score(review):
         return "incorrect", int(0), ""
 
 
-def cvrr_print_scores(eval_file_path, args, task):
-    # Load the predictions from the result file
-    with open(eval_file_path, "r") as file:
-        evaluated_list = json.load(file)
-
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    score_file_name = f"scores_cvrr_{task}_{now_date_time}.json"
-    path = file_utils.generate_submission_file(score_file_name, args)
-
-    # Compute average score and final accuracy
-    # Initialize counters
-    yes_count = 0
-    no_count = 0
-    total_score = 0
-
-    # Iterate over the results to count correctness and sum scores
-    for result_list in evaluated_list:
-        eval_dict = result_list[0]
-        if eval_dict["pred"] == "correct":
-            yes_count += 1
-        else:
-            no_count += 1
-        total_score += eval_dict["score"]
-
-    # Calculate accuracy and average score
-    accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
-    accuracy = accuracy * 100
-    average_score = total_score / len(evaluated_list) if evaluated_list else 0
-
-    # Write the processed data to the scores file
-    with open(path, "w") as f:
-        json.dump({"accuracy": accuracy, "average_score": average_score}, f, indent=4)
-
-    eval_logger.info(f"Score file saved to {path}")
-
-    return accuracy, average_score
-
-
 # Process result for evaluation in temporal task
 def cvrr_process_results(doc, result):
     """
@@ -255,8 +204,8 @@ def cvrr_process_results(doc, result):
         answer = doc["A"]
         pred = result[0]
 
-        # Assume get_eval returns a review and the model name, and parse_score parses this review
-        review, model_name = get_eval(question, answer, pred, 512)
+        # Assume get_gpt_eval returns a review and the model name, and parse_score parses this review
+        review, model_name = get_gpt_eval(question, answer, pred, 512)
         correctness, score, reason = parse_score(review)
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
@@ -270,146 +219,6 @@ def cvrr_process_results(doc, result):
         "gpt_eval_score": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"], "correctness": correctness, "score": score, "reason": reason},
         "gpt_eval_accuracy": {"VideoID": doc["VideoID"], "Q": doc["Q"], "A": doc["A"], "pred": pred, "DimensionName": doc["DimensionName"], "correctness": correctness, "score": score, "reason": reason},
     }
-
-
-def cvrr_gpt_eval(result_file_path, args, task):
-    """
-    Process the result file containing predictions, score them using GPT,
-    and save the results with added scores and correctness fields to a new file.
-
-    Args:
-        result_file_path: path to the JSON file with results to be evaluated
-    """
-
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    eval_file_name = f"gpt_eval_result_cvrr_{task}_{now_date_time}.json"
-    eval_file_path = file_utils.generate_submission_file(eval_file_name, args)
-
-    # Load the predictions from the result file
-    with open(result_file_path, "r") as file:
-        result_list = json.load(file)
-
-    evaluated_results = []
-
-    # Load the predictions from the result file
-    with open(result_file_path, "r") as file:
-        result_list = json.load(file)
-
-    # Process each result to generate scores
-    for data_dict in tqdm(result_list, desc="GPT-Eval"):
-        try:
-            question = data_dict.get("Q", "")
-            answer = data_dict.get("A", "")
-            pred = data_dict.get("pred", "")
-
-            # Assume get_eval returns a review and the model name, and parse_score parses this review
-            review, model_name = get_eval(question, answer, pred, 512)
-            correctness, score, reason = parse_score(review)
-        except Exception as e:
-            eval_logger.error(f"Error for Video Name: {data_dict.get('VideoID', 'Unknown')}: {e}")
-            review = "Failed to Get a Proper Review."
-            model_name = "Failed Request"
-            score = 0
-            correctness = "incorrect"
-            reason = ""
-
-        # Update the dictionary with the new entries
-        eval_dict = {
-            "pred": correctness,
-            "score": score,
-            "reason": reason,
-        }
-        result_dict = {
-            "Q": question,
-            "A": answer,
-            "pred": pred,
-        }
-        updated_list = [eval_dict, result_dict]
-        evaluated_results.append(updated_list)
-
-    # Save the evaluated results to a new JSON file
-    with open(eval_file_path, "w") as f:
-        json.dump(evaluated_results, f, indent=4)
-
-    return eval_file_path
-
-
-def cvrr_aggregate_results_dim1(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "continuity_and_object_instance_count")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "continuity_and_object_instance_count")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "continuity_and_object_instance_count")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim2(results, args):
-    print("aggregate submissions")
-    result_file_path = cvrr_aggregate_submissions(results, args, "fine_grained_action_understanding")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "fine_grained_action_understanding")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "fine_grained_action_understanding")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim3(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_social_context")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "interpretation_of_social_context")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "interpretation_of_social_context")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim4(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "interpretation_of_visual_context")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "interpretation_of_visual_context")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "interpretation_of_visual_context")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim5(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "multiple_actions_in_a_single_video")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "multiple_actions_in_a_single_video")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "multiple_actions_in_a_single_video")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim6(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_existent_scene_depictions")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "non_existent_actions_with_existent_scene_depictions")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "non_existent_actions_with_existent_scene_depictions")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim7(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "non_existent_actions_with_non_existent_scene_depictions")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "non_existent_actions_with_non_existent_scene_depictions")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "non_existent_actions_with_non_existent_scene_depictions")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim8(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "partial_actions")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "partial_actions")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "partial_actions")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim9(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "time_order_understanding")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "time_order_understanding")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "time_order_understanding")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim10(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "understanding_emotional_context")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "understanding_emotional_context")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "understanding_emotional_context")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
-
-
-def cvrr_aggregate_results_dim11(results, args):
-    result_file_path = cvrr_aggregate_submissions(results, args, "unusual_and_physically_anomalous_activities")
-    eval_file_path = cvrr_gpt_eval(result_file_path, args, "unusual_and_physically_anomalous_activities")
-    accuracy, average_score = cvrr_print_scores(eval_file_path, args, "unusual_and_physically_anomalous_activities")
-    return "acc: " + str(accuracy) + "%" + " score: " + str(average_score)
 
 
 # Factory into different aggregate

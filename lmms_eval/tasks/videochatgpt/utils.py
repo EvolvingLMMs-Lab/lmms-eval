@@ -105,11 +105,6 @@ def videochatgpt_doc_to_answer(doc):
     return doc["answer"]
 
 
-# Note: we process answer and gpt_eval seperately, in case gpt is not stable
-# so we obtained a submission file for answer first
-# and then feed the submission file to gpt for scoring
-
-
 # Process result for evaluation in generic task
 def videochatgpt_process_results_generic(doc, result):
     """
@@ -185,19 +180,6 @@ def videochatgpt_process_results_consistency(doc, result, full_docs=None):
         return {"gpt_eval_score_consistency": {"video_name": doc["video_name"], "Q2": doc["question_2"], "A": doc["answer"], "pred2": pred}}
 
 
-def videochatgpt_aggregate_submissions(results, args, task):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_videochatgpt_{task}_{now_date_time}.json"
-    path = file_utils.generate_submission_file(submission_file_name, args)
-
-    with open(path, "w") as f:
-        json.dump(results, f, indent=4)
-
-    eval_logger.info(f"Submission file saved to {path}")
-
-    return path
-
-
 def videochatgpt_aggregate_submissions_consistency(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     submission_file_name = f"inference_results_videochatgpt_{task}_{now_date_time}.json"
@@ -206,8 +188,7 @@ def videochatgpt_aggregate_submissions_consistency(results, args, task):
     combined_results = []
     processed_indices = set()
 
-    # iterate through results to find pairs
-    # avoid multiprocess bugs
+    # Iterate through results to find pairs in order to avoid multiprocessing bugs
     for i in range(len(results)):
         if i in processed_indices:
             continue
@@ -579,34 +560,6 @@ def videochatgpt_gpt_eval(result_file_path, args, task):
 
 
 # Factory into different aggregate
-def videochatgpt_aggregate_correctness(results, args):
-    result_file_path = videochatgpt_aggregate_submissions(results, args, "correctness")
-    eval_file_path = videochatgpt_gpt_eval(result_file_path, args, "correctness")
-    average_score = videochatgpt_print_scores(eval_file_path, args, "correctness")
-    return average_score
-
-
-def videochatgpt_aggregate_detailed_orientation(results, args):
-    result_file_path = videochatgpt_aggregate_submissions(results, args, "detailed_orientation")
-    eval_file_path = videochatgpt_gpt_eval(result_file_path, args, "detailed_orientation")
-    average_score = videochatgpt_print_scores(eval_file_path, args, "detailed_orientation")
-    return average_score
-
-
-def videochatgpt_aggregate_context(results, args):
-    result_file_path = videochatgpt_aggregate_submissions(results, args, "context")
-    eval_file_path = videochatgpt_gpt_eval(result_file_path, args, "context")
-    average_score = videochatgpt_print_scores(eval_file_path, args, "context")
-    return average_score
-
-
-def videochatgpt_aggregate_temporal(results, args):
-    result_file_path = videochatgpt_aggregate_submissions(results, args, "temporal")
-    eval_file_path = videochatgpt_gpt_eval(result_file_path, args, "temporal")
-    average_score = videochatgpt_print_scores(eval_file_path, args, "temporal")
-    return average_score
-
-
 def videochatgpt_aggregate_consistency(results, args):
     result_file_path = videochatgpt_aggregate_submissions_consistency(results, args, "consistency")
     eval_file_path = videochatgpt_gpt_eval(result_file_path, args, "consistency")
