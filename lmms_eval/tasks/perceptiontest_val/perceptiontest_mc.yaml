@@ -1,0 +1,13 @@
+dataset_name: "mc_question_val"
+task: "perceptiontest_val"
+test_split: validation
+output_type: generate_until
+doc_to_visual: !function utils.perceptiontest_val_doc_to_visual
+doc_to_text: !function utils.perceptiontest_val_doc_to_text
+doc_to_target: !function utils.perceptiontest_val_doc_to_answer
+process_results: !function utils.perceptiontest_val_process_results_mc
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.perceptiontest_val_aggregate_accuracy
+    higher_is_better: true
+include: _default_template_yaml
