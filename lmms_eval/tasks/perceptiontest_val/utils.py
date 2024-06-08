@@ -32,8 +32,8 @@ eval_logger = logging.getLogger("lmms-eval")
 
 # Pass in video path here
 # Can only work correctly with video llm
-def egoschema_doc_to_visual(doc):
-    video_path = doc["video_idx"] + ".mp4"
+def perceptiontest_val_doc_to_visual(doc):
+    video_path = doc["video_name"] + ".mp4"
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
         video_path = video_path
@@ -45,7 +45,7 @@ def egoschema_doc_to_visual(doc):
 
 
 # This is the place where you format your question
-def egoschema_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def perceptiontest_val_doc_to_text(doc, model_specific_prompt_kwargs=None):
     if model_specific_prompt_kwargs is None:
         model_specific_prompt_kwargs = {}
     pre_prompt = ""
@@ -56,20 +56,27 @@ def egoschema_doc_to_text(doc, model_specific_prompt_kwargs=None):
         post_prompt = model_specific_prompt_kwargs["post_prompt"]
 
     question = doc["question"]
-    if "option" in doc:
-        for op in doc["option"]:
-            question += "\n" + op
+    if "options" in doc:
+        index = 0
+        for op in doc["options"]:
+            if index == 0:
+                question += "\n" + "A. " + op
+            elif index == 1:
+                question += "\n" + "B. " + op
+            else:
+                question += "\n" + "C. " + op
+            index += 1
         post_prompt = "\nAnswer with the option's letter from the given choices directly."
 
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def egoschema_doc_to_answer(doc):
-    return doc["answer"]
+def perceptiontest_val_doc_to_answer(doc):
+    return doc["answer_id"]
 
 
 # Process result for mc_ppl
-def egoschema_process_results(doc, result):
+def perceptiontest_val_process_results_mc_ppl(doc, result):
     # Initialize minimum value and index
     min_value = float("inf")
     min_index = -1
@@ -81,53 +88,27 @@ def egoschema_process_results(doc, result):
             min_index = i
 
     # Return the result with the index of the lowest value
-    return {"submission": {doc["video_idx"]: min_index}, "score": {"pred": min_index, "ground_truth": doc["answer"]}}
+    return {"accuracy": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred_id": min_index, "answer_id": doc["answer_id"], "area": doc["area"], "reasoning": doc["reasoning"], "tag": doc["tag"]}}
 
 
-# Process result for mcq answer generation
-def egoschema_process_results_generation(doc, result):
-    pred = result[0]  # string prediction "A", "B", "C", "D", or "E"
+# Process result for generation
+def perceptiontest_val_process_results_mc(doc, result):
+    pred = result[0]# string prediction "A", "B", "C"
 
     # Map the prediction to an index
-    pred_to_index = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4}
+    pred_to_index = {"A": 0, "B": 1, "C": 2}
     index = pred_to_index.get(pred, -1)  # Default to -1 if the prediction is not found
 
-    return {"submission": {doc["video_idx"]: index}, "score": {"pred": index, "ground_truth": doc["answer"]}}
-
-
-def egoschema_aggregate_submissions(results, args, task):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_egoschema_{task}_{now_date_time}.json"
-    path = file_utils.generate_submission_file(submission_file_name, args)
-
-    # results is a list of 5031 dict,
-    # need to convert results into a single dict with 5031 key-value pairs
-    combined_submission = {}
-
-    for submission_dict in results:
-        combined_submission.update(submission_dict)
-
-    with open(path, "w") as f:
-        json.dump(combined_submission, f, indent=4)
-
-    eval_logger.info(f"Submission file saved to {path}")
+    return {"accuracy": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred_id": index, "answer_id": doc["answer_id"], "area": doc["area"], "reasoning": doc["reasoning"], "tag": doc["tag"]}}
 
 
 # Factory into different aggregate
-def egoschema_aggregate_mc(results, args):
-    egoschema_aggregate_submissions(results, args, "MC")
-
-
-def egoschema_aggregate_mc_ppl(results, args):
-    egoschema_aggregate_submissions(results, args, "MC_PPL")
-
-
-def egoschema_aggregate_score(results, args):
+def perceptiontest_val_aggregate_accuracy(results, args):
     yes_count = 0
 
     # results is a list of dict
     for answer_dict in results:
-        if str(answer_dict["ground_truth"]) == str(answer_dict["pred"]):
+        if str(answer_dict["answer_id"]) == str(answer_dict["pred_id"]):
             yes_count = yes_count + 1
 
     accuracy = yes_count / len(results)
@@ -135,5 +116,6 @@ def egoschema_aggregate_score(results, args):
     return accuracy
 
 
-def egoschema_doc_to_choice(doc):
-    return [op.split(".")[1].strip() for op in doc["option"]]
+def perceptiontest_val_doc_to_choice(doc):
+    #return [op.split(".")[1].strip() for op in doc["options"]]
+    return [op for op in doc["options"]]

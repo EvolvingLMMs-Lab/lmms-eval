@@ -1,0 +1,13 @@
+dataset_name: "mc_question"
+task: "perceptiontest_mcppl"
+test_split: test
+output_type: multiple_choice
+doc_to_visual: !function utils.perceptiontest_doc_to_visual
+doc_to_text: "question"
+doc_to_target: !function utils.perceptiontest_doc_to_answer_mc
+doc_to_choice: !function utils.perceptiontest_doc_to_choice
+process_results: !function utils.perceptiontest_process_results_mc_ppl
+metric_list:
+  - metric: submission
+    aggregation: !function utils.perceptiontest_aggregate_mc_ppl
+include: _default_template_yaml

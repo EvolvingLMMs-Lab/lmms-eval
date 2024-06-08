@@ -90,12 +90,12 @@ def perceptiontest_process_results_mc_ppl(doc, result):
             min_index = i
 
     # Return the result with the index of the lowest value
-    return {"submission": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred": min_index}}
+    return {"submission": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred_id": min_index}}
 
 
 # Process result for generation
 def perceptiontest_process_results_mc(doc, result):
-    pred = result[0]  # string prediction "A", "B", "C"
+    pred = result[0]# string prediction "A", "B", "C"
 
     # Map the prediction to an index
     pred_to_index = {"A": 0, "B": 1, "C": 2}
@@ -125,5 +125,5 @@ def perceptiontest_aggregate_mc_ppl(results, args):
 
 
 def perceptiontest_doc_to_choice(doc):
-    # return [op.split(".")[1].strip() for op in doc["options"]]
+    #return [op.split(".")[1].strip() for op in doc["options"]]
     return [op for op in doc["options"]]
