@@ -1,4 +1,5 @@
 import torch
+import random
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -11,7 +12,6 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-from accelerate import Accelerator, InitProcessGroupKwargs
 from typing import List, Optional, Union, Tuple
 import warnings
 
@@ -53,11 +53,11 @@ class LlavaSglang(lmms):
         self.tokenizer = tokenizer
         self.tp_size = tp_size
         self.conv_template = conv_template
-        torch.multiprocessing.set_start_method("spawn")
+        # torch.multiprocessing.set_start_method("spawn")
 
-        accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
-        accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
-        assert accelerator.num_processes == 1, "Llava-sglang does not support multi-processes yet (it does support tensor parallelism)."
+        # accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
+        # accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
+        # assert accelerator.num_processes == 1, "Llava-sglang does not support multi-processes yet (it does support tensor parallelism)."
         self._rank = 0
         self._world_size = 1
         self.parallel = parallel
@@ -66,7 +66,8 @@ class LlavaSglang(lmms):
         raise NotImplementedError("Llava-sglang does not support loglikelihood evaluation yet")
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
-        runtime = sgl.Runtime(model_path=self.pretrained, tokenizer_path=self.tokenizer, tp_size=self.tp_size)
+        torch.multiprocessing.set_start_method("spawn", force=True)
+        runtime = sgl.Runtime(model_path=self.pretrained, tokenizer_path=self.tokenizer, tp_size=self.tp_size, port=random.randint(10000, 50000))
         runtime.endpoint.chat_template = get_chat_template(self.conv_template)
         sgl.set_default_backend(runtime)
 
