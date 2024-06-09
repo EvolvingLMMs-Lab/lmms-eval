@@ -2,6 +2,7 @@ from io import BytesIO
 from copy import deepcopy
 import os
 import base64
+import json
 from typing import List, Tuple, Union
 from tqdm import tqdm
 import requests as url_requests
@@ -22,8 +23,10 @@ eval_logger = logging.getLogger("lmms-eval")
 
 try:
     import anthropic
-except:
-    eval_logger.debug("Can not import anthropic")
+    from decord import VideoReader, cpu
+    import numpy as np
+except Exception as e:
+    eval_logger.error(f"Error importing claude: {e}")
 
 API_URL = os.getenv("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/complete")
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "YOUR_API_KEY")
@@ -36,12 +39,30 @@ class Claude(lmms):
         model_version: str = "claude-3-opus-20240229",
         image_token: str = "<image>",  # Use to separate interleaved image and text
         system_prompt: str = "",  # Whether you want some special system prompt here
+        modality: str = "image",
+        continual_mode: bool = False,
+        response_persistent_folder: str = None,
         **kwargs,
     ) -> None:
         super().__init__()
         self.model_version = model_version
         self.image_token = image_token
         self.system_prompt = system_prompt
+        self.modality = modality
+
+        self.continual_mode = continual_mode
+        if self.continual_mode and response_persistent_folder is None:
+            raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
+        self.response_persistent_folder = response_persistent_folder
+        self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+
+        if os.path.exists(self.response_persistent_file):
+            with open(self.response_persistent_file, "r") as f:
+                self.response_cache = json.load(f)
+            self.cache_mode = "resume"
+        else:
+            self.response_cache = {}
+            self.cache_mode = "start"
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -105,6 +126,24 @@ class Claude(lmms):
 
         return self.shrink_image_to_file_size(img, max_file_size)
 
+    def encode_video(self, video_path):
+        vr = VideoReader(video_path, ctx=cpu(0))
+        total_frame_num = len(vr)
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_for_video, dtype=int)
+        frame_idx = uniform_sampled_frames.tolist()
+        frames = vr.get_batch(frame_idx).asnumpy()
+
+        base64_frames = []
+        for frame in frames:
+            img = Image.fromarray(frame)
+            output_buffer = BytesIO()
+            img.save(output_buffer, format="PNG")
+            byte_data = output_buffer.getvalue()
+            base64_str = base64.b64encode(byte_data).decode("utf-8")
+            base64_frames.append(f"data:image/jpeg;base64,{base64_str}")
+
+        return base64_frames
+
     def generate_until(self, requests) -> List[str]:
         client = anthropic.Anthropic()
 
@@ -127,14 +166,28 @@ class Claude(lmms):
         ]
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            # encode, pad, and truncate contexts for this batch
+            ###################### CONTINUAL MODE ######################
+            if self.continual_mode is True and self.cache_mode == "resume":
+                doc_uuid = f"{task}___{split}___{doc_id}"
+                if doc_uuid in self.response_cache:
+                    response_text = self.response_cache[doc_uuid]
+                    if response_text:
+                        res.append(response_text)
+                        pbar.update(1)
+                        continue
+
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             imgs = []
             for visual in visuals:
-                visual = self.shrink_image_to_file_size(visual)
-                img = self.encode_image(visual)
-                imgs.append(img)
+                if isinstance(visual, str) and os.path.exists(visual):  # Assuming visual is a path to a video
+                    visual = self.encode_video(visual)
+                    for img in visual:
+                        imgs.append(img)
+                else:
+                    visual = self.shrink_image_to_file_size(visual)
+                    img = self.encode_image(visual)
+                    imgs.append(img)
 
             messages = deepcopy(empty_messages)
 
@@ -187,6 +240,13 @@ class Claude(lmms):
 
             res.append(message.content[0].text)
             pbar.update(1)
+
+            ###################### CONTINUAL MODE ######################
+            if self.continual_mode is True:  # Cache the response
+                doc_uuid = f"{task}___{split}___{doc_id}"
+                self.response_cache[doc_uuid] = response_text
+                with open(self.response_persistent_file, "w") as f:
+                    json.dump(self.response_cache, f)
 
         pbar.close()
 

@@ -23,6 +23,8 @@ AVAILABLE_MODELS = {
     "internvl": "InternVLChat",
     "gemini_api": "GeminiAPI",
     "gemini_model": "GeminiModel",
+    "reka": "Reka",
+    "llava_onevision": "Llava_OneVision",
     "from_log": "FromLog",
 }
 

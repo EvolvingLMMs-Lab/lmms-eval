@@ -47,6 +47,9 @@ elif API_TYPE == "azure":
         "api-key": API_KEY,
         "Content-Type": "application/json",
     }
+else:
+    API_URL = "YOUR_API_URL"
+    API_KEY = "YOUR_API_KEY"
 
 
 @register_model("batch_gpt4")

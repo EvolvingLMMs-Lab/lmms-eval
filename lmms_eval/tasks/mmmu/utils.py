@@ -11,7 +11,7 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 lmms_logger = logging.getLogger("lmms-eval")
 
-MULTI_CHOICE_PROMPT = "Answer with the option letter from the given choices directly."
+MULTI_CHOICE_PROMPT = "Answer with the option's letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 
 
@@ -36,9 +36,9 @@ def construct_prompt(doc):
         # Weirdly, data["options"] is a string in MMMU Huggingface dataset
         parsed_options = parse_options(ast.literal_eval(doc["options"]))
         # parsed_options already prepends a newline so no need to add space here
-        question = f"{question}\n{parsed_options}\n{MULTI_CHOICE_PROMPT}"
+        question = f"{question}\n{parsed_options}\n\n{MULTI_CHOICE_PROMPT}"
     else:
-        question = f"{question}\n{OPEN_ENDED_PROMPT}"
+        question = f"{question}\n\n{OPEN_ENDED_PROMPT}"
     return question
 
 
@@ -112,18 +112,18 @@ def mmmu_aggregate_results(results):
         in_domain_data_num = sum([cat_results["num_example"] for cat_results in in_domain_cat_results.values()])
         printable_results["Overall-" + domain] = {
             "num": int(in_domain_data_num),
-            "acc": round(in_domain_ins_acc, 3),
+            "acc": round(in_domain_ins_acc, 5),
         }
         # add sub category
         for cat_name, cat_results in in_domain_cat_results.items():
             printable_results[cat_name] = {
                 "num": int(cat_results["num_example"]),
-                "acc": round(cat_results["acc"], 3),
+                "acc": round(cat_results["acc"], 5),
             }
     all_ins_acc = calculate_ins_level_acc(evaluation_result)
     printable_results["Overall"] = {
         "num": sum([cat_results["num_example"] for cat_results in evaluation_result.values()]),
-        "acc": round(all_ins_acc, 3),
+        "acc": round(all_ins_acc, 5),
     }
     print(printable_results)
     return printable_results["Overall"]["acc"]
