@@ -415,6 +415,8 @@ def evaluate(
                 vals_torch[(task_name, key, metric)] = gathered_item
 
         vals = vals_torch
+        # Ensure all ranks wait for rank 0 to finish aggregation
+        torch.distributed.barrier()
 
     if lm.rank == 0:
         ### Get task ordering for correct sample-wide aggregation

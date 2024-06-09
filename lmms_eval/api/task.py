@@ -12,6 +12,10 @@ import shutil
 from tqdm import tqdm
 
 import datasets
+
+datasets.config.STREAMING_READ_MAX_RETRIES = 20  # default
+datasets.config.STREAMING_READ_RETRY_INTERVAL = 5  # default
+
 from datasets import Image, Sequence
 import numpy as np
 from PIL import ImageFile
