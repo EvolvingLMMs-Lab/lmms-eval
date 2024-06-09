@@ -16,7 +16,7 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
 eval_logger = logging.getLogger("lmms-eval")
-
+import sys;sys.path.append("llava-video")
 try:
     from llavavid.model.language_model.llava_llama import LlavaConfig
     from llavavid.model.language_model.llava_qwen import LlavaQwenConfig

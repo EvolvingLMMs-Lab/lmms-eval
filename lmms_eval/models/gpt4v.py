@@ -49,7 +49,7 @@ class GPT4V(lmms):
     def __init__(
         self,
         model_version: str = "gpt-4-vision-preview",
-        modality: str = "image",
+        modality: str = "video",
         max_frames_for_video: int = 10,
         timeout: int = 120,
         **kwargs,
@@ -120,7 +120,8 @@ class GPT4V(lmms):
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+            # visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+            visuals = [doc_to_visual(self.task_dict[task][split][0])]
             visuals = self.flatten(visuals)
             imgs = []  # multiple images or frames for video
             for visual in visuals:
@@ -128,7 +129,8 @@ class GPT4V(lmms):
                     img = self.encode_image(visual)
                     imgs.append(img)
                 elif self.modality == "video":
-                    frames = self.encode_video(visual, self.max_frames_for_video)
+                    # frames = self.encode_video(visual, self.max_frames_for_video)
+                    frames="hi"
                     imgs.extend(frames)
 
             payload = {"model": self.model_version, "messages": []}
@@ -166,6 +168,7 @@ class GPT4V(lmms):
 
             for attempt in range(5):
                 try:
+                    # content="一个戴着红色帽子的男子，用一个工具把自己的腰系住，往下面慢慢的在走。";break#Choiszt:just for test
                     response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
                     response_data = response.json()
 

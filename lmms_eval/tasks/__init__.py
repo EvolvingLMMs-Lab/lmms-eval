@@ -73,6 +73,8 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
         for f in file_list:
             # if "detail" in f:
             #     import pdb;pdb.set_trace()
+            # if "vatex" in f:
+            #     print("a")
             if f.endswith(".yaml"):
                 yaml_path = os.path.join(root, f)
                 try:
