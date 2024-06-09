@@ -114,7 +114,7 @@ def mme_aggregate_results(results):
     for category, question2scores in category2score.items():
         total_score = 0
         for question_id, scores in question2scores.items():
-            assert len(scores) == 2
+            assert len(scores) == 2, "MME only supports pairwise evaluation"
             acc = sum(scores) / len(scores) * 100.0
             acc_plus = (sum(scores) == 2) * 100.0
             score = acc_plus + acc

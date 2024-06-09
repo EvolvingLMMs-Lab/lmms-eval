@@ -9,7 +9,7 @@ doc_to_target: "answer"
 process_results: !function utils.mmmu_process_results
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 generation_kwargs:
-  max_new_tokens: 16
+  max_new_tokens: 128
 model_specific_generation_kwargs:
   llava:
     image_aspect_ratio: original

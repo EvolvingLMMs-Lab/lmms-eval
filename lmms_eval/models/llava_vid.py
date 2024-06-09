@@ -8,35 +8,28 @@ from decord import VideoReader, cpu
 import numpy as np
 import math
 from datetime import timedelta
-from transformers import AutoConfig, AutoModelForCausalLM
+from transformers import AutoConfig
+import copy
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.utils import stop_sequences_criteria
-from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 eval_logger = logging.getLogger("lmms-eval")
 
 try:
     from llavavid.model.language_model.llava_llama import LlavaConfig
+    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
     from llavavid.model.builder import load_pretrained_model
     from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-    from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
+    from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
     from llavavid.conversation import conv_templates, SeparatorStyle
 
+    AutoConfig.register("llava_qwen", LlavaQwenConfig)
     AutoConfig.register("llava_llama", LlavaConfig)
 
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
-
-try:
-    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
-
-    AutoConfig.register("llava_qwen", LlavaQwenConfig)
-except:
-    eval_logger.debug("No llava vid qwen yet for llavavid")
 
 
 @register_model("llavavid")
@@ -50,10 +43,7 @@ class LlavaVid(lmms):
         pretrained: str = "liuhaotian/llava-v1.5-7b",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
-        dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
-        trust_remote_code: Optional[bool] = False,
-        revision=None,
         attn_implementation=(
             "sdpa" if torch.__version__ >= "2.1.2" else "eager"
         ),  # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
@@ -337,13 +327,26 @@ class LlavaVid(lmms):
             else:
                 qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
 
-            conv = conv_templates[self.conv_template].copy()
+            # This is much safer for llama3, as we now have some object type in it
+            if "llama_3" in self.conv_template:
+                conv = copy.deepcopy(conv_templates[self.conv_template])
+            else:
+                conv = conv_templates[self.conv_template].copy()
+
             conv.append_message(conv.roles[0], qs)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
-            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().cuda()
+            pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+            if "llama_3" in self.conv_template:
+                pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
+            attention_masks = input_ids.ne(pad_token_ids).long().cuda()
+
+            # input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
+            # pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+            # input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
+            # attention_masks = input_ids.ne(pad_token_ids).to(self.device)
 
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
