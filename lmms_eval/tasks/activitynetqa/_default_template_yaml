@@ -2,6 +2,7 @@ dataset_path: lmms-lab/ActivityNetQA
 dataset_kwargs:
   token: True
   video: True
+  force_download: False
   cache_dir: activitynetqa
 model_specific_prompt_kwargs:
   default:

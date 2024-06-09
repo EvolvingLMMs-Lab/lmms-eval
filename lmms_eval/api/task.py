@@ -691,20 +691,20 @@ class ConfigurableTask(Task):
         if "From_YouTube" in dataset_kwargs:
             import subprocess
             import json
+
             def _download_from_youtube(path):
-                import subprocess
                 try:
                     for video in tqdm(self.all_dataset[split]):
-                        video_id = video['videoID']
-                        target_path=os.path.join(path,f"{video_id}.mp4")
+                        video_id = video["videoID"]
+                        target_path = os.path.join(path, f"{video_id}.mp4")
                         command = f"yt-dlp -o {target_path} -f mp4 https://www.youtube.com/watch?v={video_id}"
                         subprocess.run(command, shell=True)
-                    with open(os.path.join(cache_path,f"{task}_download_status.json"),'w') as f:
-                        f.write(json.dumps({task:"downloaded"}))
+                    with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
+                        f.write(json.dumps({task: "downloaded"}))
                 except Exception as e:
                     eval_logger.error(f"Error while downloading {task} data: {e}")
-                    with open(os.path.join(cache_path,f"{task}_download_status.json"),'w') as f:
-                        f.write(json.dumps({task:"not downloaded"}))
+                    with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
+                        f.write(json.dumps({task: "not downloaded"}))
 
             hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
             accelerator = Accelerator()
@@ -714,15 +714,16 @@ class ConfigurableTask(Task):
                     path=self.DATASET_PATH,
                     name=self.DATASET_NAME,
                     download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-                    **dataset_kwargs if dataset_kwargs is not None else {},)
-                dataset_kwargs["From_YouTube"]=True
-                cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset") #download_parquet
-                split=vars(self.config)["test_split"]
-                task=vars(self.config)["task"]
+                    **dataset_kwargs if dataset_kwargs is not None else {},
+                )
+                dataset_kwargs["From_YouTube"] = True
+                cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")  # download_parquet
+                split = vars(self.config)["test_split"]
+                task = vars(self.config)["task"]
 
-                video_path=os.path.join(hf_home,task)
-                if os.path.exists(os.path.join(cache_path,f"{task}_download_status.json")):
-                    download_status = json.load(open(os.path.join(cache_path, f"{task}_download_status.json"), 'r'))
+                video_path = os.path.join(hf_home, task)
+                if os.path.exists(os.path.join(cache_path, f"{task}_download_status.json")):
+                    download_status = json.load(open(os.path.join(cache_path, f"{task}_download_status.json"), "r"))
                     if download_status[task] == "downloaded":
                         eval_logger.info(f"Data for {task} already download!")
                     else:
@@ -741,14 +742,13 @@ class ConfigurableTask(Task):
             download_config.max_retries = dataset_kwargs.get("max_retries", 3) if dataset_kwargs is not None else 3
             download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
 
-            downloaded_video_ids=[i.split(".mp4")[0] for i in os.listdir(os.path.expanduser(video_path))if i.endswith(".mp4")]
-            #Filtered the existing dataset with the downloaded video ids
-            self.dataset=datasets.DatasetDict({split: self.all_dataset[split].filter(lambda x: x['videoID'] in downloaded_video_ids)})
+            downloaded_video_ids = [i.split(".mp4")[0] for i in os.listdir(os.path.expanduser(video_path)) if i.endswith(".mp4")]
+            # Filtered the existing dataset with the downloaded video ids
+            self.dataset = datasets.DatasetDict({split: self.all_dataset[split].filter(lambda x: x["videoID"] in downloaded_video_ids)})
 
-            self.dataset_no_image =self.dataset
+            self.dataset_no_image = self.dataset
             dataset_kwargs.pop("From_YouTube")
             return
-
 
         if dataset_kwargs is not None and "video" in dataset_kwargs and dataset_kwargs["video"]:
             hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
@@ -756,10 +756,11 @@ class ConfigurableTask(Task):
             cache_dir = os.path.join(hf_home, cache_dir)
             accelerator = Accelerator()
             if accelerator.is_main_process:
-                cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")
+                force_download = dataset_kwargs.get("force_download", False)
+                cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download)
                 zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
 
-                if not os.path.exists(cache_dir) and len(zip_files) > 0:
+                if force_download or (not os.path.exists(cache_dir) and len(zip_files) > 0):
                     for zip_file in zip_files:
                         eval_logger.info(f"Unzipping {zip_file} to {cache_dir}")
                         shutil.unpack_archive(zip_file, cache_dir)
