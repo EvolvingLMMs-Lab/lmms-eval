@@ -1,55 +1,52 @@
 import abc
-from dataclasses import dataclass, field, asdict
-
-import itertools
-import os
-import re
 import ast
+import itertools
+import json
 import logging
+import os
 import random
-from glob import glob
+import re
 import shutil
-from tqdm import tqdm
+import subprocess
+from collections.abc import Callable
+from dataclasses import dataclass, field, asdict
+from glob import glob
+from typing import Any, List, Union
 
 import datasets
-from datasets import Image, Sequence
 import numpy as np
 from PIL import ImageFile
+from datasets import DownloadConfig, Image, Sequence
+from huggingface_hub import snapshot_download
+from tenacity import retry, stop_after_attempt, wait_fixed, stop_after_delay
+from tqdm import tqdm
 
 from accelerate import Accelerator
-from datasets import DownloadConfig
-from typing import Union, List, Any
-from collections.abc import Callable
-from tenacity import retry, stop_after_attempt, wait_fixed, stop_after_delay
-from huggingface_hub import snapshot_download
-
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
-
-from lmms_eval.filters import build_filter_ensemble
 from lmms_eval.api.registry import (
-    get_aggregation,
-    get_metric_aggregation,
-    is_higher_better,
+    AGGREGATION_REGISTRY,
     DEFAULT_METRIC_REGISTRY,
     METRIC_REGISTRY,
     OUTPUT_TYPE_REGISTRY,
-    AGGREGATION_REGISTRY,
+    get_aggregation,
+    get_metric_aggregation,
+    is_higher_better,
 )
-
-ALL_OUTPUT_TYPES = [
-    "loglikelihood",
-    "multiple_choice",
-    "generate_until",
-]
-
+from lmms_eval.filters import build_filter_ensemble
 
 eval_logger = logging.getLogger("lmms-eval")
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
 # Include this inside code block to avoid error
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+ALL_OUTPUT_TYPES = [
+    "loglikelihood",
+    "multiple_choice",
+    "generate_until",
+]
 
 
 @dataclass
@@ -690,9 +687,6 @@ class ConfigurableTask(Task):
         download_config.local_files_only = dataset_kwargs.get("local_files_only", False) if dataset_kwargs is not None else False
         if dataset_kwargs is not None:
             if "From_YouTube" in dataset_kwargs:
-                import subprocess
-                import json
-                import shutil
 
                 def _download_from_youtube(path):
                     try:
@@ -757,7 +751,7 @@ class ConfigurableTask(Task):
                 accelerator = Accelerator()
                 if accelerator.is_main_process:
                     force_download = dataset_kwargs.get("force_download", False)
-                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download)
+                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
 
                     if force_download or (not os.path.exists(cache_dir) and len(zip_files) > 0):
