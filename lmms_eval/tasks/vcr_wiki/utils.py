@@ -1,14 +1,16 @@
+import datetime
+import json
+import logging
 import os
 from difflib import SequenceMatcher as SM
-import evaluate
-import logging
-import spacy
-from spacy.cli import download
-from nltk.util import ngrams
 from functools import partial
-import datetime
+
+import evaluate
+import spacy
+from nltk.util import ngrams
+from spacy.cli import download
+
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-import json
 
 # Download the English and Chinese models
 download("en_core_web_sm")
@@ -193,6 +195,7 @@ def vcr_en_process_results(doc, results):
                 {
                     "score": tmp[k],
                     "max_sim_string": tmp["max_sim_string"],
+                    "crossed_text": crossed_text[i],
                     "caption": doc["caption"],
                 }
             )
@@ -224,6 +227,7 @@ def vcr_zh_process_results(doc, results):
                 {
                     "score": tmp[k],
                     "max_sim_string": tmp["max_sim_string"],
+                    "crossed_text": crossed_text[i],
                     "caption": doc["caption"],
                 }
             )
