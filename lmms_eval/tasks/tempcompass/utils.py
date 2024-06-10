@@ -72,11 +72,9 @@ def tempcompass_doc_to_text_multi_choice(doc, model_specific_prompt_kwargs=None)
     if "pre_prompt" in model_specific_prompt_kwargs:
         pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+        post_prompt = model_specific_prompt_kwargs["post_prompt"]["multi-choice"]
 
     question = doc["question"]
-    post_prompt = "\nPlease directly give the best option:"
-
     return f"{pre_prompt}{question}{post_prompt}"
 
 
@@ -88,11 +86,9 @@ def tempcompass_doc_to_text_yes_no(doc, model_specific_prompt_kwargs=None):
     if "pre_prompt" in model_specific_prompt_kwargs:
         pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+        post_prompt = model_specific_prompt_kwargs["post_prompt"]["yes_no"]
 
     question = doc["question"]
-    post_prompt = "\nPlease answer yes or no:"
-
     return f"{pre_prompt}{question}{post_prompt}"
 
 
@@ -104,11 +100,9 @@ def tempcompass_doc_to_text_caption_matching(doc, model_specific_prompt_kwargs=N
     if "pre_prompt" in model_specific_prompt_kwargs:
         pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+        post_prompt = model_specific_prompt_kwargs["post_prompt"]["caption_matching"]
 
     question = doc["question"]
-    post_prompt = "\nPlease directly give the best option:"
-
     return f"{pre_prompt}{question}{post_prompt}"
 
 
@@ -120,10 +114,9 @@ def tempcompass_doc_to_text_captioning(doc, model_specific_prompt_kwargs=None):
     if "pre_prompt" in model_specific_prompt_kwargs:
         pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+        post_prompt = model_specific_prompt_kwargs["post_prompt"]["captioning"]
 
     question = doc["question"]
-
     return f"{pre_prompt}{question}{post_prompt}"
 
 
@@ -395,13 +388,13 @@ def parse_llm_output_for_captioning(llm_output, gt_answer):
     # Check if the chatgpt answer is the ground-truth answer
     answer_counts = sum(eval_result["chatgpt-answer"].count(prefix) for prefix in ["A.", "B.", "C.", "D."])  # calculate the number of 'A.', 'B.', 'C.', 'D.' in chatgpt-answer
     answer_counts += sum(eval_result["chatgpt-answer"].count(prefix) for prefix in ["A:", "B:", "C:", "D:"])
-    match = re.search(r"Information (\w+)", eval_result["chatgpt-answer"])
+    match = re.search(r"Information (\w+)", eval_result["chatgpt-answer"]) if eval_result["chatgpt-answer"].startswith("Information") else None
 
     # If the gpt answer starts with "A.""
     if eval_result["chatgpt-answer"].split(". ")[0] == gt_answer.split(". ")[0] and answer_counts == 1:
         eval_result["rating"] = 1
     # If the gpt answer starts with "Information A"
-    elif match.group(1) == gt_answer.split(". ")[0] and answer_counts == 1:
+    elif match is not None and match.group(1) == gt_answer.split(". ")[0] and answer_counts == 1:
         eval_result["rating"] = 1
     # If the gpt answer starts with "Information A:"
     elif eval_result["chatgpt-answer"].split(": ")[0][-1] == gt_answer.split(". ")[0] and answer_counts == 1:
