@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/vatex_from_url
+dataset_path: lmms-lab/VATEX
 dataset_name: vatex_val_zh
 task: vatex_val_zh
 test_split: validation

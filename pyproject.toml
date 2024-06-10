@@ -37,6 +37,7 @@ dependencies = [
     "sqlitedict",
     "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
     "openai>=1.0.0",
+    "yt-dlp",
     "google-generativeai",
     "pycocoevalcap",
     "tqdm-multiprocess",
