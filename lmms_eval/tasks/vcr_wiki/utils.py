@@ -13,16 +13,23 @@ from spacy.cli import download
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 # Download the English and Chinese models
-download("en_core_web_sm")
-download("zh_core_web_sm")
+try:
+    nlp_en = spacy.load("en_core_web_sm")
+except:
+    download("en_core_web_sm")
+    nlp_en = spacy.load("en_core_web_sm")
+try:
+    nlp_zh = spacy.load("zh_core_web_sm")
+except:
+    download("zh_core_web_sm")
+    nlp_zh = spacy.load("zh_core_web_sm")
 
 eval_logger = logging.getLogger("lmms-eval")
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 rouge = evaluate.load("rouge")
-nlp_en = spacy.load("en_core_web_sm")
-nlp_zh = spacy.load("zh_core_web_sm")
+
 nlp = {"en": nlp_en, "zh": nlp_zh}
 
 aggregate_results_template = {
