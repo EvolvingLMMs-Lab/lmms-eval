@@ -1,9 +1,5 @@
-from collections import defaultdict
 import os
 from difflib import SequenceMatcher as SM
-import datetime
-import json
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 import evaluate
 import logging
 import spacy
@@ -32,6 +28,21 @@ aggregate_results_template = {
     "jaccard": 0,
     "rouge1": 0,
 }
+
+
+def fast_filter(answer_text):
+    if "I can't" in answer_text:
+        return True
+    elif "I cannot" in answer_text:
+        return True
+    elif "sorry" in answer_text.lower():
+        return True
+    if "无法" in answer_text:
+        return True
+    elif "抱歉" in answer_text:
+        return True
+    else:
+        return False
 
 
 def vcr_doc_to_visual(doc):
@@ -63,7 +74,7 @@ def tokenize(text, language):
     return [token.text for token in processed_text]
 
 
-def vcr_process_results_single(doc, result, language):
+def vcr_process_results_single(crossed_text, result, language):
     """
     Args:
         doc: a instance of the eval dataset
@@ -71,8 +82,21 @@ def vcr_process_results_single(doc, result, language):
     Returns:
         a dictionary with key: metric name (in this case mme score), value: metric value
     """
+
     assert language in ["en", "zh"], f"Language {language} is not supported."
-    crossed_text = doc["crossed_text"]
+
+    if fast_filter(result):
+        return {
+            "crossed_text": crossed_text,
+            "max_sim_val": 0,
+            "max_sim_string": "",
+            "precision": 0,
+            "recall": 0,
+            "f1": 0,
+            "jaccard": 0,
+            "rouge1": 0,
+            "exact_match": 0,
+        }
     tokens_result = tokenize(result, language)
     tokens_crossed_text = tokenize(crossed_text, language)
 
@@ -150,10 +174,26 @@ def vcr_en_process_results(doc, results):
         a dictionary with key: metric name (in this case mme score), value: metric value
     """
     assert len(results) == 2, f"Expected 2 results, got {len(results)}"
-    output = {
-        "res_stacked_image": vcr_process_results_single(doc, results[0], "en"),
-        "res_only_it_image": vcr_process_results_single(doc, results[1], "en"),
-    }
+    output = {}
+    for i in range(len(doc["crossed_text"])):
+        res_stacked_image_results = vcr_process_results_single(
+            doc["crossed_text"][i], results[0], "en"
+        )
+        res_only_image_results = vcr_process_results_single(
+            doc["crossed_text"][i], results[1], "en"
+        )
+        output.update(
+            {
+                f"res_stacked_image__{k}___{i}": v
+                for k, v in res_stacked_image_results.items()
+            }
+        )
+        output.update(
+            {
+                f"res_only_it_image__{k}___{i}": v
+                for k, v in res_only_image_results.items()
+            }
+        )
     return output
 
 
@@ -166,10 +206,26 @@ def vcr_zh_process_results(doc, results):
         a dictionary with key: metric name (in this case mme score), value: metric value
     """
     assert len(results) == 2, f"Expected 2 results, got {len(results)}"
-    output = {
-        "res_stacked_image": vcr_process_results_single(doc, results[0], "zh"),
-        "res_only_it_image": vcr_process_results_single(doc, results[1], "zh"),
-    }
+    output = {}
+    for i in range(len(doc["crossed_text"])):
+        res_stacked_image_results = vcr_process_results_single(
+            doc["crossed_text"][i], results[0], "zh"
+        )
+        res_only_image_results = vcr_process_results_single(
+            doc["crossed_text"][i], results[1], "zh"
+        )
+        output.update(
+            {
+                f"res_stacked_image__{k}___{i}": v
+                for k, v in res_stacked_image_results.items()
+            }
+        )
+        output.update(
+            {
+                f"res_only_it_image__{k}___{i}": v
+                for k, v in res_only_image_results.items()
+            }
+        )
     return output
 
 
@@ -180,36 +236,29 @@ def vcr_aggregate_results(results):
     Returns:
         A dictionary of dictionary of float, where the outer dictionary has keys "res_stacked_image" and "res_only_it_image"
     """
-
     output = {
-        "res_stacked_image": {
-            "max_sim_val": 0,
-            "precision": 0,
-            "recall": 0,
-            "f1": 0,
-            "jaccard": 0,
-            "rouge1": 0,
-        },
-        "res_only_it_image": {
-            "max_sim_val": 0,
-            "precision": 0,
-            "recall": 0,
-            "f1": 0,
-            "jaccard": 0,
-            "rouge1": 0,
-        },
+        "res_stacked_image__precision": 0,
+        "res_stacked_image__recall": 0,
+        "res_stacked_image__f1": 0,
+        "res_stacked_image__jaccard": 0,
+        "res_stacked_image__rouge1": 0,
+        "res_stacked_image__exact_match": 0,
+        "res_only_it_image__precision": 0,
+        "res_only_it_image__recall": 0,
+        "res_only_it_image__f1": 0,
+        "res_only_it_image__jaccard": 0,
+        "res_only_it_image__rouge1": 0,
+        "res_only_it_image__exact_match": 0,
     }
-    for target_domain in output.keys():
-        for target_metric_name in output[target_domain].keys():
-            score = 0
-            count = 0
-            for inner_dict in results:
-                for inner_key, inner_value in inner_dict.items():
-                    if inner_key == target_domain:
-                        for blank_id, blank_metrics in inner_value.items():
-                            for metric_name, metric_value in blank_metrics.items():
-                                if metric_name == target_metric_name:
-                                    score += metric_value
-                                    count += 1
-            output[target_domain][target_metric_name] = score / count
+
+    for output_key in output.keys():
+        count = 0
+        query_domain, query_metric_name = output_key.split("__")
+        for inner_dict in results:
+            for inner_key, inner_value in inner_dict.items():
+                key_domain, key_metric_name, _ = inner_key.split("__")
+                if query_domain == key_domain and query_metric_name == key_metric_name:
+                    output[output_key] += inner_value
+                    count += 1
+        output[output_key] /= count
     return output
