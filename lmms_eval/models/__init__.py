@@ -26,6 +26,7 @@ AVAILABLE_MODELS = {
     "reka": "Reka",
     "llava_onevision": "Llava_OneVision",
     "from_log": "FromLog",
+    "mplugOwlVideo": "mplug_Owl",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
