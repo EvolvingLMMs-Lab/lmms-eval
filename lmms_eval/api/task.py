@@ -774,6 +774,8 @@ class ConfigurableTask(Task):
 
             dataset_kwargs.pop("cache_dir")
             dataset_kwargs.pop("video")
+        if "force_download" in dataset_kwargs:
+            dataset_kwargs.pop("force_download") # Don't use force download here, sometimes get error
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
