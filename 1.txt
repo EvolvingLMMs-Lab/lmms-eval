@@ -1,0 +1,1620 @@
+ - metric: videomme_short_Knowledge_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Knowledge_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Film & Television_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Sports Competition_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Artistic Performance_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Life Record_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_short_Multilingual_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Knowledge_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Film & Television_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Sports Competition_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Artistic Performance_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Life Record_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_medium_Multilingual_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Knowledge_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Film & Television_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Sports Competition_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Artistic Performance_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Life Record_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Humanity & History_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Literature & Art_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Biology & Medicine_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Finance & Commerce_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Astronomy_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Geography_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Law_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Life Tip_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Technology_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Animation_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Movie & TV Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Documentary_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_News Report_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Esports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Basketball_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Football_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Athletics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Other Sports_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Stage Play_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Magic Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Variety Show_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Acrobatics_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Handicraft_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Food_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Fashion_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Daily Life_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Travel_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Pet & Animal_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Exercise_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+ - metric: videomme_long_Multilingual_Multilingual_Information Synopsis
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true

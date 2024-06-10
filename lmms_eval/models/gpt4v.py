@@ -168,7 +168,6 @@ class GPT4V(lmms):
 
             for attempt in range(5):
                 try:
-                    # content="一个戴着红色帽子的男子，用一个工具把自己的腰系住，往下面慢慢的在走。";break#Choiszt:just for test
                     response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
                     response_data = response.json()
 

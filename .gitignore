@@ -35,4 +35,4 @@ logs/
 vatex/
 data/
 llava-video/
-!lmms_eval/tasks/vatex
+Video-MME/
