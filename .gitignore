@@ -30,3 +30,9 @@ pretrained/
 LLaVA/
 *logs
 temp/
+InternVL/
+logs/
+vatex/
+data/
+llava-video/
+!lmms_eval/tasks/vatex
