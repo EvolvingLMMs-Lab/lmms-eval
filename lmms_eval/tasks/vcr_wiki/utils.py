@@ -15,22 +15,21 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 # Download the English and Chinese models
 try:
     nlp_en = spacy.load("en_core_web_sm")
-except:
+except Exception as e:
     download("en_core_web_sm")
     nlp_en = spacy.load("en_core_web_sm")
+
 try:
     nlp_zh = spacy.load("zh_core_web_sm")
-except:
+except Exception as e:
     download("zh_core_web_sm")
     nlp_zh = spacy.load("zh_core_web_sm")
 
-eval_logger = logging.getLogger("lmms-eval")
-
-dir_name = os.path.dirname(os.path.abspath(__file__))
-
+nlp = {"en": nlp_en, "zh": nlp_zh}
 rouge = evaluate.load("rouge")
 
-nlp = {"en": nlp_en, "zh": nlp_zh}
+eval_logger = logging.getLogger("lmms-eval")
+dir_name = os.path.dirname(os.path.abspath(__file__))
 
 aggregate_results_template = {
     "max_sim_val": 0,
@@ -89,7 +88,7 @@ def tokenize(text, language):
 def vcr_process_results_single(crossed_text, result, language):
     """
     Args:
-        doc: a instance of the eval dataset
+        doc: an instance of the eval dataset
         results: [pred]
     Returns:
         a dictionary with key: metric name (in this case vcr score), value: metric value
@@ -180,8 +179,8 @@ def vcr_process_results_single(crossed_text, result, language):
 def vcr_en_process_results(doc, results):
     """
     Args:
-        doc: a instance of the eval dataset
-        results: [pred]
+        doc: an instance of the eval dataset
+        results: [pred], with length = 1
     Returns:
         a dictionary with key: metric name (in this case vcr score), value: metric value
     """
@@ -196,13 +195,13 @@ def vcr_en_process_results(doc, results):
     }
     crossed_text = doc["crossed_text"]
     for i in range(len(crossed_text)):
-        tmp = vcr_process_results_single(crossed_text[i], results, "en")
+        tmp = vcr_process_results_single(crossed_text[i], results[0], "en")
         for k in output.keys():
             output[k].append(
                 {
                     "score": tmp[k],
-                    "max_sim_string": tmp["max_sim_string"],
-                    "crossed_text": crossed_text[i],
+                    "pred_ngram": tmp["max_sim_string"],
+                    "gt_ngram": crossed_text[i],
                     "caption": doc["caption"],
                 }
             )
@@ -212,10 +211,10 @@ def vcr_en_process_results(doc, results):
 def vcr_zh_process_results(doc, results):
     """
     Args:
-        doc: a instance of the eval dataset
-        results: [pred]
+        doc: an instance of the eval dataset
+        results: [pred], with length = 1
     Returns:
-        a dictionary with key: metric name (in this case vcr score), value: metric value
+        a dictionary with key: metric name (in this case vcr score), value: metric value and other info
     """
     output = {
         "max_sim_val": [],
@@ -228,13 +227,13 @@ def vcr_zh_process_results(doc, results):
     }
     crossed_text = doc["crossed_text"]
     for i in range(len(crossed_text)):
-        tmp = vcr_process_results_single(crossed_text[i], results, "zh")
+        tmp = vcr_process_results_single(crossed_text[i], results[0], "zh")
         for k in output.keys():
             output[k].append(
                 {
                     "score": tmp[k],
-                    "max_sim_string": tmp["max_sim_string"],
-                    "crossed_text": crossed_text[i],
+                    "pred_ngram": tmp["max_sim_string"],
+                    "gt_ngram": crossed_text[i],
                     "caption": doc["caption"],
                 }
             )
@@ -244,9 +243,9 @@ def vcr_zh_process_results(doc, results):
 def vcr_aggregate_results(results, args):
     """
     Args:
-        results: a list of values returned by process_results
+        results: List[List[Dict]], list of results returned by process_results
     Returns:
-        A dictionary of dictionary of float, where the outer dictionary has keys "res_stacked_image" and "res_only_it_image"
+        A float value representing the final score of jaccard index or exact match
     """
     scores = 0
     count = 0
@@ -259,8 +258,8 @@ def vcr_aggregate_results(results, args):
 
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     path = generate_submission_file(f"vcr_submission_{now_date_time}.json", args)
-    with open(path, "w") as f:
-        json.dump(output_dict, f)
+    with open(path, "w", encoding='utf-8') as f:
+        json.dump(output_dict, f, indent=4, ensure_ascii=False)
     # print(f"Submission file saved to {path}")
     eval_logger.info(f"Submission file saved to {path}")
     return scores / count
