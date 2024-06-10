@@ -13,10 +13,6 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
-import os
-
-script_dir = os.path.dirname(__file__)
-os.chdir(script_dir)
 
 
 def add_order_label(image, label, font_size=40):
