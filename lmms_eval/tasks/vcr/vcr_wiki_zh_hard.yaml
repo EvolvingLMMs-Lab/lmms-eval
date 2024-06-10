@@ -1,0 +1,31 @@
+dataset_path: vcr-org/VCR-wiki-zh-hard
+dataset_kwargs:
+  token: True
+task: "vcr_wiki_zh_hard"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.vcr_doc_to_visual
+doc_to_text: !function utils.vcr_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 120
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.vcr_zh_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: mme_percetion_score
+    aggregation: !function utils.vcr_zh_process_results
+    higher_is_better: true
+  - metric: mme_cognition_score
+    aggregation: !function utils.vcr_zh_process_results
+    higher_is_better: true
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "图像中被覆盖的文本是什么？请在不输出解释的情况下还原被覆盖的文本。"
+metadata:
+  - version: 0.0.1
