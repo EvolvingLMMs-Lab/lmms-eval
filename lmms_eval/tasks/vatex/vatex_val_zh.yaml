@@ -1,6 +1,6 @@
 dataset_path: lmms-lab/VATEX
 dataset_name: vatex_val_zh
-task: vatex_val_zh
+task: vatex_val_ZH
 test_split: validation
 output_type: generate_until
 doc_to_visual: !function utils.vatex_ZH_doc_to_visual
