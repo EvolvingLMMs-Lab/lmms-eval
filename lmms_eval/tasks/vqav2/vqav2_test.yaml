@@ -3,6 +3,6 @@ include: _default_template_vqav2_yaml
 test_split: test
 metric_list:
   - metric: submission
-    aggregation: !function utils.vqav2_aggreate_submissions
+    aggregation: !function utils.vqav2_aggregate_submissions
     higher_is_better: true
 process_results: !function utils.vqav2_process_results_test

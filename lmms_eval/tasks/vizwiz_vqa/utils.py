@@ -19,7 +19,9 @@ def vizwiz_vqa_doc_to_visual(doc):
 
 def vizwiz_vqa_process_results(doc, result):
     eval_ai_processor = EvalAIAnswerProcessor()
-    assert len(result) == 1, f"The result should be a list of length 1, but got {len(result)}."
+    assert (
+        len(result) == 1
+    ), f"The result should be a list of length 1, but got {len(result)}."
     resAns = eval_ai_processor(result[0])
     accuracy = 0
 
@@ -30,7 +32,9 @@ def vizwiz_vqa_process_results(doc, result):
             doc["answers"][i] = eval_ai_processor(doc["answers"][i])
 
         for i in range(len(doc["answers"])):
-            otherGTAns = [doc["answers"][j] for j in range(len(doc["answers"])) if i != j]
+            otherGTAns = [
+                doc["answers"][j] for j in range(len(doc["answers"])) if i != j
+            ]
             matchingAns = [item for item in otherGTAns if item == resAns]
             acc = min(1, float(len(matchingAns)) / 3)
             gtAcc.append(acc)
@@ -61,7 +65,7 @@ def vizwiz_vqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
     return text
 
 
-def vizwiz_vqa_aggreate_submissions(results, args):
+def vizwiz_vqa_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
     submission_file_name = f"vizwiz_vqa-test-submission-{now_date_time}.json"
     path = generate_submission_file(submission_file_name, args)

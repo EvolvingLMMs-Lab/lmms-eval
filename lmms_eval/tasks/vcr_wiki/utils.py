@@ -6,6 +6,9 @@ import spacy
 from spacy.cli import download
 from nltk.util import ngrams
 from functools import partial
+import datetime
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import json
 
 # Download the English and Chinese models
 download("en_core_web_sm")
@@ -46,7 +49,7 @@ def fast_filter(answer_text):
 
 
 def vcr_doc_to_visual(doc):
-    return [doc["stacked_image"].convert("RGB"), doc["only_it_image"].convert("RGB")]
+    return [doc["stacked_image"].convert("RGB")]
 
 
 def vcr_doc_to_text(doc, model_specific_prompt_kwargs=None):
@@ -80,7 +83,7 @@ def vcr_process_results_single(crossed_text, result, language):
         doc: a instance of the eval dataset
         results: [pred]
     Returns:
-        a dictionary with key: metric name (in this case mme score), value: metric value
+        a dictionary with key: metric name (in this case vcr score), value: metric value
     """
 
     assert language in ["en", "zh"], f"Language {language} is not supported."
@@ -171,29 +174,28 @@ def vcr_en_process_results(doc, results):
         doc: a instance of the eval dataset
         results: [pred]
     Returns:
-        a dictionary with key: metric name (in this case mme score), value: metric value
+        a dictionary with key: metric name (in this case vcr score), value: metric value
     """
-    assert len(results) == 2, f"Expected 2 results, got {len(results)}"
-    output = {}
-    for i in range(len(doc["crossed_text"])):
-        res_stacked_image_results = vcr_process_results_single(
-            doc["crossed_text"][i], results[0], "en"
-        )
-        res_only_image_results = vcr_process_results_single(
-            doc["crossed_text"][i], results[1], "en"
-        )
-        output.update(
-            {
-                f"res_stacked_image__{k}___{i}": v
-                for k, v in res_stacked_image_results.items()
-            }
-        )
-        output.update(
-            {
-                f"res_only_it_image__{k}___{i}": v
-                for k, v in res_only_image_results.items()
-            }
-        )
+    output = {
+        "max_sim_val": [],
+        "precision": [],
+        "recall": [],
+        "f1": [],
+        "jaccard": [],
+        "rouge1": [],
+        "exact_match": [],
+    }
+    crossed_text = doc["crossed_text"]
+    for i in range(len(crossed_text)):
+        tmp = vcr_process_results_single(crossed_text[i], results, "en")
+        for k in output.keys():
+            output[k].append(
+                {
+                    "score": tmp[k],
+                    "max_sim_string": tmp["max_sim_string"],
+                    "caption": doc["caption"],
+                }
+            )
     return output
 
 
@@ -203,62 +205,51 @@ def vcr_zh_process_results(doc, results):
         doc: a instance of the eval dataset
         results: [pred]
     Returns:
-        a dictionary with key: metric name (in this case mme score), value: metric value
+        a dictionary with key: metric name (in this case vcr score), value: metric value
     """
-    assert len(results) == 2, f"Expected 2 results, got {len(results)}"
-    output = {}
-    for i in range(len(doc["crossed_text"])):
-        res_stacked_image_results = vcr_process_results_single(
-            doc["crossed_text"][i], results[0], "zh"
-        )
-        res_only_image_results = vcr_process_results_single(
-            doc["crossed_text"][i], results[1], "zh"
-        )
-        output.update(
-            {
-                f"res_stacked_image__{k}___{i}": v
-                for k, v in res_stacked_image_results.items()
-            }
-        )
-        output.update(
-            {
-                f"res_only_it_image__{k}___{i}": v
-                for k, v in res_only_image_results.items()
-            }
-        )
+    output = {
+        "max_sim_val": [],
+        "precision": [],
+        "recall": [],
+        "f1": [],
+        "jaccard": [],
+        "rouge1": [],
+        "exact_match": [],
+    }
+    crossed_text = doc["crossed_text"]
+    for i in range(len(crossed_text)):
+        tmp = vcr_process_results_single(crossed_text[i], results, "zh")
+        for k in output.keys():
+            output[k].append(
+                {
+                    "score": tmp[k],
+                    "max_sim_string": tmp["max_sim_string"],
+                    "caption": doc["caption"],
+                }
+            )
     return output
 
 
-def vcr_aggregate_results(results):
+def vcr_aggregate_results(results, args):
     """
     Args:
         results: a list of values returned by process_results
     Returns:
         A dictionary of dictionary of float, where the outer dictionary has keys "res_stacked_image" and "res_only_it_image"
     """
-    output = {
-        "res_stacked_image__precision": 0,
-        "res_stacked_image__recall": 0,
-        "res_stacked_image__f1": 0,
-        "res_stacked_image__jaccard": 0,
-        "res_stacked_image__rouge1": 0,
-        "res_stacked_image__exact_match": 0,
-        "res_only_it_image__precision": 0,
-        "res_only_it_image__recall": 0,
-        "res_only_it_image__f1": 0,
-        "res_only_it_image__jaccard": 0,
-        "res_only_it_image__rouge1": 0,
-        "res_only_it_image__exact_match": 0,
-    }
+    scores = 0
+    count = 0
+    output_dict = {}
+    for i in range(len(results)):
+        for blank_id in range(len(results[i])):
+            scores += results[i][blank_id]["score"]
+            count += 1
+        output_dict[str(i)] = results[i]
 
-    for output_key in output.keys():
-        count = 0
-        query_domain, query_metric_name = output_key.split("__")
-        for inner_dict in results:
-            for inner_key, inner_value in inner_dict.items():
-                key_domain, key_metric_name, _ = inner_key.split("__")
-                if query_domain == key_domain and query_metric_name == key_metric_name:
-                    output[output_key] += inner_value
-                    count += 1
-        output[output_key] /= count
-    return output
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    path = generate_submission_file(f"vcr_submission_{now_date_time}.json", args)
+    with open(path, "w") as f:
+        json.dump(output_dict, f)
+    # print(f"Submission file saved to {path}")
+    eval_logger.info(f"Submission file saved to {path}")
+    return scores / count
