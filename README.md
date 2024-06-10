@@ -276,10 +276,22 @@ We also provide the raw data exported from Weights & Biases for the detailed res
   - TextVQA Validation (textvqa_val)
   - TextVQA Test (textvqa_test)
 - VCR-Wiki (vcr_wiki)
-  - vcr English easy mode (vcr_wiki_en_easy)
-  - vcr English hard mode (vcr_wiki_en_hard)
-  - vcr Chinese easy mode (vcr_wiki_zh_easy)
-  - vcr Chinese hard mode (vcr_wiki_zh_hard)
+  - VCR English easy mode
+    - VCR English easy mode full test set (vcr_wiki_en_easy)
+    - VCR English easy mode test 100 (vcr_wiki_en_easy_100)
+    - VCR English easy mode test 500 (vcr_wiki_en_easy_500)
+  - VCR English hard mode
+    - VCR English hard mode full test set (vcr_wiki_en_hard)
+    - VCR English hard mode test 100 (vcr_wiki_en_hard_100)
+    - VCR English hard mode test 500 (vcr_wiki_en_hard_500)
+  - VCR Chinese easy mode
+    - VCR Chinese easy mode full test set (vcr_wiki_zh_easy)
+    - VCR Chinese easy mode test 100 (vcr_wiki_zh_easy_100)
+    - VCR Chinese easy mode test 500 (vcr_wiki_zh_easy_500)
+  - VCR Chinese hard mode
+    - VCR Chinese hard mode full test set (vcr_wiki_zh_hard)
+    - VCR Chinese hard mode test 100 (vcr_wiki_zh_hard_100)
+    - VCR Chinese hard mode test 500 (vcr_wiki_zh_hard_500)
 - VizWizVQA (vizwiz_vqa)
   - VizWizVQA Validation (vizwiz_vqa_val)
   - VizWizVQA Test (vizwiz_vqa_test)
