@@ -12,10 +12,6 @@ import shutil
 from tqdm import tqdm
 
 import datasets
-
-datasets.config.STREAMING_READ_MAX_RETRIES = 20  # default
-datasets.config.STREAMING_READ_RETRY_INTERVAL = 5  # default
-
 from datasets import Image, Sequence
 import numpy as np
 from PIL import ImageFile
@@ -688,102 +684,114 @@ class ConfigurableTask(Task):
     def download(self, dataset_kwargs=None) -> None:
         # If the dataset is a video dataset,
         # Recursively search whether their is a zip and unzip it to the huggingface home
-        if "From_YouTube" in dataset_kwargs:
-            import subprocess
-            import json
+        download_config = DownloadConfig()
+        download_config.max_retries = dataset_kwargs.get("max_retries", 10) if dataset_kwargs is not None else 10
+        download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
+        download_config.local_files_only = dataset_kwargs.get("local_files_only", False) if dataset_kwargs is not None else False
+        if dataset_kwargs is not None:
+            if "From_YouTube" in dataset_kwargs:
+                import subprocess
+                import json
+                import shutil
 
-            def _download_from_youtube(path):
-                try:
-                    for video in tqdm(self.all_dataset[split]):
-                        video_id = video["videoID"]
-                        target_path = os.path.join(path, f"{video_id}.mp4")
-                        command = f"yt-dlp -o {target_path} -f mp4 https://www.youtube.com/watch?v={video_id}"
-                        subprocess.run(command, shell=True)
-                    with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
-                        f.write(json.dumps({task: "downloaded"}))
-                except Exception as e:
-                    eval_logger.error(f"Error while downloading {task} data: {e}")
-                    with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
-                        f.write(json.dumps({task: "not downloaded"}))
+                def _download_from_youtube(path):
+                    try:
+                        for video in tqdm(self.all_dataset[split]):
+                            video_id = video["videoID"]
+                            target_path = os.path.join(path, f"{video_id}.mp4")
+                            assert shutil.which("yt-dlp") is not None, "yt-dlp must be installed and available in the system's PATH"
+                            command = f"yt-dlp -o {target_path} -f mp4 https://www.youtube.com/watch?v={video_id}"
+                            subprocess.run(command, shell=True)
+                        with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
+                            f.write(json.dumps({task: "downloaded"}))
+                    except Exception as e:
+                        eval_logger.error(f"Error while downloading {task} data: {e}")
+                        with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
+                            f.write(json.dumps({task: "not downloaded"}))
 
-            hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
-            accelerator = Accelerator()
-            if accelerator.is_main_process:
-                dataset_kwargs.pop("From_YouTube")
-                self.all_dataset = datasets.load_dataset(
-                    path=self.DATASET_PATH,
-                    name=self.DATASET_NAME,
-                    download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-                    **dataset_kwargs if dataset_kwargs is not None else {},
-                )
-                dataset_kwargs["From_YouTube"] = True
-                cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")  # download_parquet
-                split = vars(self.config)["test_split"]
-                task = vars(self.config)["task"]
+                hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+                accelerator = Accelerator()
+                if accelerator.is_main_process:
+                    dataset_kwargs.pop("From_YouTube")
+                    self.all_dataset = datasets.load_dataset(
+                        path=self.DATASET_PATH,
+                        name=self.DATASET_NAME,
+                        download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+                        **dataset_kwargs if dataset_kwargs is not None else {},
+                    )
+                    dataset_kwargs["From_YouTube"] = True
+                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")  # download_parquet
+                    split = vars(self.config)["test_split"]
+                    task = vars(self.config)["task"]
 
-                video_path = os.path.join(hf_home, task)
-                if os.path.exists(os.path.join(cache_path, f"{task}_download_status.json")):
-                    download_status = json.load(open(os.path.join(cache_path, f"{task}_download_status.json"), "r"))
-                    if download_status[task] == "downloaded":
-                        eval_logger.info(f"Data for {task} already download!")
+                    video_path = os.path.join(hf_home, task)
+                    if os.path.exists(os.path.join(cache_path, f"{task}_download_status.json")):
+                        download_status = json.load(open(os.path.join(cache_path, f"{task}_download_status.json"), "r"))
+                        if download_status[task] == "downloaded":
+                            eval_logger.info(f"Data for {task} already download!")
+                        else:
+                            eval_logger.info(f"Start downloading YouTube data to {video_path}...")
+                            _download_from_youtube(video_path)
                     else:
                         eval_logger.info(f"Start downloading YouTube data to {video_path}...")
                         _download_from_youtube(video_path)
-                else:
-                    eval_logger.info(f"Start downloading YouTube data to {video_path}...")
-                    _download_from_youtube(video_path)
 
-            accelerator.wait_for_everyone()
-            if "builder_script" in dataset_kwargs:
-                builder_script = dataset_kwargs["builder_script"]
-                self.DATASET_PATH = os.path.join(cache_path, builder_script)
-                dataset_kwargs.pop("builder_script")
-            download_config = DownloadConfig()
-            download_config.max_retries = dataset_kwargs.get("max_retries", 3) if dataset_kwargs is not None else 3
-            download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
+                accelerator.wait_for_everyone()
+                if "builder_script" in dataset_kwargs:
+                    builder_script = dataset_kwargs["builder_script"]
+                    self.DATASET_PATH = os.path.join(cache_path, builder_script)
+                    dataset_kwargs.pop("builder_script")
 
-            downloaded_video_ids = [i.split(".mp4")[0] for i in os.listdir(os.path.expanduser(video_path)) if i.endswith(".mp4")]
-            # Filtered the existing dataset with the downloaded video ids
-            self.dataset = datasets.DatasetDict({split: self.all_dataset[split].filter(lambda x: x["videoID"] in downloaded_video_ids)})
+                downloaded_video_ids = [i.split(".mp4")[0] for i in os.listdir(os.path.expanduser(video_path)) if i.endswith(".mp4")]
+                # Filtered the existing dataset with the downloaded video ids
+                self.dataset = datasets.DatasetDict({split: self.all_dataset[split].filter(lambda x: x["videoID"] in downloaded_video_ids)})
 
-            self.dataset_no_image = self.dataset
-            dataset_kwargs.pop("From_YouTube")
-            return
+                self.dataset_no_image = self.dataset
+                dataset_kwargs.pop("From_YouTube")
+                return
 
-        if dataset_kwargs is not None and "video" in dataset_kwargs and dataset_kwargs["video"]:
-            hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
-            cache_dir = dataset_kwargs["cache_dir"]
-            cache_dir = os.path.join(hf_home, cache_dir)
-            accelerator = Accelerator()
-            if accelerator.is_main_process:
-                force_download = dataset_kwargs.get("force_download", False)
-                cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download)
-                zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
+            if "video" in dataset_kwargs and dataset_kwargs["video"]:
+                hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+                cache_dir = dataset_kwargs["cache_dir"]
+                cache_dir = os.path.join(hf_home, cache_dir)
+                accelerator = Accelerator()
+                if accelerator.is_main_process:
+                    force_download = dataset_kwargs.get("force_download", False)
+                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download)
+                    zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
 
-                if force_download or (not os.path.exists(cache_dir) and len(zip_files) > 0):
-                    for zip_file in zip_files:
-                        eval_logger.info(f"Unzipping {zip_file} to {cache_dir}")
-                        shutil.unpack_archive(zip_file, cache_dir)
+                    if force_download or (not os.path.exists(cache_dir) and len(zip_files) > 0):
+                        for zip_file in zip_files:
+                            eval_logger.info(f"Unzipping {zip_file} to {cache_dir}")
+                            shutil.unpack_archive(zip_file, cache_dir)
 
-            accelerator.wait_for_everyone()
+                accelerator.wait_for_everyone()
+                dataset_kwargs.pop("cache_dir")
+                dataset_kwargs.pop("video")
 
             if "builder_script" in dataset_kwargs:
                 builder_script = dataset_kwargs["builder_script"]
                 self.DATASET_PATH = os.path.join(cache_path, builder_script)
                 dataset_kwargs.pop("builder_script")
 
-            dataset_kwargs.pop("cache_dir")
-            dataset_kwargs.pop("video")
+            if "force_download" in dataset_kwargs:
+                dataset_kwargs.pop("force_download")
+
+            if "local_files_only" in dataset_kwargs:
+                dataset_kwargs.pop("local_files_only")
+
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+            download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
         self.dataset_no_image = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+            download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
         for doc_name in self.dataset_no_image:

@@ -3,6 +3,7 @@ dataset_kwargs:
   token: True
   video: True
   force_download: False
+  local_files_only: False
   cache_dir: activitynetqa
 model_specific_prompt_kwargs:
   default:
