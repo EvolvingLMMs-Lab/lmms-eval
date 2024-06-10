@@ -14,22 +14,29 @@ import copy
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 eval_logger = logging.getLogger("lmms-eval")
 
 try:
     from llavavid.model.language_model.llava_llama import LlavaConfig
-    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+    # from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
     from llavavid.model.builder import load_pretrained_model
     from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
     from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
     from llavavid.conversation import conv_templates, SeparatorStyle
 
-    AutoConfig.register("llava_qwen", LlavaQwenConfig)
+    # AutoConfig.register("llava_qwen", LlavaQwenConfig)
     AutoConfig.register("llava_llama", LlavaConfig)
 
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
+
+try:
+    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+    AutoConfig.register("llava_qwen", LlavaQwenConfig)
+except:
+    eval_logger.debug("")
 
 
 @register_model("llavavid")
@@ -108,8 +115,31 @@ class LlavaVid(lmms):
                     overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
                     overwrite_config["max_sequence_length"] = 4096 * scaling_factor
                     overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
+            
+            if "v1.5" in pretrained: # A hardcode solution here to load v1.5 model, otherwise it will use LlavaConfig from hf transformers
+                from transformers import AutoTokenizer
+                from llavavid.model.language_model.llava_llama import LlavaConfig, LlavaLlamaForCausalLM
+                self._tokenizer = AutoTokenizer.from_pretrained(pretrained, use_fast=False)
+                cfg_pretrained = LlavaConfig.from_pretrained(pretrained)
+                if overwrite_config is not None:
+                    print(f"Overwriting config with {overwrite_config}")
+                    for k, v in overwrite_config.items():
+                        setattr(cfg_pretrained, k, v)
+                kwargs["torch_dtype"] = torch.float16
+                self._model = LlavaLlamaForCausalLM.from_pretrained(pretrained, low_cpu_mem_usage=True, config=cfg_pretrained, device_map=self.device_map, **kwargs)
+                vision_tower = self._model.get_vision_tower()
+                if not vision_tower.is_loaded:
+                    vision_tower.load_model(device_map=self.device_map)
+                if self.device_map != "auto":
+                    vision_tower.to(device="cuda", dtype=torch.float16)
+                self._image_processor = vision_tower.image_processor
 
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, overwrite_config=overwrite_config)
+                if hasattr(self._model.config, "max_sequence_length"):
+                    self._max_length = self._model.config.max_sequence_length
+                else:
+                    self._max_length = 2048
+            else:
+                self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, overwrite_config=overwrite_config)
         else:
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
                 pretrained,
