@@ -19,7 +19,9 @@ def vqav2_doc_to_visual(doc):
 
 def vqav2_process_results(doc, result):
     eval_ai_processor = EvalAIAnswerProcessor()
-    assert len(result) == 1, f"The result should be a list of length 1, but got {len(result)}."
+    assert (
+        len(result) == 1
+    ), f"The result should be a list of length 1, but got {len(result)}."
     resAns = eval_ai_processor(result[0])
     accuracy = 0
 
@@ -33,8 +35,12 @@ def vqav2_process_results(doc, result):
 
         if len(set(gtAnswers)) > 1:
             for ansDic in doc["answers"]:
-                ansDic["answer"] = eval_ai_processor.process_punctuation(ansDic["answer"])
-                ansDic["answer"] = eval_ai_processor.process_digit_article(ansDic["answer"])
+                ansDic["answer"] = eval_ai_processor.process_punctuation(
+                    ansDic["answer"]
+                )
+                ansDic["answer"] = eval_ai_processor.process_digit_article(
+                    ansDic["answer"]
+                )
             resAns = eval_ai_processor.process_punctuation(resAns)
             resAns = eval_ai_processor.process_digit_article(resAns)
 
@@ -80,7 +86,7 @@ def vqav2_doc_to_text(doc, model_specific_prompt_kwargs=None):
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 
-def vqav2_aggreate_submissions(results, args):
+def vqav2_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     submission_file_name = f"vqav2-test-submission-{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
