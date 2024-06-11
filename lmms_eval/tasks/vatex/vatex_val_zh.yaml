@@ -29,7 +29,6 @@ metadata:
 dataset_kwargs:
   token: True
   video: True #skip download video from hf
-  force_unzip: True
   cache_dir: vatex_val_zh
   # From_YouTube: True
 
