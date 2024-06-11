@@ -1,7 +1,8 @@
-dataset_path: lmms-lab/Video-MME_from_url
+dataset_path: lmms-lab/Video-MME
 dataset_kwargs:
   token: True
-  From_YouTube: True
+  cache_dir: videomme
+  # From_YouTube: True
 task: videomme
 test_split: test
 output_type: generate_until
@@ -28,14 +29,14 @@ model_specific_prompt_kwargs:
   gpt4v:
     pre_prompt: ""
     post_prompt: "\nAnswer the question with A, B, C, or D."
-  qwen_vl:  
-    pre_prompt: ""
-    post_prompt: " Answer:"
-  otterhd:
-    pre_prompt: ""
-    post_prompt: " Answer:"
+  # qwen_vl:  
+  #   pre_prompt: ""
+  #   post_prompt: " Answer:"
+  # otterhd:
+  #   pre_prompt: ""
+  #   post_prompt: " Answer:"
   xcomposer2_4khd:
     pre_prompt: "[UNUSED_TOKEN_146]user\n"
-    post_prompt: " Answer this question briefly[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
+    post_prompt: " Answer this question with A, B, C, or D.[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
 metadata:
   - version: 0.0
