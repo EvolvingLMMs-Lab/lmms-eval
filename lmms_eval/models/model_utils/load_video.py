@@ -2,6 +2,7 @@ import av
 from av.codec.context import CodecContext
 import numpy as np
 
+
 # This one is faster
 def record_video_length_stream(container, indices):
     frames = []
@@ -14,6 +15,7 @@ def record_video_length_stream(container, indices):
             frames.append(frame)
     return frames
 
+
 # This one works for all types of video
 def record_video_length_packet(container):
     frames = []
@@ -21,9 +23,10 @@ def record_video_length_packet(container):
     # https://www.cnblogs.com/beyond-tester/p/17641872.html
     # context = CodecContext.create("libvpx-vp9", "r")
     for packet in container.demux(video=0):
-        for frame in packet.decode(): 
+        for frame in packet.decode():
             frames.append(frame)
     return frames
+
 
 def read_video_pyav(video_path, num_frm=8):
     container = av.open(video_path)
