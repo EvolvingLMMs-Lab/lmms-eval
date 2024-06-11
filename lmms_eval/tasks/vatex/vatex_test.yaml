@@ -33,7 +33,7 @@ dataset_kwargs:
 
 model_specific_prompt_kwargs:
   default:
-    prompt: Provide a one-sentence caption for the provided Video.
+    prompt: Provide a one-sentence caption for the provided video.
   gemini_api:
     prompt: Provide a brief single-sentence caption for the last video below. Do not give any reasoning, just the caption. You must follow the captioning style of the preceding videos. Do not start your response with "Output:", just provide the caption.
 
