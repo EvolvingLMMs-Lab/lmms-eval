@@ -335,8 +335,8 @@ def tempcompass_process_results_captioning(doc, result):
     ```
     """
 
-    prompt = f"""{caption_evaluation_prompt}\nVideo Description:{pred}\nMulti-Choice Question:\n{doc["question"]}\nAnswer:"""
-    eval_result = get_eval_result_for_captioning(prompt, mc_answer=doc["answer"])
+    prompt = f"""{caption_evaluation_prompt}\nVideo Description:{pred}\nMulti-Choice Question:\n{doc["mc_question"]}\nAnswer:"""
+    eval_result = get_eval_result_for_captioning(prompt, mc_answer=doc["mc_answer"])
 
     return {
         "avg_accuracy": {
@@ -345,7 +345,7 @@ def tempcompass_process_results_captioning(doc, result):
             "chatgpt-reasoning": eval_result["chatgpt-reasoning"],
             "chatgpt-answer": eval_result["chatgpt-answer"],
             "video-llm-prediction": pred,
-            "gt-answer": doc["answer"],
+            "gt-answer": doc["mc_answer"],
             "rating": eval_result["rating"],
             "dim": doc["dim"],
         },
@@ -356,7 +356,7 @@ def tempcompass_process_results_captioning(doc, result):
             "chatgpt-reasoning": eval_result["chatgpt-reasoning"],
             "chatgpt-answer": eval_result["chatgpt-answer"],
             "video-llm-prediction": pred,
-            "gt-answer": doc["answer"],
+            "gt-answer": doc["mc_answer"],
             "rating": eval_result["rating"],
             "dim": doc["dim"],
         },
@@ -387,17 +387,8 @@ def parse_llm_output_for_captioning(llm_output, gt_answer):
 
     # Check if the chatgpt answer is the ground-truth answer
     answer_counts = sum(eval_result["chatgpt-answer"].count(prefix) for prefix in ["A.", "B.", "C.", "D."])  # calculate the number of 'A.', 'B.', 'C.', 'D.' in chatgpt-answer
-    answer_counts += sum(eval_result["chatgpt-answer"].count(prefix) for prefix in ["A:", "B:", "C:", "D:"])
-    match = re.search(r"Information (\w+)", eval_result["chatgpt-answer"]) if eval_result["chatgpt-answer"].startswith("Information") else None
-
-    # If the gpt answer starts with "A.""
+    
     if eval_result["chatgpt-answer"].split(". ")[0] == gt_answer.split(". ")[0] and answer_counts == 1:
-        eval_result["rating"] = 1
-    # If the gpt answer starts with "Information A"
-    elif match is not None and match.group(1) == gt_answer.split(". ")[0] and answer_counts == 1:
-        eval_result["rating"] = 1
-    # If the gpt answer starts with "Information A:"
-    elif eval_result["chatgpt-answer"].split(": ")[0][-1] == gt_answer.split(". ")[0] and answer_counts == 1:
         eval_result["rating"] = 1
     else:
         eval_result["rating"] = 0
@@ -408,7 +399,7 @@ def parse_llm_output_for_captioning(llm_output, gt_answer):
 def get_llm_output_for_captioning(prompt):
     data = {
         "max_tokens": 128,
-        "model": "gpt-3.5-turbo",
+        "model": "gpt-3.5-turbo-1106",
         "temperature": 1.0,
         "top_p": 1,
         "presence_penalty": 1,
@@ -501,7 +492,7 @@ def get_eval_result(prompt, maxtry=10, sys_prompt=None):
 def get_llm_output(prompt, sys_prompt, max_tokens=128):
     if sys_prompt is None:
         sys_prompt = "You are an AI assistant for question answering."
-    data = {"max_tokens": max_tokens, "model": "gpt-3.5-turbo", "temperature": 1.0, "top_p": 1, "presence_penalty": 1, "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]}
+    data = {"max_tokens": max_tokens, "model": "gpt-3.5-turbo-1106", "temperature": 1.0, "top_p": 1, "presence_penalty": 1, "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]}
     response = requests.post(API_URL, headers=headers, data=json.dumps(data).encode("utf-8"))
     result = response.content.decode("utf-8")
     dict_result = json.loads(result)

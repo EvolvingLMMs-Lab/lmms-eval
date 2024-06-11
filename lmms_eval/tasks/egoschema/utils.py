@@ -86,12 +86,40 @@ def egoschema_process_results(doc, result):
 
 # Process result for mcq answer generation
 def egoschema_process_results_generation(doc, result):
-    pred = result[0]  # string prediction "A", "B", "C", "D", or "E"
+    pred = result[0]
+    
+    # Determine whether the video LLM output is correct, based on word matching rules
+    # Ensure each option string ends with a period
+    option_strs = [opt if opt.endswith(".") else opt + "." for opt in doc["option"]]  # Complete option strings
+    option_sents = [opt.split(". ")[1] if ". " in opt else opt for opt in option_strs]  # Option sentence
+    option_inds = [opt.split(". ")[0] if ". " in opt else opt for opt in option_strs]  # Option letter, e.g., A, B, C, D, E
+    
+    video_llm_pred = None
+    index = -1
+    
+    # Check if the prediction matches any of the complete option strings
+    for idx, option_str in enumerate(option_strs):
+        if pred == option_str:
+            video_llm_pred = option_str
+            index = idx
+            break
+    
+    # Check if the prediction matches any of the option sentences
+    if not video_llm_pred:
+        for idx, option_sent in enumerate(option_sents):
+            if pred == option_sent:
+                video_llm_pred = option_sent
+                index = idx
+                break
 
-    # Map the prediction to an index
-    pred_to_index = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4}
-    index = pred_to_index.get(pred, -1)  # Default to -1 if the prediction is not found
-
+    # Check if the prediction matches any of the option letters
+    if not video_llm_pred:
+        for idx, option_ind in enumerate(option_inds):
+            if pred == option_ind or pred == option_ind.replace(".", ""):
+                video_llm_pred = option_ind
+                index = idx
+                break
+            
     return {"submission": {doc["video_idx"]: index}, "score": {"pred": index, "ground_truth": doc["answer"]}}
 
 
