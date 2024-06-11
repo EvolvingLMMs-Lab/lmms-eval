@@ -16,11 +16,13 @@ except ImportError:
 try:
     from nltk.tokenize import word_tokenize
     from nltk.corpus import wordnet
+
     try:
         import nltk
+
         nltk.download("averaged_perceptron_tagger", quiet=True)
         nltk.download("wordnet", quiet=True)
-        nltk.download('punkt', quiet=True)
+        nltk.download("punkt", quiet=True)
     except Exception as e:
         eval_logger.debug(f"nltk download failed: {e}")
 except ImportError:
