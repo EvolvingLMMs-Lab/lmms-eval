@@ -14,11 +14,8 @@ try:
     from nltk.corpus import wordnet
     from pywsd.utils import lemmatize_sentence
 
-    if not nltk.data.find("taggers/averaged_perceptron_tagger"):
-        nltk.download("averaged_perceptron_tagger")
-
-    if not nltk.data.find("corpora/wordnet"):
-        nltk.download("wordnet")
+    nltk.download("averaged_perceptron_tagger", quiet=True)
+    nltk.download("wordnet", quiet=True)
 except ImportError:
     eval_logger.debug("pywsd not installed. Please install pywsd to use this module. You can install it by running 'pip install pywsd'")
 
