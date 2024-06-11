@@ -9,7 +9,7 @@ import evaluate
 import spacy
 from nltk.util import ngrams
 from spacy.cli import download
-
+import numpy as np
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 # Download the English and Chinese models
@@ -231,6 +231,7 @@ def vcr_zh_process_results(doc, results):
         for k in output.keys():
             output[k].append(
                 {
+                    "question_id": doc["question_id"],
                     "score": tmp[k],
                     "pred_ngram": tmp["max_sim_string"],
                     "gt_ngram": crossed_text[i],
@@ -240,6 +241,27 @@ def vcr_zh_process_results(doc, results):
     return output
 
 
+def bootstrap_std(data, n_bootstrap=1000, ci=0.95):
+    """
+    Args:
+        data: a list of values
+        n_bootstrap: number of bootstrap samples
+        ci: confidence interval
+    Returns:
+        a tuple of mean, lower bound, upper bound
+    """
+    n = len(data)
+    means = []
+    for _ in range(n_bootstrap):
+        sample = np.random.choice(data, n, replace=True)
+        means.append(np.mean(sample))
+    means = np.array(means)
+    lower_bound = np.percentile(means, (1 - ci) / 2 * 100)
+    upper_bound = np.percentile(means, (1 + ci) / 2 * 100)
+    std = np.std(means)
+    return std, lower_bound, upper_bound
+
+
 def vcr_aggregate_results(results, args):
     """
     Args:
@@ -247,19 +269,25 @@ def vcr_aggregate_results(results, args):
     Returns:
         A float value representing the final score of jaccard index or exact match
     """
-    scores = 0
-    count = 0
-    output_dict = {}
+    scores = []
+    output_dict_detail_result = {}
     for i in range(len(results)):
         for blank_id in range(len(results[i])):
-            scores += results[i][blank_id]["score"]
-            count += 1
-        output_dict[str(i)] = results[i]
-
+            scores.append(results[i][blank_id]["score"])
+        output_dict_detail_result[str(i)] = results[i]
+    mean_score = np.mean(scores)
+    std, lb, ub = bootstrap_std(scores, n_bootstrap=1000, ci=0.95)
+    output_dict = {
+        "mean_score": mean_score,
+        "std_score": std,
+        "percentile_2.5": lb,
+        "percentie_97.5": ub,
+        "detailed_results": output_dict_detail_result,
+    }
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     path = generate_submission_file(f"vcr_submission_{now_date_time}.json", args)
-    with open(path, "w", encoding='utf-8') as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(output_dict, f, indent=4, ensure_ascii=False)
     # print(f"Submission file saved to {path}")
     eval_logger.info(f"Submission file saved to {path}")
-    return scores / count
+    return mean_score
