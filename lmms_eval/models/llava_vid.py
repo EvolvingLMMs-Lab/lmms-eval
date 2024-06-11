@@ -68,7 +68,7 @@ class LlavaVid(lmms):
         mm_spatial_pool_out_channels: int = 1024,
         mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
-        video_decode_backend: str = "decord",
+        video_decode_backend: str = "pyav",
         **kwargs,
     ) -> None:
         super().__init__()

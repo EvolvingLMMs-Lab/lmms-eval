@@ -14,7 +14,7 @@ generation_kwargs:
   do_sample: false
 model_specific_prompt_kwargs:
   default:
-    prompt: 请为提供的视频提供一句话简短的字幕。
+    prompt: 请为提供的视频提供简短的描述。不要给出任何理由，只提供描述。您必须沿用前面视频的描述样式。不需要以 "输出"开头，只需提供描述即可.
 
   gemini_api:
     prompt: 请为提供的视频提供简短的描述。不要给出任何理由，只提供描述。您必须沿用前面视频的描述样式。不需要以 "输出"开头，只需提供描述即可.
