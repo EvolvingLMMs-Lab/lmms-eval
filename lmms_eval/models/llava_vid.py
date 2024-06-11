@@ -17,9 +17,12 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 eval_logger = logging.getLogger("lmms-eval")
-import sys;sys.path.append("llava-video")
+import sys
+
+sys.path.append("llava-video")
 try:
     from llavavid.model.language_model.llava_llama import LlavaConfig
+
     # from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
     from llavavid.model.builder import load_pretrained_model
     from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
@@ -34,6 +37,7 @@ except ImportError:
 
 try:
     from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+
     AutoConfig.register("llava_qwen", LlavaQwenConfig)
 except:
     eval_logger.debug("")
@@ -64,7 +68,7 @@ class LlavaVid(lmms):
         mm_spatial_pool_out_channels: int = 1024,
         mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
-        video_decode_backend: str = "pyav",
+        video_decode_backend: str = "decord",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -115,10 +119,11 @@ class LlavaVid(lmms):
                     overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
                     overwrite_config["max_sequence_length"] = 4096 * scaling_factor
                     overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
-            
-            if "v1.5" in pretrained: # A hardcode solution here to load v1.5 model, otherwise it will use LlavaConfig from hf transformers
+
+            if "v1.5" in pretrained:  # A hardcode solution here to load v1.5 model, otherwise it will use LlavaConfig from hf transformers
                 from transformers import AutoTokenizer
                 from llavavid.model.language_model.llava_llama import LlavaConfig, LlavaLlamaForCausalLM
+
                 self._tokenizer = AutoTokenizer.from_pretrained(pretrained, use_fast=False)
                 cfg_pretrained = LlavaConfig.from_pretrained(pretrained)
                 if overwrite_config is not None:
