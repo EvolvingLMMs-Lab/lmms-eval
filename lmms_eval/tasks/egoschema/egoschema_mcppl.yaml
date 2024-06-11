@@ -1,5 +1,5 @@
 dataset_name: "MC_PPL"
-task: "egoschema_mc_ppl"
+task: "egoschema_mcppl"
 test_split: test
 output_type: multiple_choice
 doc_to_visual: !function utils.egoschema_doc_to_visual
