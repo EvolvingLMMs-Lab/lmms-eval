@@ -10,12 +10,16 @@ eval_logger = logging.getLogger("lmms-eval")
 
 try:
     from pywsd.utils import lemmatize_sentence
+    from nltk.tokenize import word_tokenize
+    from nltk.corpus import wordnet
+    import nltk
+
+    nltk.download("averaged_perceptron_tagger")
+    nltk.download("wordnet")
 except ImportError:
     eval_logger.debug("pywsd not installed. Please install pywsd to use this module. You can install it by running 'pip install pywsd'")
 
 from lmms_eval.tasks._task_utils.video_loader import get_cache_dir, get_video
-from nltk.tokenize import word_tokenize
-from nltk.corpus import wordnet
 import numpy as np
 
 
