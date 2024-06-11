@@ -96,9 +96,11 @@ def videomme_doc_to_visual(doc):
             # remove function definition since yaml load cannot handle it
             if "!function" not in line:
                 safe_data.append(line)
+
     taskname= yaml.safe_load("".join(safe_data))['task']
     cache_dir=os.path.join(base_cache_dir,taskname)
     video_path = doc["videoID"] + ".mp4" 
+
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
         video_path = video_path
@@ -115,6 +117,7 @@ def videomme_doc_to_text(doc, model_specific_prompt_kwargs=None):
     question = doc['question']
     option = str(doc['options'])
     question=question+"\n"+option
+
     if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
         question = question.replace(replace_prompt, "")
         question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
@@ -123,7 +126,7 @@ def videomme_doc_to_text(doc, model_specific_prompt_kwargs=None):
         question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
     return question
 
-#Brought from videomme eval
+
 def extract_characters_regex(s):
     s = s.strip()
     answer_prefixes = [
@@ -141,17 +144,21 @@ def extract_characters_regex(s):
 
     if len(s.split()) > 10 and not re.search("[ABCD]", s):
         return ""
+
     matches = re.search(r'[ABCD]', s)
     if matches is None:
         return ""
     return matches[0]
 
+
 matrices=[]
+
 for i in VIDEO_TYPE:
     for j in CATEGORIES:
         for k in SUB_CATEGORIES:
             for l in TASK_CATEGORIES:
                  matrices.append(f"{i}_{j}_{k}_{l}")
+
 
 def videomme_process_results(doc, results):
     """
@@ -164,15 +171,16 @@ def videomme_process_results(doc, results):
     pred = results[0]
     pred_ans = extract_characters_regex(pred)
     # gt_ans = doc["answer"].lower().strip().replace(".", "")
+
     category=doc["domain"]
     sub_category=doc["sub_category"]
     task_category=doc['task_type']
     data_dict= {"question_id": doc["question_id"],"duration":doc["duration"] ,"category": category,\
             "sub_category":sub_category,"task_category":task_category,\
                   "pred_answer": pred_ans,"answer":doc['answer']}
+
     # return {f"videomme_percetion_score": data_dict for metric in matrices}
     return {f"videomme_percetion_score": data_dict}
-
 
 
 def videomme_aggregate_results(results):
@@ -183,7 +191,7 @@ def videomme_aggregate_results(results):
         A score
     """
     category2score = {}
-    
+
     for video_type in VIDEO_TYPE:
         for category in CATEGORIES:
             for sub_category in SUB_CATEGORIES:

@@ -751,6 +751,7 @@ class ConfigurableTask(Task):
                 accelerator = Accelerator()
                 if accelerator.is_main_process:
                     force_download = dataset_kwargs.get("force_download", False)
+                    # cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60,ignore_patterns=["*.zip"])
                     cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
 

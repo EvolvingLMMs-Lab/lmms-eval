@@ -32,14 +32,14 @@ class mplug_Owl(lmms):
         num_frames: Union[str, int] = 4,
         **kwargs,
     ) -> None:
-        '''
+        """
         Install instructions:
         1. Install lmms-eval
         cd lmms-eval
         pip install -e .;
         2. Install other packages with restricted versions
         pip install av sentencepiece protobuf==3.20 transformers==4.28.1 einops;
-        '''
+        """
         super().__init__()
 
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))

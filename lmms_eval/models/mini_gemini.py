@@ -11,8 +11,7 @@ from tqdm import tqdm
 import numpy as np
 import math
 from datetime import timedelta
-from transformers import AutoConfig,AutoModelForCausalLM,GenerationConfig, \
-                         LlamaConfig, LlamaModel, LlamaForCausalLM
+from transformers import AutoConfig, AutoModelForCausalLM, GenerationConfig, LlamaConfig, LlamaModel, LlamaForCausalLM
 from huggingface_hub import snapshot_download
 
 from lmms_eval import utils
@@ -54,7 +53,7 @@ except ImportError:
 def split_list(lst, n):
     """Split a list into n (roughly) equal-sized chunks"""
     chunk_size = math.ceil(len(lst) / n)  # integer division
-    return [lst[i:i+chunk_size] for i in range(0, len(lst), chunk_size)]
+    return [lst[i : i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
 
 def get_chunk(lst, n, k):
@@ -75,16 +74,16 @@ def eval_model(args):
     os.makedirs(os.path.dirname(answers_file), exist_ok=True)
     ans_file = open(answers_file, "w")
 
-    if 'plain' in args.conv_mode and 'finetune' not in model_name.lower() and 'mmtag' not in args.conv_mode:
-        args.conv_mode = args.conv_mode + '_mmtag'
-        print(f'It seems that this is a plain model, but it is not using a mmtag prompt, auto switching to {args.conv_mode}.')
+    if "plain" in args.conv_mode and "finetune" not in model_name.lower() and "mmtag" not in args.conv_mode:
+        args.conv_mode = args.conv_mode + "_mmtag"
+        print(f"It seems that this is a plain model, but it is not using a mmtag prompt, auto switching to {args.conv_mode}.")
 
     data_loader = create_data_loader(questions, args.image_folder, tokenizer, image_processor, model.config)
 
     for (input_ids, image_tensor, image_tensor_aux), line in tqdm(zip(data_loader, questions), total=len(questions)):
         idx = line["question_id"]
         cur_prompt = line["text"]
-        
+
         input_ids = input_ids.to(device=model.device, non_blocking=True)
         if hasattr(model, "update_prompt"):
             model.update_prompt([[cur_prompt]])
@@ -92,12 +91,12 @@ def eval_model(args):
         terminators = tokenizer.eos_token_id
         if "llama_3" in args.conv_mode:
             terminators = [terminators, tokenizer.convert_tokens_to_ids("<|eot_id|>")]
-        
+
         with torch.inference_mode():
             output_ids = model.generate(
                 input_ids,
                 images=image_tensor.to(dtype=model.dtype, device=model.device, non_blocking=True),
-                images_aux=image_tensor_aux.to(dtype=model.dtype, device=model.device, non_blocking=True) if len(image_tensor_aux)>0 else None,
+                images_aux=image_tensor_aux.to(dtype=model.dtype, device=model.device, non_blocking=True) if len(image_tensor_aux) > 0 else None,
                 do_sample=True if args.temperature > 0 else False,
                 temperature=args.temperature,
                 top_p=args.top_p,
@@ -106,20 +105,15 @@ def eval_model(args):
                 bos_token_id=tokenizer.bos_token_id,  # Begin of sequence token
                 eos_token_id=terminators,  # End of sequence token
                 pad_token_id=tokenizer.pad_token_id,  # Pad token
-                use_cache=True)
+                use_cache=True,
+            )
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
 
         ans_id = shortuuid.uuid()
-        ans_file.write(json.dumps({"question_id": idx,
-                                   "prompt": cur_prompt,
-                                   "text": outputs,
-                                   "answer_id": ans_id,
-                                   "model_id": model_name,
-                                   "metadata": {}}) + "\n")
+        ans_file.write(json.dumps({"question_id": idx, "prompt": cur_prompt, "text": outputs, "answer_id": ans_id, "model_id": model_name, "metadata": {}}) + "\n")
         # ans_file.flush()
     ans_file.close()
-
 
 
 @register_model("mini_gemini")
@@ -156,11 +150,11 @@ class MGM7B(lmms):
     └── InternVL-Chat-V1-5
     """
 
-    # 
+    #
     # The above steps can be optional, I add snapshot download, so now can just use hf repo_id
     # model_args pretrained=OpenGVLab/InternVL-Chat-V1-5
     #
-    
+
     """
     InternVL-Chat-V1-5 Model for OpenGVLab https://github.com/OpenGVLab/InternVL/blob/main/internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py
     Example usage:
@@ -219,7 +213,7 @@ class MGM7B(lmms):
 
         model_name = get_model_name_from_path(pretrained)
 
-        config=MGMConfig.from_pretrained(pretrained)
+        config = MGMConfig.from_pretrained(pretrained)
         overwrite_config = {}
         overwrite_config["mm_vision_tower"] = "openai/clip-vit-large-patch14-336"
         overwrite_config["mm_vision_tower_aux"] = "openai/openclip-convnext-large-d-320-laion2B-s29B-b131K-ft-soup"
@@ -228,7 +222,7 @@ class MGM7B(lmms):
         # overwrite_config["mm_spatial_pool_out_channels"] = self.mm_spatial_pool_out_channels
         # overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
         # overwrite_config["patchify_video_feature"] = False
-        tokenizer, model, image_processor, context_len = load_pretrained_model(pretrained, None, model_name, load_8bit=load_in_8bit,config=config)
+        tokenizer, model, image_processor, context_len = load_pretrained_model(pretrained, None, model_name, load_8bit=load_in_8bit, config=config)
         # config = InternVLChatConfig.from_pretrained(cache_dir)
         # tokenizer = AutoTokenizer.from_pretrained(cache_dir, trust_remote_code=True, use_fast=False)
         # model = InternVLChatModel.from_pretrained(cache_dir, low_cpu_mem_usage=True, config=config, torch_dtype=torch.bfloat16, load_in_8bit=load_in_8bit).eval()

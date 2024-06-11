@@ -129,8 +129,7 @@ class GPT4V(lmms):
                     img = self.encode_image(visual)
                     imgs.append(img)
                 elif self.modality == "video":
-                    # frames = self.encode_video(visual, self.max_frames_for_video)
-                    frames="hi"
+                    frames = self.encode_video(visual, self.max_frames_for_video)
                     imgs.extend(frames)
 
             payload = {"model": self.model_version, "messages": []}
