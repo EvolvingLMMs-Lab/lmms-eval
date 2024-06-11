@@ -9,13 +9,16 @@ from pathlib import Path
 eval_logger = logging.getLogger("lmms-eval")
 
 try:
-    from pywsd.utils import lemmatize_sentence
+    import nltk
     from nltk.tokenize import word_tokenize
     from nltk.corpus import wordnet
-    import nltk
+    from pywsd.utils import lemmatize_sentence
 
-    nltk.download("averaged_perceptron_tagger")
-    nltk.download("wordnet")
+    if not nltk.data.find("taggers/averaged_perceptron_tagger"):
+        nltk.download("averaged_perceptron_tagger")
+
+    if not nltk.data.find("corpora/wordnet"):
+        nltk.download("wordnet")
 except ImportError:
     eval_logger.debug("pywsd not installed. Please install pywsd to use this module. You can install it by running 'pip install pywsd'")
 
