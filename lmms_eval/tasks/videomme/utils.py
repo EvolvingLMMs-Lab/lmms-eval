@@ -96,11 +96,9 @@ def videomme_doc_to_visual(doc):
             # remove function definition since yaml load cannot handle it
             if "!function" not in line:
                 safe_data.append(line)
-
-    taskname= yaml.safe_load("".join(safe_data))['task']
-    cache_dir=os.path.join(base_cache_dir,taskname)
-    video_path = doc["videoID"] + ".mp4" 
-
+    cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    video_path = doc["videoID"] + ".mp4"
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
         video_path = video_path
@@ -114,16 +112,9 @@ def videomme_doc_to_visual(doc):
 
 
 def videomme_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    question = doc['question']
-    option = str(doc['options'])
-    question=question+"\n"+option
-
-    if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
-        question = question.replace(replace_prompt, "")
-        question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
-        question = question.replace(replace_prompt, "")
-        question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
+    question = doc["question"]
+    option = str(doc["options"])
+    question = question + "\n" + option+model_specific_prompt_kwargs['post_prompt']
     return question
 
 
