@@ -387,7 +387,7 @@ def parse_llm_output_for_captioning(llm_output, gt_answer):
 
     # Check if the chatgpt answer is the ground-truth answer
     answer_counts = sum(eval_result["chatgpt-answer"].count(prefix) for prefix in ["A.", "B.", "C.", "D."])  # calculate the number of 'A.', 'B.', 'C.', 'D.' in chatgpt-answer
-    
+
     if eval_result["chatgpt-answer"].split(". ")[0] == gt_answer.split(". ")[0] and answer_counts == 1:
         eval_result["rating"] = 1
     else:

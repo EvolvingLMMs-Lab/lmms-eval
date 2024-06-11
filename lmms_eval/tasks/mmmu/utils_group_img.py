@@ -14,7 +14,6 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
 
-
 def add_order_label(image, label, font_size=40):
     # Create a drawing context
     draw = ImageDraw.Draw(image)
