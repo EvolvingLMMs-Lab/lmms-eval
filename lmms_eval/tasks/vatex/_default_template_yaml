@@ -1,5 +1,0 @@
-dataset_kwargs:
-  token: True
-  video: True #skip download video from hf
-  cache_dir: vatex
-  # From_YouTube: True

@@ -4,11 +4,14 @@ task: vatex_test
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.vatex_test_doc_to_visual
-doc_to_text: !function utils.vatex_doc_to_text
+doc_to_text: !function utils.vatex_test_doc_to_text
 doc_to_target: "answer"
 model_specific_prompt_kwargs:
   default:
     prompt: Provide a one-sentence caption for the provided Video.
+  gemini_api:
+    prompt: Provide a brief single-sentence caption for the last video below. Do not give any reasoning, just the caption. You must follow the captioning style of the preceding videos. Do not start your response with "Output:", just provide the caption.
+    
 generation_kwargs:
   max_new_tokens: 64
   temperature: 0
@@ -31,5 +34,11 @@ metric_list:
     aggregation : !function utils.vatex_cider
     higher_is_better : true
 metadata:
-  - version: 0.0
-include: _default_template_yaml
+  version: 0.0
+# include: _default_template_yaml
+
+dataset_kwargs:
+  token: True
+  video: True #skip download video from hf
+  cache_dir: vatex_test
+  # From_YouTube: True

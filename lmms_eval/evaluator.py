@@ -468,7 +468,7 @@ def evaluate(
             else:
                 # Bo: for models only need agg items
                 results[task_name][metric_key] = agg_fn(items)
- 
+
             results[task_name]["samples"] = len(items)
 
             # hotfix: bleu, chrf, ter seem to be really expensive to bootstrap

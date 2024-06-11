@@ -2,6 +2,7 @@ import os
 import datetime
 import cv2
 
+
 def get_video_duration(video_path):
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -10,11 +11,12 @@ def get_video_duration(video_path):
     cap.release()
     return duration
 
+
 def calculate_average_duration(directory):
     total_duration = 0
     video_count = 0
     for filename in os.listdir(directory):
-        if filename.endswith('.mp4'):
+        if filename.endswith(".mp4"):
             video_path = os.path.join(directory, filename)
             duration = get_video_duration(video_path)
             total_duration += duration
@@ -25,7 +27,8 @@ def calculate_average_duration(directory):
     else:
         return 0
 
-directory = 'data/test_video'
+
+directory = "data/test_video"
 
 # calculate average duration
 average_duration = calculate_average_duration(directory)
