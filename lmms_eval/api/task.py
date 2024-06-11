@@ -751,14 +751,20 @@ class ConfigurableTask(Task):
                 accelerator = Accelerator()
                 if accelerator.is_main_process:
                     force_download = dataset_kwargs.get("force_download", False)
-                    # cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60,ignore_patterns=["*.zip"])
+                    force_unzip = dataset_kwargs.get("force_unzip", False)
                     cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
 
-                    if force_download or (not os.path.exists(cache_dir) and len(zip_files) > 0):
+                    def unzip_video_data(zip_file):
+                        import zipfile
+
+                        with zipfile.ZipFile(zip_file, "r") as zip_ref:
+                            zip_ref.extractall(cache_dir)
+                            eval_logger.info(f"Extracted all files from {zip_file} to {cache_dir}")
+
+                    if force_unzip or (not os.path.exists(cache_dir) and len(zip_files) > 0):
                         for zip_file in zip_files:
-                            eval_logger.info(f"Unzipping {zip_file} to {cache_dir}")
-                            shutil.unpack_archive(zip_file, cache_dir)
+                            unzip_video_data(zip_file)
 
                 accelerator.wait_for_everyone()
                 dataset_kwargs.pop("cache_dir")
