@@ -14,12 +14,13 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
 
-def add_order_label(image, label, font_family="DejaVu Sans", font_size=40):
+def add_order_label(image, label, font_size=40):
     # Create a drawing context
     draw = ImageDraw.Draw(image)
 
     # Define font for the label
-    font_path = fm.findfont(fm.FontProperties(family=font_family))
+    # font_path = fm.findfont(fm.FontProperties(family=font_family))
+    font_path = "./arial.ttf"
     font = ImageFont.truetype(font_path, font_size)
 
     # Calculate text size and position
@@ -112,7 +113,7 @@ def process_images_vertical(original_images, size):
     return concatenate_images_vertical(images)
 
 
-def process_images(images, size=672):
+def process_images(images, size=1008):
     concat_horizontal = process_images_horizontal(images, size)
     concat_vertical = process_images_vertical(images, size)
 
@@ -130,7 +131,7 @@ def process_images(images, size=672):
 
 lmms_logger = logging.getLogger("lmms-eval")
 
-MULTI_CHOICE_PROMPT = "Answer with the option letter from the given choices directly."
+MULTI_CHOICE_PROMPT = "Answer with the option's letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 
 
@@ -145,7 +146,7 @@ def replace_images_tokens(input_string):
 
 def parse_options(options):
     option_letters = [chr(ord("A") + i) for i in range(len(options))]
-    choices_str = "\n".join([f"{option_letter}. {option}" for option_letter, option in zip(option_letters, options)])
+    choices_str = "\n".join([f"({option_letter}) {option}" for option_letter, option in zip(option_letters, options)])
     return choices_str
 
 
@@ -155,7 +156,7 @@ def construct_prompt(doc):
         # Weirdly, data["options"] is a string in MMMU Huggingface dataset
         parsed_options = parse_options(ast.literal_eval(doc["options"]))
         # parsed_options already prepends a newline so no need to add space here
-        question = f"{question}\n{parsed_options}\n{MULTI_CHOICE_PROMPT}"
+        question = f"{question}\n{parsed_options}\n\n{MULTI_CHOICE_PROMPT}"
     else:
         question = f"{question}\n{OPEN_ENDED_PROMPT}"
     return question
