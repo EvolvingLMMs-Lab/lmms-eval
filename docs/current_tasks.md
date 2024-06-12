@@ -1,0 +1,122 @@
+# Current Tasks
+
+> () indicates the task name in the lmms_eval. The task name is also used to specify the dataset in the configuration file.
+> The following is manually updated documentation. You could use `lmms_eval task --list` to list all supported tasks and their task names. 
+
+- AI2D (ai2d)
+- ChartQA (chartqa)
+- CMMMU (cmmmu)
+  - CMMMU Validation (cmmmu_val)
+  - CMMMU Test (cmmmu_test)
+- COCO Caption (coco_cap)
+  - COCO 2014 Caption (coco2014_cap)
+    - COCO 2014 Caption Validation (coco2014_cap_val)
+    - COCO 2014 Caption Test (coco2014_cap_test)
+  - COCO 2017 Caption (coco2017_cap)
+    - COCO 2017 Caption MiniVal (coco2017_cap_val)
+    - COCO 2017 Caption MiniTest (coco2017_cap_test)
+- [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
+- DOCVQA (docvqa)
+  - DOCVQA Validation (docvqa_val)
+  - DOCVQA Test (docvqa_test)
+- Ferret (ferret)
+- Flickr30K (flickr30k)
+  - Ferret Test (ferret_test)
+- GQA (gqa)
+- HallusionBenchmark (hallusion_bench_image)
+- Infographic VQA (info_vqa)
+  - Infographic VQA Validation (info_vqa_val)
+  - Infographic VQA Test (info_vqa_test)
+- LLaVA-Bench (llava_in_the_wild)
+- LLaVA-Bench-COCO (llava_bench_coco)
+- MathVerse (mathverse)
+  - MathVerse Text Dominant (mathverse_testmini_text_dominant)
+  - MathVerse Text Only (mathverse_testmini_text_only)
+  - MathVerse Text Lite (mathverse_testmini_text_lite)
+  - MathVerse Vision Dominant (mathverse_testmini_vision_dominant)
+  - MathVerse Vision Intensive (mathverse_testmini_vision_intensive)
+  - MathVerse Vision Only (mathverse_testmini_vision_only)
+- MathVista (mathvista)
+  - MathVista Validation (mathvista_testmini)
+  - MathVista Test (mathvista_test)
+- MMBench (mmbench)
+  - MMBench English (mmbench_en)
+    - MMBench English Dev (mmbench_en_dev)
+    - MMBench English Test (mmbench_en_test)
+  - MMBench Chinese (mmbench_cn)
+    - MMBench Chinese Dev (mmbench_cn_dev)
+    - MMBench Chinese Test (mmbench_cn_test)
+- MME (mme)
+- MMMU (mmmu)
+  - MMMU Validation (mmmu_val)
+  - MMMU Test (mmmu_test)
+- MMUPD (mmupd)
+  - MMUPD Base (mmupd_base)
+    - MMAAD Base (mmaad_base)
+    - MMIASD Base (mmiasd_base)
+    - MMIVQD Base (mmivqd_base)
+  - MMUPD Option (mmupd_option)
+    - MMAAD Option (mmaad_option)
+    - MMIASD Option (mmiasd_option)
+    - MMIVQD Option (mmivqd_option)
+  - MMUPD Instruction (mmupd_instruction)
+    - MMAAD Instruction (mmaad_instruction)
+    - MMIASD Instruction (mmiasd_instruction)
+    - MMIVQD Instruction (mmivqd_instruction)
+- MMVet (mmvet)
+- Multi-DocVQA (multidocvqa)
+  - Multi-DocVQA Validation (multidocvqa_val)
+  - Multi-DocVQA Test (multidocvqa_test)
+- NoCaps (nocaps)
+  - NoCaps Validation (nocaps_val)
+  - NoCaps Test (nocaps_test)
+- OKVQA (ok_vqa)
+  - OKVQA Validation 2014 (ok_vqa_val2014)
+- POPE (pope)
+- RefCOCO (refcoco)
+    - refcoco_seg_test
+    - refcoco_seg_val
+    - refcoco_seg_testA
+    - refcoco_seg_testB
+    - refcoco_bbox_test
+    - refcoco_bbox_val
+    - refcoco_bbox_testA
+    - refcoco_bbox_testB
+- RefCOCO+ (refcoco+)
+    - refcoco+_seg
+        - refcoco+_seg_val
+        - refcoco+_seg_testA
+        - refcoco+_seg_testB
+    - refcoco+_bbox
+        - refcoco+_bbox_val
+        - refcoco+_bbox_testA
+        - refcoco+_bbox_testB
+- RefCOCOg (refcocog)
+    - refcocog_seg_test
+    - refcocog_seg_val
+    - refcocog_bbox_test
+    - refcocog_bbox_val
+- ScienceQA (scienceqa_full)
+  - ScienceQA Full (scienceqa)
+  - ScienceQA IMG (scienceqa_img)
+- ScreenSpot (screenspot)
+  - ScreenSpot REC / Grounding (screenspot_rec)
+  - ScreenSpot REG / Instruction Generation (screenspot_reg)
+- SeedBench (seedbench)
+- SeedBench 2 (seedbench_2)
+- ST-VQA (stvqa)
+- TextCaps (textcaps)
+  - TextCaps Validation (textcaps_val)
+  - TextCaps Test (textcaps_test)
+- TextVQA (textvqa)
+  - TextVQA Validation (textvqa_val)
+  - TextVQA Test (textvqa_test)
+- VizWizVQA (vizwiz_vqa)
+  - VizWizVQA Validation (vizwiz_vqa_val)
+  - VizWizVQA Test (vizwiz_vqa_test)
+- VQAv2 (vqav2)
+  - VQAv2 Validation (vqav2_val)
+  - VQAv2 Test (vqav2_test)
+- WebSRC (websrc)
+  - WebSRC Validation (websrc_val)
+  - WebSRC Test (websrc_test)
