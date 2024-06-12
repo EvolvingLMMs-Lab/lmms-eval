@@ -1,0 +1,16 @@
+"include": "_default_template_vcr_yaml"
+dataset_path: vcr-org/VCR-wiki-zh-easy-test-500
+task: "vcr_wiki_zh_easy_500"
+test_split: test
+process_results: !function utils.vcr_zh_process_results
+metric_list:
+  - metric: jaccard
+    aggregation: !function utils.vcr_aggregate_jaccard
+    higher_is_better: true
+  - metric: exact_match
+    aggregation: !function utils.vcr_aggregate_exact_match
+    higher_is_better: true
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "图像中被覆盖的文本是什么？请在不输出解释的情况下还原被覆盖的文本。"
