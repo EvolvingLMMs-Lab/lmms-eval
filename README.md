@@ -227,7 +227,7 @@ During the `v0.1` to `v0.2`, we thank the community support from pull requests (
 
 **Datasets:**
 
-- VCR: Vision_Caption_Restoration (officially from the authors, MILA)
+- VCR: Visual Caption Restoration (officially from the authors, MILA)
 - ConBench (officially from the authors, PKU/Bytedance)
 - MathVerse (officially from the authors, CUHK)
 - MM-UPD (officially from the authors, University of Tokyo)
