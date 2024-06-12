@@ -100,4 +100,4 @@ def ocrbench_aggregate_accuracy(results, args):
         print(f"Final Score(Total 1000): {Final_score}", file=f)
     logger.info(f"OCR Bench results saved to {file_name}")
     # return {"Final Score":Final_score,"Text Recognition":recognition_score,'Scene Text-centric VQA':OCRBench_score['Scene Text-centric VQA'],'Doc-oriented VQA':OCRBench_score['Doc-oriented VQA'],'Key Information Extraction':OCRBench_score['Key Information Extraction'],'Handwritten Mathematical Expression Recognition':OCRBench_score['Handwritten Mathematical Expression Recognition']}
-    return Final_score
+    return Final_score / 1000  # return the final score as accuracy

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.1.2"
+version = "0.2.0.dev0"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@outlook.com" },
 ]
@@ -21,10 +21,11 @@ classifiers = [
 requires-python = ">=3.8"
 license = { text = "MIT" }
 dependencies = [
-    "accelerate>=0.21.0",
+    "accelerate>=0.29.1",
     "black==24.1.0",
     "datasets==2.16.1",
     "evaluate>=0.4.0",
+    "httpx==0.23.3",
     "jsonlines",
     "numexpr",
     "peft>=0.2.0",
@@ -34,11 +35,14 @@ dependencies = [
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
     "sqlitedict",
-    "torch>=1.8",
+    "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
     "openai>=1.0.0",
+    "yt-dlp",
+    "google-generativeai",
     "pycocoevalcap",
     "tqdm-multiprocess",
-    "transformers",
+    "transformers>=4.37.2",
+    "transformers-stream-generator",
     "zstandard",
     "pillow",
     "pyyaml",
@@ -50,21 +54,54 @@ dependencies = [
     "hf_transfer",
     "tenacity",
     "wandb>=0.16.0",
-    "transformers-stream-generator",
     "tiktoken",
     "pre-commit",
     "pydantic",
+    "packaging",
+    "decord",
+    "zss",
+    "pywsd",
 ]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
+exclude = [
+    "assets*",
+    "benchmark*",
+    "docs",
+    "dist*",
+    "playground*",
+    "scripts*",
+    "tests*",
+    "checkpoints*",
+    "project_checkpoints*",
+    "debug_checkpoints*",
+    "mlx_configs*",
+    "wandb*",
+    "notebooks*",
+    "logs*",
+]
 
-[tool.setuptools.package-data]
-lmms_eval = ["**/*.yaml", "tasks/**/*"]
+[tool.wheel]
+exclude = [
+    "assets*",
+    "benchmark*",
+    "docs",
+    "dist*",
+    "playground*",
+    "scripts*",
+    "tests*",
+    "checkpoints*",
+    "project_checkpoints*",
+    "debug_checkpoints*",
+    "mlx_configs*",
+    "wandb*",
+    "notebooks*",
+    "logs*",
+]
 
 [project.scripts]
 lmms-eval = "lmms_eval.__main__:cli_evaluate"
-lmms_eval = "lmms_eval.__main__:cli_evaluate"
 
 [project.urls]
 Homepage = "https://lmms-lab.github.io/lmms-eval-blog/"

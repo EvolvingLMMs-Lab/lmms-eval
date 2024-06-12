@@ -1,0 +1,13 @@
+dataset_name: "GENERATION"
+task: "egoschema"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.egoschema_doc_to_visual
+doc_to_text: !function utils.egoschema_doc_to_text
+doc_to_target: !function utils.egoschema_doc_to_answer
+process_results: !function utils.egoschema_process_results_generation
+metric_list:
+  - metric: submission
+    aggregation: !function utils.egoschema_aggregate_mc
+    higher_is_better: true
+include: _default_template_yaml

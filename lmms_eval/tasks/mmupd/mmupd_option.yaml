@@ -6,4 +6,4 @@ task:
 metadata:
   version: 0.0
   sys_prompt: ""
-  gpt_eval_model_name: "gpt-3.5-turbo-0613"
+  gpt_eval_model_name: "gpt-3.5-turbo-0125"

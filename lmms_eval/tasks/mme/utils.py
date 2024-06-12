@@ -56,6 +56,13 @@ def parse_pred_ans(pred_ans):
     pred_label = None
     if pred_ans in ["yes", "no"]:
         pred_label = pred_ans
+    elif len(pred_ans) == 1:
+        if pred_ans == "y":
+            pred_label = "yes"
+        elif pred_ans == "n":
+            pred_label = "no"
+        else:
+            pred_label = "other"
     else:
         prefix_pred_ans = pred_ans[:4]
         if "yes" in prefix_pred_ans:
@@ -107,7 +114,7 @@ def mme_aggregate_results(results):
     for category, question2scores in category2score.items():
         total_score = 0
         for question_id, scores in question2scores.items():
-            assert len(scores) == 2
+            assert len(scores) == 2, "MME only supports pairwise evaluation"
             acc = sum(scores) / len(scores) * 100.0
             acc_plus = (sum(scores) == 2) * 100.0
             score = acc_plus + acc
