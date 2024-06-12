@@ -20,6 +20,7 @@ eval_logger = logging.getLogger("lmms-eval")
 def bypass_agg(arr):
     return 999
 
+
 @register_aggregation("mean")
 def mean(arr):
     return sum(arr) / len(arr)
@@ -229,6 +230,7 @@ def sample_stddev(arr):
 def mean_stderr(arr):
     return sample_stddev(arr) / math.sqrt(len(arr))
 
+
 @register_metric(
     metric="bypass",
     higher_is_better=True,
@@ -237,6 +239,7 @@ def mean_stderr(arr):
 )
 def bypass(items):
     return items
+
 
 @register_metric(
     metric="mcc",

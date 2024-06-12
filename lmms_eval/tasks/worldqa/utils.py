@@ -176,12 +176,14 @@ def worldqa_process_results(doc, result):
         "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "eval_answer": eval_answer, "gpt_prompt": content},
     }
 
+
 def worldqa_process_results_mc(doc, result):
-    pred = result[0] 
+    pred = result[0]
     data = {
-        "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "option" : doc["option"], "question" : doc["question"] },
-    }  
+        "gpt_eval": {"pred": pred, "question_idx": doc["question_idx"], "object_description": doc["object_description"], "answer": doc["answer"], "option": doc["option"], "question": doc["question"]},
+    }
     return data
+
 
 def worldqa_aggregate_mc_eval(results):
     score = 0
@@ -189,6 +191,7 @@ def worldqa_aggregate_mc_eval(results):
     for result in results:
         score += evaluator.evaluate(result)
     return score / len(results)
+
 
 def worldqa_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -224,7 +227,6 @@ def worldqa_aggregate_mc(results, args):
 
 def worldqa_aggregate_mc_ppl(results, args):
     worldqa_aggregate_submissions(results, args, "MC_PPL")
-
 
 
 def worldqa_doc_to_choice(doc):
