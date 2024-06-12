@@ -223,6 +223,8 @@ During the initial stage of our project, we thank:
 
 During the `v0.1` to `v0.2`, we thank the community support from pull requests (PRs):
 
+> Details are in [lmms-eval/v0.2.0 release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/releases/tag/untagged-9057ff0e9a72d5a5846f)
+
 **Datasets:**
 
 - VCR: Vision_Caption_Restoration (officially from the authors, MILA)
