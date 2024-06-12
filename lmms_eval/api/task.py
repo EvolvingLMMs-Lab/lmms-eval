@@ -802,6 +802,9 @@ class ConfigurableTask(Task):
             if "force_download" in dataset_kwargs:
                 dataset_kwargs.pop("force_download")
 
+            if "force_unzip" in dataset_kwargs:
+                dataset_kwargs.pop("force_unzip")
+
             if "local_files_only" in dataset_kwargs:
                 dataset_kwargs.pop("local_files_only")
 
