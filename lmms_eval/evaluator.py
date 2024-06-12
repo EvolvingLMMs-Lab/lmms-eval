@@ -46,6 +46,7 @@ def simple_evaluate(
     log_samples: bool = True,
     gen_kwargs: str = None,
     cli_args=None,  # Bo: put args into more functions (cost 48 Bytes per call)
+    predict_only: bool = False,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -112,6 +113,14 @@ def simple_evaluate(
         config = task_obj._config
         if config["output_type"] == "generate_until" and gen_kwargs:
             config["generation_kwargs"].update(gen_kwargs)
+        
+        if predict_only:
+            log_samples = True
+            eval_logger.info(
+                f"Processing {task_name} in output-only mode. Metrics will not be calculated!"
+            )
+            # we have to change the class properties post-hoc. This is pretty hacky.
+            task_obj.override_metric(metric_name="bypass")
 
         if num_fewshot is not None:
             if config["num_fewshot"] == 0:
