@@ -203,6 +203,7 @@ class Idefics2(lmms):
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
+                
             prompts = []
             for context, visual in zip(contexts, visuals):
                 content = []

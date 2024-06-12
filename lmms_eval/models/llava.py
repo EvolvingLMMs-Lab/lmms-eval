@@ -26,18 +26,10 @@ eval_logger = logging.getLogger("lmms-eval")
 try:
     from llava.model.builder import load_pretrained_model
     from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
-    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
-    from llava.conversation import conv_templates, SeparatorStyle
+    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN
+    from llava.conversation import conv_templates
 except Exception as e:
     eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.\nError: %s" % e)
-
-from transformers.integrations.deepspeed import (
-    is_deepspeed_zero3_enabled,
-    set_hf_deepspeed_config,
-    unset_hf_deepspeed_config,
-)
-
-from transformers.utils import is_flash_attn_2_available
 
 # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
 # if is_flash_attn_2_available:
@@ -60,10 +52,7 @@ class Llava(lmms):
         pretrained: str = "liuhaotian/llava-v1.5-7b",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
-        dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
-        trust_remote_code: Optional[bool] = False,
-        revision=None,
         model_name=None,
         attn_implementation=best_fit_attn_implementation,
         device_map="cuda:0",

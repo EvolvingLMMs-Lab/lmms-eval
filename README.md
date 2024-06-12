@@ -9,7 +9,7 @@
 🏠 [LMMs-Lab Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/lmms-eval-0.1/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
 
-In today's world, we're on an exciting journey toward creating Artificial General Intelligence (AGI), much like the enthusiasm of the 1960s moon landing. This journey is powered by advanced large language models (LLMs) and large multimodal models (LMMs), which are complex systems capable of understanding, learning, and performing a wide variety of human tasks. These advancements bring us closer to achieving AGI.
+In today's world, we're on an exciting journey toward creating Artificial General Intelligence (AGI), much like the enthusiasm of the 1960s moon landing. This journey is powered by advanced large language models (LLMs) and large multimodal models (LMMs), which are complex systems capable of understanding, learning, and performing a wide variety of human tasks.
 
 To gauge how advanced these models are, we use a variety of evaluation benchmarks. These benchmarks are tools that help us understand the capabilities of these models, showing us how close we are to achieving AGI. However, finding and using these benchmarks is a big challenge. The necessary benchmarks and datasets are spread out and hidden in various places like Google Drive, Dropbox, and different school and research lab websites. It feels like we're on a treasure hunt, but the maps are scattered everywhere.
 
@@ -163,6 +163,7 @@ We also provide the raw data exported from Weights & Biases for the detailed res
   - COCO 2017 Caption (coco2017_cap)
     - COCO 2017 Caption MiniVal (coco2017_cap_val)
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
+- [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
 - DOCVQA (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
@@ -176,6 +177,13 @@ We also provide the raw data exported from Weights & Biases for the detailed res
   - Infographic VQA Test (info_vqa_test)
 - LLaVA-Bench (llava_in_the_wild)
 - LLaVA-Bench-COCO (llava_bench_coco)
+- MathVerse (mathverse)
+  - MathVerse Text Dominant (mathverse_testmini_text_dominant)
+  - MathVerse Text Only (mathverse_testmini_text_only)
+  - MathVerse Text Lite (mathverse_testmini_text_lite)
+  - MathVerse Vision Dominant (mathverse_testmini_vision_dominant)
+  - MathVerse Vision Intensive (mathverse_testmini_vision_intensive)
+  - MathVerse Vision Only (mathverse_testmini_vision_only)
 - MathVista (mathvista)
   - MathVista Validation (mathvista_testmini)
   - MathVista Test (mathvista_test)
@@ -190,6 +198,19 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 - MMMU (mmmu)
   - MMMU Validation (mmmu_val)
   - MMMU Test (mmmu_test)
+- MMUPD (mmupd)
+  - MMUPD Base (mmupd_base)
+    - MMAAD Base (mmaad_base)
+    - MMIASD Base (mmiasd_base)
+    - MMIVQD Base (mmivqd_base)
+  - MMUPD Option (mmupd_option)
+    - MMAAD Option (mmaad_option)
+    - MMIASD Option (mmiasd_option)
+    - MMIVQD Option (mmivqd_option)
+  - MMUPD Instruction (mmupd_instruction)
+    - MMAAD Instruction (mmaad_instruction)
+    - MMIASD Instruction (mmiasd_instruction)
+    - MMIVQD Instruction (mmivqd_instruction)
 - MMVet (mmvet)
 - Multi-DocVQA (multidocvqa)
   - Multi-DocVQA Validation (multidocvqa_val)
@@ -226,6 +247,9 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 - ScienceQA (scienceqa_full)
   - ScienceQA Full (scienceqa)
   - ScienceQA IMG (scienceqa_img)
+- ScreenSpot (screenspot)
+  - ScreenSpot REC / Grounding (screenspot_rec)
+  - ScreenSpot REG / Instruction Generation (screenspot_reg)
 - SeedBench (seedbench)
 - SeedBench 2 (seedbench_2)
 - ST-VQA (stvqa)
@@ -241,6 +265,9 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 - VQAv2 (vqav2)
   - VQAv2 Validation (vqav2_val)
   - VQAv2 Test (vqav2_test)
+- WebSRC (websrc)
+  - WebSRC Validation (websrc_val)
+  - WebSRC Test (websrc_test)
 
 ## Datasets to be added and tested
 - TallyQA (tallyqa)
