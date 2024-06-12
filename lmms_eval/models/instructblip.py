@@ -10,6 +10,7 @@ from lmms_eval.tasks.mmmu.utils_group_img import process_images
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
+import transformers
 from transformers import InstructBlipProcessor, InstructBlipForConditionalGeneration
 
 from lmms_eval.utils import stop_sequences_criteria
@@ -20,6 +21,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 eval_logger = logging.getLogger("lmms-eval")
+transformers.logging.set_verbosity_error()
 
 
 @register_model("instructblip")

@@ -29,3 +29,11 @@ ckpt
 pretrained/
 LLaVA/
 *logs
+temp/
+InternVL/
+logs/
+data/
+llava-video/
+Video-MME/
+VATEX/
+lmms_eval/tasks/vatex/__pycache__/utils.cpython-310.pyc

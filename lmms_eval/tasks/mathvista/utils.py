@@ -38,7 +38,13 @@ def mathvista_doc_to_text(doc, model_specific_prompt_kwargs=None):
         "answer": doc["answer"] if "answer" in doc else None,
         "precision": doc["precision"] if "precision" in doc else 0,
     }
-    query_prompt = mathvista_evaluator.create_one_query(problem, examples=None, shot_num=0, shot_type=model_specific_prompt_kwargs["shot_type"])
+    query_prompt = mathvista_evaluator.create_one_query(
+        problem,
+        shot_num=model_specific_prompt_kwargs["shot"],
+        shot_type=model_specific_prompt_kwargs["shot_type"],
+        use_caption=model_specific_prompt_kwargs["use_caption"],
+        use_ocr=model_specific_prompt_kwargs["use_ocr"],
+    )
     return query_prompt
 
 

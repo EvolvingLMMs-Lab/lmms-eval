@@ -106,8 +106,15 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "--log_samples_suffix",
         type=str,
-        default="",
+        default="model_outputs",
         help="Specify a suffix for the log_samples file name.",
+    )
+    parser.add_argument(
+        "--predict_only",
+        "-x",
+        action="store_true",
+        default=False,
+        help="Use with --log_samples. Only model outputs will be saved and metrics will not be evaluated.",
     )
     parser.add_argument(
         "--show_config",
@@ -228,6 +235,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
     initialize_tasks(args.verbosity)
 
+    if args.predict_only:
+        args.log_samples = True
+    if (args.log_samples or args.predict_only) and not args.output_path:
+        raise ValueError("Specify --output_path if providing --log_samples or --predict_only")
     if args.limit:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
     if args.include_path is not None:
@@ -274,6 +285,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     # set datetime before evaluation
     datetime_str = utils.get_datetime_str(timezone=args.timezone)
     if args.output_path:
+        if args.log_samples_suffix and len(args.log_samples_suffix) > 15:
+            eval_logger.warning("The suffix for log_samples is too long. It is recommended to keep it under 15 characters.")
+            args.log_samples_suffix = args.log_samples_suffix[:5] + "..." + args.log_samples_suffix[-5:]
+
         hash_input = f"{args.model_args}".encode("utf-8")
         hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
         path = Path(args.output_path)
@@ -296,6 +311,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         log_samples=args.log_samples,
         gen_kwargs=args.gen_kwargs,
         cli_args=args,
+        predict_only=args.predict_only,
     )
 
     if results is not None:
@@ -318,9 +334,9 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
                 for task_name, config in results["configs"].items():
                     filename = args.output_path.joinpath(f"{task_name}.json")
                     # Structure the data with 'args' and 'logs' keys
-                    data_to_dump = {"args": vars(args), "model_configs": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
-                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable)
-                    filename.open("w").write(samples_dumped)
+                    data_to_dump = {"args": vars(args), "model_configs": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"]), "time": datetime_str}
+                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable, ensure_ascii=False)
+                    filename.open("w", encoding="utf-8").write(samples_dumped)
                     eval_logger.info(f"Saved samples to {filename}")
 
         return results, samples

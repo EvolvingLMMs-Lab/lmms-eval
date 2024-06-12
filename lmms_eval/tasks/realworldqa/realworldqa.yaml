@@ -11,7 +11,7 @@ doc_to_target: "answer"
 generation_kwargs:
   max_new_tokens: 16
   temperature: 0
-  top_p: 0
+  top_p: 1.0
   num_beams: 1
   do_sample: false
 
@@ -39,5 +39,8 @@ model_specific_prompt_kwargs:
   gpt4v:
     pre_prompt: ""
     post_prompt: ""
+  xcomposer2_4khd:
+    pre_prompt: "[UNUSED_TOKEN_146]user\nQuestion: "
+    post_prompt: "[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\nThe answer is"
 metadata:
   - version: 0.0

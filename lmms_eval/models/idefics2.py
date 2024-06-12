@@ -17,11 +17,13 @@ warnings.filterwarnings("ignore")
 eval_logger = logging.getLogger("lmms-eval")
 
 DEFAULT_IMAGE_TOKEN = "<image>"
-try: 
+try:
     import flash_attn
+
     best_fit_attn_implementation = "flash_attention_2"
 except ImportError:
     best_fit_attn_implementation = "eager"
+
 
 @register_model("idefics2")
 class Idefics2(lmms):
@@ -50,7 +52,7 @@ class Idefics2(lmms):
         attn_implementation: Optional[str] = best_fit_attn_implementation,
         device_map: str = "",
         use_cache: bool = True,
-        do_image_splitting: bool =False,
+        do_image_splitting: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -194,9 +196,14 @@ class Idefics2(lmms):
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
-            # 
+            #
             until = gen_kwargs.pop("until", None)
-            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio",  None)
+            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
+            if "max_new_tokens" not in gen_kwargs:
+                gen_kwargs["max_new_tokens"] = 1024
+            if "temperature" not in gen_kwargs:
+                gen_kwargs["temperature"] = 0
+                
             prompts = []
             for context, visual in zip(contexts, visuals):
                 content = []
@@ -212,9 +219,9 @@ class Idefics2(lmms):
             output_ids = self.model.generate(**inputs, **gen_kwargs)
             # only retain the generated text
             for output_id, input_id in zip(output_ids, inputs["input_ids"]):
-                generated_id = output_id[len(input_id):]
+                generated_id = output_id[len(input_id) :]
                 generated_text = self.tokenizer.decode(generated_id, skip_special_tokens=True)
-                
+
                 res.append(generated_text)
             pbar.update(1)
         # reorder this group of results back to original unsorted form
