@@ -10,13 +10,13 @@
 
 ---
 
-# Annoucement
+## Annoucement
 
 - [2024-06] 🎬🎬 The `lmms-eval/v0.2` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
 
 - [2024-03] 📝📝 We have released the first version of `lmms-eval`, please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/) for more details
 
-# Why `lmms-eval`?
+## Why `lmms-eval`?
 
 <p align="center" width="80%">
 <img src="https://i.postimg.cc/L5kNJsJf/Blue-Purple-Futuristic-Modern-3-D-Tech-Company-Business-Presentation.png"  width="100%" height="80%">
@@ -32,7 +32,7 @@ In the field of language models, there has been a valuable precedent set by the 
 
 We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) and introduce **lmms-eval**, an evaluation framework meticulously crafted for consistent and efficient evaluation of LMM.
 
-# Installation
+## Installation
 
 For formal usage, you can install the package from PyPI by running the following command:
 ```bash
@@ -93,7 +93,7 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 
 Our Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
 
-# Multiple Usages
+## Multiple Usages
 
 **Evaluation of LLaVA on MME**
 
@@ -191,19 +191,19 @@ python3 -m lmms_eval \
 	--verbosity=INFO
 ```
 
-## Supported models
+### Supported models
 
 Please check [supported models](lmms_eval/models/__init__.py) for more details.
 
-## Supported tasks
+### Supported tasks
 
 Please check [supported tasks](lmms_eval/docs/current_tasks.md) for more details.
 
-# Add Customized Model and Dataset
+## Add Customized Model and Dataset
 
 Please refer to our [documentation](docs/README.md).
 
-# Acknowledgement
+## Acknowledgement
 
 lmms_eval is a fork of [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). We recommend you to read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) for relevant information. 
 
