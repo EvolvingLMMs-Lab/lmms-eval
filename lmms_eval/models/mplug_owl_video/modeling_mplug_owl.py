@@ -24,7 +24,7 @@ try:
     flash_attn_func = flash_attn_unpadded_func
 except:
     flash_attn_func = None
-    print("install flash-attn first.")
+    print("Error importing flash_attn in mplug_owl. Please install flash-attn first.")
 import math
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
