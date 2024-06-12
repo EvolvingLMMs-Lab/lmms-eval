@@ -8,26 +8,27 @@ from pathlib import Path
 import logging
 import yaml
 import sys
+
 eval_logger = logging.getLogger("lmms-eval")
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 VATEX_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
+# with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
+#     raw_data = f.readlines()
+#     safe_data = []
+#     for i, line in enumerate(raw_data):
+#         # remove function definition since yaml load cannot handle it
+#         if "!function" not in line:
+#             safe_data.append(line)
 
-    config = yaml.safe_load("".join(safe_data))
-    
+#     config = yaml.safe_load("".join(safe_data))
+
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 # cache_dir = os.path.join(hf_home, cache_dir)
 # base_cache_dir = config["dataset_kwargs"]["cache_dir"]
-base_cache_dir=os.path.expanduser(hf_home)
+base_cache_dir = os.path.expanduser(hf_home)
 
 
 def vatex_ZH_doc_to_visual(doc):
@@ -38,9 +39,9 @@ def vatex_ZH_doc_to_visual(doc):
             # remove function definition since yaml load cannot handle it
             if "!function" not in line:
                 safe_data.append(line)
-    taskname= yaml.safe_load("".join(safe_data))['task']
-    cache_dir=os.path.join(base_cache_dir,taskname)
-    video_path = doc["videoID"] + ".mp4" 
+    cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    video_path = doc["videoID"] + ".mp4"
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
         video_path = video_path
@@ -61,9 +62,9 @@ def vatex_test_doc_to_visual(doc):
             # remove function definition since yaml load cannot handle it
             if "!function" not in line:
                 safe_data.append(line)
-    taskname= yaml.safe_load("".join(safe_data))['task']
-    cache_dir=os.path.join(base_cache_dir,taskname)
-    video_path = doc["videoID"] + ".mp4" 
+    cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    video_path = doc["videoID"] + ".mp4"
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
         video_path = video_path
@@ -76,8 +77,15 @@ def vatex_test_doc_to_visual(doc):
     return [video_path]
 
 
-def vatex_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    return model_specific_prompt_kwargs["prompt"]
+def vatex_ZH_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    few_shot_prompt = """[视频1] 输出:一个穿黑运动服、戴红色头盔的男人正在攀登雪山。\n[视频2] 输出:一个戴着耳机男人在电脑面前模拟打架子鼓。\n[视频3] 输出:一个穿黑色短袖的男子的男子，双手十指交叉放在胸前，肘部放在面前的桌子上，桌子上有一台电脑，不一会儿，男子半个手臂都放在了桌子上。\n[视频4] 输出:一位女士在她的手上涂抹少量的面霜，并且在她的眼睛下涂抹。\n"""
+    return model_specific_prompt_kwargs["prompt"] + "\n" + few_shot_prompt
+
+
+def vatex_test_doc_to_text(doc, model_specific_prompt_kwargs=None):
+    few_shot_prompt = """[video1] output: A man picks up a can of shoe paste, a towel, and brush from a table.\n[video2] output: A person places the frying pan on the stove and then another person flips over the food that is in it.\n[video3] output: A woman describes and demonstrates how to create a colorful cross stitch design.\n[video4] output: A little girl uses the grass in her yard as well as a blue mat to do flips.\n"""
+    return model_specific_prompt_kwargs["prompt"] + "\n" + few_shot_prompt
+
 
 def vatex_process_result(doc, result):
     """
@@ -92,6 +100,7 @@ def vatex_process_result(doc, result):
     data_dict = {"answer": doc["enCap"], "pred": pred, "video_id": doc["videoID"]}
 
     return {f"vatex_{metric}": data_dict for metric in VATEX_METRICS}
+
 
 def vatex_process_CN_result(doc, result):
     """

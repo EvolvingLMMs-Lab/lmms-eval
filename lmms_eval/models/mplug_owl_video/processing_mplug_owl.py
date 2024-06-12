@@ -21,14 +21,14 @@ def get_index(num_frames, num_segments):
 
 
 def load_video(path, num_frames=4):
-    '''vr = VideoReader(path, height=224, width=224)
+    """vr = VideoReader(path, height=224, width=224)
     total_frames = len(vr)
     frame_indices = get_index(total_frames, num_frames)
     images_group = list()
     for frame_index in frame_indices:
         img = Image.fromarray(vr[frame_index].asnumpy()).convert("RGB")
         images_group.append(img)
-    return images_group'''
+    return images_group"""
     # Change a bit here from the original code
     # I use pyav instead of decord because it is much more safer
     # The operations here are the same, we load video and return a list of PIL Image
@@ -42,7 +42,7 @@ def load_video(path, num_frames=4):
         video_frames = video_frames.permute(0, 2, 3, 1).to(torch.uint8).numpy()
     video_frames = [Image.fromarray(frame) for frame in video_frames]
     if len(video_frames) > num_frames:
-        video_frames = video_frames[: num_frames]
+        video_frames = video_frames[:num_frames]
     return video_frames
 
 
@@ -51,7 +51,6 @@ class MplugOwlProcessor(ProcessorMixin):
     tokenizer_class = "MplugOwlTokenizer"
 
     def __init__(self, image_processor=None, tokenizer=None, **kwargs):
-
         super().__init__(**kwargs)
         self.tokens_to_generate = 0
         self.image_processor = image_processor
