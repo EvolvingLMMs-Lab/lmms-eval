@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_celeb_cn_eval
-test_split: sft_face
-dataset_name: sft_face
-include: _default_sft_eval_rest_template_yaml

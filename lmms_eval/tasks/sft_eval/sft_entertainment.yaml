@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_entertainment_cn_eval
-test_split: sft_entertainment
-dataset_name: sft_entertainment
-include: _default_sft_eval_rest_template_yaml

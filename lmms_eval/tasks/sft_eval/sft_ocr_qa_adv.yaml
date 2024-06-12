@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_ocr_ecommerceQA_cn_eval
-test_split: sft_ocr_qa_adv
-dataset_name: sft_ocr_qa_adv
-include: _default_sft_eval_rest_template_yaml

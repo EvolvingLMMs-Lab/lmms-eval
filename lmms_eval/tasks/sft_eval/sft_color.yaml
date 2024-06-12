@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_color_cn_eval
-test_split: sft_color
-dataset_name: sft_color
-include: _default_sft_eval_rest_template_yaml

@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_healthcare_cn_eval
-test_split: sft_healthcare
-dataset_name: sft_healthcare
-include: _default_sft_eval_rest_template_yaml
