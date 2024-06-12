@@ -110,6 +110,13 @@ def parse_eval_args() -> argparse.Namespace:
         help="Specify a suffix for the log_samples file name.",
     )
     parser.add_argument(
+        "--predict_only",
+        "-x",
+        action="store_true",
+        default=False,
+        help="Use with --log_samples. Only model outputs will be saved and metrics will not be evaluated.",
+    )
+    parser.add_argument(
         "--show_config",
         action="store_true",
         default=False,
@@ -228,6 +235,12 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
     initialize_tasks(args.verbosity)
 
+    if args.predict_only:
+        args.log_samples = True
+    if (args.log_samples or args.predict_only) and not args.output_path:
+        raise ValueError(
+            "Specify --output_path if providing --log_samples or --predict_only"
+        )
     if args.limit:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
     if args.include_path is not None:
@@ -300,6 +313,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         log_samples=args.log_samples,
         gen_kwargs=args.gen_kwargs,
         cli_args=args,
+        predict_only=args.predict_only,
     )
 
     if results is not None:
