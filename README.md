@@ -11,9 +11,9 @@
 
 # Annoucement
 
-- [2024-06] The `lmms-eval/v0.2` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
+- [2024-06] 🎬🎬 The `lmms-eval/v0.2` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
 
-- [2024-03] We have released the first version of `lmms-eval`, please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/) for more details
+- [2024-03] 📝📝 We have released the first version of `lmms-eval`, please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/) for more details
 
 # Why `lmms-eval`?
 
@@ -120,7 +120,9 @@ python3 -m accelerate.commands.launch \
     --output_path ./logs/
 ```
 
-**For other variants llava. Note that `conv_template` is an arg of the init function of llava in `lmms_eval/models/llava.py`**
+**For other variants llava. Please change the `conv_template` in the `model_args`**
+
+> `conv_template` is an arg of the init function of llava in `lmms_eval/models/llava.py`, you could find the corresponding value at LLaVA's code, probably in a dict variable `conv_templates` in `llava/conversations.py`
 
 ```bash
 python3 -m accelerate.commands.launch \
