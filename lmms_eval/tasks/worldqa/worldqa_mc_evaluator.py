@@ -14,13 +14,14 @@ import logging
 
 eval_logger = logging.getLogger("lmms-eval")
 
+
 class WorldQA_MC_Evaluator:
     def __init__(self, sys_prompt="There are several options:", API_KEY="", API_URL="", model_version="gpt-3.5-turbo-0613"):
         self.sys_prompt = sys_prompt
         self.model_version = model_version
         self.API_KEY = API_KEY
         self.API_URL = API_URL
-    
+
     def build_prompt(self, question, options, prediction):
         tmpl = (
             "You are an AI assistant who will help me to match an answer "
@@ -41,7 +42,7 @@ class WorldQA_MC_Evaluator:
             "Question: {}?\nOptions: {}\nAnswer: {}\nYour output: "
         )
         return tmpl.format(question, options, prediction)
-    
+
     # Prefetch Answers
     def can_infer_option(self, answer, num_choice=5):
         choices = string.ascii_uppercase[:num_choice]
@@ -70,7 +71,6 @@ class WorldQA_MC_Evaluator:
                     if tup[0] + ch + tup[1] in splits:
                         return ch
         return False
-    
 
     def _post_request(self, payload):
         headers = {
@@ -108,7 +108,7 @@ class WorldQA_MC_Evaluator:
         return "Failed to obtain answer via API"
 
     def evaluate(self, results):
-        answer = results["answer"].split(".")[0] 
+        answer = results["answer"].split(".")[0]
         if self.can_infer_option(results["pred"], num_choice=4):
             choice = self.can_infer_option(results["pred"], num_choice=4)
             return int(choice.lower().strip() == answer.lower().strip())

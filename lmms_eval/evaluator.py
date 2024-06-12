@@ -113,12 +113,10 @@ def simple_evaluate(
         config = task_obj._config
         if config["output_type"] == "generate_until" and gen_kwargs:
             config["generation_kwargs"].update(gen_kwargs)
-        
+
         if predict_only:
             log_samples = True
-            eval_logger.info(
-                f"Processing {task_name} in output-only mode. Metrics will not be calculated!"
-            )
+            eval_logger.info(f"Processing {task_name} in output-only mode. Metrics will not be calculated!")
             # we have to change the class properties post-hoc. This is pretty hacky.
             task_obj.override_metric(metric_name="bypass")
 

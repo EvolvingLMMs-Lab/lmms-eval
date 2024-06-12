@@ -238,9 +238,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     if args.predict_only:
         args.log_samples = True
     if (args.log_samples or args.predict_only) and not args.output_path:
-        raise ValueError(
-            "Specify --output_path if providing --log_samples or --predict_only"
-        )
+        raise ValueError("Specify --output_path if providing --log_samples or --predict_only")
     if args.limit:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
     if args.include_path is not None:

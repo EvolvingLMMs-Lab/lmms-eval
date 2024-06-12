@@ -67,8 +67,6 @@ def perceptiontest_doc_to_text(doc, model_specific_prompt_kwargs=None):
                 question += "\n" + "C. " + op
             index += 1
         post_prompt = "\nAnswer with the option's letter from the given choices directly."
-    print("question\n")
-    print(question)
 
     return f"{pre_prompt}{question}{post_prompt}"
 
