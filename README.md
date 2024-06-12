@@ -1,4 +1,4 @@
-<p align="center" width="100%">
+<p align="center" width="85%">
 <img src="https://i.postimg.cc/g0QRgMVv/WX20240228-113337-2x.png"  width="100%" height="70%">
 </p>
 
@@ -11,7 +11,7 @@
 
 # Annoucement
 
-- [2024-06] The `lmms-eval/v0.2` has been upgraded to support video evaluations, and other feature updates. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
+- [2024-06] The `lmms-eval/v0.2` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
 
 - [2024-03] We have released the first version of `lmms-eval`, please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/) for more details
 
@@ -67,81 +67,6 @@ conda install openjdk=8
 ```
 you can then check your java version by `java -version` 
 
-# Multiple Usages
-```bash
-# Evaluation of LLaVA on MME
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
-    --tasks mme \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme \
-    --output_path ./logs/
-
-# Evaluation of LLaVA on multiple datasets
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
-
-# For other variants llava. Note that `conv_template` is an arg of the init function of llava in `lmms_eval/models/llava.py`
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.6-mistral-7b,conv_template=mistral_instruct" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
-
-# Evaluation of larger lmms (llava-v1.6-34b)
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.6-34b,conv_template=mistral_direct" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
-
-# Evaluation with a set of configurations, supporting evaluation of multiple models and datasets
-python3 -m accelerate.commands.launch --num_processes=8 -m lmms_eval --config ./miscs/example_eval.yaml
-
-# Evaluation with naive model sharding for bigger model (llava-next-72b)
-python3 -m lmms_eval \
-    --model=llava \
-    --model_args=pretrained=lmms-lab/llava-next-72b,conv_template=qwen_1_5,device_map=auto,model_name=llava_qwen \
-    --tasks=pope,vizwiz_vqa_val,scienceqa_img \
-    --batch_size=1 \
-    --log_samples \
-    --log_samples_suffix=llava_qwen \
-    --output_path="./logs/" \
-    --wandb_args=project=lmms-eval,job_type=eval,entity=llava-vl
-
-# Evaluation with SGLang for bigger model (llava-next-72b)
-python3 -m lmms_eval \
-	--model=llava_sglang \
-	--model_args=pretrained=lmms-lab/llava-next-72b,tokenizer=lmms-lab/llavanext-qwen-tokenizer,conv_template=chatml-llava,tp_size=8,parallel=8 \
-	--tasks=mme \
-	--batch_size=1 \
-	--log_samples \
-	--log_samples_suffix=llava_qwen \
-	--output_path=./logs/ \
-	--verbosity=INFO
-```
 
 <details>
 <summary>Comprehensive Evaluation Results of LLaVA Family Models</summary>
@@ -162,6 +87,102 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 
 
 Our Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
+
+# Multiple Usages
+
+**Evaluation of LLaVA on MME**
+
+```bash
+python3 -m accelerate.commands.launch \
+    --num_processes=8 \
+    -m lmms_eval \
+    --model llava \
+    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
+    --tasks mme \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix llava_v1.5_mme \
+    --output_path ./logs/
+```
+
+**Evaluation of LLaVA on multiple datasets**
+
+```bash
+python3 -m accelerate.commands.launch \
+    --num_processes=8 \
+    -m lmms_eval \
+    --model llava \
+    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
+    --tasks mme,mmbench_en \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix llava_v1.5_mme_mmbenchen \
+    --output_path ./logs/
+```
+
+**For other variants llava. Note that `conv_template` is an arg of the init function of llava in `lmms_eval/models/llava.py`**
+
+```bash
+python3 -m accelerate.commands.launch \
+    --num_processes=8 \
+    -m lmms_eval \
+    --model llava \
+    --model_args pretrained="liuhaotian/llava-v1.6-mistral-7b,conv_template=mistral_instruct" \
+    --tasks mme,mmbench_en \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix llava_v1.5_mme_mmbenchen \
+    --output_path ./logs/
+```
+
+**Evaluation of larger lmms (llava-v1.6-34b)**
+
+```bash
+python3 -m accelerate.commands.launch \
+    --num_processes=8 \
+    -m lmms_eval \
+    --model llava \
+    --model_args pretrained="liuhaotian/llava-v1.6-34b,conv_template=mistral_direct" \
+    --tasks mme,mmbench_en \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix llava_v1.5_mme_mmbenchen \
+    --output_path ./logs/
+```
+
+**Evaluation with a set of configurations, supporting evaluation of multiple models and datasets**
+
+```bash
+python3 -m accelerate.commands.launch --num_processes=8 -m lmms_eval --config ./miscs/example_eval.yaml
+```
+
+**Evaluation with naive model sharding for bigger model (llava-next-72b)**
+
+```bash
+python3 -m lmms_eval \
+    --model=llava \
+    --model_args=pretrained=lmms-lab/llava-next-72b,conv_template=qwen_1_5,device_map=auto,model_name=llava_qwen \
+    --tasks=pope,vizwiz_vqa_val,scienceqa_img \
+    --batch_size=1 \
+    --log_samples \
+    --log_samples_suffix=llava_qwen \
+    --output_path="./logs/" \
+    --wandb_args=project=lmms-eval,job_type=eval,entity=llava-vl
+```
+
+**Evaluation with SGLang for bigger model (llava-next-72b)**
+
+```bash
+python3 -m lmms_eval \
+	--model=llava_sglang \
+	--model_args=pretrained=lmms-lab/llava-next-72b,tokenizer=lmms-lab/llavanext-qwen-tokenizer,conv_template=chatml-llava,tp_size=8,parallel=8 \
+	--tasks=mme \
+	--batch_size=1 \
+	--log_samples \
+	--log_samples_suffix=llava_qwen \
+	--output_path=./logs/ \
+	--verbosity=INFO
+```
 
 ## Supported models
 
