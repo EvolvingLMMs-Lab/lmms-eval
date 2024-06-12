@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_ocr_markdown_cn_eval
-test_split: sft_ocr_rec_markdown
-dataset_name: sft_ocr_rec_markdown
-include: _default_sft_eval_ocr_rec_template_yaml

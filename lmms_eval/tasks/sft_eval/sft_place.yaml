@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_place_cn_eval
-test_split: sft_place
-dataset_name: sft_place
-include: _default_sft_eval_rest_template_yaml

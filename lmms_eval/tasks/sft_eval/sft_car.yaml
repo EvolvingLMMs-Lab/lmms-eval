@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_car_cn_eval
-test_split: sft_car
-dataset_name: sft_car
-include: _default_sft_eval_rest_template_yaml

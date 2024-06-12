@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_ocr_handwrite_cn_eval
-test_split: sft_ocr_rec_handwrite
-dataset_name: sft_ocr_rec_handwrite
-include: _default_sft_eval_ocr_rec_template_yaml

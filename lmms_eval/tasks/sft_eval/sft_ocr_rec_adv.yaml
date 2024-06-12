@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_ocr_adv_cn_eval
-test_split: sft_ocr_rec_adv
-dataset_name: sft_ocr_rec_adv
-include: _default_sft_eval_ocr_rec_template_yaml
