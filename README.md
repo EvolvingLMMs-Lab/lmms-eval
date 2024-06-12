@@ -8,6 +8,7 @@
 
 🏠 [LMMs-Lab Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/lmms-eval-0.1/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
+---
 
 # Annoucement
 
@@ -206,13 +207,40 @@ Please refer to our [documentation](docs/README.md).
 
 lmms_eval is a fork of [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). We recommend you to read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) for relevant information. 
 
+---
+
 Below are the changes we made to the original API:
 - Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness other wise the cpu memory would explode.
 - Instance.args (lmms_eval/api/instance.py) now contains a list of images to be inputted to lmms.
 - lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
 
-We also thank:
+---
+
+During the initial stage of our project, we thank:
 - [Xiang Yue](https://xiangyue9607.github.io/), [Jingkang Yang](https://jingkang50.github.io/), [Dong Guo](https://www.linkedin.com/in/dongguoset/) and [Sheng Shen](https://sincerass.github.io/) for early discussion and testing.
+
+---
+
+During the `v0.1` to `v0.2`, we thank the community support from pull requests (PRs):
+
+**Datasets:**
+
+- VCR: Vision_Caption_Restoration (officially from the authors, MILA)
+- ConBench (officially from the authors, PKU/Bytedance)
+- MathVerse (officially from the authors, CUHK)
+- MM-UPD (officially from the authors, University of Tokyo)
+- Multi-lingual MMMU (officially from the authors, CUHK)
+- WebSRC (from Hunter Heiden)
+- ScreeSpot (from Hunter Heiden)
+- RealworldQA (from Fanyi Pu, NTU)
+- Multi-lingual LLaVA-W (from Gagan Bhatia, UBC)
+
+**Models:**
+
+- LLaVA-HF (officially from Huggingface)
+- Idefics-2 (from the lmms-lab team)
+- microsoft/Phi-3-Vision (officially from the authors, Microsoft)
+- LLaVA-SGlang (from the lams-lab team)
 
 ## Citations
 
