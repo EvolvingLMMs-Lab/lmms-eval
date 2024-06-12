@@ -6,10 +6,11 @@ from difflib import SequenceMatcher as SM
 from functools import partial
 
 import evaluate
+import numpy as np
 import spacy
 from nltk.util import ngrams
 from spacy.cli import download
-import numpy as np
+
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 # Download the English and Chinese models
@@ -262,7 +263,7 @@ def bootstrap_std(data, n_bootstrap=1000, ci=0.95):
     return std, lower_bound, upper_bound
 
 
-def vcr_aggregate_results(results, args):
+def vcr_aggregate_results(results, args, metric='exact_match'):
     """
     Args:
         results: List[List[Dict]], list of results returned by process_results
@@ -285,9 +286,17 @@ def vcr_aggregate_results(results, args):
         "detailed_results": output_dict_detail_result,
     }
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    path = generate_submission_file(f"vcr_submission_{now_date_time}.json", args)
+    path = generate_submission_file(f"vcr_submission_{metric}_{now_date_time}.json", args)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(output_dict, f, indent=4, ensure_ascii=False)
     # print(f"Submission file saved to {path}")
     eval_logger.info(f"Submission file saved to {path}")
     return mean_score
+
+
+def vcr_aggregate_exact_match(results, args):
+    return vcr_aggregate_results(results, args, metric='exact_match')
+
+
+def vcr_aggregate_jaccard(results, args):
+    return vcr_aggregate_results(results, args, metric='jaccard')

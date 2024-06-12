@@ -5,10 +5,10 @@ test_split: test
 process_results: !function utils.vcr_zh_process_results
 metric_list:
   - metric: jaccard
-    aggregation: !function utils.vcr_aggregate_results
+    aggregation: !function utils.vcr_aggregate_jaccard
     higher_is_better: true
   - metric: exact_match
-    aggregation: !function utils.vcr_aggregate_results
+    aggregation: !function utils.vcr_aggregate_exact_match
     higher_is_better: true
 model_specific_prompt_kwargs:
   default:
