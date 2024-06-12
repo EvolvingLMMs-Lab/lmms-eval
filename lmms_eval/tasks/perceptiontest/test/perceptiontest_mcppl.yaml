@@ -10,4 +10,5 @@ process_results: !function utils.perceptiontest_process_results_mc_ppl
 metric_list:
   - metric: submission
     aggregation: !function utils.perceptiontest_aggregate_mc_ppl
+    higher_is_better: true
 include: _default_template_yaml

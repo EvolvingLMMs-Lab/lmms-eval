@@ -9,6 +9,7 @@ process_results: !function utils.egoschema_process_results_generation
 metric_list:
   - metric: submission
     aggregation: !function utils.egoschema_aggregate_mc
+    higher_is_better: true
   - metric: score
     aggregation: !function utils.egoschema_aggregate_score
     higher_is_better: true
