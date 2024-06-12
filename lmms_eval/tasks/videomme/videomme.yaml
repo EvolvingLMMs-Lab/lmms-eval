@@ -2,6 +2,7 @@ dataset_path: lmms-lab/Video-MME
 dataset_kwargs:
   token: True
   cache_dir: videomme
+  video: True
   # From_YouTube: True
 task: videomme
 test_split: test
