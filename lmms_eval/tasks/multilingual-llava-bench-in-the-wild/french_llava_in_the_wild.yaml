@@ -1,0 +1,6 @@
+dataset_path: "gagan3012/multilingual-llava-bench"
+dataset_kwargs:
+    config: french
+    token: True
+task: "llava_in_the_wild_french"
+include: _default_template.yaml
