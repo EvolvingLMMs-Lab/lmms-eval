@@ -231,7 +231,6 @@ During the `v0.1` to `v0.2`, we thank the community support from pull requests (
 - ConBench (officially from the authors, PKU/Bytedance)
 - MathVerse (officially from the authors, CUHK)
 - MM-UPD (officially from the authors, University of Tokyo)
-- Multi-lingual MMMU (officially from the authors, CUHK)
 - WebSRC (from Hunter Heiden)
 - ScreeSpot (from Hunter Heiden)
 - RealworldQA (from Fanyi Pu, NTU)
