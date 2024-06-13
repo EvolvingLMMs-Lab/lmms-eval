@@ -1,0 +1,20 @@
+dataset_path: m-a-p/II-Bench
+task: "ii-bench"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.ii_bench_doc_to_visual
+doc_to_text: !function utils.ii_bench_doc_to_text
+doc_to_target: "answers"
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: False
+process_results: !function utils.ii_bench_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.ii_bench_aggregate_submissions
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: "Instruction: Please try to answer the single-answer multiple choice question below based on the picture provided.\n"
+    post_prompt: "\nAnswer:"
+  
