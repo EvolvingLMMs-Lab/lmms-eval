@@ -27,6 +27,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 try:
     from llava.model.builder import load_pretrained_model
@@ -34,15 +35,17 @@ try:
     from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
     from llava.conversation import conv_templates, SeparatorStyle
 
+except Exception as e:
+    eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.\nError: %s" % e)
+
+try:
     from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
     from llavavid.model.language_model.llava_llama import LlavaConfig
 
     AutoConfig.register("llava_qwen", LlavaQwenConfig)
     AutoConfig.register("llava_llama", LlavaConfig)
-
 except Exception as e:
-    eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.\nError: %s" % e)
-
+    eval_logger.debug("")
 # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
 # if is_flash_attn_2_available:
 #     best_fit_attn_implementation = "flash_attention_2" # flash_attn has a bug that says: ERROR Error query and key must have the same dtype in generating
@@ -76,6 +79,7 @@ class Llava_OneVision(lmms):
         mm_spatial_pool_stride: Optional[int] = 2,
         mm_spatial_pool_mode: Optional[str] = "average",
         token_strategy: Optional[str] = "single",  # could be "single" or "multiple", "multiple" denotes adding multiple <image> tokens for each frame
+        video_decode_backend: str = "pyav",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -110,6 +114,7 @@ class Llava_OneVision(lmms):
         self.max_frames_num = max_frames_num
         self.mm_spatial_pool_stride = mm_spatial_pool_stride
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
+        self.video_decode_backend = video_decode_backend
 
         overwrite_config = {}
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
@@ -388,7 +393,10 @@ class Llava_OneVision(lmms):
                 elif type(visual[0]) == str:  # For video task
                     image_tensor = []
                     try:
-                        frames = self.load_video(visual, self.max_frames_num)
+                        if self.video_decode_backend == "decord":
+                            frames = self.load_video(visual, self.max_frames_num)
+                        elif self.video_decode_backend == "pyav":
+                            frames = read_video_pyav(visual, num_frm=self.max_frames_num)
                         frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
                         image_tensor.append(frames)
                     except Exception as e:
