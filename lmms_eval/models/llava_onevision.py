@@ -463,6 +463,8 @@ class Llava_OneVision(lmms):
 
             # These steps are not in LLaVA's original code, but are necessary for generation to work
             # TODO: attention to this major generation step...
+            if "image_aspect_ratio" in gen_kwargs.keys():
+                gen_kwargs.pop("image_aspect_ratio") 
             try:
                 with torch.inference_mode():
                     cont = self.model.generate(input_ids, attention_mask=attention_masks, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
