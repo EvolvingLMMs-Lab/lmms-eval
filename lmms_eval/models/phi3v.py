@@ -185,9 +185,16 @@ class Phi3v(lmms):
                 contexts = list(contexts)
             for i in range(len(contexts)):
                 if "<image>" in contexts[i]:
-                    query = contexts[i].replace("<image>", "<|image_1|>")
+                    query = "" + contexts[i]
+                    img_placeholder_count = 1
+                    while "<image>" in query:
+                        query = query.replace("<image>", f"<|image_{img_placeholder_count}|>", 1)
+                        img_placeholder_count += 1
                 else:
-                    query = f"<|image_1|>\n{contexts[i]}"
+                    query = ""
+                    for placeholder_id in range(len(visuals)):
+                        query += f"<|image_{placeholder_id+1}|>\n"
+                    query += contexts[i]
                 messages = [
                     {"role": "user", "content": query}
                 ]
@@ -196,12 +203,11 @@ class Phi3v(lmms):
                     tokenize=False,
                     add_generation_prompt=True)
             assert len(contexts) == 1
-            # We always pass a single image given that the model only accepts one image (as of 5/21/24).
+            # 
             context = contexts[0]
-            pil_image = visuals[0]
             input_ids = self._processor(
                 text=context,
-                images=[pil_image],
+                images=visuals,
                 return_tensors="pt").to(self._device, self.model.dtype)
             # Setting default parameters.
             if "max_new_tokens" not in gen_kwargs:
