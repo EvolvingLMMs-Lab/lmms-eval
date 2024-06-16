@@ -405,7 +405,7 @@ class LlavaVid(lmms):
                     attention_mask=attention_masks,
                     modalities="video",
                     use_cache=self.use_cache,
-                    #stopping_criteria=[stopping_criteria],
+                    stopping_criteria=[stopping_criteria],
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
                     temperature=gen_kwargs["temperature"],
                     top_p=gen_kwargs["top_p"],
