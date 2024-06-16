@@ -776,7 +776,6 @@ class ConfigurableTask(Task):
                 if accelerator.is_main_process:
                     force_download = dataset_kwargs.get("force_download", False)
                     force_unzip = dataset_kwargs.get("force_unzip", False)
-                    print(force_download)
                     cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
@@ -797,15 +796,11 @@ class ConfigurableTask(Task):
 
     
                     def concat_tar_parts(tar_parts, output_tar):
-                        print("This is the output file:", output_tar, "from:", tar_parts)
-                        try:
-                            with open(output_tar, 'wb') as out_tar:
-                                from tqdm import tqdm
-                                for part in tqdm(sorted(tar_parts)):
-                                    with open(part, 'rb') as part_file:
-                                        out_tar.write(part_file.read())
-                        except Exception as ex:
-                            print("Error!!!", ex)
+                        with open(output_tar, 'wb') as out_tar:
+                            from tqdm import tqdm
+                            for part in tqdm(sorted(tar_parts)):
+                                with open(part, 'rb') as part_file:
+                                    out_tar.write(part_file.read())
                         eval_logger.info(f"Concatenated parts {tar_parts} into {output_tar}")
 
                     # Unzip zip files if needed
@@ -824,7 +819,6 @@ class ConfigurableTask(Task):
                                 tar_parts_dict[base_name] = []
                             tar_parts_dict[base_name].append(tar_file)
 
-                        print(tar_parts_dict)
                         
                         # Concatenate and untar split parts
                         for base_name, parts in tar_parts_dict.items():
