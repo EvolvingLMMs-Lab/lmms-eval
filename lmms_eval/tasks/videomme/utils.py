@@ -106,10 +106,37 @@ def videomme_doc_to_visual(doc):
 
 
 def videomme_doc_to_text(doc, model_specific_prompt_kwargs=None):
+
+    option_prompt="Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]
     option = str(doc["options"])
-    question = question + "\n" + option + model_specific_prompt_kwargs["post_prompt"]
-    return question
+    question = question + "\n" + option
+    full_prompt=option_prompt+"\n"+question+"\n"+"The best answer is:"
+    return full_prompt
+# Frames + Subs
+# This video's subtitles are listed below: 
+# 【subtitles】
+
+# Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option.
+# 【question】
+# The best answer is:
+# Frames / Frames + Audio
+# Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, or D) of the correct option.
+# 【question】
+# The best answer is:
+
+def videomme_doc_to_text_subtitle(doc, model_specific_prompt_kwargs=None):
+    subtitles_prompt="This video's subtitles are listed below: \n"
+    if doc["Subtitle"]=="":
+        subtitle="No subtitles available"
+    else:
+        subtitle=doc["Subtitle"]
+    option_prompt="Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
+    question = doc["question"]
+    option = str(doc["options"])
+    question = question + "\n" + option
+    full_prompt=subtitles_prompt+subtitle+"\n"+option_prompt+"\n"+question+"\n"+"The best answer is:"
+    return full_prompt
 
 
 def extract_characters_regex(s):
