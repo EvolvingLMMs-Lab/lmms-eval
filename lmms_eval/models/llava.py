@@ -79,7 +79,6 @@ class Llava(lmms):
         else:
             self._device = torch.device(device)
             self.device_map = device_map
-
         llava_model_args = {}
         llava_model_args["attn_implementation"] = attn_implementation
         if customized_config:
@@ -88,7 +87,6 @@ class Llava(lmms):
             llava_model_args["attn_implementation"] = attn_implementation
         if "use_flash_attention_2" in kwargs:
             llava_model_args["use_flash_attention_2"] = kwargs["use_flash_attention_2"]
-
         model_name = model_name if model_name is not None else get_model_name_from_path(pretrained)
         try:
             # Try to load the model with the multimodal argument

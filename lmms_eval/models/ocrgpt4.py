@@ -7,6 +7,7 @@ from tqdm import tqdm
 import requests as url_requests
 import time
 import logging
+import pytesseract
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -35,11 +36,11 @@ elif API_TYPE == "azure":
     }
 
 
-@register_model("gpt4v")
-class GPT4V(lmms):
+@register_model("ocrgpt4")
+class OCRGPT4(lmms):
     def __init__(
         self,
-        model_version: str = "gpt-4-vision-preview",
+        model_version: str = "gpt-4-1106-preview",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -49,14 +50,7 @@ class GPT4V(lmms):
         self.model_version = model_version
         self.image_token = "<image>"
 
-    # Function to encode the image
-    def encode_image(self, image: Image):
-        output_buffer = BytesIO()
-        image.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
-
+  
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -73,31 +67,16 @@ class GPT4V(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             imgs = []
+            texts = ""
             for visual in visuals:
-                img = self.encode_image(visual)
-                imgs.append(img)
+                texts += pytesseract.image_to_string(visual)
 
+            texts += f"\n\n {contexts}"
+            
             payload = {"model": self.model_version, "messages": []}
-            response_json = {"role": "user", "content": []}
-            # When there is no image token in the context, append the image to the text
-            if self.image_token not in contexts:
-                payload["messages"].append(deepcopy(response_json))
-                payload["messages"][0]["content"].append({"type": "text", "text": contexts})
-                for img in imgs:
-                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
-            else:
-                contexts = contexts.split(self.image_token)
-                for idx, img in enumerate(imgs):
-                    payload["messages"].append(deepcopy(response_json))
-                    payload["messages"][idx]["content"].append({"type": "text", "text": contexts[idx]})
-                    payload["messages"][idx]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
-
-                # If n image tokens are in the contexts
-                # contexts will be splitted into n+1 chunks
-                # Manually add it into the payload
-                payload["messages"].append(deepcopy(response_json))
-                payload["messages"][-1]["content"].append({"type": "text", "text": contexts[-1]})
-
+            messages = [{"role": "user", "content": texts}]
+            payload['messages'] = messages
+            
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:

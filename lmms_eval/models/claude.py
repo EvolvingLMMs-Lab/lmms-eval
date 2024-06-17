@@ -16,30 +16,23 @@ from lmms_eval import utils
 from PIL import Image
 
 API_TYPE = os.getenv("API_TYPE", "openai")
-NUM_SECONDS_TO_SLEEP = 5
+NUM_SECONDS_TO_SLEEP = 20
 eval_logger = logging.getLogger("lmms-eval")
 
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
 
+API_URL = os.getenv("ANTHROPID_ENDPOINT", "https://api.anthropic.com/v1/messages")
+API_KEY = os.getenv("ANTHROPIC_API_KEY", "YOUR_API_KEY")
+headers = {
+    "x-api-key": API_KEY,
+    "anthropic-version": "2023-06-01",
+    "content-type": "application/json"
+}
 
-@register_model("gpt4v")
-class GPT4V(lmms):
+@register_model("claude")
+class Claude(lmms):
     def __init__(
         self,
-        model_version: str = "gpt-4-vision-preview",
+        model_version: str = "claude-3-opus-20240229",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -84,7 +77,7 @@ class GPT4V(lmms):
                 payload["messages"].append(deepcopy(response_json))
                 payload["messages"][0]["content"].append({"type": "text", "text": contexts})
                 for img in imgs:
-                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+                    payload["messages"][0]["content"].append({"type": "image",  'source': {"media_type": "image/png","type": "base64", "data": img}})
             else:
                 contexts = contexts.split(self.image_token)
                 for idx, img in enumerate(imgs):
@@ -107,16 +100,15 @@ class GPT4V(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            # payload["max_tokens"] = gen_kwargs["max_new_tokens"]
-            # payload["temperature"] = gen_kwargs["temperature"]
+            payload["max_tokens"] = gen_kwargs["max_new_tokens"]
+            payload["temperature"] = gen_kwargs["temperature"]
 
             for attempt in range(5):
                 try:
                     response = url_requests.post(API_URL, headers=headers, json=payload, timeout=20)
                     response_data = response.json()
-                    content = response_data["choices"][0]["message"]["content"].strip()
+                    content = response_data['content'][0]['text'].strip()
                     break  # If successful, break out of the loop
-
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
@@ -130,4 +122,4 @@ class GPT4V(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
-        assert False, "GPT4V not support"
+        assert False, "Claude not support"

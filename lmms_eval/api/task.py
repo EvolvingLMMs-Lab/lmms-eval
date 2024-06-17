@@ -1065,6 +1065,7 @@ class ConfigurableTask(Task):
 
         elif self.OUTPUT_TYPE == "generate_until":
             gold = self.doc_to_target(doc)
+
             result = results[0]
             if self.config.doc_to_choice is not None:
                 # If you set doc_to_choice,
@@ -1080,6 +1081,8 @@ class ConfigurableTask(Task):
 
             for metric in self._metric_fn_list.keys():
                 if self.multiple_target:
+                    if 'query' in self._metric_fn_kwargs[metric]:
+                        self._metric_fn_kwargs[metric]['query'] = self.doc_to_text(doc)
                     # in the case where we have multiple targets,
                     # return true if any are true
                     # TODO: this may break for multipLe_target, non zero-or-1 metrics
@@ -1106,6 +1109,8 @@ class ConfigurableTask(Task):
                     else:
                         result_score = 0.0
                 else:
+                    if 'query' in self._metric_fn_kwargs[metric]:
+                        self._metric_fn_kwargs[metric]['query'] = self.doc_to_text(doc)
                     try:
                         result_score = self._metric_fn_list[metric](
                             references=[gold],
@@ -1116,6 +1121,8 @@ class ConfigurableTask(Task):
                         result_score = self._metric_fn_list[metric]([gold, result])
                     if isinstance(result_score, dict):
                         # TODO: this handles the case where HF evaluate returns a dict.
+                        if 'for_log' in result_score:
+                            result_dict['log'] = result_score['for_log']
                         result_score = result_score[metric]
                 result_dict[metric] = result_score
         else:

@@ -154,7 +154,6 @@ class Fuyu(lmms):
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
-
         def _collate(x):
             # the negative sign on len(toks) sorts descending - this has a few advantages:
             # - time estimates will always be over not underestimates, which is more useful for planning

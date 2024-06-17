@@ -1,0 +1,19 @@
+dataset_path: EtashGuha/HungarianDocQA
+task: "hu_docvqa_old"
+output_type: generate_until
+test_split: test
+doc_to_visual: !function utils.docvqa_doc_to_visual
+doc_to_text: !function utils.docvqa_doc_to_text
+doc_to_target: "Short Answer"
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: False
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: "Kérjük, válaszoljon erre a kérdésre rövid válasszal.\n"
+    post_prompt: "Válasz magyarul:"
+metric_list:
+  - metric: anls
+    aggregation: mean
+    higher_is_better: true

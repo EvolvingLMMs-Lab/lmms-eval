@@ -593,7 +593,6 @@ def evaluate(
         }
         if log_samples:
             results_dict["samples"] = dict(samples)
-
         return results_dict
 
     else:
