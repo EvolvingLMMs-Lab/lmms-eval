@@ -216,7 +216,7 @@ class TinyLlava(lmms):
                 if type(image) is list:
                     image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
                     # as of 2024/06, tinyllava only accepts `images` input to be a tensor
-                    image_tensor = torch.stack(image_tensor) 
+                    image = torch.stack(image) 
                 else:
                     image = image.to(dtype=torch.float16, device=self.device)
             else:
