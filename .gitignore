@@ -24,3 +24,16 @@ submissions/
 lmms_eval/tasks/hallusion_bench/hallusion_output_vs_model.json
 lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
 zk.log
+cache_dir
+ckpt
+pretrained/
+LLaVA/
+*logs
+temp/
+InternVL/
+logs/
+data/
+llava-video/
+Video-MME/
+VATEX/
+lmms_eval/tasks/vatex/__pycache__/utils.cpython-310.pyc

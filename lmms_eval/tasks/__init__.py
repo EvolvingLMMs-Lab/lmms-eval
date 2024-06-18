@@ -71,6 +71,10 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
     for root, subdirs, file_list in os.walk(task_dir):
         # if (subdirs == [] or subdirs == ["__pycache__"]) and (len(file_list) > 0):
         for f in file_list:
+            # if "detail" in f:
+            #     import pdb;pdb.set_trace()
+            # if "vatex" in f:
+            #     print("a")
             if f.endswith(".yaml"):
                 yaml_path = os.path.join(root, f)
                 try:
@@ -112,7 +116,7 @@ def initialize_tasks(verbosity="INFO"):
 
 def get_task(task_name, model_name):
     try:
-        return TASK_REGISTRY[task_name](model_name=model_name)
+        return TASK_REGISTRY[task_name](model_name=model_name)  # TODO choiszt the return result need to check " 'mmeConfigurableTask' object has no attribute '_instances'. Did you mean: 'instances'?"
     except KeyError:
         eval_logger.info("Available tasks:")
         eval_logger.info(list(TASK_REGISTRY) + list(GROUP_REGISTRY))
