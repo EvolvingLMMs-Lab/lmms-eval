@@ -1,51 +1,53 @@
 import abc
-from dataclasses import dataclass, field, asdict
-
-import itertools
-import os
-import re
 import ast
+import itertools
+import json
 import logging
+import os
 import random
-from tqdm import tqdm
+import re
+import shutil
+import subprocess
+from collections.abc import Callable
+from dataclasses import dataclass, field, asdict
+from glob import glob
+from typing import Any, List, Union
 
 import datasets
-from datasets import Image, Sequence
 import numpy as np
 from PIL import ImageFile
+from datasets import DownloadConfig, Image, Sequence
+from huggingface_hub import snapshot_download
+from tenacity import retry, stop_after_attempt, wait_fixed, stop_after_delay
+from tqdm import tqdm
 
-from datasets import DownloadConfig
-from typing import Union, List, Any
-from collections.abc import Callable
-from tenacity import retry, stop_after_attempt, wait_fixed
-
+from accelerate import Accelerator
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
-
-from lmms_eval.filters import build_filter_ensemble
 from lmms_eval.api.registry import (
-    get_aggregation,
-    get_metric_aggregation,
-    is_higher_better,
+    AGGREGATION_REGISTRY,
     DEFAULT_METRIC_REGISTRY,
     METRIC_REGISTRY,
     OUTPUT_TYPE_REGISTRY,
-    AGGREGATION_REGISTRY,
+    get_aggregation,
+    get_metric,
+    get_metric_aggregation,
+    is_higher_better,
 )
-
-ALL_OUTPUT_TYPES = [
-    "loglikelihood",
-    "multiple_choice",
-    "generate_until",
-]
-
+from lmms_eval.filters import build_filter_ensemble
 
 eval_logger = logging.getLogger("lmms-eval")
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
 # Include this inside code block to avoid error
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+ALL_OUTPUT_TYPES = [
+    "loglikelihood",
+    "multiple_choice",
+    "generate_until",
+]
 
 
 @dataclass
@@ -100,7 +102,7 @@ class TaskConfig(dict):
             import inspect
             from importlib import import_module
 
-            self.dataset_path = inspect.getfile(import_module(self.dataset_path))
+            # self.dataset_path = inspect.getfile(import_module(self.dataset_path))
 
         if self.generation_kwargs is not None:
             if self.output_type != "generate_until":
@@ -508,6 +510,29 @@ class Task(abc.ABC):
         # (num_fewshot)
         return self.config.to_dict()
 
+    def override_metric(self, metric_name: str) -> None:
+        """
+        Override the default metrics used for evaluation with custom metrics.
+
+        Parameters:
+        - metric_name (str): The name of the custom metric to override. Should be registered in api.metrics.
+        """
+        (
+            self._metric_fn_list,
+            self._aggregation_list,
+            self._metric_fn_kwargs,
+            self._higher_is_better,
+        ) = ({}, {}, {}, {})
+        self._metric_fn_list[metric_name] = get_metric(metric_name)
+        self._aggregation_list[metric_name] = get_metric_aggregation(metric_name)
+        self._higher_is_better[metric_name] = is_higher_better(metric_name)
+        self._metric_fn_kwargs[metric_name] = {}
+        if not isinstance(self, ConfigurableTask):
+            self.process_results = lambda x, y: {metric_name: get_metric(metric_name)}
+            self.aggregation = lambda: {metric_name: get_metric_aggregation(metric_name)}
+        setattr(self._config, "metric_list", [{"metric": metric_name}])
+        setattr(self._config, "process_results", None)
+
 
 class ConfigurableTask(Task):
     VERSION = "Yaml"
@@ -676,21 +701,168 @@ class ConfigurableTask(Task):
                     eval_logger.warning(f"[Task: {self._config.task}] metric {metric_name} is defined, but higher_is_better is not. " f"using default " f"higher_is_better={is_higher_better(metric_name)}")
                     self._higher_is_better[metric_name] = is_higher_better(metric_name)
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
+    @retry(stop=(stop_after_attempt(5) | stop_after_delay(60)), wait=wait_fixed(2))
     def download(self, dataset_kwargs=None) -> None:
+        # If the dataset is a video dataset,
+        # Recursively search whether their is a zip and unzip it to the huggingface home
         download_config = DownloadConfig()
-        download_config.max_retries = dataset_kwargs.get("max_retries", 3) if dataset_kwargs is not None else 3
+        download_config.max_retries = dataset_kwargs.get("max_retries", 10) if dataset_kwargs is not None else 10
         download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
+        download_config.local_files_only = dataset_kwargs.get("local_files_only", False) if dataset_kwargs is not None else False
+        if dataset_kwargs is not None:
+            if "From_YouTube" in dataset_kwargs:
+
+                def _download_from_youtube(path):
+                    try:
+                        for video in tqdm(self.all_dataset[split]):
+                            video_id = video["videoID"]
+                            target_path = os.path.join(path, f"{video_id}.mp4")
+                            assert shutil.which("yt-dlp") is not None, "yt-dlp must be installed and available in the system's PATH"
+                            command = f"yt-dlp -o {target_path} -f mp4 https://www.youtube.com/watch?v={video_id}"
+                            subprocess.run(command, shell=True)
+                        with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
+                            f.write(json.dumps({task: "downloaded"}))
+                    except Exception as e:
+                        eval_logger.error(f"Error while downloading {task} data: {e}")
+                        with open(os.path.join(cache_path, f"{task}_download_status.json"), "w") as f:
+                            f.write(json.dumps({task: "not downloaded"}))
+
+                hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+                accelerator = Accelerator()
+                if accelerator.is_main_process:
+                    dataset_kwargs.pop("From_YouTube")
+                    self.all_dataset = datasets.load_dataset(
+                        path=self.DATASET_PATH,
+                        name=self.DATASET_NAME,
+                        download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+                        **dataset_kwargs if dataset_kwargs is not None else {},
+                    )
+                    dataset_kwargs["From_YouTube"] = True
+                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")  # download_parquet
+                    split = vars(self.config)["test_split"]
+                    task = vars(self.config)["task"]
+
+                    video_path = os.path.join(hf_home, task)
+                    if os.path.exists(os.path.join(cache_path, f"{task}_download_status.json")):
+                        download_status = json.load(open(os.path.join(cache_path, f"{task}_download_status.json"), "r"))
+                        if download_status[task] == "downloaded":
+                            eval_logger.info(f"Data for {task} already download!")
+                        else:
+                            eval_logger.info(f"Start downloading YouTube data to {video_path}...")
+                            _download_from_youtube(video_path)
+                    else:
+                        eval_logger.info(f"Start downloading YouTube data to {video_path}...")
+                        _download_from_youtube(video_path)
+
+                accelerator.wait_for_everyone()
+                if "builder_script" in dataset_kwargs:
+                    builder_script = dataset_kwargs["builder_script"]
+                    self.DATASET_PATH = os.path.join(cache_path, builder_script)
+                    dataset_kwargs.pop("builder_script")
+
+                downloaded_video_ids = [i.split(".mp4")[0] for i in os.listdir(os.path.expanduser(video_path)) if i.endswith(".mp4")]
+                # Filtered the existing dataset with the downloaded video ids
+                self.dataset = datasets.DatasetDict({split: self.all_dataset[split].filter(lambda x: x["videoID"] in downloaded_video_ids)})
+
+                self.dataset_no_image = self.dataset
+                dataset_kwargs.pop("From_YouTube")
+                return
+
+            if "video" in dataset_kwargs and dataset_kwargs["video"]:
+                hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+                cache_dir = dataset_kwargs["cache_dir"]
+                cache_dir = os.path.join(hf_home, cache_dir)
+                accelerator = Accelerator()
+                if accelerator.is_main_process:
+                    force_download = dataset_kwargs.get("force_download", False)
+                    force_unzip = dataset_kwargs.get("force_unzip", False)
+                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60)
+                    zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
+                    tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
+
+                    def unzip_video_data(zip_file):
+                        import zipfile
+
+                        with zipfile.ZipFile(zip_file, "r") as zip_ref:
+                            zip_ref.extractall(cache_dir)
+                            eval_logger.info(f"Extracted all files from {zip_file} to {cache_dir}")
+
+                    def untar_video_data(tar_file):
+                        import tarfile
+                        with tarfile.open(tar_file, "r") as tar_ref:
+                            tar_ref.extractall(cache_dir)
+                            eval_logger.info(f"Extracted all files from {tar_file} to {cache_dir}")
+
+
+    
+                    def concat_tar_parts(tar_parts, output_tar):
+                        with open(output_tar, 'wb') as out_tar:
+                            from tqdm import tqdm
+                            for part in tqdm(sorted(tar_parts)):
+                                with open(part, 'rb') as part_file:
+                                    out_tar.write(part_file.read())
+                        eval_logger.info(f"Concatenated parts {tar_parts} into {output_tar}")
+
+                    # Unzip zip files if needed
+                    if force_unzip or (not os.path.exists(cache_dir) and len(zip_files) > 0):
+                        for zip_file in zip_files:
+                            unzip_video_data(zip_file)
+
+                    # Concatenate and extract tar files if needed
+                    if force_unzip or (not os.path.exists(cache_dir) and len(tar_files) > 0):
+                        tar_parts_dict = {}
+                        
+                        # Group tar parts together
+                        for tar_file in tar_files:
+                            base_name = tar_file.split('.tar')[0]
+                            if base_name not in tar_parts_dict:
+                                tar_parts_dict[base_name] = []
+                            tar_parts_dict[base_name].append(tar_file)
+
+                        
+                        # Concatenate and untar split parts
+                        for base_name, parts in tar_parts_dict.items():
+                            eval_logger.info(f"Extracting following tar files: {parts}")
+                            output_tar = base_name + ".tar"
+                            if not os.path.exists(output_tar):
+                                eval_logger.info(f"Start concatenating tar files")
+
+                                concat_tar_parts(parts, output_tar)
+                                eval_logger.info(f"Finish concatenating tar files")
+
+                            if not os.path.exists(os.path.join(cache_dir, os.path.basename(base_name))):
+                                untar_video_data(output_tar)
+
+                accelerator.wait_for_everyone()
+                dataset_kwargs.pop("cache_dir")
+                dataset_kwargs.pop("video")
+
+            if "builder_script" in dataset_kwargs:
+                builder_script = dataset_kwargs["builder_script"]
+                self.DATASET_PATH = os.path.join(cache_path, builder_script)
+                dataset_kwargs.pop("builder_script")
+
+            if "force_download" in dataset_kwargs:
+                dataset_kwargs.pop("force_download")
+
+            if "force_unzip" in dataset_kwargs:
+                dataset_kwargs.pop("force_unzip")
+
+            if "local_files_only" in dataset_kwargs:
+                dataset_kwargs.pop("local_files_only")
+
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+            download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
         self.dataset_no_image = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+            download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
         for doc_name in self.dataset_no_image:
@@ -972,9 +1144,17 @@ class ConfigurableTask(Task):
             arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual, doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
-    def process_results(self, doc, results):
+    # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
+    @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
+    def process_results(self, doc, results, full_docs=None):
+        if self.OUTPUT_TYPE == "generate_until":
+            results[0] = results[0].strip()
+
+        kwargs = {}
+        if full_docs is not None:
+            kwargs["full_docs"] = full_docs
         if callable(self.config.process_results):
-            return self.config.process_results(doc, results)
+            return self.config.process_results(doc, results, **kwargs)
 
         result_dict = {}
         use_metric = list(self._metric_fn_list.keys())

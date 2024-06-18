@@ -1,0 +1,18 @@
+dataset_path: MM-UPD/MM-UPD
+doc_to_target: "answer"
+doc_to_visual: !function utils.mmupd_doc_to_visual
+doc_to_text: !function utils.mmupd_doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.mmupd_process_results
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
+output_type: generate_until
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false

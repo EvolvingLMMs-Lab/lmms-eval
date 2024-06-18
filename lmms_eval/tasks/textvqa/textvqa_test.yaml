@@ -2,6 +2,6 @@ task: textvqa_test
 test_split: test
 metric_list:
   - metric: submission
-    aggregation: !function utils.textvqa_aggreate_submissions
+    aggregation: !function utils.textvqa_aggregate_submissions
     higher_is_better: true
 include: _default_template_textvqa_yaml

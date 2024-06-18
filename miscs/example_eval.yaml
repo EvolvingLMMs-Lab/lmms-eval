@@ -1,0 +1,8 @@
+- model: llava
+  model_args: pretrained=liuhaotian/llava-v1.5-7b
+  tasks: mmmu_val
+  batch_size: 1
+  log_samples: true
+  log_samples_suffix: eval_mmmu
+  output_path: "./logs/"
+
