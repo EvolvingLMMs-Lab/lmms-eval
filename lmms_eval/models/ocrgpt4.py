@@ -67,12 +67,7 @@ class OCRGPT4(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             imgs = []
-            texts = ""
-            for visual in visuals:
-                texts += pytesseract.image_to_string(visual)
-
-            texts += f"\n\n {contexts}"
-            
+            texts = f"{contexts}"
             payload = {"model": self.model_version, "messages": []}
             messages = [{"role": "user", "content": texts}]
             payload['messages'] = messages
