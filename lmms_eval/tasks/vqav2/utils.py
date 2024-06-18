@@ -80,7 +80,7 @@ def vqav2_doc_to_text(doc, model_specific_prompt_kwargs=None):
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 
-def vqav2_aggreate_submissions(results, args):
+def vqav2_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     submission_file_name = f"vqav2-test-submission-{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)

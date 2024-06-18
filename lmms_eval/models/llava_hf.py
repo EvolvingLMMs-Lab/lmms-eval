@@ -8,7 +8,7 @@ from lmms_eval.api.registry import register_model
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
-from transformers import LlavaForConditionalGeneration, AutoProcessor
+from transformers import LlavaForConditionalGeneration, LlavaNextForConditionalGeneration, AutoProcessor
 
 import warnings
 
@@ -31,10 +31,10 @@ class LlavaHf(lmms):
 
     Example usage:
 
-    accelerate launch --num_processes=8 -m lmms_eval \
+    accelerate launch --num_processes=8 --main_process_port 12345 -m lmms_eval \
         --model llava_hf \
         --model_args pretrained=llava-hf/llava-1.5-7b-hf \
-        --tasks mme \
+        --tasks seedbench \
         --batch_size 1 \
         --output_path ./logs/ \
         --log_samples
@@ -67,7 +67,16 @@ class LlavaHf(lmms):
             self.device_map = device_map
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
-        self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+
+        if "1.5" in pretrained:
+            self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+        elif "1.6" in pretrained:
+            self._model = LlavaNextForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+        else:
+            eval_logger.info("Not sure whether you use 1.5 or 1.6. Use 1.5 by default. This might cause bugs if you are actually using 1.6")
+            self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+
+        self.pretrained = pretrained
         self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._image_processor.tokenizer.padding_side = "left"
@@ -106,6 +115,7 @@ class LlavaHf(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._word_size = 1
+        self.accelerator = accelerator
 
     @property
     def config(self):
@@ -199,8 +209,8 @@ class LlavaHf(lmms):
             labels[: len(contxt_id)] = -100
 
             if self.accelerator.is_main_process and doc_id % 100 == 0:
-                eval_logger.info(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
-                eval_logger.info(f"Prompt and continuation for doc ID {doc_id}:\n\n{formatted_continuation[0]}\n")
+                eval_logger.debug(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
+                eval_logger.debug(f"Prompt and continuation for doc ID {doc_id}:\n\n{formatted_continuation[0]}\n")
 
             with torch.inference_mode():
                 outputs = self.model(**model_inputs, labels=labels)
@@ -268,7 +278,9 @@ class LlavaHf(lmms):
 
             # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
             if DEFAULT_IMAGE_TOKEN not in context:
-                context = f"{DEFAULT_IMAGE_TOKEN}\n{context}"
+                image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
+                image_tokens = " ".join(image_tokens)
+                context = f"{image_tokens}\n{context}"
             # Apply chat template
             messages = [{"role": "user", "content": context}]
             if self.chat_template is not None:
@@ -281,7 +293,7 @@ class LlavaHf(lmms):
                 text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
-                eval_logger.info(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
+                eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
 
             inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self.model.dtype)
 
@@ -303,15 +315,21 @@ class LlavaHf(lmms):
                     num_beams=gen_kwargs["num_beams"],
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                     use_cache=self.use_cache,
+                    pad_token_id=self.tokenizer.eos_token_id,
                 )
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
-            text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
+            if "1.5" in self.pretrained:
+                text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
+            elif "mistral" in self.pretrained:
+                text_outputs = text_outputs.split("[/INST]")[-1].strip()
+            else:
+                text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
-                eval_logger.info(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
+                eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
 
             res.append(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)

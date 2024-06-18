@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_food_cn_eval
-test_split: sft_food
-dataset_name: sft_food
-include: _default_sft_eval_rest_template_yaml

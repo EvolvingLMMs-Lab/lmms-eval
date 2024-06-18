@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_status_cn_eval
-test_split: sft_status
-dataset_name: sft_status
-include: _default_sft_eval_rest_template_yaml

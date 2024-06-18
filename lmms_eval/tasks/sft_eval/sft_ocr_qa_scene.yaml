@@ -1,5 +1,0 @@
-group: sft_eval
-task: sft_ocr_sceneQA_cn_eval
-test_split: sft_ocr_qa_scene
-dataset_name: sft_ocr_qa_scene
-include: _default_sft_eval_rest_template_yaml

@@ -13,7 +13,7 @@ metric_list:
     ignore_case: true
     ignore_punctuation: true
   - metric: submission
-    aggregation: !function utils.ok_vqa_aggreate_submissions
+    aggregation: !function utils.ok_vqa_aggregate_submissions
     higher_is_better: true
 process_results: !function utils.ok_vqa_process_results
 model_specific_prompt_kwargs:
