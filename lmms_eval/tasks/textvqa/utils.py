@@ -59,7 +59,7 @@ def textvqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
     return f"{pre_prompt}{doc['question'].capitalize()}{ocr_ref}{post_prompt}"
 
 
-def textvqa_aggreate_submissions(results, args):
+def textvqa_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     path = generate_submission_file(f"textvqa_submission_{now_date_time}.json", args)
     with open(path, "w") as f:
