@@ -86,8 +86,9 @@ def extract_subset_name(input_string):
 
 def mmmu_test_aggregate_results_for_submission(results, args):
     path = generate_submission_file("mmmu_test_for_submission.json", args)
+    results_dict = {list(item.keys())[0]: list(item.values())[0] for item in results}
     with open(path, "w") as f:
-        json.dump(results, f)
+        json.dump(results_dict, f)
     lmms_logger.info(f"Results saved to {path}.")
 
 
