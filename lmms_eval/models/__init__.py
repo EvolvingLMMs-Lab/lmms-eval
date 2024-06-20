@@ -34,5 +34,6 @@ AVAILABLE_MODELS = {
 for model_name, model_class in AVAILABLE_MODELS.items():
     try:
         exec(f"from .{model_name} import {model_class}")
-    except ImportError:
+    except ImportError as e:
+        print(f"Failed to import {model_class} from {model_name}: {e}")
         pass
