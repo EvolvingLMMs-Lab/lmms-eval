@@ -15,10 +15,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from transformers import PreTrainedTokenizer
-from transformers import logging
 from transformers.generation import LogitsProcessor
 
-logger = logging.get_logger(__name__)
+from loguru import logger
 
 # Types.
 HistoryType = List[Tuple[str, str]]

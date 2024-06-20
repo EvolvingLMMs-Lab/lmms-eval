@@ -2,7 +2,7 @@ import torch
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
-import logging
+
 import copy
 from tqdm import tqdm
 from datetime import timedelta
@@ -21,7 +21,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     from llava.model.builder import load_pretrained_model

@@ -1,4 +1,3 @@
-import logging
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -15,17 +14,19 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger
 
-# try:
-#     import torch
-#     from videollava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN
-#     from videollava.conversation import conv_templates, SeparatorStyle
-#     from videollava.model.builder import load_pretrained_model
-#     from videollava.utils import disable_torch_init
-#     from videollava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-# except ImportError:
-#     eval_logger.debug("Video-LLaVA is not installed. Please install Video-LLaVA to use this model.")
+eval_logger = logger
+
+try:
+    import torch
+    from videollava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN
+    from videollava.conversation import conv_templates, SeparatorStyle
+    from videollava.model.builder import load_pretrained_model
+    from videollava.utils import disable_torch_init
+    from videollava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
+except ImportError as e:
+    eval_logger.warning(f"Error importing Video-LLaVA: {e}")
 
 from transformers import VideoLlavaProcessor, VideoLlavaForConditionalGeneration
 from lmms_eval.models.model_utils.load_video import read_video_pyav

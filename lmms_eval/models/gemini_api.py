@@ -1,7 +1,7 @@
 import io
 import os
 import time
-import logging
+
 import json
 
 from PIL import Image
@@ -12,7 +12,7 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     import google.generativeai as genai

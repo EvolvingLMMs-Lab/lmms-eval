@@ -11,9 +11,7 @@ from torch.utils.data import Dataset
 from transformers.modeling_utils import PreTrainedModel
 
 
-import logging
-
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     import zss

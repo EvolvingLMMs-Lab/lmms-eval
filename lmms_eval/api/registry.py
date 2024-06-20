@@ -1,10 +1,9 @@
 from lmms_eval.api.model import lmms
 
 from typing import Callable, Dict
-import logging
 import evaluate as hf_evaluate
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 MODEL_REGISTRY = {}
 
