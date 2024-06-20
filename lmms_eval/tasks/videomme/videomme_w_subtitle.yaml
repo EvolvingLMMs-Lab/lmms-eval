@@ -4,11 +4,11 @@ dataset_kwargs:
   cache_dir: videomme
   video: True
   # From_YouTube: True
-task: videomme
+task: videomme_w_subtitle
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.videomme_doc_to_visual
-doc_to_text: !function utils.videomme_doc_to_text
+doc_to_text: !function utils.videomme_doc_to_text_subtitle
 doc_to_target: "answer"
 generation_kwargs:
   max_new_tokens: 16
@@ -25,19 +25,20 @@ metric_list:
     higher_is_better: true
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: ""
-    post_prompt: "\nAnswer the question with A, B, C, or D."
-  gpt4v:
-    pre_prompt: ""
-    post_prompt: "\nAnswer the question with A, B, C, or D."
-  # qwen_vl:  
+    frame_num: 32
+  gemini_api:
+    gemini_api_flag: "full subtitle"
+  # gpt4v:
   #   pre_prompt: ""
-  #   post_prompt: " Answer:"
-  # otterhd:
-  #   pre_prompt: ""
-  #   post_prompt: " Answer:"
-  xcomposer2_4khd:
-    pre_prompt: "[UNUSED_TOKEN_146]user\n"
-    post_prompt: " Answer this question with A, B, C, or D.[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
+  #   post_prompt: 
+  # # qwen_vl:  
+  # #   pre_prompt: ""
+  # #   post_prompt: " Answer:"
+  # # otterhd:
+  # #   pre_prompt: ""
+  # #   post_prompt: " Answer:"
+  # xcomposer2_4khd:
+  #   pre_prompt: "[UNUSED_TOKEN_146]user\n"
+  #   post_prompt: " Answer this question with A, B, C, or D.[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
 metadata:
   - version: 0.0
