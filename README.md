@@ -201,7 +201,7 @@ Please check [supported tasks](lmms_eval/docs/current_tasks.md) for more details
 
 ## Add Customized Model and Dataset
 
-Please refer to our [documentation](tools/make_image_hf_dataset.ipynb).
+Please refer to our [documentation](docs/README.md).
 
 ## Acknowledgement
 
