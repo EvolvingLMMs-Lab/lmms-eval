@@ -51,6 +51,7 @@ dependencies = [
     "mpmath",
     "Jinja2",
     "openpyxl",
+    "loguru",
     "Levenshtein",
     "hf_transfer",
     "tenacity==8.3.0",

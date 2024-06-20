@@ -1,5 +1,5 @@
 import json
-import logging
+
 import re
 from collections import Counter, defaultdict
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -12,7 +12,7 @@ def q_bench_doc_to_text(doc, model_specific_prompt_kwargs):
         if candidate != "N/A":
             candidates.append(candidate)
 
-    question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A")+i), candidate]) for i, candidate in enumerate(candidates)])
+    question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(candidates)])
     pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
     return f"{pre_prompt}{question}\n{post_prompt}"
@@ -121,6 +121,7 @@ def evaluate_q_bench(samples):
         return {"acc": 0}
     return judge_dict, {"acc": pred_correct / len(samples)}
 
+
 def eval_multi_choice(gold_i, pred_i):
     correct = False
     # only they are exactly the same, we consider it as correct
@@ -133,6 +134,7 @@ def eval_multi_choice(gold_i, pred_i):
         if gold_i == pred_i:
             correct = True
     return correct
+
 
 def calculate_ins_level_acc(results):
     """Calculate the instruction level accuracy for given Subject results
@@ -173,6 +175,7 @@ def q_bench_process_results(doc, results):
 concern_list = ["Global Distortion", "Global Others", "Local Distortion", "Local Others"]
 question_list = ["Yes/No", "How", "What"]
 
+
 def q_bench_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
@@ -184,7 +187,7 @@ def q_bench_aggregate_results(results):
         metric_dict.update({"num_example": len(sub_eval_samples)})
         evaluation_result[subset] = metric_dict
     printable_results = {}
-    
+
     for cat_name, cat_results in evaluation_result.items():
         printable_results[cat_name] = {
             "num": int(cat_results["num_example"]),
@@ -197,6 +200,7 @@ def q_bench_aggregate_results(results):
     }
     print(printable_results)
     return printable_results["Overall"]["acc"]
+
 
 def a_bench_process_results(doc, results):
     pred = results[0]
@@ -220,7 +224,6 @@ def a_bench_process_results(doc, results):
     }
 
 
-
 def a_bench_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
@@ -231,7 +234,7 @@ def a_bench_aggregate_results(results):
         metric_dict.update({"num_example": len(sub_eval_samples)})
         evaluation_result[subset] = metric_dict
     printable_results = {}
-    
+
     for cat_name, cat_results in evaluation_result.items():
         printable_results[cat_name] = {
             "num": int(cat_results["num_example"]),
@@ -244,4 +247,3 @@ def a_bench_aggregate_results(results):
     }
     print(printable_results)
     return printable_results["Overall"]["acc"]
-

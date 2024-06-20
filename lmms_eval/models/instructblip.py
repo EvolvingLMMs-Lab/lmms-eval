@@ -1,5 +1,5 @@
 import torch
-import logging
+
 import copy
 from tqdm import tqdm
 from lmms_eval import utils
@@ -20,8 +20,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
-transformers.logging.set_verbosity_error()
+from loguru import logger as eval_logger
 
 
 @register_model("instructblip")

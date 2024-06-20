@@ -1,7 +1,7 @@
 import re
 import os
 import json
-import logging
+
 import datetime
 import statistics
 
@@ -10,7 +10,7 @@ import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.tasks._task_utils.vqa_eval_metric import EvalAIAnswerProcessor
 
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def vqav2_doc_to_visual(doc):
@@ -19,9 +19,7 @@ def vqav2_doc_to_visual(doc):
 
 def vqav2_process_results(doc, result):
     eval_ai_processor = EvalAIAnswerProcessor()
-    assert (
-        len(result) == 1
-    ), f"The result should be a list of length 1, but got {len(result)}."
+    assert len(result) == 1, f"The result should be a list of length 1, but got {len(result)}."
     resAns = eval_ai_processor(result[0])
     accuracy = 0
 
@@ -35,12 +33,8 @@ def vqav2_process_results(doc, result):
 
         if len(set(gtAnswers)) > 1:
             for ansDic in doc["answers"]:
-                ansDic["answer"] = eval_ai_processor.process_punctuation(
-                    ansDic["answer"]
-                )
-                ansDic["answer"] = eval_ai_processor.process_digit_article(
-                    ansDic["answer"]
-                )
+                ansDic["answer"] = eval_ai_processor.process_punctuation(ansDic["answer"])
+                ansDic["answer"] = eval_ai_processor.process_digit_article(ansDic["answer"])
             resAns = eval_ai_processor.process_punctuation(resAns)
             resAns = eval_ai_processor.process_digit_article(resAns)
 

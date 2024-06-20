@@ -1,11 +1,10 @@
-import re 
-import logging
+import re
+
 from datasets import Dataset
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 REC_METRICS = ["IoU", "ACC@0.1", "ACC@0.3", "ACC@0.5", "ACC@0.7", "ACC@0.9", "Center_ACC"]
-
 
 
 def screenspot_rec_doc_to_visual(doc):
@@ -15,7 +14,10 @@ def screenspot_rec_doc_to_visual(doc):
 
 
 def screenspot_rec_doc_to_text(doc):
-    return "Bounding box coordinates are specified in the format (top-left x, top-left y, bottom-right x, bottom-right y). All values are floating point numbers bounded between 0 and 1 with two decimal places of precision (e.g., 0.15). Please provide the bounding box coordinates of the region that corresponds to the command: " + doc["instruction"]
+    return (
+        "Bounding box coordinates are specified in the format (top-left x, top-left y, bottom-right x, bottom-right y). All values are floating point numbers bounded between 0 and 1 with two decimal places of precision (e.g., 0.15). Please provide the bounding box coordinates of the region that corresponds to the command: "
+        + doc["instruction"]
+    )
 
 
 def parse_float_sequence_within(input_str):
@@ -29,15 +31,15 @@ def parse_float_sequence_within(input_str):
     list: A list of four floats if the pattern is found, or a list of four zeros if the pattern is not found.
     """
     # Define the regex pattern to find the first instance of four floats within square brackets
-    pattern = r'\[\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\s*\]'
-    
+    pattern = r"\[\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\s*\]"
+
     # Use re.search to find the first match of the pattern in the input string
     match = re.search(pattern, input_str)
-    
+
     # If a match is found, convert the captured groups into a list of floats
     if match:
         return [float(match.group(i)) for i in range(1, 5)]
-    
+
     # If the input does not contain the pattern, return the null float sequence
     return [0, 0, 0, 0]
 
@@ -53,7 +55,7 @@ def screenspot_rec_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
     pred = parse_float_sequence_within(pred)
     ann_id = doc["file_name"]
-    data_dict = {"instruction": doc["instruction"], "pred": pred, "ann_id": ann_id, 'bbox': doc['bbox'], 'data_type': doc['data_type'], 'data_source': doc['data_source']}
+    data_dict = {"instruction": doc["instruction"], "pred": pred, "ann_id": ann_id, "bbox": doc["bbox"], "data_type": doc["data_type"], "data_source": doc["data_source"]}
     return {f"screenspot_{metric}": data_dict for metric in REC_METRICS}
 
 
@@ -137,46 +139,46 @@ def screenspot_rec_aggregation_result(results, metric):
     - dict: Dictionary containing the aggregated results for the specified metric.
     """
     scorers = {
-        'IoU': compute_iou,
-        'ACC@0.1': lambda x, y: compute_accuracy(x, y, 0.1),
-        'ACC@0.3': lambda x, y: compute_accuracy(x, y, 0.3),
-        'ACC@0.5': lambda x, y: compute_accuracy(x, y, 0.5),
-        'ACC@0.7': lambda x, y: compute_accuracy(x, y, 0.7),
-        'ACC@0.9': lambda x, y: compute_accuracy(x, y, 0.9),
-        'Center_ACC': compute_center_accuracy
+        "IoU": compute_iou,
+        "ACC@0.1": lambda x, y: compute_accuracy(x, y, 0.1),
+        "ACC@0.3": lambda x, y: compute_accuracy(x, y, 0.3),
+        "ACC@0.5": lambda x, y: compute_accuracy(x, y, 0.5),
+        "ACC@0.7": lambda x, y: compute_accuracy(x, y, 0.7),
+        "ACC@0.9": lambda x, y: compute_accuracy(x, y, 0.9),
+        "Center_ACC": compute_center_accuracy,
     }
     results_dict = {
-        metric: [], 
-        metric + '-mobile_text': [], 
-        metric + '-mobile_icon': [],
-        metric + '-web_text': [], 
-        metric + '-web_icon': [],
-        metric + '-desktop_text': [], 
-        metric + '-desktop_icon': [],
+        metric: [],
+        metric + "-mobile_text": [],
+        metric + "-mobile_icon": [],
+        metric + "-web_text": [],
+        metric + "-web_icon": [],
+        metric + "-desktop_text": [],
+        metric + "-desktop_icon": [],
     }
     for result in results:
         # Extract the ground truth and predicted bounding boxes
-        gt = result['bbox']
-        pred = result['pred']
+        gt = result["bbox"]
+        pred = result["pred"]
 
         # Compute the specified metric between the ground truth and predicted bounding boxes
         score = scorers[metric](gt, pred)
 
         results_dict[metric].append(score)
-        if result['data_type'] == 'text':
-            if 'ios' in result['data_source'] or 'android' in result['data_source']:
-                results_dict[metric + '-mobile_text'].append(score)
-            elif 'macos' in result['data_source'] or 'windows' in result['data_source']:
-                results_dict[metric + '-desktop_text'].append(score)
+        if result["data_type"] == "text":
+            if "ios" in result["data_source"] or "android" in result["data_source"]:
+                results_dict[metric + "-mobile_text"].append(score)
+            elif "macos" in result["data_source"] or "windows" in result["data_source"]:
+                results_dict[metric + "-desktop_text"].append(score)
             else:
-                results_dict[metric + '-web_text'].append(score)
+                results_dict[metric + "-web_text"].append(score)
         else:
-            if 'ios' in result['data_source'] or 'android' in result['data_source']:
-                results_dict[metric + '-mobile_icon'].append(score)
-            elif 'macos' in result['data_source'] or 'windows' in result['data_source']:
-                results_dict[metric + '-desktop_icon'].append(score)
+            if "ios" in result["data_source"] or "android" in result["data_source"]:
+                results_dict[metric + "-mobile_icon"].append(score)
+            elif "macos" in result["data_source"] or "windows" in result["data_source"]:
+                results_dict[metric + "-desktop_icon"].append(score)
             else:
-                results_dict[metric + '-web_icon'].append(score)
+                results_dict[metric + "-web_icon"].append(score)
 
     for key in results_dict:
         if len(results_dict[key]) == 0:
@@ -194,6 +196,7 @@ def screenspot_rec_iou(results):
 
 def screenspot_rec_acc01(results):
     return screenspot_rec_aggregation_result(results, "ACC@0.1")
+
 
 def screenspot_rec_acc03(results):
     return screenspot_rec_aggregation_result(results, "ACC@0.3")

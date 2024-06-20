@@ -5,11 +5,11 @@ import random
 import numpy as np
 import os
 import json
-import logging
+
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-lmms_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 MULTI_CHOICE_PROMPT = "Answer with the option's letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
@@ -89,7 +89,7 @@ def mmmu_test_aggregate_results_for_submission(results, args):
     results_dict = {list(item.keys())[0]: list(item.values())[0] for item in results}
     with open(path, "w") as f:
         json.dump(results_dict, f)
-    lmms_logger.info(f"Results saved to {path}.")
+    eval_logger.info(f"Results saved to {path}.")
 
 
 def mmmu_aggregate_results(results):

@@ -1,12 +1,10 @@
 import os
 import yaml
 import sys
-import copy
 import json
-import logging
+
 import traceback
 import argparse
-import torch
 import numpy as np
 import datetime
 
@@ -25,10 +23,7 @@ from lmms_eval import evaluator, utils
 from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict
 from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.logging_utils import WandbLogger
-from lmms_eval.utils import PathFormatter
-
-
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def _handle_non_serializable(o):
@@ -166,9 +161,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         print("└───────────────────────────────────────────────────────────────────────────────┘")
         sys.exit(1)
 
-    set_loggers(args)
-    eval_logger = logging.getLogger("lmms-eval")
-    eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
+    # reset logger
+    eval_logger.remove()
+    eval_logger.add(sys.stdout, colorize=True, level=args.verbosity)
+    eval_logger.add(sys.stderr, level=args.verbosity)
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -228,11 +224,6 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
-    eval_logger = logging.getLogger("lmms-eval")
-    eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
-    eval_logger.info(f"Verbosity set to {args.verbosity}")
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
     initialize_tasks(args.verbosity)
 
     if args.predict_only:
@@ -348,14 +339,6 @@ def print_results(args, results):
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))
-
-
-def set_loggers(args):
-    eval_logger = logging.getLogger("lmms-eval")
-    ch = logging.StreamHandler()
-    formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(levelname)s %(message)s", "%m-%d %H:%M:%S", timezone=args.timezone)
-    ch.setFormatter(formatter)
-    eval_logger.addHandler(ch)
 
 
 if __name__ == "__main__":

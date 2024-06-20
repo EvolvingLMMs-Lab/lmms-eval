@@ -7,7 +7,7 @@ from typing import List, Tuple
 from tqdm import tqdm
 import requests as url_requests
 import time
-import logging
+
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -26,7 +26,7 @@ from PIL import Image
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 30
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")

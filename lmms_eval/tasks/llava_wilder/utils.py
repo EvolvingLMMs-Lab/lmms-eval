@@ -3,7 +3,7 @@ import yaml
 import os
 from pathlib import Path
 import requests
-import logging
+
 import time
 from copy import deepcopy
 import numpy as np
@@ -11,7 +11,7 @@ from http import HTTPStatus
 from io import BytesIO
 
 # Set up a logger
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 # Create a static variable to track if the message has been logged
 if not hasattr(eval_logger, "dashcope_warning_logged"):

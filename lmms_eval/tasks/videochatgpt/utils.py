@@ -5,7 +5,7 @@ import sys
 import datetime
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
-import logging
+
 import yaml
 from pathlib import Path
 
@@ -16,7 +16,7 @@ import time
 import ast
 from tqdm import tqdm
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()

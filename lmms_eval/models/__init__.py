@@ -1,7 +1,8 @@
-import os
-import hf_transfer
+from loguru import logger
+import sys
 
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+logger.remove()
+logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
     "llava": "Llava",
@@ -33,5 +34,5 @@ for model_name, model_class in AVAILABLE_MODELS.items():
     try:
         exec(f"from .{model_name} import {model_class}")
     except ImportError as e:
-        print(f"Failed to import {model_class} from {model_name}: {e}")
+        # logger.warning(f"Failed to import {model_class} from {model_name}: {e}")
         pass

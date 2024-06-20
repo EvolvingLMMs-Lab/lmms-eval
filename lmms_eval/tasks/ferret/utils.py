@@ -1,5 +1,5 @@
 import json
-import logging
+
 import os
 import requests
 import numpy as np
@@ -10,7 +10,8 @@ import yaml
 from pathlib import Path
 from copy import deepcopy
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
+
 NUM_SECONDS_TO_SLEEP = 0.5
 
 FERRET_W_METRICS = ["gpt_eval_ferret_refer_desc", "gpt_eval_ferret_refer_reason", "gpt_eval_ferret_ground_conv"]
