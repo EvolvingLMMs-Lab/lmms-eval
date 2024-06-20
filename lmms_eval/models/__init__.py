@@ -29,6 +29,7 @@ AVAILABLE_MODELS = {
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
     "tinyllava": "TinyLlava",
+    "llava_hf" : "LlavaHf",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
