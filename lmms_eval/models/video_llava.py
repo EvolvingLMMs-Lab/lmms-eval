@@ -18,16 +18,6 @@ from loguru import logger
 
 eval_logger = logger
 
-try:
-    import torch
-    from videollava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN
-    from videollava.conversation import conv_templates, SeparatorStyle
-    from videollava.model.builder import load_pretrained_model
-    from videollava.utils import disable_torch_init
-    from videollava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-except ImportError as e:
-    eval_logger.warning(f"Error importing Video-LLaVA: {e}")
-
 from transformers import VideoLlavaProcessor, VideoLlavaForConditionalGeneration
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
