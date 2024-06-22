@@ -13,17 +13,6 @@ from io import BytesIO
 # Set up a logger
 from loguru import logger as eval_logger
 
-# Create a static variable to track if the message has been logged
-if not hasattr(eval_logger, "dashcope_warning_logged"):
-    eval_logger.dashcope_warning_logged = False
-
-try:
-    import dashscope
-except ImportError:
-    if not eval_logger.dashcope_warning_logged:
-        eval_logger.debug("Dashcope not found, make sure you install dashscope to use qwen vl")
-        eval_logger.dashcope_warning_logged = True
-
 NUM_SECONDS_TO_SLEEP = 5
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -55,14 +44,6 @@ elif API_TYPE == "azure":
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     headers = {
         "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-elif API_TYPE == "qwen_vl":
-    API_URL = os.getenv("QWEN_ENDPOINT", "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation")
-    API_KEY = os.getenv("DASHSCOPE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
 
@@ -114,29 +95,6 @@ def image_to_base64(pil_image):
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 
-def qwen_multimodal_conversation_call(text_content, image_content, retries=5):
-    """Simple single round multimodal conversation call."""
-    messages = [{"role": "user", "content": [{"image": image_content}, {"text": text_content}]}]
-    for attempt in range(retries):
-        try:
-            response_data = dashscope.MultiModalConversation.call(model=GPT_EVAL_MODEL_NAME, messages=messages)
-            # The response status_code is HTTPStatus.OK indicate success,
-            # otherwise indicate request is failed, you can get error code
-            # and message from code and message.
-            content = response_data["output"]["choices"][0]["message"]["content"][0]["text"].strip()
-            if content != "":
-                return content, GPT_EVAL_MODEL_NAME
-            break  # If successful, break out of the loop
-        except Exception as e:
-            eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
-            if attempt < retries:  # If we have retries left, sleep and then continue to next attempt
-                time.sleep(NUM_SECONDS_TO_SLEEP)
-            else:  # If this was the last attempt, log and return empty
-                eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
-                return "", ""
-    return "", ""
-
-
 def parse_score(review):
     try:
         score_pair = review.split("\n")[0]
@@ -162,20 +120,13 @@ def llava_process_results(doc, result):
     """
     try:
         question = doc.get("question", "")
-        ans1 = doc.get("gpt4v_answer", "")
+        ans1 = doc.get("answer", "")
         ans2 = result[0] if result else ""
         content = f"[Question]\n{question}\n\n" + f"[Assistant 1]\n{ans1}\n\n[End of Assistant 1]\n\n" + f"[Assistant 2]\n{ans2}\n\n[End of Assistant 2]\n\n" f"[System]\n{judge_rules}\n\n"
         visuals = llava_doc_to_visual(doc)
-        if API_TYPE == "qwen_vl":
-            file_path = os.path.join(dir_path, f"tmp_{doc['question_id']}.jpg")
-            visuals[0].save(file_path)
-            image_content = "file://" + file_path
-            review, model_name = qwen_multimodal_conversation_call(content, image_content=image_content)
-            os.remove(file_path)
-        elif API_TYPE == "openai":
-            image_path = doc["image"]
-            base64_image = image_to_base64(image_path)
-            review, model_name = get_chat_response(base64_image, content)
+        image_path = doc["image"]
+        base64_image = image_to_base64(image_path)
+        review, model_name = get_chat_response(base64_image, content)
         scores = parse_score(review)
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
