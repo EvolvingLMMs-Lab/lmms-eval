@@ -1,7 +1,7 @@
 import base64
 import requests
 import re
-import logging
+
 import os
 import yaml
 import json
@@ -18,7 +18,7 @@ def doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 # Assuming the config is loaded similarly as in d170_en/utils.py
 with open(Path(__file__).parent / "dc200_cn.yaml", "r") as f:

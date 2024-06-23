@@ -1,10 +1,10 @@
 import json
 import os
-import logging
+
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-logger = logging.getLogger("lmms-eval")
+from loguru import logger
 
 
 def docvqa_doc_to_visual(doc):

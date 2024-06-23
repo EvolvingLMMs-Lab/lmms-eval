@@ -1,4 +1,4 @@
-import os
+import os, sys
 from typing import List, Union, Dict
 
 from lmms_eval import utils
@@ -13,9 +13,9 @@ from lmms_eval.api.registry import (
     ALL_TASKS,
 )
 
-import logging
+from loguru import logger
 
-eval_logger = logging.getLogger("lmms-eval")
+eval_logger = logger
 
 
 def register_configurable_task(config: Dict[str, str]) -> int:
@@ -109,7 +109,9 @@ def include_path(task_dir):
 
 
 def initialize_tasks(verbosity="INFO"):
-    eval_logger.setLevel(getattr(logging, f"{verbosity}"))
+    logger.remove()
+    eval_logger.add(sys.stdout, colorize=True, level=verbosity)
+    eval_logger.add(sys.stderr, level=verbosity)
     task_dir = os.path.dirname(os.path.abspath(__file__)) + "/"
     include_path(task_dir)
 

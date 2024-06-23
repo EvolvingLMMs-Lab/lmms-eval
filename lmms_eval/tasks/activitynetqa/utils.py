@@ -5,7 +5,7 @@ import sys
 import datetime
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
-import logging
+
 import yaml
 from pathlib import Path
 
@@ -15,7 +15,7 @@ from openai import OpenAI
 import time
 import ast
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -239,7 +239,6 @@ def activitynetqa_gpt_eval(results, args):
 
 # Factory into different aggregate
 def activitynetqa_aggregate_score(results, args):
-
     yes_count = 0
     no_count = 0
     total_score = 0

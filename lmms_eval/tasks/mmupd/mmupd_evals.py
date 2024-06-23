@@ -7,24 +7,23 @@ import math
 import numpy as np
 import pandas as pd
 import pickle
-import logging
+
 import json
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def dump(data, f):
-
     def dump_pkl(data, pth):
-        pickle.dump(data, open(pth, 'wb'))
+        pickle.dump(data, open(pth, "wb"))
 
     def dump_json(data, pth):
-        json.dump(data, open(pth, 'w'))
+        json.dump(data, open(pth, "w"))
 
     def dump_jsonl(data, f):
         lines = [json.dumps(x, ensure_ascii=False) for x in data]
-        with open(f, 'w', encoding='utf8') as fout:
-            fout.write('\n'.join(lines))
+        with open(f, "w", encoding="utf8") as fout:
+            fout.write("\n".join(lines))
 
     def dump_xlsx(data, f):
         data.to_excel(f, index=False)
@@ -33,45 +32,41 @@ def dump(data, f):
         data.to_csv(f, index=False)
 
     def dump_tsv(data, f):
-        data.to_csv(f, sep='\t', index=False)
+        data.to_csv(f, sep="\t", index=False)
 
-    handlers = dict(pkl=dump_pkl,
-                    json=dump_json,
-                    jsonl=dump_jsonl,
-                    xlsx=dump_xlsx,
-                    csv=dump_csv,
-                    tsv=dump_tsv)
-    suffix = f.split('.')[-1]
+    handlers = dict(pkl=dump_pkl, json=dump_json, jsonl=dump_jsonl, xlsx=dump_xlsx, csv=dump_csv, tsv=dump_tsv)
+    suffix = f.split(".")[-1]
     return handlers[suffix](data, f)
 
 
 def load(f):
     """
-        Loads data from various file formats.
+    Loads data from various file formats.
 
-        Parameters:
-        - file_path: Path to the file to be loaded.
+    Parameters:
+    - file_path: Path to the file to be loaded.
 
-        Returns:
-        - Loaded data.
+    Returns:
+    - Loaded data.
     """
+
     def load_pkl(pth):
-        return pickle.load(open(pth, 'rb'))
+        return pickle.load(open(pth, "rb"))
 
     def load_json(pth):
-        return json.load(open(pth, 'r', encoding='utf-8'))
+        return json.load(open(pth, "r", encoding="utf-8"))
 
     def load_jsonl(f):
-        lines = open(f, encoding='utf-8').readlines()
+        lines = open(f, encoding="utf-8").readlines()
         lines = [x.strip() for x in lines]
-        if lines[-1] == '':
+        if lines[-1] == "":
             lines = lines[:-1]
         data = [json.loads(x) for x in lines]
         return data
 
     def load_xlsx(f):
         df = pd.read_excel(f)
-        df = df.dropna(subset=['prediction'])
+        df = df.dropna(subset=["prediction"])
 
         return df
 
@@ -79,15 +74,10 @@ def load(f):
         return pd.read_csv(f)
 
     def load_tsv(f):
-        return pd.read_csv(f, sep='\t')
+        return pd.read_csv(f, sep="\t")
 
-    handlers = dict(pkl=load_pkl,
-                    json=load_json,
-                    jsonl=load_jsonl,
-                    xlsx=load_xlsx,
-                    csv=load_csv,
-                    tsv=load_tsv)
-    suffix = f.split('.')[-1]
+    handlers = dict(pkl=load_pkl, json=load_json, jsonl=load_jsonl, xlsx=load_xlsx, csv=load_csv, tsv=load_tsv)
+    suffix = f.split(".")[-1]
     return handlers[suffix](f)
 
 
@@ -115,9 +105,9 @@ class MMUPD_Evaluator:
             return True
         if type(value) is float and math.isnan(value):
             return True
-        if type(value) is str and value.lower() == 'nan':
+        if type(value) is str and value.lower() == "nan":
             return True
-        if type(value) is str and value.lower() == 'none':
+        if type(value) is str and value.lower() == "none":
             return True
         return False
 
@@ -134,7 +124,7 @@ class MMUPD_Evaluator:
 
     def extract_options(self, item):
         options = []
-        for c in 'ABCDE':
+        for c in "ABCDE":
             try:
                 if self.is_none(item[c]) is False:
                     options.append(item[c])
@@ -144,7 +134,7 @@ class MMUPD_Evaluator:
 
     def build_choices(self, item):
         ret = {}
-        for ch in 'ABCDE':
+        for ch in "ABCDE":
             try:
                 if self.is_none(item[ch]) is False:
                     ret[ch] = item[ch]
@@ -154,193 +144,196 @@ class MMUPD_Evaluator:
 
     def build_option_str_w_gt(self, option_list, gt_text, eval_type, question_type, upd_type):
         chars = string.ascii_uppercase
-        s = 'There are several options: \n'
+        s = "There are several options: \n"
         valid_option = []
         answer_option = []
 
         for c, opt in zip(chars, option_list):
             if self.is_none(opt) is False:
-                s += f'{c}. {opt}\n'
+                s += f"{c}. {opt}\n"
                 valid_option.append(c)
         if upd_type == "aad":
             if eval_type == "aad":
                 gt_option = ""
-                for option in ['C', 'D', 'E', 'F']:
+                for option in ["C", "D", "E", "F"]:
                     if option not in valid_option:
                         gt_option = option
                         break
-                none_option_mapping = {'C': 'D', 'D': 'E', 'E': 'F', 'F': 'G'}
-                s += f'{gt_option}. {gt_text}\n'
+                none_option_mapping = {"C": "D", "D": "E", "E": "F", "F": "G"}
+                s += f"{gt_option}. {gt_text}\n"
                 none_option = none_option_mapping[gt_option]
-                s += f'{none_option}. The correct answer is No answer, None of the above, \
-                    all provided options are incorrect, or I cannot answer.\n'
+                s += f"{none_option}. The correct answer is No answer, None of the above, \
+                    all provided options are incorrect, or I cannot answer.\n"
                 valid_option.append(gt_option)
                 valid_option.append(none_option)
                 answer_option = [gt_option, none_option]
-                if question_type == 'inst':
-                    s += f'F. None of the above\n'
+                if question_type == "inst":
+                    s += f"F. None of the above\n"
                     valid_option.append("F")
                     answer_option = [gt_option, none_option, "F"]
 
             if eval_type == "standard":
                 none_option = ""
-                for option in ['C', 'D', 'E', 'F']:
+                for option in ["C", "D", "E", "F"]:
                     if option not in valid_option:
                         none_option = option
                         break
-                s += f'{none_option}. The correct answer is No answer, None of the above, \
-                    all provided options are incorrect, or I cannot answer.\n'
+                s += f"{none_option}. The correct answer is No answer, None of the above, \
+                    all provided options are incorrect, or I cannot answer.\n"
                 valid_option.append(none_option)
-                if question_type == 'inst':
-                    s += 'F. None of the above\n'
+                if question_type == "inst":
+                    s += "F. None of the above\n"
                     valid_option.append("F")
         elif upd_type == "iasd":
             if eval_type == "iasd":
                 gt_option = ""
-                for option in ['C', 'D', 'E', 'F']:
+                for option in ["C", "D", "E", "F"]:
                     if option not in valid_option:
                         gt_option = option
                         break
 
-                s += f'{gt_option}. {gt_text}\n'
+                s += f"{gt_option}. {gt_text}\n"
                 valid_option.append(gt_option)
 
-                if question_type == 'inst':
-                    if gt_option == 'E':
-                        s += f'F. None of the above\n'
-                        valid_option.append('F')
-                        s += 'G. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n'
-                        valid_option.append('G')
-                        answer_option = [gt_option, 'F', 'G']
+                if question_type == "inst":
+                    if gt_option == "E":
+                        s += f"F. None of the above\n"
+                        valid_option.append("F")
+                        s += "G. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n"
+                        valid_option.append("G")
+                        answer_option = [gt_option, "F", "G"]
                     else:
-                        none_option_mapping = {'C': 'D', 'D': 'E'}
+                        none_option_mapping = {"C": "D", "D": "E"}
                         none_option = none_option_mapping[gt_option]
-                        s += f'{none_option}. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n'
+                        s += f"{none_option}. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n"
                         valid_option.append(none_option)
-                        s += f'F. None of the above\n'
-                        valid_option.append('F')
-                        answer_option = [gt_option, none_option, 'F']
+                        s += f"F. None of the above\n"
+                        valid_option.append("F")
+                        answer_option = [gt_option, none_option, "F"]
                 else:
-                    none_option_mapping = {'C': 'D', 'D': 'E', 'E': 'F', 'F': 'G'}
+                    none_option_mapping = {"C": "D", "D": "E", "E": "F", "F": "G"}
                     none_option = none_option_mapping[gt_option]
-                    s += f'{none_option}. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n'
+                    s += f"{none_option}. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n"
                     valid_option.append(none_option)
                     answer_option = [gt_option, none_option]
 
             if eval_type == "standard":
                 none_option = ""
-                for option in ['C', 'D', 'E', 'F']:
+                for option in ["C", "D", "E", "F"]:
                     if option not in valid_option:
                         none_option = option
                         break
-                s += f'{none_option}. The correct answer is No answer, None of the above, \
-                    all provided options are irrelevant or incorrect, or I cannot answer.\n'
+                s += f"{none_option}. The correct answer is No answer, None of the above, \
+                    all provided options are irrelevant or incorrect, or I cannot answer.\n"
                 valid_option.append(none_option)
-                if question_type == 'inst':
-                    s += f'F. None of the above\n'
+                if question_type == "inst":
+                    s += f"F. None of the above\n"
                     valid_option.append("F")
         elif upd_type == "ivqd":
             if eval_type == "ivqd":
                 none_option = ""
-                for option in ['C', 'D', 'E', 'F']:
+                for option in ["C", "D", "E", "F"]:
                     if option not in valid_option:
                         none_option = option
                         break
-                s += f'{none_option}. The correct answer is that The image is incompatible with the question, or I cannot answer.\n'
+                s += f"{none_option}. The correct answer is that The image is incompatible with the question, or I cannot answer.\n"
                 valid_option.append(none_option)
                 answer_option = [none_option]
-                if question_type == 'inst':
-                    s += f'F. The image and question are irrelevant.\n'
+                if question_type == "inst":
+                    s += f"F. The image and question are irrelevant.\n"
                     valid_option.append("F")
                     answer_option = [none_option, "F"]
 
             if eval_type == "standard":
                 none_option = ""
-                for option in ['C', 'D', 'E', 'F']:
+                for option in ["C", "D", "E", "F"]:
                     if option not in valid_option:
                         none_option = option
                         break
-                s += f'{none_option}. The correct answer is that The image is incompatible with the question, or I cannot answer.\n'
+                s += f"{none_option}. The correct answer is that The image is incompatible with the question, or I cannot answer.\n"
                 valid_option.append(none_option)
-                if question_type == 'inst':
-                    s += f'F. The image and question are irrelevant.\n'
+                if question_type == "inst":
+                    s += f"F. The image and question are irrelevant.\n"
                     valid_option.append("F")
         return s, valid_option, answer_option
 
     def build_prompt(self, question, options, prediction, upd_type):
         if upd_type == "aad":
             tmpl = (
-                'You are an AI assistant who will help me to match an answer '
-                'with several options of a single-choice question. '
-                'You are provided with a question, several options, and an answer, '
-                'and you need to find which option is most similar to the answer. '
-                'If the meaning of all options are significantly different '
-                'from the answer, output H. '
-                'Your should output a single uppercase character in A, B, C, D, E, F, G '
-                '(if they are valid options), and H. \n'
-                'Example 1: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. no answer \nAnswer: a cute teddy bear\nYour output: A\n'
-                'Example 2: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. None of the above  \nAnswer: no answer \nYour output: E\n'
-                'Example 3: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. None of the above \nAnswer: fish \nYour output: H\n'
-                'Example 4: \n'
-                'Question: {}?\nOptions: {}\nAnswer: {}\nYour output: ')
+                "You are an AI assistant who will help me to match an answer "
+                "with several options of a single-choice question. "
+                "You are provided with a question, several options, and an answer, "
+                "and you need to find which option is most similar to the answer. "
+                "If the meaning of all options are significantly different "
+                "from the answer, output H. "
+                "Your should output a single uppercase character in A, B, C, D, E, F, G "
+                "(if they are valid options), and H. \n"
+                "Example 1: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. no answer \nAnswer: a cute teddy bear\nYour output: A\n"
+                "Example 2: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. None of the above  \nAnswer: no answer \nYour output: E\n"
+                "Example 3: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. None of the above \nAnswer: fish \nYour output: H\n"
+                "Example 4: \n"
+                "Question: {}?\nOptions: {}\nAnswer: {}\nYour output: "
+            )
         elif upd_type == "iasd":
             tmpl = (
-                'You are an AI assistant who will help me to match an answer '
-                'with several options of a single-choice question. '
-                'You are provided with a question, several options, and an answer, '
-                'and you need to find which option is most similar to the answer. '
-                'If the meaning of all options are significantly different '
-                'from the answer, output H. '
-                'Your should output a single uppercase character in A, B, C, D, E, F, G '
-                '(if they are valid options), and H. \n'
-                'Example 1: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. no answer \nAnswer: a cute teddy bear\nYour output: A\n'
-                'Example 2: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. None of the above  \nAnswer: no answer \nYour output: E\n'
-                'Example 3: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. None of the above \nAnswer: fish \nYour output: H\n'
-                'Example 4: \n'
-                'Question: {}?\nOptions: {}\nAnswer: {}\nYour output: ')
+                "You are an AI assistant who will help me to match an answer "
+                "with several options of a single-choice question. "
+                "You are provided with a question, several options, and an answer, "
+                "and you need to find which option is most similar to the answer. "
+                "If the meaning of all options are significantly different "
+                "from the answer, output H. "
+                "Your should output a single uppercase character in A, B, C, D, E, F, G "
+                "(if they are valid options), and H. \n"
+                "Example 1: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. no answer \nAnswer: a cute teddy bear\nYour output: A\n"
+                "Example 2: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. None of the above  \nAnswer: no answer \nYour output: E\n"
+                "Example 3: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. None of the above \nAnswer: fish \nYour output: H\n"
+                "Example 4: \n"
+                "Question: {}?\nOptions: {}\nAnswer: {}\nYour output: "
+            )
         elif upd_type == "ivqd":
             tmpl = (
-                'You are an AI assistant who will help me to match an answer '
-                'with several options of a single-choice question. '
-                'You are provided with a question, several options, and an answer, '
-                'and you need to find which option is most similar to the answer. '
-                'If the meaning of all options are significantly different '
-                'from the answer, output H. '
-                'Your should output a single uppercase character in A, B, C, D, E, F, G '
-                '(if they are valid options), and H. \n'
-                'Example 1: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. The image and question are irrelevant \nAnswer: a cute teddy bear\nYour output: A\n'
-                'Example 2: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. The image and question are irrelevant \nAnswer: The updloaded image and question are incompatible. \nYour output: E\n'
-                'Example 3: \n'
-                'Question: What is the main object in image?\nOptions: A. teddy bear '
-                'B. rabbit C. cat D. dog E. The image and question are irrelevant \nAnswer: fish \nYour output: H\n'
-                'Example 4: \n'
-                'Question: {}?\nOptions: {}\nAnswer: {}\nYour output: ')
+                "You are an AI assistant who will help me to match an answer "
+                "with several options of a single-choice question. "
+                "You are provided with a question, several options, and an answer, "
+                "and you need to find which option is most similar to the answer. "
+                "If the meaning of all options are significantly different "
+                "from the answer, output H. "
+                "Your should output a single uppercase character in A, B, C, D, E, F, G "
+                "(if they are valid options), and H. \n"
+                "Example 1: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. The image and question are irrelevant \nAnswer: a cute teddy bear\nYour output: A\n"
+                "Example 2: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. The image and question are irrelevant \nAnswer: The updloaded image and question are incompatible. \nYour output: E\n"
+                "Example 3: \n"
+                "Question: What is the main object in image?\nOptions: A. teddy bear "
+                "B. rabbit C. cat D. dog E. The image and question are irrelevant \nAnswer: fish \nYour output: H\n"
+                "Example 4: \n"
+                "Question: {}?\nOptions: {}\nAnswer: {}\nYour output: "
+            )
         return tmpl.format(question, options, prediction)
 
     # Prefetch Answers
     def can_infer_option(self, answer, option_dict, question_type=None, valid_option=None):
         if valid_option is None:
             valid_option = list(option_dict.keys())
-            if question_type == 'inst':
+            if question_type == "inst":
                 valid_option.append("F")
 
-        if 'Failed to obtain answer via API' in answer:
+        if "Failed to obtain answer via API" in answer:
             return False
 
         answer = answer.strip()
@@ -444,22 +437,22 @@ class MMUPD_Evaluator:
         options = self.extract_options(item)
         option_str, valid_option, answer_option = self.build_option_str_w_gt(options, gt_text, eval_type, question_type=question_type, upd_type=upd_type)
 
-        prompt = self.build_prompt(item['question'], option_str, item['prediction'], upd_type=upd_type)
+        prompt = self.build_prompt(item["question"], option_str, item["prediction"], upd_type=upd_type)
         retry = 3
         choices = self.build_choices(item)
 
-        ret = self.can_infer(item['prediction'], choices, valid_option=valid_option)
+        ret = self.can_infer(item["prediction"], choices, valid_option=valid_option)
         if ret:
-            return ret, item['prediction'], answer_option
+            return ret, item["prediction"], answer_option
 
         while retry:
             ans = self.get_chat_response(prompt, temperature=0.7)
-            if 'Failed to obtain answer via API' in ans:
-                msg = 'GPT API failed to answer. '
+            if "Failed to obtain answer via API" in ans:
+                msg = "GPT API failed to answer. "
                 eval_logger.info(msg)
                 retry -= 1
             else:
-                ret = self.can_infer(ans,  choices, valid_option=valid_option)
+                ret = self.can_infer(ans, choices, valid_option=valid_option)
                 if ret:
                     return ret, ans, answer_option
                 else:
@@ -467,7 +460,7 @@ class MMUPD_Evaluator:
                     retry -= 1
 
             if retry == 0:
-                return 'H', 'Failed to predict. ', answer_option
+                return "H", "Failed to predict. ", answer_option
 
     def eval_sub_data(self, sub_data, answer_map, gt_text_map, question_type, eval_type, upd_type):
         lt = len(sub_data)
@@ -475,7 +468,7 @@ class MMUPD_Evaluator:
 
         for i in range(lt):
             item = sub_data.iloc[i]
-            idx = item['index']
+            idx = item["index"]
             GT.append(answer_map[idx])
             PRED.append(self.prefetch_answer(item, question_type))
             if PRED[-1] and (GT[-1] != PRED[-1]):
@@ -486,7 +479,7 @@ class MMUPD_Evaluator:
                 continue
             else:
                 item = sub_data.iloc[i]
-                idx = item['index']
+                idx = item["index"]
                 gt_text = gt_text_map[idx] if gt_text_map is not None else None
                 ret, _, answer_option = self.extract_answer_from_item(sub_data.iloc[i], gt_text, eval_type, question_type=question_type, upd_type=upd_type)
                 PRED[i] = ret
@@ -549,7 +542,7 @@ class MMUPD_Evaluator:
         cate_map = {i: c for i, c in zip(data["index"], data["category"])}
         answer_map = {i: c for i, c in zip(data["index"], data["answer"])}
 
-        gt_text_map = {i: c for i, c in zip(data['index'], data['masked_answer'])}
+        gt_text_map = {i: c for i, c in zip(data["index"], data["masked_answer"])}
 
         lt = len(data_main)
         hit, tot = 0, 0
@@ -568,8 +561,7 @@ class MMUPD_Evaluator:
 
             sub_data = data[data["index"] % int(1e6) == idx]
 
-            ret = self.eval_sub_data(sub_data, answer_map, gt_text_map,\
-                                     question_type=question_type, eval_type=eval_type, upd_type=upd_type)
+            ret = self.eval_sub_data(sub_data, answer_map, gt_text_map, question_type=question_type, eval_type=eval_type, upd_type=upd_type)
             result[idx] = ret
             hit += ret
             tot += 1
@@ -584,15 +576,15 @@ class MMUPD_Evaluator:
 
         return overall_hit_rate, category_hit_rate, data_main
 
-    def report_acc(self, df, groupd='category'):
-        assert 'split' in df
-        assert groupd in [None, 'category', 'l2-category']
+    def report_acc(self, df, groupd="category"):
+        assert "split" in df
+        assert groupd in [None, "category", "l2-category"]
 
         res = defaultdict(list)
-        res['split'] = ['test']
+        res["split"] = ["test"]
         if groupd is None:
-            res['overall'] = [
-                np.mean(df['hit']),
+            res["overall"] = [
+                np.mean(df["hit"]),
             ]
             return pd.DataFrame(res)
 
@@ -602,17 +594,16 @@ class MMUPD_Evaluator:
             for ab in abilities:
                 sub_df = df[df[groupd] == ab]
                 res[ab] = [
-                    np.mean(sub_df['hit']),
+                    np.mean(sub_df["hit"]),
                 ]
             return pd.DataFrame(res)
 
     def calculate_dual_acc(self, standard_df, upd_df):
         # dual results
-        dual_df = pd.merge(standard_df, upd_df, on='index',
-                           suffixes=('_standard', '_upd'))
-        dual_df['hit'] = dual_df.apply(lambda row: 1 if row['hit_standard'] == 1 and row['hit_upd'] == 1 else 0, axis=1)
-        dual_df['split'] = dual_df['split_standard']
-        dual_df['category'] = dual_df['category_standard']
+        dual_df = pd.merge(standard_df, upd_df, on="index", suffixes=("_standard", "_upd"))
+        dual_df["hit"] = dual_df.apply(lambda row: 1 if row["hit_standard"] == 1 and row["hit_upd"] == 1 else 0, axis=1)
+        dual_df["split"] = dual_df["split_standard"]
+        dual_df["category"] = dual_df["category_standard"]
 
         # Evaluate dual results
         overall_hit_rate, category_hit_rate = self.calculate_hit_rates(dual_df)

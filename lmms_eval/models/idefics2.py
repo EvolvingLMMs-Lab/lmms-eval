@@ -1,5 +1,5 @@
 import torch
-import logging
+
 from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -14,7 +14,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 try:
@@ -203,7 +203,7 @@ class Idefics2(lmms):
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
-                
+
             prompts = []
             for context, visual in zip(contexts, visuals):
                 content = []

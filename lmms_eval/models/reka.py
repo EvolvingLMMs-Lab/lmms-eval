@@ -8,7 +8,7 @@ from typing import List, Tuple
 from tqdm import tqdm
 import requests as url_requests
 import time
-import logging
+
 import json
 
 from lmms_eval.api.instance import Instance
@@ -17,14 +17,17 @@ from lmms_eval.api.registry import register_model
 from accelerate import Accelerator, DistributedType
 
 NUM_SECONDS_TO_SLEEP = 30
-eval_logger = logging.getLogger("lmms-eval")
+
+from loguru import logger
+
+eval_logger = logger
 
 try:
     from reka.client import Reka as RekaClient
     from reka import ChatMessage
     from decord import VideoReader, cpu
 except Exception as e:
-    eval_logger.error(f"Error importing reka: {e}")
+    eval_logger.warning(f"Error importing reka: {e}")
 
 
 @register_model("reka")

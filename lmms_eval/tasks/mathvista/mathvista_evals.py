@@ -2,9 +2,9 @@ import time
 import requests
 import re
 from Levenshtein import distance
-import logging
 
-eval_logger = logging.getLogger("lmms-eval")
+
+from loguru import logger as eval_logger
 
 # pids: 799, 681, 615
 shot_examples = [
