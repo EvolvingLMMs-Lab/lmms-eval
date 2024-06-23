@@ -2,7 +2,6 @@ import torch
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
-import logging
 import copy
 from tqdm import tqdm
 from datetime import timedelta
@@ -21,12 +20,10 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
-    from tinyllava.model import load_pretrained_model
     from tinyllava.data import ImagePreprocess, TextPreprocess
-    from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
     from tinyllava.utils.message import Message
 except Exception as e:
     eval_logger.debug("TinyLLaVA_Factory is not installed. Please install TinyLLaVA_Factory to use this model.\nError: %s" % e)
@@ -368,8 +365,6 @@ class TinyLlava(lmms):
             attention_masks = input_ids.ne(pad_token_ids).to(self.device)
             # These steps are not in LLaVA's original code, but are necessary for generation to work
             # TODO: attention to this major generation step...
-            if "image_aspect_ratio" in gen_kwargs.keys():
-                gen_kwargs.pop("image_aspect_ratio")
             try:
                 cont = self.model.generate(
                     input_ids,

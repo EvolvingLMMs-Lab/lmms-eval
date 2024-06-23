@@ -1,7 +1,8 @@
-import os
-import hf_transfer
+from loguru import logger
+import sys
 
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+logger.remove()
+logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
     "llava": "Llava",
@@ -22,18 +23,19 @@ AVAILABLE_MODELS = {
     "idefics2": "Idefics2",
     "internvl": "InternVLChat",
     "gemini_api": "GeminiAPI",
-    "gemini_model": "GeminiModel",
     "reka": "Reka",
-    "llava_onevision": "Llava_OneVision",
     "from_log": "FromLog",
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
     "tinyllava": "TinyLlava",
     "llava_onevision": "Llava_OneVision",
+    "llava_hf": "LlavaHf",
+    "longva": "LongVA",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
     try:
         exec(f"from .{model_name} import {model_class}")
-    except ImportError:
+    except ImportError as e:
+        # logger.warning(f"Failed to import {model_class} from {model_name}: {e}")
         pass

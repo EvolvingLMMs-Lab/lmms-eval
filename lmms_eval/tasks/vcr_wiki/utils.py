@@ -1,6 +1,5 @@
 import datetime
 import json
-import logging
 import os
 from difflib import SequenceMatcher as SM
 from functools import partial
@@ -29,7 +28,8 @@ except Exception as e:
 nlp = {"en": nlp_en, "zh": nlp_zh}
 rouge = evaluate.load("rouge")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 aggregate_results_template = {

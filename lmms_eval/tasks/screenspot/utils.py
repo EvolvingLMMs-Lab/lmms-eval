@@ -6,9 +6,8 @@ from pycocotools.coco import COCO
 # COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
 COCO_METRICS = ["CIDEr"]
 
-import logging
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def screenspot_bbox_doc_to_visual(doc):

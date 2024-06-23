@@ -5,7 +5,6 @@ from PIL import Image
 import numpy as np
 import torchvision.transforms as transforms
 from datetime import timedelta
-import logging
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -22,7 +21,7 @@ from tqdm import tqdm
 
 pattern = re.compile(r"[A-Z]")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 meta_instruction = """You are an AI assistant whose name is InternLM-XComposer (浦语·灵笔).
 - InternLM-XComposer (浦语·灵笔) is a multi-modality conversational language model that is developed\

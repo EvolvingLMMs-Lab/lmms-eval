@@ -1,5 +1,4 @@
 import torch
-import logging
 
 from accelerate import Accelerator, DistributedType
 from lmms_eval import utils
@@ -11,7 +10,7 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoProcessor
 from typing import List, Optional, Tuple, Union
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @register_model("phi3v")

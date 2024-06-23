@@ -1,5 +1,5 @@
 import torch
-import logging
+
 from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -14,7 +14,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 try:

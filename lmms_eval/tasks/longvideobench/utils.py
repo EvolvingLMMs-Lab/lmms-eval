@@ -1,5 +1,4 @@
 import json
-import logging
 import re
 from collections import Counter, defaultdict
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -13,7 +12,6 @@ import numpy as np
 from PIL import Image
 import torch
 
-import logging
 from pathlib import Path
 import yaml
 import sys
