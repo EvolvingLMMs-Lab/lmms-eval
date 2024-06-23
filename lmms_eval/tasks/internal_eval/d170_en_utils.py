@@ -1,7 +1,7 @@
 import os
 import requests
 import time
-import logging
+
 import yaml
 from pathlib import Path
 import re
@@ -9,7 +9,7 @@ import json
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "d170_en.yaml", "r") as f:
     raw_data = f.readlines()

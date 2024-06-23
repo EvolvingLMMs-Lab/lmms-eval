@@ -10,9 +10,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-import logging
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 class WorldQA_MC_Evaluator:

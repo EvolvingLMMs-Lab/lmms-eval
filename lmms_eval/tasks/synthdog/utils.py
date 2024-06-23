@@ -1,9 +1,8 @@
-import logging
 import json
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.synthdog.donut_evaluator import JSONParseEvaluator
 
-logger = logging.getLogger("lmms-eval")
+from loguru import logger
 
 evaluator = JSONParseEvaluator()
 

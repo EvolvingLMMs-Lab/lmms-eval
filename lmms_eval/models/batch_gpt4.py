@@ -2,7 +2,7 @@
 from copy import deepcopy
 from io import BytesIO
 import base64
-import logging
+
 import os
 import time
 import json
@@ -20,14 +20,13 @@ from openai import OpenAI
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval import utils
+from loguru import logger as eval_logger
 
 # Conditional imports
 try:
     from decord import VideoReader, cpu
 except ImportError:
-    eval_logger = logging.getLogger("lmms-eval")
-    eval_logger.info("Decord is not installed. Video input will not be supported.")
+    eval_logger.warning("Decord is not installed. Video input will not be supported.")
 
 # Constants and global configurations
 API_TYPE = os.getenv("API_TYPE", "openai")

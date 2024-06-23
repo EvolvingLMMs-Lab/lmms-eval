@@ -1,4 +1,3 @@
-import logging
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -7,17 +6,17 @@ from transformers import AutoTokenizer
 from tqdm import tqdm
 from datetime import timedelta
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.utils import stop_sequences_criteria
 
 from lmms_eval.models.mplug_owl_video.modeling_mplug_owl import MplugOwlForConditionalGeneration
 from lmms_eval.models.mplug_owl_video.processing_mplug_owl import MplugOwlImageProcessor, MplugOwlProcessor
 
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger
+
+eval_logger = logger
 
 
 @register_model("mplug_owl_video")

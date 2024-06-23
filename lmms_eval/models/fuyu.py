@@ -15,11 +15,8 @@ from lmms_eval.api.instance import Instance
 from tqdm import tqdm
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
-import logging
 
-import logging
-
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @register_model("fuyu")

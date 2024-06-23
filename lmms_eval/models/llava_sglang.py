@@ -3,7 +3,7 @@ import random
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
-import logging
+
 from tqdm import tqdm
 from datetime import timedelta
 
@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore")
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tempfile
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     import sglang as sgl

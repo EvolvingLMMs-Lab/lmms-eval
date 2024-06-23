@@ -1,6 +1,5 @@
-import os
 import json
-import logging
+from loguru import logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -25,4 +24,4 @@ def stvqa_aggregate_submissions(results, args):
     file = generate_submission_file("stvqa_test_for_submission.json", args)
     with open(file, "w") as f:
         json.dump(results, f)
-    logging.getLogger("lmms-eval").info(f"Results saved to {file}")
+    logger.info(f"Results saved to {file}")
