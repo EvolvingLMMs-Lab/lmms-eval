@@ -5,7 +5,7 @@ import random
 import numpy as np
 import os
 import json
-import logging
+
 import matplotlib.font_manager as fm
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -129,7 +129,7 @@ def process_images(images, size=1008):
         return concat_horizontal
 
 
-lmms_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 MULTI_CHOICE_PROMPT = "Answer with the option's letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
@@ -209,7 +209,7 @@ def mmmu_test_aggregate_results_for_submission(results, args):
     path = generate_submission_file("mmmu_test_for_submission.json", args)
     with open(path, "w") as f:
         json.dump(results, f)
-    lmms_logger.info(f"Results saved to {path}.")
+    eval_logger.info(f"Results saved to {path}.")
 
 
 def mmmu_aggregate_results(results):

@@ -3,11 +3,11 @@ import re
 import random
 import os
 import json
-import logging
+
 from collections import Counter
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 PROMPT = {
     "task_instructions": [

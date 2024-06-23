@@ -3,14 +3,14 @@ import os
 import json
 import yaml
 import pathlib
-import logging
+
 import datetime
 import statistics
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks._task_utils.vqa_eval_metric import EvalAIAnswerProcessor
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def ok_vqa_doc_to_visual(doc):

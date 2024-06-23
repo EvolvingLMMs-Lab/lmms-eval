@@ -1,12 +1,12 @@
 import os
 import yaml
-import logging
+
 import random
 import pandas as pd
 
 from pathlib import Path
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     from pywsd.utils import lemmatize_sentence

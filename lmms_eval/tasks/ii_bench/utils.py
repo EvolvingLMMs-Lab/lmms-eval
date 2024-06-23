@@ -1,8 +1,9 @@
 import json
-import logging
 import re
 from collections import Counter
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+from loguru import logger
 
 PROMPT = """Question: {}
 (A) {}
@@ -68,4 +69,4 @@ def ii_bench_aggregate_submissions(results, args):
     file = generate_submission_file("ii_bench_test_for_submission.json", args)
     with open(file, "w") as f:
         json.dump(results, f, indent=4)
-    logging.getLogger("lmms-eval").info(f"Results saved to {file}")
+    logger.info(f"Results saved to {file}")

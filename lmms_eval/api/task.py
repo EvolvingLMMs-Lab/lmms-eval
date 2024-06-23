@@ -2,7 +2,7 @@ import abc
 import ast
 import itertools
 import json
-import logging
+
 import os
 import random
 import re
@@ -37,7 +37,7 @@ from lmms_eval.api.registry import (
 )
 from lmms_eval.filters import build_filter_ensemble
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
 # Include this inside code block to avoid error

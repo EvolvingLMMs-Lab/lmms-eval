@@ -7,10 +7,10 @@ import math
 import numpy as np
 import pandas as pd
 import pickle
-import logging
+
 import json
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def dump(data, f):

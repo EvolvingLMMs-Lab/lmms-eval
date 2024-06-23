@@ -1,10 +1,10 @@
 import time
 import requests
-import logging
+
 from tqdm import tqdm
 import pandas as pd
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 DEMO_PROMPT_EXTRACT = """
 I am providing you a response from a model to a math problem, termed 'Model Response'. You should extract the answer from the response as 'Extracted Answer'. Directly output the extracted answer with no explanation.

@@ -1,4 +1,3 @@
-import logging
 import yaml
 import os
 from pathlib import Path
@@ -10,7 +9,7 @@ import base64
 from lmms_eval.tasks.mmupd.mmupd_evals import MMUPD_Evaluator
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "mmupd.yaml", "r") as f:
     raw_data = f.readlines()

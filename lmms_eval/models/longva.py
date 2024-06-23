@@ -30,22 +30,14 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 try:
-    from llava.model.builder import load_pretrained_model
-    from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token, KeywordsStoppingCriteria
-    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
-    from llava.conversation import conv_templates, SeparatorStyle
+    from longva.model.builder import load_pretrained_model
+    from longva.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token, KeywordsStoppingCriteria
+    from longva.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
+    from longva.conversation import conv_templates, SeparatorStyle
 
 except Exception as e:
-    eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.\nError: %s" % e)
+    eval_logger.debug("longva is not installed. Please install longva to use this model.\nError: %s" % e)
 
-try:
-    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
-    from llavavid.model.language_model.llava_llama import LlavaConfig
-
-    AutoConfig.register("llava_qwen", LlavaQwenConfig)
-    AutoConfig.register("llava_llama", LlavaConfig)
-except Exception as e:
-    eval_logger.debug("")
 # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
 # if is_flash_attn_2_available:
 #     best_fit_attn_implementation = "flash_attention_2" # flash_attn has a bug that says: ERROR Error query and key must have the same dtype in generating
@@ -56,15 +48,11 @@ else:
     best_fit_attn_implementation = "eager"
 
 
-@register_model("llava_onevision")
-class Llava_OneVision(lmms):
-    """
-    Llava Model
-    """
-
+@register_model("longva")
+class LongVA(lmms):
     def __init__(
         self,
-        pretrained: str = "liuhaotian/llava-v1.5-7b",
+        pretrained: str = "lmms-lab/LongVA-7B",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
@@ -120,18 +108,6 @@ class Llava_OneVision(lmms):
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
         overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
         cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
-
-        if cfg_pretrained.architectures[0] == "LlavaLlamaForCausalLM":  # Ugly code, only used in  vicuna that needs ROPE
-            if "224" in cfg_pretrained.mm_vision_tower:
-                least_token_number = self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
-            else:
-                least_token_number = self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
-
-            scaling_factor = math.ceil(least_token_number / 4096)
-            if scaling_factor >= 2:
-                overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
-                overwrite_config["max_sequence_length"] = 4096 * scaling_factor
-                overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
 
         llava_model_args["overwrite_config"] = overwrite_config
         try:
@@ -364,6 +340,7 @@ class Llava_OneVision(lmms):
             task = batched_task[0]
             split = batched_split[0]
             batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]  # [B, N]
+            flattened_visuals = self.flatten(batched_visuals)  # [B*N]
             assert len(batched_visuals) == 1
 
             # we assume all gen kwargs in the batch are the same
@@ -451,7 +428,7 @@ class Llava_OneVision(lmms):
             attention_masks = input_ids.ne(pad_token_ids).to(self.device)
 
             if task_type == "image":
-                gen_kwargs["image_sizes"] = [batched_visuals[idx][0].size for idx in range(len(batched_visuals))]
+                gen_kwargs["image_sizes"] = [flattened_visuals[idx].size for idx in range(len(flattened_visuals))]
             elif task_type == "video":
                 stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
                 keywords = [stop_str]
@@ -464,7 +441,7 @@ class Llava_OneVision(lmms):
             # These steps are not in LLaVA's original code, but are necessary for generation to work
             # TODO: attention to this major generation step...
             if "image_aspect_ratio" in gen_kwargs.keys():
-                gen_kwargs.pop("image_aspect_ratio") 
+                gen_kwargs.pop("image_aspect_ratio")
             try:
                 with torch.inference_mode():
                     cont = self.model.generate(input_ids, attention_mask=attention_masks, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)

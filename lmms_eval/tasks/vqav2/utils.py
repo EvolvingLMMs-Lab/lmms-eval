@@ -1,7 +1,7 @@
 import re
 import os
 import json
-import logging
+
 import datetime
 import statistics
 
@@ -10,7 +10,7 @@ import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.tasks._task_utils.vqa_eval_metric import EvalAIAnswerProcessor
 
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def vqav2_doc_to_visual(doc):

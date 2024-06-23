@@ -7,7 +7,7 @@ import inspect
 from tqdm import tqdm
 
 import torch
-import logging
+
 import numpy as np
 from datasets import Image, Sequence
 
@@ -16,8 +16,6 @@ import lmms_eval.tasks
 import lmms_eval.models
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-
-import re
 
 from lmms_eval.utils import (
     positional_deprecated,
@@ -28,7 +26,7 @@ from lmms_eval.utils import (
     simple_parse_args_string,
 )
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @positional_deprecated

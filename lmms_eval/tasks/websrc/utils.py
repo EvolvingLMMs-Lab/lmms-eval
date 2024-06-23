@@ -7,12 +7,10 @@ import random
 import numpy as np
 import os
 import json
-import logging
 from PIL import Image
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-lmms_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 
@@ -63,7 +61,7 @@ def websrc_test_aggregate_results_for_submission(results, args):
         for result in results:
             out.update(result)
         json.dump(out, f, indent=4)
-    lmms_logger.info(f"Results saved to {path}.")
+    eval_logger.info(f"Results saved to {path}.")
 
 
 def websrc_aggregate_results(results):
