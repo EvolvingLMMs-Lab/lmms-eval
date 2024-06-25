@@ -26,6 +26,8 @@ metric_list:
 model_specific_prompt_kwargs:
   default:
     frame_num: 32
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
   gemini_api:
     gemini_api_flag: "full subtitle"
   # gpt4v:
