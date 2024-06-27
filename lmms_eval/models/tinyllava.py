@@ -2,7 +2,7 @@ import torch
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
-import logging
+
 import copy
 from tqdm import tqdm
 from datetime import timedelta
@@ -21,7 +21,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     from tinyllava.model import load_pretrained_model
@@ -53,7 +53,7 @@ class TinyLlava(lmms):
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
         device_map="cuda:0",
-        conv_mode="phi", # TODO
+        conv_mode="phi",  # TODO
         use_cache=True,
         **kwargs,
     ) -> None:
@@ -73,9 +73,7 @@ class TinyLlava(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
-        self._model, self._tokenizer, self._image_processor, self._max_length = load_pretrained_model(
-            pretrained, device_map=self.device_map
-        )
+        self._model, self._tokenizer, self._image_processor, self._max_length = load_pretrained_model(pretrained, device_map=self.device_map)
         data_args = self._model.config
         self._image_processor = ImagePreprocess(self._image_processor, data_args)
         assert self._tokenizer.padding_side == "right", "Not sure but seems like `right` is a natural choice for padding?"
@@ -89,7 +87,7 @@ class TinyLlava(lmms):
         # self.conv_template = conv_template
         self.use_cache = use_cache
         # self.truncate_context = truncate_context
-        
+
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
@@ -187,7 +185,7 @@ class TinyLlava(lmms):
             return self.tokenizer.decode(tokens)
         except:
             return self.tokenizer.decode([tokens])
-        
+
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -216,7 +214,7 @@ class TinyLlava(lmms):
                 if type(image) is list:
                     image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
                     # as of 2024/06, tinyllava only accepts `images` input to be a tensor
-                    image = torch.stack(image) 
+                    image = torch.stack(image)
                 else:
                     image = image.to(dtype=torch.float16, device=self.device)
             else:
@@ -237,23 +235,17 @@ class TinyLlava(lmms):
 
             msg = Message()
             msg.add_message(prompts_input)
-            contxt_id = self._text_processor(msg.messages, mode='eval')["input_ids"]
+            contxt_id = self._text_processor(msg.messages, mode="eval")["input_ids"]
             # Add the answer of the second role
             msg._messages[1]["value"] = continuation
-            input_ids = self._text_processor(msg.messages, mode='eval')["input_ids"]
-            
+            input_ids = self._text_processor(msg.messages, mode="eval")["input_ids"]
+
             labels = input_ids.clone()
             # Context part no need to calculate for loss
             labels[0, : contxt_id.shape[1]] = -100
-            
+
             with torch.inference_mode():
-                outputs = self.model(
-                    input_ids=input_ids, 
-                    labels=labels, 
-                    images=image, 
-                    use_cache=True, 
-                    image_sizes=image_sizes
-                )
+                outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, image_sizes=image_sizes)
             loss = outputs["loss"]
             # loss = torch.exp(loss)
             logits = outputs["logits"]
@@ -317,7 +309,7 @@ class TinyLlava(lmms):
                 if type(image_tensor) is list:
                     image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
                     # as of 2024/06, tinyllava only accepts `images` input to be a tensor
-                    image_tensor = torch.stack(image_tensor) 
+                    image_tensor = torch.stack(image_tensor)
                 else:
                     image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
             else:
@@ -340,10 +332,10 @@ class TinyLlava(lmms):
                     question = image_tokens + "\n" + context
                 else:
                     question = context
-                
+
                 msg = Message()
                 msg.add_message(question)
-                prompt_question = self._text_processor(msg.messages, mode='eval')["prompt"]
+                prompt_question = self._text_processor(msg.messages, mode="eval")["prompt"]
                 question_input.append(prompt_question)
 
             # The above for loop has bugs. When there is no visuals, e.g. pure text,
@@ -354,7 +346,7 @@ class TinyLlava(lmms):
                     question = context
                     msg = Message()
                     msg.add_message(question)
-                    prompt_question = self._text_processor(msg.messages, mode='eval')["prompt"]
+                    prompt_question = self._text_processor(msg.messages, mode="eval")["prompt"]
                     question_input.append(prompt_question)
 
             # input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
@@ -369,11 +361,8 @@ class TinyLlava(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            #input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
-            input_ids_list = [
-                self._text_processor.template.tokenizer_image_token(prompt, self.tokenizer, return_tensors='pt') 
-                for prompt in question_input
-            ]
+            # input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
+            input_ids_list = [self._text_processor.template.tokenizer_image_token(prompt, self.tokenizer, return_tensors="pt") for prompt in question_input]
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
             attention_masks = input_ids.ne(pad_token_ids).to(self.device)

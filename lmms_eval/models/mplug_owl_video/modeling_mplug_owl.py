@@ -14,9 +14,9 @@
 # limitations under the License.
 """ PyTorch MplugOwl model. """
 
-import logging
 import math
 from typing import Any, Optional, Tuple, Union
+from loguru import logger
 
 try:
     from flash_attn.flash_attn_interface import flash_attn_unpadded_func
@@ -24,7 +24,8 @@ try:
     flash_attn_func = flash_attn_unpadded_func
 except:
     flash_attn_func = None
-    print("Error importing flash_attn in mplug_owl. Please install flash-attn first.")
+    logger.warning("Error importing flash_attn in mplug_owl. Please install flash-attn first.")
+
 import math
 from dataclasses import dataclass
 from typing import Any, Optional, Tuple, Union
@@ -41,14 +42,10 @@ from transformers.utils import (
     ModelOutput,
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
-    logging,
     replace_return_docstrings,
 )
 from transformers.models.auto import AutoModelForCausalLM
 from .configuration_mplug_owl import MplugOwlConfig, MplugOwlVisionConfig, MplugOwlVisualAbstractorConfig
-
-
-logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "MAGAer13/mplug-owl-llama-7b"
 _CONFIG_FOR_DOC = "MplugOwlConfig"

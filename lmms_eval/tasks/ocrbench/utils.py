@@ -1,8 +1,6 @@
-import logging
-
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-logger = logging.getLogger("lmms-eval")
+from loguru import logger
 
 # Add the following functions to your existing utils.py file
 OCRBench_score = {
