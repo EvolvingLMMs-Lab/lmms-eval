@@ -5,28 +5,28 @@ import base64
 import json
 from typing import List, Tuple, Union
 from tqdm import tqdm
-import requests as url_requests
 import time
-import logging
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval import utils
 
 from accelerate import Accelerator, DistributedType
 
 from PIL import Image
 
 NUM_SECONDS_TO_SLEEP = 5
-eval_logger = logging.getLogger("lmms-eval")
+
+from loguru import logger
+
+eval_logger = logger
 
 try:
     import anthropic
     from decord import VideoReader, cpu
     import numpy as np
 except Exception as e:
-    eval_logger.error(f"Error importing claude: {e}")
+    eval_logger.warning(f"Error importing claude: {e}")
 
 API_URL = os.getenv("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/complete")
 API_KEY = os.getenv("ANTHROPIC_API_KEY", "YOUR_API_KEY")

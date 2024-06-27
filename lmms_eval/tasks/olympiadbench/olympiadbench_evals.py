@@ -1,9 +1,8 @@
 import re
 import sympy as sp
 
-import logging
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     from sympy import simplify, Eq, sympify, Pow

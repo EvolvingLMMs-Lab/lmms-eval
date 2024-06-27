@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 import torchvision.transforms as transforms
 from datetime import timedelta
-import logging
+
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 pattern = re.compile(r"[A-Z]")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 meta_instruction = """You are an AI assistant whose name is InternLM-XComposer (浦语·灵笔).
 - InternLM-XComposer (浦语·灵笔) is a multi-modality conversational language model that is developed\
@@ -146,7 +146,7 @@ class XComposer2_4KHD(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
             if "[UNUSED_TOKEN_146]" not in contexts:
-                contexts = f"[UNUSED_TOKEN_146]user\n{contexts}[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n" 
+                contexts = f"[UNUSED_TOKEN_146]user\n{contexts}[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
 

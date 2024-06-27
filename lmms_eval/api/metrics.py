@@ -9,10 +9,7 @@ import evaluate
 import torch
 
 from lmms_eval.api.registry import register_metric, register_aggregation
-
-import logging
-
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 # Register Aggregations First

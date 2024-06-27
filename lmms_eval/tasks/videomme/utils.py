@@ -4,7 +4,7 @@ import datetime
 import json
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-import logging
+
 from pathlib import Path
 import yaml
 import sys
@@ -13,7 +13,7 @@ import re
 import cv2
 import numpy as np
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 VIDEO_TYPE = ["short", "medium", "long"]
 CATEGORIES = ["Knowledge", "Film & Television", "Sports Competition", "Artistic Performance", "Life Record", "Multilingual"]

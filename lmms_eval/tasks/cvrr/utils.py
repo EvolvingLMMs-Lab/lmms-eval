@@ -4,7 +4,7 @@ import sys
 import datetime
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
-import logging
+
 import yaml
 from pathlib import Path
 
@@ -15,7 +15,7 @@ import time
 import ast
 from tqdm import tqdm
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -45,7 +45,6 @@ if API_TYPE == "openai":
 # Pass in video path here
 # Can only work correctly with video llm
 def cvrr_doc_to_visual(doc):
-
     # Unzip all the zip files to HF HOME cache dir
     HF_HOME = os.environ["HF_HOME"]
     cache_dir = config["dataset_kwargs"]["cache_dir"]

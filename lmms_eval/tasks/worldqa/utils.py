@@ -6,7 +6,7 @@ import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.tasks.worldqa.worldqa_mc_evaluator import WorldQA_MC_Evaluator
 import json
-import logging
+
 import yaml
 from pathlib import Path
 import requests
@@ -114,7 +114,7 @@ cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
 
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 # Pass in video path here

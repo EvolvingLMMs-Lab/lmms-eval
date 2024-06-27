@@ -6,9 +6,8 @@ from pycocotools.coco import COCO
 # COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CIDEr"]  # , "SPICE"]
 COCO_METRICS = ["CIDEr"]
 
-import logging
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def screenspot_bbox_doc_to_visual(doc):
@@ -30,7 +29,7 @@ def screenspot_process_result(doc, result):
     """
     pred = result[0] if len(result) > 0 else ""
     ann_id = doc["file_name"]
-    data_dict = {"instruction": doc["instruction"], "pred": pred, "ann_id": ann_id, 'data_type': doc['data_type'], 'data_source': doc['data_source']}
+    data_dict = {"instruction": doc["instruction"], "pred": pred, "ann_id": ann_id, "data_type": doc["data_type"], "data_source": doc["data_source"]}
     return {f"screenspot_{metric}": data_dict for metric in COCO_METRICS}
 
 
@@ -55,7 +54,7 @@ def screenspot_aggregation_result(results, metric):
     for result in results:
         stored_results.append({"image_id": idx, "caption": result["pred"]})
         # for s in result["answer"]:
-        dataset["annotations"].append({"image_id": idx, "caption": result['instruction'], "id": ann_id})
+        dataset["annotations"].append({"image_id": idx, "caption": result["instruction"], "id": ann_id})
         ann_id += 1
 
         dataset["images"].append({"id": idx})

@@ -1,4 +1,3 @@
-dataset_name: "Generation"
 task: "activitynetqa"
 test_split: test
 output_type: generate_until

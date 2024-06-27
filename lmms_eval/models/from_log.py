@@ -1,4 +1,3 @@
-import logging
 import json
 import os
 import re
@@ -11,7 +10,7 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @register_model("from_log")

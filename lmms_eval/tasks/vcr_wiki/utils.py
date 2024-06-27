@@ -1,6 +1,6 @@
 import datetime
 import json
-import logging
+
 import os
 from difflib import SequenceMatcher as SM
 from functools import partial
@@ -29,7 +29,8 @@ except Exception as e:
 nlp = {"en": nlp_en, "zh": nlp_zh}
 rouge = evaluate.load("rouge")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 aggregate_results_template = {
@@ -118,9 +119,7 @@ def vcr_process_results_single(crossed_text, result, language):
     max_sim_string = ""
     max_sim_ngram = []
     tokens_crossed_text_set = set(tokens_crossed_text)
-    ngrams_hasjoint = [
-        ngram for ngram in ngrams_ if not set(ngram).isdisjoint(tokens_crossed_text_set)
-    ]
+    ngrams_hasjoint = [ngram for ngram in ngrams_ if not set(ngram).isdisjoint(tokens_crossed_text_set)]
 
     for ngram in ngrams_hasjoint:
         result_ngram = splitter.join(ngram)
@@ -263,7 +262,7 @@ def bootstrap_std(data, n_bootstrap=1000, ci=0.95):
     return std, lower_bound, upper_bound
 
 
-def vcr_aggregate_results(results, args, metric='exact_match'):
+def vcr_aggregate_results(results, args, metric="exact_match"):
     """
     Args:
         results: List[List[Dict]], list of results returned by process_results
@@ -295,8 +294,8 @@ def vcr_aggregate_results(results, args, metric='exact_match'):
 
 
 def vcr_aggregate_exact_match(results, args):
-    return vcr_aggregate_results(results, args, metric='exact_match')
+    return vcr_aggregate_results(results, args, metric="exact_match")
 
 
 def vcr_aggregate_jaccard(results, args):
-    return vcr_aggregate_results(results, args, metric='jaccard')
+    return vcr_aggregate_results(results, args, metric="jaccard")

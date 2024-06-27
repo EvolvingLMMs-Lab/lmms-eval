@@ -1,5 +1,5 @@
 import torch
-import logging
+
 
 from accelerate import Accelerator, DistributedType
 from lmms_eval import utils
@@ -11,7 +11,7 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoProcessor
 from typing import List, Optional, Tuple, Union
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @register_model("phi3v")
@@ -30,15 +30,16 @@ class Phi3v(lmms):
     accelerate launch --num_processes=4 -m lmms_eval --model phi3v --tasks mmmu_val \
         --batch_size 1 --log_samples --log_samples_suffix phi3v_mmmu --output_path ./logs/
     """
+
     def __init__(
-            self,
-            model_id_name: str = "microsoft/Phi-3-vision-128k-instruct",
-            device: str = "cuda",
-            dtype: Optional[Union[str, torch.dtype]] = "auto",
-            batch_size: int = 1,
-            trust_remote_code: Optional[bool] = True,
-            use_cache: bool = True,
-            **kwargs,
+        self,
+        model_id_name: str = "microsoft/Phi-3-vision-128k-instruct",
+        device: str = "cuda",
+        dtype: Optional[Union[str, torch.dtype]] = "auto",
+        batch_size: int = 1,
+        trust_remote_code: Optional[bool] = True,
+        use_cache: bool = True,
+        **kwargs,
     ) -> None:
         super().__init__()
         # Do not use kwargs for now
@@ -46,40 +47,25 @@ class Phi3v(lmms):
         # Setup accelerator.
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
-            self._device = torch.device(
-                f"cuda:{accelerator.local_process_index}")
+            self._device = torch.device(f"cuda:{accelerator.local_process_index}")
         else:
             self._device = device
         # Load model.
-        self._model = AutoModelForCausalLM.from_pretrained(
-            model_id_name,
-            device_map=device,
-            trust_remote_code=trust_remote_code,
-            torch_dtype=dtype)
-        self._processor = AutoProcessor.from_pretrained(
-            model_id_name,
-            trust_remote_code=trust_remote_code)
+        self._model = AutoModelForCausalLM.from_pretrained(model_id_name, device_map=device, trust_remote_code=trust_remote_code, torch_dtype=dtype)
+        self._processor = AutoProcessor.from_pretrained(model_id_name, trust_remote_code=trust_remote_code)
         self._processor.tokenizer.padding_side = "left"
         self._tokenizer = self._processor.tokenizer
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
-        assert self.batch_size_per_gpu == 1, \
-            "batch_size_per_gpu > 1 is not supported for now."
+        assert self.batch_size_per_gpu == 1, "batch_size_per_gpu > 1 is not supported for now."
         self.use_cache = use_cache
         if accelerator.num_processes > 1:
-            distributed_type_list = [
-                DistributedType.FSDP,
-                DistributedType.MULTI_GPU,
-                DistributedType.DEEPSPEED
-            ]
-            assert accelerator.distributed_type in distributed_type_list, \
-                "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            distributed_type_list = [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED]
+            assert accelerator.distributed_type in distributed_type_list, "Unsupported distributed type provided. Only DDP and FSDP are supported."
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model,
-                    evaluation_mode=True)
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
@@ -179,8 +165,7 @@ class Phi3v(lmms):
                 if isinstance(until, str):
                     until = [until]
                 elif not isinstance(until, list):
-                    raise ValueError(
-                        f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
+                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
             for i in range(len(contexts)):
@@ -195,20 +180,12 @@ class Phi3v(lmms):
                     for placeholder_id in range(len(visuals)):
                         query += f"<|image_{placeholder_id+1}|>\n"
                     query += contexts[i]
-                messages = [
-                    {"role": "user", "content": query}
-                ]
-                contexts[i] = self._tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True)
+                messages = [{"role": "user", "content": query}]
+                contexts[i] = self._tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             assert len(contexts) == 1
-            # 
+            #
             context = contexts[0]
-            input_ids = self._processor(
-                text=context,
-                images=visuals,
-                return_tensors="pt").to(self._device, self.model.dtype)
+            input_ids = self._processor(text=context, images=visuals, return_tensors="pt").to(self._device, self.model.dtype)
             # Setting default parameters.
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -219,8 +196,7 @@ class Phi3v(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
             # Generate answer.
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None \
-                else self.tokenizer.eod_id
+            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eod_id
             generate_ids = self.model.generate(
                 **input_ids,
                 eos_token_id=self.tokenizer.eos_token_id,
@@ -232,11 +208,8 @@ class Phi3v(lmms):
                 max_new_tokens=gen_kwargs["max_new_tokens"],
                 use_cache=self.use_cache,
             )
-            generate_ids = generate_ids[:, input_ids['input_ids'].shape[1]:]
-            response = self._processor.batch_decode(
-                generate_ids,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False)[0]
+            generate_ids = generate_ids[:, input_ids["input_ids"].shape[1] :]
+            response = self._processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
             res.append(response)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), response)
             pbar.update(1)
