@@ -1,0 +1,36 @@
+task: "mmbench_en_dev_lite"
+test_split: lite 
+dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_name: mmbench_en_dev
+dataset_kwargs:
+  token: True
+doc_to_target: "answer"
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+doc_to_visual: !function en_utils.mmbench_doc_to_visual
+doc_to_text: !function en_utils.mmbench_doc_to_text
+doc_to_target: "answer"
+process_results: !function en_utils.mmbench_process_results
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
+output_type: generate_until
+dataset_name: "en"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function en_utils.mmbench_aggregate_dev_results_eval
+    higher_is_better: true
+  - metric: submission
+    aggregation: !function en_utils.mmbench_aggregate_dev_results_submission
+    higher_is_better: true
