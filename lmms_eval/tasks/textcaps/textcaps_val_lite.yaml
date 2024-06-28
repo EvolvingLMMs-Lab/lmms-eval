@@ -1,0 +1,48 @@
+dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_name: textcaps_val
+dataset_kwargs:
+  token: True
+task: "textcaps_val_lite"
+test_split: lite
+output_type: generate_until
+doc_to_visual: !function utils.textcaps_doc_to_visual
+doc_to_text: !function utils.textcaps_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.textcaps_process_result
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: textcaps_Bleu_4 
+    aggregation : !function utils.textcaps_bleu4
+    higher_is_better : true
+  - metric: textcaps_Bleu_3
+    aggregation : !function utils.textcaps_bleu3
+    higher_is_better : true
+  - metric: textcaps_Bleu_2
+    aggregation : !function utils.textcaps_bleu2
+    higher_is_better : true
+  - metric: textcaps_Bleu_1
+    aggregation : !function utils.textcaps_bleu1
+    higher_is_better : true
+  - metric: textcaps_METEOR
+    aggregation : !function utils.textcaps_meteor
+    higher_is_better : true
+  - metric: textcaps_ROUGE_L
+    aggregation : !function utils.textcaps_rougel
+    higher_is_better : true
+  - metric: textcaps_CIDEr
+    aggregation : !function utils.textcaps_cider
+    higher_is_better : true
+  #- metric: textcaps_SPICE
+  #  aggregation : !function utils.textcaps_spice
+  #  higher_is_better : true
+metadata:
+  - version: 0.0
+model_specific_prompt_kwargs:
+  default:
+    prompt: Provide a one-sentence caption for the provided image.
