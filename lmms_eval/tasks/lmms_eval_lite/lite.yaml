@@ -1,0 +1,25 @@
+group: lite 
+task:
+- ai2d_lite
+- chartqa_lite
+- coco2017_cap_val_lite
+- docvqa_val_lite
+- flickr30k_test_test
+- gqa_lite
+- infovqa_val_lite
+- mmbench_cn_dev_lite
+- mmbench_en_dev_lite
+- ok_vqa_val2014_lite
+- refcoco_bbox_val_lite
+- seedbench_lite
+- textcaps_val_lite
+- textvqa_val_lite
+- vizwiz_vqa_val_lite
+- vqav2_val_lite
+- mmmu_val
+- cmmmu_val
+- mmvet
+- mathvista_testmini
+- realworldqa
+- llava_in_the_wild
+- llava_wilder_small
