@@ -5,7 +5,7 @@ doc_to_target: "answer"
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+    post_prompt: "\nВыбери правильный вариант ответа буквой."
 doc_to_visual: !function ru_utils.mmbench_doc_to_visual
 doc_to_text: !function ru_utils.mmbench_doc_to_text
 doc_to_target: "answer"
