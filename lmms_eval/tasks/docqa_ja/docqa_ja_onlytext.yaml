@@ -17,7 +17,7 @@ metric_list:
   - metric: anls
     aggregation: mean
     higher_is_better: true
-  - metric: gpt4judge
+  - metric: sambajudge
     aggregation: mean
     higher_is_better: true
     query: true

@@ -248,6 +248,48 @@ def gpt4judge(
         
     return {"gpt4judge": max(values), "for_log": responses}
 
+@register_metric(
+    metric="sambajudge",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="mean",
+    query="false"
+)
+def sambajudge(
+    references,
+    predictions,
+    query
+):  # This is a passthrough function
+    """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
+    values = []
+    responses = []
+    SERVER_URL = 'http://10.10.0.109:5000'
+    import requests
+    import json
+    for answer in references:
+        # preprocess both the answers - gt and prediction
+        gt_answer = answer
+        det_answer = predictions[0]
+        single_judge_payload = {
+            'prompt': query,
+            'completion': det_answer,
+            'ground_truth': gt_answer
+        }
+        url = f'{SERVER_URL}/single-judge'
+        headers = {'Content-Type': 'application/json'}
+        
+        # response = requests.post(url, headers=headers, data=json.dumps(single_judge_payload))
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(single_judge_payload))
+            score = int(response.json()['response'])
+        except:
+            breakpoint()
+        responses.append(response)
+        values.append(score)
+        
+    return {"sambajudge": max(values), "for_log": responses}
+
+
 def extract_number_from_brackets(string):
     # Regular expression to find numbers inside double brackets
     match = re.search(r'\[\[(\d+)\]\]', string)
