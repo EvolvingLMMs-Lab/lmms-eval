@@ -1,5 +1,5 @@
 task: wildvision_0617
-dataset_name: release_bench_0617_with_modeljudgement 
+dataset_name: release_bench_0617_with_modelresponse 
 test_split: test500
 output_type: generate_until
 include: _default_template_yaml
