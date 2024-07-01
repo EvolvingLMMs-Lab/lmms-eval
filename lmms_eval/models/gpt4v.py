@@ -169,7 +169,6 @@ class GPT4V(lmms):
                 try:
                     response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
                     response_data = response.json()
-
                     content = response_data["choices"][0]["message"]["content"].strip()
                     break  # If successful, break out of the loop
 

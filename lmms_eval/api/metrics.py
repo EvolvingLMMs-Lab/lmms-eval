@@ -7,7 +7,7 @@ import sklearn.metrics
 import random
 import evaluate
 import torch
-
+import re
 from lmms_eval.api.registry import register_metric, register_aggregation
 from loguru import logger as eval_logger
 
@@ -214,6 +214,51 @@ def anls(
     return {"anls": question_result}
 
 
+@register_metric(
+    metric="gpt4judge",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="mean",
+    query="false"
+)
+def gpt4judge(
+    references,
+    predictions,
+    query
+):  # This is a passthrough function
+    """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
+    values = []
+    from openai import OpenAI
+    responses = []
+    for answer in references:
+        # preprocess both the answers - gt and prediction
+        gt_answer = answer
+        det_answer = predictions[0]
+        client = OpenAI()
+        messages = []
+        messages.append({'role': 'system', 'content': "You are a highly efficient assistant. You are to be as fair and accurate"})
+        messages.append({'role': 'user', 'content': "I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n What is name of university? \n\n Here is the answer to the question: \n\n University of California, San Diego \n\n Here is the model completion: \n\n UCSD \n\n Judgement:"})
+        messages.append({'role': 'assistant', 'content': "The answer is correct, so I rate [[1]]. \n\n Explanation: UCSD is an appropriate abbreviation for the University of California, San Diego. "})
+        messages.append({'role': 'user', 'content': f"I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n {query} \n\n Here is the answer to the question: \n\n { gt_answer} \n\n Here is the model completion: \n\n {det_answer} \n\n Judgement:"})
+        completion = client.chat.completions.create(model="gpt-4o", messages=messages)
+        response = completion.choices[0].message.content
+        score = int(extract_number_from_brackets(response))
+        responses.append(response)
+        values.append(score)
+        
+    return {"gpt4judge": max(values), "for_log": responses}
+
+def extract_number_from_brackets(string):
+    # Regular expression to find numbers inside double brackets
+    match = re.search(r'\[\[(\d+)\]\]', string)
+    if match:
+        return int(match.group(1))
+    else:
+        return None  # Return None if no match is found
+
+
+    
+    
 def pop_stddev(arr):
     mu = mean(arr)
     return math.sqrt(sum([(x - mu) ** 2 for x in arr]) / len(arr))

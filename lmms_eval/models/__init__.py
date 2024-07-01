@@ -13,6 +13,7 @@ AVAILABLE_MODELS = {
     "fuyu": "Fuyu",
     "batch_gpt4": "BatchGPT4",
     "gpt4v": "GPT4V",
+    "ocrgpt4": "OCRGPT4",
     "minicpm_v": "MiniCPM_V",
     "llava_vid": "LlavaVid",
     "videoChatGPT": "VideoChatGPT",
@@ -33,6 +34,7 @@ AVAILABLE_MODELS = {
     "llava_hf": "LlavaHf",
     "longva": "LongVA",
     "paligemma": "PaliGemma"
+    # "docowl": "DocOwl"
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
