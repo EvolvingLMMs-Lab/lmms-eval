@@ -11,10 +11,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval import utils
-from typing import List, Optional, Union, Tuple
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline,Conversation 
-from tqdm import tqdm
+from typing import List, Optional, Union
 from lmms_eval.models.hfmodel import HFModel
 
 @register_model("llama8b")

@@ -282,12 +282,13 @@ def sambajudge(
         try:
             response = requests.post(url, headers=headers, data=json.dumps(single_judge_payload))
             score = int(response.json()['response'])
+            reasoning = response.json()['reasoning']
         except:
             breakpoint()
         responses.append(response)
         values.append(score)
         
-    return {"sambajudge": max(values), "for_log": responses}
+    return {"sambajudge": max(values), "for_log": reasoning}
 
 
 def extract_number_from_brackets(string):
