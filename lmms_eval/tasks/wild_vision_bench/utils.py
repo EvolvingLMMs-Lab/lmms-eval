@@ -1,5 +1,5 @@
 import json
-
+import re
 import os
 import requests
 import numpy as np
@@ -78,14 +78,15 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
     payload = {
         "model": GPT_EVAL_MODEL_NAME,
         "messages": [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": [{"type": "text", "text": system_prompt}]},
             {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}",
+                    {"type": "image_url",
+                        "image_url" : {
+                            "url" : f"data:image/jpeg;base64, {base64_image}"
+                            }
                     },
                 ],
             }
@@ -101,14 +102,14 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             response_data = response.json()
             return response_data["choices"][0]["message"]["content"], GPT_EVAL_MODEL_NAME
         except requests.exceptions.RequestException as e:
-            eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
-            time.sleep(wait_time)
+            print(f"Request failed on attempt {attempt+1}: {e}")
             if attempt == max_retries - 1:
-                eval_logger.error(f"Failed to get response after {max_retries} attempts")
+                print(f"Failed to get response after {max_retries} attempts")
                 return "", GPT_EVAL_MODEL_NAME
         except Exception as e:
-            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
+            print(f"Error on attempt {attempt+1}: {e}")
             return "", GPT_EVAL_MODEL_NAME
+
 
 
 def image_to_base64(pil_image):
@@ -149,13 +150,29 @@ def wild_vision_process_results(doc, results):
     user_prompt = prompt_template.format(question_1=doc["instruction"], answer_1=doc[BASELINE_MODEL_NAME], answer_2=pred)
     base64_image = image_to_base64(doc["image"])
     resps, gpt_name = get_chat_response(base64_image, user_prompt)
-    score, _ = get_score(resps, pattern="\[\[([AB<>=]+)\]\]")
-    try:
-        score = int(score)
-    except:
-        score = 0
+    score, _ = get_score(resps, pattern=re.compile("\[\[([AB<>=]+)\]\]"))
+    
+    if "A>B" in score:
+        final_score = -1
+        judgement = "Worse" #Baseline better
+    elif "A>>B" in score:
+        final_score = -2
+        judgement = "Worse++"
+    elif "A=B" in score:
+        final_score = 0 
+        judgement = "Tie"
+    elif "B>A" in score:
+        final_score = 1
+        judgement = "Better"
+    elif "B>>A" in score:
+        final_score = 2
+        judgement = "Better++"
+    else:
+        final_score = 0
+        judgement = "Unclear"
 
-    return {"gpt_eval_score" : {"question" : doc["instruction"], "score" : score, "gpt_resps" : resps, "ans_1" : doc[BASELINE_MODEL_NAME], "ans_2" : pred}}
+
+    return {"gpt_eval_score" : {"question" : doc["instruction"], "score" : final_score, "gpt_resps" : resps, "ans_1" : doc[BASELINE_MODEL_NAME], "ans_2" : pred, "filtered_resps" : score, "judgement" : judgement}}
 
 
 def wild_vision_aggregation(results):
