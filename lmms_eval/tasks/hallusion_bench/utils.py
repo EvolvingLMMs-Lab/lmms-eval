@@ -7,7 +7,7 @@ import time
 import openai
 import threading
 import requests
-import logging
+
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 
@@ -26,7 +26,7 @@ elif API_TYPE == "azure":
         "Content-Type": "application/json",
     }
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def evaluate_by_chatgpt(data, output_entry, correctness_entry, gpt_model="gpt-4", load_json=False, save_json_path="./hallusion_output.json", retries=3):

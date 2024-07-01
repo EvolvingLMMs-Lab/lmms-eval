@@ -1,12 +1,11 @@
+import importlib
 import os
 import yaml
 import sys
-import copy
 import json
-import logging
+
 import traceback
 import argparse
-import torch
 import numpy as np
 import datetime
 
@@ -25,10 +24,7 @@ from lmms_eval import evaluator, utils
 from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict
 from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.logging_utils import WandbLogger
-from lmms_eval.utils import PathFormatter
-
-
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def _handle_non_serializable(o):
@@ -106,8 +102,15 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "--log_samples_suffix",
         type=str,
-        default="",
+        default="model_outputs",
         help="Specify a suffix for the log_samples file name.",
+    )
+    parser.add_argument(
+        "--predict_only",
+        "-x",
+        action="store_true",
+        default=False,
+        help="Use with --log_samples. Only model outputs will be saved and metrics will not be evaluated.",
     )
     parser.add_argument(
         "--show_config",
@@ -159,9 +162,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         print("└───────────────────────────────────────────────────────────────────────────────┘")
         sys.exit(1)
 
-    set_loggers(args)
-    eval_logger = logging.getLogger("lmms-eval")
-    eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
+    # reset logger
+    eval_logger.remove()
+    eval_logger.add(sys.stdout, colorize=True, level=args.verbosity)
+    eval_logger.add(sys.stderr, level=args.verbosity)
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -221,18 +225,23 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
-    eval_logger = logging.getLogger("lmms-eval")
-    eval_logger.setLevel(getattr(logging, f"{args.verbosity}"))
-    eval_logger.info(f"Verbosity set to {args.verbosity}")
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
     initialize_tasks(args.verbosity)
 
+    if args.predict_only:
+        args.log_samples = True
+    if (args.log_samples or args.predict_only) and not args.output_path:
+        raise ValueError("Specify --output_path if providing --log_samples or --predict_only")
     if args.limit:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
     if args.include_path is not None:
         eval_logger.info(f"Including path: {args.include_path}")
         include_path(args.include_path)
+
+    if os.environ.get("LMMS_EVAL_PLUGINS", None):
+        for plugin in os.environ["LMMS_EVAL_PLUGINS"].split(","):
+            package_tasks_location = importlib.util.find_spec(f"{plugin}.tasks").submodule_search_locations[0]
+            eval_logger.info(f"Including path: {args.include_path}")
+            include_path(package_tasks_location)
 
     if args.tasks is None:
         task_names = ALL_TASKS
@@ -274,6 +283,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     # set datetime before evaluation
     datetime_str = utils.get_datetime_str(timezone=args.timezone)
     if args.output_path:
+        if args.log_samples_suffix and len(args.log_samples_suffix) > 15:
+            eval_logger.warning("The suffix for log_samples is too long. It is recommended to keep it under 15 characters.")
+            args.log_samples_suffix = args.log_samples_suffix[:5] + "..." + args.log_samples_suffix[-5:]
+
         hash_input = f"{args.model_args}".encode("utf-8")
         hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
         path = Path(args.output_path)
@@ -296,6 +309,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         log_samples=args.log_samples,
         gen_kwargs=args.gen_kwargs,
         cli_args=args,
+        predict_only=args.predict_only,
     )
 
     if results is not None:
@@ -318,9 +332,9 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
                 for task_name, config in results["configs"].items():
                     filename = args.output_path.joinpath(f"{task_name}.json")
                     # Structure the data with 'args' and 'logs' keys
-                    data_to_dump = {"args": vars(args), "model_configs": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"])}  # Convert Namespace to dict
-                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable)
-                    filename.open("w").write(samples_dumped)
+                    data_to_dump = {"args": vars(args), "model_configs": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"]), "time": datetime_str}
+                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable, ensure_ascii=False)
+                    filename.open("w", encoding="utf-8").write(samples_dumped)
                     eval_logger.info(f"Saved samples to {filename}")
 
         return results, samples
@@ -332,14 +346,6 @@ def print_results(args, results):
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))
-
-
-def set_loggers(args):
-    eval_logger = logging.getLogger("lmms-eval")
-    ch = logging.StreamHandler()
-    formatter = PathFormatter("%(asctime)s [%(pathname)s:%(lineno)d] %(levelname)s %(message)s", "%m-%d %H:%M:%S", timezone=args.timezone)
-    ch.setFormatter(formatter)
-    eval_logger.addHandler(ch)
 
 
 if __name__ == "__main__":

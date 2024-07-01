@@ -9,13 +9,15 @@ import evaluate
 import torch
 import re
 from lmms_eval.api.registry import register_metric, register_aggregation
-
-import logging
-
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 # Register Aggregations First
+@register_aggregation("bypass")
+def bypass_agg(arr):
+    return 999
+
+
 @register_aggregation("mean")
 def mean(arr):
     return sum(arr) / len(arr)
@@ -312,6 +314,16 @@ def sample_stddev(arr):
 
 def mean_stderr(arr):
     return sample_stddev(arr) / math.sqrt(len(arr))
+
+
+@register_metric(
+    metric="bypass",
+    higher_is_better=True,
+    output_type=["loglikelihood", "multiple_choice", "generate_until"],
+    aggregation="bypass",
+)
+def bypass(items):
+    return items
 
 
 @register_metric(

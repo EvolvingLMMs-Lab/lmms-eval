@@ -1,5 +1,5 @@
 import json
-import logging
+
 import os
 import requests
 import numpy as np
@@ -10,14 +10,15 @@ import yaml
 from pathlib import Path
 from copy import deepcopy
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
+
 NUM_SECONDS_TO_SLEEP = 5
 
 LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_complex"]
 
 rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule.json"), "r"))
 
-with open(Path(__file__).parent / "llava-in-the-wild.yaml", "r") as f:
+with open(Path(__file__).parent / "_default_template.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):

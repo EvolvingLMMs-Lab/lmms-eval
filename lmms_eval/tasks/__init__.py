@@ -1,4 +1,4 @@
-import os
+import os, sys
 from typing import List, Union, Dict
 
 from lmms_eval import utils
@@ -13,9 +13,9 @@ from lmms_eval.api.registry import (
     ALL_TASKS,
 )
 
-import logging
+from loguru import logger
 
-eval_logger = logging.getLogger("lmms-eval")
+eval_logger = logger
 
 
 def register_configurable_task(config: Dict[str, str]) -> int:
@@ -71,6 +71,10 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
     for root, subdirs, file_list in os.walk(task_dir):
         # if (subdirs == [] or subdirs == ["__pycache__"]) and (len(file_list) > 0):
         for f in file_list:
+            # if "detail" in f:
+            #     import pdb;pdb.set_trace()
+            # if "vatex" in f:
+            #     print("a")
             if f.endswith(".yaml"):
                 yaml_path = os.path.join(root, f)
                 try:
@@ -105,14 +109,16 @@ def include_path(task_dir):
 
 
 def initialize_tasks(verbosity="INFO"):
-    eval_logger.setLevel(getattr(logging, f"{verbosity}"))
+    logger.remove()
+    eval_logger.add(sys.stdout, colorize=True, level=verbosity)
+    eval_logger.add(sys.stderr, level=verbosity)
     task_dir = os.path.dirname(os.path.abspath(__file__)) + "/"
     include_path(task_dir)
 
 
 def get_task(task_name, model_name):
     try:
-        return TASK_REGISTRY[task_name](model_name=model_name)
+        return TASK_REGISTRY[task_name](model_name=model_name)  # TODO choiszt the return result need to check " 'mmeConfigurableTask' object has no attribute '_instances'. Did you mean: 'instances'?"
     except KeyError:
         eval_logger.info("Available tasks:")
         eval_logger.info(list(TASK_REGISTRY) + list(GROUP_REGISTRY))

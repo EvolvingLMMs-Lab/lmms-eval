@@ -35,36 +35,8 @@ import transformers
 from jinja2 import BaseLoader, Environment, StrictUndefined
 from itertools import islice
 import pytz
-import logging
 
-
-class PathFormatter(logging.Formatter):
-    def __init__(self, fmt=None, datefmt=None, timezone="UTC"):
-        super().__init__(fmt, datefmt)
-        self.timezone = timezone
-
-    def formatTime(self, record, datefmt=None):
-        # Convert to Asia/Singapore timezone
-        ct = datetime.datetime.fromtimestamp(record.created, pytz.timezone(self.timezone))
-        if datefmt:
-            s = ct.strftime(datefmt)
-        else:
-            try:
-                s = ct.isoformat(timespec="milliseconds")
-            except TypeError:
-                s = ct.isoformat()
-        return s
-
-    def format(self, record):
-        # Extract the pathname from the record
-        pathname = record.pathname
-        # Split the pathname into folders
-        folders = pathname.split(os.sep)
-        # Get the last two folders and the filename
-        if len(folders) > 2:
-            record.pathname = os.sep.join(folders[-3:])
-        return super(PathFormatter, self).format(record)
-
+from loguru import logger as eval_logger
 
 SPACING = " " * 47
 
@@ -411,9 +383,12 @@ def make_table(result_dict, column: str = "results"):
 
             points = "N/A"
             if v is not None:
-                if 0 <= v <= 1:
-                    v *= 100
-                points = "%.4f" % v
+                if isinstance(v, str):
+                    points = v
+                else:
+                    # if 0 <= v <= 1:
+                    #     # v *= 100
+                    points = "%.4f" % v
 
             if m + "_stderr" + "," + f in dic:
                 if v is None:

@@ -1,5 +1,5 @@
 import torch
-import logging
+
 import copy
 from tqdm import tqdm
 from lmms_eval import utils
@@ -10,6 +10,7 @@ from lmms_eval.tasks.mmmu.utils_group_img import process_images
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
+import transformers
 from transformers import InstructBlipProcessor, InstructBlipForConditionalGeneration
 
 from lmms_eval.utils import stop_sequences_criteria
@@ -19,7 +20,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @register_model("instructblip")

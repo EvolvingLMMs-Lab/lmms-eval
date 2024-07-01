@@ -1,10 +1,10 @@
 import time
 import requests
-import logging
+
 from tqdm import tqdm
 import pandas as pd
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 DEMO_PROMPT_EXTRACT = """
 I am providing you a response from a model to a math problem, termed 'Model Response'. You should extract the answer from the response as 'Extracted Answer'. Directly output the extracted answer with no explanation.
@@ -71,6 +71,7 @@ Judgement: 1
 [Model_answer] : {extraction}
 Judgement: """
 
+
 class MathVerseEvaluator:
     API_URL = "https://api.openai.com/v1/chat/completions"
 
@@ -108,15 +109,15 @@ class MathVerseEvaluator:
 
             except Exception as e:
                 # some model may output repetitive answer, which ChatGPT will throw an error.
-                if 'repetitive patterns' in str(e):
+                if "repetitive patterns" in str(e):
                     print(str(e))
                     print("Continue with empty answer")
                     return ""
                 # some answer may contain some sensitive words, like 'test'
-                if 'sensitive' in str(e) or '400' in str(e):
+                if "sensitive" in str(e) or "400" in str(e):
                     print(str(e))
                     print("Continue with empty answer")
-                    return "0" 
+                    return "0"
 
                 if "Rate limit" not in str(e):
                     eval_logger.error(e)
@@ -153,7 +154,6 @@ class MathVerseEvaluator:
         return full_prompt
 
     def extract_answer(self, response):
-
         if not response:
             return ""
 
@@ -177,7 +177,7 @@ class MathVerseEvaluator:
             while True:
                 extraction = self.get_chat_response(full_prompt, temperature=0, max_tokens=8, n=1)
                 judgement = extraction.replace("Judgement:", "").strip()
-                if judgement.strip() in ['0', '1']:
+                if judgement.strip() in ["0", "1"]:
                     return int(judgement) == 1
 
         except Exception as e:
@@ -185,7 +185,6 @@ class MathVerseEvaluator:
             print(f"Error in matching answer")
 
         return False
-
 
     def get_acc_with_contion(self, res_pd, key, value):
         """
@@ -240,11 +239,11 @@ class MathVerseEvaluator:
             hint_text = ""
         # custom-prompt
         elif shot_type == "custom-prompt":
-            if question_type == 'multi-choice':
-                hint_text = hint['multi-choice']
-            else: # free-form
-                hint_text = hint['free-form']
-        
+            if question_type == "multi-choice":
+                hint_text = hint["multi-choice"]
+            else:  # free-form
+                hint_text = hint["free-form"]
+
         # question
         if shot_type == "format-prompt":
             question_text = f"{problem[query_type]}"
@@ -262,23 +261,23 @@ class MathVerseEvaluator:
     def eval_results(self, results, config):
         # extract and score for each question
         for inst in tqdm(results):
-            full_prediction = inst['prediction'].strip()
+            full_prediction = inst["prediction"].strip()
             problem = {
                 "question_type": inst["question_type"],
                 "answer": inst["answer"] if "answer" in inst else None,
                 "question_for_eval": inst["question_for_eval"],
             }
-            if config['metadata'].get('trunk_response', -1) > 0:
-                prediction = ' '.join(full_prediction.split(' ')[-config['metadata']['trunk_response']:])
+            if config["metadata"].get("trunk_response", -1) > 0:
+                prediction = " ".join(full_prediction.split(" ")[-config["metadata"]["trunk_response"] :])
             else:
                 prediction = full_prediction
             extraction = self.extract_answer(prediction)
             # set test set answer to None
-            true_false = self.score_answer(problem['question_for_eval'], problem["answer"], extraction, config['metadata']['quick_match']) if problem["answer"] is not None else False
+            true_false = self.score_answer(problem["question_for_eval"], problem["answer"], extraction, config["metadata"]["quick_match"]) if problem["answer"] is not None else False
 
-            inst['extraction'] = extraction
-            inst['prediction'] = prediction
-            inst['true_false'] = true_false
+            inst["extraction"] = extraction
+            inst["prediction"] = prediction
+            inst["true_false"] = true_false
 
         # calculate total scores
         sample_index = [result["sample_index"] for result in results]

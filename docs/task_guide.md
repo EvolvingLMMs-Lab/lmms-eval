@@ -27,7 +27,7 @@ doc_to_target: "answer"
 generation_kwargs:
   max_new_tokens: 16
   temperature: 0
-  top_p: 0
+  top_p: 1.0
   num_beams: 1
   do_sample: false
 # The return value of process_results will be used by metrics
