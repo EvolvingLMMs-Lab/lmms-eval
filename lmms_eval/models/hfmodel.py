@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline,Conversation 
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from typing import List, Tuple, Union
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -25,7 +25,7 @@ class HFModel(lmms):
                                                           device_map="auto"
                                                           )
         self.tokenizer = AutoTokenizer.from_pretrained(pretrained)
-        self.pipeline = pipeline('conversational', model=self.model, tokenizer=self.tokenizer, max_length=1024)
+        self.pipeline = pipeline('text-generation', model=self.model, tokenizer=self.tokenizer, max_length=1024)
         self.batch_size = int(batch_size)
     def loglikelihood(self, requests: list[Instance]) -> list[tuple[float, bool]]:
         raise NotImplementedError
@@ -35,7 +35,7 @@ class HFModel(lmms):
         
         for i in range(0, len(requests), self.batch_size):
             all_prompts = [reg.args[0] for reg in requests[i:i+self.batch_size]]
-            all_convos = [Conversation(messages=[{'role': 'user', 'content': prompt}]) for prompt in all_prompts]
+            all_convos = [{'role': 'user', 'content': prompt} for prompt in all_prompts]
             batch_outputs = self.pipeline(all_convos)
             res.append(batch_outputs[-1]['content'])
         return res

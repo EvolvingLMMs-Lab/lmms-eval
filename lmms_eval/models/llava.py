@@ -95,7 +95,6 @@ class Llava(lmms):
             # for older versions of LLaVA that don't have multimodal argument
             llava_model_args.pop("multimodal", None)
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
-
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -319,6 +318,7 @@ class Llava(lmms):
                 self._config.image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio")
                 eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
             # encode, pad, and truncate contexts for this batch
+
             if visuals:
                 image_tensor = process_images(visuals, self._image_processor, self._config)
                 if type(image_tensor) is list:
