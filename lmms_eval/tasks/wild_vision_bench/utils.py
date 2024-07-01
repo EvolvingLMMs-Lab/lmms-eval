@@ -152,6 +152,9 @@ def wild_vision_process_results(doc, results):
     resps, gpt_name = get_chat_response(base64_image, user_prompt)
     score, _ = get_score(resps, pattern=re.compile("\[\[([AB<>=]+)\]\]"))
     
+    if score is None:
+        score = resps
+    
     if "A>B" in score:
         final_score = -1
         judgement = "Worse" #Baseline better
