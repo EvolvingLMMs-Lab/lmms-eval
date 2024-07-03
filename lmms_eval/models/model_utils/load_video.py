@@ -29,6 +29,8 @@ def record_video_length_packet(container):
 
 
 def read_video_pyav(video_path, num_frm=8):
+    container = av.open(video_path)
+
     if "webm" not in video_path and "mkv" not in video_path:
         # For mp4, we try loading with stream first
         try:
