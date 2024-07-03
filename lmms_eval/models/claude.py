@@ -238,6 +238,7 @@ class Claude(lmms):
                         pbar.update(1)
                         continue
 
+            response_text = message.content[0].text
             res.append(message.content[0].text)
             pbar.update(1)
 

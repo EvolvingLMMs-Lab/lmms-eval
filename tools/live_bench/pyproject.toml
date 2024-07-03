@@ -1,0 +1,47 @@
+[tool.black]
+line-length = 240
+
+[build-system]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[tomli]>=6.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "live_bench"
+version = "0.0.1"
+authors = [
+    { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@outlook.com" },
+]
+description = "Live Bench"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "PyYAML >= 6.0.1",
+    "webdriver_manager >= 4.0.1",
+    "openai >= 1.32.0",
+    "google-generativeai >= 0.6.0",
+    "datasets >= 2.19.2",
+    "Pillow >= 10.3.0",
+    "selenium >= 4.21.0",
+    "undetected-chromedriver >= 3.5.5",
+    "anthropic >= 0.28.0",
+    "bs4 >= 0.0.2",
+]
+
+[tool.setuptools.packages.find]
+include = ["lmms_eval*"]
+
+[tool.setuptools.package-data]
+lmms_eval = ["**/*.yaml", "tasks/**/*"]
+
+[project.scripts]
+lmms-eval = "lmms_eval.__main__:cli_evaluate"
+
+[project.urls]
+Homepage = "https://lmms-lab.github.io/"
+Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
