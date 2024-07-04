@@ -1,3 +1,4 @@
+import importlib
 import os
 import yaml
 import sys
@@ -235,6 +236,12 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     if args.include_path is not None:
         eval_logger.info(f"Including path: {args.include_path}")
         include_path(args.include_path)
+
+    if os.environ.get("LMMS_EVAL_PLUGINS", None):
+        for plugin in os.environ["LMMS_EVAL_PLUGINS"].split(","):
+            package_tasks_location = importlib.util.find_spec(f"{plugin}.tasks").submodule_search_locations[0]
+            eval_logger.info(f"Including path: {args.include_path}")
+            include_path(package_tasks_location)
 
     if args.tasks is None:
         task_names = ALL_TASKS

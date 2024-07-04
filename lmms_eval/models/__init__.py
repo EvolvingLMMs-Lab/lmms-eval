@@ -1,3 +1,6 @@
+import importlib
+import os
+import hf_transfer
 from loguru import logger
 import sys
 
@@ -28,6 +31,8 @@ AVAILABLE_MODELS = {
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
     "tinyllava": "TinyLlava",
+    "llava_hf": "LlavaHf",
+    "longva": "LongVA",
     "llava_onevision": "Llava_OneVision",
     "llava_hf": "LlavaHf",
     "longva": "LongVA",
@@ -39,3 +44,17 @@ for model_name, model_class in AVAILABLE_MODELS.items():
     except ImportError as e:
         # logger.warning(f"Failed to import {model_class} from {model_name}: {e}")
         pass
+
+if os.environ.get("LMMS_EVAL_PLUGINS", None):
+    # Allow specifying other packages to import models from
+    for plugin in os.environ["LMMS_EVAL_PLUGINS"].split(","):
+        m = importlib.import_module(f"{plugin}.models")
+        for model_name, model_class in getattr(m, "AVAILABLE_MODELS").items():
+            try:
+                exec(f"from {plugin}.models.{model_name} import {model_class}")
+            except ImportError:
+                pass
+
+import hf_transfer
+
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
