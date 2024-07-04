@@ -1,0 +1,23 @@
+include: _default_template_yaml
+dataset_path: lmms-lab/MixEvals_Video2Text_OpenEnded_2nd
+dataset_name: "video2text_openended"
+task: "mix_evals_video2text_openconv_2nd"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
+doc_to_text: !function utils.mix_evals_video2text_doc_to_text_open_convs
+doc_to_target: ""
+process_results: !function utils.mix_evals_video2text_process_results_open_convs
+
+metric_list:
+  - metric: submission
+    aggregation: !function utils.mix_evals_video2text_aggregate_gen
+    higher_is_better: true
+
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
+    post_prompt: ""
+  gpt4v:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
+    post_prompt: ""

@@ -40,6 +40,7 @@ class Claude(lmms):
         image_token: str = "<image>",  # Use to separate interleaved image and text
         system_prompt: str = "",  # Whether you want some special system prompt here
         modality: str = "image",
+        max_frames_num: int = 10,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
         **kwargs,
@@ -49,20 +50,24 @@ class Claude(lmms):
         self.image_token = image_token
         self.system_prompt = system_prompt
         self.modality = modality
+        self.max_frames_num = max_frames_num
 
         self.continual_mode = continual_mode
-        if self.continual_mode and response_persistent_folder is None:
-            raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-        self.response_persistent_folder = response_persistent_folder
-        self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+        if self.continual_mode:
+            if response_persistent_folder is None:
+                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
 
-        if os.path.exists(self.response_persistent_file):
-            with open(self.response_persistent_file, "r") as f:
-                self.response_cache = json.load(f)
-            self.cache_mode = "resume"
-        else:
-            self.response_cache = {}
-            self.cache_mode = "start"
+            os.makedirs(response_persistent_folder, exist_ok=True)
+            self.response_persistent_folder = response_persistent_folder
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+
+            if os.path.exists(self.response_persistent_file):
+                with open(self.response_persistent_file, "r") as f:
+                    self.response_cache = json.load(f)
+                self.cache_mode = "resume"
+            else:
+                self.response_cache = {}
+                self.cache_mode = "start"
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -81,7 +86,7 @@ class Claude(lmms):
 
     def encode_image(self, image):
         output_buffer = BytesIO()
-        image.save(output_buffer, format="PNG")
+        image.save(output_buffer, format="JPEG")
         byte_data = output_buffer.getvalue()
         base64_str = base64.b64encode(byte_data).decode("utf-8")
         return base64_str
@@ -129,7 +134,7 @@ class Claude(lmms):
     def encode_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_for_video, dtype=int)
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
@@ -137,10 +142,10 @@ class Claude(lmms):
         for frame in frames:
             img = Image.fromarray(frame)
             output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
+            img.save(output_buffer, format="JPEG")
             byte_data = output_buffer.getvalue()
             base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(f"data:image/jpeg;base64,{base64_str}")
+            base64_frames.append(f"{base64_str}")
 
         return base64_frames
 
@@ -154,7 +159,7 @@ class Claude(lmms):
             "type": "image",
             "source": {
                 "type": "base64",
-                "media_type": "image/png",
+                "media_type": "image/jpeg",
             },
         }
         empty_text_block = {"type": "text"}
@@ -220,8 +225,8 @@ class Claude(lmms):
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
+            if "top_p" not in gen_kwargs or gen_kwargs["top_p"] is None:
+                gen_kwargs["top_p"] = 1
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
@@ -244,6 +249,7 @@ class Claude(lmms):
 
             ###################### CONTINUAL MODE ######################
             if self.continual_mode is True:  # Cache the response
+                response_text = message.content[0].text
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 self.response_cache[doc_uuid] = response_text
                 with open(self.response_persistent_file, "w") as f:

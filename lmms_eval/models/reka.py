@@ -36,7 +36,7 @@ class Reka(lmms):
         self,
         model_version: str = "reka-edge",
         modality: str = "image",
-        max_frames_for_video: int = 10,
+        max_frames_num: int = 5,
         timeout: int = 120,
         continual_mode: bool = False,
         response_persistent_folder: str = None,  # We will cache the Gemini API response in this path and use it for future requests
@@ -45,21 +45,24 @@ class Reka(lmms):
         super().__init__()
         self.model_version = model_version
         self.modality = modality
-        self.max_frames_for_video = max_frames_for_video
+        self.max_frames_num = max_frames_num
         self.timeout = timeout
         self.continual_mode = continual_mode
-        if self.continual_mode and response_persistent_folder is None:
-            raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-        self.response_persistent_folder = response_persistent_folder
-        self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+        if self.continual_mode:
+            if response_persistent_folder is None:
+                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
 
-        if os.path.exists(self.response_persistent_file):
-            with open(self.response_persistent_file, "r") as f:
-                self.response_cache = json.load(f)
-            self.cache_mode = "resume"
-        else:
-            self.response_cache = {}
-            self.cache_mode = "start"
+            os.makedirs(response_persistent_folder, exist_ok=True)
+            self.response_persistent_folder = response_persistent_folder
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+
+            if os.path.exists(self.response_persistent_file):
+                with open(self.response_persistent_file, "r") as f:
+                    self.response_cache = json.load(f)
+                self.cache_mode = "resume"
+            else:
+                self.response_cache = {}
+                self.cache_mode = "start"
 
         self.reka = RekaClient(api_key=os.getenv("REKA_API_KEY", "YOUR_API_KEY"))
 
@@ -99,7 +102,7 @@ class Reka(lmms):
     def encode_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_for_video, dtype=int)
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
@@ -141,7 +144,7 @@ class Reka(lmms):
                 message_content.append({"type": "text", "text": context})
                 assert len(visual) == 1, "Reka only supports one video per request"
                 media_urls = self.encode_video(visual[0])
-                assert len(media_urls) == self.max_frames_for_video, f"Reka only supports {self.max_frames_for_video} frames per request"
+                assert len(media_urls) == self.max_frames_num, f"Reka only supports {self.max_frames_num} frames per request"
                 for media_url in media_urls:
                     message_content.append({"type": "image_url", "image_url": media_url})
 
