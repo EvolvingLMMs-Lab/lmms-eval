@@ -120,8 +120,8 @@ class GPT4V(lmms):
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
-            # visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            visuals = [doc_to_visual(self.task_dict[task][split][0])]
+            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+            # visuals = [doc_to_visual(self.task_dict[task][split][0])]
             visuals = self.flatten(visuals)
             imgs = []  # multiple images or frames for video
             for visual in visuals:
@@ -139,13 +139,13 @@ class GPT4V(lmms):
                 payload["messages"].append(deepcopy(response_json))
                 payload["messages"][0]["content"].append({"type": "text", "text": contexts})
                 for img in imgs:
-                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
             else:
                 contexts = contexts.split(self.image_token)
                 for idx, img in enumerate(imgs):
                     payload["messages"].append(deepcopy(response_json))
                     payload["messages"][idx]["content"].append({"type": "text", "text": contexts[idx]})
-                    payload["messages"][idx]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
+                    payload["messages"][idx]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
 
                 # If n image tokens are in the contexts
                 # contexts will be splitted into n+1 chunks

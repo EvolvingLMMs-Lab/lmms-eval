@@ -31,7 +31,9 @@ def get_qa_data(images: ScreenImage, qa_generator: QAGenerator, *, infomation_ge
     return qa_data, response
 
 
-def get_live_bench_data(driver, website: Website, screen_shoter: ScreenShoter, qa_generator: QAGenerator, checker: QAGenerator, infomation_getter: InfomationExtractor, test=False, scorer=None, score_threshold = 5) -> Tuple[List[LiveBenchData], Response]:
+def get_live_bench_data(
+    driver, website: Website, screen_shoter: ScreenShoter, qa_generator: QAGenerator, checker: QAGenerator, infomation_getter: InfomationExtractor, test=False, scorer=None, score_threshold=5
+) -> Tuple[List[LiveBenchData], Response]:
     images = screen_shoter.capture(driver, website)
     qa_data, logs = get_qa_data(images, qa_generator, test=test, infomation_getter=infomation_getter)
     data = []
@@ -65,7 +67,23 @@ class LiveBench(object):
 
     def clear(self):
         self.hf_data = Dataset.from_dict(
-            {"id": [], "images": [], "website": [], "question": [], "answer": [], "criteria": [], "subtask": [], "data_generator": [], "checker": [], "date_time": [], "screen_shoter": [], "screen_size": [], "score": [], "reason": [], "scorer_name": []},
+            {
+                "id": [],
+                "images": [],
+                "website": [],
+                "question": [],
+                "answer": [],
+                "criteria": [],
+                "subtask": [],
+                "data_generator": [],
+                "checker": [],
+                "date_time": [],
+                "screen_shoter": [],
+                "screen_size": [],
+                "score": [],
+                "reason": [],
+                "scorer_name": [],
+            },
             features=LiveBenchData.features,
         )
 

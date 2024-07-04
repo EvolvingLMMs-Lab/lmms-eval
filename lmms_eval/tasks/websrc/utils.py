@@ -46,11 +46,13 @@ def websrc_process_results(doc, results):
 
     return {
         "websrc_squad_f1": websrc_ans,
-        "submission": {
-            websrc_ans["question_id"]: pred,
-        }
-        if "question_id" in websrc_ans
-        else None,
+        "submission": (
+            {
+                websrc_ans["question_id"]: pred,
+            }
+            if "question_id" in websrc_ans
+            else None
+        ),
     }
 
 
