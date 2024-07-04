@@ -12,7 +12,6 @@ dataset_name: mmbench_cn_dev
 dataset_kwargs:
   token: True
 doc_to_target: "answer"
-dataset_name: "cn"
 output_type: generate_until
 doc_to_visual: !function cn_utils.mmbench_doc_to_visual
 doc_to_text: !function cn_utils.mmbench_doc_to_text
