@@ -165,7 +165,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     # reset logger
     eval_logger.remove()
     eval_logger.add(sys.stdout, colorize=True, level=args.verbosity)
-    eval_logger.add(sys.stderr, level=args.verbosity)
+    # eval_logger.add(sys.stderr, level=args.verbosity)
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 

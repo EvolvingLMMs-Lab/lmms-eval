@@ -1,0 +1,16 @@
+dataset_path: lmms-lab/MixEvals_Video2Text
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: mix_evals_video2text
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+  gpt4v:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
+    post_prompt: ""
+metadata:
+  modality: video
+  version: 0.0
+  gpt_eval_model_name: "gpt-3.5-turbo"
