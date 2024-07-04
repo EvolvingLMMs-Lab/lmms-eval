@@ -1,7 +1,7 @@
 dataset_path: lmms-lab/LMMs-Eval-Lite
 dataset_kwargs:
   token: True
-task : "flickr30k_test_test"
+task : "flickr30k_test_lite"
 dataset_name: flickr30k_test
 test_split: lite
 output_type: generate_until

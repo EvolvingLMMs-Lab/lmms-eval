@@ -17,7 +17,6 @@ model_specific_generation_kwargs:
   llava:
     image_aspect_ratio: original
 output_type: generate_until
-dataset_name: "en"
 generation_kwargs:
   until:
     - "ASSISTANT:"
