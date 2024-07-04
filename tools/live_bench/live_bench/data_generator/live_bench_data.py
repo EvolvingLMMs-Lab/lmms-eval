@@ -6,7 +6,7 @@ import datasets
 
 class LiveBenchData(object):
     SUBTASKS = ("Basic Understanding", "Contextual Analysis", "Deeper Implications", "Broader Implications", "Further Insights")
-    
+
     features = datasets.Features(
         {
             "id": datasets.Value("int32"),
@@ -28,7 +28,20 @@ class LiveBenchData(object):
     )
 
     def __init__(
-        self, *, screen: ScreenImage, question: str, answer: str, criteria: str, subtask: str, data_generator: str, infomation: ImageInfomation = None, score: int = None, reason: str = None, checker: QAGenerator = None, scorer_name=None, scorer=None
+        self,
+        *,
+        screen: ScreenImage,
+        question: str,
+        answer: str,
+        criteria: str,
+        subtask: str,
+        data_generator: str,
+        infomation: ImageInfomation = None,
+        score: int = None,
+        reason: str = None,
+        checker: QAGenerator = None,
+        scorer_name=None,
+        scorer=None,
     ):
         self.screen = screen
         self.question = question
