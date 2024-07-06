@@ -63,15 +63,7 @@ def websrc_test_aggregate_results_for_submission(results, args):
         for result in results:
             out.update(result)
         json.dump(out, f, indent=4)
-<<<<<<< HEAD
-<<<<<<< HEAD
     eval_logger.info(f"Results saved to {path}.")
-=======
-    lmms_logger.info(f"Results saved to {path}.")
->>>>>>> internal_main_dev
-=======
-    eval_logger.info(f"Results saved to {path}.")
->>>>>>> internal_main_dev
 
 
 def websrc_aggregate_results(results):
