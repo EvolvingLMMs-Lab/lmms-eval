@@ -59,6 +59,7 @@ Your response should be in the format:
 Explanation: (your explanation)
 Rating: (int)"""
 
+
 @dataclass
 class Example:
     """An example loaded from vibe-eval, stored as jsonl in the repo."""
@@ -75,6 +76,7 @@ class Example:
     score: Optional[int] = None
     evaluator_explanation: Optional[str] = None
 
+
 class Evaluator(Enum):
     # Use Reka Core (including image input).
     REKA_CORE = "reka-core"
@@ -82,12 +84,14 @@ class Evaluator(Enum):
     # Use Reka Core, only using text input.
     REKA_CORE_TEXT = "reka-core-text"
 
+
 def make_evaluator_prompt(example: Example, include_image: bool) -> str:
     return (_PROMPT_WITH_IMAGE if include_image else _PROMPT_WITH_NO_IMAGE).format(
         prompt=example.prompt,
         reference=example.reference,
         generation=example.generation,
     )
+
 
 def evaluate(example: Example, evaluator: Evaluator) -> Example:
     """Evaluates the generation and populates the score and explanation fields."""
@@ -112,11 +116,11 @@ def evaluate(example: Example, evaluator: Evaluator) -> Example:
     )
     evaluator_response = evaluator_response.responses[0].message.content
     # evaluator_response = reka.chat(
-        # human=evaluator_prompt,
-        # media_url=example.media_url if include_image else None,
-        # temperature=0.4,
-        # model_name="reka-core-20240415",
-        # request_output_len=1024,
+    # human=evaluator_prompt,
+    # media_url=example.media_url if include_image else None,
+    # temperature=0.4,
+    # model_name="reka-core-20240415",
+    # request_output_len=1024,
     # )["text"]
     re_match = re.search(r"Rating:\s*([1-5])", evaluator_response)
     if re_match is None:
@@ -127,8 +131,10 @@ def evaluate(example: Example, evaluator: Evaluator) -> Example:
     example.evaluator_explanation = evaluator_response
     return example
 
+
 def vibe_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
+
 
 def vibe_doc_to_text(doc, model_specific_prompt_kwargs=None):
     question = doc["prompt"].strip()
@@ -138,6 +144,7 @@ def vibe_doc_to_text(doc, model_specific_prompt_kwargs=None):
         question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
     return question
 
+
 def vibe_process_results(doc, results):
     example_id = doc["example_id"]
     category = doc["category"]
@@ -146,33 +153,26 @@ def vibe_process_results(doc, results):
     media_filename = doc["media_url"]
     media_url = doc["media_url"]
     generation = results[0]
-    example = Example(
-        example_id=example_id,
-        category=category,
-        prompt=prompt,
-        reference=reference,
-        media_filename=media_filename,
-        media_url=media_url,
-        generation=generation
-    )
+    example = Example(example_id=example_id, category=category, prompt=prompt, reference=reference, media_filename=media_filename, media_url=media_url, generation=generation)
 
-    evaluator = Evaluator.REKA_CORE if EVALUATOR_NAME == "reka-core" else Evaluator.REKA_CORE_TEXT 
-    
+    evaluator = Evaluator.REKA_CORE if EVALUATOR_NAME == "reka-core" else Evaluator.REKA_CORE_TEXT
+
     example = evaluate(example, evaluator=evaluator)
     data_dict = {
-        "score" : example.score,
-        "evaluator_explanation" : example.evaluator_explanation,
-        "prompt" : example.prompt,
-        "generation" : example.generation,
-        "media_url" : example.media_url,
-        "category" : example.category,
+        "score": example.score,
+        "evaluator_explanation": example.evaluator_explanation,
+        "prompt": example.prompt,
+        "generation": example.generation,
+        "media_url": example.media_url,
+        "category": example.category,
     }
 
     return {
-        "hard" : deepcopy(data_dict),
-        "normal" : deepcopy(data_dict),
-        "all" : deepcopy(data_dict),
+        "hard": deepcopy(data_dict),
+        "normal": deepcopy(data_dict),
+        "all": deepcopy(data_dict),
     }
+
 
 def _mean(scores: List[int]) -> float:
     """Scale from 1-5 to 0-100 and compute means."""
@@ -184,7 +184,7 @@ def vibe_aggregation_results(results, category):
     for res in results:
         if category in res["category"] or category == "all":
             score.append(res["score"])
-    
+
     aggregate_scores = _mean(score)
     return aggregate_scores
 
