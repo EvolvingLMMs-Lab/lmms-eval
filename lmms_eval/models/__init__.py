@@ -25,6 +25,7 @@ AVAILABLE_MODELS = {
     "llava_sglang": "LlavaSglang",
     "idefics2": "Idefics2",
     "internvl": "InternVLChat",
+    "internvl2": "InternVL2",
     "gemini_api": "GeminiAPI",
     "reka": "Reka",
     "from_log": "FromLog",
