@@ -204,6 +204,7 @@ class InternVL2(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if "until" in gen_kwargs:
                 gen_kwargs.pop("until")
+            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
             for k, v in DEFAULT_GEN_KWARGS.items():
                 if k not in gen_kwargs:
                     gen_kwargs[k] = v
