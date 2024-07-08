@@ -63,6 +63,7 @@ dependencies = [
     "decord",
     "zss",
     "pywsd",
+    "capture_metric"
 ]
 
 [tool.setuptools.packages.find]
