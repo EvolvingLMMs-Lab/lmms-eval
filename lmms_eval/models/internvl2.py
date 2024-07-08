@@ -204,7 +204,7 @@ class InternVL2(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if "until" in gen_kwargs:
                 gen_kwargs.pop("until")
-            image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
+
             for k, v in DEFAULT_GEN_KWARGS.items():
                 if k not in gen_kwargs:
                     gen_kwargs[k] = v
@@ -220,6 +220,7 @@ class InternVL2(lmms):
                     image_tokens = " ".join(image_tokens)
                     contexts = image_tokens + "\n" + contexts
                 response, history = self.model.chat(self.tokenizer, pixel_values, contexts, gen_kwargs, num_patches_list=num_patches_list, history=None, return_history=True)
+
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."
                 video_path = visuals[0]
