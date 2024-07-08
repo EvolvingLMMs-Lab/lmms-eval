@@ -10,11 +10,8 @@ doc_to_text: !function utils.doc_to_text
 process_results: !function utils.interleave_process_results
 
 metric_list:
-  - metric: mcq_acc
-    aggregation: !function utils.mcq_acc
-    higher_is_better: true
-  - metric: oe_rogue
-    aggregation: !function utils.oe_rogue
+  - metric: overall_score
+    aggregation: !function utils.overall_score
     higher_is_better: true
 
 generation_kwargs:
@@ -26,4 +23,4 @@ generation_kwargs:
 model_specific_prompt_kwargs:
   default:
     oe_post_prompt: ""
-    mcq_post_prompt: "Answer with the option's letter from the given choices directly."
+    mcq_post_prompt: ""
