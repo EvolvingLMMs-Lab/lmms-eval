@@ -223,6 +223,8 @@ class Claude(lmms):
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
+            if gen_kwargs["max_new_tokens"] > 4096:
+                gen_kwargs["max_new_tokens"] = 4096
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
             if "top_p" not in gen_kwargs or gen_kwargs["top_p"] is None:
