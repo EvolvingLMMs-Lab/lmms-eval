@@ -1,29 +1,23 @@
+import math
+import re
+import copy
+import json
+import logging
+import warnings
+from datetime import timedelta
+from typing import List, Optional, Union, Tuple
+import PIL
+
+import numpy as np
+import torch
+import transformers
+from tqdm import tqdm
+from packaging import version
+from decord import VideoReader, cpu
+
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from transformers import AutoConfig
-
-import math
-import torch
-import transformers
-import re
-
-torch.backends.cuda.matmul.allow_tf32 = True
-
-from tqdm import tqdm
-from datetime import timedelta
-from decord import VideoReader, cpu
-import numpy as np
-
-import copy
-import PIL
-from typing import List, Optional, Union, Tuple
-from packaging import version
-import warnings
-import logging
-
-warnings.filterwarnings("ignore")
-
-eval_logger = logging.getLogger("lmms-eval")
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -31,27 +25,46 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
+# Suppress warnings
+warnings.filterwarnings("ignore")
+
+# Configure logging
+eval_logger = logging.getLogger("lmms-eval")
+
+# Enable TF32 for CUDA
+torch.backends.cuda.matmul.allow_tf32 = True
+
+# Import LLaVA modules
 try:
     from llava.model.builder import load_pretrained_model
-    from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token, KeywordsStoppingCriteria
-    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
+    from llava.mm_utils import (
+        get_model_name_from_path,
+        process_images,
+        tokenizer_image_token,
+        KeywordsStoppingCriteria,
+    )
+    from llava.constants import (
+        IMAGE_TOKEN_INDEX,
+        DEFAULT_IMAGE_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IM_END_TOKEN,
+        IGNORE_INDEX,
+    )
     from llava.conversation import conv_templates, SeparatorStyle
+except ImportError as e:
+    eval_logger.debug(f"LLaVA is not installed. Please install LLaVA to use this model.\nError: {e}")
 
-except Exception as e:
-    eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.\nError: %s" % e)
-
+# Import LLaVA-vid modules
 try:
     from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
     from llavavid.model.language_model.llava_llama import LlavaConfig
 
     AutoConfig.register("llava_qwen", LlavaQwenConfig)
     AutoConfig.register("llava_llama", LlavaConfig)
-except Exception as e:
-    eval_logger.debug("")
-# inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
-# if is_flash_attn_2_available:
-#     best_fit_attn_implementation = "flash_attention_2" # flash_attn has a bug that says: ERROR Error query and key must have the same dtype in generating
+except ImportError as e:
+    eval_logger.debug(f"LLaVA-vid is not installed. Error: {e}")
 
+# Determine best attention implementation
 if version.parse(torch.__version__) >= version.parse("2.1.2"):
     best_fit_attn_implementation = "sdpa"
 else:
@@ -146,7 +159,6 @@ class Llava_OneVision(lmms):
 
         self._config = self._model.config
         self.model.eval()
-        self.model.tie_weights()
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
@@ -484,10 +496,23 @@ class Llava_OneVision(lmms):
                     conv = copy.deepcopy(conv_templates[self.conv_template])
                 else:
                     conv = conv_templates[self.conv_template].copy()
-                conv.append_message(conv.roles[0], question)
-                conv.append_message(conv.roles[1], None)
-                prompt_question = conv.get_prompt()
-                question_input.append(prompt_question)
+
+                if utils.is_json(question):  # conversational question input
+                    question = json.loads(question)
+                    for idx, item in enumerate(question):
+                        role = conv.roles[idx % 2]
+                        message = item["value"]
+                        conv.append_message(role, message)
+
+                    assert len(conv.messages) % 2 == 1
+                    conv.append_message(conv.roles[1], None)
+                    prompt_question = conv.get_prompt()
+                    question_input.append(prompt_question)
+                else:  # only simple string for question
+                    conv.append_message(conv.roles[0], question)
+                    conv.append_message(conv.roles[1], None)
+                    prompt_question = conv.get_prompt()
+                    question_input.append(prompt_question)
 
             # preconfigure gen_kwargs with defaults
             if "max_new_tokens" not in gen_kwargs:

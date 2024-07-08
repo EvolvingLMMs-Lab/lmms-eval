@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import yaml
+import json
 import inspect
 import pathlib
 import functools
@@ -39,6 +40,14 @@ import pytz
 from loguru import logger as eval_logger
 
 SPACING = " " * 47
+
+
+def is_json(string):
+    try:
+        json.loads(string)
+        return True
+    except json.JSONDecodeError:
+        return False
 
 
 def escaped_split(text, sep_char, maxsplit=-1):

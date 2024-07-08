@@ -97,7 +97,7 @@ class Llava(lmms):
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
         self._config = self._model.config
         self.model.eval()
-        self.model.tie_weights()
+
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
