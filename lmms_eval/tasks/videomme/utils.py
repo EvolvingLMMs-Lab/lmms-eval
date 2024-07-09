@@ -152,6 +152,7 @@ def videomme_doc_to_text(doc, model_specific_prompt_kwargs=None):
     option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]
     option = str(doc["options"])
+    # option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
     question = question + "\n" + option
     full_prompt = option_prompt + "\n" + question + "\n" + "The best answer is:"
     return full_prompt

@@ -1,47 +1,53 @@
+import argparse
+import torch
+import os
+import json
+from tqdm import tqdm
+import logging
+from typing import List, Optional, Union, Tuple
+from PIL import Image
+import math
+import numpy as np
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
-from decord import VideoReader, cpu
-import numpy as np
-import math
 from datetime import timedelta
-from transformers import AutoConfig
-import copy
+from decord import VideoReader, cpu
+
+
+from torchvision.transforms import Resize
+
+import signal
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
 
-from loguru import logger as eval_logger
-
+eval_logger = logging.getLogger("lmms-eval")
+# import sys;sys.path.append("llava-video")
 try:
-    from llavavid.model.builder import load_pretrained_model
-    from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-    from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
-    from llavavid.conversation import conv_templates, SeparatorStyle
-    from llavavid.mm_utils import tokenizer_image_token_qwen_merge, preprocess_qwen, preprocess_llama3
-except ImportError:
-    eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
-
-from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
-from llavavid.model.language_model.llava_llama import LlavaConfig
-
-AutoConfig.register("llava_qwen", LlavaQwenConfig)
-AutoConfig.register("llava_llama", LlavaConfig)
+    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+    from llava.conversation import conv_templates, SeparatorStyle
+    from llava.model.builder import load_pretrained_model
+    from llava.data.dataset import LazySupervisedDataset
+    from llava.utils import disable_torch_init
+    from llava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
+    from llava.mm_utils import process_images
+except ImportError as e:
+    print(e)
+    # import pdb;pdb.set_trace()
+    eval_logger.debug("VILA is not installed. Please install VILA to use this model.")
 
 
-@register_model("llavavid")
-class LlavaVid(lmms):
+@register_model("vila")
+class VILA(lmms):
     """
-    LlavaVid Model
+    VILA Model
     """
 
     def __init__(
         self,
-        pretrained: str = "liuhaotian/llava-v1.5-7b",
+        pretrained: str = "Efficient-Large-Model/VILA1.5-40b",
+        max_frames_num: Optional[int] = 100,
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
@@ -49,18 +55,10 @@ class LlavaVid(lmms):
             "sdpa" if torch.__version__ >= "2.1.2" else "eager"
         ),  # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
         device_map="cuda:0",
-        conv_template="vicuna_v1",
+        conv_template="hermes-2",
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
-        max_frames_num: int = 3,
-        mm_resampler_type: str = "spatial_pool",
-        mm_spatial_pool_stride: int = 2,
-        mm_spatial_pool_out_channels: int = 1024,
-        mm_spatial_pool_mode: str = "average",
-        overwrite: bool = True,
-        video_decode_backend: str = "pyav",
-        delay_load: bool = False,
-        tie_weights: bool = True,
+        video_decode_backend="decord",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -80,79 +78,24 @@ class LlavaVid(lmms):
 
         self.pretrained = pretrained
         self.model_name = get_model_name_from_path(pretrained)
-        self.video_decode_backend = video_decode_backend
+        self.max_frames_num = max_frames_num
         # self._config = AutoConfig.from_pretrained(self.pretrained)
-        self.overwrite = overwrite
-        self.mm_resampler_type = mm_resampler_type
-        self.mm_spatial_pool_stride = int(mm_spatial_pool_stride)
-        self.mm_spatial_pool_out_channels = int(mm_spatial_pool_out_channels)
-        self.mm_spatial_pool_mode = mm_spatial_pool_mode
-        self.max_frames_num = int(max_frames_num)
-        self.mm_resampler_location = mm_resampler_location
-        self.delay_load = delay_load
-        if self.overwrite == True:
-            overwrite_config = {}
-            overwrite_config["mm_resampler_type"] = self.mm_resampler_type
-            overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
-            overwrite_config["mm_spatial_pool_out_channels"] = self.mm_spatial_pool_out_channels
-            overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
-            overwrite_config["mm_pooling_position"] = self.mm_resampler_location
-            overwrite_config["mm_newline_position"] = mm_newline_position
-            overwrite_config["add_faster_video"] = False
-            overwrite_config["delay_load"] = self.delay_load
-            # overwrite_config["attn_implementation"] = attn_implementation
 
-            cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
+        # import pdb; pdb.set_trace()
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, self.model_name, device_map=self.device_map, attn_implementation=attn_implementation)
 
-            if cfg_pretrained.architectures[0] == "LlavaLlamaForCausalLM":  # Ugly code, only used in  vicuna that needs ROPE
-                if "224" in cfg_pretrained.mm_vision_tower:
-                    least_token_number = self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
-                else:
-                    least_token_number = self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
-
-                scaling_factor = math.ceil(least_token_number / 4096)
-                if scaling_factor >= 2:
-                    overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
-                    overwrite_config["max_sequence_length"] = 4096 * scaling_factor
-                    overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
-
-            if "v1.5" in pretrained:  # A hardcode solution here to load v1.5 model, otherwise it will use LlavaConfig from hf transformers
-                from transformers import AutoTokenizer
-                from llavavid.model.language_model.llava_llama import LlavaConfig, LlavaLlamaForCausalLM
-
-                self._tokenizer = AutoTokenizer.from_pretrained(pretrained, use_fast=False)
-                cfg_pretrained = LlavaConfig.from_pretrained(pretrained)
-                if overwrite_config is not None:
-                    print(f"Overwriting config with {overwrite_config}")
-                    for k, v in overwrite_config.items():
-                        setattr(cfg_pretrained, k, v)
-                kwargs["torch_dtype"] = torch.float16
-                self._model = LlavaLlamaForCausalLM.from_pretrained(pretrained, low_cpu_mem_usage=True, config=cfg_pretrained, device_map=self.device_map, **kwargs)
-                vision_tower = self._model.get_vision_tower()
-                if not vision_tower.is_loaded:
-                    vision_tower.load_model(device_map=self.device_map)
-                if self.device_map != "auto":
-                    vision_tower.to(device="cuda", dtype=torch.float16)
-                self._image_processor = vision_tower.image_processor
-
-                if hasattr(self._model.config, "max_sequence_length"):
-                    self._max_length = self._model.config.max_sequence_length
-                else:
-                    self._max_length = 2048
-            else:
-                self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, overwrite_config=overwrite_config)
-        else:
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
-                pretrained,
-                None,
-                self.model_name,
-                device_map=self.device_map,
-            )
+        self.model.image_processor = self._image_processor
 
         self._config = self._model.config
+
+        if self._tokenizer.pad_token_id is None:
+            if "qwen" in self._tokenizer.name_or_path.lower():
+                print("Setting pad token to bos token for qwen model.")
+                self._tokenizer.pad_token_id = 151643
+
+        self.video_decode_backend = video_decode_backend
         self.model.eval()
-        if tie_weights:
-            self.model.tie_weights()
+        # self.model.tie_weights()
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
@@ -250,14 +193,17 @@ class LlavaVid(lmms):
         return encoding
 
     def load_video(self, video_path, max_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0))
-        total_frame_num = len(vr)
-        # fps = round(vr.get_avg_fps())
-        # frame_idx = [i for i in range(0, len(vr), fps)]
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
-        spare_frames = vr.get_batch(frame_idx).asnumpy()
-        return spare_frames  # (frames, height, width, channels)
+        try:
+            vr = VideoReader(video_path, ctx=cpu(0))
+            total_frame_num = len(vr)
+            fps = round(vr.get_avg_fps())
+            frame_idx = np.linspace(0, total_frame_num - 2, max_frames_num, dtype=int)
+            spare_frames = vr.get_batch(frame_idx).asnumpy()
+            return [Image.fromarray(img) for img in spare_frames]
+        except Exception as e:
+            eval_logger.error(f"Failed to load video {video_path} with error: {e}")
+            # import pdb;pdb.set_trace()
+            return [Image.new("RGB", (448, 448), (0, 0, 0))] * max_frames_num
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
@@ -332,38 +278,46 @@ class LlavaVid(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+            # if self.task_dict[task][split][doc_id]["duration"] != "short":
+            #     # import pdb;pdb.set_trace()
+            #     res.append("A")
+            #     pbar.update(1)
+            #     continue
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            videos = []
-            try:
-                for visual in visuals:
-                    if self.video_decode_backend == "decord":
-                        video = self.load_video(visual, self.max_frames_num)
-                    elif self.video_decode_backend == "pyav":
-                        video = read_video_pyav(visual, num_frm=self.max_frames_num)
-                    # video = self.load_video(visual, self.max_frames_num)
-                    video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
-                    videos.append(video)
-            except Exception as e:
-                eval_logger.info(f"{e}")
-                eval_logger.info(f"Video {visuals} can not load, check the source")
-                video_path = "\n".join(visuals)
-                res.append(f"Video {video_path} can not load, check the source")
-                pbar.update(1)
-                continue
 
-            qs = contexts
+            num_video_frames = self.model.config.num_video_frames
+            videos = []
+            # import pdb;pdb.set_trace()
+            if self.max_frames_num == 0:
+                images = [Image.new("RGB", (448, 448), (0, 0, 0))] * num_video_frames
+                video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
+                videos.append(video)
+            else:
+                for visual in visuals:
+                    # images, video_loading_succeed = LazySupervisedDataset._load_video(visual, num_video_frames, self.model)
+                    # import pdb;pdb.set_trace()
+                    if self.video_decode_backend == "decord":
+                        images = self.load_video(visual, num_video_frames)
+                    elif self.video_decode_backend == "pyav":
+                        images = read_video_pyav(visual, num_frm=num_video_frames)
+                    # import pdb;pdb.set_trace()
+                    video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
+                    videos.append(video)
+
+            qs = f"<video>\n {contexts}"
             if self.model.config.mm_use_im_start_end:
                 qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
-                qs = DEFAULT_IMAGE_TOKEN * len(videos) + "\n" + qs
+                qs = (DEFAULT_IMAGE_TOKEN + "\n") * len(images) + qs
 
             # This is much safer for llama3, as we now have some object type in it
-            if "llama_3" in self.conv_template:
-                conv = copy.deepcopy(conv_templates[self.conv_template])
-            else:
-                conv = conv_templates[self.conv_template].copy()
+            # if "llama_3" in self.conv_template:
+            #     conv = copy.deepcopy(conv_templates[self.conv_template])
+            # else:
+            #     conv = conv_templates[self.conv_template].copy()
+            conv = conv_templates[self.conv_template].copy()
 
             conv.append_message(conv.roles[0], qs)
             conv.append_message(conv.roles[1], None)
@@ -371,12 +325,18 @@ class LlavaVid(lmms):
 
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
-            if "llama_3" in self.conv_template:
-                pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
+            # if "llama_3" in self.conv_template:
+            #     pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
             attention_masks = input_ids.ne(pad_token_ids).long().cuda()
+
+            # input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
+            # pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+            # input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
+            # attention_masks = input_ids.ne(pad_token_ids).to(self.device)
 
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
+
             stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
 
             cur_prompt = contexts
@@ -384,17 +344,18 @@ class LlavaVid(lmms):
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
+                gen_kwargs["temperature"] = 0.2
             if "top_p" not in gen_kwargs:
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
+
+            # import pdb;pdb.set_trace()
             with torch.inference_mode():
                 output_ids = self.model.generate(
-                    inputs=input_ids,
+                    input_ids=input_ids,
                     images=videos,
                     attention_mask=attention_masks,
-                    modalities="video",
                     use_cache=self.use_cache,
                     stopping_criteria=[stopping_criteria],
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
@@ -403,9 +364,13 @@ class LlavaVid(lmms):
                     num_beams=gen_kwargs["num_beams"],
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                 )
-                # output_ids = model.generate(inputs=input_ids, images=video, attention_mask=attention_masks, modalities="video", do_sample=True, temperature=0.2, use_cache=True, stopping_criteria=[stopping_criteria])
+                # output_ids_2 = self.model.generate(inputs=input_ids, images=videos, attention_mask=attention_masks, modalities="video", do_sample=False, max_new_tokens=50,stopping_criteria=[stopping_criteria])
+                # output_ids = self.model.generate(inputs=input_ids, images=videos, attention_mask=attention_masks, modalities="video", do_sample=True, temperature=0.2, max_new_tokens=50,use_cache=True)
 
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+            print("Question: ", cur_prompt)
+            print("Answer: ", outputs)
+            # import pdb;pdb.set_trace()
             res.append(outputs)
             pbar.update(1)
         return res
