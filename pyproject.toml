@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.2.0.post1"
+version = "0.2.1"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@outlook.com" },
 ]
