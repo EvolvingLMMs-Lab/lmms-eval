@@ -76,7 +76,6 @@ class VideoChatGPTLlamaModel(LlamaModel):
             inputs_embeds = self.embed_tokens(input_ids)
 
         if (input_ids.shape[1] != 1 or self.training) and video_spatio_temporal_features is not None:
-
             video_features = self.mm_projector(video_spatio_temporal_features)
             dummy_video_features = torch.zeros(video_features.shape[1], 1024, device=inputs_embeds.device, dtype=inputs_embeds.dtype)
             dummy_video_features = self.mm_projector(dummy_video_features)

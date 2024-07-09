@@ -111,7 +111,6 @@ def include_path(task_dir):
 def initialize_tasks(verbosity="INFO"):
     logger.remove()
     eval_logger.add(sys.stdout, colorize=True, level=verbosity)
-    # eval_logger.add(sys.stderr, level=verbosity)
     task_dir = os.path.dirname(os.path.abspath(__file__)) + "/"
     include_path(task_dir)
 
