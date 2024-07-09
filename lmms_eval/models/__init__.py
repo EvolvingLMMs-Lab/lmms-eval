@@ -37,6 +37,7 @@ AVAILABLE_MODELS = {
     "llava_onevision": "Llava_OneVision",
     "llava_hf": "LlavaHf",
     "longva": "LongVA",
+    "vila": "VILA",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
