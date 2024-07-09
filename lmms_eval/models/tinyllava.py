@@ -23,7 +23,9 @@ warnings.filterwarnings("ignore")
 from loguru import logger as eval_logger
 
 try:
+    from tinyllava.model import load_pretrained_model
     from tinyllava.data import ImagePreprocess, TextPreprocess
+    from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
     from tinyllava.utils.message import Message
 except Exception as e:
     eval_logger.debug("TinyLLaVA_Factory is not installed. Please install TinyLLaVA_Factory to use this model.\nError: %s" % e)

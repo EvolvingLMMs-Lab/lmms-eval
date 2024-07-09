@@ -13,6 +13,7 @@ temp
 __pycache__
 .ipynb_checkpoints
 temp
+.DS_STORE
 # IPython
 profile_default/
 ipython_config.py

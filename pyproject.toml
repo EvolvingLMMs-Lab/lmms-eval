@@ -74,6 +74,7 @@ dependencies = [
     "spacy",
     "anls",
     "rouge",
+    "capture_metric",
 ]
 
 [project.optional-dependencies]
