@@ -34,8 +34,8 @@ try:
     from llava.mm_utils import process_images
 except ImportError as e:
     print(e)
-    # import pdb;pdb.set_trace()
-    eval_logger.debug("VILA is not installed. Please install VILA to use this model.")
+    
+    eval_logger.debug("VILA is not installed. Please install VILA to use this model. Error: {e}")
 
 
 @register_model("vila")
@@ -202,7 +202,7 @@ class VILA(lmms):
             return [Image.fromarray(img) for img in spare_frames]
         except Exception as e:
             eval_logger.error(f"Failed to load video {video_path} with error: {e}")
-            # import pdb;pdb.set_trace()
+            
             return [Image.new("RGB", (448, 448), (0, 0, 0))] * max_frames_num
 
     def tok_decode(self, tokens):
@@ -279,7 +279,7 @@ class VILA(lmms):
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # if self.task_dict[task][split][doc_id]["duration"] != "short":
-            #     # import pdb;pdb.set_trace()
+            #     
             #     res.append("A")
             #     pbar.update(1)
             #     continue
@@ -289,7 +289,7 @@ class VILA(lmms):
 
             num_video_frames = self.model.config.num_video_frames
             videos = []
-            # import pdb;pdb.set_trace()
+            
             if self.max_frames_num == 0:
                 images = [Image.new("RGB", (448, 448), (0, 0, 0))] * num_video_frames
                 video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
@@ -297,12 +297,12 @@ class VILA(lmms):
             else:
                 for visual in visuals:
                     # images, video_loading_succeed = LazySupervisedDataset._load_video(visual, num_video_frames, self.model)
-                    # import pdb;pdb.set_trace()
+                    
                     if self.video_decode_backend == "decord":
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
                         images = read_video_pyav(visual, num_frm=num_video_frames)
-                    # import pdb;pdb.set_trace()
+                    
                     video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
                     videos.append(video)
 
@@ -350,7 +350,7 @@ class VILA(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            # import pdb;pdb.set_trace()
+            
             with torch.inference_mode():
                 output_ids = self.model.generate(
                     input_ids=input_ids,
@@ -370,7 +370,7 @@ class VILA(lmms):
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
             print("Question: ", cur_prompt)
             print("Answer: ", outputs)
-            # import pdb;pdb.set_trace()
+            
             res.append(outputs)
             pbar.update(1)
         return res
