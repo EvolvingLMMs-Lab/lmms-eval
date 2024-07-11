@@ -11,6 +11,7 @@ from lmms_eval.api.registry import (
     TASK_REGISTRY,
     GROUP_REGISTRY,
     ALL_TASKS,
+    TASK_INITIALIZED,
 )
 
 from loguru import logger
@@ -111,9 +112,14 @@ def include_path(task_dir):
 def initialize_tasks(verbosity="INFO"):
     logger.remove()
     eval_logger.add(sys.stdout, colorize=True, level=verbosity)
+    global TASK_INITIALIZED
+    if TASK_INITIALIZED:
+        eval_logger.info("Tasks already initialized, skipping re-initialization.")
+        return
     # eval_logger.add(sys.stderr, level=verbosity)
     task_dir = os.path.dirname(os.path.abspath(__file__)) + "/"
     include_path(task_dir)
+    TASK_INITIALIZED = True
 
 
 def get_task(task_name, model_name):
