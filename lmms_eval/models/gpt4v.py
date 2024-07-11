@@ -49,7 +49,7 @@ class GPT4V(lmms):
     def __init__(
         self,
         model_version: str = "gpt-4-vision-preview",
-        modality: str = "video",
+        modality: str = "image",
         max_frames_for_video: int = 10,
         timeout: int = 120,
         **kwargs,

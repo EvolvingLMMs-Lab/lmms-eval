@@ -2,18 +2,10 @@ from io import BytesIO
 from copy import deepcopy
 import os
 import base64
-<<<<<<< HEAD
-from typing import List, Tuple
-from tqdm import tqdm
-import requests as url_requests
-import time
-import logging
-=======
 import json
 from typing import List, Tuple, Union
 from tqdm import tqdm
 import time
->>>>>>> EvolvingLMMs-Lab-main
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms

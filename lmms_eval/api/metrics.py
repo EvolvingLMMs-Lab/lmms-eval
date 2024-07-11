@@ -275,7 +275,7 @@ def sambajudge(
             'completion': det_answer,
             'ground_truth': gt_answer
         }
-        url = f'{SERVER_URL}/single-judge'
+        url = f'{SERVER_URL}/simple-judge'
         headers = {'Content-Type': 'application/json'}
         
         # response = requests.post(url, headers=headers, data=json.dumps(single_judge_payload))
@@ -287,7 +287,6 @@ def sambajudge(
             breakpoint()
         responses.append(response)
         values.append(score)
-        
     return {"sambajudge": max(values), "for_log": reasoning}
 
 
