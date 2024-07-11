@@ -1,3 +1,5 @@
+import os
+import time
 import random
 import itertools
 import json
@@ -428,6 +430,13 @@ def evaluate(
         # Ensure all ranks wait for rank 0 to finish aggregation
         torch.distributed.barrier()
 
+    # Synchronize processes with a temp file in case the evluation metric requires gpus
+    if os.path.exists(f'{str(os.environ.get("HF_HOME", "~/.cache"))}/rank0_metric_eval_done.txt'):
+        try:
+            os.remove(f'{str(os.environ.get("HF_HOME", "~/.cache"))}/rank0_metric_eval_done.txt') 
+        except:
+            pass
+
     if lm.rank == 0:
         ### Get task ordering for correct sample-wide aggregation
         group_to_task = {}
@@ -629,7 +638,12 @@ def evaluate(
         if log_samples:
             results_dict["samples"] = dict(samples)
 
-        return results_dict
-
+        with open(f'{str(os.environ.get("HF_HOME", "~/.cache"))}/rank0_metric_eval_done.txt', 'w') as f:
+            f.write('rank0 metric eval done')
     else:
-        return None
+        results_dict = None
+        if int(os.environ.get("RANK", 0)) != 0:
+            while not os.path.exists(f'{str(os.environ.get("HF_HOME", "~/.cache"))}/rank0_metric_eval_done.txt'):
+                time.sleep(1)
+
+    return results_dict
