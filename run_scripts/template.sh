@@ -11,7 +11,7 @@ else
 fi
 
 if [[ $model_name == *"llava_hf"* ]]; then
-    model_args+=",device_map=auto,dtype=bfloat16"
+    model_args+=",device_map=auto,dtype=bfloat16,fast_tokenizer=False"
 fi
 
 echo $logger_name
