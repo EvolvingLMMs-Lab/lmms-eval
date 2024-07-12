@@ -52,6 +52,7 @@ class LlavaHf(lmms):
         device_map: str = "",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
+        fast_tokenizer: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -77,7 +78,7 @@ class LlavaHf(lmms):
             self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
 
         self.pretrained = pretrained
-        self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
+        self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code, use_fast=fast_tokenizer)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._image_processor.tokenizer.padding_side = "left"
         self._tokenizer = self._image_processor.tokenizer
