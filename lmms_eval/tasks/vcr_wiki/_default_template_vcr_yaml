@@ -15,3 +15,4 @@ generation_kwargs:
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 metadata:
   - version: 0.0.1
+  - load_package: False
