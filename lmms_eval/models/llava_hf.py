@@ -322,9 +322,12 @@ class LlavaHf(lmms):
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
-            if "1.5" in self.pretrained:
+            chat_template = self.chat_template if self.chat_template is not None else self.tokenizer.chat_template
+            if "ASSISTANT:" in chat_template:
                 text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
-            elif "mistral" in self.pretrained:
+            elif "<|assistant|>" in chat_template:
+                text_outputs = text_outputs.split("<|assistant|>")[-1].strip()
+            elif "[/INST]" in chat_template:
                 text_outputs = text_outputs.split("[/INST]")[-1].strip()
             else:
                 text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
