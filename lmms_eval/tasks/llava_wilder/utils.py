@@ -119,8 +119,8 @@ def llava_process_results(doc, result):
         a dictionary with key: metric name (in this case coco_bleu), value: metric value
     """
     try:
-        question = doc.get("question", "")
-        ans1 = doc.get("answer", "")
+        question = doc.get("Question", "")
+        ans1 = doc.get("Answer", "")
         ans2 = result[0] if result else ""
         content = f"[Question]\n{question}\n\n" + f"[Assistant 1]\n{ans1}\n\n[End of Assistant 1]\n\n" + f"[Assistant 2]\n{ans2}\n\n[End of Assistant 2]\n\n" f"[System]\n{judge_rules}\n\n"
         visuals = llava_doc_to_visual(doc)
@@ -148,7 +148,7 @@ def llava_doc_to_text(doc, model_specific_prompt_kwargs=None):
         model_specific_prompt_kwargs = {}
     pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
     post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
-    return f"{pre_prompt}{doc['question']}{post_prompt}"
+    return f"{pre_prompt}{doc['Question']}{post_prompt}"
 
 
 def llava_all_aggregation(results):

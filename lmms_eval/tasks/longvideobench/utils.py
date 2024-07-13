@@ -1,5 +1,4 @@
 import json
-
 import re
 from collections import Counter, defaultdict
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -12,7 +11,6 @@ from decord import VideoReader, cpu
 import numpy as np
 from PIL import Image
 import torch
-
 
 from pathlib import Path
 import yaml

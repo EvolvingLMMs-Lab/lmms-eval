@@ -59,7 +59,7 @@ class BatchGPT4(lmms):
         api_key: str = API_KEY,
         api_url: str = API_URL,
         modality: str = "image",
-        max_frames_for_video: int = 10,
+        max_frames_num: int = 10,
         timeout: int = 120,
         **kwargs,
     ) -> None:
@@ -69,7 +69,7 @@ class BatchGPT4(lmms):
         # Here we just use the same token as llava for convenient
         self.model_version = model_version
         self.modality = modality
-        self.max_frames_for_video = max_frames_for_video
+        self.max_frames_num = max_frames_num
         self.image_token = "<image>"
         self.timeout = timeout
 
@@ -128,7 +128,7 @@ class BatchGPT4(lmms):
                     img = self.encode_image(visual)
                     imgs.append(img)
                 elif self.modality == "video":
-                    frames = self.encode_video(visual, self.max_frames_for_video)
+                    frames = self.encode_video(visual, self.max_frames_num)
                     imgs.extend(frames)
 
             messages = []

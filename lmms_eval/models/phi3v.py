@@ -1,6 +1,5 @@
 import torch
 
-
 from accelerate import Accelerator, DistributedType
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance

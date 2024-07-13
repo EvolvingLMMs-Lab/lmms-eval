@@ -1,8 +1,8 @@
-dataset_path: lmms-lab/llava-bench-wilder
+dataset_path: lmms-lab/LLaVA-Bench-Wilder
 dataset_kwargs:
   token: True
 task: "llava_wilder_small"
-test_split: small
+test_split: test 
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
