@@ -38,7 +38,7 @@ AVAILABLE_MODELS = {
     "tinyllava": "TinyLlava",
     "llava_hf": "LlavaHf",
     "longva": "LongVA",
-    "paligemma": "PaliGemma"
+    "paligemma": "PaliGemma",
     # "docowl": "DocOwl"
 }
 
@@ -48,7 +48,7 @@ for model_name, model_class in AVAILABLE_MODELS.items():
     except ImportError as e:
         # logger.warning(f"Failed to import {model_class} from {model_name}: {e}")
         pass
-    
+
 if os.environ.get("LMMS_EVAL_PLUGINS", None):
     # Allow specifying other packages to import models from
     for plugin in os.environ["LMMS_EVAL_PLUGINS"].split(","):

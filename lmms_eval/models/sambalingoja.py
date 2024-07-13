@@ -14,12 +14,12 @@ from lmms_eval import utils
 from typing import List, Optional, Union, Tuple
 from lmms_eval.models.hfmodel import HFModel
 
+
 @register_model("sambalingoja")
 class SambaLingoJA(HFModel):
     def __init__(
         self,
         batch_size: Optional[Union[int, str]] = 1,
         **kwargs,
-    ) -> None:    
+    ) -> None:
         super().__init__(pretrained="sambanovasystems/SambaLingo-Japanese-Chat", batch_size=batch_size)
-        

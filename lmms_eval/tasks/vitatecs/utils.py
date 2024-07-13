@@ -89,17 +89,17 @@ def process_option_for_matching(sent):
 
 
 def format_question_and_answer(doc):
-    seed = sum(ord(c) for c in doc['caption'] + doc['counterfactual']) % 100
+    seed = sum(ord(c) for c in doc["caption"] + doc["counterfactual"]) % 100
     random.seed(seed)
     if random.random() > 0.5:
-        option_a = process_option_for_question(doc['caption'])
-        option_b = process_option_for_question(doc['counterfactual'])
+        option_a = process_option_for_question(doc["caption"])
+        option_b = process_option_for_question(doc["counterfactual"])
         answer = "(A) " + option_a
     else:
-        option_a = process_option_for_question(doc['counterfactual'])
-        option_b = process_option_for_question(doc['caption'])
+        option_a = process_option_for_question(doc["counterfactual"])
+        option_b = process_option_for_question(doc["caption"])
         answer = "(B) " + option_b
-    options = [process_option_for_matching(doc['caption']), process_option_for_matching(doc['counterfactual'])]
+    options = [process_option_for_matching(doc["caption"]), process_option_for_matching(doc["counterfactual"])]
 
     question = f"Which of the following best describes the content of the video: \n(A) {option_a} \n(B) {option_b}"
     return question, answer, options
@@ -149,7 +149,7 @@ def vitatecs_process_results(doc, result):
                 "video-llm-prediction": pred,
                 "match_success": match_success,
                 "rating": rating,
-                # "chatgpt_prompt": prompt, 
+                # "chatgpt_prompt": prompt,
                 "chatgpt_response": chatgpt_response,
                 "aspect": doc["aspect"],
             },

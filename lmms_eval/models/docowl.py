@@ -16,6 +16,7 @@ from typing import List, Optional, Union, Tuple
 import torch
 from tqdm import tqdm
 
+
 @register_model("docowl")
 class DocOwl(lmms):
     def __init__(
@@ -25,23 +26,20 @@ class DocOwl(lmms):
         dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         **kwargs,
-    ) -> None:     
+    ) -> None:
         super().__init__()
         model_path = "mPLUG/DocOwl1.5-stage1"
-        self.docowl = DocOwlInfer(ckpt_path=model_path, anchors='grid_9', add_global_img=False)
-        
+        self.docowl = DocOwlInfer(ckpt_path=model_path, anchors="grid_9", add_global_img=False)
 
-                
-        
     def loglikelihood(self, requests: list[Instance]) -> list[tuple[float, bool]]:
         raise NotImplementedError
-    
+
     def generate_until(self, requests: list[Instance]) -> list[str]:
-        
+
         res = []
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in tqdm([reg.args for reg in requests]):
             visual = doc_to_visual(self.task_dict[task][split][doc_id])
             answer = self.docowl.inference(visual, contexts)
             res.append(answer)
-            
+
         return res
