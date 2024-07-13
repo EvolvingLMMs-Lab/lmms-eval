@@ -59,6 +59,8 @@ class LlavaVid(lmms):
         mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
         video_decode_backend: str = "pyav",
+        delay_load: bool = False,
+        tie_weights: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -86,15 +88,19 @@ class LlavaVid(lmms):
         self.mm_spatial_pool_out_channels = int(mm_spatial_pool_out_channels)
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.max_frames_num = int(max_frames_num)
+        self.mm_resampler_location = mm_resampler_location
+        self.delay_load = delay_load
         if self.overwrite == True:
             overwrite_config = {}
             overwrite_config["mm_resampler_type"] = self.mm_resampler_type
             overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
             overwrite_config["mm_spatial_pool_out_channels"] = self.mm_spatial_pool_out_channels
             overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
-            overwrite_config["mm_resampler_location"] = "before"
-            overwrite_config["patchify_video_feature"] = False
-            overwrite_config["attn_implementation"] = attn_implementation
+            overwrite_config["mm_pooling_position"] = self.mm_resampler_location
+            overwrite_config["mm_newline_position"] = mm_newline_position
+            overwrite_config["add_faster_video"] = False
+            overwrite_config["delay_load"] = self.delay_load
+            # overwrite_config["attn_implementation"] = attn_implementation
 
             cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
@@ -145,7 +151,8 @@ class LlavaVid(lmms):
 
         self._config = self._model.config
         self.model.eval()
-        self.model.tie_weights()
+        if tie_weights:
+            self.model.tie_weights()
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template

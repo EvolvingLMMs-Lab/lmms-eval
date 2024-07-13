@@ -27,11 +27,12 @@ def detailcaps_doc_to_text(doc, model_specific_prompt_kwargs=None):
     # question = "Please carefully observe the image and come up with a caption for the image"
     return model_specific_prompt_kwargs["prompt"]
 
+
 def detailcaps_doc_to_target(doc):
     references = [
-        doc['GT_Caption_GPT4O'],
-        doc['GT_Caption_GPT4V'],
-        doc['GT_Caption_Gemini15Pro'],
+        doc["GT_Caption_GPT4O"],
+        doc["GT_Caption_GPT4V"],
+        doc["GT_Caption_Gemini15Pro"],
     ]
     return references
 
@@ -54,28 +55,18 @@ def detailcaps_process_result(doc, result):
     return {f"detailcaps_{metric}": data_dict for metric in detailcaps_METRICS}
 
 
-def check_if_context_is_set(expected_context='spawn'):
+def check_if_context_is_set(expected_context="spawn"):
     # 获取默认上下文的名称
     default_context_name = mp.get_context().get_start_method()
-    
+
     # 检查当前上下文是否与预期的上下文相匹配
     is_set_to_expected = default_context_name == expected_context
-    
+
     return is_set_to_expected
 
 
 def detailcaps_aggregation_result(results, metric, args=None):
-
-    scorers = [
-        (Bleu(4), "Bleu_1"), 
-        (Bleu(4), "Bleu_2"), 
-        (Bleu(4), "Bleu_3"), 
-        (Bleu(4), "Bleu_4"), 
-        (Meteor(), "METEOR"), 
-        (Rouge(), "ROUGE_L"), 
-        (Cider(), "CIDEr"),
-        (CAPTURE(), "CAPTURE")
-    ]
+    scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr"), (CAPTURE(), "CAPTURE")]
     scorers_dict = {s[1]: s for s in scorers}
 
     stored_results = []
@@ -112,14 +103,14 @@ def detailcaps_aggregation_result(results, metric, args=None):
     eval_logger.info("tokenization...")
     tokenizer = PTBTokenizer()
 
-    if metric == 'CAPTURE':
+    if metric == "CAPTURE":
         reorg_gts, reorg_res = collections.defaultdict(list), collections.defaultdict(list)
         for _, samples in gts.items():
             for sample in samples:
-                reorg_gts[sample['image_id']].append(sample['caption'])
+                reorg_gts[sample["image_id"]].append(sample["caption"])
         for _, samples in res.items():
             for sample in samples:
-                reorg_res[sample['image_id']].append(sample['caption'])
+                reorg_res[sample["image_id"]].append(sample["caption"])
         gts, res = reorg_gts, reorg_res
     else:
         gts = tokenizer.tokenize(gts)
@@ -127,7 +118,7 @@ def detailcaps_aggregation_result(results, metric, args=None):
 
     eval_logger.info(f"Computing {metric} scores...")
 
-    # if int(os.environ.get("RANK", 0)) == 0:        
+    # if int(os.environ.get("RANK", 0)) == 0:
     #     from IPython import embed; embed()
     # else:
     #     import time; time.sleep(1200)

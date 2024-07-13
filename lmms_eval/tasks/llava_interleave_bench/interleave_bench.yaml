@@ -1,0 +1,5 @@
+group: llava_interleave_bench
+task:
+- llava_interleave_bench_in_domain
+- llava_interleave_bench_out_domain
+- llava_interleave_bench_multi_view

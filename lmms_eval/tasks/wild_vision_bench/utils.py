@@ -83,13 +83,9 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url",
-                        "image_url" : {
-                            "url" : f"data:image/jpeg;base64, {base64_image}"
-                            }
-                    },
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64, {base64_image}"}},
                 ],
-            }
+            },
         ],
         "max_tokens": 1024,
         "temperature": 0.0,
@@ -111,7 +107,6 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             return "", GPT_EVAL_MODEL_NAME
 
 
-
 def image_to_base64(pil_image):
     buffered = BytesIO()
     pil_image.save(buffered, format="PNG")
@@ -129,8 +124,9 @@ def get_score(judgement, pattern, pairwise=True):
     else:
         return None, False
 
+
 def wild_vision_doc_to_visual(doc):
-    return [doc["image"].convert('RGB')]
+    return [doc["image"].convert("RGB")]
 
 
 def wild_vision_doc_to_text(doc, model_specific_prompt_kwargs=None):
@@ -151,18 +147,18 @@ def wild_vision_process_results(doc, results):
     base64_image = image_to_base64(doc["image"])
     resps, gpt_name = get_chat_response(base64_image, user_prompt)
     score, _ = get_score(resps, pattern=re.compile("\[\[([AB<>=]+)\]\]"))
-    
+
     if score is None:
         score = resps
-    
+
     if "A>B" in score:
         final_score = -1
-        judgement = "Worse" #Baseline better
+        judgement = "Worse"  # Baseline better
     elif "A>>B" in score:
         final_score = -2
         judgement = "Worse++"
     elif "A=B" in score:
-        final_score = 0 
+        final_score = 0
         judgement = "Tie"
     elif "B>A" in score:
         final_score = 1
@@ -174,15 +170,12 @@ def wild_vision_process_results(doc, results):
         final_score = 0
         judgement = "Unclear"
 
-
-    return {"gpt_eval_score" : {"question" : doc["instruction"], "score" : final_score, "gpt_resps" : resps, "ans_1" : doc[BASELINE_MODEL_NAME], "ans_2" : pred, "filtered_resps" : score, "judgement" : judgement}}
+    return {"gpt_eval_score": {"question": doc["instruction"], "score": final_score, "gpt_resps": resps, "ans_1": doc[BASELINE_MODEL_NAME], "ans_2": pred, "filtered_resps": score, "judgement": judgement}}
 
 
 def wild_vision_aggregation(results):
     score = 0
     for res in results:
         score += res["score"]
-    
+
     return score / len(results)
-
-
