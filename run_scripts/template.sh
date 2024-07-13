@@ -17,8 +17,8 @@ fi
 echo $logger_name
 echo $model_args
 
-
 mkdir logs/${logger_name}
+# if [[ true ]]; then
 if [[ $model_name == *"gpt"* || $model_name == *"claude"* ]]; then
     if [[ -z "${AZURE_API_KEY}" ]]; then 
         echo "Error: AZURE_API_KEY environment variable is not set." \

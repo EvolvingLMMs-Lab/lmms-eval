@@ -15,12 +15,12 @@ from typing import List, Optional, Union, Tuple
 
 from lmms_eval.models.hfmodel import HFModel
 
+
 @register_model("sambalingohu")
 class SambaLingoHU(HFModel):
     def __init__(
         self,
         batch_size: Optional[Union[int, str]] = 1,
         **kwargs,
-    ) -> None:    
+    ) -> None:
         super().__init__(pretrained="sambanovasystems/SambaLingo-Hungarian-Chat-70B", batch_size=batch_size)
-        
