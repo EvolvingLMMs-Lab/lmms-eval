@@ -1,4 +1,5 @@
 import datetime
+import yaml
 import json
 import os
 
@@ -8,6 +9,7 @@ import spacy
 from nltk.util import ngrams
 from spacy.cli import download
 
+from pathlib import Path
 from difflib import SequenceMatcher as SM
 from functools import partial
 
@@ -25,7 +27,7 @@ with open(Path(__file__).parent / "_default_template_vcr_yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 # Download the English and Chinese models
-if config["load_package"]:
+if config["metadata"]["load_package"]:
     try:
         nlp_en = spacy.load("en_core_web_sm")
         nlp_zh = spacy.load("zh_core_web_sm")
@@ -37,10 +39,10 @@ if config["load_package"]:
         nlp_en = spacy.load("en_core_web_sm")
         download("zh_core_web_sm")
         nlp_zh = spacy.load("zh_core_web_sm")
+        eval_logger.debug("Spacy models not loaded due to load_package is False. Please set load_package to True in the config file to load them.")
 else:
     nlp = {"en": None, "zh": None}
     rouge = None
-    eval_logger.debug("Spacy models not loaded due to load_package is False. Please set load_package to True in the config file to load them.")
 
 aggregate_results_template = {
     "max_sim_val": 0,
