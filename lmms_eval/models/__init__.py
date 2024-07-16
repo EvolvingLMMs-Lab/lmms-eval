@@ -4,6 +4,10 @@ import hf_transfer
 from loguru import logger
 import sys
 
+import hf_transfer
+
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+
 logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
@@ -30,6 +34,7 @@ AVAILABLE_MODELS = {
     "llava_sglang": "LlavaSglang",
     "idefics2": "Idefics2",
     "internvl": "InternVLChat",
+    "internvl2": "InternVL2",
     "gemini_api": "GeminiAPI",
     "reka": "Reka",
     "from_log": "FromLog",
@@ -38,17 +43,17 @@ AVAILABLE_MODELS = {
     "tinyllava": "TinyLlava",
     "llava_hf": "LlavaHf",
     "longva": "LongVA",
-    "paligemma": "PaliGemma"
-    # "docowl": "DocOwl"
+    "llava_hf": "LlavaHf",
+    "longva": "LongVA",
+    "vila": "VILA",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
     try:
         exec(f"from .{model_name} import {model_class}")
     except ImportError as e:
-        # logger.warning(f"Failed to import {model_class} from {model_name}: {e}")
-        pass
-    
+        logger.warning(f"Failed to import {model_class} from {model_name}: {e}")
+
 if os.environ.get("LMMS_EVAL_PLUGINS", None):
     # Allow specifying other packages to import models from
     for plugin in os.environ["LMMS_EVAL_PLUGINS"].split(","):
@@ -57,8 +62,4 @@ if os.environ.get("LMMS_EVAL_PLUGINS", None):
             try:
                 exec(f"from {plugin}.models.{model_name} import {model_class}")
             except ImportError:
-                pass
-
-import hf_transfer
-
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+                logger.warning(f"Failed to import {model_class} from {model_name}")

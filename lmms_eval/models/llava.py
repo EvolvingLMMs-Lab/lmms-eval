@@ -58,6 +58,7 @@ class Llava(lmms):
         device_map="cuda:0",
         conv_template="vicuna_v1",
         use_cache=True,
+        tie_weights: bool = True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
         customized_config=None,  # ends in json
         **kwargs,
@@ -97,7 +98,9 @@ class Llava(lmms):
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
         self._config = self._model.config
         self.model.eval()
-        self.model.tie_weights()
+        if tie_weights:
+            self.model.tie_weights()
+
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
