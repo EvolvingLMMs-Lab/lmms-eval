@@ -19,8 +19,8 @@ def xm_doc_to_visual(doc):
 
 
 def xm_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    
-    return model_specific_prompt_kwargs['post_prompt']
+
+    return model_specific_prompt_kwargs["post_prompt"]
 
 
 def xm_process_result(doc, result):
@@ -39,7 +39,7 @@ def xm_process_result(doc, result):
 
 
 def xm_aggregation_result(results, metric, args=None):
-    scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr")]#, (Spice(), "SPICE")]
+    scorers = [(Bleu(4), "Bleu_1"), (Bleu(4), "Bleu_2"), (Bleu(4), "Bleu_3"), (Bleu(4), "Bleu_4"), (Meteor(), "METEOR"), (Rouge(), "ROUGE_L"), (Cider(), "CIDEr")]  # , (Spice(), "SPICE")]
     scorers_dict = {s[1]: s for s in scorers}
 
     stored_results = []
@@ -78,7 +78,7 @@ def xm_aggregation_result(results, metric, args=None):
     res = tokenizer.tokenize(res)
 
     eval_logger.info(f"Computing {metric} scores...")
-    
+
     score, scores = scorers_dict[metric][0].compute_score(gts, res)
     # When metric is one of the Bleu, score will be a list
     if type(score) == list:

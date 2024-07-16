@@ -326,7 +326,7 @@ class LlavaHf(lmms):
                 text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
             except:
                 breakpoint()
-            if "1.5" in self.pretrained:
+            if "ASSISTANT:" in chat_template:
                 text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
             elif "<|assistant|>" in chat_template:
                 text_outputs = text_outputs.split("<|assistant|>")[-1].strip()

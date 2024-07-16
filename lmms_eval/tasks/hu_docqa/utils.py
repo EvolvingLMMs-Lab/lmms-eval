@@ -17,8 +17,9 @@ def docvqa_doc_to_text(doc, model_specific_prompt_kwargs):
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
+
 def docvqa_doc_to_textonly(doc, model_specific_prompt_kwargs):
-    all_text = doc['pdf_extract_texts']
+    all_text = doc["pdf_extract_texts"]
     question = doc["Question"]
     pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     post_prompt = model_specific_prompt_kwargs["post_prompt"]

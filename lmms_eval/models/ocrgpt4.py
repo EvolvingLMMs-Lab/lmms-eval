@@ -50,7 +50,6 @@ class OCRGPT4(lmms):
         self.model_version = model_version
         self.image_token = "<image>"
 
-  
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -70,8 +69,8 @@ class OCRGPT4(lmms):
             texts = f"{contexts}"
             payload = {"model": self.model_version, "messages": []}
             messages = [{"role": "user", "content": texts}]
-            payload['messages'] = messages
-            
+            payload["messages"] = messages
+
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
