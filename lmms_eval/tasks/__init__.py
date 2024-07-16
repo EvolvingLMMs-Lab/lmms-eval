@@ -72,7 +72,7 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
         # if (subdirs == [] or subdirs == ["__pycache__"]) and (len(file_list) > 0):
         for f in file_list:
             # if "detail" in f:
-            #     import pdb;pdb.set_trace()
+            #     
             # if "vatex" in f:
             #     print("a")
             if f.endswith(".yaml"):
@@ -111,7 +111,6 @@ def include_path(task_dir):
 def initialize_tasks(verbosity="INFO"):
     logger.remove()
     eval_logger.add(sys.stdout, colorize=True, level=verbosity)
-    eval_logger.add(sys.stderr, level=verbosity)
     task_dir = os.path.dirname(os.path.abspath(__file__)) + "/"
     include_path(task_dir)
 

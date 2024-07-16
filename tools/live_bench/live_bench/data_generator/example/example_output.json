@@ -1,0 +1,57 @@
+{
+    "Basic Understanding": [
+        {
+            "Question": "Which of the following topics is NOT covered in the news articles shown in the image?\nA) Middle East politics\nB) Technological advancements\nC) Natural disasters\nD) Animal welfare",
+            "Answer": "C) Natural disasters",
+            "Criteria": "Give 10 marks if correctly selected C, otherwise 0 marks."
+        },
+        {
+            "Question": "Based on the image and the headlines provided on the BBC webpage, fill in the blank with the most appropriate word or phrase:\n\"The article titled 'UN Security Council backs US Israel-Gaza ceasefire plan' is accompanied by an image of ______, which symbolizes the impact of the conflict on civilians and the urgency for a ceasefire.\"",
+            "Answer": "The article titled 'UN Security Council backs US Israel-Gaza ceasefire plan' is accompanied by an image of **children amidst rubble**, which symbolizes the impact of the conflict on civilians and the urgency for a ceasefire.",
+            "Criteria": "Award 10 marks for the correct answer 'children amidst rubble', 5 marks for partially correct synonyms or related phrases, and 0 marks for incorrect answers."
+        }
+    ],
+    "Contextual Analysis": [
+		{
+            "Question": "In the image associated with the article about the US Security Council backing the Israel-Gaza ceasefire plan, what are the people in the image doing, and how do their actions and expressions relate to the content of the article?",
+            "Answer": "In the image associated with the article about the US Security Council backing the Israel-Gaza ceasefire plan, the people are navigating through rubble, indicating a scene of destruction. One person is climbing over debris, while another is looking directly at the camera with a serious expression. Their actions and expressions reflect the aftermath of conflict and the urgency of the situation, which aligns with the article's focus on the need for a ceasefire and the release of hostages held by Hamas.",
+            "Criteria": "Award up to 10 marks based on the accuracy and detail of the response: 2 marks for identifying the scene of destruction, 2 marks for mentioning a person climbing over debris, 2 marks for noting someone looking directly at the camera with a serious expression, 4 marks for correctly relating these observations to the aftermath of conflict, the urgency of the situation, and the article's focus on ceasefire and hostage release."
+        },
+        {
+            "Question": "How might the image of children navigating through rubble relate to the themes discussed in the article about Netanyahu and Gaza ceasefire?",
+            "Answer": "The image powerfully underscores the humanitarian impact of the conflict, aligning with the themes discussed in the article where Netanyahu's political maneuvers are contrasted with the pressing need for a ceasefire to alleviate civilian suffering in Gaza.",
+            "Criteria": "Award up to 10 marks based on the accuracy and relevance of the response: 2 marks for identifying the humanitarian impact, 3 marks for linking the image to the themes of the article, 2 marks for mentioning Netanyahu's political maneuvers, 3 marks for correctly associating the need for a ceasefire with the alleviation of civilian suffering."
+        }
+    ],
+    "Deeper Implications": [
+        {
+            "Question": "What broader issues are raised by the UN Security Council's backing of a ceasefire in the Israel-Gaza context?",
+            "Answer": "The broader issues include international involvement in regional conflicts, the effectiveness of UN resolutions in conflict resolution, and the ongoing debate over the balance between national security and humanitarian needs in conflict zones.",
+            "Criteria": "Award up to 10 marks based on the accuracy and completeness of the response: 3 marks for mentioning international involvement in regional conflicts, 3 marks for discussing the effectiveness of UN resolutions in conflict resolution, 4 marks for addressing the debate over the balance between national security and humanitarian needs in conflict zones."
+        },
+        {
+            "Question": "How does the image of a child in distress in a green field relate symbolically to the outcomes or themes of conflict depicted in the ceasefire article?",
+            "Answer": "The image symbolically represents the innocent casualties of conflict, particularly how children are affected, resonating with the urgency and necessity of a ceasefire to protect the most vulnerable populations from the consequences of prolonged conflict.",
+            "Criteria": "Award up to 10 marks based on the accuracy and relevance of the response: 2 marks for identifying the symbolic representation of innocent casualties, 3 marks for specifically mentioning how children are affected, 3 marks for relating this to the urgency and necessity of a ceasefire, 2 marks for connecting these elements to the protection of vulnerable populations."
+        }
+    ],
+    "Broader Implications": [
+        {
+            "Question": "Rank the news articles in the image in order of their potential global impact, from highest to lowest.",
+            "Answer": "1. **UN Security Council backs US Israel-Gaza ceasefire plan**\n2. **Netanyahu walks tightrope as US urges Gaza ceasefire deal**\n3. **Apple brings ChatGPT to iPhones in AI overhaul**\n4. **Aircraft carrying Malawi vice-president goes missing**\n5. **Fire at famous Bangkok market kills 1,000 animals**\n6. **Four US college instructors stabbed in public park in China**\n7. **Baltimore shipping channel reopens after bridge collapse**",
+            "Criteria": "Award up to 10 marks based on the accuracy of the ranking: 2 marks for correctly placing the UN Security Council article first, 2 marks for correctly placing the Netanyahu article second, 1 mark each for correctly placing the next three articles (Apple, Aircraft, Fire), and 1 mark each for correctly placing the last two articles (Stabbing, Bridge). Deduct 1 mark for each position an article is away from its correct placement."
+        }
+    ],
+    "Further Insights": [
+        {
+            "Question": "Based on the image, which of the following statements best explains the potential global impact of the events described in the news articles?\nA. The US-Israel-Gaza ceasefire plan backed by the UN Security Council is likely to reduce tensions in the Middle East, potentially leading to a more stable geopolitical environment in the region.\nB. The introduction of ChatGPT to iPhones is expected to significantly disrupt the technology market, overshadowing the geopolitical events in the Middle East and Africa.\nC. The fire at the Bangkok market, which killed 1,000 animals, is likely to have a more profound impact on global environmental policies than the ceasefire plan in the Middle East.\nD. The disappearance of the aircraft carrying the Malawi vice-president is expected to lead to a major international search and rescue operation, diverting attention from other global issues.",
+            "Answer": "A. The US-Israel-Gaza ceasefire plan backed by the UN Security Council is likely to reduce tensions in the Middle East, potentially leading to a more stable geopolitical environment in the region.",
+            "Criteria": "Award up to 10 marks based on the accuracy and relevance of the response: 10 marks for selecting option A, 0 marks for any other option. Detailed justification for scoring: Option A directly addresses the reduction of tensions and potential stabilization in the Middle East, which is a significant global impact. Other options, while plausible, do not directly relate to the primary global impact as depicted in the provided image and articles."
+        },
+        {
+            "Question": "Considering the current global attention on AI, how might the article about Apple bringing ChatGPT to iPhones in an AI overhaul reflect on broader technological trends and consumer expectations?",
+            "Answer": "This article reflects broader trends in AI integration into consumer technology, highlighting competitive dynamics in the tech industry, and growing consumer expectations for sophisticated AI features in everyday devices.",
+            "Criteria": "Award up to 10 marks based on the depth and accuracy of the response: 3 marks for identifying AI integration into consumer technology, 3 marks for discussing competitive dynamics in the tech industry, 4 marks for explaining the growth in consumer expectations for sophisticated AI features in everyday devices."
+        }
+    ]
+}

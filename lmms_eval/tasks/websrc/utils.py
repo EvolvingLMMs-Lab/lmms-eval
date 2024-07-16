@@ -7,11 +7,9 @@ import random
 import numpy as np
 import os
 import json
-
 from PIL import Image
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
 from loguru import logger as eval_logger
 
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
@@ -48,11 +46,13 @@ def websrc_process_results(doc, results):
 
     return {
         "websrc_squad_f1": websrc_ans,
-        "submission": {
-            websrc_ans["question_id"]: pred,
-        }
-        if "question_id" in websrc_ans
-        else None,
+        "submission": (
+            {
+                websrc_ans["question_id"]: pred,
+            }
+            if "question_id" in websrc_ans
+            else None
+        ),
     }
 
 

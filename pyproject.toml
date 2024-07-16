@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.2.0.post1"
+version = "0.2.1"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@outlook.com" },
 ]
@@ -32,17 +32,25 @@ dependencies = [
     "peft>=0.2.0",
     "pybind11>=2.6.2",
     "pytablewriter",
-    "rouge-score>=0.0.4",
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
     "sqlitedict",
     "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
-    "openai>=1.0.0",
+    "torchvision>=0.16.0",
+    "timm",
+    "einops",
+    "ftfy",
+    "openai",
+    "opencv-python-headless",
+    "av",
+    "hf_transfer",
+    "pywsd",
+    "nltk",
+    "sentencepiece==0.1.99",
     "yt-dlp",
-    "google-generativeai",
     "pycocoevalcap",
     "tqdm-multiprocess",
-    "transformers>=4.37.2",
+    "transformers==4.39.2",
     "transformers-stream-generator",
     "zstandard",
     "pillow",
@@ -63,6 +71,22 @@ dependencies = [
     "decord",
     "zss",
     "pywsd",
+    "spacy",
+    "anls",
+    "rouge",
+    "capture_metric",
+]
+
+[project.optional-dependencies]
+vila = [
+    "s2wrapper@git+https://github.com/bfshi/scaling_on_scales"
+]
+gemini = [
+    "google-generativeai",
+]
+all = [
+    "vila",
+    "gemini",
 ]
 
 [tool.setuptools.packages.find]
@@ -106,5 +130,5 @@ exclude = [
 lmms-eval = "lmms_eval.__main__:cli_evaluate"
 
 [project.urls]
-Homepage = "https://lmms-lab.github.io/lmms-eval-blog/"
+Homepage = "https://lmms-lab.github.io"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
