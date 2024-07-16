@@ -209,6 +209,14 @@ class InternVL2(lmms):
                 if k not in gen_kwargs:
                     gen_kwargs[k] = v
 
+            pop_keys = []
+            for k, v in gen_kwargs.items():
+                if k not in DEFAULT_GEN_KWARGS:
+                    pop_keys.append(k)
+            
+            for k in pop_keys:
+                gen_kwargs.pop(k)
+
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             if self.modality == "image":
