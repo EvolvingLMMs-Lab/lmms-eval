@@ -33,9 +33,7 @@ try:
     from llava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
     from llava.mm_utils import process_images
 except ImportError as e:
-    print(e)
-    # import pdb;pdb.set_trace()
-    eval_logger.debug("VILA is not installed. Please install VILA to use this model.")
+    eval_logger.debug(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
 
 
 @register_model("vila")
@@ -81,7 +79,6 @@ class VILA(lmms):
         self.max_frames_num = max_frames_num
         # self._config = AutoConfig.from_pretrained(self.pretrained)
 
-        # import pdb; pdb.set_trace()
         self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, self.model_name, device_map=self.device_map, attn_implementation=attn_implementation)
 
         self.model.image_processor = self._image_processor
@@ -202,7 +199,6 @@ class VILA(lmms):
             return [Image.fromarray(img) for img in spare_frames]
         except Exception as e:
             eval_logger.error(f"Failed to load video {video_path} with error: {e}")
-            # import pdb;pdb.set_trace()
             return [Image.new("RGB", (448, 448), (0, 0, 0))] * max_frames_num
 
     def tok_decode(self, tokens):
@@ -278,31 +274,23 @@ class VILA(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            # if self.task_dict[task][split][doc_id]["duration"] != "short":
-            #     # import pdb;pdb.set_trace()
-            #     res.append("A")
-            #     pbar.update(1)
-            #     continue
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
 
             num_video_frames = self.model.config.num_video_frames
             videos = []
-            # import pdb;pdb.set_trace()
             if self.max_frames_num == 0:
                 images = [Image.new("RGB", (448, 448), (0, 0, 0))] * num_video_frames
                 video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
                 videos.append(video)
             else:
                 for visual in visuals:
-                    # images, video_loading_succeed = LazySupervisedDataset._load_video(visual, num_video_frames, self.model)
-                    # import pdb;pdb.set_trace()
                     if self.video_decode_backend == "decord":
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
                         images = read_video_pyav(visual, num_frm=num_video_frames)
-                    # import pdb;pdb.set_trace()
+
                     video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
                     videos.append(video)
 
@@ -370,7 +358,6 @@ class VILA(lmms):
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
             print("Question: ", cur_prompt)
             print("Answer: ", outputs)
-            # import pdb;pdb.set_trace()
             res.append(outputs)
             pbar.update(1)
         return res

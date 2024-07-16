@@ -22,6 +22,16 @@ puzzle = ["RAVEN"]
 nlrv2 = ["NLVR2_Mantis"]
 qbench = ["QBench"]
 
+scan_qa = ["ScanQA"]
+alfred = ["ALFRED"]
+nuscenes = ["nuscenes"]
+scannet_chat = ["ScanNet_chat"]
+scannet_task = ["ScanNet_task"]
+blink = ["BLINK"]
+math_verse = ["MathVerse"]
+sci_verse = ["SciVerse"]
+mantis = ["Mantis"]
+
 
 def doc_to_visual(doc):
     max_visual_count = 16
@@ -184,9 +194,19 @@ def overall_score(results):
         "Puzzle": puzzle,
         "NLVR2": nlrv2,
         "QBench": qbench,
+        "ScanQA": scan_qa,
+        "ALFRED": alfred,
+        "nuscenes": nuscenes,
+        "ScanNet_chat": scannet_chat,
+        "ScanNet_task": scannet_task,
+        "BLINK": blink,
+        "MathVerse": math_verse,
+        "SciVerse": sci_verse,
+        "Mantis": mantis,
     }
 
     category_scores = {}
+    matched_subtasks = set()
 
     eval_logger.info(f"Evaluation Sub-Task Results:")
     for category, subtasks in categories.items():
@@ -196,10 +216,14 @@ def overall_score(results):
             if result["sub_task"] in subtasks:
                 count += 1
                 score += result["score"]
+                matched_subtasks.add(result["sub_task"])
         if count > 0:
             avg_score = score / count
             category_scores[category] = avg_score
             eval_logger.info(f"{category}: {avg_score:.3f}")
+
+    if not matched_subtasks:
+        raise ValueError("No subtasks were matched in the results. Check if the subtask names are correct.")
 
     # Calculate overall score
     total_score = sum(category_scores.values())

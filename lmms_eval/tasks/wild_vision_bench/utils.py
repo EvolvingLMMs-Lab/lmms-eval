@@ -97,6 +97,7 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
             response.raise_for_status()
             response_data = response.json()
+            print(response_data)
             return response_data["choices"][0]["message"]["content"], GPT_EVAL_MODEL_NAME
         except requests.exceptions.RequestException as e:
             print(f"Request failed on attempt {attempt+1}: {e}")

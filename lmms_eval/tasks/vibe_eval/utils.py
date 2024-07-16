@@ -2,14 +2,17 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, List
 from pathlib import Path
+
 import yaml
-
-from reka import ChatMessage
-from reka.client import Reka
-
 import re
 import os
 from copy import deepcopy
+
+try:
+    from reka import ChatMessage
+    from reka.client import Reka
+except ImportError:
+    eval_logger.warning("Reka is not installed, please install it by `pip install reka-api`")
 
 REKA_API_KEY = os.getenv("REKA_API_KEY", "YOUR_API_KEY")
 

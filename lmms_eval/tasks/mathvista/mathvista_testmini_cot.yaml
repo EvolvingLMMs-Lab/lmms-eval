@@ -1,8 +1,8 @@
 dataset_path: AI4Math/MathVista
 dataset_kwargs:
   token: True
-task: "mathvista_test"
-test_split: test
+task: "mathvista_testmini_cot"
+test_split: testmini
 output_type: generate_until
 doc_to_visual: !function utils.mathvista_doc_to_visual
 doc_to_text: !function utils.mathvista_doc_to_text
@@ -15,10 +15,15 @@ generation_kwargs:
   do_sample: false
 process_results: !function utils.mathvista_process_results
 metric_list:
-  - metric: submission
+  - metric: gpt_eval_score
     aggregation: !function utils.mathvista_aggregate_results
     higher_is_better: true
 
 model_specific_prompt_kwargs:
   default:
-    shot_type: "reason-first" # can be "reason-first", "solution", "step-by-step"
+    shot_type: "step-by-step" # can be "reason-first", "solution", "step-by-step"
+    shot: 0
+    use_caption: False
+    use_ocr: False
+  phi3v:
+    shot_type: "solution"

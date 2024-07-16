@@ -213,7 +213,7 @@ class InternVL2(lmms):
             for k, v in gen_kwargs.items():
                 if k not in DEFAULT_GEN_KWARGS:
                     pop_keys.append(k)
-            
+
             for k in pop_keys:
                 gen_kwargs.pop(k)
 

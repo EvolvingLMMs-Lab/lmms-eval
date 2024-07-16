@@ -54,15 +54,6 @@ try:
 except ImportError as e:
     eval_logger.debug(f"LLaVA is not installed. Please install LLaVA to use this model.\nError: {e}")
 
-# Import LLaVA-vid modules
-try:
-    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
-    from llavavid.model.language_model.llava_llama import LlavaConfig
-
-    AutoConfig.register("llava_qwen", LlavaQwenConfig)
-    AutoConfig.register("llava_llama", LlavaConfig)
-except ImportError as e:
-    eval_logger.debug(f"LLaVA-vid is not installed. Error: {e}")
 
 # Determine best attention implementation
 if version.parse(torch.__version__) >= version.parse("2.1.2"):
