@@ -199,7 +199,7 @@ Please check [supported models](lmms_eval/models/__init__.py) for more details.
 
 ### Supported tasks
 
-Please check [supported tasks](lmms_eval/docs/current_tasks.md) for more details.
+Please check [supported tasks](docs/current_tasks.md) for more details.
 
 ## Add Customized Model and Dataset
 
