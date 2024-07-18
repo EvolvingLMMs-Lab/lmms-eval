@@ -317,17 +317,12 @@ class LlavaHf(lmms):
                     use_cache=self.use_cache,
                     pad_token_id=self.tokenizer.eos_token_id,
                 )
+                cont = cont[:, inputs["input_ids"].shape[-1]:]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
-            if "1.5" in self.pretrained:
-                text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
-            elif "mistral" in self.pretrained:
-                text_outputs = text_outputs.split("[/INST]")[-1].strip()
-            else:
-                text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
-
+            
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
 
