@@ -269,13 +269,37 @@ class Llava_OneVision(lmms):
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            image_sizes = [[visual.size[0], visual.size[1]] for visual in visuals]
             if visuals:
-                image = process_images(visuals, self._image_processor, self._config)
-                if type(image) is list:
-                    image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
-                else:
-                    image = image.to(dtype=torch.float16, device=self.device)
+                for visual in visuals:
+                    if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
+                        self._config.image_aspect_ratio = "pad"
+                        eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+                    # if (len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__) and ("image_aspect_ratio" in gen_kwargs.keys()):
+                    #     self._config.image_aspect_ratio = gen_kwargs["image_aspect_ratio"]
+                    #     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+
+                    if type(visual) == PIL.Image.Image:  # For image task
+                        image = process_images([visual], self._image_processor, self._config)
+                        if type(image) is list:
+                            image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
+                        else:
+                            image = image.to(dtype=torch.float16, device=self.device)
+
+                        task_type = "image"
+
+                    elif type(visual) == str:  # For video task
+                        try:
+                            if self.video_decode_backend == "decord":
+                                frames = self.load_video([visual], self.max_frames_num)
+                            elif self.video_decode_backend == "pyav":
+                                frames = read_video_pyav(visual, num_frm=self.max_frames_num)
+                            frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                            image = frames
+                        except Exception as e:
+                            eval_logger.error(f"Error {e} in loading video")
+                            image = None
+
+                        task_type = "video"
             else:
                 image = None
 
@@ -288,9 +312,14 @@ class Llava_OneVision(lmms):
                 2. image token is already specified in the context, so we don't need to add it.
                 3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
                 """
-                image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
+                if task_type == "image":
+                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals) if isinstance(visuals, list) else [DEFAULT_IMAGE_TOKEN]
+                elif task_type == "video":
+                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(frames) if self.token_strategy == "multiple" else [DEFAULT_IMAGE_TOKEN]
                 image_tokens = " ".join(image_tokens)
                 prompts_input = image_tokens + "\n" + (contexts[0] if isinstance(contexts, list) else contexts)
+            else:
+                question = (contexts[0] if isinstance(contexts, list) else contexts)
 
             # This is much safer for llama3, as we now have some object type in it
             if "llama_3" in self.conv_template:
@@ -311,8 +340,18 @@ class Llava_OneVision(lmms):
             labels = input_ids.clone()
             # Context part no need to calculate for loss
             labels[0, : contxt_id.shape[1]] = -100
+
+            kwargs = {}
+            if task_type == "image":
+                kwargs["image_sizes"] = [[visual.size[0], visual.size[1]] for visual in visuals]
+            elif task_type == "video":
+                kwargs["modalities"] = ["video"]
+                self._config.mm_spatial_pool_stride = self.mm_spatial_pool_stride
+                self._config.mm_spatial_pool_mode = self.mm_spatial_pool_mode
+
+
             with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, image_sizes=image_sizes)
+                outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, **kwargs)
             loss = outputs["loss"]
             # loss = torch.exp(loss)
             logits = outputs["logits"]
@@ -343,59 +382,6 @@ class Llava_OneVision(lmms):
         frame_idx = uniform_sampled_frames.tolist()
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         return spare_frames  # (frames, height, width, channels)
-
-    def preprocess_qwen(self, sources, tokenizer: transformers.PreTrainedTokenizer, has_image: bool = False, max_len=2048, system_message: str = "You are a helpful assistant."):
-        roles = {"human": "<|im_start|>user", "gpt": "<|im_start|>assistant"}
-
-        im_start, im_end = tokenizer.additional_special_tokens_ids
-        nl_tokens = tokenizer("\n").input_ids
-        _system = tokenizer("system").input_ids + nl_tokens
-        _user = tokenizer("user").input_ids + nl_tokens
-        _assistant = tokenizer("assistant").input_ids + nl_tokens
-
-        # Apply prompt templates
-        input_ids, targets = [], []
-
-        source = sources
-        if roles[source[0]["from"]] != roles["human"]:
-            source = source[1:]
-
-        input_id, target = [], []
-        system = [im_start] + _system + tokenizer(system_message).input_ids + [im_end] + nl_tokens
-        input_id += system
-        target += [im_start] + [IGNORE_INDEX] * (len(system) - 3) + [im_end] + nl_tokens
-        assert len(input_id) == len(target)
-        for j, sentence in enumerate(source):
-            role = roles[sentence["from"]]
-            if has_image and sentence["value"] is not None and "<image>" in sentence["value"]:
-                num_image = len(re.findall(DEFAULT_IMAGE_TOKEN, sentence["value"]))
-                texts = sentence["value"].split("<image>")
-                _input_id = tokenizer(role).input_ids + nl_tokens
-                for i, text in enumerate(texts):
-                    _input_id += tokenizer(text).input_ids
-                    if i < len(texts) - 1:
-                        _input_id += [IMAGE_TOKEN_INDEX] + nl_tokens
-                _input_id += [im_end] + nl_tokens
-                assert sum([i == IMAGE_TOKEN_INDEX for i in _input_id]) == num_image
-            else:
-                if sentence["value"] is None:
-                    _input_id = tokenizer(role).input_ids + nl_tokens
-                else:
-                    _input_id = tokenizer(role).input_ids + nl_tokens + tokenizer(sentence["value"]).input_ids + [im_end] + nl_tokens
-            input_id += _input_id
-            if role == "<|im_start|>user":
-                _target = [im_start] + [IGNORE_INDEX] * (len(_input_id) - 3) + [im_end] + nl_tokens
-            elif role == "<|im_start|>assistant":
-                _target = [im_start] + [IGNORE_INDEX] * len(tokenizer(role).input_ids) + _input_id[len(tokenizer(role).input_ids) + 1 : -2] + [im_end] + nl_tokens
-            else:
-                raise NotImplementedError
-            target += _target
-
-        input_ids.append(input_id)
-        targets.append(target)
-        input_ids = torch.tensor(input_ids, dtype=torch.long)
-        targets = torch.tensor(targets, dtype=torch.long)
-        return input_ids
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
