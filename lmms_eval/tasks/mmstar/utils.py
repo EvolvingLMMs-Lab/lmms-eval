@@ -35,7 +35,7 @@ eval_type_dict = {
         "electronics & energy & mechanical eng.",
         "geography & earth science & agriculture"
     ],
-    "mathematics" : [
+    "math" : [
         "geometry",
         "numeric commonsense and calculation",
         "statistical reasoning"
