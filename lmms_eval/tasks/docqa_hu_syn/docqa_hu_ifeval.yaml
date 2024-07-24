@@ -1,4 +1,4 @@
-dataset_path: hongfenglu/HungarianDocQA_IT_IfEvalQA
+dataset_path: hongfenglu/HungarianDocQA_IT_IFEvalQA
 task: "docqa_hu_ifeval"
 output_type: generate_until
 test_split: test
