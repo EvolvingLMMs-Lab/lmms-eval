@@ -13,6 +13,7 @@ temp
 __pycache__
 .ipynb_checkpoints
 temp
+.DS_STORE
 # IPython
 profile_default/
 ipython_config.py
@@ -29,3 +30,11 @@ ckpt
 pretrained/
 LLaVA/
 *logs
+temp/
+InternVL/
+logs/
+data/
+llava-video/
+Video-MME/
+VATEX/
+lmms_eval/tasks/vatex/__pycache__/utils.cpython-310.pyc

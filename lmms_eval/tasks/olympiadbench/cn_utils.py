@@ -4,9 +4,9 @@ import datetime
 from lmms_eval.tasks.olympiadbench.olympiadbench_evals import OlympiadBenchEvaluator
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-import logging
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 try:

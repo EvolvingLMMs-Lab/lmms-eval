@@ -7,30 +7,49 @@ output_type: generate_until
 doc_to_visual: !function utils.ai2d_doc_to_visual
 doc_to_text: !function utils.ai2d_doc_to_text
 doc_to_target: !function utils.ai2d_doc_to_target
+  
+model_specific_prompt_kwargs:
+  default:
+    prompt_format: mcq
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  gpt4v: 
+    prompt_format: mcq
+    pre_prompt: ""
+    post_prompt: "\nAbove choices are given in {option}. {content} format.\nPlease answer with the option letter from the given choices directly."
+  qwen_vl:
+    prompt_format: qa
+    pre_prompt: ""
+    post_prompt: " Answer:"
+  xcomposer2_4khd:
+    prompt_format: mcq_xcomposer
+    pre_prompt: "[UNUSED_TOKEN_146]user\nQuestion: "
+    post_prompt: "[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\nThe answer is"
+
+model_specific_target_kwargs:
+  default: "mcq"
+  qwen_vl: "qa"
+
 generation_kwargs:
   max_new_tokens: 16
   temperature: 0
   do_sample: False
+
+filter_list:
+  - name: "flexible-extract"
+    filter:
+      - function: !function utils.MultiChoiceRegexFilter
+        group_select: 0
+        ignore_case: true
+        ignore_punctuation: true
+        regex_pattern: "([A-Z])\\."
+
 metric_list:
   - metric: exact_match
     aggregation: mean
     higher_is_better: true
     ignore_case: true
     ignore_punctuation: true
+
 metadata:
   - version: 0.0
-
-model_specific_prompt_kwargs:
-  default:
-    prompt_format: mcq
-    pre_prompt: ""
-    post_prompt: "\nAnswer with the option's letter from the given choices directly."
-  # qwen formulate ai2d as question answering instead of mcq
-  qwen_vl:
-    prompt_format: qa
-    pre_prompt: ""
-    post_prompt: " Answer:"
-
-model_specific_target_kwargs:
-  default: "mcq"
-  qwen_vl: "qa"

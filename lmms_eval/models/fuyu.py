@@ -15,13 +15,8 @@ from lmms_eval.api.instance import Instance
 from tqdm import tqdm
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
-import logging
 
-import logging
-
-eval_logger = logging.getLogger("lmms-eval")
-
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @register_model("fuyu")
@@ -85,7 +80,7 @@ class Fuyu(lmms):
             self._rank = 0
             self._word_size = 1
 
-        '''if accelerator.num_processes > 1:
+        """if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
@@ -98,7 +93,7 @@ class Fuyu(lmms):
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
-            self._world_size = self.accelerator.num_processes'''
+            self._world_size = self.accelerator.num_processes"""
 
     @property
     def config(self):
@@ -204,7 +199,7 @@ class Fuyu(lmms):
             # generation_output = self.model.generate(
             #     **model_inputs, temperature=gen_kwargs["temperature"], max_new_tokens=gen_kwargs["max_new_tokens"], top_p=gen_kwargs["top_p"], num_beams=gen_kwargs["num_beams"], pad_token_id=self.tokenizer.eos_token_id
             # )
-            generation_output = self.model.generate(**model_inputs, max_new_tokens=gen_kwargs["max_new_tokens"])
+            generation_output = self.model.generate(**model_inputs, max_new_tokens=gen_kwargs["max_new_tokens"], pad_token_id=self.tokenizer.eos_token_id)
             generation_texts = self.processor.batch_decode(generation_output, skip_special_tokens=True)
             response = [gen_text.split("\x04")[1].strip(" ").strip("\n") for gen_text in generation_texts]
             res.extend(response)

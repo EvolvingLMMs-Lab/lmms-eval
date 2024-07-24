@@ -12,7 +12,7 @@ generation_kwargs:
     - "ASSISTANT:"
   max_new_tokens: 1024
   temperature: 0
-  top_p: 0
+  top_p: 1.0
   num_beams: 1
   do_sample: false
 process_results: !function utils.mathvista_process_results
@@ -24,6 +24,9 @@ metric_list:
 model_specific_prompt_kwargs:
   default:
     shot_type: "format-prompt" # can be "reason-first", "solution", "step-by-step"
+    shot: 0
+    use_caption: False
+    use_ocr: False
   phi3v:
     shot_type: "solution"
 model_specific_generation_kwargs:

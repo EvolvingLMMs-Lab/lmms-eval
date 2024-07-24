@@ -10,9 +10,9 @@ doc_to_target: "{{answer}}"
 generation_kwargs:
   until:
     - "ASSISTANT:"
-  max_new_tokens: 1024
+  max_new_tokens: 32768
   temperature: 0
-  top_p: 0
+  top_p: 1.0
   num_beams: 1
   do_sample: false
 process_results: !function utils.mmvet_process_results # apply gpt eval here
@@ -22,8 +22,8 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4"
+  gpt_eval_model_name: "gpt-4-0613"
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: ""
+    pre_prompt: "Please think step by step and try to provide best answer to the following question: \n\n"
     post_prompt: ""

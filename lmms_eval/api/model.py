@@ -8,9 +8,9 @@ import hashlib
 from lmms_eval.api.instance import Instance
 from tqdm import tqdm
 from lmms_eval import utils
-import logging
 
-eval_logger = logging.getLogger("lmms-eval")
+
+from loguru import logger as eval_logger
 
 T = TypeVar("T", bound="lmms")
 

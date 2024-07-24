@@ -3,14 +3,14 @@ import os
 import json
 import yaml
 import pathlib
-import logging
+
 import datetime
 import statistics
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks._task_utils.vqa_eval_metric import EvalAIAnswerProcessor
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def vizwiz_vqa_doc_to_visual(doc):
@@ -61,7 +61,7 @@ def vizwiz_vqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
     return text
 
 
-def vizwiz_vqa_aggreate_submissions(results, args):
+def vizwiz_vqa_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
     submission_file_name = f"vizwiz_vqa-test-submission-{now_date_time}.json"
     path = generate_submission_file(submission_file_name, args)

@@ -1,0 +1,30 @@
+task: textvqa_val_lite
+test_split: lite
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: submission
+    aggregation: !function utils.textvqa_aggregate_submissions
+    higher_is_better: true
+dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_name: textvqa_val
+output_type: generate_until
+doc_to_visual: !function utils.textvqa_doc_to_visual
+doc_to_text: !function utils.textvqa_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+process_results: !function utils.textvqa_process_results
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
+    ocr: false
+  qwen_vl:
+    pre_prompt: ""
+    post_prompt: " Answer:"
+
