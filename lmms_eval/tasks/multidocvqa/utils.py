@@ -2,11 +2,11 @@ import os
 import re
 import ast
 import json
-import logging
+
 from lmms_eval.api.metrics import levenshtein_distance
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-lmms_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def multidocvqa_doc_to_text(doc, model_specific_prompt_kwargs):
@@ -55,7 +55,7 @@ def multidocvqa_test_aggregate_results_for_submission(results, args):
     path = generate_submission_file("multidocvqa_test_for_submission.json", args)
     with open(path, "w") as f:
         json.dump(results, f)
-    lmms_logger.info(f"Results saved to {path}.")
+    eval_logger.info(f"Results saved to {path}.")
 
 
 ##################

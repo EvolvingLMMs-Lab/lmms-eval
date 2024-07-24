@@ -1,8 +1,9 @@
 import torch
+import random
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
-import logging
+
 from tqdm import tqdm
 from datetime import timedelta
 
@@ -11,7 +12,6 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-from accelerate import Accelerator, InitProcessGroupKwargs
 from typing import List, Optional, Union, Tuple
 import warnings
 
@@ -19,13 +19,13 @@ warnings.filterwarnings("ignore")
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tempfile
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     import sglang as sgl
     from sglang.lang.chat_template import get_chat_template
 except ImportError:
-    eval_logger.error("SGLang is not installed. If you want to use llava_sglang, please install it using pip install 'sglang[all]' ")
+    eval_logger.debug("SGLang is not installed. If you want to use llava_sglang, please install it using pip install 'sglang[all]' ")
 
 if torch.__version__ > "2.1.2":
     best_fit_attn_implementation = "sdpa"
@@ -53,11 +53,11 @@ class LlavaSglang(lmms):
         self.tokenizer = tokenizer
         self.tp_size = tp_size
         self.conv_template = conv_template
-        torch.multiprocessing.set_start_method("spawn")
+        # torch.multiprocessing.set_start_method("spawn")
 
-        accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
-        accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
-        assert accelerator.num_processes == 1, "Llava-sglang does not support multi-processes yet (it does support tensor parallelism)."
+        # accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
+        # accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
+        # assert accelerator.num_processes == 1, "Llava-sglang does not support multi-processes yet (it does support tensor parallelism)."
         self._rank = 0
         self._world_size = 1
         self.parallel = parallel
@@ -66,8 +66,8 @@ class LlavaSglang(lmms):
         raise NotImplementedError("Llava-sglang does not support loglikelihood evaluation yet")
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
-
-        runtime = sgl.Runtime(model_path=self.pretrained, tokenizer_path=self.tokenizer, tp_size=self.tp_size)
+        torch.multiprocessing.set_start_method("spawn", force=True)
+        runtime = sgl.Runtime(model_path=self.pretrained, tokenizer_path=self.tokenizer, tp_size=self.tp_size, port=random.randint(10000, 50000))
         runtime.endpoint.chat_template = get_chat_template(self.conv_template)
         sgl.set_default_backend(runtime)
 
@@ -109,9 +109,6 @@ class LlavaSglang(lmms):
                 gen_kwargs["top_p"] = 1.0
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
-            if gen_kwargs["top_p"] == 0.0:
-                gen_kwargs["top_p"] = 1.0
-                gen_kwargs["temperature"] = 0.0
             assert gen_kwargs["num_beams"] == 1
 
             def save_image_to_temp_file(image):

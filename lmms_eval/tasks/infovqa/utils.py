@@ -1,11 +1,10 @@
 import json
 import os
-import logging
 
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-lmms_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def infovqa_doc_to_visual(doc):
@@ -30,4 +29,4 @@ def infovqa_test_aggregate_results(results, args):
     file = generate_submission_file("infovqa_test_for_submission.json", args)
     with open(file, "w") as f:
         json.dump(results, f)
-    lmms_logger.info(f"Results saved to {file}")
+    eval_logger.info(f"Results saved to {file}")

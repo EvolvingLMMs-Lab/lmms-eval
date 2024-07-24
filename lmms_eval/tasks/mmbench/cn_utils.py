@@ -1,4 +1,3 @@
-import logging
 import yaml
 import os
 from pathlib import Path
@@ -6,7 +5,7 @@ import pandas as pd
 import json
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 from lmms_eval.tasks.mmbench.mmbench_evals import MMBench_Evaluator
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -29,6 +28,9 @@ if API_TYPE == "openai":
 elif API_TYPE == "azure":
     API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+else:
+    API_URL = "YOUR_API_URL"
+    API_KEY = "YOUR_API_KEY"
 
 
 mmbench_evaluator = MMBench_Evaluator(sys_prompt=config["metadata"]["sys_prompt"], API_KEY=API_KEY, API_URL=API_URL, model_version=GPT_EVAL_MODEL_NAME)

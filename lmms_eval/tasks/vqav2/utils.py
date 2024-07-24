@@ -1,7 +1,7 @@
 import re
 import os
 import json
-import logging
+
 import datetime
 import statistics
 
@@ -10,7 +10,7 @@ import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.tasks._task_utils.vqa_eval_metric import EvalAIAnswerProcessor
 
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def vqav2_doc_to_visual(doc):
@@ -80,7 +80,7 @@ def vqav2_doc_to_text(doc, model_specific_prompt_kwargs=None):
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 
-def vqav2_aggreate_submissions(results, args):
+def vqav2_aggregate_submissions(results, args):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     submission_file_name = f"vqav2-test-submission-{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)

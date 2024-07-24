@@ -1,6 +1,6 @@
 # Code mostly from: https://github.com/EleutherAI/lm-evaluation-harness/pull/1339, credit to: https://github.com/ayulockin
 import copy
-import logging
+
 import re
 import os
 import json
@@ -9,13 +9,10 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Tuple, Union
-
 from packaging.version import Version
-
 from lmms_eval import utils
 import tenacity
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 try:
     import wandb
@@ -89,10 +86,10 @@ class WandbLogger:
     def init_run(self):
         if "name" not in self.wandb_args:
             if "config" in self.all_args_dict and self.all_args_dict["config"] != "":
-                self.wandb_args["name"] = self.all_args_dict["config"].split("/")[-1].replace(".yaml", "") + "_" + self.args.log_samples_suffix
+                self.wandb_args["name"] = self.all_args_dict["config"].split("/")[-1].replace(".yaml", "") + "/" + self.args.log_samples_suffix
             else:
                 task_names = self.args.tasks.replace(",", "/")
-                self.wandb_args["name"] = f"{self.args.model}_{task_names}_{self.args.log_samples_suffix}"
+                self.wandb_args["name"] = f"{self.args.model}/<{task_names}>/{self.args.log_samples_suffix}"
                 if self.args.num_fewshot:
                     self.wandb_args["name"] += f"_{self.args.num_fewshot}shot"
         if "project" not in self.wandb_args:
@@ -119,6 +116,7 @@ class WandbLogger:
     def _sanitize_results_dict(self) -> Tuple[Dict[str, str], Dict[str, Any]]:
         """Sanitize the results dictionary."""
         _results = copy.deepcopy(self.results.get("results", dict()))
+        _results["model_configs"] = self.results.get("model_configs", dict())
 
         # Remove None from the metric string name
         tmp_results = copy.deepcopy(_results)
@@ -138,15 +136,18 @@ class WandbLogger:
                 if isinstance(metric_value, str):
                     wandb_summary[f"{task}/{metric_name}"] = metric_value
 
+        wandb_summary["model_configs"] = self.results.get("model_configs", dict())
         for summary_metric, summary_value in wandb_summary.items():
-            _task, _summary_metric = summary_metric.split("/")
-            _results[_task].pop(_summary_metric)
+            if summary_metric != "model_configs":
+                _task, _summary_metric = summary_metric.split("/")
+                _results[_task].pop(_summary_metric)
 
         tmp_results = copy.deepcopy(_results)
         for task_name, task_results in tmp_results.items():
-            for metric_name, metric_value in task_results.items():
-                _results[f"{task_name}/{metric_name}"] = metric_value
-                _results[task_name].pop(metric_name)
+            if task_name != "model_configs":
+                for metric_name, metric_value in task_results.items():
+                    _results[f"{task_name}/{metric_name}"] = metric_value
+                    _results[task_name].pop(metric_name)
         for task in self.task_names:
             _results.pop(task)
 
