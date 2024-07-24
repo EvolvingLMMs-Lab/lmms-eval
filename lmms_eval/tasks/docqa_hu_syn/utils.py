@@ -25,6 +25,9 @@ def docvqa_doc_to_textonly(doc, model_specific_prompt_kwargs):
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
     return f"All PDF Text: {all_text} \n\n {pre_prompt}{question}{post_prompt}"
 
+def docvqa_doc_to_target(doc):
+    return doc["conversations"][1]["value"]
+
 
 def docvqa_test_process_results(doc, results):
     pred = results[0]
