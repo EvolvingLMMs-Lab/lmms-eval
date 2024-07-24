@@ -19,13 +19,13 @@ from typing import List, Optional, Union, Tuple
 from packaging import version
 import warnings
 
-warnings.filterwarnings("ignore")
-
 from loguru import logger as eval_logger
 
+warnings.filterwarnings("ignore")
+
 try:
-    from mantis.models.mllava import chat_mllava
     from mantis.models.mllava import LlavaForConditionalGeneration, MLlavaProcessor
+    from mantis.models.mfuyu import MFuyuForCausalLM, MFuyuProcessor
     from mantis.models.conversation import conv_mllava_v1 as default_conv, conv_templates
     
 except Exception as e:
@@ -40,9 +40,11 @@ except Exception as e:
 # if is_flash_attn_2_available:
 #     best_fit_attn_implementation = "flash_attention_2" # flash_attn has a bug that says: ERROR Error query and key must have the same dtype in generating
 
-if version.parse(torch.__version__) >= version.parse("2.1.2"):
-    best_fit_attn_implementation = "sdpa"
-else:
+try:
+    import flash_attn
+    
+    best_fit_attn_implementation = "flash_attention_2"
+except ImportError:
     best_fit_attn_implementation = "eager"
 
 DEFAULT_IMAGE_TOKEN = "<image>"
@@ -59,6 +61,7 @@ class Mantis(lmms):
         pretrained: str = "TIGER-Lab/Mantis-8B-siglip-llama3",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
+        dtype: Optional[Union[str, torch.dtype]] = "float16",
         batch_size: Optional[Union[int, str]] = 1,
         attn_implementation=best_fit_attn_implementation,
         device_map="cuda:0",
@@ -83,14 +86,21 @@ class Mantis(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
         
         self._is_idefics = "idefics" in pretrained.lower()
+        if isinstance(dtype, str) and dtype != "auto":
+            dtype = getattr(torch, dtype)
+        
         # Here we load the "non-idefics" Mantis model.
         if not self._is_idefics:
-            self._processor = MLlavaProcessor.from_pretrained(pretrained)
-            self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, device_map=self.device_map, attn_implementation=attn_implementation)
+            if 'fuyu' in pretrained.lower():
+                self._processor = MFuyuProcessor.from_pretrained(pretrained)
+                self._model = MFuyuForCausalLM.from_pretrained(pretrained, device_map=self.device_map, attn_implementation=attn_implementation, torch_dtype=dtype)
+            else:
+                self._processor = MLlavaProcessor.from_pretrained(pretrained)
+                self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, device_map=self.device_map, attn_implementation=attn_implementation, torch_dtype=dtype)
             
         else:
             self._processor = AutoProcessor.from_pretrained(pretrained)
-            self._model = AutoModelForVision2Seq.from_pretrained(pretrained, device_map=self.device_map, attn_implementation=attn_implementation)
+            self._model = AutoModelForVision2Seq.from_pretrained(pretrained, device_map=self.device_map, torch_dtype=dtype)
         eval_logger.info(f"Using {type(self._model)} to instantiate the Mantis model.")
         
         self._tokenizer = self._processor.tokenizer
@@ -281,6 +291,8 @@ class Mantis(lmms):
                     prompt = conv.get_prompt()
                     prompts.append(prompt)
             inputs = self._processor(images=visuals, text=prompts, return_tensors="pt", truncation=True)
+            if "image_patches" in inputs.keys():
+                inputs["image_patches"] = inputs["image_patches"][0] # FIXME: Fuyu model would return a list instead of a pytorch tensor. This weird behavior needs fixing.
             inputs = {k: v.to(self.device) for k, v in inputs.items()}    
             
             output_ids = self.model.generate(**inputs, **gen_kwargs)
