@@ -159,7 +159,8 @@ class BatchGPT4(lmms):
             if batch_status.status == "completed":
                 eval_logger.info("Batch processing completed.")
                 batch_results = self.retrieve_batch_results(batch_status.output_file_id)
-                res = [result["response"]["choices"][0]["message"]["content"] for result in json.loads(batch_results)]
+                batch_results = batch_results.text.split("\n")
+                res = [json.loads(r)["response"]["body"]["choices"][0]["message"]["content"] for r in batch_results]
                 return res
             elif batch_status.status == "failed":
                 eval_logger.info("Batch processing failed.")
