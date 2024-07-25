@@ -1,3 +1,5 @@
+import os
+import time
 import random
 import itertools
 import json
@@ -7,7 +9,7 @@ import inspect
 from tqdm import tqdm
 
 import torch
-import logging
+
 import numpy as np
 from datasets import Image, Sequence
 
@@ -16,8 +18,6 @@ import lmms_eval.tasks
 import lmms_eval.models
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-
-import re
 
 from lmms_eval.utils import (
     positional_deprecated,
@@ -28,7 +28,7 @@ from lmms_eval.utils import (
     simple_parse_args_string,
 )
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 @positional_deprecated
@@ -327,7 +327,7 @@ def evaluate(
             # hack: remove image columns to speed avoid loading images and speed up postprocessing
             # reason: doc_iterator will actually load image if it's in the doc.
             docs = task.test_docs() if task.has_test_docs() else task.validation_docs()
-            if "d170" not in task_name and "dc100" not in task_name and "dc200" not in task_name and "llava_wilder" not in task_name and "livebench" not in task_name:
+            if "d170" not in task_name and "dc100" not in task_name and "dc200" not in task_name and "llava_wilder" not in task_name and "livebench" not in task_name and "wildvision" not in task_name:
                 remove_cols = []
                 features = docs.features
                 # If it is an Image instance or a Sequence of Image instance. Remove it
@@ -424,6 +424,12 @@ def evaluate(
         vals = vals_torch
         # Ensure all ranks wait for rank 0 to finish aggregation
         torch.distributed.barrier()
+
+    # Synchronize processes with a temp file in case the evluation metric requires gpus
+    # TODO: fix barriers' taking up gpu computation
+    os.makedirs(cli_args.output_path, exist_ok=True)
+    if os.path.exists(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt"):
+        os.remove(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt")
 
     if lm.rank == 0:
         ### Get task ordering for correct sample-wide aggregation
@@ -625,8 +631,12 @@ def evaluate(
         }
         if log_samples:
             results_dict["samples"] = dict(samples)
-
-        return results_dict
-
     else:
-        return None
+        results_dict = None
+    
+    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", 'w') as f:
+        f.write(f"rank {int(os.environ.get('RANK', 0))} eval done")
+    while len([file for file in os.listdir(cli_args.output_path) if file.endswith('metric_eval_done.txt')]) < lm.accelerator.num_processes:
+        time.sleep(1)
+
+    return results_dict

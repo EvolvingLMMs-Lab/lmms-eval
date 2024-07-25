@@ -14,4 +14,5 @@ generation_kwargs:
 # The return value of process_results will be used by metrics
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 metadata:
-  - version: 0.0.1
+  version: 0.0.1
+  load_package: False

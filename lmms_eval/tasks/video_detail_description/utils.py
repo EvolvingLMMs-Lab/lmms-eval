@@ -6,7 +6,7 @@ import sys
 import datetime
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
-import logging
+
 import yaml
 from pathlib import Path
 
@@ -44,7 +44,7 @@ cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "Test_Videos")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 # Pass in video path here

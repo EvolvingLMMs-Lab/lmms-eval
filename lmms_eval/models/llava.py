@@ -2,7 +2,7 @@ import torch
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
-import logging
+
 import copy
 from tqdm import tqdm
 from datetime import timedelta
@@ -21,7 +21,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     from llava.model.builder import load_pretrained_model
@@ -58,6 +58,7 @@ class Llava(lmms):
         device_map="cuda:0",
         conv_template="vicuna_v1",
         use_cache=True,
+        tie_weights: bool = True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
         customized_config=None,  # ends in json
         **kwargs,
@@ -68,6 +69,7 @@ class Llava(lmms):
 
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
         accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
+        self.accelerator = accelerator
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
@@ -97,7 +99,9 @@ class Llava(lmms):
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
         self._config = self._model.config
         self.model.eval()
-        self.model.tie_weights()
+        if tie_weights:
+            self.model.tie_weights()
+
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
@@ -357,18 +361,6 @@ class Llava(lmms):
                 conv.append_message(conv.roles[1], None)
                 prompt_question = conv.get_prompt()
                 question_input.append(prompt_question)
-
-            # The above for loop has bugs. When there is no visuals, e.g. pure text,
-            # there will be no for loop execute resulting in an empty question_input (because no visuals)
-            # Scenario 1 won't even be execute
-            if len(flattened_visuals) == 0:
-                for context in contexts:
-                    question = context
-                    conv = conv_templates[self.conv_template].copy()
-                    conv.append_message(conv.roles[0], question)
-                    conv.append_message(conv.roles[1], None)
-                    prompt_question = conv.get_prompt()
-                    question_input.append(prompt_question)
 
             # input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
             # preconfigure gen_kwargs with defaults

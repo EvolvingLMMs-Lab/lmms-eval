@@ -1,4 +1,3 @@
-import logging
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from typing import List, Optional, Union, Tuple
@@ -16,31 +15,22 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
-eval_logger = logging.getLogger("lmms-eval")
-import sys
+from loguru import logger as eval_logger
 
-sys.path.append("llava-video")
 try:
-    from llavavid.model.language_model.llava_llama import LlavaConfig
-
-    # from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
     from llavavid.model.builder import load_pretrained_model
     from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-    from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+    from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
     from llavavid.conversation import conv_templates, SeparatorStyle
-
-    # AutoConfig.register("llava_qwen", LlavaQwenConfig)
-    AutoConfig.register("llava_llama", LlavaConfig)
-
+    from llavavid.mm_utils import tokenizer_image_token_qwen_merge, preprocess_qwen, preprocess_llama3
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
 
-try:
-    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+from llavavid.model.language_model.llava_llama import LlavaConfig
 
-    AutoConfig.register("llava_qwen", LlavaQwenConfig)
-except:
-    eval_logger.debug("")
+AutoConfig.register("llava_qwen", LlavaQwenConfig)
+AutoConfig.register("llava_llama", LlavaConfig)
 
 
 @register_model("llavavid")
@@ -67,8 +57,12 @@ class LlavaVid(lmms):
         mm_spatial_pool_stride: int = 2,
         mm_spatial_pool_out_channels: int = 1024,
         mm_spatial_pool_mode: str = "average",
+        mm_resampler_location:str = "before",
+        mm_newline_position: str = "grid",
         overwrite: bool = True,
         video_decode_backend: str = "pyav",
+        delay_load: bool = False,
+        tie_weights: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -96,16 +90,22 @@ class LlavaVid(lmms):
         self.mm_spatial_pool_out_channels = int(mm_spatial_pool_out_channels)
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.max_frames_num = int(max_frames_num)
-        
+
+        self.mm_resampler_location = mm_resampler_location
+        self.mm_newline_position=mm_newline_position
+        self.delay_load = delay_load
+
         if self.overwrite == True:
             overwrite_config = {}
             overwrite_config["mm_resampler_type"] = self.mm_resampler_type
             overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
             overwrite_config["mm_spatial_pool_out_channels"] = self.mm_spatial_pool_out_channels
             overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
-            overwrite_config["mm_resampler_location"] = "before"
-            overwrite_config["patchify_video_feature"] = False
-            overwrite_config["attn_implementation"] = attn_implementation
+            overwrite_config["mm_pooling_position"] = self.mm_resampler_location
+            overwrite_config["mm_newline_position"] = self.mm_newline_position
+            overwrite_config["add_faster_video"] = False
+            overwrite_config["delay_load"] = self.delay_load
+            # overwrite_config["attn_implementation"] = attn_implementation
 
             cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
@@ -156,7 +156,8 @@ class LlavaVid(lmms):
 
         self._config = self._model.config
         self.model.eval()
-        self.model.tie_weights()
+        if tie_weights:
+            self.model.tie_weights()
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
@@ -361,7 +362,7 @@ class LlavaVid(lmms):
             if self.model.config.mm_use_im_start_end:
                 qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
-                qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
+                qs = DEFAULT_IMAGE_TOKEN * len(videos) + "\n" + qs
 
             # This is much safer for llama3, as we now have some object type in it
             if "llama_3" in self.conv_template:
@@ -379,11 +380,6 @@ class LlavaVid(lmms):
                 pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
             attention_masks = input_ids.ne(pad_token_ids).long().cuda()
 
-            # input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
-            # pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
-            # input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
-            # attention_masks = input_ids.ne(pad_token_ids).to(self.device)
-
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
             stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
@@ -393,7 +389,7 @@ class LlavaVid(lmms):
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0.2
+                gen_kwargs["temperature"] = 0
             if "top_p" not in gen_kwargs:
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
@@ -405,7 +401,7 @@ class LlavaVid(lmms):
                     attention_mask=attention_masks,
                     modalities="video",
                     use_cache=self.use_cache,
-                    #stopping_criteria=[stopping_criteria],
+                    stopping_criteria=[stopping_criteria],
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
                     temperature=gen_kwargs["temperature"],
                     top_p=gen_kwargs["top_p"],

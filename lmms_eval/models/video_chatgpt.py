@@ -1,5 +1,4 @@
 import os
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -11,20 +10,20 @@ import torch
 from PIL import Image
 
 from datetime import timedelta
-import logging
 from typing import List, Tuple, Optional, Union
 from tqdm import tqdm
+
+from loguru import logger
+
+eval_logger = logger
 
 try:
     from lmms_eval.models.video_chatgpt.eval.model_utils import load_video, initialize_model
     from lmms_eval.models.video_chatgpt.inference import video_chatgpt_infer, video_chatgpt_infer_ppl, get_spatio_temporal_features_torch
 except ImportError:
-    eval_logger = logging.getLogger("lmms-eval")
-    eval_logger.info("Failed to import video_chatgpt modules")
+    eval_logger.warning("Failed to import video_chatgpt modules")
 
 from lmms_eval.models.model_utils.load_video import read_video_pyav
-
-eval_logger = logging.getLogger("lmms-eval")
 
 
 @register_model("video_chatgpt")

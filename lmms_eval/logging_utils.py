@@ -1,6 +1,6 @@
 # Code mostly from: https://github.com/EleutherAI/lm-evaluation-harness/pull/1339, credit to: https://github.com/ayulockin
 import copy
-import logging
+
 import re
 import os
 import json
@@ -9,13 +9,10 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Tuple, Union
-
 from packaging.version import Version
-
 from lmms_eval import utils
 import tenacity
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 try:
     import wandb

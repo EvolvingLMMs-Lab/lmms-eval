@@ -5,7 +5,7 @@ import sys
 import datetime
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
-import logging
+
 import yaml
 from pathlib import Path
 
@@ -48,7 +48,7 @@ cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 # Pass in video path here
@@ -365,7 +365,6 @@ def tempcompass_process_results_captioning(doc, result):
 
 # utils functions for captioning: parse gpt outputs
 def parse_llm_output_for_captioning(llm_output, gt_answer):
-
     if llm_output == "invalid_request_error" or not llm_output:
         eval_result = {"rating": -1, "chatgpt-answer": None, "chatgpt-reasoning": None}
         return eval_result
@@ -461,7 +460,6 @@ def eval_rule(video_llm_output, question, answer):
 
 # utils function for yes_no
 def extract_pred(video_llm_output):
-
     # Extract the yes/no predction from the original video llm output
     video_llm_output = video_llm_output.lower()
     if video_llm_output.startswith("yes"):

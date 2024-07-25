@@ -1,4 +1,3 @@
-import logging
 import os
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
@@ -26,7 +25,7 @@ wd = Path(__file__).parent.parent.parent.resolve()
 import sys
 
 sys.path.append(os.path.join(str(wd), "InternVL", "internvl_chat"))
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 if not hasattr(eval_logger, "internvl_warning_logged"):
     eval_logger.internvl_warning_logged = False

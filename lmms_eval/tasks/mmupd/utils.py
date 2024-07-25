@@ -1,4 +1,3 @@
-import logging
 import yaml
 import os
 from pathlib import Path
@@ -10,7 +9,7 @@ import base64
 from lmms_eval.tasks.mmupd.mmupd_evals import MMUPD_Evaluator
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "mmupd.yaml", "r") as f:
     raw_data = f.readlines()
@@ -31,6 +30,9 @@ if API_TYPE == "openai":
 elif API_TYPE == "azure":
     API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+else:
+    API_URL = "YOUR_API_URL"
+    API_KEY = "YOUR_API_KEY"
 
 
 mmupd_evaluator = MMUPD_Evaluator(sys_prompt=config["metadata"]["sys_prompt"], API_KEY=API_KEY, API_URL=API_URL, model_version=GPT_EVAL_MODEL_NAME)
@@ -78,7 +80,7 @@ def mmupd_process_results(doc, results):
             "split": doc["split"],
             "category": doc["category"],
             "type": doc["type"],
-            "masked_answer": doc["masked_answer"]
+            "masked_answer": doc["masked_answer"],
         },
         "submission": {
             "index": doc["index"],
@@ -90,7 +92,7 @@ def mmupd_process_results(doc, results):
             "split": doc["split"],
             "category": doc["category"],
             "type": doc["type"],
-            "masked_answer": doc["masked_answer"]
+            "masked_answer": doc["masked_answer"],
         },
     }
     option_candidate = ["A", "B", "C", "D", "E"]
@@ -137,7 +139,6 @@ def mmivqd_instruction(results, args):
 
 
 def mmupd_results_eval(results, args, upd_type, question_type):
-
     print("============= MMUPD Bench Detailed Results =============")
 
     overall_acc_standard, category_acc_standard, standard_results_df = mmupd_evaluator.eval_result(results, eval_method="openai", upd_type=upd_type, question_type=question_type, eval_type="standard")
