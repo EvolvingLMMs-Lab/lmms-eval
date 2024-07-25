@@ -50,6 +50,7 @@
 - MMMU (mmmu)
   - MMMU Validation (mmmu_val)
   - MMMU Test (mmmu_test)
+- MMStar (mmstar)
 - MMUPD (mmupd)
   - MMUPD Base (mmupd_base)
     - MMAAD Base (mmaad_base)
