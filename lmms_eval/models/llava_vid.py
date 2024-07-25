@@ -90,9 +90,11 @@ class LlavaVid(lmms):
         self.mm_spatial_pool_out_channels = int(mm_spatial_pool_out_channels)
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.max_frames_num = int(max_frames_num)
+
         self.mm_resampler_location = mm_resampler_location
         self.mm_newline_position=mm_newline_position
         self.delay_load = delay_load
+
         if self.overwrite == True:
             overwrite_config = {}
             overwrite_config["mm_resampler_type"] = self.mm_resampler_type
@@ -126,7 +128,7 @@ class LlavaVid(lmms):
                 self._tokenizer = AutoTokenizer.from_pretrained(pretrained, use_fast=False)
                 cfg_pretrained = LlavaConfig.from_pretrained(pretrained)
                 if overwrite_config is not None:
-                    print(f"Overwriting config with {overwrite_config}")
+                    eval_logger.log(f"Overwriting config with {overwrite_config}")
                     for k, v in overwrite_config.items():
                         setattr(cfg_pretrained, k, v)
                 kwargs["torch_dtype"] = torch.float16
