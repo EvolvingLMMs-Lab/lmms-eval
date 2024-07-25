@@ -1,0 +1,24 @@
+dataset_path: deepvk/MMBench-ru
+dataset_kwargs:
+  token: True
+doc_to_target: "answer"
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nВыбери правильный вариант ответа буквой."
+doc_to_visual: !function ru_utils.mmbench_doc_to_visual
+doc_to_text: !function ru_utils.mmbench_doc_to_text
+doc_to_target: "answer"
+process_results: !function ru_utils.mmbench_process_results
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
+output_type: generate_until
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false

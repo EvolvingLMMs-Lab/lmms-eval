@@ -1,9 +1,7 @@
 import datetime
+import yaml
 import json
-import logging
 import os
-from difflib import SequenceMatcher as SM
-from functools import partial
 
 import evaluate
 import numpy as np
@@ -11,26 +9,40 @@ import spacy
 from nltk.util import ngrams
 from spacy.cli import download
 
+from pathlib import Path
+from difflib import SequenceMatcher as SM
+from functools import partial
+
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from loguru import logger as eval_logger
+
+with open(Path(__file__).parent / "_default_template_vcr_yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+
+    config = yaml.safe_load("".join(safe_data))
 
 # Download the English and Chinese models
-try:
-    nlp_en = spacy.load("en_core_web_sm")
-except Exception as e:
-    download("en_core_web_sm")
-    nlp_en = spacy.load("en_core_web_sm")
-
-try:
-    nlp_zh = spacy.load("zh_core_web_sm")
-except Exception as e:
-    download("zh_core_web_sm")
-    nlp_zh = spacy.load("zh_core_web_sm")
-
-nlp = {"en": nlp_en, "zh": nlp_zh}
-rouge = evaluate.load("rouge")
-
-eval_logger = logging.getLogger("lmms-eval")
-dir_name = os.path.dirname(os.path.abspath(__file__))
+if config["metadata"]["load_package"]:
+    try:
+        nlp_en = spacy.load("en_core_web_sm")
+        nlp_zh = spacy.load("zh_core_web_sm")
+        nlp = {"en": nlp_en, "zh": nlp_zh}
+        rouge = evaluate.load("rouge")
+    except Exception as e:
+        eval_logger.debug(f"Failed to load spacy models: {e}")
+        download("en_core_web_sm")
+        nlp_en = spacy.load("en_core_web_sm")
+        download("zh_core_web_sm")
+        nlp_zh = spacy.load("zh_core_web_sm")
+        eval_logger.debug("Spacy models not loaded due to load_package is False. Please set load_package to True in the config file to load them.")
+else:
+    nlp = {"en": None, "zh": None}
+    rouge = None
 
 aggregate_results_template = {
     "max_sim_val": 0,
@@ -118,9 +130,7 @@ def vcr_process_results_single(crossed_text, result, language):
     max_sim_string = ""
     max_sim_ngram = []
     tokens_crossed_text_set = set(tokens_crossed_text)
-    ngrams_hasjoint = [
-        ngram for ngram in ngrams_ if not set(ngram).isdisjoint(tokens_crossed_text_set)
-    ]
+    ngrams_hasjoint = [ngram for ngram in ngrams_ if not set(ngram).isdisjoint(tokens_crossed_text_set)]
 
     for ngram in ngrams_hasjoint:
         result_ngram = splitter.join(ngram)
@@ -263,7 +273,7 @@ def bootstrap_std(data, n_bootstrap=1000, ci=0.95):
     return std, lower_bound, upper_bound
 
 
-def vcr_aggregate_results(results, args, metric='exact_match'):
+def vcr_aggregate_results(results, args, metric="exact_match"):
     """
     Args:
         results: List[List[Dict]], list of results returned by process_results
@@ -295,8 +305,8 @@ def vcr_aggregate_results(results, args, metric='exact_match'):
 
 
 def vcr_aggregate_exact_match(results, args):
-    return vcr_aggregate_results(results, args, metric='exact_match')
+    return vcr_aggregate_results(results, args, metric="exact_match")
 
 
 def vcr_aggregate_jaccard(results, args):
-    return vcr_aggregate_results(results, args, metric='jaccard')
+    return vcr_aggregate_results(results, args, metric="jaccard")

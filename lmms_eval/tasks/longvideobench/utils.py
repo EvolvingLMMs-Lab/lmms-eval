@@ -1,5 +1,4 @@
 import json
-import logging
 import re
 from collections import Counter, defaultdict
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -13,7 +12,6 @@ import numpy as np
 from PIL import Image
 import torch
 
-import logging
 from pathlib import Path
 import yaml
 import sys
@@ -22,30 +20,34 @@ import re
 
 import json
 
+
 def timestamp_to_seconds(timestamp):
     # Split the timestamp into hours, minutes, and seconds
-    h, m, s = timestamp.split(':')
+    h, m, s = timestamp.split(":")
     # Convert hours, minutes, and total seconds (including fractions) to float and compute total seconds
     total_seconds = int(h) * 3600 + int(m) * 60 + float(s)
     return total_seconds
 
+
 def load_video(video_file, duration, max_num_frames=16):
     from decord import VideoReader
+
     vr = VideoReader(video_file, ctx=cpu(0), num_threads=1)
     fps = vr.get_avg_fps()
     total_valid_frames = int(duration * fps)
     num_frames = min(max_num_frames, int(duration))
 
     frame_indices = [int(total_valid_frames / num_frames) * i for i in range(num_frames)]
-    
+
     frames = vr.get_batch(frame_indices)
     if isinstance(frames, torch.Tensor):
         frames = frames.numpy()
     else:
         frames = frames.asnumpy()
     frame_timestamps = [frame_index / fps for frame_index in frame_indices]
-    
+
     return [Image.fromarray(fr).convert("RGB") for fr in frames]
+
 
 def compute_frame_timestamps(duration, max_num_frames=16):
     if duration > max_num_frames:
@@ -53,23 +55,21 @@ def compute_frame_timestamps(duration, max_num_frames=16):
     else:
         return [i for i in range(int(duration))]
 
-        
-def insert_subtitles_into_frames(frame_timestamps, subtitles, 
-                                 starting_timestamp_for_subtitles, duration):
+
+def insert_subtitles_into_frames(frame_timestamps, subtitles, starting_timestamp_for_subtitles, duration):
     interleaved_list = []
     cur_i = 0
-    
+
     for subtitle in subtitles:
         if "timestamp" in subtitle:
             start, end = subtitle["timestamp"]
 
             if not isinstance(end, float):
                 end = duration
-                
+
             start -= starting_timestamp_for_subtitles
             end -= starting_timestamp_for_subtitles
-            
-            
+
             subtitle_timestamp = (start + end) / 2
             subtitle_text = subtitle["text"]
         else:
@@ -78,18 +78,17 @@ def insert_subtitles_into_frames(frame_timestamps, subtitles,
             end = timestamp_to_seconds(end)
             start -= starting_timestamp_for_subtitles
             end -= starting_timestamp_for_subtitles
-            
+
             subtitle_timestamp = (start + end) / 2
             subtitle_text = subtitle["line"]
 
-        
         for i, frame_timestamp in enumerate(frame_timestamps[cur_i:]):
-                if frame_timestamp <= subtitle_timestamp:
-                    #print("frame:", frame_timestamp)
-                    interleaved_list.append("<image>")
-                    cur_i += 1
-                else:
-                    break
+            if frame_timestamp <= subtitle_timestamp:
+                # print("frame:", frame_timestamp)
+                interleaved_list.append("<image>")
+                cur_i += 1
+            else:
+                break
 
         if end - start < 1:
             end = subtitle_timestamp + 0.5
@@ -102,32 +101,30 @@ def insert_subtitles_into_frames(frame_timestamps, subtitles,
                 break
 
         if covering_frames:
-            #print("subtitle:", subtitle_timestamp, start, end)
+            # print("subtitle:", subtitle_timestamp, start, end)
             interleaved_list.append(subtitle_text)
         else:
             pass
-            #print("leaving out subtitle:", start, end)
-        
+            # print("leaving out subtitle:", start, end)
+
     for i, frame_timestamp in enumerate(frame_timestamps[cur_i:]):
-        #print(frame_timestamp)
+        # print(frame_timestamp)
         interleaved_list.append("<image>")
-        
+
     return "\n".join(interleaved_list)
 
+
 def longvideobench_doc_to_text(doc, model_specific_prompt_kwargs):
-
     candidates = []
-
 
     for i in range(5):
         candidate = doc.get(f"option{i}")
         if candidate != "N/A":
             candidates.append(candidate)
 
-    question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A")+i), candidate]) for i, candidate in enumerate(candidates)])
+    question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(candidates)])
     pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
-
 
     if model_specific_prompt_kwargs.get("insert_interleave_subtitles", False):
         with open(Path(__file__).parent / "longvideobench_val_i.yaml", "r") as f:
@@ -155,6 +152,7 @@ def longvideobench_doc_to_text(doc, model_specific_prompt_kwargs):
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(hf_home)
 
+
 def longvideobench_doc_to_visual_v(doc):
     with open(Path(__file__).parent / "longvideobench_val_v.yaml", "r") as f:
         raw_data = f.readlines()
@@ -169,6 +167,7 @@ def longvideobench_doc_to_visual_v(doc):
     video_path = doc["video_path"]
     video_path = os.path.join(cache_dir, video_path)
     return [video_path]
+
 
 def longvideobench_doc_to_visual_i(doc):
     with open(Path(__file__).parent / "longvideobench_val_i.yaml", "r") as f:
@@ -283,6 +282,7 @@ def evaluate_longvideobench(samples):
         return {"acc": 0}
     return judge_dict, {"acc": pred_correct / len(samples)}
 
+
 def eval_multi_choice(gold_i, pred_i):
     correct = False
     # only they are exactly the same, we consider it as correct
@@ -295,6 +295,7 @@ def eval_multi_choice(gold_i, pred_i):
         if gold_i == pred_i:
             correct = True
     return correct
+
 
 def calculate_ins_level_acc(results):
     """Calculate the instruction level accuracy for given Subject results
@@ -332,7 +333,6 @@ def longvideobench_process_results(doc, results):
     }
 
 
-
 def longvideobench_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
@@ -344,7 +344,7 @@ def longvideobench_aggregate_results(results):
         metric_dict.update({"num_example": len(sub_eval_samples)})
         evaluation_result[subset] = metric_dict
     printable_results = {}
-    
+
     for cat_name, cat_results in evaluation_result.items():
         printable_results[cat_name] = {
             "num": int(cat_results["num_example"]),
@@ -357,4 +357,3 @@ def longvideobench_aggregate_results(results):
     }
     print(printable_results)
     return printable_results["Overall"]["acc"]
-

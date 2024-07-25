@@ -1,6 +1,6 @@
 import os
 import json
-import logging
+
 from tqdm import tqdm
 
 from lmms_eval.tasks.hallusion_bench.utils import evaluate_by_chatgpt, check_same_by_chatgpt, assign_correctness, get_eval_all, get_eval_fig, get_eval_pair_all
@@ -11,7 +11,7 @@ correctness_entry = "gpt4v_output_gpt_check"
 
 metric = ["aAcc", "fAcc", "qAcc"]
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 
 def hb_doc_to_text(doc, model_specific_prompt_kwargs=None):

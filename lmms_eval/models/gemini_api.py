@@ -1,7 +1,7 @@
 import io
 import os
 import time
-import logging
+
 import json
 
 from PIL import Image
@@ -12,7 +12,7 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.instance import Instance
 from accelerate import Accelerator, DistributedType
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 try:
     import google.generativeai as genai
@@ -31,7 +31,7 @@ except Exception as e:
 class GeminiAPI(lmms):
     def __init__(
         self,
-        model_version: str = "gemini-1.5-flash-latest",
+        model_version: str = "gemini-1.5-pro",
         modality: str = "image",
         timeout: int = 120,
         continual_mode: bool = False,
@@ -46,6 +46,8 @@ class GeminiAPI(lmms):
         if self.continual_mode and response_persistent_folder is None:
             raise ValueError("Continual mode requires a persistent path for the response. We will cache the Gemini API response in this path and use it for future requests. Please provide a valid path.")
         self.response_persistent_folder = response_persistent_folder
+        if not os.path.exists(self.response_persistent_folder):
+            os.makedirs(self.response_persistent_folder)
         self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
 
         if os.path.exists(self.response_persistent_file):

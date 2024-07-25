@@ -2,7 +2,7 @@
 from copy import deepcopy
 from io import BytesIO
 import base64
-import logging
+
 import os
 import time
 import json
@@ -20,14 +20,13 @@ from openai import OpenAI
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval import utils
+from loguru import logger as eval_logger
 
 # Conditional imports
 try:
     from decord import VideoReader, cpu
 except ImportError:
-    eval_logger = logging.getLogger("lmms-eval")
-    eval_logger.info("Decord is not installed. Video input will not be supported.")
+    eval_logger.warning("Decord is not installed. Video input will not be supported.")
 
 # Constants and global configurations
 API_TYPE = os.getenv("API_TYPE", "openai")
@@ -60,7 +59,7 @@ class BatchGPT4(lmms):
         api_key: str = API_KEY,
         api_url: str = API_URL,
         modality: str = "image",
-        max_frames_for_video: int = 10,
+        max_frames_num: int = 10,
         timeout: int = 120,
         **kwargs,
     ) -> None:
@@ -70,7 +69,7 @@ class BatchGPT4(lmms):
         # Here we just use the same token as llava for convenient
         self.model_version = model_version
         self.modality = modality
-        self.max_frames_for_video = max_frames_for_video
+        self.max_frames_num = max_frames_num
         self.image_token = "<image>"
         self.timeout = timeout
 
@@ -129,7 +128,7 @@ class BatchGPT4(lmms):
                     img = self.encode_image(visual)
                     imgs.append(img)
                 elif self.modality == "video":
-                    frames = self.encode_video(visual, self.max_frames_for_video)
+                    frames = self.encode_video(visual, self.max_frames_num)
                     imgs.extend(frames)
 
             messages = []

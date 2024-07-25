@@ -11,8 +11,10 @@
 ---
 
 ## Annoucement
+- [2024-07] 🎉🎉 We have released the [technical report](https://arxiv.org/abs/2407.12772) and [LiveBench](https://huggingface.co/spaces/lmms-lab/LiveBench)! 
+- [2024-07] 👨‍💻👨‍💻 The `lmms-eval/v0.2.1` has been upgraded to support more models, including [LongVA](https://github.com/EvolvingLMMs-Lab/LongVA), [InterVL-2](https://github.com/OpenGVLab/InternVL), [VILA](https://github.com/NVlabs/VILA), and many more evaluation tasks, e.g. [Details Captions](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/136), [MLVU](https://arxiv.org/abs/2406.04264), [WildVision-Bench](https://huggingface.co/datasets/WildVision/wildvision-arena-data), [VITATECS](https://github.com/lscpku/VITATECS) and [LLaVA-Interleave-Bench](https://llava-vl.github.io/blog/2024-06-16-llava-next-interleave/).
 
-- [2024-06] 🎬🎬 The `lmms-eval/v0.2` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
+- [2024-06] 🎬🎬 The `lmms-eval/v0.2.0` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
 
 - [2024-03] 📝📝 We have released the first version of `lmms-eval`, please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/) for more details
 
@@ -163,6 +165,18 @@ python3 -m accelerate.commands.launch \
 python3 -m accelerate.commands.launch --num_processes=8 -m lmms_eval --config ./miscs/example_eval.yaml
 ```
 
+**Evaluation of video model (llava-next-video-32B)**
+```bash
+accelerate launch --num_processes 8 --main_process_port 12345 -m lmms_eval \
+    --model llavavid \
+    --model_args pretrained=lmms-lab/LLaVA-NeXT-Video-32B-Qwen,conv_template=qwen_1_5,video_decode_backend=decord,max_frames_num=32，mm_spatial_pool_mode=average,mm_newline_position=grid,mm_resampler_location=after \
+    --tasks videomme \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix llava_vid_32B \
+    --output_path ./logs/
+```
+
 **Evaluation with naive model sharding for bigger model (llava-next-72b)**
 
 ```bash
@@ -197,7 +211,7 @@ Please check [supported models](lmms_eval/models/__init__.py) for more details.
 
 ### Supported tasks
 
-Please check [supported tasks](lmms_eval/docs/current_tasks.md) for more details.
+Please check [supported tasks](docs/current_tasks.md) for more details.
 
 ## Add Customized Model and Dataset
 

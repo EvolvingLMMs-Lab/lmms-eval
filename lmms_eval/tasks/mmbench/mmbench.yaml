@@ -5,6 +5,7 @@ task:
   - mmbench_cn_dev
   - mmbench_cn_test
   - mmbench_cn_cc
+  - mmbench_ru_dev
 metadata:
   version: 0.0
   sys_prompt: "There are several options:"

@@ -2,7 +2,7 @@ import abc
 import ast
 import itertools
 import json
-import logging
+
 import os
 import random
 import re
@@ -37,7 +37,7 @@ from lmms_eval.api.registry import (
 )
 from lmms_eval.filters import build_filter_ensemble
 
-eval_logger = logging.getLogger("lmms-eval")
+from loguru import logger as eval_logger
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
 # Include this inside code block to avoid error
@@ -778,6 +778,7 @@ class ConfigurableTask(Task):
                     force_unzip = dataset_kwargs.get("force_unzip", False)
                     cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
+                    tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
 
                     def unzip_video_data(zip_file):
                         import zipfile
@@ -786,9 +787,50 @@ class ConfigurableTask(Task):
                             zip_ref.extractall(cache_dir)
                             eval_logger.info(f"Extracted all files from {zip_file} to {cache_dir}")
 
+                    def untar_video_data(tar_file):
+                        import tarfile
+
+                        with tarfile.open(tar_file, "r") as tar_ref:
+                            tar_ref.extractall(cache_dir)
+                            eval_logger.info(f"Extracted all files from {tar_file} to {cache_dir}")
+
+                    def concat_tar_parts(tar_parts, output_tar):
+                        with open(output_tar, "wb") as out_tar:
+                            from tqdm import tqdm
+
+                            for part in tqdm(sorted(tar_parts)):
+                                with open(part, "rb") as part_file:
+                                    out_tar.write(part_file.read())
+                        eval_logger.info(f"Concatenated parts {tar_parts} into {output_tar}")
+
+                    # Unzip zip files if needed
                     if force_unzip or (not os.path.exists(cache_dir) and len(zip_files) > 0):
                         for zip_file in zip_files:
                             unzip_video_data(zip_file)
+
+                    # Concatenate and extract tar files if needed
+                    if force_unzip or (not os.path.exists(cache_dir) and len(tar_files) > 0):
+                        tar_parts_dict = {}
+
+                        # Group tar parts together
+                        for tar_file in tar_files:
+                            base_name = tar_file.split(".tar")[0]
+                            if base_name not in tar_parts_dict:
+                                tar_parts_dict[base_name] = []
+                            tar_parts_dict[base_name].append(tar_file)
+
+                        # Concatenate and untar split parts
+                        for base_name, parts in tar_parts_dict.items():
+                            eval_logger.info(f"Extracting following tar files: {parts}")
+                            output_tar = base_name + ".tar"
+                            if not os.path.exists(output_tar):
+                                eval_logger.info(f"Start concatenating tar files")
+
+                                concat_tar_parts(parts, output_tar)
+                                eval_logger.info(f"Finish concatenating tar files")
+
+                            if not os.path.exists(os.path.join(cache_dir, os.path.basename(base_name))):
+                                untar_video_data(output_tar)
 
                 accelerator.wait_for_everyone()
                 dataset_kwargs.pop("cache_dir")

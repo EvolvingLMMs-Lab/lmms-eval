@@ -1,8 +1,9 @@
 import json
-import logging
 import re
 from collections import Counter
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+
+from loguru import logger
 
 PROMPT = """Question: {}
 (A) {}
@@ -11,6 +12,7 @@ PROMPT = """Question: {}
 (D) {}
 (E) {}
 (F) {}"""
+
 
 def ii_bench_doc_to_text(doc, model_specific_prompt_kwargs):
     question = PROMPT.format(doc["question"], doc["option1"], doc["option2"], doc["option3"], doc["option4"], doc["option5"], doc["option6"])
@@ -25,14 +27,14 @@ def ii_bench_doc_to_visual(doc):
 
 def extract_option_labels(text, options=None):
     if isinstance(text, dict):
-        return 'error'
+        return "error"
     pattern = r"\(([A-F])\)"
     matches = re.findall(pattern, text)
-    
+
     if not matches:
         pattern = r"\b([A-F])\b"
         matches = re.findall(pattern, text)
-    
+
     if matches:
         counter = Counter(matches)
         most_common = counter.most_common()
@@ -67,4 +69,4 @@ def ii_bench_aggregate_submissions(results, args):
     file = generate_submission_file("ii_bench_test_for_submission.json", args)
     with open(file, "w") as f:
         json.dump(results, f, indent=4)
-    logging.getLogger("lmms-eval").info(f"Results saved to {file}")
+    logger.info(f"Results saved to {file}")
