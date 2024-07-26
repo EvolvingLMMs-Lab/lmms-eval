@@ -2,13 +2,17 @@ from PIL import Image
 import io
 import base64
 from live_bench.data_generator.response import Response
+import anthropic
 import logging
 from time import sleep
+from typing import Union, List
 
 logger = logging.getLogger("lmms-eval")
 
 
-def format_claude_images(image: Image.Image):
+def format_claude_images(image: Union[Image.Image, List[Image.Image]]):
+    if isinstance(image, list):
+        return [format_claude_images(img) for img in image]
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
@@ -22,16 +26,38 @@ def format_claude_images(image: Image.Image):
     }
 
 
-def claude_generate_response(client, model, messages, system, max_tokens: int, max_try_times, **kwargs):
-    messages.append({"role": "assistant", "content": "{"})
+def claude_generate_response(client: anthropic.Anthropic, model, messages, max_tokens: int = 4096, max_try_times=5, system=None, json_format="auto", test=False, **kwargs):
+    if json_format == "auto":
+        json_format = False
+        for message in messages:
+            if message.get("role") == "user":
+                contents = message.get("content", [])
+                if isinstance(contents, str):
+                    if "json" in contents:
+                        json_format = True
+                        break
+                else:
+                    for content in contents:
+                        if content.get("type", None) == "text" and "json" in content.get("text", ""):
+                            json_format = True
+                            break
+
+    if json_format:
+        messages.append({"role": "assistant", "content": "{"})
 
     def _generate():
-        return client.messages.create(model=model, messages=messages, max_tokens=max_tokens, system=system, **kwargs)
+        if system:
+            return client.messages.create(model=model, messages=messages, max_tokens=max_tokens, system=system, **kwargs)
+        else:
+            return client.messages.create(model=model, messages=messages, max_tokens=max_tokens, **kwargs)
 
     for times in range(max_try_times):
         try:
             response = _generate()
-            return Response(success=True, content="{" + response.content[0].text, full_log={"input": messages, "output": response})
+            response_str = response.content[0].text
+            if json_format:
+                response_str = "{" + response_str
+            return Response(success=True, content=response_str, full_log={"input": messages, "output": response.to_dict()})
         except Exception as e:
             logger.error(f"Failed to generate response: {e}")
             if times < max_try_times - 1:

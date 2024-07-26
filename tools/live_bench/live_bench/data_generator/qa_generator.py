@@ -2,12 +2,11 @@ import io
 import re
 import os
 import openai
+import anthropic
 import base64
 import json
 import random
 import logging
-import pathlib
-import textwrap
 import google.generativeai as genai
 from time import sleep
 from PIL import Image
@@ -16,6 +15,7 @@ from abc import ABC, abstractmethod
 from live_bench.data_generator.response import Response
 from live_bench.screen_shoter import ScreenImage
 from live_bench.data_generator.utils.gpt4v import format_gpt4v_images, gpt4v_generate_response
+from live_bench.data_generator.utils.claude import format_claude_images, claude_generate_response
 from live_bench.data_generator.utils.gemini import gemini_generate_response
 from live_bench.data_generator.utils.extract_infomation import InfomationExtractor, ImageInfomation
 
@@ -142,7 +142,7 @@ class GPT4Generator(QAGenerator):
     def __init__(
         self,
         prompt_file: str = os.path.join(os.path.dirname(__file__), "prompt.md"),
-        model="gpt-4-turbo",
+        model="gpt-4o",
         example_path=os.path.join(os.path.dirname(__file__), "example"),
         check_prompt=os.path.join(os.path.dirname(__file__), "check_prompt.md"),
     ):
@@ -202,7 +202,8 @@ class GPT4Generator(QAGenerator):
             example_output_path = os.path.join(self.example_path, "example_output.json")
             example_image = Image.open(example_image_path)
             with open(example_output_path, "r") as f:
-                example_output = f.read()
+                example_output = json.load(f)
+                example_output = json.dumps(example_output, indent=4)
 
         messages = self.format_messages(images.images, example_image, example_output, infomation)
 
@@ -320,7 +321,9 @@ class GeminiGenerator(QAGenerator):
             example_output_path = os.path.join(self.example_path, "example_output.json")
             example_image = Image.open(example_image_path)
             with open(example_output_path, "r") as f:
-                example_output = f.read()
+                # example_output = f.read()
+                example_output = json.load(f)
+                example_output = json.dumps(example_output, indent=4)
 
         messages = self.format_messages(images.images, example_image, example_output, infomation)
 
@@ -373,6 +376,146 @@ class GeminiGenerator(QAGenerator):
                 except KeyError as e:
                     logger.error(f"Failed to parse response: {message}")
                     logger.error(f"Error: {e}")
+            return qa_data
+        except Exception as e:
+            logger.error(f"Failed to format response: {e}")
+            return []
+
+
+@register_generator("claude")
+class ClaudeGenerator(QAGenerator):
+    def __init__(
+        self,
+        prompt_file: str = os.path.join(os.path.dirname(__file__), "prompt.md"),
+        model="claude-3-5-sonnet-20240620",
+        example_path=os.path.join(os.path.dirname(__file__), "example"),
+        check_prompt=os.path.join(os.path.dirname(__file__), "check_prompt.md"),
+    ):
+        super().__init__(prompt_file)
+        API_KEY = os.getenv("ANTHROPIC_API_KEY")
+        if not API_KEY:
+            raise ValueError("ANTHROPIC_API_KEY environment variable not set.")
+        self.api_key = API_KEY
+        self.client = anthropic.Anthropic(api_key=self.api_key)
+        self.model = model
+        if os.path.exists(example_path):
+            self.example_path = example_path
+        else:
+            self.example_path = None
+        if os.path.exists(check_prompt):
+            with open(check_prompt, "r") as f:
+                self.check_prompt = f.read()
+        else:
+            self.check_prompt = check_prompt
+
+    def format_messages(self, images: List[Image.Image], example_image: Image.Image, example_output: str, infomation: ImageInfomation):
+        example = [
+            {
+                "type": "text",
+                "text": "Here are few examples about the task and the expected output format. You can take these as examples to generate your own questions.",
+            },
+            format_claude_images(example_image),
+            {
+                "type": "text",
+                "text": example_output,
+            },
+        ]
+        content = example + [format_claude_images(image) for image in images]
+        if infomation:
+            content.append({"type": "text", "text": str(infomation)})
+        content.append(
+            {
+                "type": "text",
+                "text": "Please generate high-quality questions focusing on the information displayed within this webpage. Ensure your response adheres to the examples provided above and is structured in JSON format, incorporating regular expressions to validate the format.",
+            },
+        )
+        messages = [
+            {
+                "role": "user",
+                "content": content,
+            },
+        ]
+        return messages
+
+    def _generate(self, images: ScreenImage, *, max_tokens=4096, max_try_times=5, infomation=None, **kwargs):
+        if self.example_path:
+            example_image_path = os.path.join(self.example_path, "example_website.png")
+            example_output_path = os.path.join(self.example_path, "example_output.json")
+            example_image = Image.open(example_image_path)
+            with open(example_output_path, "r") as f:
+                # example_output = f.read()
+                example_output = json.load(f)
+                example_output = json.dumps(example_output, indent=4)
+
+        messages = self.format_messages(images.images, example_image, example_output, infomation)
+
+        return claude_generate_response(client=self.client, model=self.model, messages=messages, max_tokens=max_tokens, max_try_times=max_try_times, json_format=True, system=self.prompt, **kwargs)
+
+    def get_check_prompt(self, question: str, answer: str, criteria, subtask, images: List[Image.Image], infomation: ImageInfomation = None):
+        messages = [
+            {
+                "role": "system",
+                "content": self.check_prompt,
+            }
+        ]
+        content = []
+        for img in images:
+            content.append(format_claude_images(img))
+        content.append(
+            {
+                "type": "text",
+                "text": f"Question: {question}\nQuestioner's Answer: {answer}\nCriteria: {criteria}\nSubtask: {subtask}",
+            },
+        )
+        if infomation:
+            content.append(
+                {
+                    "type": "text",
+                    "text": str(infomation),
+                },
+            )
+        content.append(
+            {
+                "type": "text",
+                "text": "Please rephrase or rewrite the high-quality question focusing on the information displayed within this webpage. Your response should be in the format of the examples provided above and in JSON format.",
+            },
+        )
+        messages.append(
+            {
+                "role": "user",
+                "content": content,
+            }
+        )
+        return messages
+
+    def _check(self, images: ScreenImage, question, answer, criteria, subtask, *, max_tokens=4096, max_try_times=5, **kwargs):
+        messages = self.get_check_prompt(question, answer, criteria, subtask, images.images)
+        return claude_generate_response(client=self.client, model=self.model, messages=messages, max_tokens=max_tokens, max_try_times=max_try_times, json_format=True, **kwargs)
+
+    def format_checked_response(self, response: Response):
+        data = json.loads(response.content)
+        question = data.get("question", None)
+        answer = data.get("answer", None)
+        criteria = data.get("criteria", None)
+        subtask = data.get("subtask", None)
+        return QAData(question=question, answer=answer, criteria=criteria, subtask=subtask)
+
+    def _format_response(self, response: Response) -> List[QAData]:
+        try:
+            qa_data = []
+            content = json.loads(response.content)
+            for subtask, messages in content.items():
+                subtask = subtask.lower()
+                for message in messages:
+                    message_lower = {k.lower(): v for k, v in message.items()}
+                    try:
+                        question = message_lower["question"]
+                        answer = message_lower["answer"]
+                        criteria = message_lower["criteria"]
+                        qa_data.append(QAData(question=question, answer=answer, criteria=criteria, subtask=subtask))
+                    except KeyError as e:
+                        logger.error(f"Failed to parse response: {message}")
+                        logger.error(f"Error: {e}")
             return qa_data
         except Exception as e:
             logger.error(f"Failed to format response: {e}")

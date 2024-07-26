@@ -1,6 +1,7 @@
 from live_bench.screen_shoter.screen import ScreenImage
 from live_bench.data_generator.utils.extract_infomation import ImageInfomation
 from live_bench.data_generator.qa_generator import QAGenerator
+from live_bench.data_generator.question_finalizer import QuestionFinalizer
 import datasets
 
 
@@ -40,6 +41,7 @@ class LiveBenchData(object):
         score: int = None,
         reason: str = None,
         checker: QAGenerator = None,
+        finalizer: QuestionFinalizer = None,
         scorer_name=None,
         scorer=None,
     ):
@@ -64,6 +66,14 @@ class LiveBenchData(object):
                     else:
                         self.subtask = subtask
                     self.checker = checker.get_name()
+        if finalizer:
+            try:
+                qa = finalizer.finalize_question(self.question, self.answer, self.criteria, self.screen.images)
+            except Exception as e:
+                raise e
+            self.question = qa["question"]
+            self.answer = qa["answer"]
+            self.criteria = qa["criteria"]
         if self.subtask:
             for sub in LiveBenchData.SUBTASKS:
                 if sub.lower() in self.subtask.lower():

@@ -7,7 +7,7 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold
 logger = logging.getLogger("lmms-eval")
 
 
-def gemini_generate_response(client: genai.GenerativeModel, messages, max_tokens: int, max_try_times, **kwargs):
+def gemini_generate_response(client: genai.GenerativeModel, messages, max_tokens: int, max_try_times: int = 5, **kwargs):
     generation_config = genai.GenerationConfig(max_output_tokens=max_tokens)
 
     def _generate():

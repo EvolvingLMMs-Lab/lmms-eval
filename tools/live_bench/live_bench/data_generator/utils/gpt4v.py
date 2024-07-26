@@ -34,7 +34,10 @@ def format_printable_messages(messages):
     return messages
 
 
-def gpt4v_generate_response(messages, *, client=None, model="gpt-4-turbo", max_tokens: int = 4096, max_try_times: int = 5, json_format="auto", test=False, **kwargs) -> Response:
+def gpt4v_generate_response(messages, *, client=None, model="gpt-4o", max_tokens: int = 4096, max_try_times: int = 5, json_format="auto", test=False, system=None, **kwargs) -> Response:
+    if system:
+        messages = [{"role": "system", "content": system}] + messages
+
     if json_format == "auto":
         json_format = False
         for message in messages:

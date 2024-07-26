@@ -12,18 +12,7 @@ import cv2
 import numpy as np
 from loguru import logger as eval_logger
 
-TASK_TYPES = [
-    "TR",
-    "AR",
-    "VS",
-    "NQA",
-    "ER",
-    "PQA",
-    "SSC",
-    "AO",
-    "AC"
-]
-
+TASK_TYPES = ["TR", "AR", "VS", "NQA", "ER", "PQA", "SSC", "AO", "AC"]
 
 
 hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
@@ -37,7 +26,6 @@ with open(Path(__file__).parent / "mlvu.yaml", "r") as f:
         if "!function" not in line:
             safe_data.append(line)
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
-
 
 
 def mlvu_doc_to_visual(doc):
@@ -54,20 +42,21 @@ def mlvu_doc_to_visual(doc):
 
 def mlvu_doc_to_text(doc, model_specific_prompt_kwargs=None):
     # option_prompt="Carefully watch this video and pay attention to every detail. Based on your observations, select the best option that accurately addresses the question."
-    option_prompt=""
-    question = doc["question"] + "\nOnly give the best option.\n" 
-    full_prompt=option_prompt+"\n"+question+"\n"+"Best option: ("
+    option_prompt = ""
+    question = doc["question"] + "\nOnly give the best option.\n"
+    full_prompt = option_prompt + "\n" + question + "\n" + "Best option: ("
     return full_prompt
 
 
 def extract_characters_regex(s):
     s = s.strip()
     if ")" in s:
-        index=s.index(")")
-        pred=s[index-1:index]
+        index = s.index(")")
+        pred = s[index - 1 : index]
         return pred
     else:
         return s
+
 
 def mlvu_process_results(doc, results):
     """
@@ -98,12 +87,10 @@ def mlvu_aggregate_results(results):
     for task_type in TASK_TYPES:
         category2score[task_type] = {"correct": 0, "answered": 0}
 
-
     for result in results:
         task_type = result["task_type"]
         category2score[task_type]["answered"] += 1
         category2score[task_type]["correct"] += result["pred_answer"] == result["answer"]
-
 
     for task_cate in TASK_TYPES:
         total_correct = 0

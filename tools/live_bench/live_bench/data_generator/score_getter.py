@@ -66,7 +66,7 @@ def get_random_score_getter(*args, **kwargs) -> ScoreGetter:
 
 @register_score_getter("gpt4v")
 class GPT4VScoreGetter(ScoreGetter):
-    def __init__(self, prompt: str = os.path.join(os.path.dirname(__file__), "score_prompt.md"), model="gpt-4-turbo", example_path=os.path.join(os.path.dirname(__file__), "example")):
+    def __init__(self, prompt: str = os.path.join(os.path.dirname(__file__), "score_prompt.md"), model="gpt-4o", example_path=os.path.join(os.path.dirname(__file__), "example")):
         super().__init__()
         if os.path.exists(prompt):
             with open(prompt, "r") as f:
@@ -91,7 +91,7 @@ class GPT4VScoreGetter(ScoreGetter):
         for image in images:
             messages.append(format_gpt4v_images(image))
         messages.append({"type": "text", "text": f"Question: {question}\nQuestioner's Answer: {answer}"})
-        messages.append({"type": "text", "text": 'You should format you answer into json format like this: {"score": 10, "reason": "some reason"}'})
+        messages.append({"type": "text", "text": 'You should format you answer into json format like this: {"reason": "some reason", "score": 10}'})
         prompt.append({"role": "user", "content": messages})
         return prompt
 
@@ -112,7 +112,7 @@ class GPT4VScoreGetter(ScoreGetter):
 
 @register_score_getter("claude")
 class ClaudeScoreGetter(ScoreGetter):
-    def __init__(self, prompt: str = os.path.join(os.path.dirname(__file__), "score_prompt.md"), model="claude-3-opus-20240229", example_path=os.path.join(os.path.dirname(__file__), "example")):
+    def __init__(self, prompt: str = os.path.join(os.path.dirname(__file__), "score_prompt.md"), model="claude-3-5-sonnet-20240620", example_path=os.path.join(os.path.dirname(__file__), "example")):
         super().__init__()
         if os.path.exists(prompt):
             with open(prompt, "r") as f:
@@ -138,14 +138,14 @@ class ClaudeScoreGetter(ScoreGetter):
         for image in images:
             messages.append(format_claude_images(image))
         messages.append({"type": "text", "text": f"Question: {question}\nQuestioner's Answer: {answer}"})
-        messages.append({"type": "text", "text": 'You should format you answer into json format like this: {"score": 10, "reason": "some reason"}'})
+        messages.append({"type": "text", "text": 'You should format you answer into JSON format like this: { "reason": "some reason", "score": 10 }'})
         prompt.append({"role": "user", "content": messages})
         return prompt
 
     def get_score(self, question: str, answer: str, images: ScreenImage, *, max_tokens=4096, max_try_times=5, **kwargs) -> Score:
         prompt = self._format_prompt(question, answer, images)
         try:
-            response = claude_generate_response(self.client, self.model, prompt, self.prompt, max_tokens, max_try_times, **kwargs)
+            response = claude_generate_response(client=self.client, model=self.model, messages=prompt, system=self.prompt, max_tokens=max_tokens, max_try_times=max_try_times, **kwargs)
             if response.success:
                 content = json.loads(response.content)
                 score = content.get("score", None)

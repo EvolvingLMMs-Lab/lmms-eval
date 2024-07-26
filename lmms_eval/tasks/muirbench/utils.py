@@ -1,4 +1,3 @@
-
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
 import re
@@ -17,7 +16,7 @@ def muir_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
 def muir_doc_to_visual(doc):
     image_list = [image.convert("RGB") for image in doc["image_list"]]
-    return image_list 
+    return image_list
 
 
 def muir_doc_to_target(doc):
@@ -33,15 +32,15 @@ def muir_process_results(doc, result):
     image_type = doc["image_type"]
 
     data_dict = {
-            "pred" : pred,
-            "task" : task,
-            "idx" : idx,
-            "image_relation" : image_relation,
-            "answer" : answer,
-            "image_type" : image_type,
-        }
+        "pred": pred,
+        "task": task,
+        "idx": idx,
+        "image_relation": image_relation,
+        "answer": answer,
+        "image_type": image_type,
+    }
 
-    return {"muirbench_score_overall" : data_dict}
+    return {"muirbench_score_overall": data_dict}
 
 
 def muir_aggregation(results):
@@ -62,16 +61,14 @@ def muir_aggregation(results):
 
     score = score / len(results)
 
-    task_score = {k : v / task_num[k] for k,v in task_score.items()}
+    task_score = {k: v / task_num[k] for k, v in task_score.items()}
 
     print("=" * 50)
     for k, v in task_score.items():
         print(f"{k} : {v:.2f}")
     print("=" * 50)
-    
+
     return score
-
-
 
 
 class MultiChoiceRegexFilter(ExtendedRegexFilter):

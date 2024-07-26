@@ -6,13 +6,13 @@ websites:
   # args:
   #  arg1: value1
   #  arg2: value2
-- url: https://www.bbc.com/news
-- url: https://www.bbc.com/sport
-- url: https://www.bbc.com/business
-- url: https://www.bbc.com/innovation
-- url: https://www.bbc.com/culture
-- url: https://www.bbc.com/travel
-- url: https://www.bbc.com/future-planet
+# - url: https://www.bbc.com/news
+# - url: https://www.bbc.com/sport
+# - url: https://www.bbc.com/business
+# - url: https://www.bbc.com/innovation
+# - url: https://www.bbc.com/culture
+# - url: https://www.bbc.com/travel
+# - url: https://www.bbc.com/future-planet
 # - url: https://edition.cnn.com/
 # - url: https://edition.cnn.com/politics
 # - url: https://edition.cnn.com/entertainment
@@ -74,6 +74,5 @@ websites:
 # - url: https://news.ycombinator.com/
 # - url: https://www.reddit.com/?rdt=48006
 # - url: https://news.crunchbase.com/
-- url: https://www.cctv.com/
-- url: https://opinion.cctv.com/
-- url: https://sports.cctv.com/
+# - url: https://www.cctv.com/
+# - url: https://sports.cctv.com/

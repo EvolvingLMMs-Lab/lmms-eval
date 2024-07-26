@@ -26,8 +26,8 @@ with open(Path(__file__).parent / "live_bench.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
 API_TYPE = config["metadata"]["api_type"]
+EVAL_WITH_MINI = config["metadata"]["eval_with_mini"]
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
@@ -84,7 +84,7 @@ def format_prompt(question, ground_truth_answer, answer, criteria):
     return _PROMPT_WITH_IMAGE.format(prompt=question, generation=answer, reference=ground_truth_answer, criteria=criteria)
 
 
-def get_chat_response(base64_images, question, ground_truth_answer, answer, criteria, max_retries=5, wait_time=10):
+def get_chat_response(gpt_model_name, base64_images, question, ground_truth_answer, answer, criteria, max_retries=5, wait_time=10):
     client = openai.OpenAI(api_key=API_KEY)
 
     content = []
@@ -114,22 +114,22 @@ def get_chat_response(base64_images, question, ground_truth_answer, answer, crit
 
     for attempt in range(max_retries):
         try:
-            response = client.chat.completions.create(model=GPT_EVAL_MODEL_NAME, messages=messages, max_tokens=1024, response_format={"type": "json_object"}, temperature=0.0)
+            response = client.chat.completions.create(model=gpt_model_name, messages=messages, max_tokens=1024, response_format={"type": "json_object"}, temperature=0.0)
             response_data = response.choices[0].message.content
             # print(response_data)
             response_data = json.loads(response_data)
             rating = response_data["Rating"]
             explanation = response_data["Explanation"]
-            return rating, explanation, GPT_EVAL_MODEL_NAME
+            return rating, explanation, gpt_model_name
         except requests.exceptions.RequestException as e:
             eval_logger.warning(f"Request failed on attempt {attempt + 1}: {e}")
             time.sleep(wait_time)
             if attempt == max_retries - 1:
                 eval_logger.error(f"Failed to get response after {max_retries} attempts")
-                return -1, str(e), GPT_EVAL_MODEL_NAME
+                return -1, str(e), gpt_model_name
         except Exception as e:
             eval_logger.error(f"Error on attempt {attempt + 1}: {e}")
-            return -1, str(e), GPT_EVAL_MODEL_NAME
+            return -1, str(e), gpt_model_name
 
 
 def image_to_base64(pil_image):
@@ -159,19 +159,34 @@ def livebench_doc_to_text(doc, model_specific_prompt_kwargs=None):
 SUBTASKS = ("Basic Understanding", "Contextual Analysis", "Deeper Implications", "Broader Implications", "Further Insights")
 
 
-def livebench_process_results(doc, results):
+def livebench_process_results_for_name(doc, results, model, eval_name):
     base64_images = [image_to_base64(image) for image in livebench_doc_to_visual(doc)]
     subtask = doc["subtask"]
     criteria = doc["criteria"]
     if subtask not in SUBTASKS:
         subtask = "further insights"
     if not results or results[0] == "":
-        return {"gpt4_eval_score": {"rating": 0, "explanation": "No response", "model_name": "N/A", "subtask": subtask}}
-    rating, explanation, model_name = get_chat_response(base64_images=base64_images, question=doc["question"], ground_truth_answer=doc["answer"], answer=results[0] if results else "", criteria=criteria)
+        return {eval_name: {"rating": 0, "explanation": "No response", "model_name": "N/A", "subtask": subtask}}
+    rating, explanation, model_name = get_chat_response(gpt_model_name=model, base64_images=base64_images, question=doc["question"], ground_truth_answer=doc["answer"], answer=results[0] if results else "", criteria=criteria)
     if rating >= 0:
-        return {"gpt4_eval_score": {"rating": rating, "explanation": explanation, "model_name": model_name, "subtask": subtask, "id": doc["id"]}}
+        return {eval_name: {"rating": rating, "explanation": explanation, "model_name": model_name, "subtask": subtask, "id": doc["id"]}}
     else:
-        return {"gpt4_eval_score": {"rating": -1, "explanation": explanation, "model_name": "N/A", "subtask": subtask, "id": doc["id"]}}
+        return {eval_name: {"rating": -1, "explanation": explanation, "model_name": "N/A", "subtask": subtask, "id": doc["id"]}}
+
+
+def livebench_process_results_4o(doc, results):
+    return livebench_process_results_for_name(doc, results, "gpt-4o", "gpt4_eval_score")
+
+
+def livebench_process_results_4o_mini(doc, results):
+    return livebench_process_results_for_name(doc, results, "gpt-4o-mini", "gpt4_eval_score_mini")
+
+
+def livebench_process_results(doc, results):
+    res = livebench_process_results_4o(doc, results)
+    if EVAL_WITH_MINI:
+        res.update(livebench_process_results_4o_mini(doc, results))
+    return res
 
 
 def livebench_aggregate_results(results):
@@ -186,9 +201,11 @@ def livebench_aggregate_results(results):
         count += 1
         subtask = result["subtask"]
         if subtask not in SUBTASKS:
-            subtask = "further insights"
+            subtask = "Further Insights"
         score[result["subtask"]].append(result["rating"] / 10)
-    res = pd.DataFrame([(subtask, len(score[subtask]), np.mean(score[subtask]) * 100) for subtask in SUBTASKS], columns=["Subtask", "Count", "Average Score"])
+    res = [(subtask, len(score[subtask]), np.mean(score[subtask]) * 100) for subtask in SUBTASKS]
+    res.append(("Total", count, sum_score / count * 100))
+    res = pd.DataFrame(res, columns=["Subtask", "Count", "Score"])
     print("=" * 50)
     print(res)
     print("=" * 50)
