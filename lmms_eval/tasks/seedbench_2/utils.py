@@ -13,6 +13,8 @@ def parse_choice_img(choice: str, img_token: str):
 
 def seed_doc_to_text(doc, model_specific_kwargs=None):
     question = doc["question"]
+    if model_specific_kwargs is None:
+        return question
     question.replace("<img>", model_specific_kwargs["img_token"])
     question += "\n" + f"A. {parse_choice_img(doc['choice_a'], model_specific_kwargs['img_token'])}\n"
     question += f"B. {parse_choice_img(doc['choice_b'], model_specific_kwargs['img_token'])}\n"
