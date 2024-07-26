@@ -26,10 +26,13 @@ try:
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
 
-from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
-from llavavid.model.language_model.llava_llama import LlavaConfig
+try:
+    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+    AutoConfig.register("llava_qwen", LlavaQwenConfig)
+except ImportError:
+    eval_logger.debug("No Qwen for llava vid")
 
-AutoConfig.register("llava_qwen", LlavaQwenConfig)
+from llavavid.model.language_model.llava_llama import LlavaConfig
 AutoConfig.register("llava_llama", LlavaConfig)
 
 
@@ -57,6 +60,8 @@ class LlavaVid(lmms):
         mm_spatial_pool_stride: int = 2,
         mm_spatial_pool_out_channels: int = 1024,
         mm_spatial_pool_mode: str = "average",
+        mm_newline_position: str = "grid",
+        mm_pooling_position: str = "after",
         overwrite: bool = True,
         video_decode_backend: str = "pyav",
         delay_load: bool = False,
@@ -88,7 +93,7 @@ class LlavaVid(lmms):
         self.mm_spatial_pool_out_channels = int(mm_spatial_pool_out_channels)
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.max_frames_num = int(max_frames_num)
-        self.mm_resampler_location = mm_resampler_location
+        self.mm_resampler_location = mm_pooling_position
         self.delay_load = delay_load
         if self.overwrite == True:
             overwrite_config = {}

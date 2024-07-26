@@ -39,6 +39,7 @@ AVAILABLE_MODELS = {
     "llava_onevision": "LlavaOneVision",
     "longva": "LongVA",
     "vila": "VILA",
+    "xcomposer2d5": "XComposer2D5",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
