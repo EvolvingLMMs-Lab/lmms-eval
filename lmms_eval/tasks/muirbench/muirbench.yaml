@@ -1,4 +1,3 @@
-
 dataset_path: MUIRBENCH/MUIRBENCH
 task: "muirbench"
 dataset_kwargs:

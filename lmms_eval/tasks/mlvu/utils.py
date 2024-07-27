@@ -29,7 +29,6 @@ cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
 
 def mlvu_doc_to_visual(doc):
-
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["video_name"]
     video_path = os.path.join(cache_dir, video_path)

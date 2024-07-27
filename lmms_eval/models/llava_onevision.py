@@ -83,7 +83,7 @@ class Llava_OneVision(lmms):
         customized_config: Optional[str] = None,  # ends in json
         max_frames_num: Optional[int] = 32,
         mm_spatial_pool_stride: Optional[int] = 2,
-        mm_spatial_pool_mode: Optional[str] = "average",
+        mm_spatial_pool_mode: Optional[str] = "bilinear",
         token_strategy: Optional[str] = "single",  # could be "single" or "multiple", "multiple" denotes adding multiple <image> tokens for each frame
         video_decode_backend: str = "decord",
         **kwargs,
@@ -183,7 +183,7 @@ class Llava_OneVision(lmms):
         elif accelerator.num_processes == 1 and device_map == "auto":
             eval_logger.info(f"Using {accelerator.num_processes} devices with tensor parallelism")
             self._rank = 0
-            self._word_size = 1
+            self._world_size = 1
 
         else:
             eval_logger.info(f"Using single device: {self._device}")
@@ -262,6 +262,37 @@ class Llava_OneVision(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+            if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
+                self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
+                eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+            # if (len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__) and ("image_aspect_ratio" in gen_kwargs.keys()):
+            #     self._config.image_aspect_ratio = gen_kwargs["image_aspect_ratio"]
+            #     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+
+            if type(visual[0]) == PIL.Image.Image:  # For image task
+                image_tensor = process_images(visual, self._image_processor, self._config)
+                if type(image_tensor) is list:
+                    image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
+                else:
+                    image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
+
+                task_type = "image"
+
+            elif type(visual[0]) == str:  # For video task
+                image_tensor = []
+                try:
+                    if self.video_decode_backend == "decord":
+                        frames = self.load_video(visual, self.max_frames_num)
+                    elif self.video_decode_backend == "pyav":
+                        frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
+                    frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                    image_tensor.append(frames)
+                except Exception as e:
+                    eval_logger.error(f"Error {e} in loading video")
+                    image_tensor = None
+
+                task_type = "video"
+
             # encode, pad, and truncate contexts for this batch
             if type(doc_to_target) == str:
                 continuation = doc_to_target
@@ -319,7 +350,7 @@ class Llava_OneVision(lmms):
                 image_tokens = " ".join(image_tokens)
                 prompts_input = image_tokens + "\n" + (contexts[0] if isinstance(contexts, list) else contexts)
             else:
-                question = (contexts[0] if isinstance(contexts, list) else contexts)
+                question = contexts[0] if isinstance(contexts, list) else contexts
 
             # This is much safer for llama3, as we now have some object type in it
             if "llama_3" in self.conv_template:
@@ -348,7 +379,6 @@ class Llava_OneVision(lmms):
                 kwargs["modalities"] = ["video"]
                 self._config.mm_spatial_pool_stride = self.mm_spatial_pool_stride
                 self._config.mm_spatial_pool_mode = self.mm_spatial_pool_mode
-
 
             with torch.inference_mode():
                 outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, **kwargs)

@@ -290,7 +290,6 @@ class VILA(lmms):
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
                         images = read_video_pyav(visual, num_frm=num_video_frames)
-
                     video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
                     videos.append(video)
 
@@ -338,7 +337,6 @@ class VILA(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            # import pdb;pdb.set_trace()
             with torch.inference_mode():
                 output_ids = self.model.generate(
                     input_ids=input_ids,
