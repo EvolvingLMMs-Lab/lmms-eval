@@ -35,7 +35,11 @@ pip install -e "python[srt]"
 > run sglang backend service with the following command
 
 ```bash
+# backend service
 python -m sglang.launch_server --model-path "\path\to\onevision" --tokenizer-path lmms-lab/llavanext-qwen-siglip-tokenizer --port=30000 --host=127.0.0.1 --tp-size=8 --chat-template=chatml-llava
+
+# launch lmms-eval srt_api model
+python -m accelerate.commands.launch --main_process_port=12580 --num_processes=1 lmms_eval --model=srt_api --model_args=modality=image,host=127.0.0.1,port=30000 --tasks=ai2d --batch_size=1 --log_samples --log_samples_suffix=debug --output_path=./logs/ --verbosity=DEBUG
 ```
 
 You may need to install some dependencies for the above command to work (if you encounter some errors).
