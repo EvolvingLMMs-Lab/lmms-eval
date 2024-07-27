@@ -37,6 +37,7 @@ AVAILABLE_MODELS = {
     "tinyllava": "TinyLlava",
     "llava_onevision": "LlavaOneVision",
     "llava_hf": "LlavaHf",
+    "srt_api": "SRT_API",
     "longva": "LongVA",
     "vila": "VILA",
     "xcomposer2d5": "XComposer2D5",

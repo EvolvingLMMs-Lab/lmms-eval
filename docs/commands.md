@@ -22,3 +22,28 @@ This mode supports a number of command-line arguments, the details of which can 
 
 * `--limit` : Accepts an integer, or a float between 0.0 and 1.0 . If passed, will limit the number of documents to evaluate to the first X documents (if an integer) per task or first X% of documents per task. Useful for debugging, especially on costly API models.
 
+## Usage with SRT API
+
+> install sglang
+
+```bash
+git clone https://github.com/EvolvingLMMs-Lab/sglang.git
+cd sglang
+pip install -e "python[srt]"
+```
+
+> run sglang backend service with the following command
+
+```bash
+python -m sglang.launch_server --model-path "\path\to\onevision" --tokenizer-path lmms-lab/llavanext-qwen-siglip-tokenizer --port=30000 --host=127.0.0.1 --tp-size=8 --chat-template=chatml-llava
+```
+
+You may need to install some dependencies for the above command to work (if you encounter some errors).
+
+```bash
+pip install httpx==0.23.3
+pip install protobuf==3.20
+pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
+```
+
+

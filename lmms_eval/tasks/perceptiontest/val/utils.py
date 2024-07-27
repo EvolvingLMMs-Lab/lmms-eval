@@ -103,15 +103,35 @@ def perceptiontest_val_process_results_mc_ppl(doc, result):
 
 
 # Process result for generation
+import re
+
+
 def perceptiontest_val_process_results_mc(doc, result):
-    pred = result[0]  # string prediction "A", "B", "C"
+    pred = result[0].strip()  # raw text prediction
+
+    # Use regex to match A, B, C, or D
+    match = re.search(r"\b([A-D])\b", pred)
+
+    if match:
+        pred = match.group(1)  # Extract the matched letter
+        pred = pred.upper()
+    else:
+        pred = ""  # Set to empty string if no match found
 
     # Map the prediction to an index
-    pred_to_index = {"A": 0, "B": 1, "C": 2}
+    pred_to_index = {"A": 0, "B": 1, "C": 2, "D": 3}
     index = pred_to_index.get(pred, -1)  # Default to -1 if the prediction is not found
 
+    correct = 1 if index == int(doc["answer_id"]) else 0
+
     return {
-        "accuracy": {"video_name": doc["video_name"], "question": doc["question"], "question_id": doc["question_id"], "pred_id": index, "answer_id": doc["answer_id"], "area": doc["area"], "reasoning": doc["reasoning"], "tag": doc["tag"]}
+        "accuracy": {
+            "video_name": doc["video_name"],
+            "question": doc["question"],
+            "pred_id": index,
+            "answer_id": doc["answer_id"],
+            "correct": correct,
+        }
     }
 
 
@@ -120,7 +140,7 @@ def perceptiontest_val_aggregate_accuracy(results, args):
 
     # results is a list of dict
     for answer_dict in results:
-        if str(answer_dict["answer_id"]) == str(answer_dict["pred_id"]):
+        if answer_dict["correct"] == 1:
             yes_count = yes_count + 1
 
     accuracy = yes_count / len(results)

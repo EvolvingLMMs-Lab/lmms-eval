@@ -29,6 +29,9 @@ metric_list:
   - metric: math
     aggregation: !function utils.mmstar_aggregate_results
     higher_is_better: true
+  - metric: average
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
 model_specific_prompt_kwargs:
   default:
     pre_prompt: ""

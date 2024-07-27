@@ -84,41 +84,106 @@ def egoschema_process_results(doc, result):
     return {"submission": {doc["video_idx"]: min_index}, "score": {"pred": min_index, "ground_truth": doc["answer"]}}
 
 
+def get_multi_choice_info(doc):
+    all_choices = []
+    index2ans = {}
+    OPTIONS = ["A", "B", "C", "D", "E"]
+    for i in range(5):
+        # import pdb;pdb.set_trace()
+        index2ans[OPTIONS[i]] = doc["option"][i].strip()
+        all_choices.append(OPTIONS[i])
+
+    return index2ans, all_choices
+
+
+def parse_multi_choice_response(response, all_choices, index2ans):
+    """
+    Parse the prediction from the generated response.
+    Return the predicted index e.g., A, B, C, D.
+    https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
+    """
+    for char in [",", ".", "!", "?", ";", ":", "'"]:
+        response = response.strip(char)
+    response = " " + response + " "  # add space to avoid partial match
+
+    index_ans = True
+    ans_with_brack = False
+    ans_with_space = False
+    ans_with_dot = False
+    candidates = []
+    # import pdb; pdb.set_trace()
+    for choice in all_choices:  # e.g., (A) (B) (C) (D)
+        if f"({choice})" in response:
+            candidates.append(f"({choice})")
+            ans_with_brack = True
+
+    # if len(candidates) == 0:
+    for choice in all_choices:  # e.g., A B C D
+        if f"{choice} " in response:
+            candidates.append(f"{choice} ")
+            ans_with_space = True
+
+    # if len(candidates) == 0:
+    for choice in all_choices:  # e.g., A. B. C. D.
+        if f"{choice}." in response:
+            candidates.append(f"{choice}.")
+            ans_with_dot = True
+
+    # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
+    if len(candidates) == 0 and len(response.split()) > 5:
+        for index, ans in index2ans.items():
+            if ans.lower() in response.lower():
+                candidates.append(index)
+                index_ans = False  # it's content ans.
+
+    if len(candidates) == 0:  # still not get answer, randomly choose one.
+        # import pdb; pdb.set_trace()
+        pred_index = random.choice(all_choices)
+    elif len(candidates) > 1:
+        # candidates = list(set(candidates))
+        start_indexes = []
+        if index_ans:
+            # if ans_with_brack:
+            for can in candidates:
+                index = response.rfind(can)
+                start_indexes.append(index)  # -1 will be ignored anyway
+                # start_indexes = [generated_response.index(f'({can})') for can in candidates]
+            # if ans_with_space:
+            #     for can in candidates:
+            #         index = response.rfind(f"{can} ")
+            #         start_indexes.append(index)
+            # if ans_with_dot:
+            #     for can in candidates:
+            #         index = response.rfind(f"{can}.")
+            #         start_indexes.append(index)
+            # if not ans_with_brack and not ans_with_space and not ans_with_dot:
+            #     for can in candidates:
+            #         index = response.rfind(f" {can} ")
+            #         start_indexes.append(index)
+        else:
+            for can in candidates:
+                index = response.lower().rfind(index2ans[can].lower())
+                start_indexes.append(index)
+        # get the first one
+        pred_index = candidates[np.argmin(start_indexes)]
+        pred_index = pred_index.replace("(", "").replace(")", "").replace(".", "").strip()
+    else:  # if only one candidate, use it.
+        pred_index = candidates[0]
+        pred_index = pred_index.replace("(", "").replace(")", "").replace(".", "").strip()
+
+    return pred_index, len(candidates) > 0
+
+
 # Process result for mcq answer generation
 def egoschema_process_results_generation(doc, result):
+    # import pdb;pdb.set_trace()
     pred = result[0]
 
-    # Determine whether the video LLM output is correct, based on word matching rules
-    # Ensure each option string ends with a period
-    option_strs = [opt if opt.endswith(".") else opt + "." for opt in doc["option"]]  # Complete option strings
-    option_sents = [opt.split(". ")[1] if ". " in opt else opt for opt in option_strs]  # Option sentence
-    option_inds = [opt.split(". ")[0] if ". " in opt else opt for opt in option_strs]  # Option letter, e.g., A, B, C, D, E
+    index2ans, all_choices = get_multi_choice_info(doc)
+    parsed_pred, matched_tag = parse_multi_choice_response(pred, all_choices, index2ans)
 
-    video_llm_pred = None
-    index = -1
-
-    # Check if the prediction matches any of the complete option strings
-    for idx, option_str in enumerate(option_strs):
-        if pred == option_str:
-            video_llm_pred = option_str
-            index = idx
-            break
-
-    # Check if the prediction matches any of the option sentences
-    if not video_llm_pred:
-        for idx, option_sent in enumerate(option_sents):
-            if pred == option_sent:
-                video_llm_pred = option_sent
-                index = idx
-                break
-
-    # Check if the prediction matches any of the option letters
-    if not video_llm_pred:
-        for idx, option_ind in enumerate(option_inds):
-            if pred == option_ind or pred == option_ind.replace(".", ""):
-                video_llm_pred = option_ind
-                index = idx
-                break
+    pred_to_index = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4}
+    index = pred_to_index.get(parsed_pred, -1)  # Default to -1 if the prediction is not found
 
     return {"submission": {doc["video_idx"]: index}, "score": {"pred": index, "ground_truth": doc["answer"]}}
 
