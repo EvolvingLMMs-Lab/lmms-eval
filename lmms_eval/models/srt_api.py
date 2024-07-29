@@ -16,6 +16,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
+from loguru import logger as eval_logger
+
 
 @register_model("srt_api")
 class SRT_API(lmms):
@@ -85,11 +87,27 @@ class SRT_API(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
-        frames = vr.get_batch(frame_idx).asnumpy()
+        try:
+            vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
+            total_frame_num = len(vr)
+            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+            frame_idx = uniform_sampled_frames.tolist()
+            frames = vr.get_batch(frame_idx).asnumpy()
+        except:
+            import av
+            container = av.open(video_path)
+
+            frames = []
+            # https://github.com/PyAV-Org/PyAV/issues/1269
+            # https://www.cnblogs.com/beyond-tester/p/17641872.html
+            # context = CodecContext.create("libvpx-vp9", "r")
+            for packet in container.demux(video=0):
+                for frame in packet.decode():
+                    frames.append(frame)
+            total_frames = len(frames)
+            sampled_frm = min(total_frames, for_get_frames_num)
+            indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
+            frames = [frames[i] for i in indices]
 
         base64_frames = []
         for frame in frames:
@@ -131,8 +149,21 @@ class SRT_API(lmms):
                     img = self.encode_image(visual)
                     imgs.append(img)
                 elif self.modality == "video":
-                    frames = self.encode_video(visual, self.max_frames_num)
-                    imgs.extend(frames)
+                    try:
+                        frames = self.encode_video(visual, self.max_frames_num)
+                        imgs.extend(frames)
+                    except Exception as e:
+                        eval_logger.error(f"Exception : {e} \n When loading video {visual}")
+                        imgs = None
+                        break
+            
+            # Handling video decode error
+            # If we can't even load using pyav, then we will skip
+            if imgs is None:
+                resps = ""
+                res.append(resps)
+                pbar.update(1)
+                continue
 
             messages = []
             if self.image_token not in contexts:  # single image format
