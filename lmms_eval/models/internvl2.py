@@ -136,8 +136,8 @@ class InternVL2(lmms):
         super().__init__()
 
         self.path = pretrained
-        self.model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, trust_remote_code=True).eval().cuda()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
+        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, trust_remote_code=True).eval().cuda()
+        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
 
         batch_size = int(batch_size)
         assert batch_size == 1, f"Batch size should be 1 for InternVL2, but got {batch_size}."
