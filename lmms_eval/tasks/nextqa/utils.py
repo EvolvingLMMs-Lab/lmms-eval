@@ -1,39 +1,14 @@
 import os
 import yaml
-
 import random
 import pandas as pd
-
 from pathlib import Path
-
 from loguru import logger as eval_logger
-
-try:
-    from pywsd.utils import lemmatize_sentence
-except ImportError:
-    eval_logger.debug("pywsd not installed. Please install pywsd to use this module. You can install it by running 'pip install pywsd'")
-
-try:
-    from nltk.tokenize import word_tokenize
-    from nltk.corpus import wordnet
-
-    try:
-        import nltk
-
-        nltk.download("averaged_perceptron_tagger", quiet=True)
-        nltk.download("wordnet", quiet=True)
-        nltk.download("punkt", quiet=True)
-    except Exception as e:
-        eval_logger.debug(f"nltk download failed: {e}")
-except ImportError:
-    eval_logger.debug("nltk not installed. Please install nltk to use this module. You can install it by running 'pip install nltk'")
 
 from lmms_eval.tasks._task_utils.video_loader import get_cache_dir, get_video
 import numpy as np
 
-
 OPTIONS = ["A", "B", "C", "D", "E"]
-
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -44,6 +19,23 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
             safe_data.append(line)
 
     config = yaml.safe_load("".join(safe_data))
+
+if config["metadata"]["load_package"]:
+    try:
+        from pywsd.utils import lemmatize_sentence
+    except ImportError:
+        eval_logger.debug("pywsd not installed. Please install pywsd to use this module. You can install it by running 'pip install pywsd'")
+
+    try:
+        from nltk.tokenize import word_tokenize
+        from nltk.corpus import wordnet
+        import nltk
+
+        nltk.download("averaged_perceptron_tagger", quiet=True)
+        nltk.download("wordnet", quiet=True)
+        nltk.download("punkt", quiet=True)
+    except ImportError:
+        eval_logger.debug("nltk not installed. Please install nltk to use this module. You can install it by running 'pip install nltk'")
 
 stopwords = set(pd.read_csv(Path(__file__).parent / "stopwords.csv").squeeze())
 

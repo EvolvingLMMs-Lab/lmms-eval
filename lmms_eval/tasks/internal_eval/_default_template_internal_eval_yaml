@@ -2,3 +2,4 @@ model_specific_prompt_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""
+process_results_use_image: true

@@ -5,7 +5,8 @@ import random
 import numpy as np
 import os
 import json
-
+from pathlib import Path
+import yaml
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -14,13 +15,23 @@ from loguru import logger as eval_logger
 MULTI_CHOICE_PROMPT = "Answer with the option's letter from the given choices directly."
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 
+with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+
+    config = yaml.safe_load("".join(safe_data))
+
 
 def replace_images_tokens(input_string):
-    # for i in range(1, 8):
-    #     question_text = f"<image {i}>"
-    #     query_text = "<image>"
-    #     if question_text in input_string:
-    #         input_string = input_string.replace(question_text, query_text)
+    for i in range(1, 8):
+        question_text = f"<image {i}>"
+        query_text = "<image>"
+        if question_text in input_string:
+            input_string = input_string.replace(question_text, query_text)
     return input_string
 
 
@@ -44,7 +55,9 @@ def construct_prompt(doc):
 
 def mmmu_doc_to_text(doc):
     question = construct_prompt(doc)
-    return replace_images_tokens(question)
+    if config["metadata"]["interleaved_format"]:
+        question = replace_images_tokens(question)
+    return question
 
 
 def mmmu_doc_to_visual(doc):

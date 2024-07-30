@@ -9,6 +9,7 @@ generation_kwargs:
   num_beams: 1
   do_sample: false
 process_results: !function utils.llava_process_results
+process_results_use_image: true
 metric_list:
   - metric: gpt_eval_llava_all
     aggregation: !function utils.llava_all_aggregation
