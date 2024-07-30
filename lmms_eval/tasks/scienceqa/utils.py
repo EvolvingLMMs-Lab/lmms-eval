@@ -33,8 +33,8 @@ def sqa_doc_to_target(doc):
 
 def sqa_process_results(doc, results):
     # I know this is weird, but it's how llava parse it.
-    target = sqa_doc_to_target(doc)
-    pred = results[0]
+    target = sqa_doc_to_target(doc).strip().lower()
+    pred = results[0].strip().lower()
     if pred == target:
         return {"exact_match": 1.0}
     # pattern: ^[A-Z]\. .*
