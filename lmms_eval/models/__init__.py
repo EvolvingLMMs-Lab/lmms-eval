@@ -12,6 +12,7 @@ logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
+    "cambrian1": "Cambrian1",
     "llava": "Llava",
     "qwen_vl": "Qwen_VL",
     "fuyu": "Fuyu",
