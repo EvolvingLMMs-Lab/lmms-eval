@@ -65,7 +65,11 @@ def mathverse_process_results(doc, results):
 
 
 def mathverse_aggregate_results_submission(results, args, *, calculate_gain=False, random_scores=None):
-    split_flag = results[0]["metadata"]["split"]
+    # Don't know why but this sometimes yields error so I hardcode it
+    try:
+        split_flag = results[0]["metadata"]["split"]
+    except:
+        split_flag = "testmini"
     path = generate_submission_file(f"mathverse_{split_flag}_results.json", args)
     with open(path, "w") as f:
         json.dump(results, f, indent=4)
@@ -75,7 +79,7 @@ def mathverse_aggregate_results_submission(results, args, *, calculate_gain=Fals
 
 def mathverse_aggregate_results_eval(results, args, *, calculate_gain=False, random_scores=None):
     split_flag = results[0]["metadata"]["split"]
-    problem_version = results[0]["metadata"]["problem_version"].lower().replace(" ", "_")
+    problem_version = results[0]["problem_version"].lower().replace(" ", "_")
     # save the result first, in case the gpt evaluation fails
     path = generate_submission_file(f"mathverse_{split_flag}_{problem_version}_results.json", args)
     with open(path, "w") as f:
