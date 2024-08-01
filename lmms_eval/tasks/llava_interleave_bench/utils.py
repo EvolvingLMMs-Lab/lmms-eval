@@ -56,17 +56,17 @@ def doc_to_visual(doc):
 
 
 # This is the place where you format your question
-def doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
 
     oe_post_prompt = ""
-    if "oe_post_prompt" in model_specific_prompt_kwargs:
-        oe_post_prompt = model_specific_prompt_kwargs["oe_post_prompt"]
+    if "oe_post_prompt" in lmms_eval_specific_kwargs:
+        oe_post_prompt = lmms_eval_specific_kwargs["oe_post_prompt"]
 
     mcq_post_prompt = ""
-    if "mcq_post_prompt" in model_specific_prompt_kwargs:
-        mcq_post_prompt = model_specific_prompt_kwargs["mcq_post_prompt"]
+    if "mcq_post_prompt" in lmms_eval_specific_kwargs:
+        mcq_post_prompt = lmms_eval_specific_kwargs["mcq_post_prompt"]
 
     user_prompt = doc["question"]
 
@@ -80,9 +80,9 @@ def doc_to_text(doc, model_specific_prompt_kwargs=None):
     return user_prompt
 
 
-def doc_to_text_conversation(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def doc_to_text_conversation(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
 
     conversations = doc["conversations"]
 
@@ -94,9 +94,9 @@ def doc_to_text_conversation(doc, model_specific_prompt_kwargs=None):
     return user_prompt
 
 
-def doc_to_text_multi_turn(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def doc_to_text_multi_turn(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
 
     return doc["conversations"]
 

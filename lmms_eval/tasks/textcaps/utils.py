@@ -17,8 +17,8 @@ def textcaps_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def textcaps_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    return model_specific_prompt_kwargs["prompt"]
+def textcaps_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    return lmms_eval_specific_kwargs["prompt"]
 
 
 def textcaps_process_result(doc, result):

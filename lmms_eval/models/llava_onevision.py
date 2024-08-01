@@ -429,6 +429,7 @@ class Llava_OneVision(lmms):
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
+        metadata = requests[0].metadata
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
@@ -452,6 +453,12 @@ class Llava_OneVision(lmms):
                 if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
                     self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
                     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+
+                if "sample_frames" in metadata:
+                    sample_indices = np.linspace(0, len(visual) - 1, metadata["sample_frames"], dtype=int)
+                    visual = [visual[i] for i in sample_indices]
+                    assert len(visual) == metadata["sample_frames"]
+
                 # if (len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__) and ("image_aspect_ratio" in gen_kwargs.keys()):
                 #     self._config.image_aspect_ratio = gen_kwargs["image_aspect_ratio"]
                 #     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")

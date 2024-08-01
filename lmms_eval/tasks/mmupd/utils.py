@@ -42,7 +42,7 @@ def mmupd_doc_to_visual(doc):
     return [Image.open(BytesIO(base64.b64decode(doc["image"])))]
 
 
-def mmupd_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mmupd_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_candidate = ["A", "B", "C", "D", "E"]
     options_prompt, options_dict = mmupd_evaluator.create_options_prompt(doc, option_candidate)
 
@@ -61,8 +61,8 @@ def mmupd_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
     query_prompt = f"{data['hint']}\n{data['question']}{data['options']}" if pd.notna(data["hint"]) and data["hint"] != "nan" else f"{data['question']}{data['options']}"
 
-    if model_specific_prompt_kwargs:
-        query_prompt = f"{query_prompt}{model_specific_prompt_kwargs['post_prompt']}"
+    if lmms_eval_specific_kwargs:
+        query_prompt = f"{query_prompt}{lmms_eval_specific_kwargs['post_prompt']}"
 
     return query_prompt
 

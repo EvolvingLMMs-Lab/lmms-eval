@@ -2,6 +2,7 @@ group: live_bench
 task:
 - live_bench_2406
 - live_bench_2407
+
 metadata:
   api_type : openai
   eval_with_mini: false

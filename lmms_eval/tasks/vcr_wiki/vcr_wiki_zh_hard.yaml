@@ -10,7 +10,7 @@ metric_list:
   - metric: exact_match
     aggregation: !function utils.vcr_aggregate_exact_match
     higher_is_better: true
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "图像中被覆盖的文本是什么？请在不输出解释的情况下还原被覆盖的文本。"

@@ -1,0 +1,8 @@
+include: _default_template.yaml
+task: mvbench_object_existence
+dataset_name: object_existence
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: object_existence
+    post_prompt: "Answer with the option's letter from the given choices directly."

@@ -45,16 +45,16 @@ def textvqa_process_results(doc, result):
     }
 
 
-def textvqa_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def textvqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = ""
     post_post = ""
     ocr_ref = ""
-    if model_specific_prompt_kwargs:
-        if "pre_prompt" in model_specific_prompt_kwargs:
-            pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-        if "post_prompt" in model_specific_prompt_kwargs:
-            post_prompt = model_specific_prompt_kwargs["post_prompt"]
-        if "ocr" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["ocr"]:
+    if lmms_eval_specific_kwargs:
+        if "pre_prompt" in lmms_eval_specific_kwargs:
+            pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+        if "post_prompt" in lmms_eval_specific_kwargs:
+            post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+        if "ocr" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["ocr"]:
             ocr_ref = f"\nReference OCR token: {', '.join(doc['ocr_tokens'])}"
     return f"{pre_prompt}{doc['question'].capitalize()}{ocr_ref}{post_prompt}"
 

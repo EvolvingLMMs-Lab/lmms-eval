@@ -26,14 +26,14 @@ def mmstar_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def mmstar_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mmstar_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["question"].strip()
-    if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
+    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
         question = question.replace(replace_prompt, "")
-        question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
+        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
+    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
         question = question.replace(replace_prompt, "")
-        question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
+        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
     return question
 
 

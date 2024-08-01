@@ -1,0 +1,8 @@
+include: _default_template.yaml
+task: mvbench_character_order
+dataset_name: character_order
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: character_order
+    post_prompt: "Answer with the option's letter from the given choices directly."
