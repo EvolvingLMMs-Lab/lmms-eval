@@ -102,7 +102,6 @@ echo $TASK
 TASK_SUFFIX="${TASK//,/_}"
 echo $TASK_SUFFIX
 
-#ai2d,chartqa,docvqa_val,mmmu,infovqa_val,mmbench_en_dev,mme,ok_vqa_val2014,pope,scienceqa_img,realworldqa,textvqa_val
 accelerate launch --num_processes 8 --main_process_port 12380 -m lmms_eval \
     --model internvl2 \
     --model_args pretrained=$CKPT_PATH \
