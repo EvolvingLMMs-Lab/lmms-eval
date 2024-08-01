@@ -1,23 +1,27 @@
-dataset_path: EtashGuha/JapaneseDocQA
-task: "docqa_ja_onlytext"
+dataset_path: EtashGuha/HungarianDocQA
+task: "docvqa_hu_xml"
 output_type: generate_until
 test_split: test
 doc_to_visual: !function utils.docvqa_doc_to_visual
 doc_to_text: !function utils.docvqa_doc_to_textonly
-doc_to_target: "original_answer"
+doc_to_target: "Short Answer"
 generation_kwargs:
   max_new_tokens: 32
   temperature: 0
   do_sample: False
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: "\n1 つの単語またはフレーズを使用して質問に答えます。"
-    post_prompt: "日本語での回答:"
+    pre_prompt: "\nVálaszoljon a kérdésre egyetlen szó vagy kifejezés használatával."
+    post_prompt: "Válasz magyarul:"
 metric_list:
   - metric: anls
     aggregation: mean
     higher_is_better: true
   - metric: sambajudge
+    aggregation: mean
+    higher_is_better: true
+    query: true
+  - metric: gpt4judge
     aggregation: mean
     higher_is_better: true
     query: true

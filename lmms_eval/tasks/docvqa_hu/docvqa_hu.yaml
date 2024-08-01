@@ -1,5 +1,5 @@
 dataset_path: EtashGuha/HungarianDocQA
-task: "hu_docvqa_old"
+task: "docvqa_hu"
 output_type: generate_until
 test_split: test
 doc_to_visual: !function utils.docvqa_doc_to_visual
@@ -11,9 +11,17 @@ generation_kwargs:
   do_sample: False
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: "Kérjük, válaszoljon erre a kérdésre rövid válasszal.\n"
+    pre_prompt: "\nVálaszoljon a kérdésre egyetlen szó vagy kifejezés használatával."
     post_prompt: "Válasz magyarul:"
 metric_list:
   - metric: anls
     aggregation: mean
     higher_is_better: true
+  - metric: sambajudge
+    aggregation: mean
+    higher_is_better: true
+    query: true
+  - metric: gpt4judge
+    aggregation: mean
+    higher_is_better: true
+    query: true

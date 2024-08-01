@@ -1,5 +1,5 @@
 dataset_path: EtashGuha/JapaneseDocQA
-task: "docqa_ja"
+task: "docvqa_ja"
 output_type: generate_until
 test_split: test
 doc_to_visual: !function utils.docvqa_doc_to_visual
@@ -17,7 +17,11 @@ metric_list:
   - metric: anls
     aggregation: mean
     higher_is_better: true
-  # - metric: sambajudge
-  #   aggregation: mean
-  #   higher_is_better: true
-  #   query: true
+  - metric: sambajudge
+    aggregation: mean
+    higher_is_better: true
+    query: true
+  - metric: gpt4judge
+    aggregation: mean
+    higher_is_better: true
+    query: true

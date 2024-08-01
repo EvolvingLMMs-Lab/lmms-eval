@@ -10,6 +10,7 @@ import torch
 import re
 from lmms_eval.api.registry import register_metric, register_aggregation
 from loguru import logger as eval_logger
+import os
 
 
 # Register Aggregations First
@@ -218,14 +219,16 @@ def anls(
 def gpt4judge(references, predictions, query):  # This is a passthrough function
     """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
     values = []
-    from openai import OpenAI
+    from openai import AzureOpenAI
 
     responses = []
     for answer in references:
         # preprocess both the answers - gt and prediction
         gt_answer = answer
         det_answer = predictions[0]
-        client = OpenAI()
+        api_key = os.getenv("AZURE_API_KEY")
+        azure_endpoint = os.getenv("AZURE_ENDPOINT")
+        client = AzureOpenAI(api_key=api_key, api_version="2024-02-15-preview", azure_endpoint=azure_endpoint)
         messages = []
         messages.append({"role": "system", "content": "You are a highly efficient assistant. You are to be as fair and accurate"})
         messages.append(
@@ -263,20 +266,49 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
         # preprocess both the answers - gt and prediction
         gt_answer = answer
         det_answer = predictions[0]
-        single_judge_payload = {"prompt": query, "completion": det_answer, "ground_truth": gt_answer}
-        url = f"{SERVER_URL}/simple-judge"
-        headers = {"Content-Type": "application/json"}
+        messages = []
+        messages.append({"role": "system", "content": "You are a highly efficient assistant. You are to be as fair and accurate"})
+        messages.append(
+            {
+                "role": "user",
+                "content": "I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n What is name of university? \n\n Here is the answer to the question: \n\n University of California, San Diego \n\n Here is the model completion: \n\n UCSD \n\n Judgement:",
+            }
+        )
+        messages.append({"role": "assistant", "content": "The answer is correct, so I rate [[1]]. \n\n Explanation: UCSD is an appropriate abbreviation for the University of California, San Diego. "})
+        messages.append(
+            {
+                "role": "user",
+                "content": f"I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n {query} \n\n Here is the answer to the question: \n\n { gt_answer} \n\n Here is the model completion: \n\n {det_answer} \n\n Judgement:",
+            }
+        )
+        payload = {"messages": messages, "max_tokens": 800, "stop": ["[INST", "[INST]", "[/INST]", "[/INST]"], "model": "llama3-405b", "stream": "true"}
 
-        # response = requests.post(url, headers=headers, data=json.dumps(single_judge_payload))
+        key = os.getenv("SAMBAKEY")
+        url = os.getenv("SAMBAURL")
+
+        headers = {"Authorization": f"Basic {key}", "Content-Type": "application/json"}
+        post_response = requests.post(f"https://{url}/v1/chat/completions", json=payload, headers=headers, stream=True)
+        response_text = ""
+        for line in post_response.iter_lines():
+            if line.startswith(b"data: "):
+                data_str = line.decode("utf-8")[6:]
+                try:
+                    line_json = json.loads(data_str)
+                    if "choices" in line_json and "content" in line_json["choices"][0]["delta"]:
+                        try:
+                            response_text += line_json["choices"][0]["delta"]["content"]
+                        except:
+                            breakpoint()
+                except json.JSONDecodeError as e:
+                    pass
         try:
-            response = requests.post(url, headers=headers, data=json.dumps(single_judge_payload))
-            score = int(response.json()["response"])
-            reasoning = response.json()["reasoning"]
+            score = int(extract_number_from_brackets(response_text))
         except:
             breakpoint()
-        responses.append(response)
+        print(response_text)
+        responses.append(response_text)
         values.append(score)
-    return {"sambajudge": max(values), "for_log": reasoning}
+    return {"sambajudge": max(values), "for_log": responses}
 
 
 def extract_number_from_brackets(string):
