@@ -1,7 +1,7 @@
-dataset_path: lmms-lab/SEED-Bench-2
+dataset_path: doolayer/SEED-Bench-2-Plus
 dataset_kwargs:
   token: True
-task: "seedbench_2"
+task: "seedbench_2_plus"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.seed_doc_to_visual
@@ -16,37 +16,28 @@ generation_kwargs:
 process_results: !function utils.seed_process_result
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
-  - metric: seed_Video
+  - metric: seedbench_2_plus_Chart
     aggregation: !function utils.seed_aggregation_result
     higher_is_better: true
-  - metric: seed_Multiple_Images
+  - metric: seedbench_2_plus_Map
     aggregation: !function utils.seed_aggregation_result
     higher_is_better: true
-  - metric: seed_Image_&_Text_Generation
+  - metric: seedbench_2_plus_Web
     aggregation: !function utils.seed_aggregation_result
     higher_is_better: true
-  - metric: seed_Single_Image
-    aggregation: !function utils.seed_aggregation_result
-    higher_is_better: true
-  - metric: seed_Image_Generation
-    aggregation: !function utils.seed_aggregation_result
-    higher_is_better: true
-  - metric: seed_Interleaved_Image
-    aggregation: !function utils.seed_aggregation_result
-    higher_is_better: true
-  - metric: seed_all
+  - metric: seedbench_2_plus_all
     aggregation: !function utils.seed_aggregation_result
     higher_is_better: true
 metadata:
   - version: 0.0
 
 model_specific_prompt_kwargs:
-  default :
-    img_token : <image>
-    post_prompt : "Answer with the option's letter from the given choices directly."
   llava :
     img_token : <image>
     post_prompt : "Answer with the option's letter from the given choices directly."
   gpt4V :
+    img_token : <image>
+    post_prompt : "Answer with the option's letter from the given choices directly."
+  default :
     img_token : <image>
     post_prompt : "Answer with the option's letter from the given choices directly."
