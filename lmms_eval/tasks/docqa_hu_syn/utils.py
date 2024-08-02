@@ -12,21 +12,14 @@ def docvqa_doc_to_visual(doc):
 
 
 def docvqa_doc_to_text(doc, model_specific_prompt_kwargs):
-    question = doc["conversations"][0]["value"]
+    question = doc["question"]
     pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def docvqa_doc_to_textonly(doc, model_specific_prompt_kwargs):
-    all_text = doc["text"]
-    question = doc["conversations"][0]["value"]
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
-    return f"All PDF Text: {all_text} \n\n {pre_prompt}{question}{post_prompt}"
-
 def docvqa_doc_to_target(doc):
-    return doc["conversations"][1]["value"]
+    return doc["original_answer"]
 
 
 def docvqa_test_process_results(doc, results):

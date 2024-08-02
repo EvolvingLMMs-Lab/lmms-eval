@@ -11,8 +11,8 @@ generation_kwargs:
   do_sample: False
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: "\nVálaszoljon a kérdésre egyetlen szó vagy kifejezés használatával. "
-    post_prompt: "Válasz magyarul:"
+    pre_prompt: ""
+    post_prompt: ""
 metric_list:
   - metric: anls
     aggregation: mean
