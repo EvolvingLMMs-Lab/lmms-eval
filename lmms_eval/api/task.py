@@ -378,7 +378,8 @@ class Task(abc.ABC):
 
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
             per_task_metadata = {"task": self.config["task"], "doc_id": doc_id, "repeats": self.config.repeats}
-            if self.config.metadata:
+
+            if self.config.metadata and type(self.config.metadata) == dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
                 per_task_metadata.update(self.config.metadata)
 
             inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=per_task_metadata, split=split)

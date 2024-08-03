@@ -16,4 +16,5 @@ lmms_eval_specific_kwargs:
     post_prompt: "Answer with the option's letter from the given choices directly."
 
 metadata:
+  task_type: video
   sample_frames: 32 # for episodic reasoning, it stores the frame images in folder so we need to set the number of frames to sample here.
