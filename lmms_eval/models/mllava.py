@@ -317,28 +317,10 @@ class MLlava(lmms):
                     "use_cache": self.use_cache,
                     "pad_token_id": self.tokenizer.eos_token_id,
                 }
-                breakpoint()
-                cont, _ = chat_mllava(context, visuals, self.model, self._image_processor, **generation_kwargs)
+                text_outputs, _ = chat_mllava(context, visuals, self.model, self._image_processor, **generation_kwargs)
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
-            chat_template = self.chat_template if self.chat_template is not None else self.tokenizer.chat_template
-            try:
-                text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
-            except:
-                breakpoint()
-            breakpoint()
-            if "ASSISTANT:" in chat_template:
-                text_outputs = text_outputs.split("ASSISTANT:")[-1].strip()
-            elif "<|assistant|>" in chat_template:
-                text_outputs = text_outputs.split("<|assistant|>")[-1].strip()
-            elif "assistant" in chat_template:
-                text_outputs = text_outputs.split("assistant")[-1].strip()
-            elif "[/INST]" in chat_template:
-                text_outputs = text_outputs.split("[/INST]")[-1].strip()
-            else:
-                text_outputs = text_outputs.split("assistant")[-1].strip()
-
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
 
