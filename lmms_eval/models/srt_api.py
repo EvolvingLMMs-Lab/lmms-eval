@@ -18,6 +18,8 @@ from lmms_eval.api.registry import register_model
 
 from loguru import logger as eval_logger
 
+NUM_SECONDS_TO_SLEEP = 5
+
 
 @register_model("srt_api")
 class SRT_API(lmms):
@@ -28,7 +30,7 @@ class SRT_API(lmms):
         modality: str = "video",
         host: str = "127.0.0.1",
         port: int = 30000,
-        max_frames_num: int = 10,
+        max_frames_num: int = 32,
         timeout: int = 120,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
@@ -95,6 +97,7 @@ class SRT_API(lmms):
             frames = vr.get_batch(frame_idx).asnumpy()
         except:
             import av
+
             container = av.open(video_path)
 
             frames = []
@@ -156,7 +159,7 @@ class SRT_API(lmms):
                         eval_logger.error(f"Exception : {e} \n When loading video {visual}")
                         imgs = None
                         break
-            
+
             # Handling video decode error
             # If we can't even load using pyav, then we will skip
             if imgs is None:
@@ -166,22 +169,30 @@ class SRT_API(lmms):
                 continue
 
             messages = []
-            if self.image_token not in contexts:  # single image format
-                content = []
-                for img in imgs:
-                    content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
 
-                content.append({"type": "text", "text": contexts})
-                messages.append({"role": "user", "content": content})
-            else:  # interleaved format
-                contexts = contexts.split(self.image_token)
-                for idx, img in enumerate(imgs):
-                    content = [
-                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}},
-                        {"type": "text", "text": contexts[idx]},
-                    ]
-                    messages.append({"role": "user", "content": content})
-                messages.append({"role": "user", "content": [{"type": "text", "text": contexts[-1]}]})
+            # put the images in the first place
+            content = []
+            for img in imgs:
+                content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+
+            content.append({"type": "text", "text": contexts})
+            messages.append({"role": "user", "content": content})
+            # if self.image_token not in contexts:  # single image format
+            #     content = []
+            #     for img in imgs:
+            #         content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+
+            #     content.append({"type": "text", "text": contexts})
+            #     messages.append({"role": "user", "content": content})
+            # else:  # interleaved format
+            #     contexts = contexts.split(self.image_token)
+            #     for idx, img in enumerate(imgs):
+            #         content = [
+            #             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}},
+            #             {"type": "text", "text": contexts[idx]},
+            #         ]
+            #         messages.append({"role": "user", "content": content})
+            #     messages.append({"role": "user", "content": [{"type": "text", "text": contexts[-1]}]})
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024

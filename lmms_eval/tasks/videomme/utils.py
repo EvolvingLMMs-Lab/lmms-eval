@@ -194,7 +194,8 @@ def videomme_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["question"]
     option = str(doc["options"])
     question = question + "\n" + option
-    full_prompt = option_prompt + "\n" + question + "\n" + "The best answer is:"
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
+    full_prompt = option_prompt + "\n" + question + "\n" + post_prompt
     return full_prompt
 
 
