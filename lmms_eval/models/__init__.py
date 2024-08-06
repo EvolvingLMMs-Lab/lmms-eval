@@ -13,6 +13,7 @@ logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
     "llava": "Llava",
+    "mllava": "MLlava",
     "qwen_vl": "Qwen_VL",
     "fuyu": "Fuyu",
     "batch_gpt4": "BatchGPT4",
