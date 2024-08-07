@@ -105,6 +105,7 @@
   - ScreenSpot REG / Instruction Generation (screenspot_reg)
 - SeedBench (seedbench)
 - SeedBench 2 (seedbench_2)
+- SeedBench 2 Plus (seedbench_2_plus)
 - ST-VQA (stvqa)
 - TextCaps (textcaps)
   - TextCaps Validation (textcaps_val)
