@@ -1,0 +1,35 @@
+dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_kwargs:
+  token: True
+task: "chartqa_lite"
+dataset_name: chartqa
+test_split: lite
+output_type: generate_until
+doc_to_visual: !function utils.chartqa_doc_to_visual
+doc_to_text: !function utils.chartqa_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: False
+process_results: !function utils.chartqa_process_results
+metric_list:
+  - metric: relaxed_overall
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_human_split
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_augmented_split
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  - version: 0.0
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question with a single word."
+  qwen_vl:
+    pre_prompt: ""
+    post_prompt: " Answer:"
+
