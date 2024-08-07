@@ -7,10 +7,13 @@ import sklearn.metrics
 import random
 import evaluate
 import torch
+import copy
 import re
 from lmms_eval.api.registry import register_metric, register_aggregation
 from loguru import logger as eval_logger
 import os
+import time
+from transformers import AutoTokenizer
 
 
 # Register Aggregations First
@@ -221,6 +224,7 @@ def gpt4judge(references, predictions, query):  # This is a passthrough function
     values = []
     from openai import AzureOpenAI
 
+    NUM_SECONDS_TO_SLEEP = 30
     responses = []
     for answer in references:
         # preprocess both the answers - gt and prediction
@@ -244,13 +248,30 @@ def gpt4judge(references, predictions, query):  # This is a passthrough function
                 "content": f"I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n {query} \n\n Here is the answer to the question: \n\n { gt_answer} \n\n Here is the model completion: \n\n {det_answer} \n\n Judgement:",
             }
         )
-        completion = client.chat.completions.create(model="gpt-4o", messages=messages)
-        response = completion.choices[0].message.content
+        for attempt in range(5):
+            try:
+                completion = client.chat.completions.create(model="gpt-4o", messages=messages)
+                response = completion.choices[0].message.content
+                break  # If successful, break out of the loop
+
+            except Exception as e:
+                try:
+                    error_msg = response.json()
+                except:
+                    error_msg = ""
+
+                eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
+                if attempt <= 3:
+                    time.sleep(NUM_SECONDS_TO_SLEEP)
+                else:  # If this was the last attempt, log and return empty string
+                    eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                    response = ""
+
         score = int(extract_number_from_brackets(response))
         responses.append(response)
         values.append(score)
 
-    return {"gpt4judge": max(values), "for_log": responses}
+    return {"gpt4judge": max(values), "gpt4_for_log": responses}
 
 
 @register_metric(metric="sambajudge", higher_is_better=True, output_type="generate_until", aggregation="mean", query="false")
@@ -258,57 +279,93 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
     """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
     values = []
     responses = []
-    SERVER_URL = "http://10.10.0.109:5000"
     import requests
     import json
+
+    NUM_SECONDS_TO_SLEEP = 30
 
     for answer in references:
         # preprocess both the answers - gt and prediction
         gt_answer = answer
         det_answer = predictions[0]
-        messages = []
-        messages.append({"role": "system", "content": "You are a highly efficient assistant. You are to be as fair and accurate"})
-        messages.append(
-            {
-                "role": "user",
-                "content": "I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n What is name of university? \n\n Here is the answer to the question: \n\n University of California, San Diego \n\n Here is the model completion: \n\n UCSD \n\n Judgement:",
-            }
-        )
-        messages.append({"role": "assistant", "content": "The answer is correct, so I rate [[1]]. \n\n Explanation: UCSD is an appropriate abbreviation for the University of California, San Diego. "})
-        messages.append(
-            {
-                "role": "user",
-                "content": f"I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n {query} \n\n Here is the answer to the question: \n\n { gt_answer} \n\n Here is the model completion: \n\n {det_answer} \n\n Judgement:",
-            }
-        )
-        payload = {"messages": messages, "max_tokens": 800, "stop": ["[INST", "[INST]", "[/INST]", "[/INST]"], "model": "llama3-405b", "stream": "true"}
+        def create_messages(query, gt_answer, det_answer):
+            messages = []
+            messages.append({"role": "system", "content": "You are a highly efficient assistant. You are to be as fair and accurate"})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": "I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n What is name of the university in San Diego? \n\n Here is the answer to the question: \n\n University of California, San Diego \n\n Here is the model completion: \n\n UCSD \n\n Judgement:",
+                }
+            )
+            messages.append({"role": "assistant", "content": "The answer is correct, so I rate [[1]]. \n\n Explanation: UCSD is an appropriate abbreviation for the University of California, San Diego. "})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n  What is the capital of France? \n\n Here is the answer to the question: \n\n Paris, France \n\n Here is the model completion: \n\n Monaco \n\n Judgement:",
+                }
+            )
+            messages.append({"role": "assistant", "content": "The answer is incorrect, so I rate [[0]]. \n\n Explanation: The model answers Monaco, but Paris is the capital of France."})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"I am going to give you a question, the answer to the question, and model's answer to the question. You are to tell me if the model is correct. Respond [[1]] if correct and [[0]] if incorrect. Then give me an explanation of your judgement. Here is the question: \n\n {query} \n\n Here is the answer to the question: \n\n {gt_answer} \n\n Here is the model completion: \n\n {det_answer} \n\n Judgement:",
+                }
+            )
+            return messages
+        
+        tokenizer = AutoTokenizer.from_pretrained("/import/snvm-sc-podscratch4/jonathanl/generic_checkpoints/llama_3/Meta-Llama-3-8B")
+        while True:
+            messages = create_messages(query, gt_answer, det_answer)
+            tokenized_messages = tokenizer.apply_chat_template(messages)
+            if len(tokenized_messages) < 3600:
+                break
+            ratio = 4000/len(tokenized_messages)
+            ratio = min(ratio, .95)
+            query = query[-int(ratio * len(query)):]
+            print("lessening")
+            
+        
+        payload = {"messages": messages, "max_tokens": 400, "stop": ["[INST", "[INST]", "[/INST]", "[/INST]"], "model": "llama3-405b", "stream": "true"}
 
         key = os.getenv("SAMBAKEY")
         url = os.getenv("SAMBAURL")
 
         headers = {"Authorization": f"Basic {key}", "Content-Type": "application/json"}
-        post_response = requests.post(f"https://{url}/v1/chat/completions", json=payload, headers=headers, stream=True)
-        response_text = ""
-        for line in post_response.iter_lines():
-            if line.startswith(b"data: "):
-                data_str = line.decode("utf-8")[6:]
-                try:
-                    line_json = json.loads(data_str)
-                    if "choices" in line_json and "content" in line_json["choices"][0]["delta"]:
-                        try:
-                            response_text += line_json["choices"][0]["delta"]["content"]
-                        except:
-                            breakpoint()
-                except json.JSONDecodeError as e:
-                    pass
-        try:
-            score = int(extract_number_from_brackets(response_text))
-        except:
-            breakpoint()
-        print(response_text)
+
+        while True:
+            post_response = requests.post(f"https://{url}/v1/chat/completions", json=payload, headers=headers, stream=True)
+            if post_response.status_code == 503 or post_response.status_code == 504 or post_response.status_code == 401:
+                print(post_response.content)
+                eval_logger.info(f"Attempt failed due to rate limit or gate timeout. Trying again...")
+                time.sleep(NUM_SECONDS_TO_SLEEP)
+                continue
+            debug_response = copy.deepcopy(post_response)
+            if post_response.status_code != 200:
+                breakpoint()
+            response_text = ""
+            for line in post_response.iter_lines():
+                if line.startswith(b"data: "):
+                    data_str = line.decode("utf-8")[6:]
+                    try:
+                        line_json = json.loads(data_str)
+                        if "choices" in line_json and "content" in line_json["choices"][0]["delta"]:
+                            try:
+                                response_text += line_json["choices"][0]["delta"]["content"]
+                            except:
+                                breakpoint()
+                    except json.JSONDecodeError as e:
+                        pass
+
+            extracted_number = extract_number_from_brackets(response_text)
+            if extracted_number is None:
+                print(f"Attempt failed with text: {response_text}.")
+                print(post_response)
+                breakpoint()
+            score = int(extracted_number)
+            break
         responses.append(response_text)
         values.append(score)
-    return {"sambajudge": max(values), "for_log": responses}
+    return {"sambajudge": max(values), "samba_for_log": responses}
 
 
 def extract_number_from_brackets(string):

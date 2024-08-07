@@ -1285,8 +1285,10 @@ class ConfigurableTask(Task):
                         result_score = self._metric_fn_list[metric]([gold, result])
                     if isinstance(result_score, dict):
                         # TODO: this handles the case where HF evaluate returns a dict.
-                        if "for_log" in result_score:
-                            result_dict["log"] = result_score["for_log"]
+                        if "samba_for_log" in result_score:
+                            result_dict["samba_log"] = result_score["samba_for_log"]
+                        if "gpt4_for_log" in result_score:
+                            result_dict["gpt4_log"] = result_score["gpt4_for_log"]
                         result_score = result_score[metric]
                 result_dict[metric] = result_score
         else:

@@ -4,23 +4,28 @@ model_args="attn_implementation=flash_attention_2"
 
 if [ -z "$3" ]; then
     echo "No pretrained checkpoint"
+    logger_name="${model_name}/${task_name}"
+    mkdir logs/${model_name}
+    mkdir eval_logs/${model_name}
+
 else
     echo "Pretrained Checkpoint: $3"
     model_args+=",pretrained=$3"
-    model_name="$(basename $3)"
+    logger_name="$(basename $3)/${task_name}"
+    mkdir eval_logs/$(basename $3)
+    mkdir logs/$(basename $3)
 fi
 
 if [[ $model_name == *"llava_hf"* ]]; then
     model_args+=",device_map=auto,dtype=bfloat16,fast_tokenizer=False"
 fi
 
-echo $logger_name
-echo $model_args
+if [[ $model_name == *"gpt"* ]]; then
+    model_args="modality=image"
+fi
 
-mkdir logs/${model_name}
-mkdir logs/${model_name}/${task_name}
-mkdir eval_logs/${model_name}
-logger_name="${model_name}/${task_name}"
+mkdir logs/${logger_name}
+
 if [[ -z "${AZURE_API_KEY}" ]]; then 
     echo "Error: AZURE_API_KEY environment variable is not set." \
     exit 1      
@@ -30,7 +35,7 @@ if [[ -z "${AZURE_ENDPOINT}" ]]; then
     echo "Error: AZURE_ENDPOINT environment variable is not set." \
     exit 1      
 fi
-# if [[ true ]]; then
+
 if [[ $model_name == *"gpt"* || $model_name == *"claude"* ]]; then
     export API_TYPE="azure"
     source /import/pa-tools/anaconda/anaconda3/2022-10/etc/profile.d/conda.sh &&  \
