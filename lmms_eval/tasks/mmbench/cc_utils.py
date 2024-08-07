@@ -38,7 +38,7 @@ def mmbench_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def mmbench_cn_cc_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mmbench_cn_cc_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_candidate = ["A", "B", "C", "D", "E"]
     options_prompt, options_dict = mmbench_evaluator.create_options_prompt(doc, option_candidate)
 
@@ -55,8 +55,8 @@ def mmbench_cn_cc_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
     query_prompt = f"{data['question']} {data['options']}"
 
-    if model_specific_prompt_kwargs:
-        query_prompt = f"{query_prompt}\n{model_specific_prompt_kwargs['post_prompt']}"
+    if lmms_eval_specific_kwargs:
+        query_prompt = f"{query_prompt}\n{lmms_eval_specific_kwargs['post_prompt']}"
 
     return query_prompt
 

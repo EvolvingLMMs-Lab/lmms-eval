@@ -4,9 +4,10 @@ import itertools
 import json
 
 import os
-import random
 import re
+import random
 import shutil
+import inspect
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field, asdict
@@ -67,8 +68,10 @@ class TaskConfig(dict):
     validation_split: str = None
     test_split: str = None
     fewshot_split: str = None  # TODO: assert that this not None if num_fewshot > 0. (?) assert if this is same split as one evaling (?)
+    full_docs: bool = False
     # formatting / prompting options.
     # see docs/advanced_task_guide.md for more info
+    process_results_use_image: bool = False
     process_docs: Callable = None
     doc_to_visual: Union[Callable, str] = None
     doc_to_text: Union[Callable, str] = None
@@ -93,7 +96,7 @@ class TaskConfig(dict):
 
     metadata: Union[str, list] = None  # by default, not used in the code. allows for users to pass arbitrary info to tasks
 
-    model_specific_prompt_kwargs: dict = None
+    lmms_eval_specific_kwargs: dict = None
     model_specific_generation_kwargs: dict = None
     model_specific_target_kwargs: dict = None
 
@@ -374,7 +377,12 @@ class Task(abc.ABC):
             fewshot_ctx = self.fewshot_context(doc_id, 0 if self.config.num_fewshot is None else self.config.num_fewshot, self.config.training_split if self.has_training_docs() else split)
 
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
-            inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=(self.config["task"], doc_id, self.config.repeats), split=split)
+            per_task_metadata = {"task": self.config["task"], "doc_id": doc_id, "repeats": self.config.repeats}
+
+            if self.config.metadata and type(self.config.metadata) == dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
+                per_task_metadata.update(self.config.metadata)
+
+            inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=per_task_metadata, split=split)
 
             if not isinstance(inst, list):
                 inst = [inst]
@@ -628,12 +636,14 @@ class ConfigurableTask(Task):
                     eval_logger.warning(f'Both target_delimiter "{self.config.target_delimiter}" and target choice: "{choice}" do not have whitespace, ignore if the language you are evaluating on does not require/use whitespace')
 
     def _prepare_model_specific_config(self):
-        self.model_specific_prompt_kwargs = self.config.model_specific_prompt_kwargs
-        if self.model_specific_prompt_kwargs is not None:
-            if self.model_name in self.model_specific_prompt_kwargs:
-                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs[self.model_name]
-            else:
-                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs.get("default", None)
+        self.lmms_eval_specific_kwargs = self.config.lmms_eval_specific_kwargs
+        if self.lmms_eval_specific_kwargs is not None:
+            if self.model_name in self.lmms_eval_specific_kwargs:
+                self.lmms_eval_specific_kwargs = self.lmms_eval_specific_kwargs[self.model_name]
+            if "default" in self.lmms_eval_specific_kwargs:
+                self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("default", {}))
+            if "dataset" in self.lmms_eval_specific_kwargs:
+                self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("dataset", {}))
 
         self.model_specific_target_kwargs = self.config.model_specific_target_kwargs
         if self.model_specific_target_kwargs is not None:
@@ -782,10 +792,17 @@ class ConfigurableTask(Task):
 
                     def unzip_video_data(zip_file):
                         import zipfile
+                        import os
 
                         with zipfile.ZipFile(zip_file, "r") as zip_ref:
-                            zip_ref.extractall(cache_dir)
-                            eval_logger.info(f"Extracted all files from {zip_file} to {cache_dir}")
+                            for file_info in zip_ref.infolist():
+                                target_path = os.path.join(cache_dir, file_info.filename)
+                                if not os.path.exists(target_path):
+                                    zip_ref.extract(file_info, cache_dir)
+                                else:
+                                    eval_logger.info(f"Skipping existing file: {target_path}")
+
+                        eval_logger.info(f"Extracted all files from {zip_file} to {cache_dir}")
 
                     def untar_video_data(tar_file):
                         import tarfile
@@ -1004,8 +1021,8 @@ class ConfigurableTask(Task):
                     return text_string
         elif callable(doc_to_text):
             return (
-                doc_to_text(doc, self.model_specific_prompt_kwargs)
-                if self.model_specific_prompt_kwargs is not None
+                doc_to_text(doc, self.lmms_eval_specific_kwargs)
+                if self.lmms_eval_specific_kwargs is not None
                 else doc_to_text(
                     doc,
                 )
@@ -1065,9 +1082,16 @@ class ConfigurableTask(Task):
             assert self.config.doc_to_visual in self.features
             # Single image. Still return a list for consistency.
             return [doc[self.config.doc_to_visual]]
+        elif callable(self.config.doc_to_visual):
+            return (
+                self.config.doc_to_visual(doc, self.lmms_eval_specific_kwargs)
+                if self.lmms_eval_specific_kwargs is not None and len(inspect.signature(self.config.doc_to_visual).parameters) == 2
+                else self.config.doc_to_visual(
+                    doc,
+                )
+            )
         else:
-            assert callable(self.config.doc_to_visual)
-            return self.config.doc_to_visual(doc)
+            raise TypeError
 
     def doc_to_choice(self, doc: Any) -> List[str]:
         if self.config.doc_to_choice is None:

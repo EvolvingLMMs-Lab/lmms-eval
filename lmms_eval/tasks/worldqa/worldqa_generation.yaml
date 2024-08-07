@@ -13,7 +13,7 @@ metric_list:
   - metric: gpt_eval
     aggregation: !function utils.worldq_gen_gpt_eval
     higher_is_better: true  
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""

@@ -23,9 +23,9 @@ def detailcaps_doc_to_visual(doc):
     return [Image.open(io.BytesIO(doc["binary"])).convert("RGB")]
 
 
-def detailcaps_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def detailcaps_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     # question = "Please carefully observe the image and come up with a caption for the image"
-    return model_specific_prompt_kwargs["prompt"]
+    return lmms_eval_specific_kwargs["prompt"]
 
 
 def detailcaps_doc_to_target(doc):

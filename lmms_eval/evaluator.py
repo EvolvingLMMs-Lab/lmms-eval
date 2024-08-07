@@ -327,7 +327,7 @@ def evaluate(
             # hack: remove image columns to speed avoid loading images and speed up postprocessing
             # reason: doc_iterator will actually load image if it's in the doc.
             docs = task.test_docs() if task.has_test_docs() else task.validation_docs()
-            if "d170" not in task_name and "dc100" not in task_name and "dc200" not in task_name and "llava_wilder" not in task_name and "live_bench" not in task_name and "wildvision" not in task_name:
+            if not task.config["process_results_use_image"]:
                 remove_cols = []
                 features = docs.features
                 # If it is an Image instance or a Sequence of Image instance. Remove it
@@ -340,10 +340,7 @@ def evaluate(
                     docs = docs.remove_columns(remove_cols)
 
             ####################### Processing with Full Docs Mode #######################
-            if task_name in ["videochatgpt_consistency"]:
-                full_docs = True
-            else:
-                full_docs = False
+            full_docs = task.config["full_docs"]
 
             doc_iterator = itertools.islice(enumerate(docs), lm.rank, limit, lm.world_size)
             # Instead of converting the iterator to a list, use `itertools.tee` to create a parallel iterator for counting
@@ -633,10 +630,10 @@ def evaluate(
             results_dict["samples"] = dict(samples)
     else:
         results_dict = None
-    
-    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", 'w') as f:
+
+    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", "w") as f:
         f.write(f"rank {int(os.environ.get('RANK', 0))} eval done")
-    while len([file for file in os.listdir(cli_args.output_path) if file.endswith('metric_eval_done.txt')]) < lm.accelerator.num_processes:
+    while len([file for file in os.listdir(cli_args.output_path) if file.endswith("metric_eval_done.txt")]) < lm._world_size:
         time.sleep(1)
 
     return results_dict

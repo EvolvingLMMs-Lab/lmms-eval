@@ -1,7 +1,7 @@
 task: "mmivqd_option"
 test_split: test
 dataset_name: mmivqd_option
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer with the option's letter from the given choices directly."

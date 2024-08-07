@@ -18,9 +18,9 @@ def nocaps_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def nocaps_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def nocaps_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     # question = "Please carefully observe the image and come up with a caption for the image"
-    return model_specific_prompt_kwargs["prompt"]
+    return lmms_eval_specific_kwargs["prompt"]
 
 
 def nocaps_process_result(doc, result):

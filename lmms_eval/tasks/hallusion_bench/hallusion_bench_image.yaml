@@ -8,7 +8,7 @@ doc_to_visual: !function evaluate_hb.hb_doc_to_visual
 doc_to_text: !function evaluate_hb.hb_doc_to_text
 doc_to_target: "gt_answer_details"
 process_results: !function evaluate_hb.hb_process_results
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""

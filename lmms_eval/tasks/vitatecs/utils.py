@@ -62,15 +62,15 @@ def vitatecs_doc_to_visual(doc):
 
 
 # This is the place where you format your question
-def vitatecs_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def vitatecs_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
     question, _, _ = format_question_and_answer(doc)
     return f"{pre_prompt}{question}{post_prompt}"

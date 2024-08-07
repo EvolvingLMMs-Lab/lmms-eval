@@ -1,0 +1,8 @@
+include: _default_template.yaml
+task: mvbench_fine_grained_pose
+dataset_name: fine_grained_pose
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: fine_grained_pose
+    post_prompt: "Answer with the option's letter from the given choices directly."

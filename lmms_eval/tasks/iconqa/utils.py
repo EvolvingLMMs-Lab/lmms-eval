@@ -24,7 +24,7 @@ def doc_to_visual(doc):
     return image_list
 
 
-def doc_to_text(doc, model_specific_prompt_kwargs):
+def doc_to_text(doc, lmms_eval_specific_kwargs):
     question = doc["question"]
     ques_type = doc["ques_type"]
     options_prompt = []
@@ -34,7 +34,7 @@ def doc_to_text(doc, model_specific_prompt_kwargs):
         options_prompt.append("The second image.")
 
         options_str = options_to_str(options_prompt)
-        full_prompt = f"{model_specific_prompt_kwargs['pre_prompt']}{model_specific_prompt_kwargs['statement']}{model_specific_prompt_kwargs['options_statement'].format(question=question, options=options_str)}"
+        full_prompt = f"{lmms_eval_specific_kwargs['pre_prompt']}{lmms_eval_specific_kwargs['statement']}{lmms_eval_specific_kwargs['options_statement'].format(question=question, options=options_str)}"
 
     elif ques_type == "choose_txt":
         choices = doc["choices"].split(",")
@@ -42,10 +42,10 @@ def doc_to_text(doc, model_specific_prompt_kwargs):
             options_prompt.append(f"{choice}")
 
         options_str = options_to_str(options_prompt)
-        full_prompt = f"{model_specific_prompt_kwargs['pre_prompt']}{model_specific_prompt_kwargs['statement']}{model_specific_prompt_kwargs['options_statement'].format(question=question, options=options_str)}"
+        full_prompt = f"{lmms_eval_specific_kwargs['pre_prompt']}{lmms_eval_specific_kwargs['statement']}{lmms_eval_specific_kwargs['options_statement'].format(question=question, options=options_str)}"
 
     elif ques_type == "fill_in_blank":
-        full_prompt = f"{model_specific_prompt_kwargs['pre_prompt']}{model_specific_prompt_kwargs['statement']}{model_specific_prompt_kwargs['freeform_statement'].format(question=question)}"
+        full_prompt = f"{lmms_eval_specific_kwargs['pre_prompt']}{lmms_eval_specific_kwargs['statement']}{lmms_eval_specific_kwargs['freeform_statement'].format(question=question)}"
 
     return full_prompt
 
