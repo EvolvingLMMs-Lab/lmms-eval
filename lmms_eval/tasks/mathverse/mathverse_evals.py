@@ -265,7 +265,7 @@ class MathVerseEvaluator:
             problem = {
                 "question_type": inst["question_type"],
                 "answer": inst["answer"] if "answer" in inst else None,
-                "question_for_eval": inst["question_for_eval"],
+                "question_for_eval": inst["question"],
             }
             if config["metadata"].get("trunk_response", -1) > 0:
                 prediction = " ".join(full_prediction.split(" ")[-config["metadata"]["trunk_response"] :])

@@ -34,7 +34,7 @@ dependencies = [
     "pytablewriter",
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
-    "sqlitedict",
+    "sqlitedict==2.1.0",
     "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
     "torchvision>=0.16.0",
     "timm",
@@ -75,6 +75,7 @@ dependencies = [
     "anls",
     "rouge",
     "capture_metric",
+    "protobuf==3.20",
 ]
 
 [project.optional-dependencies]
@@ -84,9 +85,14 @@ vila = [
 gemini = [
     "google-generativeai",
 ]
+reka = [
+    "httpx==0.23.3",
+    "reka-api",
+]
 all = [
     "vila",
     "gemini",
+    "reka",
 ]
 
 [tool.setuptools.packages.find]

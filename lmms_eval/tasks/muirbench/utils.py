@@ -1,15 +1,15 @@
-
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
 import re
 import pandas as pd
 
 
-def muir_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def muir_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question, choices = doc["question"], doc["options"]
     len_choices = len(choices)
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+
     options = [chr(ord("A") + i) for i in range(len_choices)]
     choices_str = "\n".join([f"{option}. {choice}" for option, choice in zip(options, choices)])
     return f"{pre_prompt}{question}\n{choices_str}{post_prompt}"
@@ -17,7 +17,7 @@ def muir_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
 def muir_doc_to_visual(doc):
     image_list = [image.convert("RGB") for image in doc["image_list"]]
-    return image_list 
+    return image_list
 
 
 def muir_doc_to_target(doc):
@@ -33,15 +33,15 @@ def muir_process_results(doc, result):
     image_type = doc["image_type"]
 
     data_dict = {
-            "pred" : pred,
-            "task" : task,
-            "idx" : idx,
-            "image_relation" : image_relation,
-            "answer" : answer,
-            "image_type" : image_type,
-        }
+        "pred": pred,
+        "task": task,
+        "idx": idx,
+        "image_relation": image_relation,
+        "answer": answer,
+        "image_type": image_type,
+    }
 
-    return {"muirbench_score_overall" : data_dict}
+    return {"muirbench_score_overall": data_dict}
 
 
 def muir_aggregation(results):
@@ -61,17 +61,13 @@ def muir_aggregation(results):
         task_num[result["task"]] += 1
 
     score = score / len(results)
-
-    task_score = {k : v / task_num[k] for k,v in task_score.items()}
+    task_score = {k: v / task_num[k] for k, v in task_score.items()}
 
     print("=" * 50)
     for k, v in task_score.items():
         print(f"{k} : {v:.2f}")
     print("=" * 50)
-    
     return score
-
-
 
 
 class MultiChoiceRegexFilter(ExtendedRegexFilter):

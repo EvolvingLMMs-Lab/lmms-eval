@@ -1,0 +1,8 @@
+include: _default_template.yaml
+task: mvbench_egocentric_navigation
+dataset_name: egocentric_navigation
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: egocentric_navigation
+    post_prompt: "Answer with the option's letter from the given choices directly."

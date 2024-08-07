@@ -13,6 +13,7 @@ from live_bench.screen_shoter import ScreenImage, ScreenShoter
 from live_bench.data_generator.score_getter import get_score_getter, get_random_score_getter
 from live_bench.data_generator.response import Response
 from live_bench.data_generator.utils.extract_infomation import ImageInfomation, InfomationExtractor
+from live_bench.data_generator.question_finalizer import QuestionFinalizer
 
 import json
 from typing import List, Tuple
@@ -32,13 +33,14 @@ def get_qa_data(images: ScreenImage, qa_generator: QAGenerator, *, infomation_ge
 
 
 def get_live_bench_data(
-    driver, website: Website, screen_shoter: ScreenShoter, qa_generator: QAGenerator, checker: QAGenerator, infomation_getter: InfomationExtractor, test=False, scorer=None, score_threshold=5
+    driver, website: Website, screen_shoter: ScreenShoter, qa_generator: QAGenerator, checker: QAGenerator, infomation_getter: InfomationExtractor, question_finalizer: QuestionFinalizer, test=False, scorer=None, score_threshold=5
 ) -> Tuple[List[LiveBenchData], Response]:
     images = screen_shoter.capture(driver, website)
     qa_data, logs = get_qa_data(images, qa_generator, test=test, infomation_getter=infomation_getter)
     data = []
     for qa in qa_data:
-        item = LiveBenchData(screen=images, question=qa.question, answer=qa.answer, subtask=qa.subtask, criteria=qa.criteria, data_generator=qa_generator.get_name(), checker=checker, scorer=scorer)
+        # qa_data = question_finalizer.finalize_question(qa, images.images)
+        item = LiveBenchData(screen=images, question=qa.question, answer=qa.answer, subtask=qa.subtask, criteria=qa.criteria, data_generator=qa_generator.get_name(), checker=checker, scorer=scorer, finalizer=question_finalizer)
         if score_threshold and (not item.score or item.score < score_threshold):
             continue
         data.append(item)
@@ -94,7 +96,23 @@ class LiveBench(object):
         organized_data["id"] = id
         self.hf_data = self.hf_data.add_item(organized_data)
 
-    def capture(self, websites: List[Website] = None, *, screen_shoter="single_screen", qa_generator=None, checker=None, driver=None, scorer=None, test=False, driver_kwargs={}, shoter_kwargs={}, generator_kwargs={}, log_folder="./logs"):
+    def capture(
+        self,
+        websites: List[Website] = None,
+        *,
+        screen_shoter="single_screen",
+        qa_generator=None,
+        checker=None,
+        driver=None,
+        scorer=None,
+        question_finalizer=None,
+        test=False,
+        driver_kwargs={},
+        shoter_kwargs={},
+        generator_kwargs={},
+        question_finalizer_kwargs={},
+        log_folder="./logs",
+    ):
         can_quit_driver = False
         if driver is None and screen_shoter != "human":
             driver = load_driver(**driver_kwargs)
@@ -112,11 +130,13 @@ class LiveBench(object):
             scorer = get_score_getter(scorer)
         elif scorer is None:
             scorer = get_random_score_getter()
+        if question_finalizer is None:
+            question_finalizer = QuestionFinalizer(**question_finalizer_kwargs)
         logs = []
         infomation_getter = InfomationExtractor()
         for website in tqdm(websites, desc="Capturing websites"):
             try:
-                data, log = get_live_bench_data(driver, website, screen_shoter, qa_generator, checker, test=test, scorer=scorer, infomation_getter=infomation_getter)
+                data, log = get_live_bench_data(driver, website, screen_shoter, qa_generator, checker, test=test, scorer=scorer, infomation_getter=infomation_getter, question_finalizer=question_finalizer)
                 logs.append(log.to_dict())
                 for d in data:
                     self.add(d)

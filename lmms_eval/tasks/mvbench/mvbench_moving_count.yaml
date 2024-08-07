@@ -1,0 +1,8 @@
+include: _default_template.yaml
+task: mvbench_moving_count
+dataset_name: moving_count
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: moving_count
+    post_prompt: "Answer with the option's letter from the given choices directly."

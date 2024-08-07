@@ -3,6 +3,12 @@ dataset_kwargs:
   token: True
   cache_dir: mlvu
   video: True
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
 task: mlvu
 test_split: test
 output_type: generate_until

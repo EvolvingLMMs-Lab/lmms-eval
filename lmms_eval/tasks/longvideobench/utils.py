@@ -114,7 +114,7 @@ def insert_subtitles_into_frames(frame_timestamps, subtitles, starting_timestamp
     return "\n".join(interleaved_list)
 
 
-def longvideobench_doc_to_text(doc, model_specific_prompt_kwargs):
+def longvideobench_doc_to_text(doc, lmms_eval_specific_kwargs):
     candidates = []
 
     for i in range(5):
@@ -123,10 +123,10 @@ def longvideobench_doc_to_text(doc, model_specific_prompt_kwargs):
             candidates.append(candidate)
 
     question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(candidates)])
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
-    if model_specific_prompt_kwargs.get("insert_interleave_subtitles", False):
+    if lmms_eval_specific_kwargs.get("insert_interleave_subtitles", False):
         with open(Path(__file__).parent / "longvideobench_val_i.yaml", "r") as f:
             raw_data = f.readlines()
             safe_data = []
