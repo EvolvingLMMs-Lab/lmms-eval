@@ -31,7 +31,7 @@ class SRT_API(lmms):
         host: str = "127.0.0.1",
         port: int = 30000,
         max_frames_num: int = 32,
-        timeout: int = 120,
+        timeout: int = 60,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
         **kwargs,
