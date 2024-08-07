@@ -22,6 +22,16 @@ puzzle = ["RAVEN"]
 nlrv2 = ["NLVR2_Mantis"]
 qbench = ["QBench"]
 
+scan_qa = ["ScanQA"]
+alfred = ["ALFRED"]
+nuscenes = ["nuscenes"]
+scannet_chat = ["ScanNet_chat"]
+scannet_task = ["ScanNet_task"]
+blink = ["BLINK"]
+math_verse = ["MathVerse"]
+sci_verse = ["SciVerse"]
+mantis = ["Mantis"]
+
 
 def doc_to_visual(doc):
     max_visual_count = 16
@@ -46,17 +56,17 @@ def doc_to_visual(doc):
 
 
 # This is the place where you format your question
-def doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
 
     oe_post_prompt = ""
-    if "oe_post_prompt" in model_specific_prompt_kwargs:
-        oe_post_prompt = model_specific_prompt_kwargs["oe_post_prompt"]
+    if "oe_post_prompt" in lmms_eval_specific_kwargs:
+        oe_post_prompt = lmms_eval_specific_kwargs["oe_post_prompt"]
 
     mcq_post_prompt = ""
-    if "mcq_post_prompt" in model_specific_prompt_kwargs:
-        mcq_post_prompt = model_specific_prompt_kwargs["mcq_post_prompt"]
+    if "mcq_post_prompt" in lmms_eval_specific_kwargs:
+        mcq_post_prompt = lmms_eval_specific_kwargs["mcq_post_prompt"]
 
     user_prompt = doc["question"]
 
@@ -70,9 +80,9 @@ def doc_to_text(doc, model_specific_prompt_kwargs=None):
     return user_prompt
 
 
-def doc_to_text_conversation(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def doc_to_text_conversation(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
 
     conversations = doc["conversations"]
 
@@ -84,9 +94,9 @@ def doc_to_text_conversation(doc, model_specific_prompt_kwargs=None):
     return user_prompt
 
 
-def doc_to_text_multi_turn(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def doc_to_text_multi_turn(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
 
     return doc["conversations"]
 
@@ -184,9 +194,19 @@ def overall_score(results):
         "Puzzle": puzzle,
         "NLVR2": nlrv2,
         "QBench": qbench,
+        "ScanQA": scan_qa,
+        "ALFRED": alfred,
+        "nuscenes": nuscenes,
+        "ScanNet_chat": scannet_chat,
+        "ScanNet_task": scannet_task,
+        "BLINK": blink,
+        "MathVerse": math_verse,
+        "SciVerse": sci_verse,
+        "Mantis": mantis,
     }
 
     category_scores = {}
+    matched_subtasks = set()
 
     eval_logger.info(f"Evaluation Sub-Task Results:")
     for category, subtasks in categories.items():
@@ -196,10 +216,14 @@ def overall_score(results):
             if result["sub_task"] in subtasks:
                 count += 1
                 score += result["score"]
+                matched_subtasks.add(result["sub_task"])
         if count > 0:
             avg_score = score / count
             category_scores[category] = avg_score
             eval_logger.info(f"{category}: {avg_score:.3f}")
+
+    if not matched_subtasks:
+        raise ValueError("No subtasks were matched in the results. Check if the subtask names are correct.")
 
     # Calculate overall score
     total_score = sum(category_scores.values())

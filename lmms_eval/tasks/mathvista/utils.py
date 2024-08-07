@@ -25,7 +25,7 @@ def mathvista_doc_to_visual(doc):
     return [doc["decoded_image"].convert("RGB")]
 
 
-def mathvista_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mathvista_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     problem = {
         "question_type": doc["question_type"],
         "answer_type": doc["answer_type"],
@@ -39,10 +39,10 @@ def mathvista_doc_to_text(doc, model_specific_prompt_kwargs=None):
     }
     query_prompt = mathvista_evaluator.create_one_query(
         problem,
-        shot_num=model_specific_prompt_kwargs["shot"],
-        shot_type=model_specific_prompt_kwargs["shot_type"],
-        use_caption=model_specific_prompt_kwargs["use_caption"],
-        use_ocr=model_specific_prompt_kwargs["use_ocr"],
+        shot_num=lmms_eval_specific_kwargs["shot"],
+        shot_type=lmms_eval_specific_kwargs["shot_type"],
+        use_caption=lmms_eval_specific_kwargs["use_caption"],
+        use_ocr=lmms_eval_specific_kwargs["use_ocr"],
     )
     return query_prompt
 

@@ -64,57 +64,57 @@ def tempcompass_doc_to_visual(doc):
 
 
 # This is the place where you format your question
-def tempcompass_doc_to_text_multi_choice(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def tempcompass_doc_to_text_multi_choice(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]["multi-choice"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]["multi-choice"]
 
     question = doc["question"]
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def tempcompass_doc_to_text_yes_no(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def tempcompass_doc_to_text_yes_no(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]["yes_no"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]["yes_no"]
 
     question = doc["question"]
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def tempcompass_doc_to_text_caption_matching(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def tempcompass_doc_to_text_caption_matching(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]["caption_matching"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]["caption_matching"]
 
     question = doc["question"]
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def tempcompass_doc_to_text_captioning(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def tempcompass_doc_to_text_captioning(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]["captioning"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]["captioning"]
 
     question = doc["question"]
     return f"{pre_prompt}{question}{post_prompt}"

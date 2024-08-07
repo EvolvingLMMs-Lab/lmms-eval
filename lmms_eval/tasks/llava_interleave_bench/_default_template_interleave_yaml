@@ -2,7 +2,7 @@ output_type: generate_until
 generation_kwargs:
   until:
     - "ASSISTANT:"
-  image_aspect_ratio: original
+  image_aspect_ratio: pad
 metadata:
   version: 0.0
   api_type : openai

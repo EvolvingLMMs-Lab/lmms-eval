@@ -1,9 +1,11 @@
 import os
+import anthropic
 import openai
 import logging
 from bs4 import BeautifulSoup
 import requests
 from live_bench.data_generator.utils.gpt4v import gpt4v_generate_response, format_gpt4v_images
+from live_bench.data_generator.utils.claude import claude_generate_response, format_claude_images
 from live_bench.screen_shoter import ScreenImage
 from live_bench.websites import Website
 from live_bench.data_generator.response import Response
@@ -11,17 +13,17 @@ from live_bench.data_generator.response import Response
 logger = logging.getLogger("live-bench")
 
 
-GPT4V_EXTRACT_TEXT_PROMPT: str = """\
+EXTRACT_TEXT_PROMPT: str = """\
 These are the images of the website that we have captured. Please extract the text from the website.
 You should extract the text from the website as detailed as possible.
 Only output the text extracted from the website, do not include any other information.
 """
 
-GPT4V_FIND_IMAGES_FEATURES_PROMPT: str = """\
+FIND_IMAGES_FEATURES_PROMPT: str = """\
 This is a screenshot from a news website. Your task is to identify the meaningful images in this screenshot and extract relevant information about these images, such as the environment depicted, the actions and expressions of the people, and the connection between these images and the corresponding text. You need to think deeply about these images and provide as much detailed and useful information as possible.
 """
 
-GPT4V_THINK_DIFFERENTLY_PROMPT: str = """\
+THINK_DIFFERENTLY_PROMPT: str = """\
 What makes this website different from other websites? What is special about its news? Since it is a news website, where is the "new" reflected? Do not give a generalized answer; you need to provide detailed answers based on the specific content of each news article and the accompanying illustrations.
 """
 
@@ -54,22 +56,28 @@ class ImageInfomation(object):
 
 
 class InfomationExtractor(object):
-    def __init__(self, model="gpt-4-turbo", openai_api_key=None):
+    def __init__(self, model="claude-3-5-sonnet-20240620", openai_api_key=None, anthropic_api_key=None):
+        if not anthropic_api_key:
+            anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", None)
         if not openai_api_key:
-            openai_api_key = os.getenv("OPENAI_API_KEY")
-            if not openai_api_key:
-                raise ValueError("OPENAI_API_KEY environment variable not set.")
-        self.client = openai.OpenAI(api_key=openai_api_key)
+            openai_api_key = os.getenv("OPENAI_API_KEY", None)
+        if "gpt" in model:
+            self.client = openai.OpenAI(api_key=openai_api_key)
+            self.generate_response = gpt4v_generate_response
+            self.format_images = format_gpt4v_images
+        elif "claude" in model:
+            self.client = anthropic.Anthropic(api_key=anthropic_api_key)
+            self.generate_response = claude_generate_response
+            self.format_images = format_claude_images
         self.model = model
 
     def extract_text_from_html(self, url):
         response = requests.get(url)
         soup = BeautifulSoup(response.text, "html.parser")
-
         text = "\n".join(soup.stripped_strings)
         return text
 
-    def extract_text_from_html_using_gpt4v(self, screen_image: ScreenImage, **kwargs) -> Response:
+    def extract_text_from_html_from_gpt(self, screen_image: ScreenImage, **kwargs) -> Response:
         website: Website = screen_image.website
         if website.url:
             url = website.url
@@ -77,18 +85,18 @@ class InfomationExtractor(object):
             text = f"Below is the text extracted from the website {url} for you to take reference:\n{text}"
         else:
             text = ""
-        text = f"{GPT4V_EXTRACT_TEXT_PROMPT}\n{text}"
+        text = f"{EXTRACT_TEXT_PROMPT}\n{text}"
         messages = [
             {
                 "role": "user",
-                "content": [{"type": "text", "text": text}] + format_gpt4v_images(screen_image.images),
+                "content": [{"type": "text", "text": text}] + self.format_images(screen_image.images),
             }
         ]
-        response = gpt4v_generate_response(messages, model=self.model, client=self.client, json_format=False, **kwargs)
+        response = self.generate_response(messages=messages, model=self.model, client=self.client, json_format=False, **kwargs)
         return response
 
     def extract_infomation(self, screen_image: ScreenImage, **kwargs) -> ImageInfomation:
-        ocrs = self.extract_text_from_html_using_gpt4v(screen_image)
+        ocrs = self.extract_text_from_html_from_gpt(screen_image)
         infomation = ImageInfomation()
         if ocrs.success:
             ocrs = f"Below is the text extracted from the website for you to take reference:\n{ocrs.content}"
@@ -98,19 +106,19 @@ class InfomationExtractor(object):
         messages = [
             {
                 "role": "user",
-                "content": [{"type": "text", "text": f"{GPT4V_FIND_IMAGES_FEATURES_PROMPT}\n{ocrs}"}] + format_gpt4v_images(screen_image.images),
+                "content": [{"type": "text", "text": f"{FIND_IMAGES_FEATURES_PROMPT}\n{ocrs}"}] + self.format_images(screen_image.images),
             }
         ]
-        response = gpt4v_generate_response(messages, model=self.model, client=self.client, json_format=False, **kwargs)
+        response = self.generate_response(messages=messages, model=self.model, client=self.client, json_format=False, **kwargs)
         if response.success:
             infomation.image_features = response.content
         messages = [
             {
                 "role": "user",
-                "content": [{"type": "text", "text": f"{GPT4V_THINK_DIFFERENTLY_PROMPT}\n\n{str(infomation)}"}] + format_gpt4v_images(screen_image.images),
+                "content": [{"type": "text", "text": f"{THINK_DIFFERENTLY_PROMPT}\n\n{str(infomation)}"}] + self.format_images(screen_image.images),
             }
         ]
-        response = gpt4v_generate_response(messages, model=self.model, client=self.client, json_format=False, **kwargs)
+        response = self.generate_response(messages=messages, model=self.model, client=self.client, json_format=False, **kwargs)
         if response.success:
             infomation.differnt_points = response.content
         return infomation

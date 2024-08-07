@@ -19,7 +19,7 @@ class Instance:
 
     def __post_init__(self) -> None:
         # unpack metadata field
-        self.task_name, self.doc_id, self.repeats = self.metadata
+        self.task_name, self.doc_id, self.repeats = self.metadata["task"], self.metadata["doc_id"], self.metadata["repeats"]
 
     @property
     def args(self):

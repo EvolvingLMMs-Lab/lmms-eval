@@ -44,9 +44,9 @@ def youcook2_doc_to_visual(doc):
     return [os.path.join(cache_dir, doc["video_path"])]
 
 
-def youcook2_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs and "prompt" in model_specific_prompt_kwargs:
-        return model_specific_prompt_kwargs["prompt"]
+def youcook2_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs and "prompt" in lmms_eval_specific_kwargs:
+        return lmms_eval_specific_kwargs["prompt"]
     else:
         return "Provide a one-sentence caption for the provided video."
 

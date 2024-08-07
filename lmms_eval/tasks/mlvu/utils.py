@@ -39,7 +39,7 @@ def mlvu_doc_to_visual(doc):
     return [video_path]
 
 
-def mlvu_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mlvu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     # option_prompt="Carefully watch this video and pay attention to every detail. Based on your observations, select the best option that accurately addresses the question."
     option_prompt = ""
     question = doc["question"] + "\nOnly give the best option.\n"

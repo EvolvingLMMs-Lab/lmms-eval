@@ -1,8 +1,7 @@
 import datetime
+import yaml
 import json
 import os
-from difflib import SequenceMatcher as SM
-from functools import partial
 
 import evaluate
 import numpy as np
@@ -10,27 +9,40 @@ import spacy
 from nltk.util import ngrams
 from spacy.cli import download
 
+from pathlib import Path
+from difflib import SequenceMatcher as SM
+from functools import partial
+
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-# Download the English and Chinese models
-try:
-    nlp_en = spacy.load("en_core_web_sm")
-except Exception as e:
-    download("en_core_web_sm")
-    nlp_en = spacy.load("en_core_web_sm")
-
-try:
-    nlp_zh = spacy.load("zh_core_web_sm")
-except Exception as e:
-    download("zh_core_web_sm")
-    nlp_zh = spacy.load("zh_core_web_sm")
-
-nlp = {"en": nlp_en, "zh": nlp_zh}
-rouge = evaluate.load("rouge")
-
 from loguru import logger as eval_logger
 
-dir_name = os.path.dirname(os.path.abspath(__file__))
+with open(Path(__file__).parent / "_default_template_vcr_yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+
+    config = yaml.safe_load("".join(safe_data))
+
+# Download the English and Chinese models
+if config["metadata"]["load_package"]:
+    try:
+        nlp_en = spacy.load("en_core_web_sm")
+        nlp_zh = spacy.load("zh_core_web_sm")
+        nlp = {"en": nlp_en, "zh": nlp_zh}
+        rouge = evaluate.load("rouge")
+    except Exception as e:
+        eval_logger.debug(f"Failed to load spacy models: {e}")
+        download("en_core_web_sm")
+        nlp_en = spacy.load("en_core_web_sm")
+        download("zh_core_web_sm")
+        nlp_zh = spacy.load("zh_core_web_sm")
+        eval_logger.debug("Spacy models not loaded due to load_package is False. Please set load_package to True in the config file to load them.")
+else:
+    nlp = {"en": None, "zh": None}
+    rouge = None
 
 aggregate_results_template = {
     "max_sim_val": 0,
@@ -61,11 +73,11 @@ def vcr_doc_to_visual(doc):
     return [doc["stacked_image"].convert("RGB")]
 
 
-def vcr_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+def vcr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{post_prompt}"
 
 

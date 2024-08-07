@@ -23,7 +23,7 @@ metric_list:
   - metric: mme_cognition_score
     aggregation: !function utils.mme_aggregate_results
     higher_is_better: true
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer the question using a single word or phrase."

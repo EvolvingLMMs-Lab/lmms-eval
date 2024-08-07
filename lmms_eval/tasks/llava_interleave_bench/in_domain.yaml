@@ -20,7 +20,7 @@ generation_kwargs:
   do_sample: False
   image_aspect_ratio: "pad" # for multi-image, we treat each image as original aspect ratio without anyres strategy.
 
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     oe_post_prompt: ""
     mcq_post_prompt: ""

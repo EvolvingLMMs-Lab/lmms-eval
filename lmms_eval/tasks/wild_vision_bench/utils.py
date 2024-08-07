@@ -69,6 +69,7 @@ Example output: "My final verdict is tie: [[A=B]]".\
 
 prompt_template = "<|User Prompt|>\n{question_1}\n\n<|The Start of Assistant A's Answer|>\n{answer_1}\n<|The End of Assistant A's Answer|>\n\n<|The Start of Assistant B's Answer|>\n{answer_2}\n<|The End of Assistant B's Answer|>"
 
+
 def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -96,6 +97,7 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
             response.raise_for_status()
             response_data = response.json()
+            print(response_data)
             return response_data["choices"][0]["message"]["content"], GPT_EVAL_MODEL_NAME
         except requests.exceptions.RequestException as e:
             print(f"Request failed on attempt {attempt+1}: {e}")
@@ -111,6 +113,7 @@ def image_to_base64(pil_image):
     buffered = BytesIO()
     pil_image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
 
 def get_score(judgement, pattern, pairwise=True):
     matches = pattern.findall(judgement)
@@ -129,13 +132,14 @@ def wild_vision_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def wild_vision_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def wild_vision_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["instruction"].strip()
-    if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
-        question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
-        question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
+    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
+        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
+    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
+        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
     return question
+
 
 def wild_vision_doc_to_target(doc):
     return doc[BASELINE_MODEL_NAME]

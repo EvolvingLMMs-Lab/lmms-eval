@@ -8,7 +8,7 @@ doc_to_visual: !function utils.ai2d_doc_to_visual
 doc_to_text: !function utils.ai2d_doc_to_text
 doc_to_target: !function utils.ai2d_doc_to_target
   
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     prompt_format: mcq
     pre_prompt: ""

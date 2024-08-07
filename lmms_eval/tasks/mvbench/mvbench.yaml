@@ -1,0 +1,24 @@
+group: mvbench
+task:
+  - mvbench_action_sequence
+  - mvbench_moving_count
+  - mvbench_action_prediction
+  - mvbench_episodic_reasoning
+  - mvbench_action_antonym
+  - mvbench_action_count
+  - mvbench_scene_transition
+  - mvbench_object_shuffle
+  - mvbench_object_existence
+  - mvbench_fine_grained_pose
+  - mvbench_unexpected_action
+  - mvbench_moving_direction
+  - mvbench_state_change
+  - mvbench_object_interaction
+  - mvbench_character_order
+  - mvbench_action_localization
+  - mvbench_counterfactual_inference
+  - mvbench_fine_grained_action
+  - mvbench_moving_attribute
+  - mvbench_egocentric_navigation
+
+# ['action_sequence', 'moving_count', 'action_prediction', 'episodic_reasoning', 'action_antonym', 'action_count', 'scene_transition', 'object_shuffle', 'object_existence', 'fine_grained_pose', 'unexpected_action', 'moving_direction', 'state_change', 'object_interaction', 'character_order', 'action_localization', 'counterfactual_inference', 'fine_grained_action', 'moving_attribute', 'egocentric_navigation']

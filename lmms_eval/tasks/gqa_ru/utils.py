@@ -16,8 +16,8 @@ def gqa_doc_to_visual(doc):
     return [image]
 
 
-def gqa_doc_to_text(doc, model_specific_prompt_kwargs):
+def gqa_doc_to_text(doc, lmms_eval_specific_kwargs):
     question = doc["question"]
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"

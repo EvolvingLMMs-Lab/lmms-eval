@@ -11,11 +11,9 @@ metric_list:
     aggregation: !function utils.videochatgpt_aggregate_consistency
     higher_is_better: true
 include: _default_template_yaml
+full_docs: true
 
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
-  image_aspect_ratio: original
   max_new_tokens: 1024
   temperature: 0
   top_p: 1.0

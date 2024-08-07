@@ -2,7 +2,7 @@ dataset_path: deepvk/MMBench-ru
 dataset_kwargs:
   token: True
 doc_to_target: "answer"
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nВыбери правильный вариант ответа буквой."
