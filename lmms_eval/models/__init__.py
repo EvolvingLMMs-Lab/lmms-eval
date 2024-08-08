@@ -41,7 +41,7 @@ AVAILABLE_MODELS = {
     "video_llava": "VideoLLaVA",
     "vila": "VILA",
     "xcomposer2_4KHD": "XComposer2_4KHD",
-    "xcomposer2d5": "XComposer2D5"
+    "xcomposer2d5": "XComposer2D5",
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():

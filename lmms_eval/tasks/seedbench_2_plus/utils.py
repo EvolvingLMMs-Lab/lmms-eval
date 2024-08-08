@@ -1,7 +1,9 @@
 import json
 
+
 def seed_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
+
 
 def parse_choice_img(choice: str, img_token: str):
     if "jpg" in choice or "png" in choice:
@@ -16,7 +18,7 @@ def seed_doc_to_text(doc, model_specific_kwargs=None):
     question += f"B. {parse_choice_img(doc['choice_B'], model_specific_kwargs['img_token'])}\n"
     question += f"C. {parse_choice_img(doc['choice_C'], model_specific_kwargs['img_token'])}\n"
     question += f"D. {parse_choice_img(doc['choice_D'], model_specific_kwargs['img_token'])}"
-    
+
     return f"{question}\n{model_specific_kwargs['post_prompt']}"
 
 
