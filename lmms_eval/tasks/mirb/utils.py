@@ -1,4 +1,3 @@
-
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
 import re
@@ -6,32 +5,37 @@ import numpy as np
 
 
 import logging
+
 eval_logger = logging.getLogger("lmms-eval")
 
+
 def get_task_instruction(dataset):
-    if dataset in ['analogy', 'attribute', 'plot_code', 'visual_chain', 'sightseeing']:
-        instr = 'Answer with a single word.'
-    elif dataset in ['codeu', 'food', 'image_jigsaw']:
-        instr = 'Answer with the option symbol.'
-    elif dataset in ['arxiv']:
-        instr = 'Answer with the paper title.'
-    elif dataset in ['count']:
-        instr = 'Answer with a single number.'
-    elif dataset in ['3d_scene']:
-        instr = 'The following images are different views of the same 3D scene. Answer with a single number.'
-    
+    if dataset in ["analogy", "attribute", "plot_code", "visual_chain", "sightseeing"]:
+        instr = "Answer with a single word."
+    elif dataset in ["codeu", "food", "image_jigsaw"]:
+        instr = "Answer with the option symbol."
+    elif dataset in ["arxiv"]:
+        instr = "Answer with the paper title."
+    elif dataset in ["count"]:
+        instr = "Answer with a single number."
+    elif dataset in ["3d_scene"]:
+        instr = "The following images are different views of the same 3D scene. Answer with a single number."
+
     return instr
 
+
 def mirb_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    subset, question = doc['subset'], doc["questions"]
+    subset, question = doc["subset"], doc["questions"]
     task_instruction = get_task_instruction(subset)
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
     pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
     return f"{pre_prompt}{task_instruction}{question}{post_prompt}"
 
+
 def mirb_doc_to_visual(doc):
     image_list = [image.convert("RGB") for image in doc["image_list"]]
-    return image_list 
+    return image_list
+
 
 def mirb_doc_to_target(doc):
     return doc["answers"]
@@ -60,6 +64,7 @@ def extract_numbers(string):
     all_numbers = numbers_with_commas + numbers_scientific + numbers_simple
     return all_numbers
 
+
 def check_is_number(string):
     """
     Check if the given string a number.
@@ -71,6 +76,7 @@ def check_is_number(string):
     except ValueError:
         # check if there's comma inside
         return False
+
 
 def normalize_str(string):
     """
@@ -96,6 +102,7 @@ def normalize_str(string):
         if len(string) == 1:
             return [" " + string, string + " "]  # avoid trivial matches
         return [string]
+
 
 def parse_multi_choice_response(response):
     # here, we assume we have a list, in which each element is
@@ -185,16 +192,18 @@ def parse_open_response(response):
 
     return pred_list
 
+
 def mirb_process_results(doc, results):
     pred = results[0]
     subset, answer = doc["subset"], doc["answers"]
-    if answer in ['A', 'B', 'C', 'D', 'E']: # MCQ tasks
+    if answer in ["A", "B", "C", "D", "E"]:  # MCQ tasks
         parsed_pred = parse_multi_choice_response(pred)
     else:
         parsed_pred = parse_open_response(pred)
     task_type = doc["subset"]
     data_dict = {"question_id": doc["question_id"], "subset": task_type, "pred_answer": parsed_pred, "answers": doc["answers"]}
     return {f"mirb_score": data_dict}
+
 
 def eval_multi_choice(gold_i, pred_i):
     """
@@ -242,6 +251,7 @@ def eval_open(gold_i, pred_i):
                 break
     return correct
 
+
 def mirb_aggregation(results):
     task_num = {}
     score = 0
@@ -251,7 +261,7 @@ def mirb_aggregation(results):
             task_score[result["subset"]] = 0
             task_num[result["subset"]] = 0
 
-        if result['answers'] in ['A', 'B', 'C', 'D', 'E']: # MCQ tasks
+        if result["answers"] in ["A", "B", "C", "D", "E"]:  # MCQ tasks
             correct = eval_multi_choice(result["answers"], result["pred_answer"])
             task_score[result["subset"]] += correct
             score += correct
@@ -262,7 +272,7 @@ def mirb_aggregation(results):
         task_num[result["subset"]] += 1
     avg_score = score / len(results)
 
-    task_score = {k : v / task_num[k] for k,v in task_score.items()}
+    task_score = {k: v / task_num[k] for k, v in task_score.items()}
 
     print("Performances for different subsets:")
     print("=" * 50)
@@ -271,12 +281,7 @@ def mirb_aggregation(results):
     print("=" * 50)
 
     # print across evaluation dimension
-    groups = {
-        "Knowledge": ["food", "sightseeing"],
-        "Reasoning": ["codeu", "plot_code", "analogy", "3d_scene"],
-        "Perception": ["image_jigsaw", "count", "attribute"],
-        "Multi-Hop": ["visual_chain", "arxiv"]
-    }
+    groups = {"Knowledge": ["food", "sightseeing"], "Reasoning": ["codeu", "plot_code", "analogy", "3d_scene"], "Perception": ["image_jigsaw", "count", "attribute"], "Multi-Hop": ["visual_chain", "arxiv"]}
 
     # Compute the averages for each group
     averages_dict = compute_averages_from_task_scores(task_score, groups)
@@ -287,7 +292,7 @@ def mirb_aggregation(results):
     for group, score in averages_dict.items():
         print(f"{group} : {score:.2f}")
     print("=" * 50)
-    
+
     return avg_score
 
 

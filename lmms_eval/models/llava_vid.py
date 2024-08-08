@@ -28,11 +28,13 @@ except ImportError:
 
 try:
     from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+
     AutoConfig.register("llava_qwen", LlavaQwenConfig)
 except ImportError:
     eval_logger.debug("No Qwen for llava vid")
 
 from llavavid.model.language_model.llava_llama import LlavaConfig
+
 AutoConfig.register("llava_llama", LlavaConfig)
 
 
