@@ -197,7 +197,6 @@ class GPT4V(lmms):
                 try:
                     response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
                     response_data = response.json()
-
                     response_text = response_data["choices"][0]["message"]["content"].strip()
                     break  # If successful, break out of the loop
 
@@ -208,12 +207,14 @@ class GPT4V(lmms):
                         error_msg = ""
 
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
-                    if attempt <= 5:
+                    if attempt <= 3:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty string
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
                         response_text = ""
+
             res.append(response_text)
+        
             pbar.update(1)
 
             if self.continual_mode is True:  # Cache the response
