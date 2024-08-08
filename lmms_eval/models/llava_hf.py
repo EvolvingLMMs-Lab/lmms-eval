@@ -320,7 +320,7 @@ class LlavaHf(lmms):
                     pad_token_id=self.tokenizer.eos_token_id,
                     eos_token_id=self.specified_eot_token_id,
                 )
-                cont = cont[:, inputs["input_ids"].shape[-1]:]
+                cont = cont[:, inputs["input_ids"].shape[-1] :]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
