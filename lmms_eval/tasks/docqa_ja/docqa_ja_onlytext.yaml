@@ -6,7 +6,7 @@ doc_to_visual: !function utils.docvqa_doc_to_visual
 doc_to_text: !function utils.docvqa_doc_to_textonly
 doc_to_target: "original_answer"
 generation_kwargs:
-  max_new_tokens: 32
+  max_new_tokens: 256
   temperature: 0
   do_sample: False
 model_specific_prompt_kwargs:
