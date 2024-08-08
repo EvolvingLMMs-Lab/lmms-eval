@@ -69,7 +69,7 @@ You can check the [environment install script](miscs/repr_scripts.sh) and [torch
 
 </details>
 
-If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0 ` to let pycocoeval api to work. If you don't have it, you can install by using conda
+If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0` to let pycocoeval api to work. If you don't have it, you can install by using conda
 ```
 conda install openjdk=8
 ```
