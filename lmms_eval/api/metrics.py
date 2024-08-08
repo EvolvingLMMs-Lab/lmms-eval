@@ -250,7 +250,7 @@ def gpt4judge(references, predictions, query):  # This is a passthrough function
         )
         for attempt in range(5):
             try:
-                completion = client.chat.completions.create(model="gpt-4o", messages=messages)
+                completion = client.chat.completions.create(model="gpt-4o-2024-08-06", messages=messages)
                 response = completion.choices[0].message.content
                 break  # If successful, break out of the loop
 

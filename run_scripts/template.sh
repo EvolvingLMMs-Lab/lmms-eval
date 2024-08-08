@@ -10,7 +10,11 @@ if [ -z "$3" ]; then
 
 else
     echo "Pretrained Checkpoint: $3"
-    model_args+=",pretrained=$3"
+    if [[ $model_name == *"gpt"* ]]; then
+        model_args+=",model_version=$3"
+    else
+        model_args+=",pretrained=$3"
+    fi
     logger_name="$(basename $3)/${task_name}"
     mkdir eval_logs/$(basename $3)
     mkdir logs/$(basename $3)
@@ -34,6 +38,13 @@ fi
 if [[ -z "${AZURE_ENDPOINT}" ]]; then 
     echo "Error: AZURE_ENDPOINT environment variable is not set." \
     exit 1      
+fi
+
+
+if [ -z "$4" ]; then
+    echo "No additional model arguments"
+else    
+    model_args+=",$4"
 fi
 
 if [[ $model_name == *"gpt"* || $model_name == *"claude"* ]]; then
