@@ -27,10 +27,10 @@ try:
     from mantis.models.mllava import LlavaForConditionalGeneration, MLlavaProcessor
     from mantis.models.mfuyu import MFuyuForCausalLM, MFuyuProcessor
     from mantis.models.conversation import conv_mllava_v1 as default_conv, conv_templates
-    
+
 except Exception as e:
     eval_logger.debug("Mantis is not installed. Please install Mantis to use this model.\nError: %s" % e)
-    
+
 try:
     from transformers import AutoModelForVision2Seq, AutoProcessor
 except Exception as e:
@@ -42,12 +42,13 @@ except Exception as e:
 
 try:
     import flash_attn
-    
+
     best_fit_attn_implementation = "flash_attention_2"
 except ImportError:
     best_fit_attn_implementation = "eager"
 
 DEFAULT_IMAGE_TOKEN = "<image>"
+
 
 @register_model("mantis")
 class Mantis(lmms):
@@ -84,27 +85,27 @@ class Mantis(lmms):
         else:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
-        
+
         self._is_idefics = "idefics" in pretrained.lower()
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
-        
+
         # Here we load the "non-idefics" Mantis model.
         if not self._is_idefics:
-            if 'fuyu' in pretrained.lower():
+            if "fuyu" in pretrained.lower():
                 self._processor = MFuyuProcessor.from_pretrained(pretrained)
                 self._model = MFuyuForCausalLM.from_pretrained(pretrained, device_map=self.device_map, attn_implementation=attn_implementation, torch_dtype=dtype)
             else:
                 self._processor = MLlavaProcessor.from_pretrained(pretrained)
                 self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, device_map=self.device_map, attn_implementation=attn_implementation, torch_dtype=dtype)
-            
+
         else:
             self._processor = AutoProcessor.from_pretrained(pretrained)
             self._model = AutoModelForVision2Seq.from_pretrained(pretrained, device_map=self.device_map, torch_dtype=dtype)
         eval_logger.info(f"Using {type(self._model)} to instantiate the Mantis model.")
-        
+
         self._tokenizer = self._processor.tokenizer
-        
+
         self._config = self._model.config
         self.model.eval()
         self.model.tie_weights()
@@ -112,7 +113,7 @@ class Mantis(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
         self.truncate_context = truncate_context
-        
+
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -222,7 +223,7 @@ class Mantis(lmms):
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
-    
+
         def _collate(x):
             # the negative sign on len(toks) sorts descending - this has a few advantages:
             # - time estimates will always be over not underestimates, which is more useful for planning
@@ -243,11 +244,11 @@ class Mantis(lmms):
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visuals, doc_id, tasks, splits = zip(*chunk)
             visuals = [doc_to_visual(self.task_dict[task][split][ids]) for ids, task, split, doc_to_visual in zip(doc_id, tasks, splits, doc_to_visuals)]
-        
+
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
-            
+
             until = gen_kwargs.pop("until", None)
             image_aspect_ratio = gen_kwargs.pop("image_aspect_ratio", None)
 
@@ -261,7 +262,7 @@ class Mantis(lmms):
             prompts = []
             for visual, context in zip(visuals, contexts):
                 if self._is_idefics:
-                    # Follow the idefics implementation: 
+                    # Follow the idefics implementation:
                     content = []
                     if DEFAULT_IMAGE_TOKEN not in context:
                         for _ in visual:
@@ -274,17 +275,14 @@ class Mantis(lmms):
                     # We follow the Mantis code base: https://github.com/TIGER-AI-Lab/Mantis/blob/main/mantis/models/mllava/utils.py#L33 to make sure they are consistent
                     # Users don't need to define chat template as it is done here
                     if "llama-3" in self._model.language_model.name_or_path.lower():
-                        conv = conv_templates['llama_3']
-                        terminators = [
-                            self._processor.tokenizer.eos_token_id,
-                            self._processor.tokenizer.convert_tokens_to_ids("<|eot_id|>")
-                        ]
+                        conv = conv_templates["llama_3"]
+                        terminators = [self._processor.tokenizer.eos_token_id, self._processor.tokenizer.convert_tokens_to_ids("<|eot_id|>")]
                     else:
                         conv = default_conv
                         terminators = None
-                        
+
                     gen_kwargs["eos_token_id"] = terminators
-                    
+
                     conv = conv.copy()
                     conv.append_message(conv.roles[0], context)
                     conv.append_message(conv.roles[1], "")
@@ -292,9 +290,9 @@ class Mantis(lmms):
                     prompts.append(prompt)
             inputs = self._processor(images=visuals, text=prompts, return_tensors="pt", truncation=True)
             if "image_patches" in inputs.keys():
-                inputs["image_patches"] = inputs["image_patches"][0] # FIXME: Fuyu model would return a list instead of a pytorch tensor. This weird behavior needs fixing.
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}    
-            
+                inputs["image_patches"] = inputs["image_patches"][0]  # FIXME: Fuyu model would return a list instead of a pytorch tensor. This weird behavior needs fixing.
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
             output_ids = self.model.generate(**inputs, **gen_kwargs)
             for output_id, input_id in zip(output_ids, inputs["input_ids"]):
                 generated_id = output_id[len(input_id) :]

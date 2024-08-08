@@ -49,7 +49,7 @@ cd lmms-eval
 pip install -e .
 ```
 
-If you wanted to test llava, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
+If you want to test LLaVA, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
 ```bash
 # for llava 1.5
 # git clone https://github.com/haotian-liu/LLaVA
@@ -69,7 +69,7 @@ You can check the [environment install script](miscs/repr_scripts.sh) and [torch
 
 </details>
 
-If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0 ` to let pycocoeval api to work. If you don't have it, you can install by using conda
+If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0` to let pycocoeval api to work. If you don't have it, you can install by using conda
 ```
 conda install openjdk=8
 ```
@@ -93,6 +93,11 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 </details>
 <br>
 
+If you want to test [VILA](https://github.com/NVlabs/VILA), you should install the following dependencies:
+
+```bash
+pip install s2wrapper@git+https://github.com/bfshi/scaling_on_scales
+```
 
 Our Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
 
