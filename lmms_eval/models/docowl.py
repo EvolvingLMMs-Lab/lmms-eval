@@ -7,12 +7,15 @@ from tqdm import tqdm
 import requests as url_requests
 import time
 import logging
+import sys
+sys.path.insert(0, '/nvmedata/jonathanl/mPLUG-DocOwl/DocOwl1.5/')
 from docowl_infer import DocOwlInfer
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval import utils
 from typing import List, Optional, Union, Tuple
+from accelerate import Accelerator, DistributedType
 import torch
 from tqdm import tqdm
 
@@ -29,7 +32,9 @@ class DocOwl(lmms):
     ) -> None:
         super().__init__()
         model_path = "mPLUG/DocOwl1.5-stage1"
+        accelerator = Accelerator()
         self.docowl = DocOwlInfer(ckpt_path=model_path, anchors="grid_9", add_global_img=False)
+        self.accelerator = accelerator
 
     def loglikelihood(self, requests: list[Instance]) -> list[tuple[float, bool]]:
         raise NotImplementedError

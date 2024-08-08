@@ -100,11 +100,13 @@ class Idefics2(lmms):
             eval_logger.info(f"Using {accelerator.num_processes} devices with pipeline parallelism")
             self._rank = 0
             self._word_size = 1
+            self.accelerator = accelerator
         else:
             eval_logger.info(f"Using single device: {self._device}")
             self.model.to(self._device)
             self._rank = 0
             self._word_size = 1
+            self.accelerator = accelerator
 
     @property
     def config(self):

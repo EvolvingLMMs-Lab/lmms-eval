@@ -1,7 +1,7 @@
 dataset_path: EtashGuha/JapaneseDocQA
-task: "docvqa_ja"
+task: "docvqa_ja_val"
 output_type: generate_until
-test_split: test
+test_split: val
 doc_to_visual: !function utils.docvqa_doc_to_visual
 doc_to_text: !function utils.docvqa_doc_to_text
 doc_to_target: "original_answer"
