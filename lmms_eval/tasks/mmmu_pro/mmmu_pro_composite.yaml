@@ -1,0 +1,17 @@
+task: "mmmu_pro_composite"
+dataset_path: MMMU/MMMU_Pro
+dataset_name: composite
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mmmu_pro_doc_to_visual
+doc_to_text: "Answer the series of questions individually with the option letters from the given choices in the image. The questions are ordered from top to bottom and left to right."
+doc_to_target: "{{answers}}"
+# The return value of process_results will be used by metrics
+process_results: !function utils.mmmu_pro_composite_process_results
+
+metric_list:
+  - metric: mmmu_acc
+    aggregation: !function utils.mmmu_pro_aggregate_results
+    higher_is_better: true
+
+include: _default_template_yaml

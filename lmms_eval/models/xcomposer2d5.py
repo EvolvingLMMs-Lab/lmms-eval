@@ -40,7 +40,6 @@ class XComposer2D5(lmms):
         if not os.path.exists(self.tmp_folder):
             os.makedirs(self.tmp_folder)
         eval_logger.info(f"Using temporary folder: {self.tmp_folder}")
-        
 
         batch_size = int(batch_size)
         assert batch_size == 1, f"Batch size should be 1 for InternVL2, but got {batch_size}."
@@ -57,7 +56,7 @@ class XComposer2D5(lmms):
         else:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
-        
+
         self.path = pretrained
         self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, trust_remote_code=True, device_map=self.device_map).half().eval()
         self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
@@ -130,7 +129,6 @@ class XComposer2D5(lmms):
     def world_size(self):
         return self._world_size
 
-
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -168,7 +166,7 @@ class XComposer2D5(lmms):
                 gen_kwargs["num_beams"] = 1
 
             try:
-                with torch.autocast(device_type='cuda', dtype=torch.float16):
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
                     response, his = self.model.chat(self.tokenizer, contexts, image, do_sample=False, num_beams=1, use_meta=True, max_new_tokens=gen_kwargs["max_new_tokens"])
             except Exception as e:
                 eval_logger.error(f"Error : {e}")
