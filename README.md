@@ -6,7 +6,7 @@
 
 > Accelerating the development of large multimodal models (LMMs) with `lmms-eval`
 
-🏠 [LMMs-Lab Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/lmms-eval-0.1/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
+🏠 [LMMs-Lab Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.framer.ai/blog/lmms-eval-blog) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
 ---
 
