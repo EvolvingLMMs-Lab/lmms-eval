@@ -35,6 +35,10 @@ if __name__ == '__main__':
 
         reference_answers = [log['target']]
         predictions = log['filtered_resps']
+        question_key = 'question'
+        if question_key not in log['doc']:
+            question_key = 'Question'
+            assert question_key in log['doc'], f'"question" or "Question" not found in log keys: {list(log["doc"].keys())}'
         question_text = log['doc']['question']
 
         assert len(predictions) == 1, f'Found a response number of predictions != 1 at doc ID = {log["doc_id"]}'
