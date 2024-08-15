@@ -313,7 +313,7 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
             )
             return messages
         
-        tokenizer = AutoTokenizer.from_pretrained("/import/snvm-sc-podscratch4/jonathanl/generic_checkpoints/llama_3/Meta-Llama-3-8B")
+        tokenizer = AutoTokenizer.from_pretrained("/import/snvm-sc-podscratch4/jonathanl/generic_checkpoints/llama_3/Meta-Llama-3-8B-Instruct")
         while True:
             messages = create_messages(query, gt_answer, det_answer)
             tokenized_messages = tokenizer.apply_chat_template(messages)
