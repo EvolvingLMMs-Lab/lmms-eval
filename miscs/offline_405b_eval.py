@@ -58,14 +58,14 @@ if __name__ == '__main__':
 
     completions_handle.close()
     total_correct = sum(correct) / len(correct)
-    gpt4judge_json = {
+    sambajudge_json = {
         'sambajudge': total_correct,
         'sambajudge_stderr': mean_stderr(correct),
         'logs': samba_judge_logs,
     }
-    with open(gpt4_results_path, 'w') as f:
-        json.dump(gpt4judge_json, f)
+    with open(sambajudge_results_path, 'w') as f:
+        json.dump(sambajudge_json, f)
     print('Done!')
     print(f'Original results path = {str(result_json_path.absolute())}')
-    print(f'gpt4judge: {total_correct}')
-    print(f'gpt4judge_stderr: {mean_stderr(correct)}')
+    print(f'sambajudge: {total_correct}')
+    print(f'sambajudge_stderr: {mean_stderr(correct)}')
