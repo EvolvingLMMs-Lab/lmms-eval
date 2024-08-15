@@ -30,6 +30,7 @@ if __name__ == '__main__':
 
     gpt4_judge_logs = []
     correct = []
+    skipped = []
 
     logs = result_json['logs']
     for log in tqdm(logs, dynamic_ncols=True, desc=f'Judging answers', total=len(logs)):
@@ -50,6 +51,7 @@ if __name__ == '__main__':
             if e.code == 'content_filter':
                 doc_id = log["doc_id"]
                 print(f'Ran into a content filter error at document ID {doc_id}, skipping!\n***question {doc_id}***:\n{query}\n***ground truth answer {doc_id}***:\n{gt_answer}\n***model response {doc_id}***:\n{det_answer}')
+                skipped.append(doc_id)
                 continue
                 
         correct_or_not = gpt4_judge_response_dict['gpt4judge']
@@ -70,6 +72,8 @@ if __name__ == '__main__':
         'gpt4judge': total_correct,
         'gpt4judge_stderr': mean_stderr(correct),
         'logs': gpt4_judge_logs,
+        'content_filtered': len(skipped),
+        'content_filtered_ids': skipped,
     }
     with open(gpt4_results_path, 'w') as f:
         json.dump(gpt4judge_json, f)
@@ -77,3 +81,5 @@ if __name__ == '__main__':
     print(f'Original results path = {str(result_json_path.absolute())}')
     print(f'gpt4judge: {total_correct}')
     print(f'gpt4judge_stderr: {mean_stderr(correct)}')
+    print(f'Number of content filtered documents: {len(skipped)}')
+    print(f'Content filtered documents: {skipped}')
