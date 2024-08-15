@@ -260,7 +260,7 @@ def gpt4judge(references, predictions, query):  # This is a passthrough function
                 except:
                     error_msg = ""
 
-                eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
+                eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nError message: {error_msg}")
                 if attempt <= 3:
                     time.sleep(NUM_SECONDS_TO_SLEEP)
                 else:  # If this was the last attempt, log and return empty string
