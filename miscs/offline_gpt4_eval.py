@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import jsonlines
+import openai
 from tqdm import tqdm
 from pathlib import Path
 
@@ -43,7 +44,14 @@ if __name__ == '__main__':
 
         assert len(predictions) == 1, f'Found a response number of predictions != 1 at doc ID = {log["doc_id"]}'
 
-        gpt4_judge_response_dict = gpt4judge(reference_answers, predictions, question_text)
+        try:
+            gpt4_judge_response_dict = gpt4judge(reference_answers, predictions, question_text)
+        except openai.BadRequestError as e:
+            if e.code == 'content_filter':
+                doc_id = log["doc_id"]
+                print(f'Ran into a content filter error at document ID {doc_id}, skipping!\n***question {doc_id}***:\n{query}\n***ground truth answer {doc_id}***:\n{gt_answer}\n***model response {doc_id}***:\n{det_answer}')
+                continue
+                
         correct_or_not = gpt4_judge_response_dict['gpt4judge']
         responses_this_log = gpt4_judge_response_dict['gpt4_for_log']
 
