@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import jsonlines
+import openai
 from tqdm import tqdm
 from pathlib import Path
 
@@ -29,6 +30,7 @@ if __name__ == '__main__':
 
     gpt4_judge_logs = []
     correct = []
+    skipped = []
 
     logs = result_json['logs']
     for log in tqdm(logs, dynamic_ncols=True, desc=f'Judging answers', total=len(logs)):
@@ -43,7 +45,15 @@ if __name__ == '__main__':
 
         assert len(predictions) == 1, f'Found a response number of predictions != 1 at doc ID = {log["doc_id"]}'
 
-        gpt4_judge_response_dict = gpt4judge(reference_answers, predictions, question_text)
+        try:
+            gpt4_judge_response_dict = gpt4judge(reference_answers, predictions, question_text)
+        except openai.BadRequestError as e:
+            if e.code == 'content_filter':
+                doc_id = log["doc_id"]
+                print(f'Ran into a content filter error at document ID {doc_id}, skipping!\n***question {doc_id}***:\n{question_text}\n***ground truth answers {doc_id}***:\n{reference_answers}\n***model response {doc_id}***:\n{predictions}')
+                skipped.append(doc_id)
+                continue
+                
         correct_or_not = gpt4_judge_response_dict['gpt4judge']
         responses_this_log = gpt4_judge_response_dict['gpt4_for_log']
 
@@ -62,6 +72,8 @@ if __name__ == '__main__':
         'gpt4judge': total_correct,
         'gpt4judge_stderr': mean_stderr(correct),
         'logs': gpt4_judge_logs,
+        'content_filtered': len(skipped),
+        'content_filtered_ids': skipped,
     }
     with open(gpt4_results_path, 'w') as f:
         json.dump(gpt4judge_json, f)
@@ -69,3 +81,5 @@ if __name__ == '__main__':
     print(f'Original results path = {str(result_json_path.absolute())}')
     print(f'gpt4judge: {total_correct}')
     print(f'gpt4judge_stderr: {mean_stderr(correct)}')
+    print(f'Number of content filtered documents: {len(skipped)}')
+    print(f'Content filtered document IDs: {skipped}')

@@ -222,7 +222,7 @@ def anls(
 def gpt4judge(references, predictions, query):  # This is a passthrough function
     """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
     values = []
-    from openai import AzureOpenAI
+    from openai import AzureOpenAI, BadRequestError
 
     NUM_SECONDS_TO_SLEEP = 30
     responses = []
@@ -260,11 +260,14 @@ def gpt4judge(references, predictions, query):  # This is a passthrough function
                 except:
                     error_msg = ""
 
-                eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
+                eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nError message: {error_msg}")
                 if attempt <= 3:
                     time.sleep(NUM_SECONDS_TO_SLEEP)
                 else:  # If this was the last attempt, log and return empty string
-                    eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                    if isinstance(e, BadRequestError) and e.code == 'content_filter':
+                        eval_logger.error(f'Ran into a content filter error.\n***Original question***:\n{query}\n***Original ground truth answer***:\n{gt_answer}\n***Original model response***:\n{det_answer}')
+                        raise e
+                    eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {str(error_msg)}")
                     response = ""
 
         score = int(extract_number_from_brackets(response))
