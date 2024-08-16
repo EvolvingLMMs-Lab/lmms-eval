@@ -82,4 +82,4 @@ if __name__ == '__main__':
     print(f'gpt4judge: {total_correct}')
     print(f'gpt4judge_stderr: {mean_stderr(correct)}')
     print(f'Number of content filtered documents: {len(skipped)}')
-    print(f'Content filtered documents: {skipped}')
+    print(f'Content filtered document IDs: {skipped}')
