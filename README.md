@@ -4,6 +4,11 @@
 
 # The Evaluation Suite of Large Multimodal Models 
 
+[![PyPI](https://img.shields.io/pypi/v/lmms-eval)](https://pypi.org/project/lmms-eval)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/lmms-eval)
+[![issue resolution](https://img.shields.io/github/issues-closed-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
+[![open issues](https://img.shields.io/github/issues-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
+
 > Accelerating the development of large multimodal models (LMMs) with `lmms-eval`
 
 🏠 [LMMs-Lab Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.framer.ai/blog/lmms-eval-blog) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
