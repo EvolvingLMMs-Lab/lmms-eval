@@ -29,7 +29,7 @@ This mode supports a number of command-line arguments, the details of which can 
 ```bash
 git clone https://github.com/EvolvingLMMs-Lab/sglang.git
 cd sglang;
-git checkout dev/onevision;
+git checkout dev/onevision_local;
 pip install -e "python[srt]"
 ```
 
