@@ -1,15 +1,15 @@
 import math
+import random
 from collections.abc import Iterable
 
+import evaluate
 import numpy as np
 import sacrebleu
 import sklearn.metrics
-import random
-import evaluate
 import torch
-
-from lmms_eval.api.registry import register_metric, register_aggregation
 from loguru import logger as eval_logger
+
+from lmms_eval.api.registry import register_aggregation, register_metric
 
 
 # Register Aggregations First

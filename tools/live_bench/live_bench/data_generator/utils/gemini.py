@@ -1,8 +1,9 @@
-import google.generativeai as genai
-from time import sleep
-from live_bench.data_generator.response import Response
 import logging
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from time import sleep
+
+import google.generativeai as genai
+from google.generativeai.types import HarmBlockThreshold, HarmCategory
+from live_bench.data_generator.response import Response
 
 logger = logging.getLogger("lmms-eval")
 

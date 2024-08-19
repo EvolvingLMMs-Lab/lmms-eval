@@ -1,12 +1,12 @@
 import os
 import zipfile
+
 import requests
+import undetected_chromedriver as uc
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
-from selenium.webdriver.chrome.options import Options
-
-import undetected_chromedriver as uc
 
 
 def load_driver(

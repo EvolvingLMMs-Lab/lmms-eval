@@ -1,14 +1,15 @@
-import requests
-import time
 import ast
+import datetime
+import json
 import os
 import sys
-import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-import json
-
-import yaml
+import time
 from pathlib import Path
+
+import requests
+import yaml
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()

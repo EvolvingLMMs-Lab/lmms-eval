@@ -1,16 +1,15 @@
-import re
-import os
-import json
-import yaml
-import pathlib
-
 import datetime
+import json
+import os
+import pathlib
+import re
 import statistics
 
-from lmms_eval.tasks._task_utils.vqa_eval_metric import EvalAIAnswerProcessor
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
+import yaml
 from loguru import logger as eval_logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.vqa_eval_metric import EvalAIAnswerProcessor
 
 
 def textvqa_doc_to_visual(doc):

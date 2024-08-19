@@ -1,6 +1,6 @@
 import av
-from av.codec.context import CodecContext
 import numpy as np
+from av.codec.context import CodecContext
 
 
 # This one is faster

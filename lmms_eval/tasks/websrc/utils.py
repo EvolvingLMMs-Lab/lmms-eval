@@ -1,16 +1,17 @@
-from collections import defaultdict
-import re
 import ast
 import base64
 import io
-import random
-import numpy as np
-import os
 import json
+import os
+import random
+import re
+from collections import defaultdict
+
+import numpy as np
+from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-from loguru import logger as eval_logger
 
 OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 

@@ -1,25 +1,21 @@
 import json
-import re
-from collections import Counter, defaultdict
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import os
 import random
-import os
-
-import os
-import decord
-from decord import VideoReader, cpu
-import numpy as np
-from PIL import Image
-import torch
-
-from pathlib import Path
-import yaml
-import sys
-from typing import List, Dict, Optional, Union
 import re
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
-import json
+import decord
+import numpy as np
+import torch
+import yaml
+from decord import VideoReader, cpu
 from loguru import logger as eval_logger
+from PIL import Image
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 
 def timestamp_to_seconds(timestamp):

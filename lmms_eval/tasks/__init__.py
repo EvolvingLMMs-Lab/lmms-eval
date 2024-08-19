@@ -1,20 +1,15 @@
-import os, sys
-from typing import List, Union, Dict
-
-from lmms_eval import utils
-
-# from lmms_eval import prompts
-from lmms_eval.api.task import TaskConfig, Task, ConfigurableTask
-from lmms_eval.api.registry import (
-    register_task,
-    register_group,
-    TASK_REGISTRY,
-    GROUP_REGISTRY,
-    ALL_TASKS,
-    TASK_INITIALIZED,
-)
+import os
+import sys
+from typing import Dict, List, Union
 
 from loguru import logger
+
+from lmms_eval import utils
+from lmms_eval.api.registry import (ALL_TASKS, GROUP_REGISTRY,
+                                    TASK_INITIALIZED, TASK_REGISTRY,
+                                    register_group, register_task)
+# from lmms_eval import prompts
+from lmms_eval.api.task import ConfigurableTask, Task, TaskConfig
 
 eval_logger = logger
 

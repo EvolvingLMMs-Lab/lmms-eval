@@ -1,15 +1,15 @@
 import json
 import os
-import requests
+import time
+from copy import deepcopy
+from pathlib import Path
+
 import numpy as np
 import openai
-from openai import OpenAI
-import time
+import requests
 import yaml
-from pathlib import Path
-from copy import deepcopy
-
 from loguru import logger as eval_logger
+from openai import OpenAI
 
 NUM_SECONDS_TO_SLEEP = 5
 

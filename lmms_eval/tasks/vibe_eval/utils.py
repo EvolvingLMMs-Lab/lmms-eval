@@ -1,12 +1,12 @@
-from enum import Enum
+import os
+import re
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Optional, List
+from enum import Enum
 from pathlib import Path
+from typing import List, Optional
 
 import yaml
-import re
-import os
-from copy import deepcopy
 
 try:
     from reka import ChatMessage

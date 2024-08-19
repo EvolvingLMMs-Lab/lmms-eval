@@ -1,16 +1,17 @@
-import re
-import os
-import sys
 import datetime
+import json
+import os
+import re
+import sys
+import time
+from pathlib import Path
+
+import requests
+import yaml
+
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.tasks.worldqa.worldqa_mc_evaluator import WorldQA_MC_Evaluator
-import json
-
-import yaml
-from pathlib import Path
-import requests
-import time
 
 NUM_SECONDS_TO_SLEEP = 5
 

@@ -1,8 +1,7 @@
-from collections import defaultdict
 import os
+from collections import defaultdict
+
 from anls import anls_score
-
-
 from loguru import logger as eval_logger
 
 dir_name = os.path.dirname(os.path.abspath(__file__))

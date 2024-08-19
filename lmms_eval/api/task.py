@@ -1,44 +1,37 @@
 import abc
 import ast
+import inspect
 import itertools
 import json
-
 import os
-import re
 import random
+import re
 import shutil
-import inspect
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from glob import glob
 from typing import Any, List, Union
 
 import datasets
 import numpy as np
-from PIL import ImageFile
+from accelerate import Accelerator
 from datasets import DownloadConfig, Image, Sequence
 from huggingface_hub import snapshot_download
-from tenacity import retry, stop_after_attempt, wait_fixed, stop_after_delay
+from loguru import logger as eval_logger
+from PIL import ImageFile
+from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
 
-from accelerate import Accelerator
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
-from lmms_eval.api.registry import (
-    AGGREGATION_REGISTRY,
-    DEFAULT_METRIC_REGISTRY,
-    METRIC_REGISTRY,
-    OUTPUT_TYPE_REGISTRY,
-    get_aggregation,
-    get_metric,
-    get_metric_aggregation,
-    is_higher_better,
-)
+from lmms_eval.api.registry import (AGGREGATION_REGISTRY,
+                                    DEFAULT_METRIC_REGISTRY, METRIC_REGISTRY,
+                                    OUTPUT_TYPE_REGISTRY, get_aggregation,
+                                    get_metric, get_metric_aggregation,
+                                    is_higher_better)
 from lmms_eval.filters import build_filter_ensemble
-
-from loguru import logger as eval_logger
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
 # Include this inside code block to avoid error
@@ -791,8 +784,8 @@ class ConfigurableTask(Task):
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
 
                     def unzip_video_data(zip_file):
-                        import zipfile
                         import os
+                        import zipfile
 
                         with zipfile.ZipFile(zip_file, "r") as zip_ref:
                             for file_info in zip_ref.infolist():

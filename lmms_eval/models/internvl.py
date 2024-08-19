@@ -1,25 +1,25 @@
+import math
 import os
+import subprocess
+from datetime import timedelta
+from pathlib import Path
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import requests
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
-import numpy as np
-import math
-from datetime import timedelta
-from transformers import AutoConfig
 from huggingface_hub import snapshot_download
-import requests
+from PIL import Image
+from tqdm import tqdm
+from transformers import AutoConfig
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
-from PIL import Image
-
-import subprocess
-from pathlib import Path
 
 wd = Path(__file__).parent.parent.parent.resolve()
 import sys
@@ -31,10 +31,13 @@ if not hasattr(eval_logger, "internvl_warning_logged"):
     eval_logger.internvl_warning_logged = False
 
 try:
-    from internvl.model.internlm2.modeling_internlm2 import InternLM2ForCausalLM
-    from internvl.model.internvl_chat.configuration_internvl_chat import InternVLChatConfig
-    from internvl.model.internvl_chat.modeling_intern_vit import InternVisionModel
+    from internvl.model.internlm2.modeling_internlm2 import \
+        InternLM2ForCausalLM
     from internvl.model.internvl_chat import InternVLChatModel
+    from internvl.model.internvl_chat.configuration_internvl_chat import \
+        InternVLChatConfig
+    from internvl.model.internvl_chat.modeling_intern_vit import \
+        InternVisionModel
     from internvl.train.dataset import build_transform, dynamic_preprocess
 except ImportError:
     eval_logger.debug("InternVL is not installed. Please install InternVL to use this model.")
@@ -42,20 +45,19 @@ except ImportError:
         eval_logger.debug("InternVL is not installed. Please install InternVL to use this model.")
         eval_logger.internvl_warning_logged = True
 
+import re
 import warnings
 from typing import Any, List, Optional, Tuple, Union
 
 import torch.utils.checkpoint
-
+from huggingface_hub import snapshot_download
 from peft import LoraConfig, get_peft_model
 from torch import nn
 from torch.nn import CrossEntropyLoss
-from transformers import AutoModel, GenerationConfig, LlamaForCausalLM, LlamaTokenizer
+from transformers import (AutoModel, AutoTokenizer, GenerationConfig,
+                          LlamaForCausalLM, LlamaTokenizer)
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
-from transformers import AutoTokenizer
-import re
-from huggingface_hub import snapshot_download
 
 
 @register_model("internvl")

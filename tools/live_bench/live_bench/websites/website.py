@@ -1,8 +1,8 @@
-import time
 import os
+import time
+from abc import ABC, abstractmethod
 
 from webdriver_manager.core.driver import Driver
-from abc import ABC, abstractmethod
 
 
 class Website(ABC):

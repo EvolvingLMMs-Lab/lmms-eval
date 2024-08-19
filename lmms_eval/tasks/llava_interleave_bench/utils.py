@@ -1,15 +1,15 @@
+import json
 import os
 import re
-import requests
 import time
-import json
-
 from collections import defaultdict
-from rouge import Rouge
-import yaml
 from pathlib import Path
+
+import requests
+import yaml
 from loguru import logger as eval_logger
 from PIL import Image
+from rouge import Rouge
 
 spot_the_diff = ["Spot-the-Diff", "Birds-to-Words", "CLEVR-Change"]
 image_edit_instruct = ["IEdit", "HQ-Edit", "MagicBrush"]

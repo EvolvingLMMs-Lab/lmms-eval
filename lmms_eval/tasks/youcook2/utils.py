@@ -1,12 +1,11 @@
 import os
-import yaml
-
-import string
 import random
-import numpy as np
-
+import string
 from pathlib import Path
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
+
+import numpy as np
+import yaml
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
 

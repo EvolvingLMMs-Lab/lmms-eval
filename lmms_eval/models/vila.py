@@ -1,22 +1,20 @@
 import argparse
-import torch
-import os
 import json
-from tqdm import tqdm
 import logging
-from typing import List, Optional, Union, Tuple
-from PIL import Image
 import math
+import os
+import signal
+from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from datetime import timedelta
 from decord import VideoReader, cpu
-
-
+from PIL import Image
 from torchvision.transforms import Resize
-
-import signal
+from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -25,13 +23,15 @@ from lmms_eval.api.registry import register_model
 eval_logger = logging.getLogger("lmms-eval")
 # import sys;sys.path.append("llava-video")
 try:
-    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-    from llava.conversation import conv_templates, SeparatorStyle
-    from llava.model.builder import load_pretrained_model
+    from llava.constants import (DEFAULT_IM_END_TOKEN, DEFAULT_IM_START_TOKEN,
+                                 DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX)
+    from llava.conversation import SeparatorStyle, conv_templates
     from llava.data.dataset import LazySupervisedDataset
+    from llava.mm_utils import (KeywordsStoppingCriteria,
+                                get_model_name_from_path, process_images,
+                                tokenizer_image_token)
+    from llava.model.builder import load_pretrained_model
     from llava.utils import disable_torch_init
-    from llava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-    from llava.mm_utils import process_images
 except ImportError as e:
     eval_logger.debug(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
 

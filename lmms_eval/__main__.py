@@ -1,30 +1,29 @@
-import importlib
-import os
-import yaml
-import sys
-import json
-
-import traceback
 import argparse
-import numpy as np
 import datetime
-
-import warnings
+import importlib
+import json
+import os
+import sys
 import traceback
+import warnings
+
+import numpy as np
+import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
-from accelerate import Accelerator
-from accelerate.utils import InitProcessGroupKwargs
+import hashlib
 from pathlib import Path
 from typing import Union
-import hashlib
+
+from accelerate import Accelerator
+from accelerate.utils import InitProcessGroupKwargs
+from loguru import logger as eval_logger
 
 from lmms_eval import evaluator, utils
-from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict
 from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.logging_utils import WandbLogger
-from loguru import logger as eval_logger
+from lmms_eval.tasks import get_task_dict, include_path, initialize_tasks
 
 
 def _handle_non_serializable(o):

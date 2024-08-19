@@ -1,42 +1,31 @@
-import os
-import re
-import sys
-import yaml
-import json
-import inspect
-import pathlib
-import functools
-import subprocess
 import collections
-import importlib.util
-import fnmatch
 import datetime
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-)
-
+import fnmatch
+import functools
+import importlib.util
+import inspect
+import json
+import os
+import pathlib
+import re
+import subprocess
+import sys
 import warnings
+from typing import (Any, Callable, Iterable, Iterator, List, Literal, Optional,
+                    Tuple, Type, Union)
+
+import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 import gc
+from itertools import islice
+
+import pytz
 import torch
 import transformers
-
 from jinja2 import BaseLoader, Environment, StrictUndefined
-from itertools import islice
-import pytz
-
 from loguru import logger as eval_logger
 
 SPACING = " " * 47
@@ -347,7 +336,7 @@ class Grouper:
 
 def make_table(result_dict, column: str = "results"):
     """Generate table of results."""
-    from pytablewriter import MarkdownTableWriter, LatexTableWriter
+    from pytablewriter import LatexTableWriter, MarkdownTableWriter
 
     if column == "results":
         column_name = "Tasks"

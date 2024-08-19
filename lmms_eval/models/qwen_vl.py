@@ -1,17 +1,17 @@
-import torch
+import os
+import uuid
+import warnings
+from typing import List, Optional, Tuple, Union
 
+import torch
+from accelerate import Accelerator, DistributedType
 from tqdm import tqdm
+
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.qwen.qwen_generate_utils import make_context
-from accelerate import Accelerator, DistributedType
-from typing import List, Optional, Union, Tuple
-import uuid
-import os
-
-import warnings
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")

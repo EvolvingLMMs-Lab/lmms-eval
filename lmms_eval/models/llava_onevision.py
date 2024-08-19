@@ -1,22 +1,21 @@
-import math
-import re
 import copy
 import json
 import logging
+import math
+import re
 import warnings
 from datetime import timedelta
-from typing import List, Optional, Union, Tuple
-import PIL
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
+import PIL
 import torch
 import transformers
-from tqdm import tqdm
-from packaging import version
-from decord import VideoReader, cpu
-
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
+from decord import VideoReader, cpu
+from packaging import version
+from tqdm import tqdm
 from transformers import AutoConfig
 
 from lmms_eval import utils
@@ -36,21 +35,14 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 # Import LLaVA modules
 try:
+    from llava.constants import (DEFAULT_IM_END_TOKEN, DEFAULT_IM_START_TOKEN,
+                                 DEFAULT_IMAGE_TOKEN, IGNORE_INDEX,
+                                 IMAGE_TOKEN_INDEX)
+    from llava.conversation import SeparatorStyle, conv_templates
+    from llava.mm_utils import (KeywordsStoppingCriteria,
+                                get_model_name_from_path, process_images,
+                                tokenizer_image_token)
     from llava.model.builder import load_pretrained_model
-    from llava.mm_utils import (
-        get_model_name_from_path,
-        process_images,
-        tokenizer_image_token,
-        KeywordsStoppingCriteria,
-    )
-    from llava.constants import (
-        IMAGE_TOKEN_INDEX,
-        DEFAULT_IMAGE_TOKEN,
-        DEFAULT_IM_START_TOKEN,
-        DEFAULT_IM_END_TOKEN,
-        IGNORE_INDEX,
-    )
-    from llava.conversation import conv_templates, SeparatorStyle
 except ImportError as e:
     eval_logger.debug(f"LLaVA is not installed. Please install LLaVA to use this model.\nError: {e}")
 
@@ -454,17 +446,7 @@ class Llava_OneVision(lmms):
                     self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
                     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
 
-                if type(visual[0]) == PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
-                    image_tensor = process_images(visual, self._image_processor, self._config)
-                    if type(image_tensor) is list:
-                        image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
-                    else:
-                        image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
-
-                    task_type = "image"
-                    placeholder_count = len(visual) if isinstance(visual, list) else 1
-
-                elif "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:
+                if "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:  # overwrite logic for video task
                     assert type(visual) == list, "sample_frames must be specified for video task"
                     sample_indices = np.linspace(0, len(visual) - 1, metadata["sample_frames"], dtype=int)
                     visual = [visual[i] for i in sample_indices]
@@ -479,21 +461,38 @@ class Llava_OneVision(lmms):
                     task_type = "video"
                     placeholder_count = 1
 
-                elif type(visual[0]) == str:  # For video task
-                    image_tensor = []
-                    try:
-                        if self.video_decode_backend == "decord":
-                            frames = self.load_video(visual, self.max_frames_num)
-                        elif self.video_decode_backend == "pyav":
-                            frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
-                        frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
-                        image_tensor.append(frames)
-                    except Exception as e:
-                        eval_logger.error(f"Error {e} in loading video")
+                else:  # default logic for image and text tasks
+                    if visual == [] and "task_type" not in metadata and "sample_frames" not in metadata:
+                        visual = None
+                        task_type = "text"
+                        placeholder_count = 0
                         image_tensor = None
 
-                    task_type = "video"
-                    placeholder_count = len(frames) if self.token_strategy == "multiple" else 1
+                    elif type(visual[0]) == PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
+                        image_tensor = process_images(visual, self._image_processor, self._config)
+                        if type(image_tensor) is list:
+                            image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
+                        else:
+                            image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
+
+                        task_type = "image"
+                        placeholder_count = len(visual) if isinstance(visual, list) else 1
+
+                    elif type(visual[0]) == str:  # For video task
+                        image_tensor = []
+                        try:
+                            if self.video_decode_backend == "decord":
+                                frames = self.load_video(visual, self.max_frames_num)
+                            elif self.video_decode_backend == "pyav":
+                                frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
+                            frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                            image_tensor.append(frames)
+                        except Exception as e:
+                            eval_logger.error(f"Error {e} in loading video")
+                            image_tensor = None
+
+                        task_type = "video"
+                        placeholder_count = len(frames) if self.token_strategy == "multiple" else 1
 
                 if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in context:
                     """
@@ -552,30 +551,6 @@ class Llava_OneVision(lmms):
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
             attention_masks = input_ids.ne(pad_token_ids).to(self.device)
-
-            # message_stage = [
-            #     {
-            #         "from": "human",
-            #         "value": question,
-            #     },
-            #     {
-            #         "from": "gpt",
-            #         "value": None,
-            #     }
-            # ]
-            # qwen_input_ids = self.preprocess_qwen(message_stage, self.tokenizer, has_image=True).to(self.device)
-            # qwen_result_list = qwen_input_ids.detach().cpu().numpy().tolist()
-            # qwen_result_list = [i if i != -200 else 100 for i in qwen_result_list[0]]
-            # qwen_input_text = self.tokenizer.decode(qwen_result_list)
-
-            # original_result_list = input_ids.detach().cpu().numpy().tolist()
-            # original_result_list = [i if i != -200 else 100 for i in original_result_list[0]]
-            # original_input_text = self.tokenizer.decode(original_result_list)
-
-            # print(f"Qwen input text: {qwen_input_text}")
-            # print(f"Original input text: {original_input_text}")
-
-            # assert qwen_input_ids == input_ids
 
             if task_type == "image":
                 gen_kwargs["image_sizes"] = [batched_visuals[0][idx].size for idx in range(len(batched_visuals[0]))]

@@ -1,9 +1,10 @@
 import json
 import re
 from collections import Counter
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 from loguru import logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 PROMPT = """Question: {}
 (A) {}

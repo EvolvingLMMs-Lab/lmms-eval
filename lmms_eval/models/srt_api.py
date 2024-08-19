@@ -1,22 +1,22 @@
-from accelerate import Accelerator, DistributedType
 import base64
-from io import BytesIO
+import json
+import os
+import time
 from copy import deepcopy
-from decord import VideoReader, cpu
+from io import BytesIO
+from typing import List, Tuple
+
 import numpy as np
+from accelerate import Accelerator, DistributedType
+from decord import VideoReader, cpu
+from loguru import logger as eval_logger
 from openai import OpenAI
 from PIL import Image
-import os
-import json
-from typing import List, Tuple
 from tqdm import tqdm
-import time
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
-from loguru import logger as eval_logger
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -177,22 +177,6 @@ class SRT_API(lmms):
 
             content.append({"type": "text", "text": contexts})
             messages.append({"role": "user", "content": content})
-            # if self.image_token not in contexts:  # single image format
-            #     content = []
-            #     for img in imgs:
-            #         content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
-
-            #     content.append({"type": "text", "text": contexts})
-            #     messages.append({"role": "user", "content": content})
-            # else:  # interleaved format
-            #     contexts = contexts.split(self.image_token)
-            #     for idx, img in enumerate(imgs):
-            #         content = [
-            #             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}},
-            #             {"type": "text", "text": contexts[idx]},
-            #         ]
-            #         messages.append({"role": "user", "content": content})
-            #     messages.append({"role": "user", "content": [{"type": "text", "text": contexts[-1]}]})
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024

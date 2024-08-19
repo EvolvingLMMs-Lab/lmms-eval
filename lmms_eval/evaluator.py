@@ -1,34 +1,26 @@
-import os
-import time
-import random
+import collections
+import inspect
 import itertools
 import json
-import collections
+import os
+import random
 import sys
-import inspect
-from tqdm import tqdm
-
-import torch
+import time
 
 import numpy as np
+import torch
 from datasets import Image, Sequence
+from loguru import logger as eval_logger
+from tqdm import tqdm
 
 import lmms_eval.api
-import lmms_eval.tasks
-import lmms_eval.models
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-
-from lmms_eval.utils import (
-    positional_deprecated,
-    run_task_tests,
-    make_table,
-    create_iterator,
-    get_git_commit_hash,
-    simple_parse_args_string,
-)
-
-from loguru import logger as eval_logger
+import lmms_eval.models
+import lmms_eval.tasks
+from lmms_eval.utils import (create_iterator, get_git_commit_hash, make_table,
+                             positional_deprecated, run_task_tests,
+                             simple_parse_args_string)
 
 
 @positional_deprecated

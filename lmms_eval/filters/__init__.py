@@ -1,8 +1,6 @@
-from lmms_eval.api.filter import FilterEnsemble, Filter
-from . import selection
-from . import extraction
-from . import transformation
+from lmms_eval.api.filter import Filter, FilterEnsemble
 
+from . import extraction, selection, transformation
 
 FILTER_REGISTRY = {
     "take_first": selection.TakeFirstFilter,

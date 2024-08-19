@@ -1,11 +1,10 @@
 import os
-import requests
 import time
-
-import pandas as pd
-import yaml
 from pathlib import Path
 
+import pandas as pd
+import requests
+import yaml
 from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "mmvet.yaml", "r") as f:

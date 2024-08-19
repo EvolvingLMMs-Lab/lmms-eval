@@ -1,6 +1,7 @@
+import re
+
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
-import re
 
 REPLACE_PROMPT = "Please answer directly with only the letter of the correct option and nothing else."
 
