@@ -23,14 +23,19 @@ from lmms_eval.models.model_utils.load_video import read_video_pyav
 from lmms_eval.utils import stop_sequences_criteria
 
 try:
-    from llamavid.constants import (DEFAULT_IM_END_TOKEN,
-                                    DEFAULT_IM_START_TOKEN,
-                                    DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX)
+    from llamavid.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IMAGE_TOKEN_INDEX,
+    )
     from llamavid.conversation import SeparatorStyle, conv_templates
     from llamavid.model.builder import load_pretrained_model
-    from llava.mm_utils import (KeywordsStoppingCriteria,
-                                get_model_name_from_path,
-                                tokenizer_image_token)
+    from llava.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        tokenizer_image_token,
+    )
 except ImportError:
     eval_logger.debug("LLaMA-Video is not installed. Please install LLaMA-Video to use this model.")
 

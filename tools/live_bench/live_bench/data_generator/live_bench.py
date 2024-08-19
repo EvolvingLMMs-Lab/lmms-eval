@@ -10,10 +10,14 @@ from live_bench.data_generator.live_bench_data import LiveBenchData
 from live_bench.data_generator.qa_generator import QAData, QAGenerator
 from live_bench.data_generator.question_finalizer import QuestionFinalizer
 from live_bench.data_generator.response import Response
-from live_bench.data_generator.score_getter import (get_random_score_getter,
-                                                    get_score_getter)
+from live_bench.data_generator.score_getter import (
+    get_random_score_getter,
+    get_score_getter,
+)
 from live_bench.data_generator.utils.extract_infomation import (
-    ImageInfomation, InfomationExtractor)
+    ImageInfomation,
+    InfomationExtractor,
+)
 from live_bench.driver import load_driver
 from live_bench.screen_shoter import ScreenImage, ScreenShoter, get_shoter
 from live_bench.websites import Website

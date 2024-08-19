@@ -18,8 +18,7 @@ from lmms_eval.utils import stop_sequences_criteria
 
 eval_logger = logger
 
-from transformers import (VideoLlavaForConditionalGeneration,
-                          VideoLlavaProcessor)
+from transformers import VideoLlavaForConditionalGeneration, VideoLlavaProcessor
 
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 

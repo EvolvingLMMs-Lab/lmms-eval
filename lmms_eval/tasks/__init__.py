@@ -5,9 +5,15 @@ from typing import Dict, List, Union
 from loguru import logger
 
 from lmms_eval import utils
-from lmms_eval.api.registry import (ALL_TASKS, GROUP_REGISTRY,
-                                    TASK_INITIALIZED, TASK_REGISTRY,
-                                    register_group, register_task)
+from lmms_eval.api.registry import (
+    ALL_TASKS,
+    GROUP_REGISTRY,
+    TASK_INITIALIZED,
+    TASK_REGISTRY,
+    register_group,
+    register_task,
+)
+
 # from lmms_eval import prompts
 from lmms_eval.api.task import ConfigurableTask, Task, TaskConfig
 

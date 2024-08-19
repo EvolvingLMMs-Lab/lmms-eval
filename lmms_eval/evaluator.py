@@ -18,9 +18,14 @@ import lmms_eval.api.metrics
 import lmms_eval.api.registry
 import lmms_eval.models
 import lmms_eval.tasks
-from lmms_eval.utils import (create_iterator, get_git_commit_hash, make_table,
-                             positional_deprecated, run_task_tests,
-                             simple_parse_args_string)
+from lmms_eval.utils import (
+    create_iterator,
+    get_git_commit_hash,
+    make_table,
+    positional_deprecated,
+    run_task_tests,
+    simple_parse_args_string,
+)
 
 
 @positional_deprecated

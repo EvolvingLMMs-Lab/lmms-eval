@@ -11,8 +11,12 @@ from accelerate.state import AcceleratorState
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import (AutoTokenizer, FuyuForCausalLM, FuyuImageProcessor,
-                          FuyuProcessor)
+from transformers import (
+    AutoTokenizer,
+    FuyuForCausalLM,
+    FuyuImageProcessor,
+    FuyuProcessor,
+)
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance

@@ -36,18 +36,28 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from transformers.modeling_outputs import (
-    BaseModelOutput, BaseModelOutputWithPastAndCrossAttentions,
-    BaseModelOutputWithPooling)
+    BaseModelOutput,
+    BaseModelOutputWithPastAndCrossAttentions,
+    BaseModelOutputWithPooling,
+)
 from transformers.modeling_utils import PreTrainedModel
 from transformers.models.auto import AutoModelForCausalLM
-from transformers.pytorch_utils import (find_pruneable_heads_and_indices,
-                                        prune_linear_layer)
-from transformers.utils import (ModelOutput, add_start_docstrings,
-                                add_start_docstrings_to_model_forward,
-                                replace_return_docstrings)
+from transformers.pytorch_utils import (
+    find_pruneable_heads_and_indices,
+    prune_linear_layer,
+)
+from transformers.utils import (
+    ModelOutput,
+    add_start_docstrings,
+    add_start_docstrings_to_model_forward,
+    replace_return_docstrings,
+)
 
-from .configuration_mplug_owl import (MplugOwlConfig, MplugOwlVisionConfig,
-                                      MplugOwlVisualAbstractorConfig)
+from .configuration_mplug_owl import (
+    MplugOwlConfig,
+    MplugOwlVisionConfig,
+    MplugOwlVisualAbstractorConfig,
+)
 
 _CHECKPOINT_FOR_DOC = "MAGAer13/mplug-owl-llama-7b"
 _CONFIG_FOR_DOC = "MplugOwlConfig"

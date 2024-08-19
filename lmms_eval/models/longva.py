@@ -30,13 +30,20 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 try:
-    from longva.constants import (DEFAULT_IM_END_TOKEN, DEFAULT_IM_START_TOKEN,
-                                  DEFAULT_IMAGE_TOKEN, IGNORE_INDEX,
-                                  IMAGE_TOKEN_INDEX)
+    from longva.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IGNORE_INDEX,
+        IMAGE_TOKEN_INDEX,
+    )
     from longva.conversation import SeparatorStyle, conv_templates
-    from longva.mm_utils import (KeywordsStoppingCriteria,
-                                 get_model_name_from_path, process_images,
-                                 tokenizer_image_token)
+    from longva.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        process_images,
+        tokenizer_image_token,
+    )
     from longva.model.builder import load_pretrained_model
 
 except Exception as e:

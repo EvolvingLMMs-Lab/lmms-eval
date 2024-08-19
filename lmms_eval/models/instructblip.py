@@ -7,8 +7,7 @@ import transformers
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from tqdm import tqdm
-from transformers import (InstructBlipForConditionalGeneration,
-                          InstructBlipProcessor)
+from transformers import InstructBlipForConditionalGeneration, InstructBlipProcessor
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance

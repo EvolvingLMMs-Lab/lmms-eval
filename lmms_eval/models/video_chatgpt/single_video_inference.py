@@ -14,14 +14,16 @@ import os
 import numpy as np
 import torch
 from decord import VideoReader, cpu
+
 # add new packages as below
 from PIL import Image
 
-from lmms_eval.models.video_chatgpt.eval.model_utils import (initialize_model,
-                                                             load_video)
+from lmms_eval.models.video_chatgpt.eval.model_utils import initialize_model, load_video
 from lmms_eval.models.video_chatgpt.model.utils import KeywordsStoppingCriteria
-from lmms_eval.models.video_chatgpt.video_conversation import (SeparatorStyle,
-                                                               conv_templates)
+from lmms_eval.models.video_chatgpt.video_conversation import (
+    SeparatorStyle,
+    conv_templates,
+)
 
 # Define constants
 DEFAULT_VIDEO_TOKEN = "<video>"

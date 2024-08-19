@@ -5,8 +5,11 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from tqdm import tqdm
-from transformers import (AutoProcessor, LlavaForConditionalGeneration,
-                          LlavaNextForConditionalGeneration)
+from transformers import (
+    AutoProcessor,
+    LlavaForConditionalGeneration,
+    LlavaNextForConditionalGeneration,
+)
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
