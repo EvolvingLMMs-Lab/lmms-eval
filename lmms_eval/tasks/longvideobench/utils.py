@@ -19,6 +19,7 @@ from typing import List, Dict, Optional, Union
 import re
 
 import json
+from loguru import logger as eval_logger
 
 
 def timestamp_to_seconds(timestamp):
@@ -355,5 +356,13 @@ def longvideobench_aggregate_results(results):
         "num": sum([cat_results["num_example"] for cat_results in evaluation_result.values()]),
         "acc": round(all_ins_acc, 5),
     }
-    print(printable_results)
+    eval_logger.info(printable_results)
     return printable_results["Overall"]["acc"]
+
+
+def longvideobench_aggregate_results_for_submission(results, args):
+    path = generate_submission_file("longvideobench_test_for_submission.json", args)
+    results_dict = {list(item.keys())[0]: list(item.values())[0] for item in results}
+    with open(path, "w") as f:
+        json.dump(results_dict, f)
+    eval_logger.info(f"Results saved to {path}.")

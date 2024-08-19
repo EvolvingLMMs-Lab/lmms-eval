@@ -1,10 +1,10 @@
-task: "mmmu_pro_composite"
+task: "mmmu_pro_composite_cot"
 dataset_path: MMMU/MMMU_Pro
 dataset_name: composite
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.mmmu_pro_doc_to_visual
-doc_to_text: "Answer with the option letter for each multiple choice question from the given choices directly. For each question, the last line of your response should be in the following format: 'No: [id]\nAnswer: [LETTER]' (without quotes) where LETTER is one of options."
+doc_to_text: "Write out all the multiple-choice questions in the image and then solve it. For each question, the last line of your response should be in the following format: 'No: [id]\nAnswer: [LETTER]' (without quotes) where LETTER is one of options. Think step by step before answering each question."
 doc_to_target: "{{answers}}"
 # The return value of process_results will be used by metrics
 process_results: !function utils.mmmu_pro_composite_process_results

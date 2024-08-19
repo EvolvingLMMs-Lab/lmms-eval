@@ -12,9 +12,6 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 from loguru import logger as eval_logger
 
-MULTI_CHOICE_PROMPT = "Answer with the option's letter from the given choices directly."
-OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
-
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -41,22 +38,21 @@ def parse_options(options):
     return choices_str
 
 
-def construct_prompt(doc):
+def construct_prompt(doc, post_prompt="Answer with the option letter from the given choices directly."):
     question = doc["question"]
     # Weirdly, data["options"] is a string in MMMU Huggingface dataset
     parsed_options = parse_options(ast.literal_eval(doc["options"]))
     # parsed_options already prepends a newline so no need to add space here
-    question = f"{question}\n{parsed_options}\n\n{MULTI_CHOICE_PROMPT}"
+    question = f"{question}\n{parsed_options}\n\n{post_prompt}"
     return question
 
 
-def mmmu_pro_doc_to_text(doc):
+def mmmu_pro_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     if "question" in doc and "options" in doc:  # original operation
-        question = construct_prompt(doc)
+        question = construct_prompt(doc, post_prompt)
         if config["metadata"]["interleaved_format"]:
             question = replace_images_tokens(question)
-    else:  # vision-only operation
-        question = "Please answer the question in this image with the option's letter from the given choices directly."
     return question
 
 

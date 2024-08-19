@@ -1,4 +1,4 @@
-task: "mmmu_pro_original"
+task: "mmmu_pro_original_cot"
 dataset_path: MMMU/MMMU_Pro
 dataset_name: original
 test_split: test
@@ -19,4 +19,4 @@ include: _default_template_yaml
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "Answer with the option letter from the given choices directly."
+    post_prompt: "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of options. Think step by step before answering."
