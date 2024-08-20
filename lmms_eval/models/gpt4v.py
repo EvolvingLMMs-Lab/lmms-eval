@@ -109,6 +109,11 @@ class GPT4V(lmms):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+        
+        # Ensure the last frame is included
+        if total_frame_num - 1 not in uniform_sampled_frames:
+            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
+        
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
