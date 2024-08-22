@@ -30,6 +30,7 @@ AVAILABLE_MODELS = {
     "videoChatGPT": "VideoChatGPT",
     "llama_vid": "LLaMAVid",
     "video_llava": "VideoLLaVA",
+    "ss_llava": "SambaStudioLLaVA",
     "xcomposer2_4KHD": "XComposer2_4KHD",
     "claude": "Claude",
     "qwen_vl_api": "Qwen_VL_API",
