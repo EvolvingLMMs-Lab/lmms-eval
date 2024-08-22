@@ -128,7 +128,14 @@ class SambaStudioLLaVA(lmms):
             if "top_logprobs" not in gen_kwargs:
                 gen_kwargs["top_logprobs"] = 0
 
-            payload["params"] = gen_kwargs
+            payload["params"] = {
+                'max_tokens_to_generate': {"type":"int","value":str(gen_kwargs["max_new_tokens"])},
+                'temperature':{"type":"float","value":str(gen_kwargs["temperature"])},
+                'top_p':{"type":"float","value":str(gen_kwargs["top_p"])},
+                'do_sample':{"type":"bool","value":str(gen_kwargs["do_sample"])},
+                'top_k':{"type":"int","value":str(gen_kwargs["top_k"])},
+                'top_logprobs':{"type":"int","value":str(gen_kwargs["top_logprobs"])}
+            }
 
             for attempt in range(5):
                 try:
