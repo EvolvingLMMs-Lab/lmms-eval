@@ -108,7 +108,7 @@ class SambaStudioLLaVA(lmms):
 
             payload = {
                 "instances": [{
-                    "prompt": f"A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human''s questions. USER: {self.image_token}\\n{contexts} ASSISTANT:",
+                    "prompt": contexts,
                     "image_content": img
                 }]
             }
