@@ -8,6 +8,8 @@ import re
 import os
 from copy import deepcopy
 
+from loguru import logger as eval_logger
+
 try:
     from reka import ChatMessage
     from reka.client import Reka
