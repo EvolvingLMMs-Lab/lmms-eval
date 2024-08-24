@@ -2,6 +2,7 @@ import collections
 import datetime
 import fnmatch
 import functools
+import hashlib
 import importlib.util
 import inspect
 import json
@@ -49,6 +50,10 @@ def is_json(string):
         return False
 
 
+def hash_string(string: str) -> str:
+    return hashlib.sha256(string.encode("utf-8")).hexdigest()
+
+
 def escaped_split(text, sep_char, maxsplit=-1):
     """Split text into a list on occurrences of the given separation
     character `sep_char`. The separation character may be escaped by a
@@ -81,6 +86,27 @@ def handle_arg_string(arg):
         return float(arg)
     except ValueError:
         return arg
+
+
+def handle_non_serializable(o):
+    if isinstance(o, np.int64) or isinstance(o, np.int32):
+        return int(o)
+    elif isinstance(o, set):
+        return list(o)
+    else:
+        return str(o)
+
+
+def sanitize_list(sub):
+    """
+    Takes possible nested list and recursively converts all inner component to strings
+    """
+    if isinstance(sub, list):
+        return [sanitize_list(item) for item in sub]
+    if isinstance(sub, tuple):
+        return tuple(sanitize_list(item) for item in sub)
+    else:
+        return str(sub)
 
 
 def simple_parse_args_string(args_string):
@@ -176,8 +202,11 @@ def pattern_match(patterns, source_list):
 
     task_names = set()
     for pattern in patterns:
-        for matching in fnmatch.filter(source_list, pattern):
-            task_names.add(matching)
+        try:
+            for matching in fnmatch.filter(source_list, pattern):
+                task_names.add(matching)
+        except Exception as e:
+            eval_logger.error(f"Error matching pattern {pattern}: {e}")
     return sorted(list(task_names))
 
 
@@ -189,6 +218,55 @@ def general_detokenize(string):
     string = string.replace(' "', '"')
     string = re.sub(r" (['.,])", r"\1", string)
     return string
+
+
+def get_file_task_name(filename: str) -> str:
+    """
+    Given the sample results filenames, extracts and returns the task name.
+    """
+    return filename[filename.find("_") + 1 : filename.rfind("_")]
+
+
+def get_file_datetime(filename: str) -> str:
+    """
+    Given the results and sample results filenames, extracts and returns the datetime.
+    """
+    return filename[filename.rfind("_") + 1 :].replace(".jsonl", "")
+
+
+def sanitize_model_name(model_name: str) -> str:
+    """
+    Given the model name, returns a sanitized version of it.
+    """
+    return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", model_name)
+
+
+def sanitize_task_name(task_name: str) -> str:
+    """
+    Given the task name, returns a sanitized version of it.
+    """
+    return re.sub(r"\W", "_", task_name)
+
+
+def get_latest_filename(filenames: List[str]) -> str:
+    """
+    Given a list of filenames, returns the filename with the latest datetime.
+    """
+    return max(filenames, key=lambda f: get_file_datetime(f))
+
+
+def get_results_filenames(filenames: List[str]) -> List[str]:
+    """
+    Extracts filenames that correspond to aggregated results.
+    """
+    return [f for f in filenames if "/results_" in f and ".json" in f]
+
+
+def get_sample_results_filenames(filenames: List[str]) -> List[str]:
+    """
+    Extracts filenames that correspond to sample results.
+    """
+    return [f for f in filenames if "/samples_" in f and ".json" in f]
 
 
 def get_rolling_token_windows(token_list, prefix_token, max_seq_len, context_len):
@@ -236,6 +314,18 @@ def make_disjoint_window(pair):
     """Takes output from get_rolling_token_windows and makes the context not overlap with the continuation"""
     a, b = pair
     return a[: len(a) - (len(b) - 1)], b
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    """
+    Provides a proper json encoding for the loggers and trackers json dumps.
+    Notably manages the json encoding of dataclasses.
+    """
+
+    def default(self, o):
+        if is_dataclass(o):
+            return asdict(o)
+        return super().default(o)
 
 
 class Reorderer:
@@ -497,12 +587,16 @@ def get_datetime_str(timezone="Asia/Singapore"):
     return local_time.strftime("%m%d_%H%M")
 
 
+def ignore_constructor(loader, node):
+    return node
+
+
 def import_function(loader, node):
     function_name = loader.construct_scalar(node)
     yaml_path = os.path.dirname(loader.name)
 
     *module_name, function_name = function_name.split(".")
-    if type(module_name) == list:
+    if isinstance(module_name, list):
         module_name = ".".join(module_name)
     module_path = os.path.normpath(os.path.join(yaml_path, "{}.py".format(module_name)))
 
@@ -514,11 +608,14 @@ def import_function(loader, node):
     return function
 
 
-# Add the import_function constructor to the YAML loader
-yaml.add_constructor("!function", import_function)
+def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full"):
+    if mode == "simple":
+        constructor_fn = ignore_constructor
+    elif mode == "full":
+        constructor_fn = import_function
 
-
-def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None):
+    # Add the import_function constructor to the YAML loader
+    yaml.add_constructor("!function", constructor_fn)
     if yaml_config is None:
         with open(yaml_path, "rb") as file:
             yaml_config = yaml.full_load(file)
@@ -527,12 +624,12 @@ def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None):
         yaml_dir = os.path.dirname(yaml_path)
 
     assert yaml_dir is not None
-    assert yaml_config is not None, f"Failed to load yaml config from {yaml_path}"
+
     if "include" in yaml_config:
         include_path = yaml_config["include"]
         del yaml_config["include"]
 
-        if type(include_path) == str:
+        if isinstance(include_path, str):
             include_path = [include_path]
 
         # Load from the last one first
@@ -546,7 +643,7 @@ def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None):
                 path = os.path.join(yaml_dir, path)
 
             try:
-                included_yaml_config = load_yaml_config(path)
+                included_yaml_config = load_yaml_config(yaml_path=path, mode=mode)
                 final_yaml_config.update(included_yaml_config)
             except Exception as ex:
                 # If failed to load, ignore

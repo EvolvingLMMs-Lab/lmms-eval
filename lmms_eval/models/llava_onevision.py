@@ -256,102 +256,69 @@ class Llava_OneVision(lmms):
             return self.tokenizer.decode([tokens])
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        # TODO
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
-                self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
-                eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
-            # if (len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__) and ("image_aspect_ratio" in gen_kwargs.keys()):
-            #     self._config.image_aspect_ratio = gen_kwargs["image_aspect_ratio"]
-            #     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+            visual = doc_to_visual(self.task_dict[task][split][doc_id])
 
-            if type(visual[0]) == PIL.Image.Image:  # For image task
-                image_tensor = process_images(visual, self._image_processor, self._config)
-                if type(image_tensor) is list:
-                    image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
-                else:
-                    image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
-
-                task_type = "image"
-
-            elif type(visual[0]) == str:  # For video task
-                image_tensor = []
-                try:
-                    if self.video_decode_backend == "decord":
-                        frames = self.load_video(visual, self.max_frames_num)
-                    elif self.video_decode_backend == "pyav":
-                        frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
-                    frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
-                    image_tensor.append(frames)
-                except Exception as e:
-                    eval_logger.error(f"Error {e} in loading video")
-                    image_tensor = None
-
-                task_type = "video"
-
-            # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
-                continuation = doc_to_target
+            if visual is None or visual == []:
+                visual = None
+                task_type = "text"
+                image_tensor = None
             else:
-                continuation = doc_to_target(self.task_dict[task][split][doc_id])
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            visuals = self.flatten(visuals)
-            if visuals:
-                for visual in visuals:
-                    if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
-                        self._config.image_aspect_ratio = "pad"
-                        eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
-                    # if (len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__) and ("image_aspect_ratio" in gen_kwargs.keys()):
-                    #     self._config.image_aspect_ratio = gen_kwargs["image_aspect_ratio"]
-                    #     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+                if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:
+                    self._config.image_aspect_ratio = "pad"
+                    eval_logger.info(f"In Multi-Image setting, image aspect ratio: {self._config.image_aspect_ratio}")
 
-                    if type(visual) == PIL.Image.Image:  # For image task
-                        image = process_images([visual], self._image_processor, self._config)
-                        if type(image) is list:
-                            image = [_image.to(dtype=torch.float16, device=self.device) for _image in image]
-                        else:
-                            image = image.to(dtype=torch.float16, device=self.device)
+                if "task_type" in self.metadata and self.metadata["task_type"] == "video" and "sample_frames" in self.metadata:
+                    assert type(visual) == list, "sample_frames must be specified for video task"
+                    sample_indices = np.linspace(0, len(visual) - 1, self.metadata["sample_frames"], dtype=int)
+                    visual = [visual[i] for i in sample_indices]
+                    assert len(visual) == self.metadata["sample_frames"]
 
-                        task_type = "image"
+                    image_tensor = process_images(visual, self._image_processor, self._config)
+                    if type(image_tensor) is list:
+                        image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
+                    else:
+                        image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
 
-                    elif type(visual) == str:  # For video task
-                        try:
-                            if self.video_decode_backend == "decord":
-                                frames = self.load_video([visual], self.max_frames_num)
-                            elif self.video_decode_backend == "pyav":
-                                frames = read_video_pyav(visual, num_frm=self.max_frames_num)
-                            frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
-                            image = frames
-                        except Exception as e:
-                            eval_logger.error(f"Error {e} in loading video")
-                            image = None
+                    task_type = "video"
 
-                        task_type = "video"
-            else:
-                image = None
+                elif type(visual[0]) == PIL.Image.Image:
+                    image_tensor = process_images(visual, self._image_processor, self._config)
+                    if type(image_tensor) is list:
+                        image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
+                    else:
+                        image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
 
-            prompts_input = contexts[0] if isinstance(contexts, list) else contexts
+                    task_type = "image"
 
-            if image is not None and len(image) != 0 and DEFAULT_IMAGE_TOKEN not in prompts_input:
-                """
-                Three senarios:
-                1. No image, and there for, no image token should be added.
-                2. image token is already specified in the context, so we don't need to add it.
-                3. image token is not specified in the context and there is image inputs, so we need to add it. In this case, we add the image token at the beginning of the context and add a new line.
-                """
-                if task_type == "image":
-                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals) if isinstance(visuals, list) else [DEFAULT_IMAGE_TOKEN]
-                elif task_type == "video":
-                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(frames) if self.token_strategy == "multiple" else [DEFAULT_IMAGE_TOKEN]
+                elif type(visual[0]) == str:
+                    image_tensor = []
+                    try:
+                        if self.video_decode_backend == "decord":
+                            frames = self.load_video(visual, self.max_frames_num)
+                        elif self.video_decode_backend == "pyav":
+                            frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
+                        frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                        image_tensor.append(frames)
+                    except Exception as e:
+                        eval_logger.error(f"Error {e} in loading video")
+                        image_tensor = None
+
+                    task_type = "video"
+
+            if image_tensor is not None and len(image_tensor) != 0 and DEFAULT_IMAGE_TOKEN not in contexts:
+                placeholder_count = len(visual) if isinstance(visual, list) else 1
+                if task_type == "video":
+                    placeholder_count = len(frames) if self.token_strategy == "multiple" else 1
+                image_tokens = [DEFAULT_IMAGE_TOKEN] * placeholder_count
                 image_tokens = " ".join(image_tokens)
-                prompts_input = image_tokens + "\n" + (contexts[0] if isinstance(contexts, list) else contexts)
+                prompts_input = image_tokens + "\n" + contexts
             else:
-                question = contexts[0] if isinstance(contexts, list) else contexts
+                prompts_input = contexts
 
-            # This is much safer for llama3, as we now have some object type in it
             if "llama_3" in self.conv_template:
                 conv = copy.deepcopy(conv_templates[self.conv_template])
             else:
@@ -360,34 +327,39 @@ class Llava_OneVision(lmms):
             conv.append_message(conv.roles[0], prompts_input)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
-            contxt_id = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
-            # Add the answer of the second role
-            conv.messages[1][1] = continuation
 
-            prompt = conv.get_prompt()
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
-            labels = input_ids.clone()
-            # Context part no need to calculate for loss
-            labels[0, : contxt_id.shape[1]] = -100
+
+            if type(doc_to_target) == str:
+                continuation = doc_to_target
+            else:
+                continuation = doc_to_target(self.task_dict[task][split][doc_id])
+
+            conv.messages[-1][1] = continuation
+            full_prompt = conv.get_prompt()
+            full_input_ids = tokenizer_image_token(full_prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
+
+            labels = full_input_ids.clone()
+            labels[0, : input_ids.shape[1]] = -100
 
             kwargs = {}
             if task_type == "image":
-                kwargs["image_sizes"] = [[visual.size[0], visual.size[1]] for visual in visuals]
+                kwargs["image_sizes"] = [[v.size[0], v.size[1]] for v in visual] if isinstance(visual, list) else [[visual.size[0], visual.size[1]]]
             elif task_type == "video":
                 kwargs["modalities"] = ["video"]
                 self._config.mm_spatial_pool_stride = self.mm_spatial_pool_stride
                 self._config.mm_spatial_pool_mode = self.mm_spatial_pool_mode
 
             with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, **kwargs)
+                outputs = self.model(input_ids=full_input_ids, labels=labels, images=image_tensor, use_cache=True, **kwargs)
+
             loss = outputs["loss"]
-            # loss = torch.exp(loss)
             logits = outputs["logits"]
             greedy_tokens = logits.argmax(dim=-1)
-            cont_toks = input_ids[:, contxt_id.shape[1] :]  # [1, seq]
-            greedy_tokens = greedy_tokens[:, contxt_id.shape[1] : input_ids.shape[1]]  # [1, seq]
+            cont_toks = full_input_ids[:, input_ids.shape[1] :]
+            greedy_tokens = greedy_tokens[:, input_ids.shape[1] : full_input_ids.shape[1]]
             max_equal = (greedy_tokens == cont_toks).all()
+
             res.append((float(loss.item()), bool(max_equal)))
             pbar.update(1)
 
@@ -449,33 +421,32 @@ class Llava_OneVision(lmms):
             question_input = []
 
             for visual, context in zip(batched_visuals, batched_contexts):
-                if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
-                    self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
-                    eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+                if visual is None or visual == []:  # for text-only tasks.
+                    visual = None
+                    task_type = "text"
+                    placeholder_count = 0
+                    image_tensor = None
+                else:
+                    if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
+                        self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
+                        eval_logger.info(f"In Multi-Image setting, image aspect ratio: {self._config.image_aspect_ratio}")
 
-                if "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:  # overwrite logic for video task
-                    assert type(visual) == list, "sample_frames must be specified for video task"
-                    sample_indices = np.linspace(0, len(visual) - 1, metadata["sample_frames"], dtype=int)
-                    visual = [visual[i] for i in sample_indices]
-                    assert len(visual) == metadata["sample_frames"]
+                    if "task_type" in metadata and metadata["task_type"] == "video" and "sample_frames" in metadata:  # overwrite logic for video task with multiple static image frames
+                        assert type(visual) == list, "sample_frames must be specified for video task"
+                        sample_indices = np.linspace(0, len(visual) - 1, metadata["sample_frames"], dtype=int)
+                        visual = [visual[i] for i in sample_indices]
+                        assert len(visual) == metadata["sample_frames"]
 
-                    image_tensor = process_images(visual, self._image_processor, self._config)
-                    if type(image_tensor) is list:
-                        image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
-                    else:
-                        image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
+                        image_tensor = process_images(visual, self._image_processor, self._config)
+                        if type(image_tensor) is list:
+                            image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
+                        else:
+                            image_tensor = image_tensor.to(dtype=torch.float16, device=self.device)
 
-                    task_type = "video"
-                    placeholder_count = 1
+                        task_type = "video"
+                        placeholder_count = 1
 
-                else:  # default logic for image and text tasks
-                    if visual == [] and "task_type" not in metadata and "sample_frames" not in metadata:
-                        visual = None
-                        task_type = "text"
-                        placeholder_count = 0
-                        image_tensor = None
-
-                    elif type(visual[0]) == PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
+                    elif type(visual[0]) == PIL.Image.Image:  # For image, multi-image tasks
                         image_tensor = process_images(visual, self._image_processor, self._config)
                         if type(image_tensor) is list:
                             image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]

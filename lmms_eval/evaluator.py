@@ -6,6 +6,8 @@ import os
 import random
 import sys
 import time
+from dataclasses import dataclass
+from typing import List, Optional, Union
 
 import numpy as np
 import torch
@@ -16,10 +18,22 @@ from tqdm import tqdm
 import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-import lmms_eval.models
-import lmms_eval.tasks
+from lmms_eval.evaluator_utils import (
+    consolidate_group_results,
+    consolidate_results,
+    get_sample_size,
+    get_subtask_list,
+    get_task_list,
+    prepare_print_tasks,
+    print_writeout,
+    run_task_tests,
+)
+from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
+from lmms_eval.models import get_model
+from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
+    get_datetime_str,
     get_git_commit_hash,
     make_table,
     positional_deprecated,
@@ -31,54 +45,109 @@ from lmms_eval.utils import (
 @positional_deprecated
 def simple_evaluate(
     model,
-    model_args=None,
-    tasks=[],
-    num_fewshot=None,
-    batch_size=None,
-    device=None,
-    limit=None,
+    model_args: Optional[Union[str, dict]] = None,
+    tasks: Optional[List[Union[str, dict, object]]] = None,
+    num_fewshot: Optional[int] = None,
+    batch_size: Optional[Union[int, str]] = None,
+    max_batch_size: Optional[int] = None,
+    device: Optional[str] = None,
+    use_cache: Optional[str] = None,
+    cache_requests: bool = False,
+    rewrite_requests_cache: bool = False,
+    delete_requests_cache: bool = False,
+    limit: Optional[Union[int, float]] = None,
     bootstrap_iters: int = 100000,
     check_integrity: bool = False,
-    show_task_to_terminal: bool = False,
+    write_out: bool = False,
     log_samples: bool = True,
-    gen_kwargs: str = None,
-    cli_args=None,  # Bo: put args into more functions (cost 48 Bytes per call)
+    evaluation_tracker: Optional[EvaluationTracker] = None,
+    system_instruction: Optional[str] = None,
+    apply_chat_template: bool = False,
+    fewshot_as_multiturn: bool = False,
+    gen_kwargs: Optional[str] = None,
+    task_manager: Optional[TaskManager] = None,
+    verbosity: str = "INFO",
     predict_only: bool = False,
+    random_seed: int = 0,
+    numpy_random_seed: int = 1234,
+    torch_random_seed: int = 1234,
+    fewshot_random_seed: int = 1234,
+    cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
-    :param model: Union[str, LMM]
-        Name of model or LMM object, see lmms_eval.models.get_model
-    :param model_args: Optional[str]
-        String arguments for each model class, see LMM.create_from_arg_string.
-        Ignored if `model` argument is a LMM object.
-    :param tasks: list[Union[str, Task]]
+    :param model: Union[str, LM]
+        Name of model or LM object, see lm_eval.models.get_model
+    :param model_args: Optional[str, dict]
+        String or dict arguments for each model class, see LM.create_from_arg_string and LM.create_from_arg_object.
+        Ignored if `model` argument is a LM object.
+    :param tasks: list[Union[str, dict, Task]]
         List of task names or Task objects. Task objects will be taken to have name task.EVAL_HARNESS_NAME if defined and type(task).__name__ otherwise.
     :param num_fewshot: int
         Number of examples in few-shot context
     :param batch_size: int or str, optional
         Batch size for model
+    :param max_batch_size: int, optional
+        Maximal batch size to try with automatic batch size detection
     :param device: str, optional
         PyTorch device (e.g. "cpu" or "cuda:0") for running models
+    :param use_cache: str, optional
+        A path to a sqlite db file for caching model responses. `None` if not caching.
+    :param cache_requests: bool, optional
+        Speed up evaluation by caching the building of dataset requests. `None` if not caching.
+    :param rewrite_requests_cache: bool, optional
+        Rewrites all of the request cache if set to `True`. `None` if not desired.
+    :param delete_requests_cache: bool, optional
+        Deletes all of the request cache if set to `True`. `None` if not desired.
     :param limit: int or float, optional
         Limit the number of examples per task (only use this for testing), If <1, limit is a percentage of the total number of examples.
     :param bootstrap_iters:
-        Number of iterations for bootstrap statistics
+        Number of iterations for bootstrap statistics, used when calculating stderrs. set to 0 for no stderr calculations to be performed.
     :param check_integrity: bool
         Whether to run the relevant part of the test suite for the tasks
-    :param show_task_to_terminal: bool
+    :param write_out: bool
         If True, write out an example document and model input for checking task integrity
     :param log_samples: bool
         If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis
+    :param system_instruction: str
+        System instruction to be applied to the prompt
+    :param apply_chat_template: bool
+        If True, apply chat template to the prompt
+    :param fewshot_as_multiturn: bool
+        Whether to provide the fewshot examples as a multiturn conversation or a single user turn.
     :param gen_kwargs: str
         String arguments for model generation
         Ignored for all tasks with loglikelihood output_type
+    :param predict_only: bool
+        If true only model outputs will be generated and returned. Metrics will not be evaluated
+    :param random_seed: int
+        Random seed for python's random module. If set to None, the seed will not be set.
+    :param numpy_random_seed: int
+        Random seed for numpy. If set to None, the seed will not be set.
+    :param torch_random_seed: int
+        Random seed for torch. If set to None, the seed will not be set.
+    :param fewshot_random_seed: int
+        Random seed for fewshot sampler random generator. If set to None, the seed of generator will be set to None.
+
     :return
         Dictionary of results
     """
-    random.seed(0)
-    np.random.seed(1234)
-    torch.manual_seed(1234)  # TODO: this may affect training runs that are run with evaluation mid-run.
+    seed_message = []
+    if random_seed is not None:
+        # See https://github.com/EleutherAI/lm-evaluation-harness/pull/1412
+        seed_message.append(f"Setting random seed to {random_seed}")
+        random.seed(random_seed)
+
+    if numpy_random_seed is not None:
+        seed_message.append(f"Setting numpy seed to {numpy_random_seed}")
+        np.random.seed(numpy_random_seed)
+
+    if torch_random_seed is not None:
+        seed_message.append(f"Setting torch manual seed to {torch_random_seed}")
+        torch.manual_seed(torch_random_seed)
+
+    if seed_message:
+        eval_logger.info(" | ".join(seed_message))
 
     assert tasks != [], "No tasks specified, or no tasks found. Please verify the task names."
 
@@ -90,7 +159,9 @@ def simple_evaluate(
 
     if model_args is None:
         model_args = ""
-    lm = lmms_eval.api.registry.get_model(model).create_from_arg_string(
+
+    ModelClass = get_model(model)
+    lm = ModelClass.create_from_arg_string(
         model_args,
         {
             "batch_size": batch_size,
@@ -98,59 +169,124 @@ def simple_evaluate(
         },
     )
 
-    task_dict = lmms_eval.tasks.get_task_dict(tasks, model_name=model)
-    for task_name in task_dict.keys():
-        task_obj = task_dict[task_name]
-        if type(task_obj) == tuple:
-            group, task_obj = task_obj
-            if task_obj is None:
-                continue
-        lm.task_dict[task_name] = task_obj.dataset
+    if task_manager is None:
+        task_manager = TaskManager(verbosity, model_name=model)
 
-        config = task_obj._config
-        if config["output_type"] == "generate_until" and gen_kwargs:
-            config["generation_kwargs"].update(gen_kwargs)
+    task_dict = get_task_dict(tasks, task_manager)
 
-        if predict_only:
-            log_samples = True
-            eval_logger.info(f"Processing {task_name} in output-only mode. Metrics will not be calculated!")
-            # we have to change the class properties post-hoc. This is pretty hacky.
-            task_obj.override_metric(metric_name="bypass")
+    # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
+    # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
+    def _adjust_config(task_dict):
+        adjusted_task_dict = {}
+        for task_name, task_obj in task_dict.items():
+            if isinstance(task_obj, dict):
+                adjusted_task_dict = {
+                    **adjusted_task_dict,
+                    **{task_name: _adjust_config(task_obj)},
+                }
 
-        if num_fewshot is not None:
-            if config["num_fewshot"] == 0:
-                eval_logger.info(f"num_fewshot has been set to 0 for {task_name} in its config. Manual configuration will be ignored.")
             else:
-                default_num_fewshot = config["num_fewshot"]
-                eval_logger.warning(f"Overwriting default num_fewshot of {task_name} from {default_num_fewshot} to {num_fewshot}")
+                task_obj = task_dict[task_name]
+                if type(task_obj) == tuple:
+                    group, task_obj = task_obj
+                    if task_obj is None:
+                        continue
+                lm.task_dict[task_name] = task_obj.dataset
+                if task_obj.get_config("output_type") == "generate_until":
+                    if gen_kwargs is not None:
+                        task_obj.set_config(key="generation_kwargs", value=gen_kwargs, update=True)
 
-                task_obj._config["num_fewshot"] = num_fewshot
+                if predict_only:
+                    eval_logger.info(f"Processing {task_name} in output-only mode. Metrics will not be calculated!")
+                    # we have to change the class properties post-hoc. This is pretty hacky.
+                    task_obj.override_metric(metric_name="bypass")
+
+                # override tasks' fewshot values to the provided num_fewshot arg value
+                # except if tasks have it set to 0 manually in their configs--then we should never overwrite that
+                if num_fewshot is not None:
+                    if (default_num_fewshot := task_obj.get_config("num_fewshot")) == 0:
+                        eval_logger.info(f"num_fewshot has been set to 0 for {task_name} in its config. Manual configuration will be ignored.")
+                    else:
+                        eval_logger.warning(f"Overwriting default num_fewshot of {task_name} from {default_num_fewshot} to {num_fewshot}")
+                        task_obj.set_config(key="num_fewshot", value=num_fewshot)
+                else:
+                    # if num_fewshot not provided, and the task does not define a default one, default to 0
+                    if (default_num_fewshot := task_obj.get_config("num_fewshot")) is None:
+                        task_obj.set_config(key="num_fewshot", value=0)
+                # fewshot_random_seed set for tasks, even with a default num_fewshot (e.g. in the YAML file)
+                task_obj.set_fewshot_seed(seed=fewshot_random_seed)
+                # eval_logger.info(f"Setting fewshot random generator seed to {fewshot_random_seed}")
+
+                adjusted_task_dict[task_name] = task_obj
+
+        return adjusted_task_dict
+
+    task_dict = _adjust_config(task_dict)
 
     if check_integrity:
         run_task_tests(task_list=tasks)
+
+    if evaluation_tracker is not None:
+        evaluation_tracker.general_config_tracker.log_experiment_args(
+            model_source=model,
+            model_args=model_args,
+            system_instruction=system_instruction,
+            chat_template=lm.chat_template if apply_chat_template else None,
+            fewshot_as_multiturn=fewshot_as_multiturn,
+        )
 
     results = evaluate(
         lm=lm,
         task_dict=task_dict,
         limit=limit,
+        cache_requests=cache_requests,
+        rewrite_requests_cache=rewrite_requests_cache,
         bootstrap_iters=bootstrap_iters,
-        show_task_to_terminal=show_task_to_terminal,
-        log_samples=log_samples,
+        write_out=write_out,
+        log_samples=True if predict_only else log_samples,
+        system_instruction=system_instruction,
+        apply_chat_template=apply_chat_template,
+        fewshot_as_multiturn=fewshot_as_multiturn,
+        verbosity=verbosity,
         cli_args=cli_args,
     )
 
     if lm.rank == 0:
+        if isinstance(model, str):
+            model_name = model
+        elif hasattr(model, "config") and hasattr(model.config, "_name_or_path"):
+            model_name = model.config._name_or_path
+        else:
+            model_name = type(model).__name__
+
         # add info about the model and few shot config
-        results["model_configs"] = {
-            "model": model if isinstance(model, str) else model.model.config._name_or_path,
+        results["config"] = {
+            "model": model_name,
             "model_args": model_args,
-            "batch_size": batch_size,
-            "device": device,
-            "limit": limit,
-            "bootstrap_iters": bootstrap_iters,
-            "gen_kwargs": gen_kwargs,
         }
+        # add more detailed model info if available TODO: add model info
+        # if isinstance(lm, lm_eval.models.huggingface.HFLM):
+        #     results["config"].update(lm.get_model_info())
+        # add info about execution
+        results["config"].update(
+            {
+                "batch_size": batch_size,
+                "batch_sizes": (list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else []),
+                "device": device,
+                "use_cache": use_cache,
+                "limit": limit,
+                "bootstrap_iters": bootstrap_iters,
+                "gen_kwargs": gen_kwargs,
+                "random_seed": random_seed,
+                "numpy_seed": numpy_random_seed,
+                "torch_seed": torch_random_seed,
+                "fewshot_seed": fewshot_random_seed,
+            }
+        )
         results["git_hash"] = get_git_commit_hash()
+        results["date"] = get_datetime_str()
+        # add_env_info(results)  # additional environment info to results
+        # add_tokenizer_info(results, lm)  # additional info about tokenizer
         return results
     else:
         return None
@@ -161,12 +297,18 @@ decontaminate_suffix = "_decontaminate"
 
 @positional_deprecated
 def evaluate(
-    lm,
+    lm: "LM",
     task_dict,
-    limit=None,
-    bootstrap_iters: int = 100000,
-    show_task_to_terminal: bool = False,
+    limit: Optional[int] = None,
+    cache_requests: bool = False,
+    rewrite_requests_cache: bool = False,
+    bootstrap_iters: Optional[int] = 100000,
+    write_out: bool = False,
     log_samples: bool = True,
+    system_instruction: Optional[str] = None,
+    apply_chat_template: bool = False,
+    fewshot_as_multiturn: bool = False,
+    verbosity: str = "INFO",
     cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -178,11 +320,17 @@ def evaluate(
     :param limit: int, optional
         Limit the number of examples per task (only use this for testing)
     :param bootstrap_iters:
-        Number of iterations for bootstrap statistics
-    :param show_task_to_terminal: bool
+        Number of iterations for bootstrap statistics, used when calculating stderr. Set to 0 for skipping all stderr calculations.
+    :param write_out: bool
         If True, write out an example document and model input for checking task integrity
     :param log_samples: bool
         If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis
+    :param system_instruction: str
+        System instruction to be applied to the prompt
+    :param apply_chat_template: bool
+        If True, apply chat template to the prompt
+    :param fewshot_as_multiturn: bool
+        Whether to provide the fewshot examples as a multiturn conversation or a single user turn.
     :return
         Dictionary of results
     """
@@ -212,13 +360,23 @@ def evaluate(
     # store num-fewshot value per task
     num_fewshot = collections.defaultdict(int)
 
-    # get lists of each type of request
-    for task_name, task in task_dict.items():
+    # get lists of group hierarchy and each type of request
+    eval_tasks = get_task_list(task_dict)
+    name_to_task = {}
+    if not log_samples:
+        if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
+            raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
+
+    for task_output in eval_tasks:
+        task: Task = task_output.task
+        task_name = task_output.task_name
+
+        name_to_task[task_name] = task
+
         if type(task) == tuple:
             group_name, task = task
             task_hierarchy[group_name].append(task_name)
             versions[group_name] = "N/A"
-
         else:
             group_name = None
             task_hierarchy[task_name] = []
@@ -241,30 +399,23 @@ def evaluate(
         if ("group_alias" in configs[task_name]) and (group_name not in task_group_alias) and (group_name is not None):
             task_group_alias[group_name] = configs[task_name]["group_alias"]
 
-        if limit is not None:
-            if task.has_test_docs():
-                task_docs = task.test_docs()
-            elif task.has_validation_docs():
-                task_docs = task.validation_docs()
-            else:
-                raise RuntimeError("Task has neither test_docs nor validation_docs")
-            limit = int(len(task_docs) * limit) if limit < 1.0 else int(limit)
-
-        task.build_all_requests(limit=limit, rank=lm.rank, world_size=lm.world_size)
-
-        eval_logger.debug(f"Task: {task_name}; number of requests on rank {lm.rank}: {len(task.instances)}")
-
-        if show_task_to_terminal:
-            for inst in task.instances:
-                # print the prompt for the first few documents
-                if inst.doc_id < 1:
-                    eval_logger.info(
-                        f"Task: {task_name}; document {inst.doc_id}; context prompt (starting on next line):\
-\n{inst.args[0]}\n(end of prompt on previous line)\ntarget string or answer choice index (starting on next line):\n{task.doc_to_target(inst.doc)}\n(end of target on previous line)"
-                    )
-                    eval_logger.info(f"Request: {str(inst)}")
-
-        # aggregate Instances by LMM method requested to get output.
+        limit = get_sample_size(task, limit)
+        task.build_all_requests(
+            limit=limit,
+            rank=lm.rank,
+            world_size=lm.world_size,
+            # cache_requests=cache_requests, # later we will add them
+            # rewrite_requests_cache=rewrite_requests_cache,
+            # system_instruction=system_instruction,
+            # apply_chat_template=apply_chat_template,
+            # fewshot_as_multiturn=fewshot_as_multiturn,
+            # chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
+            # tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
+        )
+        eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task.instances)}")
+        if write_out:
+            print_writeout(task)
+        # aggregate Instances by LM method requested to get output.
         for instance in task.instances:
             reqtype = instance.request_type
             requests[reqtype].append(instance)
@@ -272,10 +423,12 @@ def evaluate(
         if lm.world_size > 1:
             instances_rnk = torch.tensor(len(task._instances), device=lm.device)
             gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
-
-            # compute number of pseudobatches to pad with (FSDP/DDP require even batches among ranks)
+            # "multiple_choice" task types dispatch (several) "loglikelihood" request types
+            reqtype = "loglikelihood" if task.OUTPUT_TYPE == "multiple_choice" else task.OUTPUT_TYPE
+            # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
             numpad = max(gathered_item) - gathered_item[lm.rank]
-            padding_requests[task.OUTPUT_TYPE] += numpad
+            # todo: may not account for padding in cases like SquadV2 which has multiple req types
+            padding_requests[reqtype] += numpad
 
     ### Run LMM on inputs, get all outputs ###
     # execute each type of request
@@ -300,24 +453,15 @@ def evaluate(
         if lm.world_size > 1:
             lm.accelerator.wait_for_everyone()
 
+    ### Collect values of metrics on all datapoints ###
+    metrics_info = collections.defaultdict(list)
     ### Postprocess outputs ###
     # TODO: del model here, maybe (idea: allow user to specify device of e.g. reward model separately)
-    for task_name, task in task_dict.items():
-        if type(task) == tuple:
-            group, task = task
-            if task is None:
-                continue
+    for task_output in eval_tasks:
+        task = task_output.task
+        task_name = task_output.task_name
         task.apply_filters()
 
-    ### Collect values of metrics on all datapoints ###
-    vals = collections.defaultdict(list)
-
-    # unpack results and sort back in order and return control to Task
-    for task_name, task in task_dict.items():
-        if type(task) == tuple:
-            group, task = task
-            if task is None:
-                continue
         # TODO: make it possible to use a different metric per filter
         # iterate over different filters used
         for key in task.instances[0].filtered_resps.keys():
@@ -366,8 +510,10 @@ def evaluate(
                     }
                     example.update(metrics)
                     samples[task_name].append(example)
+
                 for metric, value in metrics.items():
-                    vals[(task_name, key, metric)].append(value)
+                    metrics_info[(task_name, key, metric)].append(value)
+
                 pbar.update(1)
 
             pbar.close()
@@ -380,8 +526,8 @@ def evaluate(
             torch.distributed.all_gather_object(full_samples, task_samples)
             samples[task_name] = list(itertools.chain.from_iterable(full_samples))
         # then collect metrics across all ranks
-        vals_torch = collections.defaultdict(list)
-        for (task_name, key, metric), items in vals.items():
+        metrics_info_torch = collections.defaultdict(list)
+        for (task_name, key, metric), items in metrics_info.items():
             numitem = 0
             if type(items[0]) == tuple:
                 numitem = len(items[0])
@@ -413,11 +559,12 @@ def evaluate(
                     gathered_item = [tuple(g) for g in gathered_item]
 
             if lm.rank == 0:
-                vals_torch[(task_name, key, metric)] = gathered_item
+                metrics_info_torch[(task_name, key, metric)] = gathered_item
 
-        vals = vals_torch
+        metrics_info = metrics_info_torch
         # Ensure all ranks wait for rank 0 to finish aggregation
         torch.distributed.barrier()
+        lm.accelerator.wait_for_everyone()
 
     # Synchronize processes with a temp file in case the evluation metric requires gpus
     # TODO: fix barriers' taking up gpu computation
@@ -455,8 +602,8 @@ def evaluate(
 
         ### Aggregate results over all datapoints ###
         # aggregate results ; run bootstrap CIs
-        for (task_name, key, metric), items in vals.items():
-            task = task_dict[task_name]
+        for (task_name, key, metric), items in metrics_info.items():
+            task = name_to_task[task_name]
             metric_key = metric + "," + key
 
             if type(task) == tuple:
@@ -633,4 +780,15 @@ def evaluate(
     while len([file for file in os.listdir(cli_args.output_path) if file.endswith("metric_eval_done.txt")]) < lm._world_size:
         time.sleep(1)
 
+    lm.accelerator.wait_for_everyone()
     return results_dict
+
+
+def request_caching_arg_to_dict(cache_requests: str) -> dict:
+    request_caching_args = {
+        "cache_requests": cache_requests in {"true", "refresh"},
+        "rewrite_requests_cache": cache_requests == "refresh",
+        "delete_requests_cache": cache_requests == "delete",
+    }
+
+    return request_caching_args
