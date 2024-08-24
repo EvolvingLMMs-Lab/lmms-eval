@@ -24,11 +24,11 @@ def get_task_instruction(dataset):
     return instr
 
 
-def mirb_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mirb_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     subset, question = doc["subset"], doc["questions"]
     task_instruction = get_task_instruction(subset)
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     return f"{pre_prompt}{task_instruction}{question}{post_prompt}"
 
 
