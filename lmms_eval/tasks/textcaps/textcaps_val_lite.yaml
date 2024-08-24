@@ -43,6 +43,6 @@ metric_list:
   #  higher_is_better : true
 metadata:
   - version: 0.0
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     prompt: Provide a one-sentence caption for the provided image.

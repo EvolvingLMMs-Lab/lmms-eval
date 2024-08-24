@@ -40,7 +40,7 @@ metric_list:
   - metric: mme_cognition_score
     aggregation: !function utils.mme_aggregate_results
     higher_is_better: true
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer the question using a single word or phrase."
@@ -52,7 +52,7 @@ metadata:
 ```
 
 You can pay special attention to the `process_results` and `metric_list` fields, which are used to define how the model output is post-processed and scored.
-Also, the `model_specific_prompt_kwargs` field is used to define model-specific prompt configurations. The default is set to follow Llava.
+Also, the `lmms_eval_specific_kwargs` field is used to define model-specific prompt configurations. The default is set to follow Llava.
 
 PPL-based tasks:
 - Seedbench (`lmms_eval/tasks/seedbench/seedbench_ppl.yaml`)

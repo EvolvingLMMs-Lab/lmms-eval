@@ -31,7 +31,7 @@ metric_list:
 metadata:
   - version: 0.0
 
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   llava :
     img_token : <image>
     post_prompt : "Answer with the option's letter from the given choices directly."
