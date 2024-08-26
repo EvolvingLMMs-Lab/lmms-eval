@@ -25,8 +25,6 @@ class SambaStudioLLaVA(lmms):
         endpoint_url: str = "",
         endpoint_key: str = "",
         timeout: int = 120,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -40,22 +38,6 @@ class SambaStudioLLaVA(lmms):
         }
         self.image_token = "<image>"
         self.timeout = timeout
-        self.continual_mode = continual_mode
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -92,15 +74,6 @@ class SambaStudioLLaVA(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                if doc_uuid in self.response_cache:
-                    response_text = self.response_cache[doc_uuid]
-                    if response_text:
-                        res.append(response_text)
-                        pbar.update(1)
-                        continue
-
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             
@@ -158,14 +131,7 @@ class SambaStudioLLaVA(lmms):
                         response_text = ""
 
             res.append(response_text)
-        
             pbar.update(1)
-
-            if self.continual_mode is True:  # Cache the response
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                self.response_cache[doc_uuid] = response_text
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f)
 
         pbar.close()
         return res
