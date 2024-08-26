@@ -620,9 +620,9 @@ class InternVL2(lmms):
             loss = outputs["loss"]
             logits = outputs["logits"]
             greedy_tokens = logits.argmax(dim=-1)
-            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + role_length:]
-            # account for off by 1
-            greedy_toks = greedy_tokens[:, contxt_id.shape[1] + role_length - 1:-1]
+            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + role_length:-1]
+            # account for off by 1 and im_end
+            greedy_toks = greedy_tokens[:, contxt_id.shape[1] + role_length - 1:-2]
             max_equal = (greedy_toks == cont_toks).all()
             res.append((float(loss.item()), bool(max_equal), self.tokenizer.decode(greedy_toks[0])))
             pbar.update(1)

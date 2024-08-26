@@ -57,9 +57,33 @@ def f1_score(items):
     golds = unzipped_list[0]
     preds = unzipped_list[1]
     fscore = sklearn.metrics.f1_score(golds, preds)
-
     return np.max(fscore)
 
+@register_aggregation("binary_mean_f1")
+def binary_mean_f1_score(items):
+    preds, golds = zip(*items)
+    preds = np.array(preds)
+    golds = np.array(golds)
+    f11 = sklearn.metrics.f1_score(y_true=golds == 0, y_pred=preds == 0)
+    f12 = sklearn.metrics.f1_score(y_true=golds == 1, y_pred=preds == 1)
+    avg_f1 = np.mean([f11, f12])
+    return avg_f1
+
+@register_aggregation("binary_f1_0")
+def binary_f1_0_score(items):
+    preds, golds = zip(*items)
+    preds = np.array(preds)
+    golds = np.array(golds)
+    f11 = sklearn.metrics.f1_score(y_true=golds == 0, y_pred=preds == 0)
+    return f11
+
+@register_aggregation("binary_f1_1")
+def binary_f1_1_score(items):
+    preds, golds = zip(*items)
+    preds = np.array(preds)
+    golds = np.array(golds)
+    f12 = sklearn.metrics.f1_score(y_true=golds == 1, y_pred=preds == 1)
+    return f12
 
 @register_aggregation("matthews_corrcoef")
 def matthews_corrcoef(items):
@@ -421,6 +445,33 @@ def mcc_fn(items):  # This is a passthrough function
     aggregation="f1",
 )
 def f1_fn(items):  # This is a passthrough function
+    return items
+
+@register_metric(
+    metric="binary_mean_f1",
+    higher_is_better=True,
+    output_type="multiple_choice",
+    aggregation="binary_mean_f1",
+)
+def mean_f1_fn(items):  # This is a passthrough function
+    return items
+
+@register_metric(
+    metric="f1_0",
+    higher_is_better=True,
+    output_type="multiple_choice",
+    aggregation="binary_f1_0",
+)
+def f1_0_fn(items):  # This is a passthrough function
+    return items
+
+@register_metric(
+    metric="f1_1",
+    higher_is_better=True,
+    output_type="multiple_choice",
+    aggregation="binary_f1_1",
+)
+def f1_1_fn(items):  # This is a passthrough function
     return items
 
 
