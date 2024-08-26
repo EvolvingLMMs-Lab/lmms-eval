@@ -172,4 +172,4 @@ class SambaStudioLLaVA(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
-        assert False, "GPT4V not support"
+        assert False, "SS-LLaVA not supported"
