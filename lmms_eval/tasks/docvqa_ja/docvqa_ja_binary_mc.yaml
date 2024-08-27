@@ -1,0 +1,25 @@
+dataset_path: jlli/JDocQA-binary
+task: "docvqa_ja_binary_mc"
+output_type: multiple_choice
+test_split: test
+doc_to_visual: !function utils.docvqa_doc_to_visual
+doc_to_text: !function utils.docvqa_doc_to_text
+doc_to_choice: !function utils.docvqa_doc_to_choice
+doc_to_target: "original_answer"
+model_specific_prompt_kwargs:
+  default:
+    pre_prompt: "\n1 つの単語またはフレーズを使用して質問に答えます。"
+    post_prompt: "日本語での回答:"
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: binary_mean_f1
+    aggregation: binary_mean_f1
+    higher_is_better: true
+  - metric: f1_0
+    aggregation: binary_f1_0
+    higher_is_better: true
+  - metric: f1_1
+    aggregation: binary_f1_1
+    higher_is_better: true

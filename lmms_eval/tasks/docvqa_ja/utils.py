@@ -17,6 +17,8 @@ def docvqa_doc_to_text(doc, model_specific_prompt_kwargs):
     post_prompt = model_specific_prompt_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
+def docvqa_doc_to_choice(doc):
+    return ['はい', 'いいえ']
 
 def docvqa_doc_to_textonly(doc, model_specific_prompt_kwargs):
     all_text = doc["text"]

@@ -1159,13 +1159,13 @@ class ConfigurableTask(Task):
         use_metric = list(self._metric_fn_list.keys())
         if self.OUTPUT_TYPE == "loglikelihood":
             results = results[0]
-            ll, is_greedy = results
+            ll, is_greedy, _ = results
             return {
                 **({"perplexity": ll} if "perplexity" in use_metric else {}),
                 **({"acc": int(is_greedy)} if "acc" in use_metric else {}),
             }
         elif self.OUTPUT_TYPE == "multiple_choice":
-            lls, is_greedy = zip(*results)
+            lls, is_greedy, _ = zip(*results)
 
             # retrieve choices in List[str] form, to compute choice lengths, etc.
             choices = self.doc_to_choice(doc)
@@ -1217,6 +1217,9 @@ class ConfigurableTask(Task):
             result_dict = {
                 **({"acc": acc} if "acc" in use_metric else {}),
                 **({"f1": (gold, pred)} if "f1" in use_metric else {}),
+                **({"binary_mean_f1": (gold, pred)} if "binary_mean_f1" in use_metric else {}),
+                **({"f1_0": (gold, pred)} if "f1_0" in use_metric else {}),
+                **({"f1_1": (gold, pred)} if "f1_1" in use_metric else {}),
                 **({"mcc": (gold, pred)} if "mcc" in use_metric else {}),
                 **({"acc_norm": acc_norm} if "acc_norm" in use_metric else {}),
                 **({"exact_match": exact_match} if "exact_match" in use_metric else {}),

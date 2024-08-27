@@ -215,7 +215,7 @@ class LlavaHf(lmms):
             model_inputs = self._image_processor(text=formatted_continuation, images=visuals).to(self._device, self.model.dtype)
             labels = model_inputs["input_ids"].clone()
             contxt_id = self._image_processor(text=formatted_contexts, return_tensors="pt")["input_ids"]
-            labels[: len(contxt_id)] = -100
+            labels[0, : contxt_id.shape[1]] = -100
 
             if self.accelerator.is_main_process and doc_id % 100 == 0:
                 eval_logger.debug(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
@@ -226,10 +226,11 @@ class LlavaHf(lmms):
             loss = outputs["loss"]
             logits = outputs["logits"]
             greedy_tokens = logits.argmax(dim=-1)
-            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] :]  # [1, seq]
-            greedy_tokens = greedy_tokens[:, contxt_id.shape[1] : model_inputs["input_ids"].shape[1]]  # [1, seq]
+            # account for the eos token
+            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + 1:]  # [1, seq]
+            greedy_tokens = greedy_tokens[:, contxt_id.shape[1] + 1 : model_inputs["input_ids"].shape[1]]  # [1, seq]
             max_equal = (greedy_tokens == cont_toks).all()
-            res.append((float(loss.item()), bool(max_equal)))
+            res.append((float(loss.item()), bool(max_equal), self.tokenizer.decode(greedy_tokens[0])))
             pbar.update(1)
 
         pbar.close()
