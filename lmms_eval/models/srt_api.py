@@ -233,6 +233,7 @@ class SRT_API(lmms):
                 pbar.update(1)
 
         asyncio.run(run(requests))
+        kill_child_process(self.process.pid)
 
         return res
 
