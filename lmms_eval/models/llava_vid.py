@@ -96,6 +96,7 @@ class LlavaVid(lmms):
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.max_frames_num = int(max_frames_num)
         self.mm_resampler_location = mm_pooling_position
+        self.mm_newline_position = mm_newline_position
         self.delay_load = delay_load
 
         if self.overwrite == True:
