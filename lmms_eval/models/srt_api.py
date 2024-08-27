@@ -18,6 +18,12 @@ from lmms_eval.api.registry import register_model
 
 from loguru import logger as eval_logger
 
+from sglang.srt.utils import kill_child_process
+from sglang.test.test_utils import (
+    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+    popen_launch_server,
+)
+
 NUM_SECONDS_TO_SLEEP = 5
 
 
@@ -25,13 +31,16 @@ NUM_SECONDS_TO_SLEEP = 5
 class SRT_API(lmms):
     def __init__(
         self,
-        api_key: str = "EMPTY",
-        model_version: str = "default",
+        api_key: str = "sk-123456",
+        model_version: str = "lmms-lab/llava-onevision-qwen2-72b-ov",
         modality: str = "video",
         host: str = "127.0.0.1",
         port: int = 30000,
         max_frames_num: int = 32,
         timeout: int = 60,
+        chat_template: str = "chatml-llava",
+        tp: int = 8,
+        chunked_prefill_size: int = 16384,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
         **kwargs,
@@ -63,7 +72,23 @@ class SRT_API(lmms):
                 self.cache_mode = "start"
 
         accelerator = Accelerator()
-        self.client = OpenAI(api_key="EMPTY", base_url="http://127.0.0.1:30000/v1")
+        self.model = model_version
+        self.base_url = f"http://{host}:{port}"
+        self.api_key = api_key
+        self.chat_template = chat_template
+        other_args = []
+        other_args.extend(["--chunked-prefill-size", str(chunked_prefill_size)])
+        other_args.extend(["--tensor-parallel-size", str(tp)])
+        other_args.extend(["--chat-template", self.chat_template])
+        self.process = popen_launch_server(
+            self.model,
+            self.base_url,
+            timeout=DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+            api_key=self.api_key,
+            other_args=other_args,
+        )
+        self.base_url += "/v1"
+        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
