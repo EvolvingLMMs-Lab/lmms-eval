@@ -453,6 +453,10 @@ class Llava_OneVision(lmms):
                 if len(visual) > 1 or "image_aspect_ratio" not in self._config.__dict__:  # for multi image case, we treat per image aspect ratio as "pad" by default.
                     self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
                     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
+                
+                if len(visual) == 0: # For textonly task
+                    image_tensor = None
+                    task_type = 'textonly'
 
                 if type(visual[0]) == PIL.Image.Image and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
                     image_tensor = process_images(visual, self._image_processor, self._config)
