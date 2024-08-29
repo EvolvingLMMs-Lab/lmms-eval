@@ -224,13 +224,15 @@ class LlavaHf(lmms):
             with torch.inference_mode():
                 outputs = self.model(**model_inputs, labels=labels)
             loss = outputs["loss"]
-            logits = outputs["logits"]
+            logits = torch.nn.functional.log_softmax(outputs["logits"])
             greedy_tokens = logits.argmax(dim=-1)
             # account for the eos token
             cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + 1:]  # [1, seq]
             greedy_tokens = greedy_tokens[:, contxt_id.shape[1] + 1 : model_inputs["input_ids"].shape[1]]  # [1, seq]
+            greedy_logits = logits[:, contxt_id.shape[1] + 1 : model_inputs["input_ids"].shape[1]]
+            greedy_logits = torch.gather(greedy_logits, 2, greedy_tokens.unsqueeze(-1)).squeeze(-1)
             max_equal = (greedy_tokens == cont_toks).all()
-            res.append((float(loss.item()), bool(max_equal), self.tokenizer.decode(greedy_tokens[0])))
+            res.append((float(greedy_logits.sum()), bool(max_equal), self.tokenizer.decode(greedy_tokens[0])))
             pbar.update(1)
 
         pbar.close()
