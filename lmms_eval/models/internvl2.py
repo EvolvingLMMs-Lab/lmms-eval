@@ -620,11 +620,11 @@ class InternVL2(lmms):
             loss = outputs["loss"]
             logits = torch.nn.functional.log_softmax(outputs["logits"], dim=-1)
             greedy_tokens = logits.argmax(dim=-1)
-            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + role_length + 1:-1]
+            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + role_length:-1]
             # account for off by 1 and im_end
-            greedy_toks = greedy_tokens[:, contxt_id.shape[1] + role_length:-2]
+            greedy_toks = greedy_tokens[:, contxt_id.shape[1] + role_length-1:-2]
             max_equal = (greedy_toks == cont_toks).all()
-            cont_logits = logits[:, contxt_id.shape[1] + role_length:-2]
+            cont_logits = logits[:, contxt_id.shape[1] + role_length - 1:-2]
             greedy_logits = torch.gather(cont_logits, 2, greedy_toks.unsqueeze(-1)).squeeze(-1)
             res.append((float(greedy_logits.sum()), bool(max_equal), self.tokenizer.decode(greedy_toks[0])))
             pbar.update(1)
