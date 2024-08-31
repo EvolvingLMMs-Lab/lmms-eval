@@ -780,6 +780,7 @@ class ConfigurableTask(Task):
 
             if "video" in dataset_kwargs and dataset_kwargs["video"]:
                 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+                hf_home = os.path.expanduser(hf_home)
                 cache_dir = dataset_kwargs["cache_dir"]
                 cache_dir = os.path.join(hf_home, cache_dir)
                 accelerator = Accelerator()
