@@ -1,17 +1,19 @@
+import logging
 from typing import List, Tuple
-from lmms_eval.api.instance import Instance
-from decord import VideoReader, cpu
+
+import numpy as np
 import torch
 import torchvision.transforms as T
+from accelerate import Accelerator, DistributedType
+from decord import VideoReader, cpu
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
-import numpy as np
-from transformers import AutoModel, AutoTokenizer
-from lmms_eval.api.registry import register_model
-from accelerate import Accelerator, DistributedType
-from lmms_eval.api.model import lmms
 from tqdm import tqdm
-import logging
+from transformers import AutoModel, AutoTokenizer
+
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 
 eval_logger = logging.getLogger("eval_logger")
 
@@ -118,6 +120,7 @@ def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=3
 
 
 from datetime import timedelta
+
 from accelerate.state import AcceleratorState
 from accelerate.utils import InitProcessGroupKwargs
 

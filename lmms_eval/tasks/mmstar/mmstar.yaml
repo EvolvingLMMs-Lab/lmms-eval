@@ -32,7 +32,6 @@ metric_list:
   - metric: average
     aggregation: !function utils.mmstar_aggregate_results
     higher_is_better: true
-    
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

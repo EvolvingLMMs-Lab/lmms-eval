@@ -8,7 +8,7 @@ doc_to_visual: !function utils.muir_doc_to_visual
 doc_to_text: !function utils.muir_doc_to_text
 doc_to_target: !function utils.muir_doc_to_target
 process_results: !function utils.muir_process_results
-
+  
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

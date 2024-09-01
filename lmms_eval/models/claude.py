@@ -1,19 +1,18 @@
-from io import BytesIO
-from copy import deepcopy
-import os
 import base64
 import json
-from typing import List, Tuple, Union
-from tqdm import tqdm
+import os
 import time
+from copy import deepcopy
+from io import BytesIO
+from typing import List, Tuple, Union
+
+from accelerate import Accelerator, DistributedType
+from PIL import Image
+from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
-from accelerate import Accelerator, DistributedType
-
-from PIL import Image
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -23,8 +22,8 @@ eval_logger = logger
 
 try:
     import anthropic
-    from decord import VideoReader, cpu
     import numpy as np
+    from decord import VideoReader, cpu
 except Exception as e:
     eval_logger.warning(f"Error importing claude: {e}")
 

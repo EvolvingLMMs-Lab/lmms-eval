@@ -1,23 +1,24 @@
-import torch
 import random
+
+import torch
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-from tqdm import tqdm
+import warnings
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-from typing import List, Optional, Union, Tuple
-import warnings
-
 warnings.filterwarnings("ignore")
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger as eval_logger
 

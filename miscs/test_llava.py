@@ -1,7 +1,6 @@
 import requests
-from PIL import Image
-
 import torch
+from PIL import Image
 from transformers import AutoProcessor, LlavaForConditionalGeneration
 
 model_id = "llava-hf/llava-1.5-7b-hf"

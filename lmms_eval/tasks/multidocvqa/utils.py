@@ -1,12 +1,12 @@
-import os
-import re
 import ast
 import json
+import os
+import re
+
+from loguru import logger as eval_logger
 
 from lmms_eval.api.metrics import levenshtein_distance
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-from loguru import logger as eval_logger
 
 
 def multidocvqa_doc_to_text(doc, lmms_eval_specific_kwargs):

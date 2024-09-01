@@ -1,15 +1,16 @@
-import yaml
-import os
-from pathlib import Path
-import pandas as pd
-import json
-from PIL import Image
-from io import BytesIO
 import base64
-from lmms_eval.tasks.mmupd.mmupd_evals import MMUPD_Evaluator
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import json
+import os
+from io import BytesIO
+from pathlib import Path
 
+import pandas as pd
+import yaml
 from loguru import logger as eval_logger
+from PIL import Image
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks.mmupd.mmupd_evals import MMUPD_Evaluator
 
 with open(Path(__file__).parent / "mmupd.yaml", "r") as f:
     raw_data = f.readlines()

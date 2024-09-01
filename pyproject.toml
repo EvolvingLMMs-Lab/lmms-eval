@@ -7,9 +7,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.2.1"
+version = "0.2.3"
 authors = [
-    { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@outlook.com" },
+    { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
 description = "A framework for evaluating large multi-modality language models"
 readme = "README.md"
@@ -23,6 +23,7 @@ license = { text = "MIT" }
 dependencies = [
     "accelerate>=0.29.1",
     "black==24.1.0",
+    "isort==5.13.2",
     "datasets==2.16.1",
     "evaluate>=0.4.0",
     "httpx==0.23.3",
@@ -44,7 +45,6 @@ dependencies = [
     "opencv-python-headless",
     "av",
     "hf_transfer",
-    "pywsd",
     "nltk",
     "sentencepiece==0.1.99",
     "yt-dlp",
@@ -60,7 +60,6 @@ dependencies = [
     "Jinja2",
     "openpyxl",
     "loguru",
-    "Levenshtein",
     "hf_transfer",
     "tenacity==8.3.0",
     "wandb>=0.16.0",
@@ -70,15 +69,21 @@ dependencies = [
     "packaging",
     "decord",
     "zss",
+    "protobuf==3.20",
+]
+
+[project.optional-dependencies]
+metrics = [
     "pywsd",
     "spacy",
     "anls",
     "rouge",
     "capture_metric",
-    "protobuf==3.20",
+    "Levenshtein",
 ]
-
-[project.optional-dependencies]
+vila = [
+    "s2wrapper@git+https://github.com/bfshi/scaling_on_scales"
+]
 gemini = [
     "google-generativeai",
 ]

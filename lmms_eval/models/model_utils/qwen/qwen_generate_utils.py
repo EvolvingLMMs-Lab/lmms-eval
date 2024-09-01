@@ -9,15 +9,14 @@ import warnings
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from typing import Tuple, List, Union, Iterable
+from typing import Iterable, List, Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn.functional as F
+from loguru import logger
 from transformers import PreTrainedTokenizer
 from transformers.generation import LogitsProcessor
-
-from loguru import logger
 
 # Types.
 HistoryType = List[Tuple[str, str]]

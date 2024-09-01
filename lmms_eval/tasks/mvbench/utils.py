@@ -1,16 +1,19 @@
-from collections import defaultdict
-import os
 import datetime
 import json
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-from pathlib import Path
-import yaml
-import sys, string
-from typing import List, Dict, Optional, Union
+import os
 import re
-import PIL
+import string
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
 import numpy as np
+import PIL
+import yaml
 from loguru import logger as eval_logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 DATA_LIST = {
     "action_sequence": "star/Charades_v1_480/",

@@ -1,11 +1,13 @@
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
-import numpy as np
 import math
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import torch
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from loguru import logger
+from tqdm import tqdm
 from transformers import AutoConfig
 
 from lmms_eval import utils
@@ -14,11 +16,10 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
 
-from loguru import logger
-
 eval_logger = logger
 
-from transformers import VideoLlavaProcessor, VideoLlavaForConditionalGeneration
+from transformers import VideoLlavaForConditionalGeneration, VideoLlavaProcessor
+
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 

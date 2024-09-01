@@ -1,24 +1,22 @@
-from multiprocessing import context
-import torch
-from transformers import AutoModel, AutoTokenizer
-from PIL import Image
-import numpy as np
-import torchvision.transforms as transforms
+import re
 from datetime import timedelta
+from multiprocessing import context
+from typing import List, Optional, Sequence, Tuple, Union
 
+import numpy as np
+import torch
+import torchvision.transforms as transforms
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from PIL import Image
+from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
-
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-
-from typing import Optional, Sequence, List, Tuple, Union
-import re
-from tqdm import tqdm
 
 pattern = re.compile(r"[A-Z]")
 

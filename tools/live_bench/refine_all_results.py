@@ -1,7 +1,6 @@
-from tqdm import tqdm
 from datasets import Dataset, load_dataset
 from live_bench.data_generator.question_finalizer import QuestionFinalizer
-
+from tqdm import tqdm
 
 if __name__ == "__main__":
     hf_data = load_dataset("lmms-lab/LiveBench", "2024-07", split="test")

@@ -7,7 +7,7 @@ import argparse
 
 import torch
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 def make_delta(base_model_path, target_model_path, delta_path, hub_repo_id):

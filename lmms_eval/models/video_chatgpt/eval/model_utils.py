@@ -1,12 +1,14 @@
 import os
+
 import numpy as np
-from PIL import Image
+import torch
 from decord import VideoReader, cpu
-from transformers import AutoTokenizer, CLIPVisionModel, CLIPImageProcessor
+from PIL import Image
+from transformers import AutoTokenizer, CLIPImageProcessor, CLIPVisionModel
+
+from lmms_eval.models.video_chatgpt.constants import *
 from lmms_eval.models.video_chatgpt.model import VideoChatGPTLlamaForCausalLM
 from lmms_eval.models.video_chatgpt.utils import disable_torch_init
-from lmms_eval.models.video_chatgpt.constants import *
-import torch
 
 
 def load_video(vis_path, n_clips=1, num_frm=100):

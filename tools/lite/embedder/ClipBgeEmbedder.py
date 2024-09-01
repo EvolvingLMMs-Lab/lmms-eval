@@ -1,21 +1,20 @@
+import json
+import os
 from copy import deepcopy
 from datetime import timedelta
-from typing import Optional, Union, List, Sequence, Dict
-import os
-import json
+from typing import Dict, List, Optional, Sequence, Union
 
-from .BaseEmbedder import BaseEmbedder
-
+import numpy as np
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from accelerate.utils import gather_object
-
-import numpy as np
-from transformers import CLIPModel, CLIPProcessor
+from PIL import Image
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
-import torch
-from PIL import Image
+from transformers import CLIPModel, CLIPProcessor
+
+from .BaseEmbedder import BaseEmbedder
 
 
 class ClipBgeEmbedder(BaseEmbedder):

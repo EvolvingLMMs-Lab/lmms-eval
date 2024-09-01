@@ -1,16 +1,16 @@
 import collections
-import os
+import io
 import json
+import logging
+import os
+
 from capture_metric.capture import CAPTURE
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
+from PIL import Image
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
-import io
-from PIL import Image
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-import logging
 
 eval_logger = logging.getLogger("lmms-eval")
 

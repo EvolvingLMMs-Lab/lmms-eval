@@ -1,15 +1,15 @@
+import base64
 import json
-import re
 import os
-import requests
-import numpy as np
+import re
 import time
-import yaml
-from pathlib import Path
 from copy import deepcopy
 from io import BytesIO
-import base64
+from pathlib import Path
 
+import numpy as np
+import requests
+import yaml
 from loguru import logger as eval_logger
 
 NUM_SECONDS_TO_SLEEP = 5

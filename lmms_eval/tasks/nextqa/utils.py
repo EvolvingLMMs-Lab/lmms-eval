@@ -1,12 +1,13 @@
 import os
-import yaml
 import random
-import pandas as pd
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import yaml
 from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.video_loader import get_cache_dir, get_video
-import numpy as np
 
 OPTIONS = ["A", "B", "C", "D", "E"]
 
@@ -27,9 +28,9 @@ if config["metadata"]["load_package"]:
         eval_logger.debug("pywsd not installed. Please install pywsd to use this module. You can install it by running 'pip install pywsd'")
 
     try:
-        from nltk.tokenize import word_tokenize
-        from nltk.corpus import wordnet
         import nltk
+        from nltk.corpus import wordnet
+        from nltk.tokenize import word_tokenize
 
         nltk.download("averaged_perceptron_tagger", quiet=True)
         nltk.download("wordnet", quiet=True)

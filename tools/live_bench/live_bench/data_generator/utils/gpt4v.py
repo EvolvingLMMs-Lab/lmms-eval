@@ -1,9 +1,10 @@
-from PIL import Image
-import io
 import base64
-from live_bench.data_generator.response import Response
+import io
 import logging
 from time import sleep
+
+from live_bench.data_generator.response import Response
+from PIL import Image
 
 logger = logging.getLogger("lmms-eval")
 

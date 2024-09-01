@@ -1,12 +1,17 @@
-import embedder
-from lmms_eval.utils import simple_parse_args_string
-from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict, ConfigurableTask
-from lmms_eval.api.registry import ALL_TASKS, GROUP_REGISTRY
-
 import argparse
 import os
 
+import embedder
 import torch.distributed as dist
+
+from lmms_eval.api.registry import ALL_TASKS, GROUP_REGISTRY
+from lmms_eval.tasks import (
+    ConfigurableTask,
+    get_task_dict,
+    include_path,
+    initialize_tasks,
+)
+from lmms_eval.utils import simple_parse_args_string
 
 
 def rank0_print(*args):

@@ -1,18 +1,19 @@
 # Code mostly from: https://github.com/EleutherAI/lm-evaluation-harness/pull/1339, credit to: https://github.com/ayulockin
 import copy
-
-import re
-import os
-import json
 import glob
-import pandas as pd
-import numpy as np
+import json
+import os
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Tuple, Union
-from packaging.version import Version
-from lmms_eval import utils
+
+import numpy as np
+import pandas as pd
 import tenacity
 from loguru import logger
+from packaging.version import Version
+
+from lmms_eval import utils
 
 try:
     import wandb

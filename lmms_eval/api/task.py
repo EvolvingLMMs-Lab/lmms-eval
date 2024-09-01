@@ -1,28 +1,39 @@
 import abc
 import ast
+import inspect
 import itertools
 import json
-
 import os
-import re
 import random
+import re
 import shutil
-import inspect
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from glob import glob
-from typing import Any, List, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import datasets
 import numpy as np
-from PIL import ImageFile
+from accelerate import Accelerator
 from datasets import DownloadConfig, Image, Sequence
 from huggingface_hub import snapshot_download
-from tenacity import retry, stop_after_attempt, wait_fixed, stop_after_delay
+from loguru import logger as eval_logger
+from PIL import ImageFile
+from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
 
-from accelerate import Accelerator
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
@@ -37,8 +48,6 @@ from lmms_eval.api.registry import (
     is_higher_better,
 )
 from lmms_eval.filters import build_filter_ensemble
-
-from loguru import logger as eval_logger
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
 # Include this inside code block to avoid error
@@ -56,6 +65,7 @@ class TaskConfig(dict):
     # task naming/registry
     task: str = None
     task_alias: str = None
+    tag: str = None
     group: Union[str, list] = None
     group_alias: Union[str, list] = None
     # HF dataset options.
@@ -106,6 +116,16 @@ class TaskConfig(dict):
             from importlib import import_module
 
             # self.dataset_path = inspect.getfile(import_module(self.dataset_path))
+
+        if self.group is not None:
+            eval_logger.warning(
+                "A task YAML file was found to contain a `group` key. Groups which provide aggregate scores over several subtasks now require a separate config file--if not aggregating, you may want to use the `tag` config option instead within your config. Setting `group` within a TaskConfig will be deprecated in v0.4.4. Please see https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/task_guide.md for more information."
+            )
+
+            if self.tag is None:
+                self.tag = self.group
+            else:
+                raise ValueError("Got both a `group` and `tag` entry within a TaskConfig. Please use one or the other--`group` values will be deprecated in v0.4.4.")
 
         if self.generation_kwargs is not None:
             if self.output_type != "generate_until":
@@ -366,7 +386,7 @@ class Task(abc.ABC):
         else:
             assert False, f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!"
 
-        eval_logger.info(f"Building contexts for task {self.CONFIG.task} on rank {rank}...")
+        eval_logger.info(f"Building contexts for task {self._config.task} on rank {rank}...")
         instances = []
         doc_id_iterator = utils.create_iterator([i for i in range(len(docs))], rank, world_size, limit)
         doc_id_iterator, doc_id_iterator_counting = itertools.tee(doc_id_iterator)
@@ -518,6 +538,19 @@ class Task(abc.ABC):
         # (num_fewshot)
         return self.config.to_dict()
 
+    def set_config(self, key: str, value: Any, update: bool = False) -> None:
+        """Set or update the configuration for a given key."""
+        if key is None:
+            raise ValueError("Key must be provided.")
+
+        if update:
+            current_value = getattr(self._config, key, {})
+            if not isinstance(current_value, dict):
+                raise TypeError(f"Expected a dict for key '{key}', got {type(current_value).__name__} instead.")
+            current_value.update(value)
+        else:
+            setattr(self._config, key, value)
+
     def override_metric(self, metric_name: str) -> None:
         """
         Override the default metrics used for evaluation with custom metrics.
@@ -541,24 +574,72 @@ class Task(abc.ABC):
         setattr(self._config, "metric_list", [{"metric": metric_name}])
         setattr(self._config, "process_results", None)
 
+    def set_fewshot_seed(self, seed: Optional[int] = None) -> None:
+        self.fewshot_rnd = random.Random(seed)
+        if hasattr(self, "sampler"):
+            self.sampler.rnd = self.fewshot_rnd
+
+    @property
+    def eval_docs(self) -> Union[datasets.Dataset, List[dict]]:
+        if self.has_test_docs():
+            return self.test_docs()
+        elif self.has_validation_docs():
+            return self.validation_docs()
+        else:
+            raise ValueError(f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!")
+
+    def doc_iterator(self, *, rank: int = 0, limit: Union[int, None] = None, world_size: int = 1) -> Iterator[Tuple[int, Any]]:
+        limit = int(limit) if limit else None
+        doc_iterator = utils.create_iterator(
+            enumerate(self.eval_docs),
+            rank=int(rank),
+            limit=limit,
+            world_size=int(world_size),
+        )
+        return doc_iterator
+
 
 class ConfigurableTask(Task):
     VERSION = "Yaml"
     OUTPUT_TYPE = None
     CONFIG = None
 
-    def __init__(self, model_name) -> None:  # TODO no super() call here
+    def __init__(
+        self,
+        data_dir=None,
+        cache_dir=None,
+        download_mode=None,
+        config: Optional[dict] = None,
+        model_name: Optional[str] = None,
+    ) -> None:  # TODO no super() call here
         # Get pre-configured attributes
         self._config = self.CONFIG
-        # different model requires different prompt, we have to take those into account.
+
+        # Use new configurations if there was no preconfiguration
+        if self.config is None:
+            self._config = TaskConfig(**config)
+        # Overwrite configs
+        else:
+            if config is not None:
+                self._config.__dict__.update(config)
+
+        if self.config is None:
+            raise ValueError("Must pass a config to ConfigurableTask, either in cls.CONFIG or `config` kwarg")
+
+        if isinstance(self.config.metadata, dict):
+            if "version" in self.config.metadata:
+                self.VERSION = self.config.metadata["version"]
 
         self.model_name = model_name
         self._prepare_model_specific_config()
 
-        assert self.config.output_type in ALL_OUTPUT_TYPES
-        self.OUTPUT_TYPE = self.config.output_type
+        if self.config.output_type is not None:
+            if self.config.output_type not in ALL_OUTPUT_TYPES:
+                raise ValueError(f"Got invalid output_type '{self.config.output_type}', must be in '{','.join(ALL_OUTPUT_TYPES)}'")
+            self.OUTPUT_TYPE = self.config.output_type
 
-        self.DATASET_PATH = self.config.dataset_path
+        if self.config.dataset_path is not None:
+            self.DATASET_PATH = self.config.dataset_path
 
         if self.config.dataset_name is not None:
             self.DATASET_NAME = self.config.dataset_name
@@ -792,8 +873,8 @@ class ConfigurableTask(Task):
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
 
                     def unzip_video_data(zip_file):
-                        import zipfile
                         import os
+                        import zipfile
 
                         with zipfile.ZipFile(zip_file, "r") as zip_ref:
                             for file_info in zip_ref.infolist():
@@ -877,9 +958,7 @@ class ConfigurableTask(Task):
         )
         if self.config.process_docs is not None:
             for split in self.dataset:
-                if split in [
-                    self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split
-                ]:
+                if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
                     self.dataset[split] = self.config.process_docs(self.dataset[split])
 
         # copy dataset, remove image features
@@ -1088,11 +1167,12 @@ class ConfigurableTask(Task):
                 )
             )
         else:
-            raise TypeError
+            # eval_logger.warning("Note that doc_to_visual was called but not set in config. Please check if this is a text-only task.")
+            return self.config.doc_to_visual
 
     def doc_to_choice(self, doc: Any) -> List[str]:
         if self.config.doc_to_choice is None:
-            eval_logger.error("doc_to_choice was called but not set in config")
+            eval_logger.error("Note that doc_to_choice was called but not set in config.")
         else:
             doc_to_choice = self.config.doc_to_choice
 
@@ -1316,3 +1396,13 @@ class ConfigurableTask(Task):
 
     def higher_is_better(self):
         return self._higher_is_better
+
+    def get_config(self, key: str) -> Any:
+        return getattr(self._config, key, None)
+
+    @property
+    def task_name(self) -> Any:
+        return getattr(self.config, "task", None)
+
+    def __repr__(self):
+        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"num_samples={len(self.eval_docs)})"

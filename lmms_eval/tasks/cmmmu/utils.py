@@ -1,13 +1,12 @@
-from collections import defaultdict
-import re
-import random
-import os
 import json
-
-from collections import Counter
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import os
+import random
+import re
+from collections import Counter, defaultdict
 
 from loguru import logger as eval_logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 PROMPT = {
     "task_instructions": [
