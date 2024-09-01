@@ -1,5 +1,6 @@
-import re 
 import logging
+import re
+
 from datasets import Dataset
 
 eval_logger = logging.getLogger("lmms-eval")
@@ -14,22 +15,17 @@ def refcoco_bbox_rec_preprocess_dataset(dataset: Dataset):
 
     # Original bbox format (top x, top y, width, height)
     # Convert to (top-left x, top-left y, bottom-right x, bottom-right y)
-    # Normalize the bounding box coordinates to be between 0 and 1 
+    # Normalize the bounding box coordinates to be between 0 and 1
     # using the image width and height
-    dataset = dataset.map(
-        lambda x: {"bbox": [x["bbox"][0] / x["image_width"], 
-                            x["bbox"][1] / x["image_height"],
-                           (x["bbox"][0] + x["bbox"][2]) / x["image_width"],
-                           (x["bbox"][1] + x["bbox"][3]) / x["image_height"]]}
-    )
+    dataset = dataset.map(lambda x: {"bbox": [x["bbox"][0] / x["image_width"], x["bbox"][1] / x["image_height"], (x["bbox"][0] + x["bbox"][2]) / x["image_width"], (x["bbox"][1] + x["bbox"][3]) / x["image_height"]]})
 
     # currently, the dataset has `answer` as a list of strings
     # each answer should be its own row
     # we will explode the dataset to have one row per answer
     # duplicate the other columns
     def explode_answers(example):
-        answers = example.pop('answer')
-        return [{'answer': answer, **example} for answer in answers]
+        answers = example.pop("answer")
+        return [{"answer": answer, **example} for answer in answers]
 
     # Apply the function to each element, collecting the results
     exploded_rows = []
@@ -50,8 +46,11 @@ def refcoco_bbox_rec_doc_to_visual(doc):
 
 
 def refcoco_bbox_rec_doc_to_text(doc):
-    assert isinstance(doc['answer'], str), "Answer must be a string"
-    return "Bounding box coordinates are specified in the format (top-left x, top-left y, bottom-right x, bottom-right y). All values are floating point numbers bounded between 0 and 1. Please provide the bounding box coordinate of the region this sentence describes: " + doc['answer']
+    assert isinstance(doc["answer"], str), "Answer must be a string"
+    return (
+        "Bounding box coordinates are specified in the format (top-left x, top-left y, bottom-right x, bottom-right y). All values are floating point numbers bounded between 0 and 1. Please provide the bounding box coordinate of the region this sentence describes: "
+        + doc["answer"]
+    )
 
 
 def parse_float_sequence_within(input_str):
@@ -65,15 +64,15 @@ def parse_float_sequence_within(input_str):
     list: A list of four floats if the pattern is found, or a list of four zeros if the pattern is not found.
     """
     # Define the regex pattern to find the first instance of four floats within square brackets
-    pattern = r'\[\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\s*\]'
-    
+    pattern = r"\[\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\s*\]"
+
     # Use re.search to find the first match of the pattern in the input string
     match = re.search(pattern, input_str)
-    
+
     # If a match is found, convert the captured groups into a list of floats
     if match:
         return [float(match.group(i)) for i in range(1, 5)]
-    
+
     # If the input does not contain the pattern, return the null float sequence
     return [0, 0, 0, 0]
 
@@ -89,7 +88,7 @@ def refcoco_bbox_rec_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
     pred = parse_float_sequence_within(pred)
     ann_id = doc["question_id"]
-    data_dict = {"answer": doc["answer"], "pred": pred, "ann_id": ann_id, 'bbox': doc['bbox']}
+    data_dict = {"answer": doc["answer"], "pred": pred, "ann_id": ann_id, "bbox": doc["bbox"]}
     return {f"refcoco_{metric}": data_dict for metric in COCO_REC_METRICS}
 
 
@@ -173,19 +172,19 @@ def refcoco_bbox_rec_aggregation_result(results, metric):
     - dict: Dictionary containing the aggregated results for the specified metric.
     """
     scorers = {
-        'IoU': compute_iou,
-        'ACC@0.1': lambda x, y: compute_accuracy(x, y, 0.1),
-        'ACC@0.3': lambda x, y: compute_accuracy(x, y, 0.3),
-        'ACC@0.5': lambda x, y: compute_accuracy(x, y, 0.5),
-        'ACC@0.7': lambda x, y: compute_accuracy(x, y, 0.7),
-        'ACC@0.9': lambda x, y: compute_accuracy(x, y, 0.9),
-        'Center_ACC': compute_center_accuracy
+        "IoU": compute_iou,
+        "ACC@0.1": lambda x, y: compute_accuracy(x, y, 0.1),
+        "ACC@0.3": lambda x, y: compute_accuracy(x, y, 0.3),
+        "ACC@0.5": lambda x, y: compute_accuracy(x, y, 0.5),
+        "ACC@0.7": lambda x, y: compute_accuracy(x, y, 0.7),
+        "ACC@0.9": lambda x, y: compute_accuracy(x, y, 0.9),
+        "Center_ACC": compute_center_accuracy,
     }
     results_dict = {metric: []}
     for result in results:
         # Extract the ground truth and predicted bounding boxes
-        gt_bbox = result['bbox']
-        pred_bbox = result['pred']
+        gt_bbox = result["bbox"]
+        pred_bbox = result["pred"]
         # Compute the specified metric between the ground truth and predicted bounding boxes
         score = scorers[metric](gt_bbox, pred_bbox)
         results_dict[metric].append(score)
@@ -200,6 +199,7 @@ def refcoco_bbox_rec_iou(results):
 
 def refcoco_bbox_rec_acc01(results):
     return refcoco_bbox_rec_aggregation_result(results, "ACC@0.1")
+
 
 def refcoco_bbox_rec_acc03(results):
     return refcoco_bbox_rec_aggregation_result(results, "ACC@0.3")

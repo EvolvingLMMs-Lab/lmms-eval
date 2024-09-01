@@ -4,8 +4,15 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 import copy
-from tqdm import tqdm
+import warnings
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from loguru import logger as eval_logger
+from packaging import version
+from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -13,20 +20,13 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
 
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-from packaging import version
-import warnings
-
-from loguru import logger as eval_logger
-
 warnings.filterwarnings("ignore")
 
 try:
-    from mantis.models.mllava import LlavaForConditionalGeneration, MLlavaProcessor
+    from mantis.models.conversation import conv_mllava_v1 as default_conv
+    from mantis.models.conversation import conv_templates
     from mantis.models.mfuyu import MFuyuForCausalLM, MFuyuProcessor
-    from mantis.models.conversation import conv_mllava_v1 as default_conv, conv_templates
+    from mantis.models.mllava import LlavaForConditionalGeneration, MLlavaProcessor
 
 except Exception as e:
     eval_logger.debug("Mantis is not installed. Please install Mantis to use this model.\nError: %s" % e)

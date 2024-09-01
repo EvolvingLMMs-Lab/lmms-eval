@@ -2,7 +2,6 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 from tqdm import tqdm
 
-
 from .sampling_def import SamplingMethod
 
 

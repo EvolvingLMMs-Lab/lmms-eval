@@ -1,29 +1,34 @@
-from abc import ABC, abstractmethod
-from glob import glob
-import os
 import json
-import numpy as np
-from numpy.polynomial.polynomial import polyfit
-import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error
-from typing import Dict, List, Union
-from distutils.dir_util import copy_tree
-import random
-import torch
-import lmms_eval
-from lmms_eval.evaluator import evaluate
-from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict, ConfigurableTask
-from lmms_eval.api.registry import ALL_TASKS
 import logging
-from lmms_eval.utils import simple_parse_args_string
+import os
+import random
+from abc import ABC, abstractmethod
+from distutils.dir_util import copy_tree
+from glob import glob
+from typing import Dict, List, Union
 
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from numpy.polynomial.polynomial import polyfit
+from sklearn.metrics import mean_squared_error
+
+import lmms_eval
+from lmms_eval.api.registry import ALL_TASKS
+from lmms_eval.evaluator import evaluate
+from lmms_eval.tasks import (
+    ConfigurableTask,
+    get_task_dict,
+    include_path,
+    initialize_tasks,
+)
+from lmms_eval.utils import simple_parse_args_string
 
 eval_logger = logging.getLogger("lmms-eval")
 
 
 class BaseShrinker(ABC):
     def __init__(self, task: str, num_items: Union[int, float], name: str, push_to_hub: bool = True) -> None:
-
         super().__init__()
         self.name = name
         self.task = task
