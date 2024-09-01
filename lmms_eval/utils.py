@@ -40,6 +40,10 @@ from jinja2 import BaseLoader, Environment, StrictUndefined
 from loguru import logger as eval_logger
 
 SPACING = " " * 47
+HIGHER_IS_BETTER_SYMBOLS = {
+    True: "↑",
+    False: "↓",
+}
 
 
 def is_json(string):
@@ -434,7 +438,7 @@ class Grouper:
         return res
 
 
-def make_table(result_dict, column: str = "results"):
+def make_table(result_dict, column: str = "results", sort_results: bool = False):
     """Generate table of results."""
     from pytablewriter import LatexTableWriter, MarkdownTableWriter
 
@@ -449,6 +453,7 @@ def make_table(result_dict, column: str = "results"):
         "Filter",
         "n-shot",
         "Metric",
+        "",
         "Value",
         "",
         "Stderr",
@@ -459,54 +464,53 @@ def make_table(result_dict, column: str = "results"):
     md_writer.headers = all_headers
     latex_writer.headers = all_headers
 
-    # Set column alignments for LaTeX
-    latex_writer.column_alignments = ["center"] * len(all_headers)
-
-    # Set padding for LaTeX columns (this will add space between columns)
-    latex_writer.column_format = " ".join(["|c"] * len(all_headers)) + "|"
-
     values = []
 
-    for k, dic in result_dict[column].items():
-        version = result_dict["versions"][k]
-        n = str(result_dict["n-shot"][k])
+    keys = result_dict[column].keys()
+    if sort_results:
+        # sort entries alphabetically by task or group name.
+        # NOTE: we default here to false, because order matters for multi-level table printing a la mmlu.
+        # sorting here would mess that up
+        keys = sorted(keys)
+    for k in keys:
+        dic = result_dict[column][k]
+        version = result_dict["versions"].get(k, "    N/A")
+        n = str(result_dict.get("n-shot", " ").get(k, " "))
+        higher_is_better = result_dict.get("higher_is_better", {}).get(k, {})
 
         if "alias" in dic:
             k = dic.pop("alias")
 
-        for (mf), v in dic.items():
+        metric_items = dic.items()
+        metric_items = sorted(metric_items)
+
+        for (mf), v in metric_items:
             m, _, f = mf.partition(",")
             if m.endswith("_stderr"):
                 continue
 
-            points = "N/A"
-            if v is not None:
-                if isinstance(v, str):
-                    points = v
-                else:
-                    # if 0 <= v <= 1:
-                    #     # v *= 100
-                    points = "%.4f" % v
+            hib = HIGHER_IS_BETTER_SYMBOLS.get(higher_is_better.get(m), "")
+
+            v = "%.4f" % v if isinstance(v, float) else v
+            if v == "" or v is None:
+                v = "N/A"
 
             if m + "_stderr" + "," + f in dic:
-                if v is None:
-                    se = "N/A"
-                else:
-                    se = dic[m + "_stderr" + "," + f]
-                if se != "N/A":
-                    se = "%.4f" % se
-                values.append([k, version, f, n, m, points, "±", se])
+                # if dic[m + "_stderr" + "," + f] != []:
+                se = dic[m + "_stderr" + "," + f]
+                se = "   N/A" if se == "N/A" or se == [] else "%.4f" % se
+                if v != []:
+                    values.append([k, version, f, n, m, hib, v, "±", se])
             else:
-                values.append([k, version, f, n, m, points, "", ""])
-            k = ""
-            version = ""
+                values.append([k, version, f, n, m, hib, v, "", ""])
+            # k = ""
+            # version = ""
     md_writer.value_matrix = values
     latex_writer.value_matrix = values
 
-    # Print LaTeX table to see how it looks
+    # todo: make latex table look good
     # print(latex_writer.dumps())
 
-    # Return Markdown table (note: column width and text alignment may not be supported)
     return md_writer.dumps()
 
 

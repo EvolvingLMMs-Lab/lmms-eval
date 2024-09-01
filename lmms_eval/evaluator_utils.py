@@ -1,5 +1,6 @@
 # credit to https://github.com/EleutherAI/lm-evaluation-harness
 import collections
+import inspect
 import math
 import pathlib
 import sys
@@ -67,6 +68,7 @@ class TaskOutput:
         self.sample_len = None
         self.sample_metrics = collections.defaultdict(list)
         self.agg_metrics = collections.defaultdict(list)
+        self.args = None
 
     @classmethod
     def from_taskdict(cls, task_name: str, task):
@@ -103,18 +105,22 @@ class TaskOutput:
 
     def calculate_aggregate_metric(self, bootstrap_iters=100000) -> None:
         for (metric, filter_key), items in self.sample_metrics.items():
-            agg_fn = self.task.aggregation()[metric]
-            metric_key = f"{metric},{filter_key}"
-            self.agg_metrics[metric_key] = agg_fn(items)
-            self.sample_len = len(items)  # TODO: same sample size for each metric?
-            if isinstance(bootstrap_iters, int):
-                stderr_fn = stderr_for_metric(
-                    metric=agg_fn,
-                    bootstrap_iters=min(bootstrap_iters, 100) if metric in ["bleu", "chrf", "ter"] else bootstrap_iters,
-                )
-                self.agg_metrics[f"{metric}_stderr,{filter_key}"] = stderr_fn(items) if (stderr_fn and len(items) > 1) else "N/A"
-            else:
-                raise ValueError(f"Received bootstrap_iters '{bootstrap_iters}' but expected an integer. Set to 0 to turn off stderr calculations.")
+            if metric in self.task.aggregation():
+                agg_fn = self.task.aggregation()[metric]
+                metric_key = f"{metric},{filter_key}"
+                if "args" in inspect.signature(agg_fn).parameters:
+                    self.agg_metrics[metric_key] = agg_fn(items, args=self.task.args)
+                else:
+                    self.agg_metrics[metric_key] = agg_fn(items)
+                self.sample_len = len(items)  # TODO: same sample size for each metric?
+                if isinstance(bootstrap_iters, int):
+                    stderr_fn = stderr_for_metric(
+                        metric=agg_fn,
+                        bootstrap_iters=min(bootstrap_iters, 100) if metric in ["bleu", "chrf", "ter"] else bootstrap_iters,
+                    )
+                    self.agg_metrics[f"{metric}_stderr,{filter_key}"] = stderr_fn(items) if (stderr_fn and len(items) > 1) else "N/A"
+                else:
+                    raise ValueError(f"Received bootstrap_iters '{bootstrap_iters}' but expected an integer. Set to 0 to turn off stderr calculations.")
 
     def __repr__(self):
         return f"TaskOutput(task_name={self.task_name}, " f"group_name={self.group_name}, " f"version={self.version}, " f"n_shot={self.n_shot}, " f"task_alias={self.task_alias}, " f"group_alias={self.group_alias})"
