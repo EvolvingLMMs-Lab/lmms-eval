@@ -1,28 +1,40 @@
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
-from decord import VideoReader, cpu
-import numpy as np
+import copy
 import math
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import torch
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from decord import VideoReader, cpu
+from loguru import logger as eval_logger
+from tqdm import tqdm
 from transformers import AutoConfig
-import copy
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
-from loguru import logger as eval_logger
-
 try:
+    from llavavid.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IGNORE_INDEX,
+        IMAGE_TOKEN_INDEX,
+    )
+    from llavavid.conversation import SeparatorStyle, conv_templates
+    from llavavid.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        preprocess_llama3,
+        preprocess_qwen,
+        tokenizer_image_token,
+        tokenizer_image_token_qwen_merge,
+    )
     from llavavid.model.builder import load_pretrained_model
-    from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-    from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
-    from llavavid.conversation import conv_templates, SeparatorStyle
-    from llavavid.mm_utils import tokenizer_image_token_qwen_merge, preprocess_qwen, preprocess_llama3
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
 
@@ -126,8 +138,11 @@ class LlavaVid(lmms):
                     overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
 
             if "v1.5" in pretrained:  # A hardcode solution here to load v1.5 model, otherwise it will use LlavaConfig from hf transformers
+                from llavavid.model.language_model.llava_llama import (
+                    LlavaConfig,
+                    LlavaLlamaForCausalLM,
+                )
                 from transformers import AutoTokenizer
-                from llavavid.model.language_model.llava_llama import LlavaConfig, LlavaLlamaForCausalLM
 
                 self._tokenizer = AutoTokenizer.from_pretrained(pretrained, use_fast=False)
                 cfg_pretrained = LlavaConfig.from_pretrained(pretrained)

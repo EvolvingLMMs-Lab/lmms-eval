@@ -4,8 +4,14 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 import copy
-from tqdm import tqdm
+import warnings
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from packaging import version
+from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -13,21 +19,19 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
 
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-from packaging import version
-import warnings
-
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
 
 try:
-    from llava.model.builder import load_pretrained_model
-    from llava.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token
-    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN
+    from llava.constants import DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX
     from llava.conversation import conv_templates
+    from llava.mm_utils import (
+        get_model_name_from_path,
+        process_images,
+        tokenizer_image_token,
+    )
+    from llava.model.builder import load_pretrained_model
 except Exception as e:
     eval_logger.debug("LLaVA is not installed. Please install LLaVA to use this model.\nError: %s" % e)
 

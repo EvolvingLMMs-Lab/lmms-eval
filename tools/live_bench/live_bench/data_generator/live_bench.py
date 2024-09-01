@@ -1,23 +1,27 @@
+import json
+import logging
 import os
 from datetime import datetime
-from typing import List
-from tqdm import tqdm
-from live_bench.data_generator.live_bench_data import LiveBenchData
-from datasets import Dataset, load_dataset
-from live_bench.websites import Website
-from live_bench.driver import load_driver
-from live_bench.data_generator import get_generator, get_random_generator
-from live_bench.screen_shoter import get_shoter
-from live_bench.data_generator.qa_generator import QAGenerator, QAData
-from live_bench.screen_shoter import ScreenImage, ScreenShoter
-from live_bench.data_generator.score_getter import get_score_getter, get_random_score_getter
-from live_bench.data_generator.response import Response
-from live_bench.data_generator.utils.extract_infomation import ImageInfomation, InfomationExtractor
-from live_bench.data_generator.question_finalizer import QuestionFinalizer
-
-import json
 from typing import List, Tuple
-import logging
+
+from datasets import Dataset, load_dataset
+from live_bench.data_generator import get_generator, get_random_generator
+from live_bench.data_generator.live_bench_data import LiveBenchData
+from live_bench.data_generator.qa_generator import QAData, QAGenerator
+from live_bench.data_generator.question_finalizer import QuestionFinalizer
+from live_bench.data_generator.response import Response
+from live_bench.data_generator.score_getter import (
+    get_random_score_getter,
+    get_score_getter,
+)
+from live_bench.data_generator.utils.extract_infomation import (
+    ImageInfomation,
+    InfomationExtractor,
+)
+from live_bench.driver import load_driver
+from live_bench.screen_shoter import ScreenImage, ScreenShoter, get_shoter
+from live_bench.websites import Website
+from tqdm import tqdm
 
 logger = logging.getLogger("lmms-eval")
 

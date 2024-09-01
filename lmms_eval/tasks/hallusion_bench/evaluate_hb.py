@@ -1,9 +1,16 @@
-import os
 import json
+import os
 
 from tqdm import tqdm
 
-from lmms_eval.tasks.hallusion_bench.utils import evaluate_by_chatgpt, check_same_by_chatgpt, assign_correctness, get_eval_all, get_eval_fig, get_eval_pair_all
+from lmms_eval.tasks.hallusion_bench.utils import (
+    assign_correctness,
+    check_same_by_chatgpt,
+    evaluate_by_chatgpt,
+    get_eval_all,
+    get_eval_fig,
+    get_eval_pair_all,
+)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 output_entry = "model_prediction"

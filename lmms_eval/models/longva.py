@@ -1,23 +1,23 @@
+import math
+
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from transformers import AutoConfig
 
-import math
-import torch
-
 torch.backends.cuda.matmul.allow_tf32 = True
 
-from tqdm import tqdm
-from datetime import timedelta
-from decord import VideoReader, cpu
-import numpy as np
-
 import copy
-import PIL
-from typing import List, Optional, Union, Tuple
-from packaging import version
-import warnings
 import logging
+import warnings
+from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import PIL
+from decord import VideoReader, cpu
+from packaging import version
+from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
 
@@ -30,10 +30,21 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 try:
+    from longva.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IGNORE_INDEX,
+        IMAGE_TOKEN_INDEX,
+    )
+    from longva.conversation import SeparatorStyle, conv_templates
+    from longva.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        process_images,
+        tokenizer_image_token,
+    )
     from longva.model.builder import load_pretrained_model
-    from longva.mm_utils import get_model_name_from_path, process_images, tokenizer_image_token, KeywordsStoppingCriteria
-    from longva.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
-    from longva.conversation import conv_templates, SeparatorStyle
 
 except Exception as e:
     eval_logger.debug("longva is not installed. Please install longva to use this model.\nError: %s" % e)

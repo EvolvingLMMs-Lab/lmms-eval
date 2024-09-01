@@ -1,16 +1,20 @@
-import torch
+import warnings
+from typing import List, Optional, Tuple, Union
 
+import torch
+from accelerate import Accelerator, DistributedType
+from accelerate.state import AcceleratorState
 from tqdm import tqdm
+from transformers import (
+    AutoProcessor,
+    LlavaForConditionalGeneration,
+    LlavaNextForConditionalGeneration,
+)
+
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from accelerate import Accelerator, DistributedType
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-from transformers import LlavaForConditionalGeneration, LlavaNextForConditionalGeneration, AutoProcessor
-
-import warnings
 
 warnings.filterwarnings("ignore")
 

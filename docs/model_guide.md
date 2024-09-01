@@ -63,7 +63,7 @@ Congrats on implementing your model! Now it's time to test it out.
 
 To make your model usable via the command line interface to `lmms_eval`, you'll need to tell `lmms_eval` what your model's name is.
 
-This is done via a *decorator*, `lmms_eval.api.registry.register_model`. Using `register_model()`, one can both tell the package what the model's name(s) to be used are when invoking it with `python -m lm_eval --model <name>` and alert `lmms_eval` to the model's existence.
+This is done via a *decorator*, `lmms_eval.api.registry.register_model`. Using `register_model()`, one can both tell the package what the model's name(s) to be used are when invoking it with `python -m lmms-eval --model <name>` and alert `lmms_eval` to the model's existence.
 
 ```python
 from lmms_eval.api.registry import register_model

@@ -1,30 +1,29 @@
-from accelerate import Accelerator, DistributedType
 import asyncio
 import base64
-from io import BytesIO
+import json
+import os
+import time
 from copy import deepcopy
-from decord import VideoReader, cpu
-import numpy as np
+from io import BytesIO
 from multiprocessing import cpu_count
+from typing import List, Tuple
+
+import numpy as np
+from accelerate import Accelerator, DistributedType
+from decord import VideoReader, cpu
+from loguru import logger as eval_logger
 from openai import AsyncOpenAI
 from PIL import Image
-import os
-import json
-from typing import List, Tuple
-from tqdm import tqdm
-import time
-
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
-
-from loguru import logger as eval_logger
-
 from sglang.srt.utils import kill_child_process
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     popen_launch_server,
 )
+from tqdm import tqdm
+
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 
 NUM_SECONDS_TO_SLEEP = 5
 

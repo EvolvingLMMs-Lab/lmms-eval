@@ -1,17 +1,17 @@
-from pathlib import Path
-import yaml
-import os
-import requests
-import logging
-import time
 import base64
-import openai
 import json
+import logging
+import os
+import time
 from io import BytesIO
-from tqdm import tqdm
-import pandas as pd
-import numpy as np
+from pathlib import Path
 
+import numpy as np
+import openai
+import pandas as pd
+import requests
+import yaml
+from tqdm import tqdm
 
 eval_logger = logging.getLogger("lmms-eval")
 

@@ -1,13 +1,13 @@
 import base64
-import requests
-import re
-
-import os
-import yaml
 import json
-from pathlib import Path
-from io import BytesIO
+import os
+import re
 import time
+from io import BytesIO
+from pathlib import Path
+
+import requests
+import yaml
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 

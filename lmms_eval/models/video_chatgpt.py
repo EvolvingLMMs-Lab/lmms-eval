@@ -1,25 +1,31 @@
 import os
+from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import torch
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from huggingface_hub import snapshot_download
+from loguru import logger
+from PIL import Image
+from tqdm import tqdm
+
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from huggingface_hub import snapshot_download
-import torch
-from PIL import Image
-
-from datetime import timedelta
-from typing import List, Tuple, Optional, Union
-from tqdm import tqdm
-
-from loguru import logger
-
 eval_logger = logger
 
 try:
-    from lmms_eval.models.video_chatgpt.eval.model_utils import load_video, initialize_model
-    from lmms_eval.models.video_chatgpt.inference import video_chatgpt_infer, video_chatgpt_infer_ppl, get_spatio_temporal_features_torch
+    from lmms_eval.models.video_chatgpt.eval.model_utils import (
+        initialize_model,
+        load_video,
+    )
+    from lmms_eval.models.video_chatgpt.inference import (
+        get_spatio_temporal_features_torch,
+        video_chatgpt_infer,
+        video_chatgpt_infer_ppl,
+    )
 except ImportError:
     eval_logger.warning("Failed to import video_chatgpt modules")
 

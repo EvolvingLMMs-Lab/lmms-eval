@@ -1,10 +1,10 @@
-from lmms_eval.filters.extraction import ExtendedRegexFilter
-from lmms_eval.filters.transformation import MapFilter
+import logging
 import re
+
 import numpy as np
 
-
-import logging
+from lmms_eval.filters.extraction import ExtendedRegexFilter
+from lmms_eval.filters.transformation import MapFilter
 
 eval_logger = logging.getLogger("lmms-eval")
 

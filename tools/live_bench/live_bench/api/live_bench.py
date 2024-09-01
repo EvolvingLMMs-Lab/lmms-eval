@@ -1,5 +1,5 @@
-from live_bench.websites import load_websites, load_websites_from_file
 from live_bench import LiveBench
+from live_bench.websites import load_websites, load_websites_from_file
 
 
 def generate_live_bench(*, force_clear=False, screen_shoter="single_screen", qa_generator="gpt4v", scorer="gpt4v", checker="gemini", driver_kwargs={}, shoter_kwargs={}, generator_kwargs={}):

@@ -1,21 +1,20 @@
-from decord import VideoReader, cpu
-import numpy as np
+import ast
+import datetime
+import json
 import os
 import sys
-import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-import json
-
-import yaml
+import time
 from pathlib import Path
 
-import requests
+import numpy as np
 import openai
-from openai import OpenAI
-import time
-import ast
-
+import requests
+import yaml
+from decord import VideoReader, cpu
 from loguru import logger as eval_logger
+from openai import OpenAI
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()

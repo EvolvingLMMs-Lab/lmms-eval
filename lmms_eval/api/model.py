@@ -1,16 +1,15 @@
 import abc
-import os
-
-from typing import Union, List, Tuple, Optional, Type, TypeVar
-from sqlitedict import SqliteDict
-import json
 import hashlib
-from lmms_eval.api.instance import Instance
-from tqdm import tqdm
-from lmms_eval import utils
-
+import json
+import os
+from typing import List, Optional, Tuple, Type, TypeVar, Union
 
 from loguru import logger as eval_logger
+from sqlitedict import SqliteDict
+from tqdm import tqdm
+
+from lmms_eval import utils
+from lmms_eval.api.instance import Instance
 
 T = TypeVar("T", bound="lmms")
 

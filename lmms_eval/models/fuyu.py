@@ -3,20 +3,25 @@ import warnings
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from accelerate import Accelerator, DistributedType
-from transformers import FuyuForCausalLM, AutoTokenizer, FuyuImageProcessor, FuyuProcessor
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
+from typing import List, Optional, Tuple, Union
+
 import torch
-from PIL import Image
-from typing import List, Optional, Union, Tuple
-from lmms_eval import utils
-from lmms_eval.api.instance import Instance
-from tqdm import tqdm
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
-
 from loguru import logger as eval_logger
+from PIL import Image
+from tqdm import tqdm
+from transformers import (
+    AutoTokenizer,
+    FuyuForCausalLM,
+    FuyuImageProcessor,
+    FuyuProcessor,
+)
+
+from lmms_eval import utils
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 
 
 @register_model("fuyu")

@@ -17,11 +17,10 @@ import copy
 import os
 from typing import Union
 
-from transformers.configuration_utils import PretrainedConfig
-from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
-from transformers.models.auto import CONFIG_MAPPING
-
 from loguru import logger
+from transformers.configuration_utils import PretrainedConfig
+from transformers.models.auto import CONFIG_MAPPING
+from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 
 MPLUG_OWL_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "MAGAer13/mplug-owl-llama-7b": "https://huggingface.co/MAGAer13/mplug-owl-llama-7b/resolve/main/config.json",

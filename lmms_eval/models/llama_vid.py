@@ -1,33 +1,41 @@
+import math
 import os
+import subprocess
+from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import requests
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
 from decord import VideoReader, cpu
-import numpy as np
-import math
-from datetime import timedelta
-from transformers import AutoConfig
 from huggingface_hub import snapshot_download
-import requests
+from loguru import logger as eval_logger
+from tqdm import tqdm
+from transformers import AutoConfig
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.utils import stop_sequences_criteria
 from lmms_eval.models.model_utils.load_video import read_video_pyav
-
-import subprocess
-
-from loguru import logger as eval_logger
+from lmms_eval.utils import stop_sequences_criteria
 
 try:
-    from llamavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-    from llamavid.conversation import conv_templates, SeparatorStyle
+    from llamavid.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IMAGE_TOKEN_INDEX,
+    )
+    from llamavid.conversation import SeparatorStyle, conv_templates
     from llamavid.model.builder import load_pretrained_model
-    from llava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
+    from llava.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        tokenizer_image_token,
+    )
 except ImportError:
     eval_logger.debug("LLaMA-Video is not installed. Please install LLaMA-Video to use this model.")
 

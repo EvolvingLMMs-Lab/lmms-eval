@@ -1,22 +1,21 @@
 import io
+import json
 import os
 import time
-
-import json
-
-from PIL import Image
 from typing import List, Tuple
-from tqdm import tqdm
-from lmms_eval.api.registry import register_model
-from lmms_eval.api.model import lmms
-from lmms_eval.api.instance import Instance
-from accelerate import Accelerator, DistributedType
 
+from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
+from PIL import Image
+from tqdm import tqdm
+
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 
 try:
     import google.generativeai as genai
-    from google.generativeai.types import HarmCategory, HarmBlockThreshold
+    from google.generativeai.types import HarmBlockThreshold, HarmCategory
 
     NUM_SECONDS_TO_SLEEP = 30
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")

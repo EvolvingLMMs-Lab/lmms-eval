@@ -1,7 +1,9 @@
+import re
+
+import pandas as pd
+
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
-import re
-import pandas as pd
 
 
 def muir_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -9,7 +11,6 @@ def muir_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     len_choices = len(choices)
     post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-
     options = [chr(ord("A") + i) for i in range(len_choices)]
     choices_str = "\n".join([f"{option}. {choice}" for option, choice in zip(options, choices)])
     return f"{pre_prompt}{question}\n{choices_str}{post_prompt}"

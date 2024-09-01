@@ -1,6 +1,5 @@
-from live_bench.websites import load_websites, load_websites_from_file
 from live_bench import LiveBench
-
+from live_bench.websites import load_websites, load_websites_from_file
 
 if __name__ == "__main__":
     website = load_websites()

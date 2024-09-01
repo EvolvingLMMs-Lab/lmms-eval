@@ -1,13 +1,13 @@
 import csv
 import json
-from tqdm import tqdm
-import numpy as np
 import os
-import time
-import openai
 import threading
-import requests
+import time
 
+import numpy as np
+import openai
+import requests
+from tqdm import tqdm
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 

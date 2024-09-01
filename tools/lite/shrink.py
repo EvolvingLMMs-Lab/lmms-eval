@@ -1,19 +1,18 @@
 import argparse
-import importlib
-import os
-import yaml
-import json
-from pathlib import Path
+import datetime
 import hashlib
+import importlib
+import json
+import os
+from pathlib import Path
 
+import numpy as np
+import shrinker as shrinker_module
+import yaml
 from accelerate import Accelerator
 from accelerate.utils import InitProcessGroupKwargs
-import numpy as np
-import datetime
 
 from lmms_eval.utils import simple_parse_args_string
-import shrinker as shrinker_module
-
 
 AVAILABEL_SHRINKER = {"embed": "Embed_Shrinker"}
 

@@ -1,9 +1,9 @@
 import importlib
 import os
+import sys
+
 import hf_transfer
 from loguru import logger
-import sys
-import hf_transfer
 
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
@@ -44,11 +44,19 @@ AVAILABLE_MODELS = {
     "xcomposer2d5": "XComposer2D5",
 }
 
-for model_name, model_class in AVAILABLE_MODELS.items():
+
+def get_model(model_name):
+    if model_name not in AVAILABLE_MODELS:
+        raise ValueError(f"Model {model_name} not found in available models.")
+
+    model_class = AVAILABLE_MODELS[model_name]
     try:
-        exec(f"from .{model_name} import {model_class}")
+        module = __import__(f"lmms_eval.models.{model_name}", fromlist=[model_class])
+        return getattr(module, model_class)
     except Exception as e:
-        logger.debug(f"Failed to import {model_class} from {model_name}: {e}")
+        logger.error(f"Failed to import {model_class} from {model_name}: {e}")
+        raise
+
 
 if os.environ.get("LMMS_EVAL_PLUGINS", None):
     # Allow specifying other packages to import models from

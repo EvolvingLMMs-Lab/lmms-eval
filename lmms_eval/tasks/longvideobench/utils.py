@@ -1,24 +1,21 @@
 import json
-import re
-from collections import Counter, defaultdict
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import os
 import random
-import os
-
-import os
-import decord
-from decord import VideoReader, cpu
-import numpy as np
-from PIL import Image
-import torch
-
-from pathlib import Path
-import yaml
-import sys
-from typing import List, Dict, Optional, Union
 import re
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
-import json
+import decord
+import numpy as np
+import torch
+import yaml
+from decord import VideoReader, cpu
+from loguru import logger as eval_logger
+from PIL import Image
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 
 def timestamp_to_seconds(timestamp):
@@ -355,5 +352,13 @@ def longvideobench_aggregate_results(results):
         "num": sum([cat_results["num_example"] for cat_results in evaluation_result.values()]),
         "acc": round(all_ins_acc, 5),
     }
-    print(printable_results)
+    eval_logger.info(printable_results)
     return printable_results["Overall"]["acc"]
+
+
+def longvideobench_aggregate_results_for_submission(results, args):
+    path = generate_submission_file("longvideobench_test_for_submission.json", args)
+    results_dict = {list(item.keys())[0]: list(item.values())[0] for item in results}
+    with open(path, "w") as f:
+        json.dump(results_dict, f)
+    eval_logger.info(f"Results saved to {path}.")

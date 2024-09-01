@@ -1,14 +1,15 @@
-from decord import VideoReader, cpu
-import numpy as np
-import os
-import sys
 import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
-
-import yaml
+import os
 import random
+import sys
 from pathlib import Path
+
+import numpy as np
+import yaml
+from decord import VideoReader, cpu
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -23,7 +24,7 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 # We will unzip all the zip files
 # To HF HOME cache dir
 # And load it here
-HF_HOME = os.environ["HF_HOME"]
+HF_HOME = os.environ["HF_HOME"] if "HF_HOME" in os.environ else os.path.expanduser("~/.cache/huggingface/hub")
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")

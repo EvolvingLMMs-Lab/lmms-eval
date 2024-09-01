@@ -14,9 +14,8 @@
 # limitations under the License.
 """Tokenization classes for MplugOwl."""
 
-from transformers.models.llama.tokenization_llama import LlamaTokenizer
-
 from loguru import logger
+from transformers.models.llama.tokenization_llama import LlamaTokenizer
 
 VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
 

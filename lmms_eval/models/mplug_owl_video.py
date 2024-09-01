@@ -1,20 +1,23 @@
+from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from transformers import AutoTokenizer
+from loguru import logger
 from tqdm import tqdm
-from datetime import timedelta
+from transformers import AutoTokenizer
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
-from lmms_eval.models.mplug_owl_video.modeling_mplug_owl import MplugOwlForConditionalGeneration
-from lmms_eval.models.mplug_owl_video.processing_mplug_owl import MplugOwlImageProcessor, MplugOwlProcessor
-
-
-from loguru import logger
+from lmms_eval.models.mplug_owl_video.modeling_mplug_owl import (
+    MplugOwlForConditionalGeneration,
+)
+from lmms_eval.models.mplug_owl_video.processing_mplug_owl import (
+    MplugOwlImageProcessor,
+    MplugOwlProcessor,
+)
 
 eval_logger = logger
 
