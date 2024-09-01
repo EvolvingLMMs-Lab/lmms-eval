@@ -167,20 +167,33 @@ results = evaluate(
 > install sglang
 
 ```bash
-git clone https://github.com/EvolvingLMMs-Lab/sglang.git
+git clone https://github.com/sgl-project/sglang.git
 cd sglang;
-git checkout dev/onevision;
 pip install -e "python[srt]"
+python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
 ```
 
 > run sglang backend service with the following command
 
 ```bash
-# backend service
-python -m sglang.launch_server --model-path "\path\to\onevision" --tokenizer-path lmms-lab/llavanext-qwen-siglip-tokenizer --port=30000 --host=127.0.0.1 --tp-size=8 --chat-template=chatml-llava
 
-# launch lmms-eval srt_api model
-python -m accelerate.commands.launch --main_process_port=12580 --num_processes=1 lmms_eval --model=srt_api --model_args=modality=image,host=127.0.0.1,port=30000 --tasks=ai2d --batch_size=1 --log_samples --log_samples_suffix=debug --output_path=./logs/ --verbosity=DEBUG
+CKPT_PATH=$1
+TASK=$2
+MODALITY=$3
+TP_SIZE=$4
+echo $TASK
+TASK_SUFFIX="${TASK//,/_}"
+echo $TASK_SUFFIX
+
+python3 -m lmms_eval \
+    --model srt_api \
+    --model_args modality=$MODALITY,model_version=$CKPT_PATH,tp=$TP_SIZE,host=127.0.0.1,port=30000,timeout=600 \
+    --tasks $TASK \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix $TASK_SUFFIX \
+    --output_path ./logs/
+
 ```
 
 You may need to install some dependencies for the above command to work (if you encounter some errors).
