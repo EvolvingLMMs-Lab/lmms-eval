@@ -4,14 +4,21 @@
 
 # The Evaluation Suite of Large Multimodal Models 
 
+[![PyPI](https://img.shields.io/pypi/v/lmms-eval)](https://pypi.org/project/lmms-eval)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/lmms-eval)
+![GitHub contributors](https://img.shields.io/github/contributors/EvolvingLMMs-Lab/lmms-eval)
+[![issue resolution](https://img.shields.io/github/issues-closed-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
+[![open issues](https://img.shields.io/github/issues-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
+
 > Accelerating the development of large multimodal models (LMMs) with `lmms-eval`
 
-🏠 [LMMs-Lab Homepage](https://lmms-lab.github.io/) |  🎉 [Blog](https://lmms-lab.github.io/lmms-eval-blog/lmms-eval-0.1/) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
+🏠 [LMMs-Lab Homepage](https://lmms-lab.framer.ai) |  🎉 [Blog](https://lmms-lab.framer.ai/blog/lmms-eval-blog) | 📚 [Documentation](docs/README.md) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
 ---
 
 ## Annoucement
-
+- [2024-08] 🎉🎉 We welcome the new model [LLaVA-OneVision](https://huggingface.co/papers/2408.03326), [Mantis](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/162), new tasks [MVBench](https://huggingface.co/datasets/OpenGVLab/MVBench), [LongVideoBench](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/117), [MMStar](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/158). We provide new feature of SGlang Runtime API for llava-onevision model, please refer the [doc](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/commands.md) for inference acceleration
+- [2024-07] 🎉🎉 We have released the [technical report](https://arxiv.org/abs/2407.12772) and [LiveBench](https://huggingface.co/spaces/lmms-lab/LiveBench)! 
 - [2024-07] 👨‍💻👨‍💻 The `lmms-eval/v0.2.1` has been upgraded to support more models, including [LongVA](https://github.com/EvolvingLMMs-Lab/LongVA), [InterVL-2](https://github.com/OpenGVLab/InternVL), [VILA](https://github.com/NVlabs/VILA), and many more evaluation tasks, e.g. [Details Captions](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/136), [MLVU](https://arxiv.org/abs/2406.04264), [WildVision-Bench](https://huggingface.co/datasets/WildVision/wildvision-arena-data), [VITATECS](https://github.com/lscpku/VITATECS) and [LLaVA-Interleave-Bench](https://llava-vl.github.io/blog/2024-06-16-llava-next-interleave/).
 
 - [2024-06] 🎬🎬 The `lmms-eval/v0.2.0` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details
@@ -48,7 +55,7 @@ cd lmms-eval
 pip install -e .
 ```
 
-If you wanted to test llava, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
+If you want to test LLaVA, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
 ```bash
 # for llava 1.5
 # git clone https://github.com/haotian-liu/LLaVA
@@ -68,7 +75,7 @@ You can check the [environment install script](miscs/repr_scripts.sh) and [torch
 
 </details>
 
-If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0 ` to let pycocoeval api to work. If you don't have it, you can install by using conda
+If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, you will need to have `java==1.8.0` to let pycocoeval api to work. If you don't have it, you can install by using conda
 ```
 conda install openjdk=8
 ```
@@ -92,6 +99,11 @@ We also provide the raw data exported from Weights & Biases for the detailed res
 </details>
 <br>
 
+If you want to test [VILA](https://github.com/NVlabs/VILA), you should install the following dependencies:
+
+```bash
+pip install s2wrapper@git+https://github.com/bfshi/scaling_on_scales
+```
 
 Our Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
 
@@ -165,6 +177,18 @@ python3 -m accelerate.commands.launch \
 python3 -m accelerate.commands.launch --num_processes=8 -m lmms_eval --config ./miscs/example_eval.yaml
 ```
 
+**Evaluation of video model (llava-next-video-32B)**
+```bash
+accelerate launch --num_processes 8 --main_process_port 12345 -m lmms_eval \
+    --model llavavid \
+    --model_args pretrained=lmms-lab/LLaVA-NeXT-Video-32B-Qwen,conv_template=qwen_1_5,video_decode_backend=decord,max_frames_num=32，mm_spatial_pool_mode=average,mm_newline_position=grid,mm_resampler_location=after \
+    --tasks videomme \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix llava_vid_32B \
+    --output_path ./logs/
+```
+
 **Evaluation with naive model sharding for bigger model (llava-next-72b)**
 
 ```bash
@@ -199,7 +223,7 @@ Please check [supported models](lmms_eval/models/__init__.py) for more details.
 
 ### Supported tasks
 
-Please check [supported tasks](lmms_eval/docs/current_tasks.md) for more details.
+Please check [supported tasks](docs/current_tasks.md) for more details.
 
 ## Add Customized Model and Dataset
 

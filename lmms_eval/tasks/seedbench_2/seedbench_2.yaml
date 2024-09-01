@@ -1,7 +1,7 @@
 dataset_path: lmms-lab/SEED-Bench-2
 dataset_kwargs:
   token: True
-task: "seedbench-2"
+task: "seedbench_2"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.seed_doc_to_visual

@@ -28,7 +28,7 @@ def seed_aggregation_result(results):
     total_count = 0
     total_correct = 0
     for result in results:
-        if result["pred"] == result["answer"]:
+        if result["pred"].lower().strip() == result["answer"].lower().strip():
             total_correct += 1
         total_count += 1
     return total_correct / total_count

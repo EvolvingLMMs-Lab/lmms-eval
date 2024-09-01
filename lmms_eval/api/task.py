@@ -861,6 +861,7 @@ class ConfigurableTask(Task):
 
             if "video" in dataset_kwargs and dataset_kwargs["video"]:
                 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+                hf_home = os.path.expanduser(hf_home)
                 cache_dir = dataset_kwargs["cache_dir"]
                 cache_dir = os.path.join(hf_home, cache_dir)
                 accelerator = Accelerator()
@@ -955,13 +956,13 @@ class ConfigurableTask(Task):
             download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
-        self.dataset_no_image = datasets.load_dataset(
-            path=self.DATASET_PATH,
-            name=self.DATASET_NAME,
-            download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-            download_config=download_config,
-            **dataset_kwargs if dataset_kwargs is not None else {},
-        )
+        if self.config.process_docs is not None:
+            for split in self.dataset:
+                if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
+                    self.dataset[split] = self.config.process_docs(self.dataset[split])
+
+        # copy dataset, remove image features
+        self.dataset_no_image = self.dataset.copy()
         for doc_name in self.dataset_no_image:
             remove_cols = []
             features = self.dataset_no_image[doc_name].features
@@ -994,20 +995,14 @@ class ConfigurableTask(Task):
 
     def training_docs(self) -> datasets.Dataset:
         if self.has_training_docs():
-            if self.config.process_docs is not None:
-                return self.config.process_docs(self.dataset[self.config.training_split])
             return self.dataset[self.config.training_split]
 
     def validation_docs(self) -> datasets.Dataset:
         if self.has_validation_docs():
-            if self.config.process_docs is not None:
-                return self.config.process_docs(self.dataset[self.config.validation_split])
             return self.dataset[self.config.validation_split]
 
     def test_docs(self) -> datasets.Dataset:
         if self.has_test_docs():
-            if self.config.process_docs is not None:
-                return self.config.process_docs(self.dataset[self.config.test_split])
             return self.dataset[self.config.test_split]
 
     def fewshot_docs(self):

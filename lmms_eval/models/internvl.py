@@ -455,7 +455,10 @@ class InternVLChat(lmms):
             split = split[0]
             batched_visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]  # [B, N]
             flattened_visuals = self.flatten(batched_visuals)
-            pixel_values = self.load_image(flattened_visuals, self.image_size).cuda().to(torch.bfloat16)
+            try:
+                pixel_values = self.load_image(flattened_visuals, self.image_size).cuda().to(torch.bfloat16)
+            except IndexError:
+                pixel_values = None
             gen_kwargs = all_gen_kwargs[0]
 
             if "max_new_tokens" not in gen_kwargs:

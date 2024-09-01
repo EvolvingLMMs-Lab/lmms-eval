@@ -62,14 +62,12 @@ def muir_aggregation(results):
         task_num[result["task"]] += 1
 
     score = score / len(results)
-
     task_score = {k: v / task_num[k] for k, v in task_score.items()}
 
     print("=" * 50)
     for k, v in task_score.items():
         print(f"{k} : {v:.2f}")
     print("=" * 50)
-
     return score
 
 

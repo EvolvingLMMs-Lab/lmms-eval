@@ -14,6 +14,14 @@ try:
 except ImportError:
     eval_logger.warning("Reka is not installed, please install it by `pip install reka-api`")
 
+from loguru import logger as eval_logger
+
+try:
+    from reka import ChatMessage
+    from reka.client import Reka
+except ImportError:
+    eval_logger.warning("Reka is not installed, please install it by `pip install reka-api`")
+
 REKA_API_KEY = os.getenv("REKA_API_KEY", "YOUR_API_KEY")
 
 with open(Path(__file__).parent / "vibe_eval.yaml", "r") as f:

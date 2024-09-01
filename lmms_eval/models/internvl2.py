@@ -148,6 +148,7 @@ class InternVL2(lmms):
 
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
         accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
+        self.accelerator = accelerator
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
@@ -254,13 +255,16 @@ class InternVL2(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             if self.modality == "image":
-                visuals = [load_image(visual).to(torch.bfloat16).cuda() for visual in visuals]
-                pixel_values = torch.cat(visuals, dim=0)
-                num_patches_list = [visual.size(0) for visual in visuals]
                 if visuals:
+                    visuals = [load_image(visual).to(torch.bfloat16).cuda() for visual in visuals]
+                    pixel_values = torch.cat(visuals, dim=0)
+                    num_patches_list = [visual.size(0) for visual in visuals]
                     image_tokens = ["<image>"] * len(visuals)
                     image_tokens = " ".join(image_tokens)
                     contexts = image_tokens + "\n" + contexts
+                else:
+                    pixel_values = None
+                    num_patch_list = None
                 response, history = self.model.chat(self.tokenizer, pixel_values, contexts, gen_kwargs, num_patches_list=num_patches_list, history=None, return_history=True)
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."

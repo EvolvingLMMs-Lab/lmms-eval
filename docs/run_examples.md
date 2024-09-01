@@ -209,6 +209,7 @@ accelerate launch --num_processes 8 --main_process_port 12345 -m lmms_eval \
 
 ### SRT API MODEL
 To enable faster testing speed for larger llava model, you can use this srt api model to enable testing through sglang.
+You will need to first glone sglang from "https://github.com/sgl-project/sglang". Current version is tested on the commit #1222 of sglang
 
 Here are the scripts if you want to test the result in one script.
 ```bash
@@ -223,22 +224,16 @@ python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
 
 
 CKPT_PATH=$1
-TOK_PATH=$2
-TASK=$3
-MODALITY=$4
+TASK=$2
+MODALITY=$3
+TP_SIZE=$4
 echo $TASK
 TASK_SUFFIX="${TASK//,/_}"
 echo $TASK_SUFFIX
 
-# Serve sglang in backend
-python3 -m sglang.launch_server --model-path ${CKPT_PATH} --tokenizer-path ${TOK_PATH} --port=30000 --host=127.0.0.1 --tp-size=8 --chat-template=chatml-llava &
-
-# Wait till the server is ready
-sleep 360;
-
 python3 -m lmms_eval \
     --model srt_api \
-    --model_args modality=$MODALITY,host=127.0.0.1,port=30000,timeout=600 \
+    --model_args modality=$MODALITY,model_version=$CKPT_PATH,tp=$TP_SIZE,host=127.0.0.1,port=30000,timeout=600 \
     --tasks $TASK \
     --batch_size 1 \
     --log_samples \

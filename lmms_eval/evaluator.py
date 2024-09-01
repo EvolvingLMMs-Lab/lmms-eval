@@ -604,8 +604,13 @@ def evaluate(
         }
         if log_samples:
             results_dict["samples"] = dict(samples)
+    else:
+        results_dict = None
 
-        return results_dict
+    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", "w") as f:
+        f.write(f"rank {int(os.environ.get('RANK', 0))} eval done")
+    while len([file for file in os.listdir(cli_args.output_path) if file.endswith("metric_eval_done.txt")]) < lm._world_size:
+        time.sleep(1)
 
     else:
         return None

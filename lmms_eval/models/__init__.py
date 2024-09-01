@@ -28,6 +28,7 @@ AVAILABLE_MODELS = {
     "llava_sglang": "LlavaSglang",
     "llava_vid": "LlavaVid",
     "longva": "LongVA",
+    "mantis": "Mantis",
     "minicpm_v": "MiniCPM_V",
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
