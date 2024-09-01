@@ -85,21 +85,20 @@ import lmms_eval
 my_model = initialize_my_model() # create your model (could be running finetuning with some custom modeling code)
 ...
 # instantiate an LM subclass that takes your initialized model and can run
-# - `Your_LM.loglikelihood()`
-# - `Your_LM.loglikelihood_rolling()`
-# - `Your_LM.generate_until()`
-lm_obj = Your_LM(model=my_model, batch_size=16)
+# - `Your_LMM.loglikelihood()`
+# - `Your_LMM.generate_until()`
+lmm_obj = Your_LMM(model=my_model, batch_size=16)
 
-# indexes all tasks from the `lm_eval/tasks` subdirectory.
+# indexes all tasks from the `lmms_eval/tasks` subdirectory.
 # Alternatively, you can set `TaskManager(include_path="path/to/my/custom/task/configs")`
 # to include a set of tasks in a separate directory.
-task_manager = lm_eval.tasks.TaskManager()
+task_manager = lmms_eval.tasks.TaskManager()
 
 # Setting `task_manager` to the one above is optional and should generally be done
-# if you want to include tasks from paths other than ones in `lm_eval/tasks`.
+# if you want to include tasks from paths other than ones in `lmms_eval/tasks`.
 # `simple_evaluate` will instantiate its own task_manager if it is set to None here.
-results = lm_eval.simple_evaluate( # call simple_evaluate
-    model=lm_obj,
+results = lmms_eval.simple_evaluate( # call simple_evaluate
+    model=lmm_obj,
     tasks=["taskname1", "taskname2"],
     num_fewshot=0,
     task_manager=task_manager,
@@ -114,7 +113,7 @@ Additionally, the `evaluate()` function offers the core evaluation functionality
 As a brief example usage of `evaluate()`:
 
 ```python
-import lm_eval
+import lmms_eval
 
 # suppose you've defined a custom lm_eval.api.Task subclass in your own external codebase
 from my_tasks import MyTask1
@@ -128,16 +127,16 @@ my_model = initialize_my_model()
 # - `Your_LM.loglikelihood()`
 # - `Your_LM.loglikelihood_rolling()`
 # - `Your_LM.generate_until()`
-lm_obj = Your_LM(model=my_model, batch_size=16)
+lmm_obj = Your_LMM(model=my_model, batch_size=16)
 
 # optional: the task_manager indexes tasks including ones
 # specified by the user through `include_path`.
-task_manager = lm_eval.tasks.TaskManager(
+task_manager = lmms_eval.tasks.TaskManager(
     include_path="/path/to/custom/yaml"
     )
 
 # To get a task dict for `evaluate`
-task_dict = lm_eval.tasks.get_task_dict(
+task_dict = lmms_eval.tasks.get_task_dict(
     [
         "mmlu", # A stock task
         "my_custom_task", # A custom task
@@ -157,7 +156,7 @@ task_dict = lm_eval.tasks.get_task_dict(
     )
 
 results = evaluate(
-    lm=lm_obj,
+    lm=lmm_obj,
     task_dict=task_dict,
     ...
 )
