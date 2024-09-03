@@ -275,6 +275,52 @@ def bits_per_byte_fn(items):  # This is a passthrough function
     return items
 
 
+def levenshtein_distance(s1, s2):
+    if len(s1) > len(s2):
+        s1, s2 = s2, s1
+
+    distances = range(len(s1) + 1)
+    for i2, c2 in enumerate(s2):
+        distances_ = [i2 + 1]
+        for i1, c1 in enumerate(s1):
+            if c1 == c2:
+                distances_.append(distances[i1])
+            else:
+                distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
+        distances = distances_
+    return distances[-1]
+
+
+@register_metric(
+    metric="anls",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="mean",
+)
+def anls(
+    references,
+    predictions,
+    thresh_hold=0.5,
+):  # This is a passthrough function
+    """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
+    values = []
+    for answer in references:
+        # preprocess both the answers - gt and prediction
+        gt_answer = " ".join(answer.strip().lower().split())
+        det_answer = " ".join(predictions[0].strip().lower().split())
+
+        # dist = levenshtein_distance(answer.lower(), detObject['answer'].lower())
+        dist = levenshtein_distance(gt_answer, det_answer)
+        length = max(len(answer.upper()), len(predictions[0].upper()))
+        values.append(0.0 if length == 0 else float(dist) / float(length))
+
+    question_result = 1 - min(values)
+
+    if question_result < thresh_hold:
+        question_result = 0
+    return {"anls": question_result}
+
+
 def pop_stddev(arr):
     mu = mean(arr)
     return math.sqrt(sum([(x - mu) ** 2 for x in arr]) / len(arr))
@@ -296,7 +342,7 @@ def mean_stderr(arr):
     aggregation="bypass",
 )
 def bypass(items):
-    return None
+    return items
 
 
 @register_metric(
