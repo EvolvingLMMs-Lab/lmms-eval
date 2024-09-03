@@ -607,19 +607,6 @@ def evaluate(
     else:
         results_dict = None
 
-    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", "w") as f:
-        f.write(f"rank {int(os.environ.get('RANK', 0))} eval done")
-    while len([file for file in os.listdir(cli_args.output_path) if file.endswith("metric_eval_done.txt")]) < lm._world_size:
-        time.sleep(1)
-
-    else:
-        return None
-
-    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", "w") as f:
-        f.write(f"rank {int(os.environ.get('RANK', 0))} eval done")
-    while len([file for file in os.listdir(cli_args.output_path) if file.endswith("metric_eval_done.txt")]) < lm._world_size:
-        time.sleep(1)
-
     lm.accelerator.wait_for_everyone()
     return results_dict
 
