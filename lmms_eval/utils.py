@@ -588,7 +588,7 @@ def get_datetime_str(timezone="Asia/Singapore"):
     tz = pytz.timezone(timezone)
     utc_now = datetime.datetime.now(datetime.timezone.utc)
     local_time = utc_now.astimezone(tz)
-    return local_time.strftime("%m%d_%H%M")
+    return local_time.strftime("%m%d_%H")
 
 
 def ignore_constructor(loader, node):
