@@ -321,20 +321,22 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     for args in args_list:
         try:
-            if is_main_process and args.wandb_args:  # thoughtfully we should only init wandb once, instead of multiple ranks to avoid network traffics and unwanted behaviors.
-                wandb_logger = WandbLogger(args)
+            # if is_main_process and args.wandb_args:  # thoughtfully we should only init wandb once, instead of multiple ranks to avoid network traffics and unwanted behaviors.
+            #     wandb_logger = WandbLogger()
 
             results, samples = cli_evaluate_single(args)
             results_list.append(results)
 
             accelerator.wait_for_everyone()
             if is_main_process and args.wandb_args:
-                wandb_logger.post_init(results)
-                wandb_logger.log_eval_result()
-                if args.wandb_log_samples and samples is not None:
-                    wandb_logger.log_eval_samples(samples)
-
-                wandb_logger.finish()
+                try:
+                    wandb_logger.post_init(results)
+                    wandb_logger.log_eval_result()
+                    if args.wandb_log_samples and samples is not None:
+                        wandb_logger.log_eval_samples(samples)
+                except Exception as e:
+                    eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
+                # wandb_logger.finish()
 
         except Exception as e:
             if args.verbosity == "DEBUG":
@@ -348,6 +350,9 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
             print_results(args, results)
+
+    if args.wandb_args:
+        wandb_logger.run.finish()
 
 
 def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
