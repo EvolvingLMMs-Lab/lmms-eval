@@ -607,7 +607,8 @@ def evaluate(
     else:
         results_dict = None
 
-    lm.accelerator.wait_for_everyone()
+    if hasattr(lm, "accelerator"):
+        lm.accelerator.wait_for_everyone()
     return results_dict
 
 
