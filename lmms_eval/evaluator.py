@@ -610,7 +610,7 @@ def evaluate(
     if hasattr(lm, "accelerator"):
         lm.accelerator.wait_for_everyone()
 
-    if not isinstance(model, lm_eval.api.model.LM):
+    if not isinstance(lm, lm_eval.api.model.LM):
         del lm
 
     return results_dict
