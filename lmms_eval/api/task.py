@@ -1,5 +1,6 @@
 import abc
 import ast
+import copy
 import inspect
 import itertools
 import json
@@ -7,7 +8,6 @@ import os
 import random
 import re
 import shutil
-import copy
 import subprocess
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
