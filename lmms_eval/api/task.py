@@ -1,5 +1,6 @@
 import abc
 import ast
+import copy
 import inspect
 import itertools
 import json
@@ -1245,7 +1246,7 @@ class ConfigurableTask(Task):
             return request_list
 
         elif self.OUTPUT_TYPE == "generate_until":
-            arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual, doc_id, self.config.task, split)
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
     # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
