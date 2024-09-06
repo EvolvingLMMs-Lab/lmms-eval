@@ -1,5 +1,4 @@
 group: mmmu_pro
 task:
 - mmmu_pro_vision
-- mmmu_pro_composite
 - mmmu_pro_original
