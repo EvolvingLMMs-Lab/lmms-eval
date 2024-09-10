@@ -1,4 +1,3 @@
-group: vizwiz_vqa
 task: vizwiz_vqa_val
 test_split: val
 include: _default_template_vqa_yaml
