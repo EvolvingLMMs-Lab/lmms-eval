@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_moving_count
 dataset_name: moving_count
 test_split: train
