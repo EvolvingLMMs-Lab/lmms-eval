@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_object_existence
 dataset_name: object_existence
 test_split: train

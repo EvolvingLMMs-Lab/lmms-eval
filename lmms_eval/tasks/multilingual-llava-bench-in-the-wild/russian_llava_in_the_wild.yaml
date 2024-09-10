@@ -3,4 +3,4 @@ dataset_kwargs:
     config: russian
     token: True
 task: "llava_in_the_wild_russian"
-include: _default_template.yaml
+include: _default_template_yaml

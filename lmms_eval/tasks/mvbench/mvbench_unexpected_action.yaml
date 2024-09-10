@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_unexpected_action
 dataset_name: unexpected_action
 test_split: train

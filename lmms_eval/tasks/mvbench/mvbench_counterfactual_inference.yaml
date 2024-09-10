@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_counterfactual_inference
 dataset_name: counterfactual_inference
 test_split: train

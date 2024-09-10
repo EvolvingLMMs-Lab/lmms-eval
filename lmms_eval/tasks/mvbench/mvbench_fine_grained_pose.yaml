@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_fine_grained_pose
 dataset_name: fine_grained_pose
 test_split: train

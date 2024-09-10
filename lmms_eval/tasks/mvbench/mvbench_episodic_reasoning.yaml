@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_episodic_reasoning
 dataset_name: episodic_reasoning
 test_split: train
