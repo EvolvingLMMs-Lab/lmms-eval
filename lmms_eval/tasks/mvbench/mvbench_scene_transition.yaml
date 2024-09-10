@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_scene_transition
 dataset_name: scene_transition
 test_split: train

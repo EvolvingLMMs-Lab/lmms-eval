@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_object_shuffle
 dataset_name: object_shuffle
 test_split: train

@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_character_order
 dataset_name: character_order
 test_split: train

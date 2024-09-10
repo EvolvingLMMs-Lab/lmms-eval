@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_action_prediction
 dataset_name: action_prediction
 test_split: train

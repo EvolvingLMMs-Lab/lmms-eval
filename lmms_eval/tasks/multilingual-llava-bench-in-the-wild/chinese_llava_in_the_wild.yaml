@@ -3,4 +3,4 @@ dataset_kwargs:
     config: chinese
     token: True
 task: "llava_in_the_wild_chinese"
-include: _default_template.yaml
+include: _default_template_yaml
