@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_action_localization
 dataset_name: action_localization
 test_split: train

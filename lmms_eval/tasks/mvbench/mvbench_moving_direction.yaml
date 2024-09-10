@@ -1,4 +1,4 @@
-include: _default_template.yaml
+include: _default_template_yaml
 task: mvbench_moving_direction
 dataset_name: moving_direction
 test_split: train
