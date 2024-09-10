@@ -203,7 +203,7 @@ class VideoLLaVA(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            generate_ids = self.model.generate(**inputs, max_length=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
+            generate_ids = self.model.generate(**inputs, max_new_tokens=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
 
             outputs = self._processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].split("ASSISTANT:")[-1].strip()
             res.append(outputs)
