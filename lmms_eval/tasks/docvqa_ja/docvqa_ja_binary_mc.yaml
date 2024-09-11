@@ -6,6 +6,7 @@ doc_to_visual: !function utils.docvqa_doc_to_visual
 doc_to_text: !function utils.docvqa_doc_to_text
 doc_to_choice: !function utils.docvqa_doc_to_choice
 doc_to_target: "original_answer"
+target_delimiter: ""
 model_specific_prompt_kwargs:
   default:
     pre_prompt: "\n1 つの単語またはフレーズを使用して質問に答えます。"
