@@ -50,7 +50,7 @@ dependencies = [
     "yt-dlp",
     "pycocoevalcap",
     "tqdm-multiprocess",
-    "transformers==4.39.2",
+    "transformers>=4.39.2",
     "transformers-stream-generator",
     "zstandard",
     "pillow",
