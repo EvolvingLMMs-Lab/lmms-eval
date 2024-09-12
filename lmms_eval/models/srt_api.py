@@ -40,6 +40,7 @@ class SRT_API(lmms):
         max_frames_num: int = 32,
         timeout: int = 60,
         chat_template: str = "chatml-llava",
+        mem_fraction_static: float = 0.83,
         tp: int = 8,
         chunked_prefill_size: int = 16384,
         continual_mode: bool = False,
@@ -78,10 +79,12 @@ class SRT_API(lmms):
         self.base_url = f"http://{host}:{port}"
         self.api_key = api_key
         self.chat_template = chat_template
+        self.mem_fraction_static = mem_fraction_static
         other_args = []
         other_args.extend(["--chunked-prefill-size", str(chunked_prefill_size)])
         other_args.extend(["--tensor-parallel-size", str(tp)])
         other_args.extend(["--chat-template", self.chat_template])
+        other_args.extend(["--mem-fraction-static", str(self.mem_fraction_static)])
         self.process = popen_launch_server(
             self.model,
             self.base_url,
@@ -226,8 +229,8 @@ class SRT_API(lmms):
                     return await self.generate(request)
 
             tasks = [asyncio.create_task(_process(request)) for request in requests]
-            for completed_task in asyncio.as_completed(tasks):
-                result = await completed_task
+            for i, task in enumerate(tasks):
+                result = await task
                 res.append(result)
                 pbar.update(1)
 
