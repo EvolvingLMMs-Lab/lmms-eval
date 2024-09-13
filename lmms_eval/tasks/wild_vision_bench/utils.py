@@ -158,25 +158,34 @@ def wild_vision_process_results(doc, results):
         score = resps
 
     if "A>B" in score:
+        raw_score = -1
         winner = "model_a"
         judgement = "Worse"  # Baseline better
     elif "A>>B" in score:
+        raw_score = -2
         winner = "model_a"
         judgement = "Worse++"
     elif "A=B" in score:
+        raw_score = 0
         winner = "tie"
         judgement = "Tie"
     elif "B>A" in score:
+        raw_score = 1
         winner = "model_b"
         judgement = "Better"
     elif "B>>A" in score:
+        raw_score = 2
         winner = "model_b"
         judgement = "Better++"
     else:
+        raw_score = 0
         winner = "tie"
         judgement = "Unclear"
 
     return {
+        "raw_scores": {
+            "final_score": raw_score,
+        },
         "elo_scores": {
             "question": doc["instruction"],
             "model_a": BASELINE_MODEL_NAME,
@@ -290,6 +299,13 @@ def get_win_rate_column(df, column, baseline):
     to_dict = df.set_index("model")[column].to_dict()
     win_rate_table = predict_win_rate(to_dict)
     return win_rate_table[baseline].fillna(0.5).apply(lambda x: round(x * 100, 2))
+
+
+def wild_vision_aggregation_raw_scores(results):
+    total_score = 0
+    for result in results:
+        total_score += result["final_score"]
+    return total_score
 
 
 def wild_vision_aggregation_elo_scores(results):
