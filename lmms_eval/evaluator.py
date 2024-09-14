@@ -6,11 +6,13 @@ import os
 import random
 import sys
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
 import numpy as np
 import torch
+import torch.distributed as dist
 from datasets import Image, Sequence
 from loguru import logger as eval_logger
 from tqdm import tqdm
@@ -415,7 +417,7 @@ def evaluate(
             # chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
             # tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
         )
-        eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task.instances)}")
+        eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
         if write_out:
             print_writeout(task)
         # aggregate Instances by LM method requested to get output.
@@ -522,35 +524,52 @@ def evaluate(
             pbar.close()
 
     if WORLD_SIZE > 1:
-        # if multigpu, then gather data across all ranks to rank 0
-        # first gather logged samples across all ranks
         for task_output in eval_tasks:
             if log_samples:
-                # for task_name, task_samples in list(samples.items()):
-                full_samples = [None] * WORLD_SIZE if RANK == 0 else None
-                per_rank_samples = []
-                for sample in task_output.logged_samples:
-                    per_rank_samples.append(sample)
+                # Gather logged samples
+                all_samples = [[] for _ in range(WORLD_SIZE)] if RANK == 0 else None
+                local_samples = task_output.logged_samples
 
-                torch.distributed.gather_object(
-                    obj=per_rank_samples,
-                    object_gather_list=full_samples,
-                    dst=0,
-                )
+                # Gather sample counts first
+                sample_counts = torch.tensor([len(local_samples)], dtype=torch.long, device="cuda")
+                all_counts = [torch.zeros(1, dtype=torch.long, device="cuda") for _ in range(WORLD_SIZE)]
+                dist.all_gather(all_counts, sample_counts)
+
+                # Pad local samples to max count
+                max_count = max(count.item() for count in all_counts)
+                local_samples += [None] * (max_count - len(local_samples))
+
+                # Gather samples
+                dist.all_gather_object(all_samples, local_samples)
 
                 if RANK == 0:
-                    task_output.logged_samples = list(itertools.chain.from_iterable(full_samples))
+                    # Flatten and remove padding
+                    task_output.logged_samples = [sample for samples, count in zip(all_samples, all_counts) for sample in samples[: count.item()]]
 
-            # then collect metrics across all ranks
-            for metrics in task_output.sample_metrics:
-                metric_list = [None] * WORLD_SIZE if RANK == 0 else None
-                torch.distributed.gather_object(
-                    obj=task_output.sample_metrics[metrics],
-                    object_gather_list=metric_list,
-                    dst=0,
-                )
+            # Gather metrics
+            all_metrics = defaultdict(list)
+            for metric_key, local_metrics in task_output.sample_metrics.items():
+                # Gather metric counts
+                metric_counts = torch.tensor([len(local_metrics)], dtype=torch.long, device="cuda")
+                all_counts = [torch.zeros(1, dtype=torch.long, device="cuda") for _ in range(WORLD_SIZE)]
+                dist.all_gather(all_counts, metric_counts)
+
+                # Pad local metrics to max count
+                max_count = max(count.item() for count in all_counts)
+                local_metrics += [None] * (max_count - len(local_metrics))
+
+                # Gather metrics
+                gathered_metrics = [None] * WORLD_SIZE
+                dist.all_gather_object(gathered_metrics, local_metrics)
+
                 if RANK == 0:
-                    task_output.sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
+                    # Flatten and remove padding
+                    all_metrics[metric_key] = [metric for metrics, count in zip(gathered_metrics, all_counts) for metric in metrics[: count.item()]]
+
+            if RANK == 0:
+                task_output.sample_metrics = dict(all_metrics)
+
+        dist.barrier()  # Ensure all processes are synced before proceeding
 
     if RANK == 0:
         ### Aggregate results over all datapoints ###
