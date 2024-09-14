@@ -255,6 +255,10 @@ def simple_evaluate(
         cli_args=cli_args,
     )
 
+    if hasattr(lm, "_model"):
+        del lm._model
+        torch.cuda.empty_cache()
+
     if lm.rank == 0:
         if isinstance(model, str):
             model_name = model
@@ -524,50 +528,35 @@ def evaluate(
             pbar.close()
 
     if WORLD_SIZE > 1:
+        # if multigpu, then gather data across all ranks to rank 0
+        # first gather logged samples across all ranks
         for task_output in eval_tasks:
             if log_samples:
-                # Gather logged samples
-                all_samples = [[] for _ in range(WORLD_SIZE)] if RANK == 0 else None
-                local_samples = task_output.logged_samples
+                # for task_name, task_samples in list(samples.items()):
+                full_samples = [None] * WORLD_SIZE if RANK == 0 else None
+                per_rank_samples = []
+                for sample in task_output.logged_samples:
+                    per_rank_samples.append(sample)
 
-                # Gather sample counts first
-                sample_counts = torch.tensor([len(local_samples)], dtype=torch.long, device="cuda")
-                all_counts = [torch.zeros(1, dtype=torch.long, device="cuda") for _ in range(WORLD_SIZE)]
-                dist.all_gather(all_counts, sample_counts)
-
-                # Pad local samples to max count
-                max_count = max(count.item() for count in all_counts)
-                local_samples += [None] * (max_count - len(local_samples))
-
-                # Gather samples
-                dist.all_gather_object(all_samples, local_samples)
+                torch.distributed.gather_object(
+                    obj=per_rank_samples,
+                    object_gather_list=full_samples,
+                    dst=0,
+                )
 
                 if RANK == 0:
-                    # Flatten and remove padding
-                    task_output.logged_samples = [sample for samples, count in zip(all_samples, all_counts) for sample in samples[: count.item()]]
+                    task_output.logged_samples = list(itertools.chain.from_iterable(full_samples))
 
-            # Gather metrics
-            all_metrics = defaultdict(list)
-            for metric_key, local_metrics in task_output.sample_metrics.items():
-                # Gather metric counts
-                metric_counts = torch.tensor([len(local_metrics)], dtype=torch.long, device="cuda")
-                all_counts = [torch.zeros(1, dtype=torch.long, device="cuda") for _ in range(WORLD_SIZE)]
-                dist.all_gather(all_counts, metric_counts)
-
-                # Pad local metrics to max count
-                max_count = max(count.item() for count in all_counts)
-                local_metrics += [None] * (max_count - len(local_metrics))
-
-                # Gather metrics
-                gathered_metrics = [None] * WORLD_SIZE
-                dist.all_gather_object(gathered_metrics, local_metrics)
-
+            # then collect metrics across all ranks
+            for metrics in task_output.sample_metrics:
+                metric_list = [None] * WORLD_SIZE if RANK == 0 else None
+                torch.distributed.gather_object(
+                    obj=task_output.sample_metrics[metrics],
+                    object_gather_list=metric_list,
+                    dst=0,
+                )
                 if RANK == 0:
-                    # Flatten and remove padding
-                    all_metrics[metric_key] = [metric for metrics, count in zip(gathered_metrics, all_counts) for metric in metrics[: count.item()]]
-
-            if RANK == 0:
-                task_output.sample_metrics = dict(all_metrics)
+                    task_output.sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
 
         dist.barrier()  # Ensure all processes are synced before proceeding
 
