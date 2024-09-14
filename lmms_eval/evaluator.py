@@ -413,13 +413,13 @@ def evaluate(
             limit=limit,
             rank=lm.rank,
             world_size=lm.world_size,
-            # cache_requests=cache_requests, # later we will add them
-            # rewrite_requests_cache=rewrite_requests_cache,
-            # system_instruction=system_instruction,
-            # apply_chat_template=apply_chat_template,
-            # fewshot_as_multiturn=fewshot_as_multiturn,
-            # chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
-            # tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
+            cache_requests=cache_requests,  # later we will add them
+            rewrite_requests_cache=rewrite_requests_cache,
+            system_instruction=system_instruction,
+            apply_chat_template=apply_chat_template,
+            fewshot_as_multiturn=fewshot_as_multiturn,
+            chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
+            tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
         )
         eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
         if write_out:
