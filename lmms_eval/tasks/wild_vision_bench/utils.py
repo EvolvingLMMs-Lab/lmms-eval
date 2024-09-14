@@ -305,7 +305,7 @@ def wild_vision_aggregation_raw_scores(results):
     total_score = 0
     for result in results:
         total_score += result["final_score"]
-    return total_score
+    return total_score / len(results)
 
 
 def wild_vision_aggregation_elo_scores(results):
