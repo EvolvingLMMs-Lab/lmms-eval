@@ -472,6 +472,15 @@ class Task(abc.ABC):
         if cache_requests and (not cached_instances or rewrite_requests_cache):
             save_to_cache(file_name=cache_key, obj=instances)
 
+        # FIXME: Bo - We need to check if the doc_to_visual if it's exists and restore it. If we use cache, the doc_to_visual will be None since it's not serializable
+        for instance in self._instances:
+            if instance.arguments[2] is None:
+                arguments = (instance.arguments[0], instance.arguments[1], self.doc_to_visual, *instance.arguments[3:])
+            else:
+                arguments = instance.arguments
+
+            instance.arguments = arguments
+
     @abc.abstractmethod
     def construct_requests(self, doc_id, ctx, **kwargs):
         """Uses RequestFactory to construct Requests and returns an iterable of
