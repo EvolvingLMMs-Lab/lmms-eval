@@ -30,6 +30,7 @@ AVAILABLE_MODELS = {
     "longva": "LongVA",
     "mantis": "Mantis",
     "minicpm_v": "MiniCPM_V",
+    "minimonkey": "MiniMonkey",
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
     "qwen_vl": "Qwen_VL",
