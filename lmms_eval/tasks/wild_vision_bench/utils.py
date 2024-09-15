@@ -102,12 +102,14 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
             # print(response_data)
             return response_data["choices"][0]["message"]["content"], GPT_EVAL_MODEL_NAME
         except requests.exceptions.RequestException as e:
-            print(f"Request failed on attempt {attempt+1}: {e}")
+            eval_logger.error(f"Request failed on attempt {attempt+1}: {e}")
+            time.sleep(wait_time)
             if attempt == max_retries - 1:
-                print(f"Failed to get response after {max_retries} attempts")
+                eval_logger.error(f"Failed to get response after {max_retries} attempts")
                 return "", GPT_EVAL_MODEL_NAME
         except Exception as e:
-            print(f"Error on attempt {attempt+1}: {e}")
+            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
+            time.sleep(wait_time)
             return "", GPT_EVAL_MODEL_NAME
 
 
