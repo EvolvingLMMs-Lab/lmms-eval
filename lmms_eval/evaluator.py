@@ -6,11 +6,13 @@ import os
 import random
 import sys
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
 import numpy as np
 import torch
+import torch.distributed as dist
 from datasets import Image, Sequence
 from loguru import logger as eval_logger
 from tqdm import tqdm
@@ -253,6 +255,10 @@ def simple_evaluate(
         cli_args=cli_args,
     )
 
+    if hasattr(lm, "_model"):
+        del lm._model
+        torch.cuda.empty_cache()
+
     if lm.rank == 0:
         if isinstance(model, str):
             model_name = model
@@ -415,7 +421,7 @@ def evaluate(
             # chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
             # tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
         )
-        eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task.instances)}")
+        eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
         if write_out:
             print_writeout(task)
         # aggregate Instances by LM method requested to get output.
@@ -551,6 +557,8 @@ def evaluate(
                 )
                 if RANK == 0:
                     task_output.sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
+
+        dist.barrier()  # Ensure all processes are synced before proceeding
 
     if RANK == 0:
         ### Aggregate results over all datapoints ###
