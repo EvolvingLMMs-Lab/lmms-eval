@@ -25,8 +25,6 @@ from lmms_eval import evaluator, utils
 from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
-
-# from lmms_eval.logging_utils import WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
     handle_non_serializable,
