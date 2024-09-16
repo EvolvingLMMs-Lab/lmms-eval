@@ -527,14 +527,6 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         if evaluation_tracker.push_results_to_hub or evaluation_tracker.push_samples_to_hub:
             evaluation_tracker.recreate_metadata_card()
 
-        # print(
-        #     f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, "
-        #     f"batch_size: {args.batch_size}{f' ({batch_sizes})' if batch_sizes else ''}"
-        # )
-        # print(make_table(results))
-        # if "groups" in results:
-        #     print(make_table(results, "groups"))
-
         if args.wandb_args:
             # Tear down wandb run once all the logging is done.
             wandb_logger.run.finish()
