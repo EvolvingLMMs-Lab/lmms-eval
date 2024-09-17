@@ -365,13 +365,6 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
             query = query[-int(ratio * len(query)) :]
             print("lessening")
 
-        payload = {"messages": messages, "max_tokens": 400, "stop": ["[INST", "[INST]", "[/INST]", "[/INST]"], "model": "Meta-Llama-3.1-405B-Instruct"}
-
-        key = os.getenv("SAMBAKEY")
-        url = os.getenv("SAMBAURL")
-
-        headers = {"Authorization": f"Basic {key}", "Content-Type": "application/json"}
-
         max_attempts = 5
         for attempt in range(max_attempts):
             try:
