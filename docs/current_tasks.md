@@ -1,13 +1,12 @@
 # Current Tasks
 
 > () indicates the task name in the lmms_eval. The task name is also used to specify the dataset in the configuration file.
-> The following is manually updated documentation. You could use `lmms_eval task --list` to list all supported tasks and their task names. 
+> The following is manually updated documentation. You could use `lmms_eval task --list` to list all supported tasks and their task names.
+
+## 1. Image tasks:
 
 - AI2D (ai2d)
 - ChartQA (chartqa)
-- CMMMU (cmmmu)
-  - CMMMU Validation (cmmmu_val)
-  - CMMMU Test (cmmmu_test)
 - COCO Caption (coco_cap)
   - COCO 2014 Caption (coco2014_cap)
     - COCO 2014 Caption Validation (coco2014_cap_val)
@@ -16,19 +15,25 @@
     - COCO 2017 Caption MiniVal (coco2017_cap_val)
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
 - [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
+- DetailCaps-4870 (detailcaps)
 - DOCVQA (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
 - Ferret (ferret)
 - Flickr30K (flickr30k)
-  - Ferret Test (ferret_test)
+  - Flickr30K Test (flickr30k_test)
 - GQA (gqa)
-- HallusionBenchmark (hallusion_bench_image)
+- GQA-ru (gqa_ru)
+- II-Bench (ii_bench)
 - Infographic VQA (info_vqa)
   - Infographic VQA Validation (info_vqa_val)
   - Infographic VQA Test (info_vqa_test)
-- LLaVA-Bench (llava_in_the_wild)
+- LiveBench (live_bench)
+  - LiveBench 06/2024 (live_bench_2406)
+  - LiveBench 07/2024 (live_bench_2407)
+- LLaVA-Bench-Wilder (llava_wilder_small)
 - LLaVA-Bench-COCO (llava_bench_coco)
+- LLaVA-Bench (llava_in_the_wild)
 - MathVerse (mathverse)
   - MathVerse Text Dominant (mathverse_testmini_text_dominant)
   - MathVerse Text Only (mathverse_testmini_text_only)
@@ -47,9 +52,6 @@
     - MMBench Chinese Dev (mmbench_cn_dev)
     - MMBench Chinese Test (mmbench_cn_test)
 - MME (mme)
-- MMMU (mmmu)
-  - MMMU Validation (mmmu_val)
-  - MMMU Test (mmmu_test)
 - MMStar (mmstar)
 - MMUPD (mmupd)
   - MMUPD Base (mmupd_base)
@@ -65,54 +67,79 @@
     - MMIASD Instruction (mmiasd_instruction)
     - MMIVQD Instruction (mmivqd_instruction)
 - MMVet (mmvet)
-- Multi-DocVQA (multidocvqa)
-  - Multi-DocVQA Validation (multidocvqa_val)
-  - Multi-DocVQA Test (multidocvqa_test)
+- Multilingual LlaVa Bench
+  - llava_in_the_wild_arabic
+  - llava_in_the_wild_bengali
+  - llava_in_the_wild_chinese
+  - llava_in_the_wild_french
+  - llava_in_the_wild_hindi
+  - llava_in_the_wild_japanese
+  - llava_in_the_wild_russian
+  - llava_in_the_wild_spanish
+  - llava_in_the_wild_urdu
 - NoCaps (nocaps)
   - NoCaps Validation (nocaps_val)
   - NoCaps Test (nocaps_test)
+- OCRBench (ocrbench)
 - OKVQA (ok_vqa)
   - OKVQA Validation 2014 (ok_vqa_val2014)
 - POPE (pope)
+- RealWorldQA (realworldqa)
 - RefCOCO (refcoco)
-    - refcoco_seg_test
-    - refcoco_seg_val
-    - refcoco_seg_testA
-    - refcoco_seg_testB
-    - refcoco_bbox_test
-    - refcoco_bbox_val
-    - refcoco_bbox_testA
-    - refcoco_bbox_testB
+  - refcoco_seg_test
+  - refcoco_seg_val
+  - refcoco_seg_testA
+  - refcoco_seg_testB
+  - refcoco_bbox_test
+  - refcoco_bbox_val
+  - refcoco_bbox_testA
+  - refcoco_bbox_testB
 - RefCOCO+ (refcoco+)
-    - refcoco+_seg
-        - refcoco+_seg_val
-        - refcoco+_seg_testA
-        - refcoco+_seg_testB
-    - refcoco+_bbox
-        - refcoco+_bbox_val
-        - refcoco+_bbox_testA
-        - refcoco+_bbox_testB
+  - refcoco+\_seg
+    - refcoco+\_seg_val
+    - refcoco+\_seg_testA
+    - refcoco+\_seg_testB
+  - refcoco+\_bbox
+    - refcoco+\_bbox_val
+    - refcoco+\_bbox_testA
+    - refcoco+\_bbox_testB
 - RefCOCOg (refcocog)
-    - refcocog_seg_test
-    - refcocog_seg_val
-    - refcocog_bbox_test
-    - refcocog_bbox_val
+  - refcocog_seg_test
+  - refcocog_seg_val
+  - refcocog_bbox_test
+  - refcocog_bbox_val
 - ScienceQA (scienceqa_full)
   - ScienceQA Full (scienceqa)
   - ScienceQA IMG (scienceqa_img)
 - ScreenSpot (screenspot)
   - ScreenSpot REC / Grounding (screenspot_rec)
   - ScreenSpot REG / Instruction Generation (screenspot_reg)
-- SeedBench (seedbench)
-- SeedBench 2 (seedbench_2)
-- SeedBench 2 Plus (seedbench_2_plus)
 - ST-VQA (stvqa)
+- synthdog (synthdog)
+  - synthdog English (synthdog_en)
+  - synthdog Chinese (synthdog_zh)
 - TextCaps (textcaps)
   - TextCaps Validation (textcaps_val)
   - TextCaps Test (textcaps_test)
 - TextVQA (textvqa)
   - TextVQA Validation (textvqa_val)
   - TextVQA Test (textvqa_test)
+- VCR-Wiki
+  - VCR-Wiki English
+    - VCR-Wiki English easy 100 (vcr_wiki_en_easy_100)
+    - VCR-Wiki English easy 500 (vcr_wiki_en_easy_500)
+    - VCR-Wiki English easy (vcr_wiki_en_easy)
+    - VCR-Wiki English hard 100 (vcr_wiki_en_hard_100)
+    - VCR-Wiki English hard 500 (vcr_wiki_en_hard_500)
+    - VCR-Wiki English hard (vcr_wiki_en_hard)
+  - VCR-Wiki Chinese
+    - VCR-Wiki Chinese easy 100 (vcr_wiki_zh_easy_100)
+    - VCR-Wiki Chinese easy 500 (vcr_wiki_zh_easy_500)
+    - VCR-Wiki Chinese easy (vcr_wiki_zh_easy)
+    - VCR-Wiki Chinese hard 100 (vcr_wiki_zh_hard_100)
+    - VCR-Wiki Chinese hard 500 (vcr_wiki_zh_hard_500)
+    - VCR-Wiki Chinese hard (vcr_wiki_zh_hard)
+- VibeEval (vibe_eval)
 - VizWizVQA (vizwiz_vqa)
   - VizWizVQA Validation (vizwiz_vqa_val)
   - VizWizVQA Test (vizwiz_vqa_test)
@@ -122,3 +149,139 @@
 - WebSRC (websrc)
   - WebSRC Validation (websrc_val)
   - WebSRC Test (websrc_test)
+- WildVision-Bench (wildvision)
+  - WildVision 0617(wildvision_0617)
+  - WildVision 0630 (wildvision_0630)
+- SeedBench 2 Plus (seedbench_2_plus)
+
+## 2. Multi-image tasks:
+
+- CMMMU (cmmmu)
+  - CMMMU Validation (cmmmu_val)
+  - CMMMU Test (cmmmu_test)
+- HallusionBenchmark (hallusion_bench_image)
+- ICON-QA (iconqa)
+  - ICON-QA Validation (iconqa_val)
+  - ICON-QA Test (iconqa_test)
+- LLaVA-NeXT-Interleave-Bench (llava_interleave_bench)
+  - llava_interleave_bench_in_domain
+  - llava_interleave_bench_out_domain
+  - llava_interleave_bench_multi_view
+- MIRB-hf (mirb)
+- MMMU (mmmu)
+  - MMMU Validation (mmmu_val)
+  - MMMU Test (mmmu_test)
+- MMMU_Pro
+  - MMMU Pro (mmmu_pro)
+    - MMMU Pro Original (mmmu_pro_original)
+    - MMMU Pro Vision (mmmu_pro_vision)
+  - MMMU Pro COT (mmmu_pro_cot)
+    - MMMU Pro Original COT (mmmu_pro_original_cot)
+    - MMMU Pro Vision COT (mmmu_pro_vision_cot)
+    - MMMU Pro Composite COT (mmmu_pro_composite_cot)
+- MUIRBENCH (muirbench)
+- Multi-DocVQA (multidocvqa)
+  - Multi-DocVQA Validation (multidocvqa_val)
+  - Multi-DocVQA Test (multidocvqa_test)
+- OlympiadBench (olympiadbench)
+  - OlympiadBench Test English (olympiadbench_test_en)
+  - OlympiadBench Test Chinese (olympiadbench_test_cn)
+- Q-Bench (qbenchs_dev)
+  - Q-Bench2-HF (qbench2_dev)
+  - Q-Bench-HF (qbench_dev)
+  - A-Bench-HF (abench_dev)
+
+## 3. Videos tasks:
+
+- ActivityNet-QA (activitynetqa_generation)
+- SeedBench (seedbench)
+- SeedBench 2 (seedbench_2)
+- CVRR-ES (cvrr)
+  - cvrr_continuity_and_object_instance_count
+  - cvrr_fine_grained_action_understanding
+  - cvrr_interpretation_of_social_context
+  - cvrr_interpretation_of_visual_context
+  - cvrr_multiple_actions_in_a_single_video
+  - cvrr_non_existent_actions_with_existent_scene_depictions
+  - cvrr_non_existent_actions_with_non_existent_scene_depictions
+  - cvrr_partial_actions
+  - cvrr_time_order_understanding
+  - cvrr_understanding_emotional_context
+  - cvrr_unusual_and_physically_anomalous_activities
+- EgoSchema (egoschema)
+  - egoschema_mcppl
+  - egoschema_subset_mcppl
+  - egoschema_subset
+- LongVideoBench
+- MLVU (mlvu)
+- MVBench (mvbench)
+
+  - mvbench_action_sequence
+  - mvbench_moving_count
+  - mvbench_action_prediction
+  - mvbench_episodic_reasoning
+  - mvbench_action_antonym
+  - mvbench_action_count
+  - mvbench_scene_transition
+  - mvbench_object_shuffle
+  - mvbench_object_existence
+  - mvbench_fine_grained_pose
+  - mvbench_unexpected_action
+  - mvbench_moving_direction
+  - mvbench_state_change
+  - mvbench_object_interaction
+  - mvbench_character_order
+  - mvbench_action_localization
+  - mvbench_counterfactual_inference
+  - mvbench_fine_grained_action
+  - mvbench_moving_attribute
+  - mvbench_egocentric_navigation
+
+- NExTQA (nextqa)
+
+  - NExTQA Multiple Choice Test (nextqa_mc_test)
+  - NExTQA Open Ended Validation (nextqa_oe_val)
+  - NExTQA Open Ended Test (nextqa_oe_test)
+
+- PerceptionTest
+
+  - PerceptionTest Test
+    - perceptiontest_test_mc
+    - perceptiontest_test_mcppl
+  - PerceptionTest Validation
+    - perceptiontest_val_mc
+    - perceptiontest_val_mcppl
+
+- TempCompass (tempcompass)
+
+  - tempcompass_multi_choice
+  - tempcompass_yes_no
+  - tempcompass_caption_matching
+  - tempcompass_captioning
+
+- Vatex (vatex)
+
+  - Vatex Chinese (vatex_val_zh)
+  - Vatex Test (vatex_test)
+
+- VideoDetailDescription (video_dc499)
+- VideoChatGPT (videochatgpt)
+  - VideoChatGPT Generic (videochatgpt_gen)
+  - VideoChatGPT Temporal (videochatgpt_temporal)
+  - VideoChatGPT Consistency (videochatgpt_consistency)
+- Video-MME (videomme)
+- VITATECS (vitatecs)
+
+  - VITATECS Direction (vitatecs_direction)
+  - VITATECS Intensity (vitatecs_intensity)
+  - VITATECS Sequence (vitatecs_sequence)
+  - VITATECS Compositionality (vitatecs_compositionality)
+  - VITATECS Localization (vitatecs_localization)
+  - VITATECS Type (vitatecs_type)
+
+- WorldQA (worldqa)
+
+  - WorldQA Generation (worldqa_gen)
+  - WorldQA Multiple Choice (worldqa_mc)
+
+- YouCook2 (youcook2_val)
