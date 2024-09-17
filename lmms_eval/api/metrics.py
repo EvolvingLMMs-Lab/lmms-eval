@@ -59,6 +59,7 @@ def f1_score(items):
     fscore = sklearn.metrics.f1_score(golds, preds)
     return np.max(fscore)
 
+
 @register_aggregation("binary_mean_f1")
 def binary_mean_f1_score(items):
     golds, preds = zip(*items)
@@ -69,6 +70,7 @@ def binary_mean_f1_score(items):
     avg_f1 = np.mean([f11, f12])
     return avg_f1
 
+
 @register_aggregation("binary_f1_0")
 def binary_f1_0_score(items):
     golds, preds = zip(*items)
@@ -77,6 +79,7 @@ def binary_f1_0_score(items):
     f11 = sklearn.metrics.f1_score(y_true=golds == 0, y_pred=preds == 0)
     return f11
 
+
 @register_aggregation("binary_f1_1")
 def binary_f1_1_score(items):
     golds, preds = zip(*items)
@@ -84,6 +87,7 @@ def binary_f1_1_score(items):
     golds = np.array(golds)
     f12 = sklearn.metrics.f1_score(y_true=golds == 1, y_pred=preds == 1)
     return f12
+
 
 @register_aggregation("matthews_corrcoef")
 def matthews_corrcoef(items):
@@ -288,8 +292,8 @@ def gpt4judge(references, predictions, query):  # This is a passthrough function
                 if attempt <= 3:
                     time.sleep(NUM_SECONDS_TO_SLEEP)
                 else:  # If this was the last attempt, log and return empty string
-                    if isinstance(e, BadRequestError) and e.code == 'content_filter':
-                        eval_logger.error(f'Ran into a content filter error.\n***Original question***:\n{query}\n***Original ground truth answer***:\n{gt_answer}\n***Original model response***:\n{det_answer}')
+                    if isinstance(e, BadRequestError) and e.code == "content_filter":
+                        eval_logger.error(f"Ran into a content filter error.\n***Original question***:\n{query}\n***Original ground truth answer***:\n{gt_answer}\n***Original model response***:\n{det_answer}")
                         raise e
                     eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {str(error_msg)}")
                     response = ""
@@ -310,11 +314,21 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
     import json
 
     NUM_SECONDS_TO_SLEEP = 30
+    from openai import OpenAI
+
+    key = os.getenv("SAMBAKEY", None)
+    if key is None:
+        raise ValueError("API key not found. Please set the SAMBAKEY environment variable.")
+    client = OpenAI(
+        base_url="https://fast-api.snova.ai/v1/",
+        api_key=key,
+    )
 
     for answer in references:
         # preprocess both the answers - gt and prediction
         gt_answer = answer
         det_answer = predictions[0]
+
         def create_messages(query, gt_answer, det_answer):
             messages = []
             messages.append({"role": "system", "content": "You are a highly efficient assistant. You are to be as fair and accurate"})
@@ -339,57 +353,44 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
                 }
             )
             return messages
-        
+
         tokenizer = AutoTokenizer.from_pretrained("/import/snvm-sc-podscratch4/jonathanl/generic_checkpoints/llama_3/Meta-Llama-3-8B-Instruct")
         while True:
             messages = create_messages(query, gt_answer, det_answer)
             tokenized_messages = tokenizer.apply_chat_template(messages)
             if len(tokenized_messages) < 3600:
                 break
-            ratio = 4000/len(tokenized_messages)
-            ratio = min(ratio, .95)
-            query = query[-int(ratio * len(query)):]
+            ratio = 4000 / len(tokenized_messages)
+            ratio = min(ratio, 0.95)
+            query = query[-int(ratio * len(query)) :]
             print("lessening")
-            
-        
-        payload = {"messages": messages, "max_tokens": 400, "stop": ["[INST", "[INST]", "[/INST]", "[/INST]"], "model": "llama3-405b", "stream": "true"}
+
+        payload = {"messages": messages, "max_tokens": 400, "stop": ["[INST", "[INST]", "[/INST]", "[/INST]"], "model": "Meta-Llama-3.1-405B-Instruct"}
 
         key = os.getenv("SAMBAKEY")
         url = os.getenv("SAMBAURL")
 
         headers = {"Authorization": f"Basic {key}", "Content-Type": "application/json"}
 
-        while True:
-            post_response = requests.post(f"https://{url}/v1/chat/completions", json=payload, headers=headers, stream=True)
-            if post_response.status_code == 503 or post_response.status_code == 504 or post_response.status_code == 401:
-                print(post_response.content)
-                eval_logger.info(f"Attempt failed due to rate limit or gate timeout. Trying again...")
-                time.sleep(NUM_SECONDS_TO_SLEEP)
-                continue
-            debug_response = copy.deepcopy(post_response)
-            if post_response.status_code != 200:
-                breakpoint()
-            response_text = ""
-            for line in post_response.iter_lines():
-                if line.startswith(b"data: "):
-                    data_str = line.decode("utf-8")[6:]
-                    try:
-                        line_json = json.loads(data_str)
-                        if "choices" in line_json and "content" in line_json["choices"][0]["delta"]:
-                            try:
-                                response_text += line_json["choices"][0]["delta"]["content"]
-                            except:
-                                breakpoint()
-                    except json.JSONDecodeError as e:
-                        pass
-
-            extracted_number = extract_number_from_brackets(response_text)
-            if extracted_number is None:
-                print(f"Attempt failed with text: {response_text}.")
-                print(post_response)
-                breakpoint()
-            score = int(extracted_number)
-            break
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            try:
+                completion = client.chat.completions.create(model="Meta-Llama-3.1-405B-Instruct", messages=messages, max_tokens=1024, temperature=0.0, stop=["<|eot_id|>", "<|eom_id|>"])
+                response_text = completion.choices[0].message.content
+                extracted_number = extract_number_from_brackets(response_text)
+                if extracted_number is None:
+                    print(f"Attempt failed with text: {response_text}.")
+                    print(post_response)
+                    breakpoint()
+                score = int(extracted_number)
+                break
+            except Exception as e:
+                eval_logger.info(f"Attempt {attempt+1} failed with error: {str(e)}")
+                if attempt < max_attempts - 1:
+                    time.sleep(NUM_SECONDS_TO_SLEEP)
+                else:
+                    eval_logger.error(f"All {max_attempts} attempts failed with exception {str(e)}")
+                    raise e
         responses.append(response_text)
         values.append(score)
     return {"sambajudge": max(values), "samba_for_log": responses}
@@ -447,6 +448,7 @@ def mcc_fn(items):  # This is a passthrough function
 def f1_fn(items):  # This is a passthrough function
     return items
 
+
 @register_metric(
     metric="binary_mean_f1",
     higher_is_better=True,
@@ -456,6 +458,7 @@ def f1_fn(items):  # This is a passthrough function
 def mean_f1_fn(items):  # This is a passthrough function
     return items
 
+
 @register_metric(
     metric="f1_0",
     higher_is_better=True,
@@ -464,6 +467,7 @@ def mean_f1_fn(items):  # This is a passthrough function
 )
 def f1_0_fn(items):  # This is a passthrough function
     return items
+
 
 @register_metric(
     metric="f1_1",
