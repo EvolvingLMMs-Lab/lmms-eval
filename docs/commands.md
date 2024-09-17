@@ -251,4 +251,26 @@ pip install httpx==0.23.3
 pip install protobuf==3.20
 ```
 
+## Regression Test
 
+Now after each PR, we need to run the regression test to make sure the performance of the model is not degraded.
+
+```bash
+python3 tools/regression.py
+```
+
+```bash
+Already on 'dev/fix_output_path'
+
+|task|llava-onevision-qwen2-0.5b-ov|
+|--|--|
+|ocrbench (dev/fix_output_path)|0.70 ± 0.70|
+|mmmu_val (dev/fix_output_path)|50.00 ± 50.00|
+|ai2d (dev/fix_output_path)|50.00 ± 50.00|
+|muirbench (dev/fix_output_path)|12.50 ± 12.50|
+|videomme (dev/fix_output_path)|2500.00 ± 2500.00|
+
+|branch|runtime|%|
+|--|--|--|
+|dev/fix_output_path|87.7s|100%|
+```
