@@ -61,8 +61,8 @@ else:
     best_fit_attn_implementation = "eager"
 
 
-@register_model("llava_onevision")
-class Llava_OneVision(lmms):
+@register_model("gqa_results")
+class GQA_Results(lmms):
     """
     Llava Model
     """

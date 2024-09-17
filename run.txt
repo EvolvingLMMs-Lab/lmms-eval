@@ -1,0 +1,57 @@
+2024-09-16
+
+(lmms-eval) azon@AsusDesktop:~$ accelerate launch --num_processes=1 \
+> -m lmms_eval \
+> --model llava_onevision \
+> --model_args pretrained=lmms-lab/llava-onevision-qwen2-0.5b-si,conv_template=qwen_1_5,model_name=llava_qwen \
+> --tasks mme \
+> --batch_size 1 \
+> --log_samples \
+> --log_samples_suffix llava_onevision \
+> --output_path ./logs/
+The following values were not passed to `accelerate launch` and had defaults used instead:
+        `--num_machines` was set to a value of `1`
+        `--mixed_precision` was set to a value of `'no'`
+        `--dynamo_backend` was set to a value of `'no'`
+To avoid this warning pass in values for each of the problematic parameters or run `accelerate config`.
+2024-09-16 17:42:01.868 | INFO     | __main__:cli_evaluate:292 - Verbosity set to INFO
+2024-09-16 17:42:02.756 | INFO     | __main__:cli_evaluate_single:372 - Evaluation tracker args: {'output_path': './logs/'}
+2024-09-16 17:42:03.473 | INFO     | __main__:cli_evaluate_single:463 - Selected Tasks: ['mme']
+2024-09-16 17:42:03.477 | INFO     | lmms_eval.evaluator:simple_evaluate:154 - Setting random seed to 0 | Setting numpy seed to 1234 | Setting torch manual seed to 1234
+Loaded LLaVA model: lmms-lab/llava-onevision-qwen2-0.5b-si
+You are using a model of type llava to instantiate a model of type llava_qwen. This is not supported for all configurations of models and can yield errors.
+Overwriting config with {'mm_spatial_pool_stride': 2, 'mm_spatial_pool_mode': 'bilinear'}
+Loading vision tower: google/siglip-so400m-patch14-384
+Model Class: LlavaQwenForCausalLM
+2024-09-16 17:42:09.772 | INFO     | lmms_eval.evaluator_utils:from_taskdict:91 - No metadata found in task config for mme, using default n_shot=0
+2024-09-16 17:42:09.772 | INFO     | lmms_eval.api.task:build_all_requests:423 - Building contexts for mme on rank 0...
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2374/2374 [00:00<00:00, 209085.48it/s]
+2024-09-16 17:42:36.116 | INFO     | lmms_eval.evaluator:evaluate:445 - Running generate_until requests
+Model Responding: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2374/2374 [17:02<00:00,  2.32it/s]
+Postprocessing: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2374/2374 [00:23<00:00, 101.44it/s]
+2024-09-16 18:00:02.437 | INFO     | utils:mme_aggregate_results:124 - code_reasoning: 57.50
+2024-09-16 18:00:02.437 | INFO     | utils:mme_aggregate_results:124 - numerical_calculation: 45.00
+2024-09-16 18:00:02.437 | INFO     | utils:mme_aggregate_results:124 - text_translation: 95.00
+2024-09-16 18:00:02.437 | INFO     | utils:mme_aggregate_results:124 - commonsense_reasoning: 72.14
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - artwork: 111.50
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - celebrity: 96.18
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - count: 98.33
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - color: 123.33
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - position: 108.33
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - OCR: 65.00
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - landmark: 138.25
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - scene: 164.50
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - existence: 195.00
+2024-09-16 18:00:02.438 | INFO     | utils:mme_aggregate_results:124 - posters: 117.01
+fatal: not a git repository (or any of the parent directories): .git
+2024-09-16 18:00:03.210 | INFO     | __main__:cli_evaluate_single:534 - Saved samples to /home/azon/logs/0917_0842_llava_onevision_llava_onevision_model_args_7dc6f4/mme.json
+llava_onevision (pretrained=lmms-lab/llava-onevision-qwen2-0.5b-si,conv_template=qwen_1_5,model_name=llava_qwen),
+gen_kwargs: (),
+limit: None,
+num_fewshot: None,
+batch_size: 1
+|Tasks|Version|Filter|n-shot|      Metric       |   |  Value  |   |Stderr|
+|-----|-------|------|-----:|-------------------|---|--------:|---|------|
+|mme  |Yaml   |none  |     0|mme_cognition_score|↑  | 269.6429|±  |   N/A|
+|mme  |Yaml   |none  |     0|mme_percetion_score|↑  |1217.4333|±  |   N/A|
+
