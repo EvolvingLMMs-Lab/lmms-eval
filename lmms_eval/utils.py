@@ -33,6 +33,7 @@ warnings.filterwarnings("ignore")
 import gc
 from itertools import islice
 
+import numpy as np
 import pytz
 import torch
 import transformers
@@ -238,11 +239,14 @@ def get_file_datetime(filename: str) -> str:
     return filename[filename.rfind("_") + 1 :].replace(".jsonl", "")
 
 
-def sanitize_model_name(model_name: str) -> str:
+def sanitize_model_name(model_name: str, full_path: bool = False) -> str:
     """
     Given the model name, returns a sanitized version of it.
     """
-    return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", model_name)
+    if full_path:
+        return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", model_name)
+    else:
+        return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", model_name.split("/")[-1])
 
 
 def sanitize_task_name(task_name: str) -> str:
@@ -263,14 +267,14 @@ def get_results_filenames(filenames: List[str]) -> List[str]:
     """
     Extracts filenames that correspond to aggregated results.
     """
-    return [f for f in filenames if "/results_" in f and ".json" in f]
+    return [f for f in filenames if "results" in f and ".json" in f]
 
 
 def get_sample_results_filenames(filenames: List[str]) -> List[str]:
     """
     Extracts filenames that correspond to sample results.
     """
-    return [f for f in filenames if "/samples_" in f and ".json" in f]
+    return [f for f in filenames if "samples" in f and ".json" in f]
 
 
 def get_rolling_token_windows(token_list, prefix_token, max_seq_len, context_len):
@@ -588,7 +592,7 @@ def get_datetime_str(timezone="Asia/Singapore"):
     tz = pytz.timezone(timezone)
     utc_now = datetime.datetime.now(datetime.timezone.utc)
     local_time = utc_now.astimezone(tz)
-    return local_time.strftime("%m%d_%H%M")
+    return local_time.strftime("%Y%m%d_%H%M%S")
 
 
 def ignore_constructor(loader, node):

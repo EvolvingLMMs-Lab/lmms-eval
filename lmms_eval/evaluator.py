@@ -76,6 +76,7 @@ def simple_evaluate(
     numpy_random_seed: int = 1234,
     torch_random_seed: int = 1234,
     fewshot_random_seed: int = 1234,
+    datetime_str: str = get_datetime_str(),
     cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -292,7 +293,7 @@ def simple_evaluate(
             }
         )
         results["git_hash"] = get_git_commit_hash()
-        results["date"] = get_datetime_str()
+        results["date"] = datetime_str
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
         return results

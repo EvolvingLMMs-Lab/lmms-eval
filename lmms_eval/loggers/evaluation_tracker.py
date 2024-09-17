@@ -15,6 +15,7 @@ from huggingface_hub.utils import build_hf_headers, get_session, hf_raise_for_st
 
 from lmms_eval.utils import (
     eval_logger,
+    get_datetime_str,
     get_file_datetime,
     get_file_task_name,
     get_results_filenames,
@@ -154,7 +155,7 @@ class EvaluationTracker:
             eval_logger.warning(f"hub_results_org was not specified. Results will be pushed to '{hub_results_org}'.")
 
         if hub_repo_name == "":
-            details_repo_name = details_repo_name if details_repo_name != "" else "lm-eval-results"
+            details_repo_name = details_repo_name if details_repo_name != "" else "lmms-eval-results"
             results_repo_name = results_repo_name if results_repo_name != "" else details_repo_name
         else:
             details_repo_name = hub_repo_name
@@ -170,6 +171,7 @@ class EvaluationTracker:
         self,
         results: dict,
         samples: dict,
+        datetime_str: str,
     ) -> None:
         """
         Saves the aggregated results and samples to the output path and pushes them to the Hugging Face hub if requested.
@@ -177,6 +179,7 @@ class EvaluationTracker:
         Args:
             results (dict): The aggregated results to save.
             samples (dict): The samples results to save.
+            datetime_str (str): The datetime string to use for the results file.
         """
         self.general_config_tracker.log_end_time()
 
@@ -205,8 +208,8 @@ class EvaluationTracker:
                 path = path.joinpath(self.general_config_tracker.model_name_sanitized)
                 path.mkdir(parents=True, exist_ok=True)
 
-                self.date_id = datetime.now().isoformat().replace(":", "-")
-                file_results_aggregated = path.joinpath(f"results_{self.date_id}.json")
+                self.date_id = datetime_str.replace(":", "-")
+                file_results_aggregated = path.joinpath(f"{self.date_id}_results.json")
                 file_results_aggregated.open("w", encoding="utf-8").write(dumped)
 
                 if self.api and self.push_results_to_hub:
@@ -219,10 +222,10 @@ class EvaluationTracker:
                     )
                     self.api.upload_file(
                         repo_id=repo_id,
-                        path_or_fileobj=str(path.joinpath(f"results_{self.date_id}.json")),
+                        path_or_fileobj=str(path.joinpath(f"{self.date_id}_results.json")),
                         path_in_repo=os.path.join(
                             self.general_config_tracker.model_name,
-                            f"results_{self.date_id}.json",
+                            f"{self.date_id}_results.json",
                         ),
                         repo_type="dataset",
                         commit_message=f"Adding aggregated results for {self.general_config_tracker.model_name}",
@@ -255,18 +258,17 @@ class EvaluationTracker:
                 path = path.joinpath(self.general_config_tracker.model_name_sanitized)
                 path.mkdir(parents=True, exist_ok=True)
 
-                file_results_samples = path.joinpath(f"samples_{task_name}_{self.date_id}.jsonl")
+                file_results_samples = path.joinpath(f"{self.date_id}_samples_{task_name}.jsonl")
 
                 for sample in samples:
                     # we first need to sanitize arguments and resps
                     # otherwise we won't be able to load the dataset
                     # using the datasets library
                     arguments = {}
-                    for i, arg in enumerate(sample["arguments"]):
-                        arguments[f"gen_args_{i}"] = {}
-                        for j, tmp in enumerate(arg):
-                            arguments[f"gen_args_{i}"][f"arg_{j}"] = tmp
+                    for key, value in enumerate(sample["arguments"][1]):  # update metadata into args
+                        arguments[key] = value
 
+                    sample["input"] = sample["arguments"][0]
                     sample["resps"] = sanitize_list(sample["resps"])
                     sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
                     sample["arguments"] = arguments
