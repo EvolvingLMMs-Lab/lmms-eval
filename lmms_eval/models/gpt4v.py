@@ -23,6 +23,7 @@ except ImportError:
 from PIL import Image
 
 API_TYPE = os.getenv("API_TYPE", "openai")
+# API_TYPE = "azure"
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
 
@@ -46,9 +47,9 @@ elif API_TYPE == "azure":
 class GPT4V(lmms):
     def __init__(
         self,
-        model_version: str = "gpt-4-vision-preview",
+        #model_version: str = "gpt-4-vision-preview",
         modality: str = "video",
-        max_frames_num: int = 10,
+        max_frames_num: int = 32,
         timeout: int = 120,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
@@ -58,7 +59,7 @@ class GPT4V(lmms):
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
-        self.model_version = model_version
+        #self.model_version = model_version
         self.modality = modality
         self.max_frames_num = max_frames_num
         self.image_token = "<image>"
@@ -157,8 +158,15 @@ class GPT4V(lmms):
                     img = self.encode_image(visual)
                     imgs.append(img)
                 elif self.modality == "video":
-                    frames = self.encode_video(visual, self.max_frames_num)
-                    imgs.extend(frames)
+                    # frames = self.encode_video(visual, self.max_frames_num)
+                    # imgs.extend(frames)
+                    try:
+                        frames = self.encode_video(visual, self.max_frames_num)
+                        imgs.extend(frames)
+                    except Exception as e:
+                        # Log the error and skip to the next visual
+                        eval_logger.error(f"Error {e} in encoding video for {visual}")
+                        continue  # Skip this visual and continue with the others
 
             payload = {"messages": []}
             if API_TYPE == "openai":
@@ -185,7 +193,7 @@ class GPT4V(lmms):
                 payload["messages"][-1]["content"].append({"type": "text", "text": contexts[-1]})
 
             if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 1024
+                gen_kwargs["max_new_tokens"] = 4096
             if gen_kwargs["max_new_tokens"] > 4096:
                 gen_kwargs["max_new_tokens"] = 4096
             if "temperature" not in gen_kwargs:
