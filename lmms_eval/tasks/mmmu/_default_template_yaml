@@ -1,5 +1,5 @@
 generation_kwargs:
-  max_new_tokens: 16
+  max_new_tokens: 4096
 
 metadata:
   version: 0.0
