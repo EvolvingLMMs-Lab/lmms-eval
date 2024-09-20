@@ -275,6 +275,161 @@ def evaluate_mmmu(samples):
 #     """
 #     Parse the prediction from the generated response.
 #     Return the predicted index e.g., A, B, C, D.
+#     """
+#     # Step 1: Clean up punctuation from the response
+#     for char in [",", ".", "!", "?", ";", ":", "'"]:
+#         response = response.strip(char)
+#     response = " " + response + " "  # Add space to avoid partial match
+
+#     index_ans = True
+#     ans_with_brack = False
+#     candidates = []
+
+#     # Step 2: Look for choices with parentheses e.g., (A) (B) (C) (D)
+#     for choice in all_choices:  # e.g., (A) (B) (C) (D)
+#             if f"{choice}." in response:
+#                 print(f"Found choice with period after: {choice}")
+#                 candidates.append(choice)
+    
+#     # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
+#     if len(candidates) == 0:
+#         for choice in all_choices:  # e.g., A. B. C. D.
+#             if f"({choice})" in response:
+#                 print(f"Found choice with parentheses: {choice}")
+#                 candidates.append(choice)
+#                 ans_with_brack = True
+
+#     # Step 3: If no candidates, look for choices with a space after (A B C D)
+#     if len(candidates) == 0:
+#         for choice in all_choices:  # e.g., A B C D
+#             if f"{choice} " in response:
+#                 print(f"Found choice without parentheses (space after): {choice}")
+#                 candidates.append(choice)
+
+
+
+#     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
+#     if len(candidates) == 0 and len(response.split()) > 5:
+#         for index, ans in index2ans.items():
+#             if ans.lower() in response.lower():
+#                 print(f"Found answer content match: {ans}")
+#                 candidates.append(index)
+#                 index_ans = False  # It's content answer, not an index
+
+#     # Step 6: If still no candidates, randomly choose one
+#     if len(candidates) == 0:
+#         pred_index = random.choice(all_choices)
+#         print(f"No candidates found, randomly selected: {pred_index}")
+#     # Step 7: If multiple candidates found, use the one appearing last
+#     elif len(candidates) > 1:
+#         start_indexes = []
+#         if index_ans:
+#             if ans_with_brack:
+#                 for can in candidates:
+#                     index = response.rfind(f"({can})")
+#                     print(f"Checking position of choice with parentheses: {can} at {index}")
+#                     start_indexes.append(index)
+#             else:
+#                 for can in candidates:
+#                     index = response.rfind(f" {can} ")
+#                     print(f"Checking position of choice: {can} at {index}")
+#                     start_indexes.append(index)
+#         else:
+#             for can in candidates:
+#                 index = response.lower().rfind(index2ans[can].lower())
+#                 print(f"Checking position of content match: {can} at {index}")
+#                 start_indexes.append(index)
+#         # Get the last one (max index)
+#         pred_index = candidates[np.argmax(start_indexes)]
+#         print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
+#     else:
+#         # If only one candidate, use it
+#         pred_index = candidates[0]
+#         print(f"Only one candidate found, selected: {pred_index}")
+
+#     return pred_index
+
+# def parse_multi_choice_response(response, all_choices, index2ans):
+#     """
+#     Parse the prediction from the generated response.
+#     Return the predicted index e.g., A, B, C, D.
+#     """
+#     # Step 1: Clean up punctuation from the response
+#     for char in [",", ".", "!", "?", ";", ":", "'"]:
+#         response = response.strip(char)
+#     response = " " + response + " "  # Add space to avoid partial match
+
+#     index_ans = True
+#     ans_with_brack = False
+#     candidates = []
+
+#     # Step 2: Look for choices with parentheses e.g., (A) (B) (C) (D)
+#     for choice in all_choices:  # e.g., (A) (B) (C) (D)
+#         if f"({choice})" in response:
+#             print(f"Found choice with parentheses: {choice}")
+#             candidates.append(choice)
+#             ans_with_brack = True
+    
+#     # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
+#     if len(candidates) == 0:
+#         for choice in all_choices:  # e.g., A. B. C. D.
+#             if f"{choice}." in response:
+#                 print(f"Found choice with period after: {choice}")
+#                 candidates.append(choice)
+
+#     # Step 3: If no candidates, look for choices with a space after (A B C D)
+#     if len(candidates) == 0:
+#         for choice in all_choices:  # e.g., A B C D
+#             if f"{choice} " in response:
+#                 print(f"Found choice without parentheses (space after): {choice}")
+#                 candidates.append(choice)
+
+
+
+#     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
+#     if len(candidates) == 0 and len(response.split()) > 5:
+#         for index, ans in index2ans.items():
+#             if ans.lower() in response.lower():
+#                 print(f"Found answer content match: {ans}")
+#                 candidates.append(index)
+#                 index_ans = False  # It's content answer, not an index
+
+#     # Step 6: If still no candidates, randomly choose one
+#     if len(candidates) == 0:
+#         pred_index = random.choice(all_choices)
+#         print(f"No candidates found, randomly selected: {pred_index}")
+#     # Step 7: If multiple candidates found, use the one appearing last
+#     elif len(candidates) > 1:
+#         start_indexes = []
+#         if index_ans:
+#             if ans_with_brack:
+#                 for can in candidates:
+#                     index = response.rfind(f"({can})")
+#                     print(f"Checking position of choice with parentheses: {can} at {index}")
+#                     start_indexes.append(index)
+#             else:
+#                 for can in candidates:
+#                     index = response.rfind(f" {can} ")
+#                     print(f"Checking position of choice: {can} at {index}")
+#                     start_indexes.append(index)
+#         else:
+#             for can in candidates:
+#                 index = response.lower().rfind(index2ans[can].lower())
+#                 print(f"Checking position of content match: {can} at {index}")
+#                 start_indexes.append(index)
+#         # Get the last one (max index)
+#         pred_index = candidates[np.argmax(start_indexes)]
+#         print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
+#     else:
+#         # If only one candidate, use it
+#         pred_index = candidates[0]
+#         print(f"Only one candidate found, selected: {pred_index}")
+
+#     return pred_index
+# def parse_multi_choice_response(response, all_choices, index2ans):
+#     """
+#     Parse the prediction from the generated response.
+#     Return the predicted index e.g., A, B, C, D.
 #     https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
 #     """
 #     for char in [",", ".", "!", "?", ";", ":", "'"]:
@@ -331,68 +486,88 @@ def evaluate_mmmu(samples):
 
 #     return pred_index
 
-
 def parse_multi_choice_response(response, all_choices, index2ans):
     """
     Parse the prediction from the generated response.
-    Return the predicted index e.g., A, B, C, D, or Z if the response includes an out-of-range choice.
+    Return the predicted index e.g., A, B, C, D.
     """
+    # Step 1: Clean up punctuation from the response
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
-    response = " " + response + " "  # add space to avoid partial match
+    response = " " + response + " "  # Add space to avoid partial match
 
     index_ans = True
     ans_with_brack = False
+    ans_with_period = False
     candidates = []
     
-    # # Check if response contains any invalid choice, e.g., Z
-    # for word in response.split():
-    #     if word not in all_choices and len(word) == 1 and word.isalpha():
-    #         return word  # If the model outputs something like 'Z', return it immediately
-
-    for choice in all_choices:  # e.g., (A) (B) (C) (D)
-        if f"({choice})" in response:
+    # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
+    for choice in all_choices:  # e.g., A. B. C. D.
+        if f"{choice}." in response:
+            print(f"Found choice with parentheses: {choice}")
             candidates.append(choice)
-            ans_with_brack = True
+            ans_with_period = True
 
+    # Step 2: Look for choices with parentheses e.g., (A) (B) (C) (D)
+    if len(candidates) == 0:
+        for choice in all_choices:  # e.g., (A) (B) (C) (D)
+            if f"({choice})" in response:
+                print(f"Found choice with period after: {choice}")
+                candidates.append(choice)
+                ans_with_brack = True
+
+    # Step 3: If no candidates, look for choices with a space after (A B C D)
     if len(candidates) == 0:
         for choice in all_choices:  # e.g., A B C D
             if f"{choice} " in response:
+                print(f"Found choice without parentheses (space after): {choice}")
                 candidates.append(choice)
 
-    if len(candidates) == 0:
-        for choice in all_choices:  # e.g., A. B. C. D.
-            if f"{choice}." in response:
-                candidates.append(choice)
 
-    # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
+
+    # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
     if len(candidates) == 0 and len(response.split()) > 5:
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
+                print(f"Found answer content match: {ans}")
                 candidates.append(index)
-                index_ans = False  # it's content ans.
+                index_ans = False  # It's content answer, not an index
 
-    if len(candidates) == 0:  # still not get answer, randomly choose one.
+    # Step 6: If still no candidates, randomly choose one
+    if len(candidates) == 0:
         pred_index = random.choice(all_choices)
+        print(f"No candidates found, randomly selected: {pred_index}")
+    # Step 7: If multiple candidates found, use the one appearing last
     elif len(candidates) > 1:
         start_indexes = []
         if index_ans:
             if ans_with_brack:
                 for can in candidates:
                     index = response.rfind(f"({can})")
-                    start_indexes.append(index)  # -1 will be ignored anyway
+                    print(f"Checking position of choice with parentheses: {can} at {index}")
+                    start_indexes.append(index)
+            elif ans_with_period:
+                for can in candidates:
+                    index = response.rfind(f"{can}.")
+                    print(f"Checking position of choice: {can} at {index}")
+                    start_indexes.append(index)
             else:
                 for can in candidates:
                     index = response.rfind(f" {can} ")
+                    print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
         else:
             for can in candidates:
                 index = response.lower().rfind(index2ans[can].lower())
+                print(f"Checking position of content match: {can} at {index}")
                 start_indexes.append(index)
-        # get the last one
+        # Get the last one (max index)
         pred_index = candidates[np.argmax(start_indexes)]
-    else:  # if only one candidate, use it.
+        print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
+    else:
+        # If only one candidate, use it
         pred_index = candidates[0]
+        print(f"Only one candidate found, selected: {pred_index}")
 
     return pred_index
 
