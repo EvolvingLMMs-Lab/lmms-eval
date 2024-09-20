@@ -97,7 +97,7 @@ def videosearch_process_results(doc, results):
     return {
         "mmmu_acc": mmmu_acc,
         "submission": {
-            id: pred,
+            id: parsed_pred,
         },
     }
 
