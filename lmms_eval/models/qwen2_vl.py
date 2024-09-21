@@ -53,14 +53,14 @@ class Qwen2_VL(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         if use_flash_attention_2:
-            self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained,
-                                                                          torch_dtype="auto",
-                                                                          device_map=self.device_map,
-                                                                          attn_implementation="flash_attention_2",).eval()
+            self._model = Qwen2VLForConditionalGeneration.from_pretrained(
+                pretrained,
+                torch_dtype="auto",
+                device_map=self.device_map,
+                attn_implementation="flash_attention_2",
+            ).eval()
         else:
-            self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained,
-                                                                          torch_dtype="auto",
-                                                                          device_map=self.device_map).eval()
+            self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
         self.processor = AutoProcessor.from_pretrained(pretrained)
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
 
@@ -128,7 +128,6 @@ class Qwen2_VL(lmms):
         return self._world_size
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        
         raise NotImplementedError("Loglikelihood is not implemented for Qwen2_VL")
 
     def flatten(self, input):
@@ -196,19 +195,15 @@ class Qwen2_VL(lmms):
             query = []
             if len(visual_paths) == 0:
                 for context in contexts:
-                    query.append({"type": "text",
-                                  "text": context})
+                    query.append({"type": "text", "text": context})
             else:
                 for visual_path, context in zip(visual_paths, contexts):
-                    query.append({"type": "image",
-                                  "image": visual_path})
-                    query.append({"type": "text",
-                                  "text": context})
+                    query.append({"type": "image", "image": visual_path})
+                    query.append({"type": "text", "text": context})
 
-            messages = [{"role": "user",
-                         "content": query}]
+            messages = [{"role": "user", "content": query}]
             questions = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            
+
             image_inputs, video_inputs = process_vision_info(messages)
             inputs = self.processor(
                 text=[questions],
