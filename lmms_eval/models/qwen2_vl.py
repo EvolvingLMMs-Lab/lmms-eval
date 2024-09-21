@@ -16,9 +16,9 @@ warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
-from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
-
 from qwen_vl_utils import process_vision_info
+from transformers import AutoProcessor, AutoTokenizer, Qwen2VLForConditionalGeneration
+
 
 @register_model("qwen2_vl")
 class Qwen2_VL(lmms):
