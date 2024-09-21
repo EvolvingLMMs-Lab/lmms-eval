@@ -52,10 +52,6 @@ MMT_abbrs = {
 def mmt_doc_to_visual(doc):
     return [image.convert("RGB") for image in doc["image"]]
 
-
-def mmt_mi_doc_to_visual(doc):
-    return [image.convert("RGB") for image in doc["image"]]
-
 # ============================
 # Text Processing Functions
 # ============================
