@@ -290,7 +290,7 @@ def evaluate_mmmu(samples):
 #             if f"{choice}." in response:
 #                 print(f"Found choice with period after: {choice}")
 #                 candidates.append(choice)
-    
+
 #     # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
 #     if len(candidates) == 0:
 #         for choice in all_choices:  # e.g., A. B. C. D.
@@ -305,7 +305,6 @@ def evaluate_mmmu(samples):
 #             if f"{choice} " in response:
 #                 print(f"Found choice without parentheses (space after): {choice}")
 #                 candidates.append(choice)
-
 
 
 #     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
@@ -369,7 +368,7 @@ def evaluate_mmmu(samples):
 #             print(f"Found choice with parentheses: {choice}")
 #             candidates.append(choice)
 #             ans_with_brack = True
-    
+
 #     # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
 #     if len(candidates) == 0:
 #         for choice in all_choices:  # e.g., A. B. C. D.
@@ -383,7 +382,6 @@ def evaluate_mmmu(samples):
 #             if f"{choice} " in response:
 #                 print(f"Found choice without parentheses (space after): {choice}")
 #                 candidates.append(choice)
-
 
 
 #     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
@@ -486,6 +484,7 @@ def evaluate_mmmu(samples):
 
 #     return pred_index
 
+
 def parse_multi_choice_response(response, all_choices, index2ans):
     """
     Parse the prediction from the generated response.
@@ -500,7 +499,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     ans_with_brack = False
     ans_with_period = False
     candidates = []
-    
+
     # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
     for choice in all_choices:  # e.g., A. B. C. D.
         if f"{choice}." in response:
@@ -522,8 +521,6 @@ def parse_multi_choice_response(response, all_choices, index2ans):
             if f"{choice} " in response:
                 print(f"Found choice without parentheses (space after): {choice}")
                 candidates.append(choice)
-
-
 
     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
     if len(candidates) == 0 and len(response.split()) > 5:

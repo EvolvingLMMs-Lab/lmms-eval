@@ -47,7 +47,7 @@ elif API_TYPE == "azure":
 class GPT4V(lmms):
     def __init__(
         self,
-        #model_version: str = "gpt-4-vision-preview",
+        # model_version: str = "gpt-4-vision-preview",
         modality: str = "video",
         max_frames_num: int = 32,
         timeout: int = 120,
@@ -59,7 +59,7 @@ class GPT4V(lmms):
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
-        #self.model_version = model_version
+        # self.model_version = model_version
         self.modality = modality
         self.max_frames_num = max_frames_num
         self.image_token = "<image>"
