@@ -2,15 +2,14 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 from accelerate import Accelerator, DistributedType
+from loguru import logger as eval_logger
 from tqdm import tqdm
+from transformers import AutoProcessor, AutoTokenizer, Qwen2VLForConditionalGeneration
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
-from loguru import logger as eval_logger
-from transformers import AutoProcessor, AutoTokenizer, Qwen2VLForConditionalGeneration
 
 
 @register_model("qwen2_vl")
