@@ -28,7 +28,19 @@ def record_video_length_packet(container):
     return frames
 
 
-def read_video_pyav(video_path, num_frm=8):
+def read_video_pyav(video_path: str, *, num_frm=8, fps=None, format = "rgb24") -> np.ndarray:
+    """
+    Read video using the PyAV library.
+
+    Args:
+        video_path (str): The path to the video file.
+        num_frm (int, optional): The maximum number of frames to extract. Defaults to 8.
+        fps (optional): The frames per second for extraction. If `None`, the maximum number of frames will be extracted. Defaults to None.
+        format (str, optional): The format of the extracted frames. Defaults to "rgb24".
+
+    Returns:
+        np.ndarray: A numpy array containing the extracted frames in RGB format.
+    """
     container = av.open(video_path)
 
     if "webm" not in video_path and "mkv" not in video_path:
@@ -68,4 +80,4 @@ def read_video_pyav(video_path, num_frm=8):
             indices = np.append(indices, total_frames - 1)
 
         frames = [frames[i] for i in indices]
-    return np.stack([x.to_ndarray(format="rgb24") for x in frames])
+    return np.stack([x.to_ndarray(format=format) for x in frames])
