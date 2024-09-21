@@ -14,6 +14,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
 
 try:
     from decord import VideoReader, cpu
@@ -50,6 +51,7 @@ class GPT4V(lmms):
         # model_version: str = "gpt-4-vision-preview",
         modality: str = "video",
         max_frames_num: int = 32,
+        fps: float = None,
         timeout: int = 120,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
@@ -65,6 +67,7 @@ class GPT4V(lmms):
         self.image_token = "<image>"
         self.timeout = timeout
         self.continual_mode = continual_mode
+        self.fps = fps
         if self.continual_mode:
             if response_persistent_folder is None:
                 raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
@@ -105,30 +108,6 @@ class GPT4V(lmms):
         base64_str = base64.b64encode(byte_data).decode("utf-8")
         return base64_str
 
-    # Function to encode the video
-    def encode_video(self, video_path, for_get_frames_num):
-        vr = VideoReader(video_path, ctx=cpu(0))
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
-
-        # Ensure the last frame is included
-        if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
-
-        frame_idx = uniform_sampled_frames.tolist()
-        frames = vr.get_batch(frame_idx).asnumpy()
-
-        base64_frames = []
-        for frame in frames:
-            img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
-
-        return base64_frames
-
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -161,7 +140,7 @@ class GPT4V(lmms):
                     # frames = self.encode_video(visual, self.max_frames_num)
                     # imgs.extend(frames)
                     try:
-                        frames = self.encode_video(visual, self.max_frames_num)
+                        frames = read_video_pyav_base64(visual, num_frm=self.max_frames_num, fps=self.fps)
                         imgs.extend(frames)
                     except Exception as e:
                         # Log the error and skip to the next visual
