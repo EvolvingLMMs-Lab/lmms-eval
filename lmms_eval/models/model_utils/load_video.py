@@ -1,7 +1,9 @@
 import av
 import numpy as np
 from av.codec.context import CodecContext
-
+from PIL import Image
+from io import BytesIO
+import base64
 
 # This one is faster
 def record_video_length_stream(container, indices):
@@ -88,3 +90,20 @@ def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, for
         frames = record_video_length_packet(container)
 
     return np.stack([x.to_ndarray(format=format) for x in frames])
+
+def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24"):
+    frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
+    return [Image.fromarray(frame) for frame in frames]
+
+
+def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", img_format="PNG"):
+    frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
+    base64_frames = []
+    for frame in frames:
+        img = Image.fromarray(frame)
+        output_buffer = BytesIO()
+        img.save(output_buffer, format=img_format)
+        byte_data = output_buffer.getvalue()
+        base64_str = base64.b64encode(byte_data).decode("utf-8")
+        base64_frames.append(base64_str)
+    return base64_frames
