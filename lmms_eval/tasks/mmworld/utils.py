@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import re
+import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -13,10 +14,8 @@ import yaml
 from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-import shutil
 
-
-DISCIPLINES= ["Tech & Engineering", "Science", "Health & Medicine", "Sports & Arts", "Game", "Business", "Embodied Tasks"]
+DISCIPLINES = ["Tech & Engineering", "Science", "Health & Medicine", "Sports & Arts", "Game", "Business", "Embodied Tasks"]
 
 
 replace_prompt = " Please answer yes or no."
@@ -45,9 +44,6 @@ with open(Path(__file__).parent / "mmworld.yaml", "r") as f:
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
 
-
-
-
 def extract_and_remove_subfolders(cache_dir):
     # Walk through all the subdirectories and move files to the root of cache_dir
     for root, dirs, files in os.walk(cache_dir):
@@ -61,30 +57,29 @@ def extract_and_remove_subfolders(cache_dir):
         for dir in dirs:
             os.rmdir(os.path.join(root, dir))
 
+
 def mmworld_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
     extract_and_remove_subfolders(cache_dir)
-    video_path_doc = doc["video_id"].split('/')[-1] + ".mp4"
-    video_path = os.path.join(cache_dir, video_path_doc).replace('.mp4.mp4', '.mp4')
-    
+    video_path_doc = doc["video_id"].split("/")[-1] + ".mp4"
+    video_path = os.path.join(cache_dir, video_path_doc).replace(".mp4.mp4", ".mp4")
+
     if os.path.exists(video_path):
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
         video_path = video_path.replace("mp4", "MP4")
     elif os.path.exists(video_path.replace("mp4", "avi")):
         video_path = video_path.replace("mp4", "avi")
-    elif os.path.exists(os.path.join(cache_dir, 'shorts:' + video_path_doc)):
-        video_path = os.path.join(cache_dir, 'shorts:' + video_path_doc)
-    elif os.path.exists(os.path.join(cache_dir, 'shorts:' + doc["video_id"].split('/')[-1] + ".MP4")):
-        video_path = os.path.join(cache_dir, 'shorts:' + doc["video_id"].split('/')[-1] + doc["video_id"] + ".MP4")
-    elif os.path.exists(os.path.join(cache_dir, 'shorts:' + doc["video_id"].split('/')[-1] + ".avi")):
-        video_path = os.path.join(cache_dir, 'shorts:' + doc["video_id"].split('/')[-1] + ".avi")
+    elif os.path.exists(os.path.join(cache_dir, "shorts:" + video_path_doc)):
+        video_path = os.path.join(cache_dir, "shorts:" + video_path_doc)
+    elif os.path.exists(os.path.join(cache_dir, "shorts:" + doc["video_id"].split("/")[-1] + ".MP4")):
+        video_path = os.path.join(cache_dir, "shorts:" + doc["video_id"].split("/")[-1] + doc["video_id"] + ".MP4")
+    elif os.path.exists(os.path.join(cache_dir, "shorts:" + doc["video_id"].split("/")[-1] + ".avi")):
+        video_path = os.path.join(cache_dir, "shorts:" + doc["video_id"].split("/")[-1] + ".avi")
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
-    
+
     return [video_path]
-
-
 
 
 def mmworld_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -95,7 +90,6 @@ def mmworld_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
     full_prompt = option_prompt + "\n" + question + "\n" + post_prompt
     return full_prompt
-
 
 
 def extract_characters_regex(s):
@@ -118,8 +112,6 @@ def extract_characters_regex(s):
     if matches is None:
         return ""
     return matches[0]
-
-
 
 
 def mmworld_process_results(doc, results):
@@ -159,7 +151,6 @@ def mmworld_aggregate_results(results):
         category2score[key]["answered"] += 1
         category2score[key]["correct"] += result["pred_answer"] == result["answer"]
 
-
     for category in DISCIPLINES:
         total_correct = 0
         total_answered = 0
@@ -168,7 +159,6 @@ def mmworld_aggregate_results(results):
                 total_correct += v["correct"]
                 total_answered += v["answered"]
         eval_logger.info(f"Evaluation on DISCIPLINES: {category}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
-
 
     total_correct = 0
     total_answered = 0
