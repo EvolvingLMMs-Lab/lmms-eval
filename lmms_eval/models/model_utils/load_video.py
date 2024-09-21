@@ -5,6 +5,7 @@ from PIL import Image
 from io import BytesIO
 import base64
 
+
 # This one is faster
 def record_video_length_stream(container, indices):
     frames = []
@@ -90,6 +91,7 @@ def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, for
         frames = record_video_length_packet(container)
 
     return np.stack([x.to_ndarray(format=format) for x in frames])
+
 
 def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24"):
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
