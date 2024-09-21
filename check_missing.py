@@ -1,4 +1,4 @@
-from datasets import load_dataset, Dataset
+from datasets import Dataset, load_dataset
 
 # Load the deduplicated VideoSearch dataset
 videosearch_dataset = load_dataset("lmms-lab/VideoSearch", "deduplicated_combined_milestone", split="test")
