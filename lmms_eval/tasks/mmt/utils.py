@@ -1,13 +1,14 @@
-from collections import defaultdict
-from loguru import logger as eval_logger
-import random
 import json
+import random
+from collections import defaultdict
+
 import numpy as np
+from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 # All abbreviations for the categories
-'''
+"""
 MMT_abbrs = {
     'visual_recognition': 'VR',
     'localization': 'Loc',
@@ -42,7 +43,7 @@ MMT_abbrs = {
     'embodied_ai': 'EA',
     'gui_navigation': 'GN'
 }
-'''
+"""
 # ============================
 # Visual Processing Functions
 # ============================
@@ -51,16 +52,20 @@ MMT_abbrs = {
 def mmt_doc_to_visual(doc):
     return [image.convert("RGB") for image in doc["image"]]
 
+
+def mmt_mi_doc_to_visual(doc):
+    return [image.convert("RGB") for image in doc["image"]]
+
 # ============================
 # Text Processing Functions
 # ============================
 
 
 def mmt_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    question_text = "Question: <image>\n" + doc['question'].strip()
+    question_text = "Question: <image>\n" + doc["question"].strip()
 
     options = []
-    for option in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
+    for option in ["A", "B", "C", "D", "E", "F", "G", "H", "I"]:
         option_text = doc.get(option)
         if option_text and option_text.strip():
             options.append(f"{option}: {option_text.strip()}")
@@ -69,15 +74,9 @@ def mmt_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     formatted_question = f"{question_text}\n{options_text}"
 
-    pre_prompt = (
-        lmms_eval_specific_kwargs.get("pre_prompt", "")
-        if lmms_eval_specific_kwargs else ""
-    )
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "") if lmms_eval_specific_kwargs else ""
 
-    post_prompt = (
-        lmms_eval_specific_kwargs.get("post_prompt", "")
-        if lmms_eval_specific_kwargs else ""
-    )
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "") if lmms_eval_specific_kwargs else ""
     formatted_question = f"{pre_prompt}{formatted_question}{post_prompt}"
 
     return formatted_question
@@ -85,7 +84,7 @@ def mmt_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def mmt_doc_to_choice(doc):
     choices = []
-    for option in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
+    for option in ["A", "B", "C", "D", "E", "F", "G", "H", "I"]:
         if doc.get(option) and doc[option].strip():
             choices.append(option)
     return choices
@@ -94,6 +93,7 @@ def mmt_doc_to_choice(doc):
 def mmt_doc_to_target(doc):
     return doc["answer"]
 
+
 # ============================
 # Result Processing Functions
 # ============================
@@ -101,33 +101,23 @@ def mmt_doc_to_target(doc):
 
 def mmt_process_results(doc, results):
     response = results[0].strip()
-    all_choices = [
-        choice for choice in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
-        if doc.get(choice)
-    ]
+    all_choices = [choice for choice in ["A", "B", "C", "D", "E", "F", "G", "H", "I"] if doc.get(choice)]
     pred = parse_multi_choice_response(response, all_choices)  # AdaptfromMMMU
     gt_ans = doc.get("answer", "").strip()
     score = 1.0 if pred == gt_ans else 0.0
     l2_category = doc.get("l2-category", "unknown")
 
-    accuracy_dict = {
-        "overall": score,  # Overall accuracy
-        l2_category: score  # Accuracy for the specific sub-category
-    }
+    accuracy_dict = {"overall": score, l2_category: score}  # Overall accuracy  # Accuracy for the specific sub-category
     submission_dict = {}
     if doc.get("split") == "TEST":
-        submission_dict = {
-            doc.get("index", "unknown"): pred  # Save using index
-        }
-    return {
-        "accuracy": accuracy_dict,
-        "submission": submission_dict
-    }
+        submission_dict = {doc.get("index", "unknown"): pred}  # Save using index
+    return {"accuracy": accuracy_dict, "submission": submission_dict}
 
 
 # ============================
 # Aggregation Functions
 # ============================
+
 
 def mmt_aggregate_results(results):
     total_correct = 0
@@ -136,33 +126,16 @@ def mmt_aggregate_results(results):
     category_total = defaultdict(int)
     for result in results:
         # Overall accuracy
-        total_correct += result['overall']
+        total_correct += result["overall"]
         total_examples += 1
         # Sub-category accuracy
         for category, score in result.items():
-            if category != 'overall':
+            if category != "overall":
                 category_correct[category] += score
                 category_total[category] += 1
-    overall_accuracy = (
-        (total_correct / total_examples) * 100
-        if total_examples > 0
-        else 0.0
-    )
-    category_accuracy = {
-        category: (
-            (category_correct[category] / category_total[category]) * 100
-            if category_total[category] > 0
-            else 0.0
-        )
-        for category in category_correct
-    }
-    final_results = {
-        "overall_accuracy": round(overall_accuracy, 5),
-        "category_accuracy": {
-            category: round(acc, 5)
-            for category, acc in category_accuracy.items()
-        }
-    }
+    overall_accuracy = (total_correct / total_examples) * 100 if total_examples > 0 else 0.0
+    category_accuracy = {category: ((category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0) for category in category_correct}
+    final_results = {"overall_accuracy": round(overall_accuracy, 5), "category_accuracy": {category: round(acc, 5) for category, acc in category_accuracy.items()}}
     print(final_results)
     return final_results
 
@@ -172,6 +145,7 @@ def mmt_test_aggregate_results_for_submission(results, args):
     with open(path, "w") as f:
         json.dump(results, f)
     eval_logger.info(f"Results saved to {path}.")
+
 
 ##################
 # Helper functions adapted from MMMU's utils.py.
