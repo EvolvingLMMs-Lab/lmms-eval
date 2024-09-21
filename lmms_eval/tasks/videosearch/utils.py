@@ -1,17 +1,18 @@
-from decord import VideoReader, cpu
-from collections import defaultdict
-import numpy as np
-import os
-import sys
-import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-import json
 import ast
-import re
-
-import yaml
+import datetime
+import json
+import os
 import random
+import re
+import sys
+from collections import defaultdict
 from pathlib import Path
+
+import numpy as np
+import yaml
+from decord import VideoReader, cpu
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:

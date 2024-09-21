@@ -1,9 +1,10 @@
+import base64
+from io import BytesIO
+
 import av
 import numpy as np
 from av.codec.context import CodecContext
 from PIL import Image
-from io import BytesIO
-import base64
 
 
 # This one is faster
