@@ -48,6 +48,10 @@ def load_video_stream(container, num_frm: int = 8, fps: float = None):
 def load_video_packet(container, num_frm: int = 8, fps: float = None):
     frames = record_video_length_packet(container)
     total_frames = len(frames)
+    frame_rate = container.streams.video[0].average_rate
+    if fps is not None:
+        video_length = total_frames / frame_rate
+        num_frm = min(num_frm, int(video_length * fps))
     sampled_frm = min(total_frames, num_frm)
     indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
 
