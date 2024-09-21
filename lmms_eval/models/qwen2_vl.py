@@ -12,6 +12,7 @@ from lmms_eval.api.registry import register_model
 from loguru import logger as eval_logger
 from transformers import AutoProcessor, AutoTokenizer, Qwen2VLForConditionalGeneration
 
+
 @register_model("qwen2_vl")
 class Qwen2_VL(lmms):
     """
@@ -45,10 +46,12 @@ class Qwen2_VL(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         if use_flash_attention_2:
-            self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained,
-                                                                          torch_dtype="auto",
-                                                                          device_map=self.device_map,
-                                                                          attn_implementation="flash_attention_2",).eval()
+            self._model = Qwen2VLForConditionalGeneration.from_pretrained(
+                pretrained,
+                torch_dtype="auto",
+                device_map=self.device_map,
+                attn_implementation="flash_attention_2",
+            ).eval()
         else:
             self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
         self.processor = AutoProcessor.from_pretrained(pretrained)
@@ -152,7 +155,7 @@ class Qwen2_VL(lmms):
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
-            
+
             gen_kwargs = all_gen_kwargs[0]
 
             # Set default values for until and max_new_tokens
@@ -184,7 +187,7 @@ class Qwen2_VL(lmms):
 
             messages = [{"role": "user", "content": query}]
             questions = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            
+
             inputs = self.processor(text=[questions], images=visuals, padding=True, return_tensors="pt")
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -233,7 +236,7 @@ class Qwen2_VL(lmms):
                 res.append(text_outputs)
 
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
-                
+
                 pbar.update(1)
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
