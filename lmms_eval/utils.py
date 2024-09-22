@@ -246,7 +246,9 @@ def sanitize_model_name(model_name: str, full_path: bool = False) -> str:
     if full_path:
         return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", model_name)
     else:
-        return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", model_name.split("/")[-1])
+        parts = model_name.split("/")
+        last_two = "/".join(parts[-2:]) if len(parts) > 1 else parts[-1]  # accommondate for models that are in Hugging Face Hub format like lmms-lab/llava-onevision-qwen2-0.5b
+        return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", last_two)
 
 
 def sanitize_task_name(task_name: str) -> str:
