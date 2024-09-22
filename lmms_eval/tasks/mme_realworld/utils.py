@@ -34,8 +34,9 @@ def mme_realworld_doc_to_visual(doc):
 
 
 import base64
-from PIL import Image
 import io
+
+from PIL import Image
 
 
 def decode_base64_to_image(base64_string, target_size=-1):
