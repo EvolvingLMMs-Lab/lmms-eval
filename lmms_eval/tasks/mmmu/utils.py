@@ -332,6 +332,7 @@ def evaluate_mmmu(samples):
 
 #     return pred_index
 
+
 def parse_multi_choice_response(response, all_choices, index2ans):
     """
     Parse the prediction from the generated response.
@@ -352,19 +353,19 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     #         print(f"Found choice with parentheses: {choice}")
     #         candidates.append(choice)
     #         ans_with_brack = True
-    
+
     # # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
     # if len(candidates) == 0:
     #     for choice in all_choices:  # e.g., A. B. C. D.
     #         if f"{choice}." in response:
     #             print(f"Found choice with period after: {choice}")
     #             candidates.append(choice)
-        # Step 2: Look for choices with parentheses e.g., (A) (B) (C) (D)
+    # Step 2: Look for choices with parentheses e.g., (A) (B) (C) (D)
     for choice in all_choices:  # e.g., (A) (B) (C) (D)
-            if f"{choice}." in response:
-                print(f"Found choice with period after: {choice}")
-                candidates.append(choice)
-    
+        if f"{choice}." in response:
+            print(f"Found choice with period after: {choice}")
+            candidates.append(choice)
+
     # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
     if len(candidates) == 0:
         for choice in all_choices:  # e.g., A. B. C. D.

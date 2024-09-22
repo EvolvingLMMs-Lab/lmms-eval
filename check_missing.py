@@ -1,13 +1,13 @@
-from datasets import load_dataset, Dataset
+from datasets import Dataset, load_dataset
 
 # Load the deduplicated VideoSearch dataset
-videosearch_dataset = load_dataset('lmms-lab/VideoSearch', 'deduplicated_combined_milestone', split='test')
+videosearch_dataset = load_dataset("lmms-lab/VideoSearch", "deduplicated_combined_milestone", split="test")
 
 # ID to be removed
-id_to_remove = 'validation_Biology_18'
+id_to_remove = "validation_Biology_18"
 
 # Filter out the row with the missing ID
-filtered_rows = [row for row in videosearch_dataset if row['id'] != id_to_remove]
+filtered_rows = [row for row in videosearch_dataset if row["id"] != id_to_remove]
 
 # Create a new dataset from the filtered rows
 filtered_dataset = Dataset.from_list(filtered_rows)

@@ -1,17 +1,18 @@
-from decord import VideoReader, cpu
-from collections import defaultdict
-import numpy as np
-import os
-import sys
-import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-import json
 import ast
-import re
-
-import yaml
+import datetime
+import json
+import os
 import random
+import re
+import sys
+from collections import defaultdict
 from pathlib import Path
+
+import numpy as np
+import yaml
+from decord import VideoReader, cpu
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -56,21 +57,21 @@ def videosearch_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    
+
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     question = doc["question"]
-    
+
     if doc["question_type"] == "multiple-choice":
         pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
         post_prompt = lmms_eval_specific_kwargs["post_mcq_prompt"]
         parsed_options = parse_options(ast.literal_eval(doc["options"]))
-        question += "\n" + parsed_options 
+        question += "\n" + parsed_options
     else:
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
-        post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"] 
-        
+        post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"]
+
     # print(f"{pre_prompt}{question}")
-    return f"{pre_prompt}{question}" 
+    return f"{pre_prompt}{question}"
 
 
 def parse_options(options):
@@ -181,10 +182,8 @@ def calculate_ins_level_acc(results):
 
 
 DOMAIN_CAT2SUB_CAT = {
-    "Art and Design": 
-        ["Art", "Art_Theory", "Design", "Music"],
-    "Business": 
-        ["Accounting", "Economics", "Finance", "Manage", "Marketing"],
+    "Art and Design": ["Art", "Art_Theory", "Design", "Music"],
+    "Business": ["Accounting", "Economics", "Finance", "Manage", "Marketing"],
     "Science": [
         "Biology",
         "Chemistry",
@@ -306,7 +305,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     ans_with_brack = False
     ans_with_period = False
     candidates = []
-    
+
     # Step 4: If no candidates, look for choices with a period after (A. B. C. D.)
     for choice in all_choices:  # e.g., A. B. C. D.
         if f"{choice}." in response:

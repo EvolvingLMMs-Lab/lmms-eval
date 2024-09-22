@@ -1,24 +1,25 @@
 import os
+
 from datasets import load_dataset
 
 # Load the VideoSearch dataset
-videosearch_dataset = load_dataset('lmms-lab/VideoSearch', 'final_combined_milestone', split='test')
+videosearch_dataset = load_dataset("lmms-lab/VideoSearch", "final_combined_milestone", split="test")
 
 # Path to the videos directory (replace with your actual path)
-videos_directory = '/mnt/sfs-common/krhu/.cache/huggingface/Combined_milestone/videos/'
+videos_directory = "/mnt/sfs-common/krhu/.cache/huggingface/Combined_milestone/videos/"
 
 # Get all IDs from the dataset
-videosearch_ids = set(videosearch_dataset['id'])
+videosearch_ids = set(videosearch_dataset["id"])
 
 # List to store IDs of files that are not in the dataset
 extra_files = []
 
 # Loop through all .mp4 files in the videos directory
 for file in os.listdir(videos_directory):
-    if file.endswith('.mp4'):
+    if file.endswith(".mp4"):
         # Extract the ID from the file name (remove the .mp4 extension)
-        file_id = file.replace('.mp4', '')
-        
+        file_id = file.replace(".mp4", "")
+
         # Check if the file ID exists in the VideoSearch dataset
         if file_id not in videosearch_ids:
             extra_files.append(file_id)

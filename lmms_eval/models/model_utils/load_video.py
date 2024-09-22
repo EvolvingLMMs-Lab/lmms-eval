@@ -1,6 +1,10 @@
+import base64
+from io import BytesIO
+
 import av
 import numpy as np
 from av.codec.context import CodecContext
+from PIL import Image
 
 
 # This one is faster
@@ -28,44 +32,81 @@ def record_video_length_packet(container):
     return frames
 
 
-def read_video_pyav(video_path, num_frm=8):
+def load_video_stream(container, num_frm: int = 8, fps: float = None):
+    # container = av.open(video_path)
+    total_frames = container.streams.video[0].frames
+    frame_rate = container.streams.video[0].average_rate
+    if fps is not None:
+        video_length = total_frames / frame_rate
+        num_frm = min(num_frm, int(video_length * fps))
+    sampled_frm = min(total_frames, num_frm)
+    indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
+
+    # Append the last frame index if not already included
+    if total_frames - 1 not in indices:
+        indices = np.append(indices, total_frames - 1)
+
+    return record_video_length_stream(container, indices)
+
+
+def load_video_packet(container, num_frm: int = 8, fps: float = None):
+    frames = record_video_length_packet(container)
+    total_frames = len(frames)
+    frame_rate = container.streams.video[0].average_rate
+    if fps is not None:
+        video_length = total_frames / frame_rate
+        num_frm = min(num_frm, int(video_length * fps))
+    sampled_frm = min(total_frames, num_frm)
+    indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
+
+    # Append the last frame index if not already included
+    if total_frames - 1 not in indices:
+        indices = np.append(indices, total_frames - 1)
+
+    return [frames[i] for i in indices]
+
+
+def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24") -> np.ndarray:
+    """
+    Read video using the PyAV library.
+
+    Args:
+        video_path (str): The path to the video file.
+        num_frm (int, optional): The maximum number of frames to extract. Defaults to 8.
+        fps (float, optional): The frames per second for extraction. If `None`, the maximum number of frames will be extracted. Defaults to None.
+        format (str, optional): The format of the extracted frames. Defaults to "rgb24".
+
+    Returns:
+        np.ndarray: A numpy array containing the extracted frames in RGB format.
+    """
+
     container = av.open(video_path)
 
     if "webm" not in video_path and "mkv" not in video_path:
         # For mp4, we try loading with stream first
         try:
-            container = av.open(video_path)
-            total_frames = container.streams.video[0].frames
-            sampled_frm = min(total_frames, num_frm)
-            indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
-
-            # Append the last frame index if not already included
-            if total_frames - 1 not in indices:
-                indices = np.append(indices, total_frames - 1)
-
-            frames = record_video_length_stream(container, indices)
+            frames = load_video_stream(container, num_frm, fps)
         except:
-            container = av.open(video_path)
             frames = record_video_length_packet(container)
-            total_frames = len(frames)
-            sampled_frm = min(total_frames, num_frm)
-            indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
-
-            # Append the last frame index if not already included
-            if total_frames - 1 not in indices:
-                indices = np.append(indices, total_frames - 1)
-
-            frames = [frames[i] for i in indices]
     else:
-        container = av.open(video_path)
         frames = record_video_length_packet(container)
-        total_frames = len(frames)
-        sampled_frm = min(total_frames, num_frm)
-        indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
 
-        # Append the last frame index if not already included
-        if total_frames - 1 not in indices:
-            indices = np.append(indices, total_frames - 1)
+    return np.stack([x.to_ndarray(format=format) for x in frames])
 
-        frames = [frames[i] for i in indices]
-    return np.stack([x.to_ndarray(format="rgb24") for x in frames])
+
+def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24"):
+    frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
+    return [Image.fromarray(frame) for frame in frames]
+
+
+def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", img_format="PNG"):
+    frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
+    base64_frames = []
+    for frame in frames:
+        img = Image.fromarray(frame)
+        output_buffer = BytesIO()
+        img.save(output_buffer, format=img_format)
+        byte_data = output_buffer.getvalue()
+        base64_str = base64.b64encode(byte_data).decode("utf-8")
+        base64_frames.append(base64_str)
+    return base64_frames
