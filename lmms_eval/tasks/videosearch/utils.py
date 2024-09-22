@@ -57,46 +57,47 @@ def videosearch_doc_to_visual(doc):
 #         lmms_eval_specific_kwargs = {}
 #     pre_prompt = ""
 #     post_prompt = ""
-    
+
 #     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
 #     question = doc["question"]
-    
+
 #     if doc["question_type"] == "multiple-choice":
 #         pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
 #         post_prompt = lmms_eval_specific_kwargs["post_mcq_prompt"]
 #         parsed_options = parse_options(ast.literal_eval(doc["options"]))
-#         question += "\n" + parsed_options 
+#         question += "\n" + parsed_options
 #     else:
 #         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
-#         post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"] 
-        
+#         post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"]
+
 #     # print(f"{pre_prompt}{question}")
 #     return f"{pre_prompt}{question}"
+
 
 def videosearch_doc_to_text(doc, lmms_eval_specific_kwargs=None, transcripts_dir="transcripts"):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-    
+
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     question = doc.get("question", "")
-    
+
     # Determine if the question is multiple-choice or open-ended
     if doc.get("question_type") == "multiple-choice":
         pre_prompt += lmms_eval_specific_kwargs.get("mcq_prompt", "")
         # post_prompt = lmms_eval_specific_kwargs.get("post_mcq_prompt", "")
         parsed_options = parse_options(ast.literal_eval(doc.get("options", "[]")))
-        question += "\n" + parsed_options 
+        question += "\n" + parsed_options
     else:
         pre_prompt += lmms_eval_specific_kwargs.get("open_ended_prompt", "")
         # post_prompt = lmms_eval_specific_kwargs.get("post_open_ended_prompt", "")
-        
+
     # Get the transcript from the corresponding file using the doc_id
     cache_dir = config["dataset_kwargs"]["cache_dir"]
     parent_cache_dir = os.path.join(HF_HOME, cache_dir)
     transcripts_dir = os.path.join(parent_cache_dir, "audios")
     doc_id = doc.get("doc_id", "")
     transcript_file = os.path.join(transcripts_dir, f"{doc_id}.txt")
-    
+
     transcript = ""
     if os.path.exists(transcript_file):
         with open(transcript_file, "r") as f:
@@ -105,12 +106,9 @@ def videosearch_doc_to_text(doc, lmms_eval_specific_kwargs=None, transcripts_dir
         transcript = "[Transcript not available]"
 
     # Combine the pre_prompt, transcript, and question
-    formatted_output = (
-        f"{pre_prompt}\n\nTranscript of the Video:\n{transcript}\n\nQuestion:\n{question}"
-    )
-    
-    return formatted_output
+    formatted_output = f"{pre_prompt}\n\nTranscript of the Video:\n{transcript}\n\nQuestion:\n{question}"
 
+    return formatted_output
 
 
 def parse_options(options):
@@ -136,9 +134,7 @@ def videosearch_process_results(doc, results):
     mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
         "mmmu_acc": mmmu_acc,
-        "submission": {
-            id: parsed_pred
-        },
+        "submission": {id: parsed_pred},
     }
 
 
