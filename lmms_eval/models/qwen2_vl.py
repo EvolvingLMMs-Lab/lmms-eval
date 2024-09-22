@@ -1,3 +1,5 @@
+import base64
+import io
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -175,19 +177,20 @@ class Qwen2_VL(lmms):
                 if "<image>" in contexts[i]:
                     contexts[i] = contexts[i].replace("<image>", "")
 
-            query = []
+            messages = []
+
             if len(visuals) == 0:
                 for context in contexts:
-                    query.append({"type": "text", "text": context})
+                    message = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": [{"type": "text", "text": context}]}]
+                    messages.append(message)
             else:
                 for _, context in zip(visuals, contexts):
-                    query.append({"type": "image"})
-                    query.append({"type": "text", "text": context})
+                    message = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": [{"type": "image"}, {"type": "text", "text": context}]}]
+                    messages.append(message)
 
-            messages = [{"role": "user", "content": query}]
-            questions = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
+            inputs = self.processor(text=texts, images=[visuals], padding=True, return_tensors="pt")
 
-            inputs = self.processor(text=[questions], images=visuals, padding=True, return_tensors="pt")
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
@@ -224,18 +227,17 @@ class Qwen2_VL(lmms):
                 # kwargs=gen_kwargs
             )
 
-            cont_toks_list = cont.tolist()
-            for cont_toks, context in zip(cont_toks_list, contexts):
-                cont_toks = cont_toks[input_ids.shape[1] :]
-                text_outputs = self.tokenizer.decode(cont_toks, skip_special_tokens=True).strip()
+            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
+            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            for i, ans in enumerate(answers):
                 for term in until:
                     if len(term) > 0:
-                        text_outputs = text_outputs.split(term)[0]
+                        ans = ans.split(term)[0]
+                answers[i] = ans
 
-                res.append(text_outputs)
-
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
-
+            for ans, context in zip(answers, contexts):
+                res.append(ans)
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
