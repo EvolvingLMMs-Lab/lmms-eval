@@ -13,6 +13,7 @@ logger.add(sys.stdout, level="WARNING")
 AVAILABLE_MODELS = {
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
+    "cogvlm2": "CogVLM2",
     "from_log": "FromLog",
     "fuyu": "Fuyu",
     "gemini_api": "GeminiAPI",
@@ -34,6 +35,7 @@ AVAILABLE_MODELS = {
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
     "qwen_vl": "Qwen_VL",
+    "qwen2_vl": "Qwen2_VL",
     "qwen_vl_api": "Qwen_VL_API",
     "reka": "Reka",
     "srt_api": "SRT_API",
