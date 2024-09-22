@@ -1,4 +1,4 @@
-dataset_path: yifanzhang114/MME-RealWorld-Base64
+dataset_path: yifanzhang114/MME-RealWorld-Lmms-eval
 dataset_kwargs:
   token: True
   cache_dir: mmerealworld

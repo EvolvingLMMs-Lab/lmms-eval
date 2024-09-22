@@ -34,7 +34,6 @@ from loguru import logger as eval_logger
 from PIL import ImageFile
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
-from datasets import DatasetDict
 
 from lmms_eval import utils
 from lmms_eval.api import samplers
@@ -1024,15 +1023,7 @@ class ConfigurableTask(Task):
             download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
-        
-        selected_datasets = DatasetDict()
-        if 'mmerealworld_cn' in self.task_name:
-            selected_datasets[self.config.test_split] = self.dataset[self.config.test_split].select(range(5917))
-            self.dataset = selected_datasets
-        elif 'mmerealworld' in self.task_name:
-            selected_datasets[self.config.test_split] = self.dataset[self.config.test_split].select(range(5917, len(self.dataset[self.config.test_split])))
-            self.dataset = selected_datasets
-            
+
         if self.config.process_docs is not None:
             for split in self.dataset:
                 if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
