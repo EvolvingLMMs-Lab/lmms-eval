@@ -1,0 +1,4 @@
+group: mmt
+task:
+- mmt_val
+- mmt_test

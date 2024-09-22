@@ -25,8 +25,6 @@ from lmms_eval import evaluator, utils
 from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
-
-# from lmms_eval.logging_utils import WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
     handle_non_serializable,
@@ -230,7 +228,7 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "--timezone",
         default="Asia/Singapore",
-        help="Timezone for datetime string, e.g. Asia/Singapore, America/New_York, America/Los_Angeles",
+        help="Timezone for datetime string, e.g. Asia/Singapore, America/New_York, America/Los_Angeles. You can check the full list via `import pytz; print(pytz.common_timezones)`",
     )
     parser.add_argument(
         "--hf_hub_log_args",
@@ -349,7 +347,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
-            print_results(args, results)
+            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(make_table(results))
+            if "groups" in results:
+                print(make_table(results, "groups"))
 
     if args.wandb_args:
         wandb_logger.run.finish()
@@ -462,22 +463,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
     eval_logger.info(f"Selected Tasks: {task_names}")
     request_caching_args = request_caching_arg_to_dict(cache_requests=args.cache_requests)
-
-    # set datetime before evaluation
     datetime_str = utils.get_datetime_str(timezone=args.timezone)
-    if args.output_path:
-        if args.log_samples_suffix and len(args.log_samples_suffix) > 15:
-            eval_logger.warning("The suffix for log_samples is too long. It is recommended to keep it under 15 characters.")
-            args.log_samples_suffix = args.log_samples_suffix[:5] + "..." + args.log_samples_suffix[-5:]
-
-        hash_input = f"{args.model_args}".encode("utf-8")
-        hash_output = hashlib.sha256(hash_input).hexdigest()[:6]
-        path = Path(args.output_path)
-        path = path.expanduser().resolve().joinpath(f"{datetime_str}_{args.log_samples_suffix}_{args.model}_model_args_{hash_output}")
-        args.output_path = path
-
-    elif args.log_samples and not args.output_path:
-        assert args.output_path, "Specify --output_path"
 
     results = evaluator.simple_evaluate(
         model=args.model,
@@ -505,6 +491,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         torch_random_seed=args.seed[2],
         fewshot_random_seed=args.seed[3],
         cli_args=args,
+        datetime_str=datetime_str,
         **request_caching_args,
     )
 
@@ -517,21 +504,30 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         if args.show_config:
             print(dumped)
 
-        if args.output_path:
-            args.output_path.mkdir(parents=True, exist_ok=True)
-            result_file_path = path.joinpath("results.json")
-            if result_file_path.exists():
-                eval_logger.warning(f"Output file {result_file_path} already exists and will be overwritten.")
+        batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
 
-            result_file_path.open("w").write(dumped)
-            if args.log_samples:
-                for task_name, config in results["configs"].items():
-                    filename = args.output_path.joinpath(f"{task_name}.json")
-                    # Structure the data with 'args' and 'logs' keys
-                    data_to_dump = {"args": vars(args), "model_configs": config, "logs": sorted(samples[task_name], key=lambda x: x["doc_id"]), "time": datetime_str}
-                    samples_dumped = json.dumps(data_to_dump, indent=4, default=_handle_non_serializable, ensure_ascii=False)
-                    filename.open("w", encoding="utf-8").write(samples_dumped)
-                    eval_logger.info(f"Saved samples to {filename}")
+        # Add W&B logging
+        if args.wandb_args:
+            try:
+                wandb_logger.post_init(results)
+                wandb_logger.log_eval_result()
+                if args.log_samples:
+                    wandb_logger.log_eval_samples(samples)
+            except Exception as e:
+                eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
+
+        evaluation_tracker.save_results_aggregated(results=results, samples=samples if args.log_samples else None, datetime_str=datetime_str)
+
+        if args.log_samples:
+            for task_name, config in results["configs"].items():
+                evaluation_tracker.save_results_samples(task_name=task_name, samples=samples[task_name])
+
+        if evaluation_tracker.push_results_to_hub or evaluation_tracker.push_samples_to_hub:
+            evaluation_tracker.recreate_metadata_card()
+
+        if args.wandb_args:
+            # Tear down wandb run once all the logging is done.
+            wandb_logger.run.finish()
 
         return results, samples
     return None, None

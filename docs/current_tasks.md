@@ -83,9 +83,8 @@
 - [OCRBench](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench)
 - [OKVQA](https://okvqa.allenai.org/) (ok_vqa)
   - OKVQA Validation 2014 (ok_vqa_val2014)
-- [POPE](https://github.com/RUCAIBox/POPE) (pope)
-- [RealWorldQA](https://huggingface.co/datasets/xai-org/RealworldQA) (realworldqa)
-- [RefCOCO](https://github.com/lichengunc/refer) (refcoco)
+- POPE (pope)
+- RefCOCO (refcoco)
   - refcoco_seg_test
   - refcoco_seg_val
   - refcoco_seg_testA
@@ -94,7 +93,7 @@
   - refcoco_bbox_val
   - refcoco_bbox_testA
   - refcoco_bbox_testB
-- [RefCOCO+](https://github.com/lichengunc/refer) (refcoco+)
+- RefCOCO+ (refcoco+)
   - refcoco+\_seg
     - refcoco+\_seg_val
     - refcoco+\_seg_testA
@@ -103,12 +102,12 @@
     - refcoco+\_bbox_val
     - refcoco+\_bbox_testA
     - refcoco+\_bbox_testB
-- [RefCOCOg](https://github.com/lichengunc/refer) (refcocog)
+- RefCOCOg (refcocog)
   - refcocog_seg_test
   - refcocog_seg_val
   - refcocog_bbox_test
   - refcocog_bbox_val
-- [ScienceQA](https://scienceqa.github.io/) (scienceqa_full)
+- ScienceQA (scienceqa_full)
   - ScienceQA Full (scienceqa)
   - ScienceQA IMG (scienceqa_img)
 - [ScreenSpot](https://github.com/njucckevin/SeeClick) (screenspot)
