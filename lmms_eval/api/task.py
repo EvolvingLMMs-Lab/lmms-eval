@@ -1023,6 +1023,7 @@ class ConfigurableTask(Task):
             download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
+
         if self.config.process_docs is not None:
             for split in self.dataset:
                 if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
