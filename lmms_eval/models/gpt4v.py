@@ -185,7 +185,9 @@ class GPT4V(lmms):
             payload["max_tokens"] = gen_kwargs["max_new_tokens"]
             payload["temperature"] = gen_kwargs["temperature"]
 
-            for attempt in range(5):
+            NUM_ATTEMPTS = 5
+
+            for attempt in range(NUM_ATTEMPTS):
                 try:
                     response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
                     response_data = response.json()
@@ -200,10 +202,10 @@ class GPT4V(lmms):
                         error_msg = ""
 
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
-                    if attempt <= 5:
+                    if attempt < NUM_ATTEMPTS:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty string
-                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                        eval_logger.error(f"All {NUM_ATTEMPTS} attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
                         response_text = ""
             res.append(response_text)
             pbar.update(1)
