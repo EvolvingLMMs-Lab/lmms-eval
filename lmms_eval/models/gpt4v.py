@@ -202,7 +202,7 @@ class GPT4V(lmms):
                         error_msg = ""
 
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
-                    if attempt < NUM_ATTEMPTS:
+                    if attempt < NUM_ATTEMPTS - 1:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty string
                         eval_logger.error(f"All {NUM_ATTEMPTS} attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
