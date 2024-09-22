@@ -193,7 +193,6 @@ class Qwen2_VL(lmms):
                 inputs = inputs.to("cuda")
             else:
                 inputs = inputs.to(self.device)
-            input_ids = inputs["input_ids"]
 
             # preconfigure gen_kwargs with defaults
             if "image_sizes" not in gen_kwargs:
