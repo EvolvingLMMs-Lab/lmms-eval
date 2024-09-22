@@ -276,7 +276,7 @@ def get_sample_results_filenames(filenames: List[str]) -> List[str]:
     """
     Extracts filenames that correspond to sample results.
     """
-    return [f for f in filenames if "samples" in f and ".json" in f]
+    return [f for f in filenames if "/samples_" in f and ".json" in f]
 
 
 def get_rolling_token_windows(token_list, prefix_token, max_seq_len, context_len):
@@ -594,6 +594,7 @@ def get_datetime_str(timezone="Asia/Singapore"):
     tz = pytz.timezone(timezone)
     utc_now = datetime.datetime.now(datetime.timezone.utc)
     local_time = utc_now.astimezone(tz)
+    return local_time.strftime("%Y%m%d_%H%M%S")
     return local_time.strftime("%Y%m%d_%H%M%S")
 
 
