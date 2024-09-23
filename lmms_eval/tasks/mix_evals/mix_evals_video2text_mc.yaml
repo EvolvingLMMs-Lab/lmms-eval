@@ -7,6 +7,9 @@ doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
 doc_to_text: !function utils.mix_evals_video2text_doc_to_text
 doc_to_target: "{{target}}"
 
+generation_kwargs:
+  max_new_tokens: 5
+
 metric_list:
   - metric: exact_match
     aggregation: mean

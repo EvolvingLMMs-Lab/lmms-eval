@@ -1,16 +1,16 @@
-dataset_path: lmms-lab/MixEvals_Video2Text
 dataset_kwargs:
-  token: True
-  video: True
   cache_dir: mix_evals_video2text
+  token: true
+  video: true
+dataset_path: lmms-lab/MixEvals_Video2Text
 lmms_eval_specific_kwargs:
   default:
+    post_prompt: ""
     pre_prompt: ""
-    post_prompt: ""
   gpt4v:
-    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
     post_prompt: ""
+    pre_prompt: These are frames from a video. Please answer the following questions about the video.
 metadata:
+  gpt_eval_model_name: gpt-4o-mini
   modality: video
-  version: 0.0
-  gpt_eval_model_name: "gpt-4o-mini"
+  version: 0
