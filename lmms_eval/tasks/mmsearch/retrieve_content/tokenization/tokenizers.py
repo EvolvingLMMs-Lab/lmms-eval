@@ -1,8 +1,8 @@
 import logging
+import re
 import sys
 import unicodedata
-import re
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 import nltk
 from nltk.corpus import stopwords
@@ -14,6 +14,7 @@ from lmms_eval.tasks.mmsearch.retrieve_content.tokenization.utils import PickleW
 
 QUOTES = re.compile("(\"|``|'')")
 
+
 class LexemeWithPositions(dict):
     def __init__(self, lexeme: str, begin_pos: int, end_pos: int):
         if begin_pos > end_pos:
@@ -21,19 +22,20 @@ class LexemeWithPositions(dict):
         super().__init__(_lexeme=lexeme, _begin_pos=begin_pos, _end_pos=end_pos)
 
     def fetch_lexeme(self) -> str:
-        return self['_lexeme']
+        return self["_lexeme"]
 
     def update_lexeme(self, lex: str) -> None:
-        self['_lexeme'] = lex
+        self["_lexeme"] = lex
 
     def fetch_begin_pos(self) -> int:
-        return self['_begin_pos']
+        return self["_begin_pos"]
 
     def fetch_end_pos(self) -> int:
-        return self['_end_pos']
+        return self["_end_pos"]
+
 
 class LexicalAnalyzer(PickleWriteable):
-    PUNCTUATION_TABLE = dict.fromkeys(i for i in range(sys.maxunicode) if unicodedata.category(chr(i)).startswith('P'))
+    PUNCTUATION_TABLE = dict.fromkeys(i for i in range(sys.maxunicode) if unicodedata.category(chr(i)).startswith("P"))
     PUNCTUATION_CHARS = set(chr(i) for i in PUNCTUATION_TABLE.keys())
 
     DEFAULT_SETTINGS = {
@@ -56,14 +58,12 @@ class LexicalAnalyzer(PickleWriteable):
         "reject_threshold": -1,
     }
 
-
-
     def __init__(self, **kwargs):
         self.settings = self.DEFAULT_SETTINGS.copy()
         self.settings.update(kwargs)
-        
+
         if self.settings["do_stop_words"]:
-            self.stop_words = set(self.settings.get("stop_words", stopwords.words('english')))
+            self.stop_words = set(self.settings.get("stop_words", stopwords.words("english")))
         elif "stop_words" in kwargs:
             raise ValueError("please set do_stop_words to True when stop_words are provided.")
 
@@ -81,7 +81,7 @@ class LexicalAnalyzer(PickleWriteable):
     def _analyze_excerpts_with_sentence_boundaries(self, text: str) -> List[List[List[LexemeWithPositions]]]:
         analyzed_sentences = self.analyze_sentences(text)
         analyzed_sentences = self._split_long_sentences(analyzed_sentences)
-        
+
         if not self.settings["do_sliding_window_excerpts"]:
             return self._generate_nonoverlapping_excerpts(analyzed_sentences)
 
@@ -105,8 +105,8 @@ class LexicalAnalyzer(PickleWriteable):
 
         for i, sent in enumerate(analyzed_sentences):
             current_excerpt.append(sent)
-            if i < len(analyzed_sentences) - 1 and sum(sent_lens[i + 1:]) <= self.settings["excerpt_len"] / 2:
-                current_excerpt.extend(analyzed_sentences[i + 1:])
+            if i < len(analyzed_sentences) - 1 and sum(sent_lens[i + 1 :]) <= self.settings["excerpt_len"] / 2:
+                current_excerpt.extend(analyzed_sentences[i + 1 :])
                 excerpts.append(current_excerpt)
                 break
             current_excerpt_len += len(sent)
@@ -121,8 +121,7 @@ class LexicalAnalyzer(PickleWriteable):
         for i in range(len(nonoverlapping_excerpts) - 1):
             left_excerpt_start_index = len(nonoverlapping_excerpts[i]) // 2
             right_excerpt_end_index = max(1, len(nonoverlapping_excerpts[i + 1]) // 2)
-            overlapping_excerpts.append(nonoverlapping_excerpts[i][left_excerpt_start_index:] +
-                                        nonoverlapping_excerpts[i + 1][:right_excerpt_end_index])
+            overlapping_excerpts.append(nonoverlapping_excerpts[i][left_excerpt_start_index:] + nonoverlapping_excerpts[i + 1][:right_excerpt_end_index])
 
         excerpts = []
         for i in range(len(nonoverlapping_excerpts) - 1):
@@ -134,7 +133,7 @@ class LexicalAnalyzer(PickleWriteable):
     def _generate_sliding_window_excerpts(self, analyzed_lexemes: List[LexemeWithPositions]) -> List[List[LexemeWithPositions]]:
         excerpts = []
         for i in range(0, len(analyzed_lexemes), self.settings["excerpt_len"] // 2):
-            excerpts.append(analyzed_lexemes[i:i + self.settings["excerpt_len"]])
+            excerpts.append(analyzed_lexemes[i : i + self.settings["excerpt_len"]])
             if i + self.settings["excerpt_len"] >= len(analyzed_lexemes):
                 break
         return excerpts
@@ -166,11 +165,11 @@ class LexicalAnalyzer(PickleWriteable):
 
     def _analyze_text(self, text: str, analyzer: callable, offset: int = 0) -> List[LexemeWithPositions]:
         if not isinstance(text, str):
-            raise ValueError(f'text type is invalid: {type(text)}')
-        
+            raise ValueError(f"text type is invalid: {type(text)}")
+
         for space_char in self.settings["space_chars"]:
-            text = text.replace(space_char, ' ')
-        
+            text = text.replace(space_char, " ")
+
         text = self._omit_long_lexemes(text, self.settings["reject_threshold"])
         segments = analyzer(text)
 
@@ -191,7 +190,7 @@ class LexicalAnalyzer(PickleWriteable):
 
             if segment_start < 0:
                 raise ValueError(f"cannot find the segment {segment} in the text {text}")
-            
+
             end = segment_start + len(segment)
             analyzed_segments.append(LexemeWithPositions(segment, offset + segment_start, offset + end))
             start = end
@@ -204,14 +203,13 @@ class LexicalAnalyzer(PickleWriteable):
             if len(seg) <= self.settings["max_lexeme_len"]:
                 divided_segments.append(seg)
             else:
-                divided_segments.extend([seg[i:i+self.settings["max_lexeme_len"]] 
-                                       for i in range(0, len(seg), self.settings["max_lexeme_len"])])
+                divided_segments.extend([seg[i : i + self.settings["max_lexeme_len"]] for i in range(0, len(seg), self.settings["max_lexeme_len"])])
         return divided_segments
 
     def _omit_long_lexemes(self, text: str, reject_threshold: int) -> str:
         if reject_threshold < 0:
             return text
-        
+
         verified_sentence = []
         omitted_count = 0
         for lexeme in text.split():
@@ -219,9 +217,9 @@ class LexicalAnalyzer(PickleWriteable):
                 verified_sentence.append(lexeme)
             else:
                 omitted_count += 1
-                logging.error(f'omitting long lexeme with length: {len(lexeme)}')
-        
-        logging.info(f'total omitted: {omitted_count}, total retained: {len(verified_sentence)}')
+                logging.error(f"omitting long lexeme with length: {len(lexeme)}")
+
+        logging.info(f"total omitted: {omitted_count}, total retained: {len(verified_sentence)}")
         return " ".join(verified_sentence)
 
     def _filter_and_transform(self, lexemes_with_positions: List[LexemeWithPositions]) -> List[LexemeWithPositions]:
@@ -229,16 +227,16 @@ class LexicalAnalyzer(PickleWriteable):
 
         for lexeme_w_positions in lexemes_with_positions:
             lexeme = lexeme_w_positions.fetch_lexeme()
-            
+
             if self._should_omit_lexeme(lexeme):
                 continue
 
             lexeme = self._transform_lexeme(lexeme)
-            
+
             if lexeme is None:
-                logging.error('analysis produced None as a lexeme')
+                logging.error("analysis produced None as a lexeme")
                 continue
-            
+
             lexeme_w_positions.update_lexeme(lexeme)
             transformed_lexemes.append(lexeme_w_positions)
 
@@ -246,10 +244,10 @@ class LexicalAnalyzer(PickleWriteable):
 
     def _should_omit_lexeme(self, lexeme: str) -> bool:
         return (
-            (self.settings["do_punct_removal"] and lexeme in self.PUNCTUATION_CHARS) or
-            (self.settings["do_stop_words"] and lexeme.lower() in self.stop_words) or
-            (len(lexeme) < self.settings["min_lexeme_len"]) or
-            (self.settings["remove_numerics"] and lexeme.isnumeric())
+            (self.settings["do_punct_removal"] and lexeme in self.PUNCTUATION_CHARS)
+            or (self.settings["do_stop_words"] and lexeme.lower() in self.stop_words)
+            or (len(lexeme) < self.settings["min_lexeme_len"])
+            or (self.settings["remove_numerics"] and lexeme.isnumeric())
         )
 
     def _transform_lexeme(self, lexeme: str) -> str:
@@ -263,11 +261,12 @@ class LexicalAnalyzer(PickleWriteable):
             lexeme = self.lemmatizer.lemmatize(lexeme)
         return lexeme
 
+
 def _split_analyzed_text_to_nonoverlapping_excerpts(analyzed_lexemes: List[LexemeWithPositions], excerpt_len: int) -> List[List[LexemeWithPositions]]:
     excerpts = []
     for i in range(0, len(analyzed_lexemes), excerpt_len):
         if len(analyzed_lexemes) - (i + excerpt_len) <= excerpt_len / 2:
             excerpts.append(analyzed_lexemes[i:])
             break
-        excerpts.append(analyzed_lexemes[i:i + excerpt_len])
+        excerpts.append(analyzed_lexemes[i : i + excerpt_len])
     return excerpts

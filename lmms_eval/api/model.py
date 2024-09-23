@@ -92,7 +92,6 @@ class lmms(abc.ABC):
         """
         pass
 
-
     @classmethod
     def create_from_arg_string(cls: Type[T], arg_string: str, additional_config: Optional[dict] = None) -> T:
         """

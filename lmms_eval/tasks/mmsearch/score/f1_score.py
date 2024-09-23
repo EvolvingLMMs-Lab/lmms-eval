@@ -1,8 +1,7 @@
-
-
+import collections
 import re
 import string
-import collections
+
 
 def normalize_answer(s):
     """Lower text and remove punctuation, articles and extra whitespace."""
@@ -28,6 +27,7 @@ def get_tokens(s):
     if not s:
         return []
     return normalize_answer(s).split()
+
 
 # qa-f1
 # from https://github.com/chanchimin/RQ-RAG/blob/96b4ec981d4a4399e8402da1b75e16f7812aedfe/retrieval_lm/output/sample_from_tree.py#L181

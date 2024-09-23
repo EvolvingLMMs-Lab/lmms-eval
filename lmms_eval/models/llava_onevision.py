@@ -605,18 +605,23 @@ class Llava_OneVision(lmms):
             while True:
                 question_input = []
 
-                if round_idx != 0: # get current round visual and context from doc_to_text function
-                    batched_visuals, batched_contexts, batched_terminal_singal, batched_round_res, batched_previous_round_info = list(zip(*[
-                        batched_doc_to_text[0](
-                            self.task_dict[task][split][ids], 
-                            previous_output=[round_res[ids_idx] for round_res in batched_round_res], 
-                            round_idx=round_idx,
-                            previous_round_info=batched_previous_round_info[ids_idx] if batched_previous_round_info is not None else None) 
-                            for ids_idx, ids in enumerate(batched_doc_id)
-                    ]))
+                if round_idx != 0:  # get current round visual and context from doc_to_text function
+                    batched_visuals, batched_contexts, batched_terminal_singal, batched_round_res, batched_previous_round_info = list(
+                        zip(
+                            *[
+                                batched_doc_to_text[0](
+                                    self.task_dict[task][split][ids],
+                                    previous_output=[round_res[ids_idx] for round_res in batched_round_res],
+                                    round_idx=round_idx,
+                                    previous_round_info=batched_previous_round_info[ids_idx] if batched_previous_round_info is not None else None,
+                                )
+                                for ids_idx, ids in enumerate(batched_doc_id)
+                            ]
+                        )
+                    )
                     # import ipdb; ipdb.set_trace()
-                    batched_round_res = list(zip(*batched_round_res)) # [(r1_1, r1_2), (r2_1, r2_2), ...]
-                    if batched_terminal_singal[0]: # terminal signal from doc_to_text function
+                    batched_round_res = list(zip(*batched_round_res))  # [(r1_1, r1_2), (r2_1, r2_2), ...]
+                    if batched_terminal_singal[0]:  # terminal signal from doc_to_text function
                         break
 
                 for visual, context in zip(batched_visuals, batched_contexts):
