@@ -5,9 +5,9 @@
 
 ## 1. Image tasks:
 
-- AI2D (ai2d)
-- ChartQA (chartqa)
-- COCO Caption (coco_cap)
+- [AI2D](https://arxiv.org/abs/1603.07396) (ai2d)
+- [ChartQA](https://github.com/vis-nlp/ChartQA) (chartqa)
+- [COCO Caption](https://github.com/tylin/coco-caption) (coco_cap)
   - COCO 2014 Caption (coco2014_cap)
     - COCO 2014 Caption Validation (coco2014_cap_val)
     - COCO 2014 Caption Test (coco2014_cap_test)
@@ -15,45 +15,45 @@
     - COCO 2017 Caption MiniVal (coco2017_cap_val)
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
 - [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
-- DetailCaps-4870 (detailcaps)
-- DOCVQA (docvqa)
+- [DetailCaps-4870](https://github.com/foundation-multimodal-models/CAPTURE) (detailcaps)
+- [DOCVQA](https://github.com/anisha2102/docvqa) (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
-- Ferret (ferret)
-- Flickr30K (flickr30k)
+- [Ferret](https://github.com/apple/ml-ferret) (ferret)
+- [Flickr30K](https://github.com/BryanPlummer/flickr30k_entities) (flickr30k)
   - Flickr30K Test (flickr30k_test)
-- GQA (gqa)
-- GQA-ru (gqa_ru)
-- II-Bench (ii_bench)
-- Infographic VQA (infovqa)
+- [GQA](https://cs.stanford.edu/people/dorarad/gqa/index.html) (gqa)
+- [GQA-ru](https://huggingface.co/datasets/deepvk/GQA-ru) (gqa_ru)
+- [II-Bench](https://github.com/II-Bench/II-Bench) (ii_bench)
+- [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
   - Infographic VQA Validation (infovqa_val)
   - Infographic VQA Test (infovqa_test)
-- LiveBench (live_bench)
+- [LiveBench](https://huggingface.co/datasets/lmms-lab/LiveBench) (live_bench)
   - LiveBench 06/2024 (live_bench_2406)
   - LiveBench 07/2024 (live_bench_2407)
-- LLaVA-Bench-Wilder (llava_wilder_small)
-- LLaVA-Bench-COCO (llava_bench_coco)
-- LLaVA-Bench (llava_in_the_wild)
-- MathVerse (mathverse)
+- [LLaVA-Bench-Wilder](https://huggingface.co/datasets/lmms-lab/LLaVA-Bench-Wilder) (llava_wilder_small)
+- [LLaVA-Bench-COCO](https://llava-vl.github.io/) (llava_bench_coco)
+- [LLaVA-Bench](https://llava-vl.github.io/) (llava_in_the_wild)
+- [MathVerse](https://github.com/ZrrSkywalker/MathVerse) (mathverse)
   - MathVerse Text Dominant (mathverse_testmini_text_dominant)
   - MathVerse Text Only (mathverse_testmini_text_only)
   - MathVerse Text Lite (mathverse_testmini_text_lite)
   - MathVerse Vision Dominant (mathverse_testmini_vision_dominant)
   - MathVerse Vision Intensive (mathverse_testmini_vision_intensive)
   - MathVerse Vision Only (mathverse_testmini_vision_only)
-- MathVista (mathvista)
+- [MathVista](https://mathvista.github.io/) (mathvista)
   - MathVista Validation (mathvista_testmini)
   - MathVista Test (mathvista_test)
-- MMBench (mmbench)
+- [MMBench](https://github.com/open-compass/MMBench) (mmbench)
   - MMBench English (mmbench_en)
     - MMBench English Dev (mmbench_en_dev)
     - MMBench English Test (mmbench_en_test)
   - MMBench Chinese (mmbench_cn)
     - MMBench Chinese Dev (mmbench_cn_dev)
     - MMBench Chinese Test (mmbench_cn_test)
-- MME (mme)
-- MMStar (mmstar)
-- MMUPD (mmupd)
+- [MME](https://github.com/BradyFU/Awesome-Multimodal-Large-Language-Models/tree/Evaluation) (mme)
+- [MMStar](https://github.com/MMStar-Benchmark/MMStar) (mmstar)
+- [MMUPD](https://huggingface.co/datasets/MM-UPD/MM-UPD) (mmupd)
   - MMUPD Base (mmupd_base)
     - MMAAD Base (mmaad_base)
     - MMIASD Base (mmiasd_base)
@@ -66,8 +66,8 @@
     - MMAAD Instruction (mmaad_instruction)
     - MMIASD Instruction (mmiasd_instruction)
     - MMIVQD Instruction (mmivqd_instruction)
-- MMVet (mmvet)
-- Multilingual LlaVa Bench
+- [MMVet](https://github.com/yuweihao/MM-Vet) (mmvet)
+- [Multilingual LlaVa Bench](https://huggingface.co/datasets/gagan3012/multilingual-llava-bench)
   - llava_in_the_wild_arabic
   - llava_in_the_wild_bengali
   - llava_in_the_wild_chinese
@@ -77,15 +77,14 @@
   - llava_in_the_wild_russian
   - llava_in_the_wild_spanish
   - llava_in_the_wild_urdu
-- NoCaps (nocaps)
+- [NoCaps](https://nocaps.org/) (nocaps)
   - NoCaps Validation (nocaps_val)
   - NoCaps Test (nocaps_test)
-- OCRBench (ocrbench)
-- OKVQA (ok_vqa)
+- [OCRBench](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench)
+- [OKVQA](https://okvqa.allenai.org/) (ok_vqa)
   - OKVQA Validation 2014 (ok_vqa_val2014)
-- POPE (pope)
-- RealWorldQA (realworldqa)
-- RefCOCO (refcoco)
+- [POPE](https://github.com/RUCAIBox/POPE) (pope)
+- [RefCOCO](https://github.com/lichengunc/refer) (refcoco)
   - refcoco_seg_test
   - refcoco_seg_val
   - refcoco_seg_testA
@@ -94,7 +93,7 @@
   - refcoco_bbox_val
   - refcoco_bbox_testA
   - refcoco_bbox_testB
-- RefCOCO+ (refcoco+)
+- [RefCOCO+](https://github.com/lichengunc/refer) (refcoco+)
   - refcoco+\_seg
     - refcoco+\_seg_val
     - refcoco+\_seg_testA
@@ -103,28 +102,28 @@
     - refcoco+\_bbox_val
     - refcoco+\_bbox_testA
     - refcoco+\_bbox_testB
-- RefCOCOg (refcocog)
+- [RefCOCOg](https://github.com/lichengunc/refer) (refcocog)
   - refcocog_seg_test
   - refcocog_seg_val
   - refcocog_bbox_test
   - refcocog_bbox_val
-- ScienceQA (scienceqa_full)
+- [ScienceQA](https://scienceqa.github.io/) (scienceqa_full)
   - ScienceQA Full (scienceqa)
   - ScienceQA IMG (scienceqa_img)
-- ScreenSpot (screenspot)
+- [ScreenSpot](https://github.com/njucckevin/SeeClick) (screenspot)
   - ScreenSpot REC / Grounding (screenspot_rec)
   - ScreenSpot REG / Instruction Generation (screenspot_reg)
-- ST-VQA (stvqa)
-- synthdog (synthdog)
+- [ST-VQA](https://rrc.cvc.uab.es/?ch=11) (stvqa)
+- [synthdog](https://github.com/clovaai/donut) (synthdog)
   - synthdog English (synthdog_en)
   - synthdog Chinese (synthdog_zh)
-- TextCaps (textcaps)
+- [TextCaps](https://textvqa.org/textcaps/) (textcaps)
   - TextCaps Validation (textcaps_val)
   - TextCaps Test (textcaps_test)
-- TextVQA (textvqa)
+- [TextVQA](https://textvqa.org/) (textvqa)
   - TextVQA Validation (textvqa_val)
   - TextVQA Test (textvqa_test)
-- VCR-Wiki
+- [VCR-Wiki](https://github.com/tianyu-z/VCR)
   - VCR-Wiki English
     - VCR-Wiki English easy 100 (vcr_wiki_en_easy_100)
     - VCR-Wiki English easy 500 (vcr_wiki_en_easy_500)
@@ -139,39 +138,39 @@
     - VCR-Wiki Chinese hard 100 (vcr_wiki_zh_hard_100)
     - VCR-Wiki Chinese hard 500 (vcr_wiki_zh_hard_500)
     - VCR-Wiki Chinese hard (vcr_wiki_zh_hard)
-- VibeEval (vibe_eval)
-- VizWizVQA (vizwiz_vqa)
+- [VibeEval](https://github.com/reka-ai/reka-vibe-eval) (vibe_eval)
+- [VizWizVQA](https://vizwiz.org/tasks-and-datasets/vqa/) (vizwiz_vqa)
   - VizWizVQA Validation (vizwiz_vqa_val)
   - VizWizVQA Test (vizwiz_vqa_test)
-- VQAv2 (vqav2)
+- [VQAv2](https://visualqa.org/) (vqav2)
   - VQAv2 Validation (vqav2_val)
   - VQAv2 Test (vqav2_test)
-- WebSRC (websrc)
+- [WebSRC](https://x-lance.github.io/WebSRC/) (websrc)
   - WebSRC Validation (websrc_val)
   - WebSRC Test (websrc_test)
-- WildVision-Bench (wildvision)
+- [WildVision-Bench](https://github.com/WildVision-AI/WildVision-Bench) (wildvision)
   - WildVision 0617(wildvision_0617)
   - WildVision 0630 (wildvision_0630)
-- SeedBench 2 Plus (seedbench_2_plus)
+- [SeedBench 2 Plus](https://huggingface.co/datasets/AILab-CVC/SEED-Bench-2-plus) (seedbench_2_plus)
 
 ## 2. Multi-image tasks:
 
-- CMMMU (cmmmu)
+- [CMMMU](https://cmmmu-benchmark.github.io/) (cmmmu)
   - CMMMU Validation (cmmmu_val)
   - CMMMU Test (cmmmu_test)
-- HallusionBenchmark (hallusion_bench_image)
-- ICON-QA (iconqa)
+- [HallusionBench](https://github.com/tianyi-lab/HallusionBench) (hallusion_bench_image)
+- [ICON-QA](https://iconqa.github.io/) (iconqa)
   - ICON-QA Validation (iconqa_val)
   - ICON-QA Test (iconqa_test)
-- LLaVA-NeXT-Interleave-Bench (llava_interleave_bench)
+- [LLaVA-NeXT-Interleave-Bench](https://huggingface.co/datasets/lmms-lab/LLaVA-NeXT-Interleave-Bench) (llava_interleave_bench)
   - llava_interleave_bench_in_domain
   - llava_interleave_bench_out_domain
   - llava_interleave_bench_multi_view
-- MIRB-hf (mirb)
-- MMMU (mmmu)
+- [MIRB](https://github.com/ys-zong/MIRB) (mirb)
+- [MMMU](https://mmmu-benchmark.github.io/) (mmmu)
   - MMMU Validation (mmmu_val)
   - MMMU Test (mmmu_test)
-- MMMU_Pro
+- [MMMU_Pro](https://huggingface.co/datasets/MMMU/MMMU_Pro)
   - MMMU Pro (mmmu_pro)
     - MMMU Pro Original (mmmu_pro_original)
     - MMMU Pro Vision (mmmu_pro_vision)
@@ -179,24 +178,27 @@
     - MMMU Pro Original COT (mmmu_pro_original_cot)
     - MMMU Pro Vision COT (mmmu_pro_vision_cot)
     - MMMU Pro Composite COT (mmmu_pro_composite_cot)
-- MUIRBENCH (muirbench)
-- Multi-DocVQA (multidocvqa)
-  - Multi-DocVQA Validation (multidocvqa_val)
-  - Multi-DocVQA Test (multidocvqa_test)
-- OlympiadBench (olympiadbench)
+- [MMT Multiple Image](https://mmt-bench.github.io/) (mmt_mi)
+  - MMT Multiple Image Validation (mmt_mi_val)
+  - MMT Multiple Image Test (mmt_mi_test)
+- [MuirBench](https://muirbench.github.io/) (muirbench)
+- [MP-DocVQA](https://github.com/rubenpt91/MP-DocVQA-Framework) (multidocvqa)
+  - MP-DocVQA Validation (multidocvqa_val)
+  - MP-DocVQA Test (multidocvqa_test)
+- [OlympiadBench](https://github.com/OpenBMB/OlympiadBench) (olympiadbench)
   - OlympiadBench Test English (olympiadbench_test_en)
   - OlympiadBench Test Chinese (olympiadbench_test_cn)
-- Q-Bench (qbenchs_dev)
+- [Q-Bench](https://q-future.github.io/Q-Bench/) (qbenchs_dev)
   - Q-Bench2-HF (qbench2_dev)
   - Q-Bench-HF (qbench_dev)
   - A-Bench-HF (abench_dev)
 
 ## 3. Videos tasks:
 
-- ActivityNet-QA (activitynetqa_generation)
-- SeedBench (seedbench)
-- SeedBench 2 (seedbench_2)
-- CVRR-ES (cvrr)
+- [ActivityNet-QA](https://github.com/MILVLG/activitynet-qa) (activitynetqa_generation)
+- [SeedBench](https://github.com/AILab-CVC/SEED-Bench) (seedbench)
+- [SeedBench 2](https://github.com/AILab-CVC/SEED-Bench) (seedbench_2)
+- [CVRR-ES](https://github.com/mbzuai-oryx/CVRR-Evaluation-Suite) (cvrr)
   - cvrr_continuity_and_object_instance_count
   - cvrr_fine_grained_action_understanding
   - cvrr_interpretation_of_social_context
@@ -208,13 +210,16 @@
   - cvrr_time_order_understanding
   - cvrr_understanding_emotional_context
   - cvrr_unusual_and_physically_anomalous_activities
-- EgoSchema (egoschema)
+- [EgoSchema](https://github.com/egoschema/EgoSchema) (egoschema)
   - egoschema_mcppl
   - egoschema_subset_mcppl
   - egoschema_subset
-- LongVideoBench
-- MLVU (mlvu)
-- MVBench (mvbench)
+- [LongVideoBench](https://github.com/longvideobench/LongVideoBench)
+- [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
+- [MMT-Bench](https://mmt-bench.github.io/) (mmt)
+  - MMT Validation (mmt_val)
+  - MMT Test (mmt_test)
+- [MVBench](https://github.com/OpenGVLab/Ask-Anything/blob/main/video_chat2/MVBENCH.md) (mvbench)
 
   - mvbench_action_sequence
   - mvbench_moving_count
@@ -237,13 +242,13 @@
   - mvbench_moving_attribute
   - mvbench_egocentric_navigation
 
-- NExTQA (nextqa)
+- [NExT-QA](https://github.com/doc-doc/NExT-QA) (nextqa)
 
-  - NExTQA Multiple Choice Test (nextqa_mc_test)
-  - NExTQA Open Ended Validation (nextqa_oe_val)
-  - NExTQA Open Ended Test (nextqa_oe_test)
+  - NExT-QA Multiple Choice Test (nextqa_mc_test)
+  - NExT-QA Open Ended Validation (nextqa_oe_val)
+  - NExT-QA Open Ended Test (nextqa_oe_test)
 
-- PerceptionTest
+- [PerceptionTest](https://github.com/google-deepmind/perception_test)
 
   - PerceptionTest Test
     - perceptiontest_test_mc
@@ -252,25 +257,25 @@
     - perceptiontest_val_mc
     - perceptiontest_val_mcppl
 
-- TempCompass (tempcompass)
+- [TempCompass](https://github.com/llyx97/TempCompass) (tempcompass)
 
   - tempcompass_multi_choice
   - tempcompass_yes_no
   - tempcompass_caption_matching
   - tempcompass_captioning
 
-- Vatex (vatex)
+- [Vatex](https://eric-xw.github.io/vatex-website/index.html) (vatex)
 
   - Vatex Chinese (vatex_val_zh)
   - Vatex Test (vatex_test)
 
-- VideoDetailDescription (video_dc499)
-- VideoChatGPT (videochatgpt)
-  - VideoChatGPT Generic (videochatgpt_gen)
-  - VideoChatGPT Temporal (videochatgpt_temporal)
-  - VideoChatGPT Consistency (videochatgpt_consistency)
-- Video-MME (videomme)
-- VITATECS (vitatecs)
+- [VideoDetailDescription](https://huggingface.co/datasets/lmms-lab/VideoDetailCaption) (video_dc499)
+- [Video-ChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT) (videochatgpt)
+  - Video-ChatGPT Generic (videochatgpt_gen)
+  - Video-ChatGPT Temporal (videochatgpt_temporal)
+  - Video-ChatGPT Consistency (videochatgpt_consistency)
+- [Video-MME](https://video-mme.github.io/) (videomme)
+- [VITATECS](https://github.com/lscpku/VITATECS) (vitatecs)
 
   - VITATECS Direction (vitatecs_direction)
   - VITATECS Intensity (vitatecs_intensity)
@@ -279,9 +284,17 @@
   - VITATECS Localization (vitatecs_localization)
   - VITATECS Type (vitatecs_type)
 
-- WorldQA (worldqa)
+- [WorldQA](https://zhangyuanhan-ai.github.io/WorldQA/) (worldqa)
 
   - WorldQA Generation (worldqa_gen)
   - WorldQA Multiple Choice (worldqa_mc)
 
-- YouCook2 (youcook2_val)
+- [YouCook2](http://youcook2.eecs.umich.edu/) (youcook2_val)
+
+## 4. Text Tasks
+
+- [GSM8K](https://github.com/openai/grade-school-math) (gsm8k)
+- [HellaSwag](https://rowanzellers.com/hellaswag/) (hellaswag)
+- [IFEval](https://github.com/google-research/google-research/tree/master/instruction_following_eval) (ifeval)
+- [MMLU](https://github.com/hendrycks/test) (mmlu)
+- [MMLU_pro](https://github.com/TIGER-AI-Lab/MMLU-Pro) (mmlu_pro)
