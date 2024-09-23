@@ -282,6 +282,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         sys.exit(1)
 
     if args.wandb_args:
+        if "name" not in args.wandb_args:
+            name = f"{args.model}_{args.model_args}_{utils.get_datetime_str(timezone=args.timezone)}"
+            name = utils.sanitize_long_string(name)
+            args.wandb_args += f",name={name}"
         wandb_logger = WandbLogger(**simple_parse_args_string(args.wandb_args))
 
     # reset logger
@@ -506,16 +510,6 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
         batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
 
-        # Add W&B logging
-        if args.wandb_args:
-            try:
-                wandb_logger.post_init(results)
-                wandb_logger.log_eval_result()
-                if args.log_samples:
-                    wandb_logger.log_eval_samples(samples)
-            except Exception as e:
-                eval_logger.info(f"Logging to Weights and Biases failed due to {e}")
-
         evaluation_tracker.save_results_aggregated(results=results, samples=samples if args.log_samples else None, datetime_str=datetime_str)
 
         if args.log_samples:
@@ -524,10 +518,6 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
         if evaluation_tracker.push_results_to_hub or evaluation_tracker.push_samples_to_hub:
             evaluation_tracker.recreate_metadata_card()
-
-        if args.wandb_args:
-            # Tear down wandb run once all the logging is done.
-            wandb_logger.run.finish()
 
         return results, samples
     return None, None

@@ -598,6 +598,12 @@ def get_datetime_str(timezone="Asia/Singapore"):
     return local_time.strftime("%Y%m%d_%H%M%S")
 
 
+def sanitize_long_string(s, max_length=40):
+    if len(s) > max_length:
+        return s[: max_length // 2] + "..." + s[-max_length // 2 :]
+    return s
+
+
 def ignore_constructor(loader, node):
     return node
 
