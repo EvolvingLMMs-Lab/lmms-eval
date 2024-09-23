@@ -1,16 +1,17 @@
+import copy
 import logging
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple, Sequence
-import torch
-from tqdm import tqdm
-from decord import VideoReader, cpu
-import numpy as np
 import math
 from datetime import timedelta
-from transformers import AutoConfig
-import copy
+from typing import List, Optional, Sequence, Tuple, Union
+
+import numpy as np
+import torch
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from decord import VideoReader, cpu
 from PIL import Image
+from tqdm import tqdm
+from transformers import AutoConfig
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -18,16 +19,26 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 eval_logger = logging.getLogger("lmms-eval")
-import sys
 import os
+import sys
 
 try:
-    from oryx.model.language_model.oryx_llama import OryxConfig
-
+    from oryx.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IMAGE_TOKEN_INDEX,
+    )
+    from oryx.conversation import SeparatorStyle, conv_templates
+    from oryx.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        process_anyres_highres_image_genli,
+        process_anyres_video_genli,
+        tokenizer_image_token,
+    )
     from oryx.model.builder import load_pretrained_model
-    from oryx.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria, process_anyres_video_genli
-    from oryx.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-    from oryx.conversation import conv_templates, SeparatorStyle
+    from oryx.model.language_model.oryx_llama import OryxConfig
 except ImportError:
     eval_logger.debug("Oryx is not installed. Please install Oryx to use this model.")
 
@@ -137,7 +148,7 @@ class Oryx(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
-        
+
     @property
     def config(self):
         # return the associated transformers.AutoConfig for the given pretrained model.
@@ -225,10 +236,34 @@ class Oryx(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             videos = []
-            for visual in visuals:
-                video = self.load_video(visual, self.max_frames_num)
-                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].bfloat16().to(self.device)
-                videos.append(video)
+            # video
+            if type(visuals[0][0]) == str:
+                for visual in visuals:
+                    video = self.load_video(visual, self.max_frames_num)
+                    video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].bfloat16().to(self.device)
+                    videos.append(video)
+                task_type = "video"
+            # image
+            else:
+                for visual in visuals:
+                    image_tensor_, image_highres_tensor_ = process_anyres_highres_image_genli(visual, self._image_processor)
+                    image_tensor.append(image_tensor_)
+                    image_highres_tensor.append(image_highres_tensor_)
+                if all(x.shape == image_tensor[0].shape for x in image_tensor):
+                    image_tensor = torch.stack(image_tensor, dim=0)
+                if all(x.shape == image_highres_tensor[0].shape for x in image_highres_tensor):
+                    image_highres_tensor = torch.stack(image_highres_tensor, dim=0)
+                if type(image_tensor) is list:
+                    image_tensor = [_image.to(dtype=torch.bfloat16, device=self.device) for _image in image_tensor]
+                else:
+                    image_tensor = image_tensor.to(dtype=torch.bfloat16, device=self.device)
+                if type(image_highres_tensor) is list:
+                    image_highres_tensor = [_image.to(dtype=torch.bfloat16, device=self.device) for _image in image_highres_tensor]
+                else:
+                    image_highres_tensor = image_highres_tensor.to(dtype=torch.bfloat16, device=self.device)
+
+                image_sizes = [visuals[idx].size for idx in range(len(visuals))]
+                task_type = "image"
 
             qs = contexts
             if self.model.config.mm_use_im_start_end:
@@ -255,7 +290,23 @@ class Oryx(lmms):
             labels[0, : contxt_id.shape[1]] = -100
 
             with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=videos, modalities="video")
+                if task_type == "video":
+                    outputs = self.model(
+                        input_ids=input_ids,
+                        labels=labels,
+                        modalities=["video"],
+                        images=videos,
+                        images_highres=videos,
+                    )
+                else:
+                    outputs = self.model(
+                        input_ids=input_ids,
+                        labels=labels,
+                        modalities=["image"] * len(image_sizes),
+                        images=image_tensor,
+                        images_highres=image_highres_tensor,
+                        image_sizes=image_sizes,
+                    )
 
             loss = outputs["loss"]
             # loss = torch.exp(loss)
@@ -290,30 +341,54 @@ class Oryx(lmms):
                     indices = np.linspace(0, len(visuals) - 1, sampled_frm, dtype=int)
                     frames = [visuals[i] for i in indices]
                     video = np.stack([np.array(x) for x in frames])
-                    modality = 'video'
+                    modality = "video"
                     frames = []
                     for frame in video:
                         self._image_processor.do_resize = False
                         self._image_processor.do_center_crop = False
-                        frames.append(process_anyres_video_genli(Image.fromarray(frame).convert('RGB'), self._image_processor))
+                        frames.append(process_anyres_video_genli(Image.fromarray(frame).convert("RGB"), self._image_processor))
                     video = torch.stack(frames, dim=0).bfloat16().to(self.device)
                     videos.append(video)
                     modalities.append(modality)
                 else:
-                    for visual in visuals:
-                        if self.video_decode_backend == "decord":
-                            video, modality = self.load_video(visual, self.max_frames_num)
-                        elif self.video_decode_backend == "pyav":
-                            video, modality = read_video_pyav(visual, num_frm=self.max_frames_num)
-                        # video = self.load_video(visual, self.max_frames_num)
-                        frames = []
-                        for frame in video:
-                            self._image_processor.do_resize = False
-                            self._image_processor.do_center_crop = False
-                            frames.append(process_anyres_video_genli(Image.fromarray(frame).convert('RGB'), self._image_processor))
-                        video = torch.stack(frames, dim=0).bfloat16().to(self.device)
-                        videos.append(video)
-                        modalities.append(modality)
+                    if type(visuals[0][0]) == str:
+                        for visual in visuals:
+                            if self.video_decode_backend == "decord":
+                                video, modality = self.load_video(visual, self.max_frames_num)
+                            elif self.video_decode_backend == "pyav":
+                                video, modality = read_video_pyav(visual, num_frm=self.max_frames_num)
+                            # video = self.load_video(visual, self.max_frames_num)
+                            frames = []
+                            for frame in video:
+                                self._image_processor.do_resize = False
+                                self._image_processor.do_center_crop = False
+                                frames.append(process_anyres_video_genli(Image.fromarray(frame).convert("RGB"), self._image_processor))
+                            video = torch.stack(frames, dim=0).bfloat16().to(self.device)
+                            videos.append(video)
+                            modalities.append(modality)
+                        task_type = "video"
+                    else:
+                        self._image_processor.do_resize = False
+                        self._image_processor.do_center_crop = False
+                        image_tensor, image_highres_tensor = [], []
+                        for visual in visuals:
+                            image_tensor_, image_highres_tensor_ = process_anyres_highres_image_genli(visual, self._image_processor)
+                            image_tensor.append(image_tensor_)
+                            image_highres_tensor.append(image_highres_tensor_)
+                        if all(x.shape == image_tensor[0].shape for x in image_tensor):
+                            image_tensor = torch.stack(image_tensor, dim=0)
+                        if all(x.shape == image_highres_tensor[0].shape for x in image_highres_tensor):
+                            image_highres_tensor = torch.stack(image_highres_tensor, dim=0)
+                        if type(image_tensor) is list:
+                            image_tensor = [_image.to(dtype=torch.bfloat16, device=self.device) for _image in image_tensor]
+                        else:
+                            image_tensor = image_tensor.to(dtype=torch.bfloat16, device=self.device)
+                        if type(image_highres_tensor) is list:
+                            image_highres_tensor = [_image.to(dtype=torch.bfloat16, device=self.device) for _image in image_highres_tensor]
+                        else:
+                            image_highres_tensor = image_highres_tensor.to(dtype=torch.bfloat16, device=self.device)
+                        task_type = "image"
+
             except Exception as e:
                 eval_logger.info(f"{e}")
                 eval_logger.info(f"Video {visuals} can not load, check the source")
@@ -321,7 +396,7 @@ class Oryx(lmms):
                 res.append(f"Video {video_path} can not load, check the source")
                 pbar.update(1)
                 continue
-            
+
             qs = contexts
             if self.model.config.mm_use_im_start_end:
                 qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
@@ -333,7 +408,7 @@ class Oryx(lmms):
             conv.append_message(conv.roles[0], qs)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
-            
+
             input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             attention_masks = input_ids.ne(pad_token_ids).long().to(self.device)
@@ -342,7 +417,8 @@ class Oryx(lmms):
             stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
 
             cur_prompt = contexts
-
+            if task_type == "image":
+                gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -351,23 +427,40 @@ class Oryx(lmms):
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
-            
+
             try:
                 with torch.inference_mode():
-                    output_ids = self.model.generate(
-                        inputs=input_ids,
-                        images=videos,
-                        images_highres=videos,
-                        attention_mask=attention_masks,
-                        modalities=modalities,
-                        use_cache=self.use_cache,
-                        stopping_criteria=[stopping_criteria],
-                        do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                        temperature=gen_kwargs["temperature"],
-                        top_p=gen_kwargs["top_p"],
-                        num_beams=gen_kwargs["num_beams"],
-                        max_new_tokens=gen_kwargs["max_new_tokens"],
-                    )
+                    if task_type == "video":
+                        output_ids = self.model.generate(
+                            inputs=input_ids,
+                            images=videos,
+                            images_highres=videos,
+                            attention_mask=attention_masks,
+                            modalities=modalities,
+                            use_cache=self.use_cache,
+                            stopping_criteria=[stopping_criteria],
+                            do_sample=True if gen_kwargs["temperature"] > 0 else False,
+                            temperature=gen_kwargs["temperature"],
+                            top_p=gen_kwargs["top_p"],
+                            num_beams=gen_kwargs["num_beams"],
+                            max_new_tokens=gen_kwargs["max_new_tokens"],
+                        )
+                    else:
+                        output_ids = self.model.generate(
+                            input_ids,
+                            attention_mask=attention_masks,
+                            pad_token_id=pad_token_ids,
+                            modalities=["image"] * len(gen_kwargs["image_sizes"]),
+                            images=image_tensor,
+                            images_highres=image_highres_tensor,
+                            image_sizes=gen_kwargs["image_sizes"],
+                            do_sample=True if gen_kwargs["temperature"] > 0 else False,
+                            temperature=gen_kwargs["temperature"],
+                            top_p=gen_kwargs["top_p"],
+                            num_beams=gen_kwargs["num_beams"],
+                            max_new_tokens=gen_kwargs["max_new_tokens"],
+                            use_cache=self.use_cache,
+                        )
                 outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
                 # print(outputs)
                 res.append(outputs)
