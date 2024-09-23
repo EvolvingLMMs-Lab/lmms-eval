@@ -66,7 +66,7 @@ def load_image(image_path, resolution=224, hd_num=6):
     image_tensor = torch.cat([sub_img, glb_img])#.unsqueeze(0)
     return image_tensor
 
-def load_video(video_path, num_segments=8, return_msg=False, resolution=224, hd_num=4, padding=False):
+def load_video(video_path, num_segments=16, return_msg=False, resolution=224, hd_num=6, padding=False):
     vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
     num_frames = len(vr)
     frame_indices = get_index(num_frames, num_segments)
@@ -209,7 +209,7 @@ class InternVideo2(lmms):
         device: str = "cuda:0",
         device_map: str = "cuda:0",
         batch_size: str = "1",
-        num_segments: str = "8",
+        num_segments: str = "16",
         hd_num: str = "6",
         **kwargs,
     ):
@@ -344,10 +344,14 @@ class InternVideo2(lmms):
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos. [META-INFO]{visuals}"
                 video_path = visuals[0]
+                if "mvbench" in task:
+                    answer_prompt="Best Option:("
+                else:
+                    answer_prompt= None
                 pixel_values = load_video(video_path, num_segments=self.num_segments, return_msg=False, resolution=224, hd_num=self.hd_num)
                 pixel_values = pixel_values.to(torch.bfloat16).cuda()
                 question = contexts
-                response, history = self.model.chat(self.tokenizer, msg="", user_prompt=question, media_type="video", media_tensor = pixel_values, instruction=None, chat_history=[], return_history=True, generation_config = gen_kwargs)
+                response, history = self.model.chat(self.tokenizer, msg="", user_prompt=question, media_type="video", media_tensor = pixel_values, instruction=None, chat_history=[], return_history=True, generation_config = gen_kwargs, answer_prompt=answer_prompt)
             res.append(response)
             pbar.update(1)
         pbar.close()
