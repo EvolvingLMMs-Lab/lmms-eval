@@ -59,6 +59,7 @@ ALL_OUTPUT_TYPES = [
     "loglikelihood",
     "multiple_choice",
     "generate_until",
+    "generate_until_multi_round",
 ]
 
 
@@ -130,9 +131,9 @@ class TaskConfig(dict):
                 raise ValueError("Got both a `group` and `tag` entry within a TaskConfig. Please use one or the other--`group` values will be deprecated in v0.4.4.")
 
         if self.generation_kwargs is not None:
-            if self.output_type != "generate_until":
+            if "generate_until" not in self.output_type:
                 eval_logger.warning(f"[{self.task}] passed `generation_kwargs`, but not using `output_type: generate_until`!")
-                assert self.output_type != "generate_until"
+                assert "generate_until" not in self.output_type
 
             if "temperature" in self.generation_kwargs:
                 self.generation_kwargs["temperature"] = float(self.generation_kwargs["temperature"])
@@ -140,7 +141,7 @@ class TaskConfig(dict):
             if "until" not in self.generation_kwargs:
                 self.generation_kwargs["until"] = [self.fewshot_delimiter]
         else:
-            if self.output_type == "generate_until":
+            if "generate_until" in self.output_type:
                 # ensure that we greedily generate in absence of explicit arguments otherwise
                 self.generation_kwargs = {
                     "until": None if self.fewshot_delimiter is None else [self.fewshot_delimiter],
@@ -1379,6 +1380,8 @@ class ConfigurableTask(Task):
 
         elif self.OUTPUT_TYPE == "generate_until":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
+        elif self.OUTPUT_TYPE == "generate_until_multi_round":
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, self.config.doc_to_text, doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
     # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
@@ -1465,7 +1468,7 @@ class ConfigurableTask(Task):
                 acc_mutual_info = 1.0 if np.argmax(lls_mutual_info) == gold else 0.0
                 result_dict["acc_mutual_info"] = acc_mutual_info
 
-        elif self.OUTPUT_TYPE == "generate_until":
+        elif "generate_until" in self.OUTPUT_TYPE:
             gold = self.doc_to_target(doc)
             result = results[0]
             if self.config.doc_to_choice is not None:
@@ -1523,7 +1526,7 @@ class ConfigurableTask(Task):
         else:
             raise ValueError(
                 f"Passed invalid output_type '{self.OUTPUT_TYPE}' ! Please use one of ",
-                "'loglikelihood','generate_until' or 'multiple_choice'",
+                "'loglikelihood','generate_until', 'generate_until_multi_round', or 'multiple_choice'",
             )
 
         return result_dict

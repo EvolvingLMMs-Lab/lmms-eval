@@ -73,6 +73,26 @@ class lmms(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def generate_until_multi_round(self, requests) -> List[str]:
+        """Generate greedily until a stopping sequence
+
+        :param requests: list[Instance]
+            A list of Instance objects with property `args` which returns a tuple (context, until).
+            context: str
+                Context string
+            generation_kwargs: dict
+                Generation Kwargs
+            'visual_list: list[dict]'
+                Visual input to the model. Can be None.
+        :return: list[str]
+            A list of strings continuation
+            continuation: str
+                The generated continuation.
+        """
+        pass
+
+
     @classmethod
     def create_from_arg_string(cls: Type[T], arg_string: str, additional_config: Optional[dict] = None) -> T:
         """
@@ -160,7 +180,7 @@ class CachingLMM:
             eval_logger.info(f"Loading '{attr}' responses from cache '{self.cache_db}' where possible...")
             for req in tqdm(requests):
                 hsh = hash_args(attr, req.args)
-                if attr == "generate_until" and req.args[1].get("do_sample", False):
+                if attr in ["generate_until", "generate_until_multi_round"] and req.args[1].get("do_sample", False):
                     # when we are doing non-greedy generation, don't use the cache
                     # (else every "randomly sampled" generation would be identical for repeats > 1).
                     if not warned:

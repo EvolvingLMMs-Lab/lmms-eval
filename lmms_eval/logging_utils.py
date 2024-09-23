@@ -278,7 +278,7 @@ class WandbLogger:
             choices = ["\n".join([f"{idx}. {y[1]}" for idx, y in enumerate(x["arguments"])]) for x in data]
             resps = [np.argmax([n[0][0] for n in x["resps"]]) for x in data]
             filtered_resps = [np.argmax([n[0] for n in x["filtered_resps"]]) for x in data]
-        elif config["output_type"] == "generate_until":
+        elif "generate_until" in config["output_type"]:
             instance = [x["arguments"][0][0] for x in data]
             resps = [x["resps"][0][0] for x in data]
             filtered_resps = [x["filtered_resps"][0] for x in data]
