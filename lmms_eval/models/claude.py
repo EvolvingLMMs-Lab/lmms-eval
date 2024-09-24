@@ -254,7 +254,7 @@ class Claude(lmms):
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 self.response_cache[doc_uuid] = response_text
                 with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f)
+                    json.dump(self.response_cache, f, indent=4)
 
         pbar.close()
 
