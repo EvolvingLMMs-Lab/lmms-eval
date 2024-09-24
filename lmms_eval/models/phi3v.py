@@ -75,6 +75,7 @@ class Phi3v(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._word_size = 1
+            self.accelerator = accelerator
 
     @property
     def config(self):

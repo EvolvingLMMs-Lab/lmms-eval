@@ -69,6 +69,7 @@ Example output: "My final verdict is tie: [[A=B]]".\
 
 prompt_template = "<|User Prompt|>\n{question_1}\n\n<|The Start of Assistant A's Answer|>\n{answer_1}\n<|The End of Assistant A's Answer|>\n\n<|The Start of Assistant B's Answer|>\n{answer_2}\n<|The End of Assistant B's Answer|>"
 
+
 def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -112,6 +113,7 @@ def image_to_base64(pil_image):
     pil_image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
+
 def get_score(judgement, pattern, pairwise=True):
     matches = pattern.findall(judgement)
     matches = [m for m in matches if m != ""]
@@ -136,6 +138,7 @@ def wild_vision_doc_to_text(doc, model_specific_prompt_kwargs=None):
     if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
         question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
     return question
+
 
 def wild_vision_doc_to_target(doc):
     return doc[BASELINE_MODEL_NAME]

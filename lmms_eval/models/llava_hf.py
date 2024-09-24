@@ -78,12 +78,9 @@ class LlavaHf(lmms):
             self._model = LlavaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
 
         self.pretrained = pretrained
-        processor_kwargs = {
-            'revision': revision,
-            'trust_remote_code': trust_remote_code
-        }
+        processor_kwargs = {"revision": revision, "trust_remote_code": trust_remote_code}
         if fast_tokenizer is not None:
-            processor_kwargs['use_fast'] = fast_tokenizer
+            processor_kwargs["use_fast"] = fast_tokenizer
         # strange bug where even if you supply `use_fast=True`, the default value, to AutoProcessor,
         # the tokenizer will sometimes have the incorrect vocab size
         self._image_processor = AutoProcessor.from_pretrained(pretrained, **processor_kwargs)
@@ -227,7 +224,7 @@ class LlavaHf(lmms):
             logits = torch.nn.functional.log_softmax(outputs["logits"], dim=-1)
             greedy_tokens = logits.argmax(dim=-1)
             # account for the eos token
-            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + 1:-1]  # [1, seq]
+            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + 1 : -1]  # [1, seq]
             greedy_tokens = greedy_tokens[:, contxt_id.shape[1] + 1 : model_inputs["input_ids"].shape[1] - 1]  # [1, seq]
             greedy_logits = logits[:, contxt_id.shape[1] + 1 : model_inputs["input_ids"].shape[1] - 1]
             greedy_logits = torch.gather(greedy_logits, 2, greedy_tokens.unsqueeze(-1)).squeeze(-1)

@@ -214,7 +214,7 @@ class GPT4V(lmms):
                         response_text = ""
 
             res.append(response_text)
-        
+
             pbar.update(1)
 
             if self.continual_mode is True:  # Cache the response
