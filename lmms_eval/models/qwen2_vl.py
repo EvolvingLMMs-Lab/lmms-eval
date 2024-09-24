@@ -198,10 +198,8 @@ class Qwen2_VL(lmms):
                         vr = decord.VideoReader(visual)
                         first_frame = vr[0].asnumpy()
                         height, width = first_frame.shape[:2]
-                        height = max(height, 360)
-                        width = max(width, 480)
                         max_pixels = height * width
-                        message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": max_pixels, "nframes": 128}, {"type": "text", "text": context}]})
+                        message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": max_pixels}, {"type": "text", "text": context}]})
                     elif isinstance(visual, Image.Image):  # Single image
                         base64_image = visual.convert("RGB")
                         buffer = BytesIO()
