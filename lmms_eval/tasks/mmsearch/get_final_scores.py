@@ -60,5 +60,5 @@ final_result_summary["subfield_dict"] = dict()
 for subfield in all_task_result_summary["end2end"]["subfield_dict"]:
     final_result_summary["subfield_dict"][subfield] = sum([ratio * all_task_result_summary[task]["subfield_dict"][subfield]["average"] for task, ratio in task_ratio_dict.items()])
 
-logger.info(f"Average final score: {final_result_summary['total_dict']['average']}")
-json.dump(final_result_summary, open(args.save_path, "w"))
+print(f"Average final score: {final_result_summary['total_dict']['average']}")
+json.dump(final_result_summary, open(args.save_path, "w"), indent=4)

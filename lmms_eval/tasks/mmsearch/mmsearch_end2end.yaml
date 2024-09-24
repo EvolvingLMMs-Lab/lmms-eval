@@ -4,7 +4,7 @@ dataset_path: CaraJ/MMSearch
 dataset_name: end2end
 dataset_kwargs:
   token: False
-task: "mmsearch_end2end2"
+task: "mmsearch_end2end"
 test_split: end2end
 output_type: generate_until_multi_round
 doc_to_visual: !function lmms_eval_utils.mmsearch_end2end_doc_to_visual
@@ -27,5 +27,5 @@ metric_list:
     aggregation: !function lmms_eval_utils.mmsearch_aggregate_results_req_score
     higher_is_better: true
 lmms_eval_specific_kwargs: # whenever a sample is infered, save it
-  middle_resules_dir: mmsearch_logs/mmsearch_middile_results
-  result_cache_dir: mmsearch_logs/mmsearch_result_cache_dir
+  middle_resules_dir: /data1/zrr/jdz/mmsearch/mmsearch_middile_results
+  result_cache_dir: /data1/zrr/jdz/mmsearch/mmsearch_result_cache_dir

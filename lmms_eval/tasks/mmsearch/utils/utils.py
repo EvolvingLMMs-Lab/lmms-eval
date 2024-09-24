@@ -19,6 +19,12 @@ from requests.exceptions import RequestException
 from lmms_eval.tasks.mmsearch.constants import *
 from lmms_eval.tasks.mmsearch.utils.web_content_utils import *
 
+# get rank id for random seed
+from accelerate import Accelerator
+accelerator = Accelerator()
+WORLD_SIZE = accelerator.num_processes
+RANK = accelerator.process_index
+random.seed(RANK)
 
 ### Proxy setting
 def get_proxy_settings():
@@ -71,7 +77,7 @@ class RapidAPI:
 
         for attempt in range(max_retries):
             try:
-                time.sleep(5)  # Avoid frequent requests
+                time.sleep(random.choice([i for i in range(5, 10+20*WORLD_SIZE, 5)]))  # Avoid frequent requests and multiple rank query at the same time
                 response = list(self.ddgs.text(" ".join(text.strip("'").split(" ")[:100]), max_results=max_results))
                 return response[:max_results]
             except Exception as e:
@@ -101,7 +107,8 @@ class DDGSQueryRun:
         try:
             output = self.api_wrapper.query(query, max_results=self.max_results + 20)  # account for error website
         except Exception as e:
-            eval_logger.error(f"DDGSQueryRun call failed: {e}")
+            eval_logger.error(f"DDGSQueryRun call failed:")
+            eval_logger.error(f"{e}")
             output = []
 
         evidences = []
