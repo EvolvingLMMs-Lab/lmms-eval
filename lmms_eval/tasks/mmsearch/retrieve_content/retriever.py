@@ -28,7 +28,7 @@ class Content_Retriever:
         self.tokenizer_offsets.settings["do_sliding_window_passages"] = self.config.slidew
         self.tokenizer_offsets.settings["respect_sent_boundaries"] = self.config.sentb
         # define retrieval model
-        self.model = BGEM3FlagModel("BAAI/bge-m3", device='cpu', use_fp16=False)  # Setting use_fp16 to True speeds up computation with a slight performance degradation
+        self.model = BGEM3FlagModel("BAAI/bge-m3", device="cpu", use_fp16=False)  # Setting use_fp16 to True speeds up computation with a slight performance degradation
 
     def split_doc_into_passages(self, doc):
         text = doc
