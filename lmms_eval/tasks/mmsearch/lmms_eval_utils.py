@@ -38,14 +38,14 @@ content_retriever = Content_Retriever()
 
 
 def mmsearch_end2end_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None, round_idx=None, previous_round_info=None):
-    '''
-    Returns: 
-        visuals (for next round) 
+    """
+    Returns:
+        visuals (for next round)
         contexts (for next round)
         terminal_signal
         round_result
         previous_round_info
-    '''
+    """
     # prepare save dir
     middle_result_dir = lmms_eval_specific_kwargs["middle_resules_dir"] if lmms_eval_specific_kwargs is not None and "middle_resules_dir" in lmms_eval_specific_kwargs else "mmsearch_middile_results"
     result_cache_dir = lmms_eval_specific_kwargs["result_cache_dir"] if lmms_eval_specific_kwargs is not None and "result_cache_dir" in lmms_eval_specific_kwargs else "mmsearch_result_cache_dir"
@@ -61,7 +61,7 @@ def mmsearch_end2end_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_o
     query = doc["query"]
 
     # initial round: round_idx is None. This remains the same output format as other benchmark
-    eval_logger.info('----------------Round1: Requery----------------')
+    eval_logger.info("----------------Round1: Requery----------------")
     if round_idx is None:
         prompt_template = prompt_template_dict["stage1"]
         if not query_has_image:
@@ -77,7 +77,7 @@ def mmsearch_end2end_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_o
             eval_logger.info(f"{doc['sample_id']} already exists. Load the cache result.")
             round_res = json.load(open(cache_path))["round_res"]
             return None, None, True, round_res, None
-        eval_logger.info('----------------Round2: Rerank----------------')
+        eval_logger.info("----------------Round2: Rerank----------------")
         # prepare
         requery = previous_output[-1]
         stage1_screenshot_dir = os.path.join(middle_result_dir, doc["sample_id"], "stage1")
@@ -112,7 +112,7 @@ def mmsearch_end2end_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_o
         return image_files, text_query, False, previous_output, dict(result_brief=result_brief)
     # round3: get full page + summarization
     if round_idx == 2:
-        eval_logger.info('----------------Round3: Summarization----------------')
+        eval_logger.info("----------------Round3: Summarization----------------")
         # prepare
         stage3_screenshot_dir = os.path.join(middle_result_dir, doc["sample_id"], "stage3")
         requery = previous_output[0]
@@ -377,7 +377,7 @@ def mmsearch_aggregate_results_req_score(results, args, *, calculate_gain=False,
         )
         result_list.append(inst)
 
-    assert len(result_list) == 300 # assert to be the benchmark length, or the get_result_summary function will not work
+    assert len(result_list) == 300  # assert to be the benchmark length, or the get_result_summary function will not work
     # save results
     path = generate_submission_file(f"{args.tasks}_requery_results.json", args)
     with open(path, "w") as f:

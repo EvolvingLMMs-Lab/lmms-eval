@@ -11,6 +11,7 @@ import shutil
 import subprocess
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
+from functools import partial
 from glob import glob
 from typing import (
     Any,
@@ -34,7 +35,6 @@ from loguru import logger as eval_logger
 from PIL import ImageFile
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
-from functools import partial
 
 from lmms_eval import utils
 from lmms_eval.api import samplers

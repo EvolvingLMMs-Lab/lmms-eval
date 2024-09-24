@@ -9,6 +9,9 @@ from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import requests
+
+# get rank id for random seed
+from accelerate import Accelerator
 from duckduckgo_search import DDGS
 from langchain_community.document_loaders import UnstructuredHTMLLoader
 from loguru import logger as eval_logger
@@ -19,12 +22,11 @@ from requests.exceptions import RequestException
 from lmms_eval.tasks.mmsearch.constants import *
 from lmms_eval.tasks.mmsearch.utils.web_content_utils import *
 
-# get rank id for random seed
-from accelerate import Accelerator
 accelerator = Accelerator()
 WORLD_SIZE = accelerator.num_processes
 RANK = accelerator.process_index
 random.seed(RANK)
+
 
 ### Proxy setting
 def get_proxy_settings():
@@ -77,7 +79,7 @@ class RapidAPI:
 
         for attempt in range(max_retries):
             try:
-                time.sleep(random.choice([i for i in range(5, 10+20*WORLD_SIZE, 5)]))  # Avoid frequent requests and multiple rank query at the same time
+                time.sleep(random.choice([i for i in range(5, 10 + 20 * WORLD_SIZE, 5)]))  # Avoid frequent requests and multiple rank query at the same time
                 response = list(self.ddgs.text(" ".join(text.strip("'").split(" ")[:100]), max_results=max_results))
                 return response[:max_results]
             except Exception as e:
