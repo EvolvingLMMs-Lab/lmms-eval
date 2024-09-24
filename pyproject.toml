@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.2.3"
+version = "0.2.3.dev0"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
@@ -91,6 +91,10 @@ reka = [
     "httpx==0.23.3",
     "reka-api",
 ]
+qwen = [
+    "decord",
+    "qwen_vl_utils",
+]
 mmsearch = [
     "playwright",
     "requests",
@@ -107,6 +111,7 @@ all = [
     "gemini",
     "reka",
     "metrics",
+    "qwen",
     "mmsearch"
 ]
 

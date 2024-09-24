@@ -126,18 +126,6 @@ class Llava_OneVision(lmms):
         overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
         cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
-        if cfg_pretrained.architectures[0] == "LlavaLlamaForCausalLM":  # Ugly code, only used in  vicuna that needs ROPE
-            if "224" in cfg_pretrained.mm_vision_tower:
-                least_token_number = self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
-            else:
-                least_token_number = self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
-
-            scaling_factor = math.ceil(least_token_number / 4096)
-            if scaling_factor >= 2:
-                overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
-                overwrite_config["max_sequence_length"] = 4096 * scaling_factor
-                overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
-
         llava_model_args["overwrite_config"] = overwrite_config
         try:
             # Try to load the model with the multimodal argument
