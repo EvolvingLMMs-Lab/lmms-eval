@@ -95,12 +95,24 @@ qwen = [
     "decord",
     "qwen_vl_utils",
 ]
+mmsearch = [
+    "playwright",
+    "requests",
+    "matplotlib",
+    "duckduckgo_search",
+    "langchain",
+    "langchain-community",
+    "beautifulsoup4",
+    "FlagEmbedding",
+    "rouge",
+]
 all = [
     "vila",
     "gemini",
     "reka",
     "metrics",
     "qwen",
+    "mmsearch"
 ]
 
 [tool.setuptools.packages.find]
