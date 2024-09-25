@@ -75,6 +75,44 @@ metadata:
   - version: 0.0
 ```
 
+Multi-round-generation-based tasks:
+
+- MMSearch(`lmms_eval/tasks/mmsearch/mmsearch_end2end.yaml`)
+
+```yaml
+dataset_path: CaraJ/MMSearch
+dataset_name: end2end
+dataset_kwargs:
+  token: False
+task: "mmsearch_end2end"
+test_split: end2end
+output_type: generate_until_multi_round # Note that here we use the new output_type here for multi-round generation. It basicly follows generate_until but incorporate multi-round inference
+doc_to_visual: !function lmms_eval_utils.mmsearch_end2end_doc_to_visual
+doc_to_text: !function lmms_eval_utils.mmsearch_end2end_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function lmms_eval_utils.mmsearch_end2end_process_results
+metric_list:
+  - metric: end2end_f1_score
+    aggregation: !function lmms_eval_utils.mmsearch_aggregate_results_f1_score
+    higher_is_better: true
+  - metric: requery_score
+    aggregation: !function lmms_eval_utils.mmsearch_aggregate_results_req_score
+    higher_is_better: true
+lmms_eval_specific_kwargs: # Note that here we cache the result of every sample whenever the it is inferenced
+  middle_resules_dir: /data1/zrr/jdz/mmsearch/mmsearch_middile_results
+  result_cache_dir: /data1/zrr/jdz/mmsearch/mmsearch_result_cache_dir
+
+```
+
+
 ## Configurations
 
 Tasks are configured via the `TaskConfig` object. Below, we describe all fields usable within the object, and their role in defining a task.
@@ -96,8 +134,9 @@ Dataset configuration options:
 - **process_docs** (`Callable`, *optional*) — Optionally define a function to apply to each HF dataset split, to preprocess all documents before being fed into prompt template rendering or other evaluation steps. Can be used to rename dataset columns, or to process documents into a format closer to the expected format expected by a prompt template.
 
 Prompting / in-context formatting options:
-- **doc_to_text** (`Union[Callable, str]`, *optional*) — Column name or function to process a sample into the appropriate input for the model
-- **doc_to_visial** (`Union[Callable, str]`, *optional*) — Function to process a sample into the appropriate input images for the model.
+- **doc_to_text** (`Union[Callable, str]`, *optional*) — Column name or function to process a sample into the appropriate input for the model. 
+
+  For multi-round generation, (e.g., MMSearch), the function accepts additional parameters about the round index, previous round information and previous model output. It should return the input image for the next round, input text for the next round, a boolean indicating if round inference should terminate, model outputs from all rounds, and extra information from previous rounds.
 - **doc_to_target** (`Union[Callable, str]`, *optional*) — Column name or or function to process a sample into the appropriate target output for the model. For multiple choice tasks, this should return an index into
 - **doc_to_choice** (`Union[Callable, str]`, *optional*) — Column name or or function to process a sample into a list of possible string choices for `multiple_choice` tasks. Left undefined for `generate_until` tasks.
 
