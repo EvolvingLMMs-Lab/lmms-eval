@@ -229,6 +229,9 @@ class XComposer2_4KHD(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         return super().loglikelihood(requests)
 
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")
+
 
 def padding_336(b):
     width, height = b.size
