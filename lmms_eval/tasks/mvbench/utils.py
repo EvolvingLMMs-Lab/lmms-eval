@@ -16,29 +16,29 @@ from loguru import logger as eval_logger
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 DATA_LIST = {
-    "action_sequence": "star/Charades_v1_480/",
-    "action_prediction": "star/Charades_v1_480/",
-    "action_antonym": "ssv2_video/",
-    "fine_grained_action": "Moments_in_Time_Raw/videos/",
-    "unexpected_action": "FunQA_test/test/",
-    "object_existence": "clevrer/video_validation/",
-    "object_interaction": "star/Charades_v1_480/",
-    "object_shuffle": "perception/videos/",
-    "moving_direction": "clevrer/video_validation/",
-    "action_localization": "sta/sta_video/",
-    "scene_transition": "scene_qa/video/",
-    "action_count": "perception/videos/",
-    "moving_count": "clevrer/video_validation/",
-    "moving_attribute": "clevrer/video_validation/",
-    "state_change": "perception/videos/",
-    "fine_grained_pose": "nturgbd/",
-    "character_order": "perception/videos/",
-    "egocentric_navigation": "vlnqa/",
-    "episodic_reasoning": "tvqa/frames_fps3_hq/",
-    "counterfactual_inference": "clevrer/video_validation/",
+     "object_interaction": "star/Charades_segment", 
+     "action_sequence": "star/Charades_segment", 
+     "action_prediction": "star/Charades_segment", 
+     "action_localization": "sta/sta_video_segment", 
+     "moving_count": "clevrer/video_validation", 
+     "fine_grained_pose": "nturgbd_convert", 
+     "character_order": "perception/videos", 
+     "object_shuffle": "perception/videos", 
+     "egocentric_navigation": "vlnqa", 
+     "moving_direction": "clevrer/video_validation", 
+     "episodic_reasoning": "tvqa/video_fps3_hq_segment", 
+     "fine_grained_action": "Moments_in_Time_Raw/videos", 
+     "scene_transition": "scene_qa/video", 
+     "state_change": "perception/videos", 
+     "moving_attribute": "clevrer/video_validation", 
+     "action_antonym": "ssv2_video_mp4", 
+     "unexpected_action": "FunQA_test/test", 
+     "counterfactual_inference": "clevrer/video_validation", 
+     "object_existence": "clevrer/video_validation", 
+     "action_count": "perception/videos"
 }
 
-hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
+hf_home = os.getenv("HF_HOME", "~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -98,7 +98,7 @@ def mvbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         option_letter = option_letters[char_index]
         option_prompt += f"{option_letter}. {option}\n"
 
-    full_text = doc["question"] + "\n" + option_prompt + lmms_eval_specific_kwargs["post_prompt"]
+    full_text = "Question:" + doc["question"] + "\nOption:\n" + option_prompt + lmms_eval_specific_kwargs["post_prompt"]
     return full_text
 
 

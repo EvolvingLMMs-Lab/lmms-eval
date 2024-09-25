@@ -1,8 +1,9 @@
 dataset_path: OpenGVLab/MVBench
 dataset_kwargs:
   token: True
-  cache_dir: mvbench
+  cache_dir: mvbench_video
   video: True
+  revision: video
 generation_kwargs:
   max_new_tokens: 16
   temperature: 0
