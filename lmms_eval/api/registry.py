@@ -76,6 +76,7 @@ DEFAULT_METRIC_REGISTRY = {
     ],
     "multiple_choice": ["acc", "acc_norm"],
     "generate_until": ["exact_match"],
+    "generate_until_multi_round": ["exact_match"],
 }
 
 

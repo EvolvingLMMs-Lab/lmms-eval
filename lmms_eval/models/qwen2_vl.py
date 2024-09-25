@@ -1,8 +1,12 @@
+import base64
+from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
+import decord
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
+from PIL import Image
 from tqdm import tqdm
 from transformers import AutoProcessor, AutoTokenizer, Qwen2VLForConditionalGeneration
 
@@ -10,6 +14,11 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+
+try:
+    from qwen_vl_utils import process_vision_info
+except ImportError:
+    eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
 @register_model("qwen2_vl")
@@ -176,30 +185,54 @@ class Qwen2_VL(lmms):
                     contexts[i] = contexts[i].replace("<image>", "")
 
             messages = []
+            processed_visuals = []
+            for i, context in enumerate(contexts):
+                if "<image>" in context:
+                    context = context.replace("<image>", "")
 
-            if len(visuals) == 0:
-                for context in contexts:
-                    message = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": [{"type": "text", "text": context}]}]
-                    messages.append(message)
-            else:
-                for _, context in zip(visuals, contexts):
-                    message = [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": [{"type": "image"}, {"type": "text", "text": context}]}]
-                    messages.append(message)
+                message = [{"role": "system", "content": "You are a helpful assistant."}]
+
+                if len(visuals) > 0:
+                    visual = visuals[i] if i < len(visuals) else None
+                    if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                        vr = decord.VideoReader(visual)
+                        first_frame = vr[0].asnumpy()
+                        height, width = first_frame.shape[:2]
+                        max_pixels = height * width
+                        message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": max_pixels}, {"type": "text", "text": context}]})
+                    elif isinstance(visual, Image.Image):  # Single image
+                        base64_image = visual.convert("RGB")
+                        buffer = BytesIO()
+                        base64_image.save(buffer, format="JPEG")
+                        base64_bytes = base64.b64encode(buffer.getvalue())
+                        base64_string = base64_bytes.decode("utf-8")
+                        message.append({"role": "user", "content": [{"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"}, {"type": "text", "text": context}]})
+                    elif isinstance(visual, (list, tuple)) and all(isinstance(v, Image.Image) for v in visual):  # Multiple images
+                        image_content = []
+                        for v in visual:
+                            base64_image = v.convert("RGB")
+                            buffer = BytesIO()
+                            base64_image.save(buffer, format="JPEG")
+                            base64_bytes = base64.b64encode(buffer.getvalue())
+                            base64_string = base64_bytes.decode("utf-8")
+                            image_content.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"})
+                        message.append({"role": "user", "content": image_content + [{"type": "text", "text": context}]})
+                    else:
+                        message.append({"role": "user", "content": [{"type": "text", "text": context}]})
+                else:
+                    message.append({"role": "user", "content": [{"type": "text", "text": context}]})
+
+                messages.append(message)
 
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
-            inputs = self.processor(text=texts, images=[visuals], padding=True, return_tensors="pt")
+            image_inputs, video_inputs = process_vision_info(messages)
+            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
                 inputs = inputs.to(self.device)
 
-            # preconfigure gen_kwargs with defaults
-            if "image_sizes" not in gen_kwargs:
-                try:
-                    gen_kwargs["image_sizes"] = [visuals[0].size]
-                except:
-                    gen_kwargs["image_sizes"] = None
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 128
             if "temperature" not in gen_kwargs:
@@ -221,7 +254,6 @@ class Qwen2_VL(lmms):
                 num_beams=gen_kwargs["num_beams"],
                 max_new_tokens=gen_kwargs["max_new_tokens"],
                 use_cache=self.use_cache,
-                # kwargs=gen_kwargs
             )
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
