@@ -130,15 +130,15 @@ def mix_evals_video2text_doc_to_visual(doc):
 
 
 # This is the place where you format your question
-def mix_evals_video2text_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def mix_evals_video2text_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
     user_prompt = doc["prompt"]
 
@@ -166,15 +166,15 @@ OPEN_CONVS_PROMPT = """{PRE}
 """
 
 
-def mix_evals_video2text_doc_to_text_open_convs(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def mix_evals_video2text_doc_to_text_open_convs(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
     filtered_first_turn = re.sub(r"<video_[0-9]+>", "", doc["first_turn_user_prompt"])
     return OPEN_CONVS_PROMPT.format(
@@ -192,15 +192,15 @@ MODEL_CONVS_PROMPT = """{FIRST}
 """
 
 
-def mix_evals_video2text_doc_to_text_open_2nd_convs(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def mix_evals_video2text_doc_to_text_open_2nd_convs(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
     return MODEL_CONVS_PROMPT.format(
         PRE=pre_prompt,
