@@ -338,7 +338,7 @@ def mean_stderr(arr):
 @register_metric(
     metric="bypass",
     higher_is_better=True,
-    output_type=["loglikelihood", "multiple_choice", "generate_until"],
+    output_type=["loglikelihood", "multiple_choice", "generate_until", "generate_until_multi_round"],
     aggregation="bypass",
 )
 def bypass(items):
@@ -368,7 +368,7 @@ def f1_fn(items):  # This is a passthrough function
 @register_metric(
     metric="bleu",
     higher_is_better=True,
-    output_type="generate_until",
+    output_type=["generate_until", "generate_until_multi_round"],
     aggregation="bleu",
 )
 def bleu_fn(items):  # This is a passthrough function
@@ -378,7 +378,7 @@ def bleu_fn(items):  # This is a passthrough function
 @register_metric(
     metric="chrf",
     higher_is_better=True,
-    output_type="generate_until",
+    output_type=["generate_until", "generate_until_multi_round"],
     aggregation="chrf",
 )
 def chrf_fn(items):  # This is a passthrough function
@@ -388,7 +388,7 @@ def chrf_fn(items):  # This is a passthrough function
 @register_metric(
     metric="ter",
     higher_is_better=True,
-    output_type="generate_until",
+    output_type=["generate_until", "generate_until_multi_round"],
     aggregation="ter",
 )
 def ter_fn(items):  # This is a passthrough function
