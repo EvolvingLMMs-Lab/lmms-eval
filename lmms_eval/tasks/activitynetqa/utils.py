@@ -154,23 +154,37 @@ def get_eval(question, answer, pred, max_tokens: int, retries: int = 5):
 
     return "", ""
 
-
 def parse_score(review):
     try:
         # Convert the string representation of a dictionary to an actual dictionary
+        review = "{" + review.split("{")[1].split("}")[0] + "}"
         review_dict = ast.literal_eval(review)
-        pred = review_dict.get("pred", "no")
-        score = review_dict.get("score", 0)
-        return [pred, float(score)]
+        # import pdb;pdb.set_trace()
+        score_match = review_dict["score"]
+        score = int(score_match)
+        pred = review_dict["pred"]
+        if "yes" in pred.lower():
+            pred = "yes"
+        elif "no" in pred.lower():
+            pred = "no"
+        # pred = review_dict.get("pred", "no")
+        # score = review_dict.get("score", 0)
+        return [pred, score]
     except SyntaxError as e:
         eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
-        return ["no", 0]
+        import pdb
+
+        pdb.set_trace()
     except ValueError as e:
         eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
-        return ["no", 0]
+        import pdb
+
+        pdb.set_trace()
     except Exception as e:
         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
-        return ["no", 0]
+        import pdb
+
+        pdb.set_trace()
 
 
 def activitynetqa_process_results(doc, result):
@@ -244,11 +258,13 @@ def activitynetqa_aggregate_score(results, args):
 
     # Iterate over the results to count correctness and sum scores
     for result_dict in results:
-        if result_dict["Correctness"] == "yes":
+        if "yes" in result_dict["Correctness"].lower():
             yes_count += 1
-        else:
+        elif "no" in result_dict["Correctness"].lower():
             no_count += 1
-        total_score += result_dict["score"]
+
+        total_score += int(result_dict["score"])
+
 
     # Calculate accuracy and average score
     accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
@@ -265,11 +281,12 @@ def activitynetqa_aggregate_accuracy(results, args):
 
     # Iterate over the results to count correctness and sum scores
     for result_dict in results:
-        if result_dict["Correctness"] == "yes":
+        if "yes" in result_dict["Correctness"].lower():
             yes_count += 1
-        else:
+        elif "no" in result_dict["Correctness"].lower():
             no_count += 1
-        total_score += result_dict["score"]
+
+        total_score += int(result_dict["score"])
 
     # Calculate accuracy and average score
     accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0
