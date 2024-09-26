@@ -46,6 +46,7 @@ AVAILABLE_MODELS = {
     "xcomposer2_4KHD": "XComposer2_4KHD",
     "internvideo2": "InternVideo2",
     "xcomposer2d5": "XComposer2D5",
+    "oryx": "Oryx",
 }
 
 
