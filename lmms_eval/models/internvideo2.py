@@ -2,15 +2,16 @@ import logging
 import os
 from typing import List, Tuple
 
+import decord
 import numpy as np
 import torch
 import torchvision.transforms as T
 from accelerate import Accelerator, DistributedType
 from decord import VideoReader, cpu
-import decord
+
 decord.bridge.set_bridge("torch")
-from PIL import Image
 import torch.nn.functional as F
+from PIL import Image
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
@@ -40,6 +41,7 @@ DEFAULT_GEN_KWARGS = dict(
 #     ])
 #     return offsets
 
+
 def get_index(max_frame, num_segments, fps, first_idx=0, bound=None):
     if bound:
         start, end = bound[0], bound[1]
@@ -50,50 +52,39 @@ def get_index(max_frame, num_segments, fps, first_idx=0, bound=None):
     start_idx = max(first_idx, round(start * fps))
     end_idx = min(round(end * fps), max_frame)
     seg_size = float(end_idx - start_idx) / num_segments
-    frame_indices = np.array([
-        int(start_idx + (seg_size / 2) + np.round(seg_size * idx))
-        for idx in range(num_segments)
-    ])
+    frame_indices = np.array([int(start_idx + (seg_size / 2) + np.round(seg_size * idx)) for idx in range(num_segments)])
     return frame_indices
+
 
 def load_image(image_path, resolution=224, hd_num=6):
     image = Image.open(image_path).convert("RGB")
     image_tensor = T.PILToTensor()(image).unsqueeze(0)
     image_tensor = HD_transform_no_padding(image_tensor.float(), image_size=resolution, hd_num=hd_num)
     T_, C, H, W = image_tensor.shape
-    
+
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
-    
-    transform = T.Compose([
-        T.Lambda(lambda x: x.float().div(255.0)),
-        T.Normalize(mean, std)
-    ])
+
+    transform = T.Compose([T.Lambda(lambda x: x.float().div(255.0)), T.Normalize(mean, std)])
     image_tensor = transform(image_tensor).cuda()
-    
-    sub_img = image_tensor.reshape(
-        1, T_, 3, H//resolution, resolution, W//resolution, resolution
-    ).permute(0, 3, 5, 1, 2, 4, 6).reshape(-1, T_, 3, resolution, resolution).contiguous()
-    
-    glb_img = F.interpolate(
-        image_tensor.float(), size=(resolution, resolution), mode='bicubic', align_corners=False
-    ).to(sub_img.dtype).unsqueeze(0)
-    
-    image_tensor = torch.cat([sub_img, glb_img])#.unsqueeze(0)
+
+    sub_img = image_tensor.reshape(1, T_, 3, H // resolution, resolution, W // resolution, resolution).permute(0, 3, 5, 1, 2, 4, 6).reshape(-1, T_, 3, resolution, resolution).contiguous()
+
+    glb_img = F.interpolate(image_tensor.float(), size=(resolution, resolution), mode="bicubic", align_corners=False).to(sub_img.dtype).unsqueeze(0)
+
+    image_tensor = torch.cat([sub_img, glb_img])  # .unsqueeze(0)
     return image_tensor
+
 
 def load_video(video_path, num_segments=16, return_msg=False, resolution=224, hd_num=6, padding=False):
     vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
-    num_frames = len(vr) -1
-    
-    frame_indices = get_index(max_frame = num_frames, num_segments= num_segments, fps = float(vr.get_avg_fps()), first_idx=0, bound=None)
+    num_frames = len(vr) - 1
+
+    frame_indices = get_index(max_frame=num_frames, num_segments=num_segments, fps=float(vr.get_avg_fps()), first_idx=0, bound=None)
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
 
-    transform = T.Compose([
-        T.Lambda(lambda x: x.float().div(255.0)),
-        T.Normalize(mean, std)
-    ])
+    transform = T.Compose([T.Lambda(lambda x: x.float().div(255.0)), T.Normalize(mean, std)])
 
     frames = vr.get_batch(frame_indices)
     frames = frames.permute(0, 3, 1, 2)
@@ -106,13 +97,9 @@ def load_video(video_path, num_segments=16, return_msg=False, resolution=224, hd
     frames = transform(frames)
     T_, C, H, W = frames.shape
 
-    sub_img = frames.reshape(
-        1, T_, 3, H//resolution, resolution, W//resolution, resolution
-    ).permute(0, 3, 5, 1, 2, 4, 6).reshape(-1, T_, 3, resolution, resolution).contiguous()
+    sub_img = frames.reshape(1, T_, 3, H // resolution, resolution, W // resolution, resolution).permute(0, 3, 5, 1, 2, 4, 6).reshape(-1, T_, 3, resolution, resolution).contiguous()
 
-    glb_img = F.interpolate(
-        frames.float(), size=(resolution, resolution), mode='bicubic', align_corners=False
-    ).to(sub_img.dtype).unsqueeze(0)
+    glb_img = F.interpolate(frames.float(), size=(resolution, resolution), mode="bicubic", align_corners=False).to(sub_img.dtype).unsqueeze(0)
 
     frames = torch.cat([sub_img, glb_img]).unsqueeze(0)
 
@@ -125,6 +112,7 @@ def load_video(video_path, num_segments=16, return_msg=False, resolution=224, hd
     else:
         return frames
 
+
 def HD_transform_padding(frames, image_size=224, hd_num=6):
     def _padding_224(frames):
         _, _, H, W = frames.shape
@@ -134,11 +122,7 @@ def HD_transform_padding(frames, image_size=224, hd_num=6):
         left_padding = 0
         right_padding = 0
 
-        padded_frames = F.pad(
-            frames,
-            pad=[left_padding, right_padding, top_padding, bottom_padding],
-            mode='constant', value=255
-        )
+        padded_frames = F.pad(frames, pad=[left_padding, right_padding, top_padding, bottom_padding], mode="constant", value=255)
         return padded_frames
 
     _, _, H, W = frames.shape
@@ -158,11 +142,7 @@ def HD_transform_padding(frames, image_size=224, hd_num=6):
     new_w = int(scale * image_size)
     new_h = int(new_w / ratio)
 
-    resized_frames = F.interpolate(
-        frames, size=(new_h, new_w),
-        mode='bicubic',
-        align_corners=False
-    )
+    resized_frames = F.interpolate(frames, size=(new_h, new_w), mode="bicubic", align_corners=False)
     padded_frames = _padding_224(resized_frames)
 
     if trans:
@@ -170,39 +150,38 @@ def HD_transform_padding(frames, image_size=224, hd_num=6):
 
     return padded_frames
 
-def find_closest_aspect_ratio(aspect_ratio, target_ratios, width, height, image_size):
-        best_ratio_diff = float('inf')
-        best_ratio = (1, 1)
-        area = width * height
-        for ratio in target_ratios:
-            target_aspect_ratio = ratio[0] / ratio[1]
-            ratio_diff = abs(aspect_ratio - target_aspect_ratio)
-            if ratio_diff < best_ratio_diff:
-                best_ratio_diff = ratio_diff
-                best_ratio = ratio
-            elif ratio_diff == best_ratio_diff:
-                if area > 0.5 * image_size * image_size * ratio[0] * ratio[1]:
-                    best_ratio = ratio
-        return best_ratio
 
-def HD_transform_no_padding(frames, image_size=224, hd_num=6, fix_ratio=(2,1)):
+def find_closest_aspect_ratio(aspect_ratio, target_ratios, width, height, image_size):
+    best_ratio_diff = float("inf")
+    best_ratio = (1, 1)
+    area = width * height
+    for ratio in target_ratios:
+        target_aspect_ratio = ratio[0] / ratio[1]
+        ratio_diff = abs(aspect_ratio - target_aspect_ratio)
+        if ratio_diff < best_ratio_diff:
+            best_ratio_diff = ratio_diff
+            best_ratio = ratio
+        elif ratio_diff == best_ratio_diff:
+            if area > 0.5 * image_size * image_size * ratio[0] * ratio[1]:
+                best_ratio = ratio
+    return best_ratio
+
+
+def HD_transform_no_padding(frames, image_size=224, hd_num=6, fix_ratio=(2, 1)):
     min_num = 1
     max_num = hd_num
     _, _, orig_height, orig_width = frames.shape
     aspect_ratio = orig_width / orig_height
 
     # calculate the existing video aspect ratio
-    target_ratios = set(
-        (i, j) for n in range(min_num, max_num + 1) for i in range(1, n + 1) for j in range(1, n + 1) if
-        i * j <= max_num and i * j >= min_num)
+    target_ratios = set((i, j) for n in range(min_num, max_num + 1) for i in range(1, n + 1) for j in range(1, n + 1) if i * j <= max_num and i * j >= min_num)
     target_ratios = sorted(target_ratios, key=lambda x: x[0] * x[1])
 
     # find the closest aspect ratio to the target
     if fix_ratio:
         target_aspect_ratio = fix_ratio
     else:
-        target_aspect_ratio = find_closest_aspect_ratio(
-            aspect_ratio, target_ratios, orig_width, orig_height, image_size)
+        target_aspect_ratio = find_closest_aspect_ratio(aspect_ratio, target_ratios, orig_width, orig_height, image_size)
 
     # calculate the target width and height
     target_width = image_size * target_aspect_ratio[0]
@@ -210,11 +189,9 @@ def HD_transform_no_padding(frames, image_size=224, hd_num=6, fix_ratio=(2,1)):
     blocks = target_aspect_ratio[0] * target_aspect_ratio[1]
 
     # resize the frames
-    resized_frame = F.interpolate(
-        frames, size=(target_height, target_width),
-        mode='bicubic', align_corners=False
-    )
+    resized_frame = F.interpolate(frames, size=(target_height, target_width), mode="bicubic", align_corners=False)
     return resized_frame
+
 
 @register_model("InternVideo2")
 class InternVideo2(lmms):
@@ -233,13 +210,8 @@ class InternVideo2(lmms):
         self.path = pretrained
         self.instruction = "Carefully watch the video and pay attention to the cause and sequence of events, the detail and movement of objects, and the action and pose of persons.\n"
 
-        self._tokenizer =  AutoTokenizer.from_pretrained(self.path,
-                        trust_remote_code=True,
-                        use_fast=False)
-        self._model = AutoModel.from_pretrained(
-                        self.path,
-                        torch_dtype=torch.bfloat16,
-                        trust_remote_code=True).eval().cuda()
+        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True, use_fast=False)
+        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, trust_remote_code=True).eval().cuda()
         batch_size = int(batch_size)
         self.num_segments = int(num_segments)
         self.hd_num = int(hd_num)
@@ -291,7 +263,7 @@ class InternVideo2(lmms):
             self._world_size = 1
 
         self.modality = modality
-    
+
     @property
     def config(self):
         # return the associated transformers.AutoConfig for the given pretrained model.
@@ -324,7 +296,7 @@ class InternVideo2(lmms):
     @property
     def world_size(self):
         return self._world_size
-    
+
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -358,18 +330,30 @@ class InternVideo2(lmms):
                 pixel_values = load_image(image_path, resolution=224, hd_num=self.hd_num)
                 pixel_values = pixel_values.to(torch.bfloat16).cuda()
                 question = contexts
-                response, history = self.model.chat(self.tokenizer, msg="", user_prompt=question, media_type="image", media_tensor = pixel_values, instruction=None, chat_history=[], return_history=True, **gen_kwargs)
+                response, history = self.model.chat(self.tokenizer, msg="", user_prompt=question, media_type="image", media_tensor=pixel_values, instruction=None, chat_history=[], return_history=True, **gen_kwargs)
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos. [META-INFO]{visuals}"
                 video_path = visuals[0]
                 if "mvbench" in task:
-                    answer_prompt="Best Option:("
+                    answer_prompt = "Best Option:("
                 else:
-                    answer_prompt= None
+                    answer_prompt = None
                 pixel_values = load_video(video_path, num_segments=self.num_segments, return_msg=False, resolution=224, hd_num=self.hd_num)
                 pixel_values = pixel_values.to(torch.bfloat16).cuda()
                 question = self.instruction + contexts
-                response, history = self.model.chat(self.tokenizer, msg="", user_prompt=question, media_type="video", media_tensor = pixel_values, instruction=self.instruction, chat_history=[], return_history=True, generation_config = gen_kwargs, answer_prompt=answer_prompt, debug_conv=False)
+                response, history = self.model.chat(
+                    self.tokenizer,
+                    msg="",
+                    user_prompt=question,
+                    media_type="video",
+                    media_tensor=pixel_values,
+                    instruction=self.instruction,
+                    chat_history=[],
+                    return_history=True,
+                    generation_config=gen_kwargs,
+                    answer_prompt=answer_prompt,
+                    debug_conv=False,
+                )
             res.append(response)
             pbar.update(1)
         pbar.close()
