@@ -209,3 +209,6 @@ class VideoLLaVA(lmms):
             res.append(outputs)
             pbar.update(1)
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

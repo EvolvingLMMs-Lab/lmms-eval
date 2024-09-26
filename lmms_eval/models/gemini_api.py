@@ -181,6 +181,9 @@ class GeminiAPI(lmms):
         pbar.close()
         return res
 
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for Gemini API")
+
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "Gemini API not support"

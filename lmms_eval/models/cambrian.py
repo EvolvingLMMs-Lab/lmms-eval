@@ -308,3 +308,6 @@ class Cambrian(lmms):
         res = re_ords.get_original(res)
         pbar.close()
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for Cambrian")
