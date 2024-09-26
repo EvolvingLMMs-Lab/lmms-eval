@@ -8,7 +8,8 @@ import requests as url_requests
 import time
 import logging
 import sys
-sys.path.insert(0, '/nvmedata/jonathanl/mPLUG-DocOwl/DocOwl1.5/')
+
+sys.path.insert(0, "/nvmedata/jonathanl/mPLUG-DocOwl/DocOwl1.5/")
 from docowl_infer import DocOwlInfer
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms

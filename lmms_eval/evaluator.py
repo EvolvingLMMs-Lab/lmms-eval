@@ -633,10 +633,10 @@ def evaluate(
             results_dict["samples"] = dict(samples)
     else:
         results_dict = None
-    
-    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", 'w') as f:
+
+    with open(f"{cli_args.output_path}/rank{int(os.environ.get('RANK', 0))}_metric_eval_done.txt", "w") as f:
         f.write(f"rank {int(os.environ.get('RANK', 0))} eval done")
-    while len([file for file in os.listdir(cli_args.output_path) if file.endswith('metric_eval_done.txt')]) < lm.accelerator.num_processes:
+    while len([file for file in os.listdir(cli_args.output_path) if file.endswith("metric_eval_done.txt")]) < lm.accelerator.num_processes:
         time.sleep(1)
 
     return results_dict

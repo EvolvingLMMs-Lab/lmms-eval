@@ -50,7 +50,7 @@ if __name__ == '__main__':
         except openai.BadRequestError as e:
             if e.code == 'content_filter':
                 doc_id = log["doc_id"]
-                print(f'Ran into a content filter error at document ID {doc_id}, skipping!\n***question {doc_id}***:\n{question_text}\n***ground truth answers {doc_id}***:\n{reference_answers}\n***model response {doc_id}***:\n{predictions}')
+                print(f'Ran into a content filter error at document ID {doc_id}, skipping!\n***question {doc_id}***:\n{question_text}\n***ground truth answers {doc_id}***:\n{reference_answers}\n***model response {doc_id}***:\n{predictions}', flush=True)
                 skipped.append(doc_id)
                 continue
                 
