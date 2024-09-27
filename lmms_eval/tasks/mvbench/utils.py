@@ -96,7 +96,7 @@ def mvbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_letters = string.ascii_uppercase
     for char_index, option in enumerate(option_list):
         option_letter = option_letters[char_index]
-        option_prompt += f"{option_letter}. {option}\n"
+        option_prompt += f"({option_letter}) {option}\n"
 
     full_text = "Question:" + doc["question"] + "\nOption:\n" + option_prompt + lmms_eval_specific_kwargs["post_prompt"]
     return full_text
