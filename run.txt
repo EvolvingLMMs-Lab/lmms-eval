@@ -55,3 +55,57 @@ batch_size: 1
 |mme  |Yaml   |none  |     0|mme_cognition_score|↑  | 269.6429|±  |   N/A|
 |mme  |Yaml   |none  |     0|mme_percetion_score|↑  |1217.4333|±  |   N/A|
 
+|   Tasks    |Version|Filter|n-shot|  Metric  |   |Value|   |Stderr|
+|------------|-------|------|-----:|----------|---|-----|---|------|
+|mmmu        |    N/A|      |      |          |   |     |   |      |
+| - mmmu_test|      0|none  |     0|submission|↑  |N/A  |±  |   N/A|
+| - mmmu_val |      0|none  |     0|mmmu_acc  |↑  | 0.31|±  |   N/A|
+
+|      Tasks       |Version|Filter|n-shot|    Metric    |   | Value |   |Stderr|
+|------------------|-------|------|-----:|--------------|---|-------|---|------|
+|mmbench           |    N/A|      |      |              |   |       |   |      |
+| - mmbench_cn_cc  |      0|none  |     0|gpt_eval_score|↑  |21.1765|±  |   N/A|
+| - mmbench_cn_cc  |      0|none  |     0|submission    |   |N/A    |±  |   N/A|
+| - mmbench_cn_dev |Yaml   |none  |     0|gpt_eval_score|↑  |35.2234|±  |   N/A|
+| - mmbench_cn_dev |Yaml   |none  |     0|submission    |↑  |N/A    |±  |   N/A|
+| - mmbench_cn_test|Yaml   |none  |     0|submission    |↑  |N/A    |±  |   N/A|
+| - mmbench_en_dev |Yaml   |none  |     0|gpt_eval_score|↑  |44.0722|±  |   N/A|
+| - mmbench_en_dev |Yaml   |none  |     0|submission    |↑  |N/A    |±  |   N/A|
+| - mmbench_en_test|Yaml   |none  |     0|submission    |↑  |N/A    |±  |   N/A|
+| - mmbench_ru_dev |Yaml   |none  |     0|gpt_eval_score|↑  |27.7512|±  |   N/A|
+| - mmbench_ru_dev |Yaml   |none  |     0|submission    |↑  |N/A    |±  |   N/A|
+
+|     Tasks      |Version|Filter|n-shot|        Metric        |   |Value |   |Stderr|
+|----------------|-------|------|-----:|----------------------|---|-----:|---|------|
+|seedbench_2_plus|Yaml   |none  |     0|seedbench_2_plus_Chart|↑  |0.4284|±  |   N/A|
+|seedbench_2_plus|Yaml   |none  |     0|seedbench_2_plus_Map  |↑  |0.4114|±  |   N/A|
+|seedbench_2_plus|Yaml   |none  |     0|seedbench_2_plus_Web  |↑  |0.6924|±  |   N/A|
+|seedbench_2_plus|Yaml   |none  |     0|seedbench_2_plus_all  |↑  |0.4989|±  |   N/A|
+
+|      Tasks       |Version|Filter|n-shot|      Metric      |   |Value|   |Stderr|
+|------------------|------:|------|-----:|------------------|---|----:|---|------|
+|llava_wilder_small|      0|none  |     0|gpt_eval_llava_all|↑  |  100|±  |   N/A|
+
+|     Tasks      |Version|Filter|n-shot|        Metric        |   |Value|   |Stderr|
+|----------------|------:|------|-----:|----------------------|---|----:|---|------|
+|llava_bench_coco|      0|none  |     0|gpt_eval_llava_all    |↑  |  100|±  |   N/A|
+|llava_bench_coco|      0|none  |     0|gpt_eval_llava_complex|↑  |  100|±  |   N/A|
+|llava_bench_coco|      0|none  |     0|gpt_eval_llava_conv   |↑  |  100|±  |   N/A|
+|llava_bench_coco|      0|none  |     0|gpt_eval_llava_detail |↑  |  100|±  |   N/A|
+
+|      Tasks      |Version|Filter|n-shot|        Metric        |   |Value|   |Stderr|
+|-----------------|------:|------|-----:|----------------------|---|----:|---|------|
+|llava_in_the_wild|      0|none  |     0|gpt_eval_llava_all    |↑  |  100|±  |   N/A|
+|llava_in_the_wild|      0|none  |     0|gpt_eval_llava_complex|↑  |  100|±  |   N/A|
+|llava_in_the_wild|      0|none  |     0|gpt_eval_llava_conv   |↑  |  100|±  |   N/A|
+|llava_in_the_wild|      0|none  |     0|gpt_eval_llava_detail |↑  |  100|±  |   N/A|
+
+|      Tasks      |Version|Filter|n-shot|  Metric   |   |Value |   |Stderr|
+|-----------------|-------|------|-----:|-----------|---|------|---|------|
+|ok_vqa           |    N/A|      |      |           |   |      |   |      |
+| - ok_vqa_val2014|Yaml   |none  |     0|exact_match|↑  |0.4036|±  |0.0065|
+| - ok_vqa_val2014|Yaml   |none  |     0|submission |↑  |N/A   |±  |   N/A|
+
+|   Tasks   |Version|     Filter     |n-shot|  Metric   |   |Value |   |Stderr|
+|-----------|-------|----------------|-----:|-----------|---|-----:|---|-----:|
+|realworldqa|Yaml   |flexible-extract|     0|exact_match|↑  |0.5425|±  | 0.018|
