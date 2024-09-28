@@ -266,7 +266,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     for char in [",", ".", "!", "?", ";", ":", "'", "、", "。", "！", "？", "；", "："]:
         response = response.strip(char)
     response = " " + response + " "  # add space to avoid partial match
-    japanese_char_pattern = r'[\u3040-\u30FF\u4E00-\u9FFF]'
+    japanese_char_pattern = r"[\u3040-\u30FF\u4E00-\u9FFF]"
     index_ans = True
     ans_with_brack = False
     candidates = []
@@ -283,7 +283,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     # Between the Japanese characters
     if len(candidates) == 0:
         for choice in all_choices:
-            pattern = fr'{japanese_char_pattern}{choice}{japanese_char_pattern}'
+            pattern = rf"{japanese_char_pattern}{choice}{japanese_char_pattern}"
             if re.search(pattern, response):
                 candidates.append(choice)
 
@@ -297,17 +297,17 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
                 candidates.append(index)
-                index_ans = False # it's content ans.
+                index_ans = False  # it's content ans.
 
     if len(candidates) == 0:  # still not get answer, randomly choose one.
         pred_index = random.choice(all_choices)
     elif len(candidates) > 1:
         start_indexes = []
         if index_ans:
-            if ans_with_brack: 
+            if ans_with_brack:
                 for can in candidates:
-                    index = response.rfind(f'({can})')
-                    start_indexes.append(index) # -1 will be ignored anyway
+                    index = response.rfind(f"({can})")
+                    start_indexes.append(index)  # -1 will be ignored anyway
                 # start_indexes = [generated_response.index(f'({can})') for can in candidates]
             else:
                 for can in candidates:
@@ -330,13 +330,13 @@ def extract_numbers(string):
     Exact all forms of numbers from a string with regex.
     """
     # Pattern for numbers with commas
-    pattern_commas = r'-?\b\d{1,3}(?:,\d{3})+\b'
+    pattern_commas = r"-?\b\d{1,3}(?:,\d{3})+\b"
     # Pattern for scientific notation
-    pattern_scientific = r'-?\d+(?:\.\d+)?[eE][+-]?\d+'
+    pattern_scientific = r"-?\d+(?:\.\d+)?[eE][+-]?\d+"
     # pattern_simple = r'-?\d+(?:\.\d+)?(?![eE][+-]?\d+)'
-    pattern_simple = r'-?(?:\d+\.\d+|\.\d+|\d+)(?![eE][+-]?\d+)(?![,\d])'
+    pattern_simple = r"-?(?:\d+\.\d+|\.\d+|\d+)(?![eE][+-]?\d+)(?![,\d])"
     # Pattern for Japanese numbers
-    pattern_japanese = r'(\d+)(?:つ|個|度|円|人|年|匹|台|%)'
+    pattern_japanese = r"(\d+)(?:つ|個|度|円|人|年|匹|台|%)"
 
     # Extract numbers with commas
     numbers_with_commas = re.findall(pattern_commas, string)
@@ -401,10 +401,9 @@ def parse_open_response(response):
     def get_key_subresponses(response):
         key_responses = []
         response = response.strip().strip("。")
-        sub_responses = re.split(r'[。！？.]\s*|\n', response)
+        sub_responses = re.split(r"[。！？.]\s*|\n", response)
 
-        indicators_of_keys = ['よって', 'よって、', '答えは', '答えは、', '最終的に', '最終的に、',
-                              '解答は', '解答は、' '回答は', '回答は、']
+        indicators_of_keys = ["よって", "よって、", "答えは", "答えは、", "最終的に", "最終的に、", "解答は", "解答は、" "回答は", "回答は、"]
         key_responses = []
         for index, resp in enumerate(sub_responses):
             # if last one, accept it's an equation (the entire response can be just one sentence with equation)
