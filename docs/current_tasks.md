@@ -158,6 +158,7 @@
 - [CMMMU](https://cmmmu-benchmark.github.io/) (cmmmu)
   - CMMMU Validation (cmmmu_val)
   - CMMMU Test (cmmmu_test)
+- [JMMMU](https://mmmu-japanese-benchmark.github.io/JMMMU/) (jmmmu)
 - [HallusionBench](https://github.com/tianyi-lab/HallusionBench) (hallusion_bench_image)
 - [ICON-QA](https://iconqa.github.io/) (iconqa)
   - ICON-QA Validation (iconqa_val)

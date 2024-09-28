@@ -1,0 +1,4 @@
+dataset_name: Diagnostics_and_Laboratory_Medicine
+tag: "jmmmu_culture_agnostic"
+task: "jmmmu_diagnostics_and_laboratory_medicine"
+include: _default_template_yaml
