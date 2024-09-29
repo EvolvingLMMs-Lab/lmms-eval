@@ -158,11 +158,11 @@
 - [CMMMU](https://cmmmu-benchmark.github.io/) (cmmmu)
   - CMMMU Validation (cmmmu_val)
   - CMMMU Test (cmmmu_test)
-- [JMMMU](https://mmmu-japanese-benchmark.github.io/JMMMU/) (jmmmu)
 - [HallusionBench](https://github.com/tianyi-lab/HallusionBench) (hallusion_bench_image)
 - [ICON-QA](https://iconqa.github.io/) (iconqa)
   - ICON-QA Validation (iconqa_val)
   - ICON-QA Test (iconqa_test)
+- [JMMMU](https://mmmu-japanese-benchmark.github.io/JMMMU/) (jmmmu)
 - [LLaVA-NeXT-Interleave-Bench](https://huggingface.co/datasets/lmms-lab/LLaVA-NeXT-Interleave-Bench) (llava_interleave_bench)
   - llava_interleave_bench_in_domain
   - llava_interleave_bench_out_domain
