@@ -1,4 +1,6 @@
 import base64
+import json
+import os
 from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
@@ -36,6 +38,8 @@ class Qwen2_VL(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
         use_flash_attention_2: Optional[bool] = True,
+        continual_mode: bool = False,
+        response_persistent_folder: str = None,  # We will cache the Gemini API response in this path and use it for future requests
         **kwargs,
     ) -> None:
         super().__init__()
@@ -64,6 +68,23 @@ class Qwen2_VL(lmms):
             self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
         self.processor = AutoProcessor.from_pretrained(pretrained)
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
+
+        self.continual_mode = continual_mode
+        if self.continual_mode and response_persistent_folder is None:
+            raise ValueError("Continual mode requires a persistent path for the response.")
+        self.response_persistent_folder = response_persistent_folder
+        if not os.path.exists(self.response_persistent_folder):
+            os.makedirs(self.response_persistent_folder)
+        model_version = pretrained.split("/")[-1]
+        self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{model_version}_response.json")
+
+        if os.path.exists(self.response_persistent_file):
+            with open(self.response_persistent_file, "r") as f:
+                self.response_cache = json.load(f)
+            self.cache_mode = "resume"
+        else:
+            self.response_cache = {}
+            self.cache_mode = "start"
 
         self._config = self.model.config
         self.batch_size_per_gpu = int(batch_size)
@@ -157,8 +178,22 @@ class Qwen2_VL(lmms):
         # in the same batch.
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+
+        def get_uuid(task, split, doc_id):
+            return f"{task}___{split}___{doc_id}"
+
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
+
+            if self.continual_mode and self.cache_mode == "resume":
+                doc_uuid = get_uuid(task, split, doc_id)
+                if doc_uuid in self.response_cache:
+                    content = self.response_cache[doc_uuid]
+                    if content:
+                        res.append(content)
+                        pbar.update(1)
+                        continue
+
             task = task[0]
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
@@ -269,6 +304,13 @@ class Qwen2_VL(lmms):
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
             # reorder this group of results back to original unsorted form
+
+            if self.continual_mode is True:  # Cache the response
+                doc_uuid = get_uuid(task, split, doc_id)
+                self.response_cache[doc_uuid] = content
+                with open(self.response_persistent_file, "w") as f:
+                    json.dump(self.response_cache, f)
+
         res = re_ords.get_original(res)
 
         pbar.close()
