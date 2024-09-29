@@ -39,7 +39,7 @@ class Qwen2_VL(lmms):
         use_cache=True,
         use_flash_attention_2: Optional[bool] = True,
         continual_mode: bool = False,
-        response_persistent_folder: str = None,  # We will cache the Gemini API response in this path and use it for future requests
+        response_persistent_folder: str = None,  # We will cache the response in this path and use it for future requests
         **kwargs,
     ) -> None:
         super().__init__()
