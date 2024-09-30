@@ -24,7 +24,7 @@ class Qwen2_Audio(lmms):
 
     def __init__(
         self,
-        pretrained: str = "Qwen/Qwen2-Audio-7B", # Qwen/Qwen2-Audio-7B-Instruct
+        pretrained: str = "Qwen/Qwen2-Audio-7B",  # Qwen/Qwen2-Audio-7B-Instruct
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "cuda",
         batch_size: Optional[Union[int, str]] = 1,
@@ -46,16 +46,14 @@ class Qwen2_Audio(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
-
         self._model = Qwen2AudioForConditionalGeneration.from_pretrained(
-                pretrained,
-                torch_dtype="auto",
-                device_map=device_map,
+            pretrained,
+            torch_dtype="auto",
+            device_map=device_map,
         ).eval()
 
-
         self.processor = AutoProcessor.from_pretrained(pretrained)
-        self.processor.tokenizer.padding_side = 'left'
+        self.processor.tokenizer.padding_side = "left"
         self._tokenizer = self.processor.tokenizer
 
         self._config = self.model.config
@@ -133,7 +131,6 @@ class Qwen2_Audio(lmms):
         return new_list
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
-
         res = []
 
         def _collate(x):
@@ -188,7 +185,7 @@ class Qwen2_Audio(lmms):
                 inputs = inputs.to("cuda")
             else:
                 inputs = inputs.to(self.device)
-            
+
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 256
             if "temperature" not in gen_kwargs:
@@ -199,7 +196,7 @@ class Qwen2_Audio(lmms):
                 gen_kwargs["num_beams"] = 1
 
             cont = self.model.generate(
-                **inputs, 
+                **inputs,
                 do_sample=True if gen_kwargs["temperature"] > 0 else False,
                 temperature=gen_kwargs["temperature"],
                 top_p=gen_kwargs["top_p"],
@@ -210,7 +207,7 @@ class Qwen2_Audio(lmms):
             )
 
             # cont = self.model.generate(**inputs, max_new_tokens=256, min_new_tokens=1, do_sample=False)
-            
+
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             # generated_ids_trimmed = cont[:, inputs.input_ids.size(1):]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
@@ -230,7 +227,6 @@ class Qwen2_Audio(lmms):
 
         pbar.close()
         return res
-    
 
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation")

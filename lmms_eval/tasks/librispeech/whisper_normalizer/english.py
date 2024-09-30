@@ -4,7 +4,7 @@ import re
 from fractions import Fraction
 from typing import Iterator, List, Match, Optional, Union
 
-from more_itertools import windowed # TODO: new package
+from more_itertools import windowed  # TODO: new package
 
 from .basic import remove_symbols_and_diacritics
 
@@ -51,10 +51,7 @@ class EnglishNumberNormalizer:
                 start=1,
             )
         }
-        self.ones_plural = {
-            "sixes" if name == "six" else name + "s": (value, "s")
-            for name, value in self.ones.items()
-        }
+        self.ones_plural = {"sixes" if name == "six" else name + "s": (value, "s") for name, value in self.ones.items()}
         self.ones_ordinal = {
             "zeroth": (0, "th"),
             "first": (1, "st"),
@@ -62,11 +59,7 @@ class EnglishNumberNormalizer:
             "third": (3, "rd"),
             "fifth": (5, "th"),
             "twelfth": (12, "th"),
-            **{
-                name + ("h" if name.endswith("t") else "th"): (value, "th")
-                for name, value in self.ones.items()
-                if value > 3 and value != 5 and value != 12
-            },
+            **{name + ("h" if name.endswith("t") else "th"): (value, "th") for name, value in self.ones.items() if value > 3 and value != 5 and value != 12},
         }
         self.ones_suffixed = {**self.ones_plural, **self.ones_ordinal}
 
@@ -80,13 +73,8 @@ class EnglishNumberNormalizer:
             "eighty": 80,
             "ninety": 90,
         }
-        self.tens_plural = {
-            name.replace("y", "ies"): (value, "s") for name, value in self.tens.items()
-        }
-        self.tens_ordinal = {
-            name.replace("y", "ieth"): (value, "th")
-            for name, value in self.tens.items()
-        }
+        self.tens_plural = {name.replace("y", "ies"): (value, "s") for name, value in self.tens.items()}
+        self.tens_ordinal = {name.replace("y", "ieth"): (value, "th") for name, value in self.tens.items()}
         self.tens_suffixed = {**self.tens_plural, **self.tens_ordinal}
 
         self.multipliers = {
@@ -103,12 +91,8 @@ class EnglishNumberNormalizer:
             "nonillion": 1_000_000_000_000_000_000_000_000_000_000,
             "decillion": 1_000_000_000_000_000_000_000_000_000_000_000,
         }
-        self.multipliers_plural = {
-            name + "s": (value, "s") for name, value in self.multipliers.items()
-        }
-        self.multipliers_ordinal = {
-            name + "th": (value, "th") for name, value in self.multipliers.items()
-        }
+        self.multipliers_plural = {name + "s": (value, "s") for name, value in self.multipliers.items()}
+        self.multipliers_ordinal = {name + "th": (value, "th") for name, value in self.multipliers.items()}
         self.multipliers_suffixed = {
             **self.multipliers_plural,
             **self.multipliers_ordinal,
@@ -131,10 +115,7 @@ class EnglishNumberNormalizer:
             "cent": "¢",
             "cents": "¢",
         }
-        self.prefixes = set(
-            list(self.preceding_prefixers.values())
-            + list(self.following_prefixers.values())
-        )
+        self.prefixes = set(list(self.preceding_prefixers.values()) + list(self.following_prefixers.values()))
         self.suffixers = {
             "per": {"cent": "%"},
             "percent": "%",
@@ -223,9 +204,7 @@ class EnglishNumberNormalizer:
                 if value is None:
                     value = ones
                 elif isinstance(value, str) or prev in self.ones:
-                    if (
-                        prev in self.tens and ones < 10
-                    ):  # replace the last zero with the digit
+                    if prev in self.tens and ones < 10:  # replace the last zero with the digit
                         assert value[-1] == "0"
                         value = value[:-1] + str(ones)
                     else:

@@ -29,35 +29,19 @@ def remove_symbols_and_diacritics(s: str, keep=""):
     Replace any other markers, symbols, and punctuations with a space,
     and drop any diacritics (category 'Mn' and some manual mappings)
     """
-    return "".join(
-        c
-        if c in keep
-        else ADDITIONAL_DIACRITICS[c]
-        if c in ADDITIONAL_DIACRITICS
-        else ""
-        if unicodedata.category(c) == "Mn"
-        else " "
-        if unicodedata.category(c)[0] in "MSP"
-        else c
-        for c in unicodedata.normalize("NFKD", s)
-    )
+    return "".join(c if c in keep else ADDITIONAL_DIACRITICS[c] if c in ADDITIONAL_DIACRITICS else "" if unicodedata.category(c) == "Mn" else " " if unicodedata.category(c)[0] in "MSP" else c for c in unicodedata.normalize("NFKD", s))
 
 
 def remove_symbols(s: str):
     """
     Replace any other markers, symbols, punctuations with a space, keeping diacritics
     """
-    return "".join(
-        " " if unicodedata.category(c)[0] in "MSP" else c
-        for c in unicodedata.normalize("NFKC", s)
-    )
+    return "".join(" " if unicodedata.category(c)[0] in "MSP" else c for c in unicodedata.normalize("NFKC", s))
 
 
 class BasicTextNormalizer:
     def __init__(self, remove_diacritics: bool = False, split_letters: bool = False):
-        self.clean = (
-            remove_symbols_and_diacritics if remove_diacritics else remove_symbols
-        )
+        self.clean = remove_symbols_and_diacritics if remove_diacritics else remove_symbols
         self.split_letters = split_letters
 
     def __call__(self, s: str):
@@ -69,8 +53,6 @@ class BasicTextNormalizer:
         if self.split_letters:
             s = " ".join(regex.findall(r"\X", s, regex.U))
 
-        s = re.sub(
-            r"\s+", " ", s
-        )  # replace any successive whitespace characters with a space
+        s = re.sub(r"\s+", " ", s)  # replace any successive whitespace characters with a space
 
         return s

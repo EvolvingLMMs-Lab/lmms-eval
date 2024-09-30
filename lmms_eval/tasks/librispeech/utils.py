@@ -1,49 +1,54 @@
-import unicodedata
-import re
 import os
+import re
+import unicodedata
 
-from lmms_eval.tasks.librispeech.whisper_normalizer.english import EnglishTextNormalizer
-from lmms_eval.tasks.librispeech.whisper_normalizer.basic import BasicTextNormalizer
+import editdistance as ed  # TODO: new package
+import zhconv  # TODO: new package
+
 from lmms_eval.tasks.librispeech.cn_tn import TextNorm
-import zhconv # TODO: new package
-import editdistance as ed # TODO: new package
+from lmms_eval.tasks.librispeech.whisper_normalizer.basic import BasicTextNormalizer
+from lmms_eval.tasks.librispeech.whisper_normalizer.english import EnglishTextNormalizer
 
 # ImportError: To support decoding audio files, please install 'librosa' and 'soundfile'.
 english_normalizer = EnglishTextNormalizer()
 chinese_normalizer = TextNorm(
-        to_banjiao = False,
-        to_upper = False,
-        to_lower = False,
-        remove_fillers = False,
-        remove_erhua =False,
-        check_chars = False,
-        remove_space = False,
-        cc_mode = '',
-    )
+    to_banjiao=False,
+    to_upper=False,
+    to_lower=False,
+    remove_fillers=False,
+    remove_erhua=False,
+    check_chars=False,
+    remove_space=False,
+    cc_mode="",
+)
 basic_normalizer = BasicTextNormalizer()
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
+
 def librispeech_doc_to_audio(doc):
     return [doc["audio"]["array"]]
 
+
 def librispeech_doc_to_text(doc):
-    lan = doc["task"][4:] 
+    lan = doc["task"][4:]
     return f"Detect the language and recognize the speech: <|{lan}|>"
 
+
 def librispeech_process_result(doc, result):
-    
     pred = result[0] if len(result) > 0 else ""
 
-    gt = doc['gt']
-    source = doc['source']
-    task = doc['task']
+    gt = doc["gt"]
+    source = doc["source"]
+    task = doc["task"]
 
     data_dict = {"gt": gt, "pred": pred, "source": source, "task": task}
 
     return {"wer": data_dict}
 
-PUNCS = '!,.?;:'
+
+PUNCS = "!,.?;:"
+
 
 def remove_sp(text, language):
     gt = re.sub(r"<\|.*?\|>", " ", text)
@@ -53,6 +58,7 @@ def remove_sp(text, language):
     if language == "zh":
         gt = re.sub(rf"\s+", r"", gt)
     return gt
+
 
 class EvaluationTokenizer(object):
     """A generic evaluation-time tokenizer, which leverages built-in tokenizers
@@ -81,21 +87,21 @@ class EvaluationTokenizer(object):
     ):
         # from sacrebleu.tokenizers import TOKENIZERS
         # from sacrebleu.tokenizers import tokenizer_none
-        from sacrebleu.tokenizers.tokenizer_none import NoneTokenizer
         from sacrebleu.tokenizers.tokenizer_13a import Tokenizer13a
-        from sacrebleu.tokenizers.tokenizer_intl import TokenizerV14International
-        from sacrebleu.tokenizers.tokenizer_zh import TokenizerZh
-        from sacrebleu.tokenizers.tokenizer_ja_mecab import TokenizerJaMecab
         from sacrebleu.tokenizers.tokenizer_char import TokenizerChar
-        TOKENIZERS = {
-            'none': NoneTokenizer,
-            '13a': Tokenizer13a,
-            'intl': TokenizerV14International,
-            'zh': TokenizerZh,
-            'ja-mecab': TokenizerJaMecab,
-            'char': TokenizerChar,
-        }
+        from sacrebleu.tokenizers.tokenizer_intl import TokenizerV14International
+        from sacrebleu.tokenizers.tokenizer_ja_mecab import TokenizerJaMecab
+        from sacrebleu.tokenizers.tokenizer_none import NoneTokenizer
+        from sacrebleu.tokenizers.tokenizer_zh import TokenizerZh
 
+        TOKENIZERS = {
+            "none": NoneTokenizer,
+            "13a": Tokenizer13a,
+            "intl": TokenizerV14International,
+            "zh": TokenizerZh,
+            "ja-mecab": TokenizerJaMecab,
+            "char": TokenizerChar,
+        }
 
         assert tokenizer_type in TOKENIZERS, f"{tokenizer_type}, {TOKENIZERS}"
         self.lowercase = lowercase
@@ -107,9 +113,7 @@ class EvaluationTokenizer(object):
     @classmethod
     def remove_punctuation(cls, sent: str):
         """Remove punctuation based on Unicode category."""
-        return cls.SPACE.join(
-            t for t in sent.split(cls.SPACE) if not all(unicodedata.category(c)[0] == "P" for c in t)
-        )
+        return cls.SPACE.join(t for t in sent.split(cls.SPACE) if not all(unicodedata.category(c)[0] == "P" for c in t))
 
     def tokenize(self, sent: str):
         tokenized = self.tokenizer()(sent)
@@ -125,21 +129,22 @@ class EvaluationTokenizer(object):
 
         return tokenized
 
+
 def compute_wer(refs, hyps, language):
     distance = 0
     ref_length = 0
     tokenizer = EvaluationTokenizer(
-            tokenizer_type="none",
-            lowercase=True,
-            punctuation_removal=True,
-            character_tokenization=False,
-        )
+        tokenizer_type="none",
+        lowercase=True,
+        punctuation_removal=True,
+        character_tokenization=False,
+    )
     for i in range(len(refs)):
         ref = refs[i]
         pred = hyps[i]
         if language in ["yue"]:
-            ref = zhconv.convert(ref, 'zh-cn')
-            pred = zhconv.convert(pred, 'zh-cn')
+            ref = zhconv.convert(ref, "zh-cn")
+            pred = zhconv.convert(pred, "zh-cn")
         if language in ["en"]:
             ref = english_normalizer(ref)
             pred = english_normalizer(pred)
@@ -154,18 +159,17 @@ def compute_wer(refs, hyps, language):
         if language in ["zh", "yue"]:
             ref_items = [x for x in "".join(ref_items)]
             pred_items = [x for x in "".join(pred_items)]
-        if i==0:
+        if i == 0:
             print(f"ref: {ref}")
             print(f"pred: {pred}")
             print(f"ref_items:\n{ref_items}\n{len(ref_items)}\n{ref_items[0]}")
             print(f"pred_items:\n{pred_items}\n{len(ref_items)}\n{ref_items[0]}")
         distance += ed.eval(ref_items, pred_items)
         ref_length += len(ref_items)
-    return distance/ref_length
+    return distance / ref_length
 
 
 def librispeech_wer(results, args):
-    
     # lan = args["language"]
     refs, hyps = [], []
     # results_list = results_dict[source]
@@ -181,8 +185,6 @@ def librispeech_wer(results, args):
     # print(f"source: {source}  cnt: {len(refs)} wer: {wer:.4f}")
     return wer * 100
 
-
-
     # for gt, response, source, audio_path in zip(merged_gts, merged_responses, merged_sources, merged_audio_paths):
     #     results.append({
     #         'gt': gt,
@@ -197,7 +199,7 @@ def librispeech_wer(results, args):
     for item in results:
         source = item["source"]
         results_dict.setdefault(source, []).append(item)
-    lan = ds_collections[args.dataset]['language']
+    lan = ds_collections[args.dataset]["language"]
     for source in results_dict:
         refs, hyps = [], []
         results_list = results_dict[source]
@@ -210,7 +212,5 @@ def librispeech_wer(results, args):
             hyps.append(response)
         wer = compute_wer(refs, hyps, lan)
         print(f"source: {source}  cnt: {len(refs)} wer: {wer:.4f}")
-
-
 
     pass
