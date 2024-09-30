@@ -1,0 +1,4 @@
+dataset_name: Music
+tag: "jmmmu_culture_agnostic"
+task: "jmmmu_music"
+include: _default_template_yaml
