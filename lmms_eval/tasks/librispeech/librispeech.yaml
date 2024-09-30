@@ -1,0 +1,6 @@
+group: librispeech
+task:
+- librispeech_dev_clean
+- librispeech_dev_other
+- librispeech_test_clean
+- librispeech_test_other
