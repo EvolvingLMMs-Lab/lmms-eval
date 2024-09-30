@@ -1,0 +1,4 @@
+dataset_name: Math
+tag: "jmmmu_culture_agnostic"
+task: "jmmmu_math"
+include: _default_template_yaml
