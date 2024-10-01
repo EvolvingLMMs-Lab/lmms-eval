@@ -411,7 +411,6 @@ class GQA_Results(lmms):
             split = batched_split[0]
             batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]  # [B, N]
             assert len(batched_visuals) == 1
-
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
@@ -420,6 +419,7 @@ class GQA_Results(lmms):
 
             context = batched_contexts[0]
             text_outputs = [self.task_dict[task][split][batched_doc_id[0]]['answer']]
+            # print(batched_doc_id, ": ", self.task_dict[task][split][batched_doc_id[0]], "\n")
             # print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]])
             res.extend(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
