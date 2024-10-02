@@ -50,7 +50,7 @@ AVAILABLE_MODELS = {
     "longva": "LongVA",
     "vila": "VILA",
     "mmllama_together": "MMLlamaTogether",
-    "mmllama_sambacloud": "MMLLamaSambaCloud"
+    "mmllama_sambacloud": "MMLlamaSambaCloud"
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():

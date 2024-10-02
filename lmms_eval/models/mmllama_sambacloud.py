@@ -79,27 +79,18 @@ class MMLlamaSambaCloud(lmms):
             
             img = self.encode_image(visuals[0])
 
-            if "do_sample" not in gen_kwargs:
-                gen_kwargs["do_sample"] = False
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if gen_kwargs["max_new_tokens"] > 4096:
                 gen_kwargs["max_new_tokens"] = 4096
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 1
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = 1
-            if "top_k" not in gen_kwargs:
-                gen_kwargs["top_k"] = 50
-            if "top_logprobs" not in gen_kwargs:
-                gen_kwargs["top_logprobs"] = 0
-            if "preprocessing" not in gen_kwargs:
-                gen_kwargs["preprocessing"] = "llava-sn"
 
             payload = {
                 "stream": False,
 	            "model": "Llama-3.2-11B-Vision-Instruct",
-                "max_tokens": 16,
+                "max_tokens": gen_kwargs["max_new_tokens"],
+                "temperature": gen_kwargs["temperature"],
                 "messages":[{
                             "role": "user",
                             "content":[
