@@ -18,6 +18,7 @@ from PIL import Image
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
 
+
 @register_model("ss_llava")
 class SambaStudioLLaVA(lmms):
     def __init__(
@@ -76,16 +77,11 @@ class SambaStudioLLaVA(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            
+
             img = self.encode_image(visuals[0])
 
-            payload = {
-                "instances": [{
-                    "prompt": contexts,
-                    "image_content": img
-                }]
-            }
-                    
+            payload = {"instances": [{"prompt": contexts, "image_content": img}]}
+
             if "do_sample" not in gen_kwargs:
                 gen_kwargs["do_sample"] = False
             if "max_new_tokens" not in gen_kwargs:
@@ -102,12 +98,12 @@ class SambaStudioLLaVA(lmms):
                 gen_kwargs["top_logprobs"] = 0
 
             payload["params"] = {
-                'max_tokens_to_generate': {"type":"int","value":str(gen_kwargs["max_new_tokens"])},
-                'temperature':{"type":"float","value":str(gen_kwargs["temperature"])},
-                'top_p':{"type":"float","value":str(gen_kwargs["top_p"])},
-                'do_sample':{"type":"bool","value":str(gen_kwargs["do_sample"])},
-                'top_k':{"type":"int","value":str(gen_kwargs["top_k"])},
-                'top_logprobs':{"type":"int","value":str(gen_kwargs["top_logprobs"])}
+                "max_tokens_to_generate": {"type": "int", "value": str(gen_kwargs["max_new_tokens"])},
+                "temperature": {"type": "float", "value": str(gen_kwargs["temperature"])},
+                "top_p": {"type": "float", "value": str(gen_kwargs["top_p"])},
+                "do_sample": {"type": "bool", "value": str(gen_kwargs["do_sample"])},
+                "top_k": {"type": "int", "value": str(gen_kwargs["top_k"])},
+                "top_logprobs": {"type": "int", "value": str(gen_kwargs["top_logprobs"])},
             }
 
             for attempt in range(5):

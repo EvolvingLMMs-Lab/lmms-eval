@@ -32,6 +32,7 @@ conv_llama_3_elyza = Conversation(
 )
 conv_templates["llama_3"] = conv_llama_3_elyza
 
+
 @register_model("mllava")
 class MLlava(lmms):
     """
