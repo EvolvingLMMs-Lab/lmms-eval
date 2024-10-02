@@ -44,7 +44,8 @@ class Qwen2_VL(lmms):
         else:
             self._device = device
         # Load model.
-        self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, device_map=device, torch_dtype="auto")
+        # use all available GPUs to avoid OOMs on large images
+        self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, device_map='auto', torch_dtype="auto")
         self._processor = AutoProcessor.from_pretrained(pretrained)
         self._processor.tokenizer.padding_side = "left"
         self._tokenizer = self._processor.tokenizer
@@ -65,8 +66,7 @@ class Qwen2_VL(lmms):
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
-            eval_logger.info(f"Using single device: {self._device}")
-            self.model.to(self._device)
+            eval_logger.info(f"Using device: {self._device}")
             self._rank = 0
             self._word_size = 1
 
