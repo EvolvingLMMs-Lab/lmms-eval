@@ -2,19 +2,19 @@ include: _default_template_yaml
 task: mvbench_episodic_reasoning
 dataset_name: episodic_reasoning
 test_split: train
-doc_to_visual: !function utils.mvbench_frames_doc_to_visual
-generation_kwargs:
-  max_new_tokens: 16
-  temperature: 0
-  top_p: 1.0
-  num_beams: 1
-  do_sample: false
+# doc_to_visual: !function utils.mvbench_frames_doc_to_visual
+# generation_kwargs:
+#   max_new_tokens: 16
+#   temperature: 0
+#   top_p: 1.0
+#   num_beams: 1
+#   do_sample: false
   
 lmms_eval_specific_kwargs:
   default:
     sub_task: episodic_reasoning
-    post_prompt: "Answer with the option's letter from the given choices directly."
+    post_prompt: "Only give the best option.\n"
 
-metadata:
-  task_type: video
-  sample_frames: 32 # for episodic reasoning, it stores the frame images in folder so we need to set the number of frames to sample here.
+# metadata:
+#   task_type: video
+#   sample_frames: 32 # for episodic reasoning, it stores the frame images in folder so we need to set the number of frames to sample here.
