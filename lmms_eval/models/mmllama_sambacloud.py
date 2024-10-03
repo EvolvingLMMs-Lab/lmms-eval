@@ -121,7 +121,7 @@ class MMLlamaSambaCloud(lmms):
 
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
                     if response.status_code == 413:
-                        eval_logger.error("Request too big for API, skipping")
+                        eval_logger.error(f"Request too big for API, skipping. Image size = {visuals[0].size}")
                         response_text = ""
                         break
                     if attempt <= 3:
