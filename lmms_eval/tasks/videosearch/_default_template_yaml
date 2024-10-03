@@ -2,6 +2,7 @@ dataset_path: lmms-lab/VideoSearch
 dataset_kwargs:
   token: True
   video: True
+  force_unzip: True
   cache_dir: Combined_milestone
 lmms_eval_specific_kwargs:
   default:
