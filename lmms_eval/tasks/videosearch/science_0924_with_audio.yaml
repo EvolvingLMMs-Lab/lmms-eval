@@ -1,0 +1,16 @@
+dataset_name: "science_0924"
+task: "science_0924_with_audio"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.videosearch_doc_to_visual
+doc_to_text: !function utils.videosearch_doc_to_text_with_transcript
+doc_to_target: !function utils.videosearch_doc_to_answer
+process_results: !function utils.videosearch_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.videosearch_aggregate_results_for_submission
+    higher_is_better: true
+  - metric: mmmu_acc
+    aggregation: !function utils.videosearch_aggregate_results
+    higher_is_better: true
+include: _default_template_yaml
