@@ -205,51 +205,6 @@ pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
 ```
 
 
-## Usage with SRT API
-
-> install sglang
-
-```bash
-git clone https://github.com/sgl-project/sglang.git
-# Current version is tested on #1222
-cd sglang;
-pip install -e "python[srt]"
-
-# Install FlashInfer CUDA kernels
-pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
-```
-
-> run sglang backend service with the following command
-
-```bash
-# After update, there is no need to use an extra command to setup backend server
-# the server will be initialized in the init process
-
-# launch lmms-eval srt_api model
-CKPT_PATH=$1
-TASK=$2
-MODALITY=$3
-TP_SIZE=$4
-echo $TASK
-TASK_SUFFIX="${TASK//,/_}"
-echo $TASK_SUFFIX
-
-python3 -m lmms_eval \
-    --model srt_api \
-    --model_args modality=$MODALITY,model_version=$CKPT_PATH,tp=$TP_SIZE,host=127.0.0.1,port=30000,timeout=600 \
-    --tasks $TASK \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix $TASK_SUFFIX \
-    --output_path ./logs/
-```
-
-You may need to install some dependencies for the above command to work (if you encounter some errors).
-
-```bash
-pip install httpx==0.23.3
-pip install protobuf==3.20
-```
 
 ## Regression Test
 

@@ -264,3 +264,6 @@ class Fuyu(lmms):
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for Fuyu")

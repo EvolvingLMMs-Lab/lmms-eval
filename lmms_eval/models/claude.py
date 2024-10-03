@@ -232,8 +232,10 @@ class Claude(lmms):
                 gen_kwargs["num_beams"] = 1
 
             for attempt in range(5):
+                retry_flag = True
                 try:
                     message = client.messages.create(model=self.model_version, max_tokens=gen_kwargs["max_new_tokens"], system=self.system_prompt, temperature=gen_kwargs["temperature"], top_p=gen_kwargs["top_p"], messages=messages)
+                    retry_flag = False
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
@@ -243,6 +245,9 @@ class Claude(lmms):
                         res.append("")
                         pbar.update(1)
                         continue
+                if not retry_flag:
+                    break
+                eval_logger.info("Retrying...")
 
             response_text = message.content[0].text
             res.append(message.content[0].text)
@@ -254,7 +259,7 @@ class Claude(lmms):
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 self.response_cache[doc_uuid] = response_text
                 with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f)
+                    json.dump(self.response_cache, f, indent=4)
 
         pbar.close()
 
@@ -262,3 +267,6 @@ class Claude(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "Not supported for claude"
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for Claude")

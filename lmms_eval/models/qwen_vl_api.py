@@ -121,3 +121,6 @@ class Qwen_VL_API(lmms):
             for j in i:
                 new_list.append(j)
         return new_list
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

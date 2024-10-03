@@ -203,3 +203,6 @@ class VideoChatGPT(lmms):
     @property
     def world_size(self):
         return self._world_size
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

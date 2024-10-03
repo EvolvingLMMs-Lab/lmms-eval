@@ -44,7 +44,10 @@ AVAILABLE_MODELS = {
     "video_llava": "VideoLLaVA",
     "vila": "VILA",
     "xcomposer2_4KHD": "XComposer2_4KHD",
+    "internvideo2": "InternVideo2",
     "xcomposer2d5": "XComposer2D5",
+    "oryx": "Oryx",
+    "videochat2": "VideoChat2",
 }
 
 

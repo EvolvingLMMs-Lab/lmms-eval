@@ -5,4 +5,4 @@ test_split: train
 lmms_eval_specific_kwargs:
   default:
     sub_task: counterfactual_inference
-    post_prompt: "Answer with the option's letter from the given choices directly."
+    post_prompt: "Only give the best option.\n"
