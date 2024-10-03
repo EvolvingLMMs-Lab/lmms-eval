@@ -120,10 +120,14 @@ class MMLlamaSambaCloud(lmms):
                         error_msg = response.text
 
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
+                    if response.status_code == 413:
+                        eval_logger.error("Request too big for API, skipping")
+                        response_text = ""
+                        break
                     if attempt <= 3:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty string
-                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {error_msg}")
                         response_text = ""
 
             res.append(response_text)
