@@ -33,6 +33,9 @@ generation_kwargs:
 # The return value of process_results will be used by metrics
 process_results: !function utils.mme_process_results
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# e.g. Following metrics `mme_perception_score` is custom defined. 
+# So `mme_process_results` function should return the dict `{"mme_perception_score": {sub_k:sub_v, ..., } }`
+# And the `mme_aggregate_results` function could get the dict `{sub_k:sub_v, ..., }`, and use the information to gather the final accuracy.
 metric_list:
   - metric: mme_percetion_score
     aggregation: !function utils.mme_aggregate_results
@@ -51,7 +54,13 @@ metadata:
   - version: 0.0
 ```
 
+**Notes:**
 You can pay special attention to the `process_results` and `metric_list` fields, which are used to define how the model output is post-processed and scored.
+
+**`process_results`** is excuted in parallel (multi-GPU), we recommend use it to collect and parse model outputs to formatted results, if your evaluation needs external models (GPT4) as judge or answer extractor, we also recommend write judge process into this function.
+
+**`aggregate_results`** is excuted in main process (rank 0), we recommend use it to calculate final score/accuracy.
+
 Also, the `lmms_eval_specific_kwargs` field is used to define model-specific prompt configurations. The default is set to follow Llava.
 
 PPL-based tasks:
