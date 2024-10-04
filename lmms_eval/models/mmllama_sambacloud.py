@@ -20,7 +20,7 @@ from loguru import logger as eval_logger
 class MMLlamaSambaCloud(lmms):
     def __init__(
         self,
-        endpoint_url: str = "https://fast-cloud-snova-ai-dev-0-api.cloud.snova.ai/v1/chat/completions",
+        endpoint_url: str = "",
         endpoint_key: str = "",
         timeout: int = 120,
         **kwargs,
