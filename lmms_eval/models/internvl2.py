@@ -28,6 +28,7 @@ DEFAULT_GEN_KWARGS = dict(
 
 ### Code copied from internvl/conversation.py
 
+
 class SeparatorStyle(IntEnum):
     """Separator styles."""
 
@@ -58,18 +59,18 @@ class Conversation:
     # The name of this template
     name: str
     # The template of the system prompt
-    system_template: str = '{system_message}'
+    system_template: str = "{system_message}"
     # The system message
-    system_message: str = ''
+    system_message: str = ""
     # The names of two roles
-    roles: Tuple[str] = ('USER', 'ASSISTANT')
+    roles: Tuple[str] = ("USER", "ASSISTANT")
     # All messages. Each item is (role, message).
     messages: List[List[str]] = ()
     # The number of few shot examples
     offset: int = 0
     # The separator style and configurations
     sep_style: SeparatorStyle = SeparatorStyle.ADD_COLON_SINGLE
-    sep: str = '\n'
+    sep: str = "\n"
     sep2: str = None
     # Stop criteria (the default one is EOS token)
     stop_str: Union[str, List[str]] = None
@@ -83,34 +84,34 @@ class Conversation:
             ret = system_prompt + self.sep
             for role, message in self.messages:
                 if message:
-                    ret += role + ': ' + message + self.sep
+                    ret += role + ": " + message + self.sep
                 else:
-                    ret += role + ':'
+                    ret += role + ":"
             return ret
         elif self.sep_style == SeparatorStyle.ADD_COLON_TWO:
             seps = [self.sep, self.sep2]
             ret = system_prompt + seps[0]
             for i, (role, message) in enumerate(self.messages):
                 if message:
-                    ret += role + ': ' + message + seps[i % 2]
+                    ret += role + ": " + message + seps[i % 2]
                 else:
-                    ret += role + ':'
+                    ret += role + ":"
             return ret
         elif self.sep_style == SeparatorStyle.ADD_COLON_SPACE_SINGLE:
             ret = system_prompt + self.sep
             for role, message in self.messages:
                 if message:
-                    ret += role + ': ' + message + self.sep
+                    ret += role + ": " + message + self.sep
                 else:
-                    ret += role + ': '  # must be end with a space
+                    ret += role + ": "  # must be end with a space
             return ret
         elif self.sep_style == SeparatorStyle.ADD_NEW_LINE_SINGLE:
-            ret = '' if system_prompt == '' else system_prompt + self.sep
+            ret = "" if system_prompt == "" else system_prompt + self.sep
             for role, message in self.messages:
                 if message:
-                    ret += role + '\n' + message + self.sep
+                    ret += role + "\n" + message + self.sep
                 else:
-                    ret += role + '\n'
+                    ret += role + "\n"
             return ret
         elif self.sep_style == SeparatorStyle.NO_COLON_SINGLE:
             ret = system_prompt
@@ -133,64 +134,60 @@ class Conversation:
             ret = system_prompt
             for i, (role, message) in enumerate(self.messages):
                 if message:
-                    ret += (
-                        role
-                        + ': '
-                        + message.replace('\r\n', '\n').replace('\n\n', '\n')
-                    )
-                    ret += '\n\n'
+                    ret += role + ": " + message.replace("\r\n", "\n").replace("\n\n", "\n")
+                    ret += "\n\n"
                 else:
-                    ret += role + ':'
+                    ret += role + ":"
             return ret
         elif self.sep_style == SeparatorStyle.LLAMA2:
             seps = [self.sep, self.sep2]
             if self.system_message:
                 ret = system_prompt
             else:
-                ret = '[INST] '
+                ret = "[INST] "
             for i, (role, message) in enumerate(self.messages):
                 tag = self.roles[i % 2]
                 if message:
                     if i == 0:
-                        ret += message + ' '
+                        ret += message + " "
                     else:
-                        ret += tag + ' ' + message + seps[i % 2]
+                        ret += tag + " " + message + seps[i % 2]
                 else:
                     ret += tag
             return ret
         elif self.sep_style == SeparatorStyle.CHATGLM:
             # source: https://huggingface.co/THUDM/chatglm-6b/blob/1d240ba371910e9282298d4592532d7f0f3e9f3e/modeling_chatglm.py#L1302-L1308
             # source2: https://huggingface.co/THUDM/chatglm2-6b/blob/e186c891cf64310ac66ef10a87e6635fa6c2a579/modeling_chatglm.py#L926
-            round_add_n = 1 if self.name == 'chatglm2' else 0
+            round_add_n = 1 if self.name == "chatglm2" else 0
             if system_prompt:
                 ret = system_prompt + self.sep
             else:
-                ret = ''
+                ret = ""
 
             for i, (role, message) in enumerate(self.messages):
                 if i % 2 == 0:
-                    ret += f'[Round {i//2 + round_add_n}]{self.sep}'
+                    ret += f"[Round {i//2 + round_add_n}]{self.sep}"
 
                 if message:
-                    ret += f'{role}：{message}{self.sep}'
+                    ret += f"{role}：{message}{self.sep}"
                 else:
-                    ret += f'{role}：'
+                    ret += f"{role}："
             return ret
         elif self.sep_style == SeparatorStyle.CHATML:
-            ret = '' if system_prompt == '' else system_prompt + self.sep + '\n'
+            ret = "" if system_prompt == "" else system_prompt + self.sep + "\n"
             for role, message in self.messages:
                 if message:
-                    ret += role + '\n' + message + self.sep + '\n'
+                    ret += role + "\n" + message + self.sep + "\n"
                 else:
-                    ret += role + '\n'
+                    ret += role + "\n"
             return ret
         elif self.sep_style == SeparatorStyle.CHATGLM3:
-            ret = ''
+            ret = ""
             if self.system_message:
                 ret += system_prompt
             for role, message in self.messages:
                 if message:
-                    ret += role + '\n' + ' ' + message
+                    ret += role + "\n" + " " + message
                 else:
                     ret += role
             return ret
@@ -202,46 +199,46 @@ class Conversation:
                 # if i % 2 == 0:
                 #     ret += "<s>"
                 if message:
-                    ret += role + ':' + message + seps[i % 2] + '\n'
+                    ret += role + ":" + message + seps[i % 2] + "\n"
                 else:
-                    ret += role + ':'
+                    ret += role + ":"
             return ret
         elif self.sep_style == SeparatorStyle.DOLLY:
             seps = [self.sep, self.sep2]
             ret = system_prompt
             for i, (role, message) in enumerate(self.messages):
                 if message:
-                    ret += role + ':\n' + message + seps[i % 2]
+                    ret += role + ":\n" + message + seps[i % 2]
                     if i % 2 == 1:
-                        ret += '\n\n'
+                        ret += "\n\n"
                 else:
-                    ret += role + ':\n'
+                    ret += role + ":\n"
             return ret
         elif self.sep_style == SeparatorStyle.PHOENIX:
             ret = system_prompt
             for role, message in self.messages:
                 if message:
-                    ret += role + ': ' + '<s>' + message + '</s>'
+                    ret += role + ": " + "<s>" + message + "</s>"
                 else:
-                    ret += role + ': ' + '<s>'
+                    ret += role + ": " + "<s>"
             return ret
         elif self.sep_style == SeparatorStyle.ROBIN:
             ret = system_prompt + self.sep
             for role, message in self.messages:
                 if message:
-                    ret += role + ':\n' + message + self.sep
+                    ret += role + ":\n" + message + self.sep
                 else:
-                    ret += role + ':\n'
+                    ret += role + ":\n"
             return ret
         elif self.sep_style == SeparatorStyle.FALCON_CHAT:
-            ret = ''
+            ret = ""
             if self.system_message:
                 ret += system_prompt + self.sep
             for role, message in self.messages:
                 if message:
-                    ret += role + ': ' + message + self.sep
+                    ret += role + ": " + message + self.sep
                 else:
-                    ret += role + ':'
+                    ret += role + ":"
 
             return ret
         elif self.sep_style == SeparatorStyle.INTERNVL_ZH:
@@ -249,9 +246,9 @@ class Conversation:
             ret = self.system_message + seps[0]
             for i, (role, message) in enumerate(self.messages):
                 if message:
-                    ret += role + ': ' + message + seps[i % 2]
+                    ret += role + ": " + message + seps[i % 2]
                 else:
-                    ret += role + ':'
+                    ret += role + ":"
             return ret
         elif self.sep_style == SeparatorStyle.MPT:
             ret = system_prompt + self.sep
@@ -264,7 +261,7 @@ class Conversation:
                     ret += role
             return ret
         else:
-            raise ValueError(f'Invalid style: {self.sep_style}')
+            raise ValueError(f"Invalid style: {self.sep_style}")
 
     def set_system_message(self, system_message: str):
         """Set the system message."""
@@ -294,14 +291,14 @@ class Conversation:
 
     def to_openai_api_messages(self):
         """Convert the conversation to OpenAI chat completion format."""
-        ret = [{'role': 'system', 'content': self.system_message}]
+        ret = [{"role": "system", "content": self.system_message}]
 
         for i, (_, msg) in enumerate(self.messages[self.offset :]):
             if i % 2 == 0:
-                ret.append({'role': 'user', 'content': msg})
+                ret.append({"role": "user", "content": msg})
             else:
                 if msg is not None:
-                    ret.append({'role': 'assistant', 'content': msg})
+                    ret.append({"role": "assistant", "content": msg})
         return ret
 
     def copy(self):
@@ -321,27 +318,24 @@ class Conversation:
 
     def dict(self):
         return {
-            'template_name': self.name,
-            'system_message': self.system_message,
-            'roles': self.roles,
-            'messages': self.messages,
-            'offset': self.offset,
+            "template_name": self.name,
+            "system_message": self.system_message,
+            "roles": self.roles,
+            "messages": self.messages,
+            "offset": self.offset,
         }
 
+
 internlm_chat_template = Conversation(
-    name='internlm2-chat',
-    system_template='<|im_start|>system\n{system_message}',
+    name="internlm2-chat",
+    system_template="<|im_start|>system\n{system_message}",
     # note: The new system prompt was not used here to avoid changes in benchmark performance.
     # system_message='我是书生·万象，英文名是InternVL，是由上海人工智能实验室、清华大学及多家合作单位联合开发的多模态大语言模型。',
-        system_message='你是由上海人工智能实验室联合商汤科技开发的书生多模态大模型，英文名叫InternVL, 是一个有用无害的人工智能助手。',
-    roles=('<|im_start|>user\n', '<|im_start|>assistant\n'),
+    system_message="你是由上海人工智能实验室联合商汤科技开发的书生多模态大模型，英文名叫InternVL, 是一个有用无害的人工智能助手。",
+    roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
     sep_style=SeparatorStyle.MPT,
-    sep='<|im_end|>',
-    stop_token_ids=[
-        2,
-        92543,
-        92542
-    ]
+    sep="<|im_end|>",
+    stop_token_ids=[2, 92543, 92542],
 )
 
 ### end copied code
@@ -569,7 +563,7 @@ class InternVL2(lmms):
                 continuation = doc_to_target(self.task_dict[task][split][doc_id])
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            if self.modality == 'image':
+            if self.modality == "image":
                 visuals = [load_image(visual).to(torch.bfloat16).cuda() for visual in visuals]
                 pixel_values = torch.cat(visuals, dim=0)
                 num_patches_list = [visual.size(0) for visual in visuals]
@@ -577,10 +571,10 @@ class InternVL2(lmms):
                     image_tokens = ["<image>"] * len(visuals)
                     image_tokens = " ".join(image_tokens)
                     context = image_tokens + "\n" + context
-            elif modality == 'video':
-                raise ValueError('Video loglikelihood not implemented for InternVL2')
+            elif modality == "video":
+                raise ValueError("Video loglikelihood not implemented for InternVL2")
 
-            img_context_token_id = self.tokenizer.convert_tokens_to_ids('<IMG_CONTEXT>')
+            img_context_token_id = self.tokenizer.convert_tokens_to_ids("<IMG_CONTEXT>")
             self.model.img_context_token_id = img_context_token_id
             template = internlm_chat_template.copy()
             template.system_message = self.model.system_message
@@ -593,38 +587,36 @@ class InternVL2(lmms):
             role_length = len(self.tokenizer.encode(template.roles[1], add_special_tokens=False))
 
             for num_patches in num_patches_list:
-                image_tokens = '<img>' + '<IMG_CONTEXT>' * self.model.num_image_token * num_patches + '</img>'
-                prompt = prompt.replace('<image>', image_tokens, 1)
-                prompt_and_continuation = prompt_and_continuation.replace('<image>', image_tokens, 1)
+                image_tokens = "<img>" + "<IMG_CONTEXT>" * self.model.num_image_token * num_patches + "</img>"
+                prompt = prompt.replace("<image>", image_tokens, 1)
+                prompt_and_continuation = prompt_and_continuation.replace("<image>", image_tokens, 1)
 
-            model_inputs = self.tokenizer(prompt_and_continuation, return_tensors='pt').to(self._device).to(self.model.dtype)
+            model_inputs = self.tokenizer(prompt_and_continuation, return_tensors="pt").to(self._device).to(self.model.dtype)
             labels = model_inputs["input_ids"].clone()
-            contxt_id = self.tokenizer(prompt, return_tensors='pt')['input_ids']
+            contxt_id = self.tokenizer(prompt, return_tensors="pt")["input_ids"]
             labels[0, : contxt_id.shape[1]] = -100
 
             vit_embeds = self.model.extract_feature(pixel_values)
-            input_embeds = self.model.language_model.get_input_embeddings()(model_inputs['input_ids'])
+            input_embeds = self.model.language_model.get_input_embeddings()(model_inputs["input_ids"])
             B, N, C = input_embeds.shape
             input_embeds = input_embeds.reshape(B * N, C)
-            input_ids = model_inputs['input_ids'].reshape(B * N)
+            input_ids = model_inputs["input_ids"].reshape(B * N)
             selected = input_ids == self.model.img_context_token_id
             assert selected.sum() != 0
             input_embeds[selected] = vit_embeds.reshape(-1, C).to(input_embeds.device)
             input_embeds = input_embeds.reshape(B, N, C)
             with torch.inference_mode():
-                outputs = self.model.language_model(
-                    inputs_embeds=input_embeds,
-                    attention_mask=model_inputs['attention_mask'],
-                    labels=labels
-                )
+                outputs = self.model.language_model(inputs_embeds=input_embeds, attention_mask=model_inputs["attention_mask"], labels=labels)
             loss = outputs["loss"]
-            logits = outputs["logits"]
+            logits = torch.nn.functional.log_softmax(outputs["logits"], dim=-1)
             greedy_tokens = logits.argmax(dim=-1)
-            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + role_length:-1]
+            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] + role_length : -1]
             # account for off by 1 and im_end
-            greedy_toks = greedy_tokens[:, contxt_id.shape[1] + role_length - 1:-2]
+            greedy_toks = greedy_tokens[:, contxt_id.shape[1] + role_length - 1 : -2]
             max_equal = (greedy_toks == cont_toks).all()
-            res.append((float(loss.item()), bool(max_equal), self.tokenizer.decode(greedy_toks[0])))
+            cont_logits = logits[:, contxt_id.shape[1] + role_length - 1 : -2]
+            greedy_logits = torch.gather(cont_logits, 2, greedy_toks.unsqueeze(-1)).squeeze(-1)
+            res.append((float(greedy_logits.sum()), bool(max_equal), self.tokenizer.decode(greedy_toks[0])))
             pbar.update(1)
         pbar.update(1)
         return res

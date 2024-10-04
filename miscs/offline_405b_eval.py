@@ -14,8 +14,6 @@ if __name__ == '__main__':
 
     if os.getenv('SAMBAKEY') is None:
         raise ValueError('SAMBAKEY is not set in environment!')
-    if os.getenv('SAMBAURL') is None:
-        raise ValueError('SAMBAURL is not set in environment!')
 
     result_json_path = Path(args.result_json)
     parent_dir = result_json_path.parent.absolute()

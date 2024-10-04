@@ -134,8 +134,8 @@ def extract_subtitles(video_path, subtitle_path):
 
 
 def parse_subtitle_time(time_str):
-    h, m, s_ms = time_str.split(':')
-    s, ms = s_ms.split(',')
+    h, m, s_ms = time_str.split(":")
+    s, ms = s_ms.split(",")
     return int(h) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000
 
 

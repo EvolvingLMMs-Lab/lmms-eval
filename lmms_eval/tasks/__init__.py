@@ -72,7 +72,7 @@ def include_task_folder(task_dir: str, register_task: bool = True) -> None:
         # if (subdirs == [] or subdirs == ["__pycache__"]) and (len(file_list) > 0):
         for f in file_list:
             # if "detail" in f:
-            #     
+            #
             # if "vatex" in f:
             #     print("a")
             if f.endswith(".yaml"):

@@ -1,43 +1,37 @@
 import torch
 
-from accelerate import Accelerator, DistributedType
+from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from tqdm import tqdm
-from transformers import AutoModelForCausalLM
-from transformers import AutoProcessor
-from typing import List, Optional, Tuple, Union
+from lmms_eval.models.model_utils.qwen.qwen_generate_utils import make_context
+from accelerate import Accelerator, DistributedType
+from typing import List, Optional, Union, Tuple
+import uuid
+import os
+
+import warnings
+
+warnings.simplefilter("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
+from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
 
 
-@register_model("phi3v")
-class Phi3v(lmms):
+@register_model("qwen2_vl")
+class Qwen2_VL(lmms):
     """
-    This class implements inference for the microsoft/Phi-3-vision-128k-instruct model.
-    To learn more about this model please visit the following links:
-    1. https://huggingface.co/microsoft/Phi-3-vision-128k-instruct
-    2. https://azure.microsoft.com/en-us/blog/new-models-added-to-the-phi-3-family-available-on-microsoft-azure/
-    3. https://github.com/microsoft/Phi-3CookBook
-
-    NOTE: This class was adapted from quen_vl.py and llava_hf.py.
-
-    Example:
-
-    accelerate launch --num_processes=4 -m lmms_eval --model phi3v --tasks mmmu_val \
-        --batch_size 1 --log_samples --log_samples_suffix phi3v_mmmu --output_path ./logs/
+    Qwen2_VL Model
     """
 
     def __init__(
         self,
-        model_id_name: str = "microsoft/Phi-3-vision-128k-instruct",
-        device: str = "cuda",
-        dtype: Optional[Union[str, torch.dtype]] = "auto",
-        batch_size: int = 1,
-        trust_remote_code: Optional[bool] = True,
-        use_cache: bool = True,
+        pretrained: str = "Qwen/Qwen2-VL-7B-Instruct",
+        device: Optional[str] = "cuda",
+        batch_size: Optional[Union[int, str]] = 1,
+        use_cache=True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -50,14 +44,16 @@ class Phi3v(lmms):
         else:
             self._device = device
         # Load model.
-        self._model = AutoModelForCausalLM.from_pretrained(model_id_name, device_map=device, trust_remote_code=trust_remote_code, torch_dtype=dtype)
-        self._processor = AutoProcessor.from_pretrained(model_id_name, trust_remote_code=trust_remote_code)
+        # use all available GPUs to avoid OOMs on large images
+        self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, device_map='auto', torch_dtype="auto")
+        self._processor = AutoProcessor.from_pretrained(pretrained)
         self._processor.tokenizer.padding_side = "left"
         self._tokenizer = self._processor.tokenizer
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
         assert self.batch_size_per_gpu == 1, "batch_size_per_gpu > 1 is not supported for now."
         self.use_cache = use_cache
+        self.accelerator = accelerator
         if accelerator.num_processes > 1:
             distributed_type_list = [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED]
             assert accelerator.distributed_type in distributed_type_list, "Unsupported distributed type provided. Only DDP and FSDP are supported."
@@ -65,17 +61,14 @@ class Phi3v(lmms):
                 self._model = accelerator.prepare(self.model)
             else:
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
-            self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
-            eval_logger.info(f"Using single device: {self._device}")
-            self.model.to(self._device)
+            eval_logger.info(f"Using device: {self._device}")
             self._rank = 0
             self._word_size = 1
-            self.accelerator = accelerator
 
     @property
     def config(self):
@@ -169,18 +162,17 @@ class Phi3v(lmms):
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
             for i in range(len(contexts)):
-                if "<image>" in contexts[i]:
-                    query = "" + contexts[i]
-                    img_placeholder_count = 1
-                    while "<image>" in query:
-                        query = query.replace("<image>", f"<|image_{img_placeholder_count}|>", 1)
-                        img_placeholder_count += 1
-                else:
-                    query = ""
-                    for placeholder_id in range(len(visuals)):
-                        query += f"<|image_{placeholder_id+1}|>\n"
-                    query += contexts[i]
-                messages = [{"role": "user", "content": query}]
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                            },
+                            {"type": "text", "text": contexts[i]},
+                        ],
+                    }
+                ]
                 contexts[i] = self._tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             assert len(contexts) == 1
             #

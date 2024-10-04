@@ -1,11 +1,9 @@
 from io import BytesIO
-import os
 import base64
 from typing import List, Tuple
 from tqdm import tqdm
 import requests as url_requests
 import time
-import json
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -18,9 +16,8 @@ from PIL import Image
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
 
-
-@register_model("ss_llava")
-class SambaStudioLLaVA(lmms):
+@register_model("mllama_sambacloud")
+class MMLlamaSambaCloud(lmms):
     def __init__(
         self,
         endpoint_url: str = "",
@@ -34,10 +31,9 @@ class SambaStudioLLaVA(lmms):
         self.endpoint_key = endpoint_key
 
         self.headers = {
-            "key": endpoint_key,
+            "Authorization": f"Bearer {endpoint_key}",
             "Content-Type": "application/json",
         }
-        self.image_token = "<image>"
         self.timeout = timeout
 
         accelerator = Accelerator()
@@ -77,55 +73,58 @@ class SambaStudioLLaVA(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-
+            
             img = self.encode_image(visuals[0])
 
-            payload = {"instances": [{"prompt": contexts, "image_content": img}]}
-
-            if "do_sample" not in gen_kwargs:
-                gen_kwargs["do_sample"] = False
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if gen_kwargs["max_new_tokens"] > 4096:
                 gen_kwargs["max_new_tokens"] = 4096
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 1
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = 1
-            if "top_k" not in gen_kwargs:
-                gen_kwargs["top_k"] = 50
-            if "top_logprobs" not in gen_kwargs:
-                gen_kwargs["top_logprobs"] = 0
-            if "preprocessing" not in gen_kwargs:
-                gen_kwargs["preprocessing"] = "llava-hf"
 
-            payload["params"] = {
-                'max_tokens_to_generate': {"type":"int","value":str(gen_kwargs["max_new_tokens"])},
-                'temperature':{"type":"float","value":str(gen_kwargs["temperature"])},
-                'top_p':{"type":"float","value":str(gen_kwargs["top_p"])},
-                'do_sample':{"type":"bool","value":str(gen_kwargs["do_sample"])},
-                'top_k':{"type":"int","value":str(gen_kwargs["top_k"])},
-                'top_logprobs':{"type":"int","value":str(gen_kwargs["top_logprobs"])},
-                'preprocessing':{"type":"str","value":gen_kwargs["preprocessing"]}
+            payload = {
+                "stream": False,
+	            "model": "Llama-3.2-11B-Vision-Instruct",
+                "max_tokens": gen_kwargs["max_new_tokens"],
+                "temperature": gen_kwargs["temperature"],
+                "messages":[{
+                            "role": "user",
+                            "content":[
+                                {"type":"text","text":contexts},
+                                {
+                                    "type":"image_url",
+                                    "image_url":{
+                                        "url":f"data:image/jpeg;base64,{img}"
+                                    }
+                                }
+                            ]
+                        }],
+                
             }
+
             for attempt in range(5):
                 try:
                     response = url_requests.post(self.endpoint_url, headers=self.headers, json=payload, timeout=self.timeout)
                     response_data = response.json()
-                    response_text = response_data["predictions"][0]["completion"].strip()
+                    response_text = response_data["choices"][0]["message"]["content"].strip()
                     break  # If successful, break out of the loop
 
                 except Exception as e:
                     try:
                         error_msg = response.json()
                     except:
-                        error_msg = ""
+                        error_msg = response.text
 
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
+                    if response.status_code == 413:
+                        eval_logger.error(f"Request too big for API, skipping. Image size = {visuals[0].size}")
+                        response_text = ""
+                        break
                     if attempt <= 3:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty string
-                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {error_msg}")
                         response_text = ""
 
             res.append(response_text)
@@ -135,5 +134,4 @@ class SambaStudioLLaVA(lmms):
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        # TODO
-        assert False, "SS-LLaVA not supported"
+        raise NotImplementedError

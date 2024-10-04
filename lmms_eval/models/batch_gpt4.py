@@ -80,6 +80,7 @@ class BatchGPT4(lmms):
         accelerator = Accelerator()
         assert accelerator.state.local_process_index == 0, "BatchGPT4 does not support distributed inference."
         assert accelerator.state.num_processes == 1, "BatchGPT4 does not support distributed inference."
+        self.accelerator = accelerator
 
     # Function to encode the image
     def encode_image(self, image: Image):

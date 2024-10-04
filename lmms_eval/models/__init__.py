@@ -15,6 +15,7 @@ AVAILABLE_MODELS = {
     "llava": "Llava",
     "mllava": "MLlava",
     "qwen_vl": "Qwen_VL",
+    "qwen2_vl": "Qwen2_VL",
     "fuyu": "Fuyu",
     "batch_gpt4": "BatchGPT4",
     # "docowl": "DocOwl",
@@ -48,6 +49,8 @@ AVAILABLE_MODELS = {
     "llava_hf": "LlavaHf",
     "longva": "LongVA",
     "vila": "VILA",
+    "mmllama_together": "MMLlamaTogether",
+    "mmllama_sambacloud": "MMLlamaSambaCloud"
 }
 
 for model_name, model_class in AVAILABLE_MODELS.items():
