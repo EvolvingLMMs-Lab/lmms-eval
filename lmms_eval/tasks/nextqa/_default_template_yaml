@@ -5,4 +5,4 @@ dataset_kwargs:
   cache_dir: nextqa
 metadata:
   version: 0.0.1
-  load_package: False
+  load_package: True
