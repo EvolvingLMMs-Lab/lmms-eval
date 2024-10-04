@@ -1,11 +1,9 @@
 from io import BytesIO
-import os
 import base64
 from typing import List, Tuple
 from tqdm import tqdm
 import requests as url_requests
 import time
-import json
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -36,7 +34,6 @@ class MMLlamaSambaCloud(lmms):
             "Authorization": f"Bearer {endpoint_key}",
             "Content-Type": "application/json",
         }
-        self.image_token = "<|image|>"
         self.timeout = timeout
 
         accelerator = Accelerator()
@@ -137,5 +134,4 @@ class MMLlamaSambaCloud(lmms):
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        # TODO
-        assert False, "SS-LLaVA not supported"
+        raise NotImplementedError

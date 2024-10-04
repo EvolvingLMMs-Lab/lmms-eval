@@ -1,11 +1,8 @@
 from io import BytesIO
-import os
 import base64
 from typing import List, Tuple
 from tqdm import tqdm
-import requests as url_requests
 import time
-import json
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -32,7 +29,6 @@ class MMLlamaTogether(lmms):
         self.endpoint_url = endpoint_url
         self.endpoint_key = endpoint_key
 
-        self.image_token = "<|image|>"
         self.timeout = timeout
         self.client = Together(api_key=endpoint_key)
 
@@ -75,7 +71,12 @@ class MMLlamaTogether(lmms):
             visuals = self.flatten(visuals)
             
             img = self.encode_image(visuals[0])
-
+            if "max_new_tokens" not in gen_kwargs:
+                gen_kwargs["max_new_tokens"] = 1024
+            if gen_kwargs["max_new_tokens"] > 4096:
+                gen_kwargs["max_new_tokens"] = 4096
+            if "temperature" not in gen_kwargs:
+                gen_kwargs["temperature"] = 1
             for attempt in range(5):
                 try:
                     response = self.client.chat.completions.create(
@@ -92,12 +93,11 @@ class MMLlamaTogether(lmms):
                                 }
                             ]
                         }],
-                        max_tokens=16,
-                        temperature=0,
+                        max_tokens=gen_kwargs["max_new_tokens"],
+                        temperature=gen_kwargs["temperature"],
                         stop=["<|eot_id|>","<|eom_id|>"],
                         stream=False
                     )
-                    print(response)
                     response_text = response.choices[0].message.content
                     break  # If successful, break out of the loop
 
@@ -111,7 +111,7 @@ class MMLlamaTogether(lmms):
                     if attempt <= 3:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty string
-                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {error_msg}")
                         response_text = ""
 
             res.append(response_text)
@@ -121,5 +121,4 @@ class MMLlamaTogether(lmms):
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        # TODO
-        assert False, "SS-LLaVA not supported"
+        raise NotImplementedError
