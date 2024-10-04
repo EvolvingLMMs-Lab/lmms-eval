@@ -10,7 +10,7 @@ While adding a standard evaluation task on a new dataset can be occasionally as 
 
 Contributing a new task can be daunting! Luckily, much of the work has often been done for you in a different, similarly evaluated task. Good examples of task implementations to study include:
 
-Generation-based tasks:
+**Generation-based tasks:**
 
 - MME (`lmms_eval/tasks/mme/mme.yaml`)
 
@@ -55,15 +55,21 @@ metadata:
 ```
 
 **Notes:**
-You can pay special attention to the `process_results` and `metric_list` fields, which are used to define how the model output is post-processed and scored.
+You can pay special attention to the process_results and metric_list fields, which define how the model output is post-processed and scored.
 
-**`process_results`** is excuted in parallel (multi-GPU), we recommend use it to collect and parse model outputs to formatted results, if your evaluation needs external models (GPT4) as judge or answer extractor, we also recommend write judge process into this function.
+**`process_results`** is executed in parallel (multi-GPU). We recommend using it to collect and parse model outputs into formatted results. If your evaluation requires external models (e.g., GPT-4) as a judge or answer extractor, we also suggest integrating the judging process within this function.
 
-**`aggregate_results`** is excuted in main process (rank 0), we recommend use it to calculate final score/accuracy.
+**`aggregate_results`** is executed in the main process (rank 0). We recommend using it to calculate the final score or accuracy.
 
 Also, the `lmms_eval_specific_kwargs` field is used to define model-specific prompt configurations. The default is set to follow Llava.
 
-PPL-based tasks:
+**Generation-based Tasks (GPT-Eval)**
+
+You can check the following tasks to see how we incoporate GPT4 as judge model into our evaluation pipeline.
+
+- LLaVA-In-The-Wild (https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/llava-in-the-wild/llava-in-the-wild.yaml)
+
+**PPL-based tasks:**
 - Seedbench (`lmms_eval/tasks/seedbench/seedbench_ppl.yaml`)
 
 ```yaml
@@ -84,7 +90,7 @@ metadata:
   - version: 0.0
 ```
 
-Multi-round-generation-based tasks:
+**Multi-round-generation-based tasks:**
 
 - MMSearch(`lmms_eval/tasks/mmsearch/mmsearch_end2end.yaml`)
 
