@@ -1,0 +1,4 @@
+task: "clotho_aqa_val_all"
+test_split: ClothoAQA_val_all
+
+include: _default_template_yaml
