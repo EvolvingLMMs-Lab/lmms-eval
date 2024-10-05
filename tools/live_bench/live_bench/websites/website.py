@@ -4,13 +4,28 @@ from abc import ABC, abstractmethod
 
 from webdriver_manager.core.driver import Driver
 
+SUBJECT_MATCH = {
+    "entertainment": "Entertainment",
+    "artandculture": "Art & Culture",
+    "entertainment": "Entertainment",
+    "finance": "Economy & Finance",
+    "politics": "Politics",
+    "science": "Science",
+    "sports": "Sports",
+    "technology": "Technology",
+}
+
 
 class Website(ABC):
     def __init__(self, url=None, name=None, path=None, subject=None):
         self.url = url
         self.name = name
         self.path = path
+
+        if subject in SUBJECT_MATCH:
+            self.subject = SUBJECT_MATCH[subject]
         self.subject = subject
+
         assert self.url is not None or self.path is not None, "Either url or path must be provided"
 
     def get_path(self):

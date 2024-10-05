@@ -24,6 +24,7 @@ from live_bench.data_generator.utils.extract_infomation import (
 from live_bench.data_generator.utils.gemini import gemini_generate_response
 from live_bench.data_generator.utils.gpt4v import (
     format_gpt4v_images,
+    get_openai_client,
     gpt4v_generate_response,
 )
 from live_bench.screen_shoter import ScreenImage
@@ -157,11 +158,7 @@ class GPT4Generator(QAGenerator):
         check_prompt=os.path.join(os.path.dirname(__file__), "check_prompt.md"),
     ):
         super().__init__(prompt_file)
-        API_KEY = os.getenv("OPENAI_API_KEY")
-        if not API_KEY:
-            raise ValueError("OPENAI_API_KEY environment variable not set.")
-        self.api_key = API_KEY
-        self.client = openai.OpenAI(api_key=self.api_key)
+        self.client = get_openai_client()
         self.model = model
         if os.path.exists(example_path):
             self.example_path = example_path

@@ -1,12 +1,28 @@
 import base64
 import io
 import logging
+import os
 from time import sleep
 
+import openai
 from live_bench.data_generator.response import Response
 from PIL import Image
 
 logger = logging.getLogger("lmms-eval")
+
+
+def get_openai_client(api_version="2024-02-15-preview") -> openai.OpenAI:
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    if endpoint:
+        key = os.getenv("AZURE_OPENAI_API_KEY")
+        if not key:
+            raise ValueError("OPENAI_API_KEY environment variable not set.")
+        return openai.AzureOpenAI(azure_endpoint=endpoint, api_key=key, api_version=api_version)
+    else:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable not set.")
+        return openai.OpenAI(api_key=api_key)
 
 
 def format_gpt4v_images(image):

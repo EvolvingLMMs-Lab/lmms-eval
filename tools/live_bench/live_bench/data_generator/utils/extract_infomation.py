@@ -12,6 +12,7 @@ from live_bench.data_generator.utils.claude import (
 )
 from live_bench.data_generator.utils.gpt4v import (
     format_gpt4v_images,
+    get_openai_client,
     gpt4v_generate_response,
 )
 from live_bench.screen_shoter import ScreenImage
@@ -69,7 +70,8 @@ class InfomationExtractor(object):
         if not openai_api_key:
             openai_api_key = os.getenv("OPENAI_API_KEY", None)
         if "gpt" in model:
-            self.client = openai.OpenAI(api_key=openai_api_key)
+            # self.client = openai.OpenAI(api_key=openai_api_key)
+            self.client = get_openai_client()
             self.generate_response = gpt4v_generate_response
             self.format_images = format_gpt4v_images
         elif "claude" in model:
