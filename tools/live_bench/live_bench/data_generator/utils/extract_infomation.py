@@ -28,11 +28,13 @@ Only output the text extracted from the website, do not include any other inform
 """
 
 FIND_IMAGES_FEATURES_PROMPT: str = """\
-This is a screenshot from a news website. Your task is to identify the meaningful images in this screenshot and extract relevant information about these images, such as the environment depicted, the actions and expressions of the people, and the connection between these images and the corresponding text. You need to think deeply about these images and provide as much detailed and useful information as possible.
+This is a screenshot from a news website. Your task is to identify the meaningful images in this screenshot and extract relevant information about these images, such as the environment depicted, the actions and expressions of the people, and the connection between these images and the corresponding text. You need to think deeply about these images and provide as much detailed and useful information as possible. Of course, it is also possible that the website is mainly text-based, and in this case, there might not be much information to extract from the images. In such instances, you can approach the task from a textual perspective, analyzing the website's content. For example, what is the theme of the website? What kind of information is contained in the text? If the website requires thoughtful analysis, feel free to engage in deeper reflection and provide your insights.
 """
 
 THINK_DIFFERENTLY_PROMPT: str = """\
-What makes this website different from other websites? What is special about its news? Since it is a news website, where is the "new" reflected? Do not give a generalized answer; you need to provide detailed answers based on the specific content of each news article and the accompanying illustrations.
+What makes this website different from other websites? What is special about its news? Since it is a news website, where is the 'new' aspect reflected? Do not provide a generalized answer; you need to give detailed responses based on the specific content of each news article and the accompanying illustrations.
+
+For example, if the news is about a software update, what conveniences will this update bring to people? How can people use these new features? Perhaps there are also some drawbacks? You need to come up with your own questions worth pondering about the website and describe in as much detail as possible your understanding of what is 'new' on the website.
 """
 
 
