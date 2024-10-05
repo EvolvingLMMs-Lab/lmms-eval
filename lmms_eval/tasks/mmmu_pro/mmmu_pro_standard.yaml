@@ -1,6 +1,6 @@
-task: "mmmu_pro_original"
+task: "mmmu_pro_standard"
 dataset_path: MMMU/MMMU_Pro
-dataset_name: original
+dataset_name: standard
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.mmmu_pro_doc_to_visual
