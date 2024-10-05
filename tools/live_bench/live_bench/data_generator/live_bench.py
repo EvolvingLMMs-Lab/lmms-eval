@@ -5,9 +5,13 @@ from datetime import datetime
 from typing import List, Tuple
 
 from datasets import Dataset, load_dataset
-from live_bench.data_generator import get_generator, get_random_generator
 from live_bench.data_generator.live_bench_data import LiveBenchData
-from live_bench.data_generator.qa_generator import QAData, QAGenerator
+from live_bench.data_generator.qa_generator import (
+    QAData,
+    QAGenerator,
+    get_generator,
+    get_random_generator,
+)
 from live_bench.data_generator.question_finalizer import QuestionFinalizer
 from live_bench.data_generator.response import Response
 from live_bench.data_generator.score_getter import (

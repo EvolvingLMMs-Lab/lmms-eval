@@ -6,10 +6,11 @@ from webdriver_manager.core.driver import Driver
 
 
 class Website(ABC):
-    def __init__(self, url=None, name=None, path=None):
+    def __init__(self, url=None, name=None, path=None, subject=None):
         self.url = url
         self.name = name
         self.path = path
+        self.subject = subject
         assert self.url is not None or self.path is not None, "Either url or path must be provided"
 
     def get_path(self):
@@ -29,6 +30,8 @@ class Website(ABC):
             info["url"] = self.url
         if self.name:
             info["name"] = self.name
+        if self.subject:
+            info["subject"] = self.subject
         return info
 
     @abstractmethod
