@@ -56,7 +56,12 @@ class DefaultWebsite(Website):
 
 class HumanScreenShotWebsite(Website):
     def __init__(self, name=None, path=None):
-        super().__init__(name=name, path=path)
+        try:
+            image_name = os.path.basename(path)
+            subject = image_name.split("_")[0]
+        except:
+            subject = None
+        super().__init__(name=name, path=path, subject=subject)
 
     def pre_visit(self, driver: Driver):
         pass
