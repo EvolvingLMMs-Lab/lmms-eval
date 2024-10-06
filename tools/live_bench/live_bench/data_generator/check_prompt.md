@@ -2,13 +2,12 @@ I would like you to act as a quizmaster who designs questions based on a provide
 
 Now, you are given a screenshot of the homepage of a news website, with a already generated question and answer. Your task is to refine the question and answer, and refractor them to make the question more answerable, checkable, and challenging. If you don't think the question is good, please provide a new question and answer.
 
-Note that the subtask must be one of these five:
+Note that the subtask must be one of these four:
 
 - Basic Understanding
-- Contextual Analysis
-- Deeper Implications
-- Broader Implications
-- Further Insights
+- Analytical Questions
+- Evaluative Questions
+- Divergent Thinking
 
 If you think the question does not correspond to the subtask, you have two options:
 1. Modify the question to correspond to the subtask.

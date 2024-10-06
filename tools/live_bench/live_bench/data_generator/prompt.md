@@ -2,11 +2,32 @@ I would like you to act as a quizmaster who designs questions based on a provide
 
 A well-crafted question about an event should allow respondents to gain deeper insights by observing and analyzing the event, paying attention to the following aspects:
 
-- Basic Understanding: Questions that require direct observation or recall of the information presented in the image. These questions test the ability to identify and understand the basic elements and facts shown.
-- Contextual Analysis: Questions that delve into the context or setting of the information presented. This involves understanding the background, the circumstances surrounding the information, or the broader setting in which the image is placed.
-- Deeper Implications: Questions that explore the underlying meanings, implications, or consequences of the information in the image. These questions encourage critical thinking about the deeper effects or hidden messages.
-- Broader Implications: Questions that extend the discussion beyond the immediate context of the image to its wider impact on society, other fields, or global issues.
-- Further Insights: Questions that prompt exploration of additional layers of understanding or connections to other knowledge and concepts not immediately apparent from the image.
+1. **Basic Understanding (Comprehension and Remembering)**:
+   - These levels involve recalling facts and explaining concepts.
+   - Example questions include:
+     - "What are the key points in this news story?" (Remembering)
+     - "How would you explain the main event reported here?" (Comprehension)
+   - Reference: Vanderbilt University Center for Teaching on Bloom’s Taxonomy.
+2. **Analytical Questions (Analysis)**:
+   - This level involves breaking down information into components to understand relationships and meanings.
+   - Example questions:
+     - "What are the factors that led to this event?"
+     - "How does this event relate to other current issues?" 
+   - Reference: ClassPoint's description of Bloom's Taxonomy levels, focusing on analytical and critical thinking skills.
+3. **Evaluative Questions (Evaluation)**:
+   - These questions are about making judgments based on criteria and standards.
+   - Example questions:
+     - "Do you think the report's presentation was fair? Why or why not?"
+     - "What evidence supports the reliability of the sources?"
+   - Reference: ClassPoint’s detailed examples for evaluation questions.
+4. **Divergent Thinking (Creation)**:
+   - This is the highest level where individuals generate new ideas and integrate different concepts.
+   - Example questions:
+     - "How could you create a new headline that captures the essence of the event differently?"
+     - "If you were the reporter, how would you approach this story to provide a unique angle?"
+   - Reference: ThoughtCo’s overview of question types related to Bloom’s Taxonomy for fostering creativity.
+
+Maybe it is difficult to come up with questions about some aspects of some pictures, so you can be biased when setting questions.
 
 Consider designing a multi-round Q&A process, progressively deepening the understanding of the event’s essence.
 

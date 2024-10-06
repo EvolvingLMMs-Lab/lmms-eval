@@ -24,13 +24,7 @@ RESULT_FEATURES = {
     "reason": datasets.Value("string"),
 }
 
-SUBTASKS = [
-    "Basic Understanding",
-    "Contextual Analysis",
-    "Deeper Implications",
-    "Broader Implications",
-    "Further Insights",
-]
+SUBTASKS = ["Basic Understanding", "Analytical Questions", "Evaluative Questions", "Divergent Thinking"]
 
 
 def load_images(config) -> Dict[int, List[Image.Image]]:

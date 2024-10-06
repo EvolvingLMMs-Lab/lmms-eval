@@ -32,7 +32,7 @@ from PIL import Image
 
 logger = logging.getLogger("lmms-eval")
 
-SUBTASKS = {"Basic Understanding", "Contextual Analysis", "Deeper Implications", "Broader Implications", "Further Insights"}
+SUBTASKS = {"Basic Understanding", "Analytical Questions", "Evaluative Questions", "Divergent Thinking"}
 
 
 class QAData(object):
