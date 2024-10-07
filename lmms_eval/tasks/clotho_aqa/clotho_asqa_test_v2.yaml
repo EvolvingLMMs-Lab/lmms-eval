@@ -1,4 +1,4 @@
-task: "clotho_aqa_test"
+task: "clotho_asqa_test_v2"
 dataset_name: "clotho_asqa_test_v2"
 test_split: test
 generation_kwargs:
@@ -11,9 +11,9 @@ lmms_eval_specific_kwargs:
     post_prompt: ""
 metric_list:
   - metric: gpt_eval
-    aggregation: mean
+    aggregation: !function utils.clotho_aqa_v2_aggregate_results
     higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
+
+process_results: !function utils.clotho_aqa_v2_process_results
 
 include: _default_template_yaml

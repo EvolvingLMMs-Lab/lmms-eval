@@ -6,5 +6,5 @@ doc_to_visual: !function utils.clotho_aqa_doc_to_audio
 doc_to_text: !function utils.clotho_aqa_doc_to_text
 
 metadata:
-  gpt_eval_model_name: gpt-4o-mini
+  gpt_eval_model_name: gpt-4o
   version: 0.0
