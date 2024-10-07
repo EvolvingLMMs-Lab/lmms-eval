@@ -17,7 +17,7 @@ from live_bench.data_generator.utils.claude import (
     claude_generate_response,
     format_claude_images,
 )
-from live_bench.data_generator.utils.extract_infomation import (
+from live_bench.data_generator.utils.extract_information import (
     ImageInfomation,
     InfomationExtractor,
 )
@@ -32,7 +32,7 @@ from PIL import Image
 
 logger = logging.getLogger("lmms-eval")
 
-SUBTASKS = {"Basic Understanding", "Analytical Questions", "Evaluative Questions", "Divergent Thinking"}
+SUBTASKS = {"Basic Understanding", "Analytical Questions", "Evaluative Questions", "Divergent Thinking", "Real-world Assistance"}
 
 
 class QAData(object):
@@ -74,15 +74,15 @@ class QAGenerator(ABC):
     def __call__(self, images: ScreenImage, *args, **kwargs):
         return self.generate(images, *args, **kwargs)
 
-    def generate(self, images: ScreenImage, *, test=False, infomation=None, **kwargs) -> Response:
+    def generate(self, images: ScreenImage, *, test=False, information=None, **kwargs) -> Response:
         if test:
             return Response(success=True, content="This is a test response.", full_log={})
-        return self._generate(images, infomation=infomation, test=test, **kwargs)
+        return self._generate(images, information=information, test=test, **kwargs)
 
-    def check(self, images: ScreenImage, question, answer, criteria, subtask, *, infomation=None, test=False, **kwargs) -> Response:
+    def check(self, images: ScreenImage, question, answer, criteria, subtask, *, information=None, test=False, **kwargs) -> Response:
         if test:
             return Response(success=True, content="This is a test response.", full_log={})
-        return self._check(images, question, answer, criteria, subtask, infomation=infomation, **kwargs)
+        return self._check(images, question, answer, criteria, subtask, information=information, **kwargs)
 
     @abstractmethod
     def _generate(self, images: ScreenImage, **kwargs) -> Response:
@@ -170,7 +170,7 @@ class GPT4Generator(QAGenerator):
         else:
             self.check_prompt = check_prompt
 
-    def format_messages(self, images: List[Image.Image], example_image: Image.Image, example_output: str, infomation: ImageInfomation):
+    def format_messages(self, images: List[Image.Image], example_image: Image.Image, example_output: str, information: ImageInfomation):
         example = [
             {
                 "type": "text",
@@ -183,8 +183,8 @@ class GPT4Generator(QAGenerator):
             },
         ]
         content = example + [format_gpt4v_images(image) for image in images]
-        if infomation:
-            content.append({"type": "text", "text": str(infomation)})
+        if information:
+            content.append({"type": "text", "text": str(information)})
         content.append(
             {
                 "type": "text",
@@ -203,7 +203,7 @@ class GPT4Generator(QAGenerator):
         ]
         return messages
 
-    def _generate(self, images: ScreenImage, *, max_tokens=4096, max_try_times=5, infomation=None, **kwargs):
+    def _generate(self, images: ScreenImage, *, max_tokens=4096, max_try_times=5, information=None, **kwargs):
         if self.example_path:
             example_image_path = os.path.join(self.example_path, "example_website.png")
             example_output_path = os.path.join(self.example_path, "example_output.json")
@@ -212,11 +212,11 @@ class GPT4Generator(QAGenerator):
                 example_output = json.load(f)
                 example_output = json.dumps(example_output, indent=4)
 
-        messages = self.format_messages(images.images, example_image, example_output, infomation)
+        messages = self.format_messages(images.images, example_image, example_output, information)
 
         return gpt4v_generate_response(client=self.client, model=self.model, messages=messages, max_tokens=max_tokens, max_try_times=max_try_times, json_format=True, **kwargs)
 
-    def get_check_prompt(self, question: str, answer: str, criteria, subtask, images: List[Image.Image], infomation: ImageInfomation = None):
+    def get_check_prompt(self, question: str, answer: str, criteria, subtask, images: List[Image.Image], information: ImageInfomation = None):
         messages = [
             {
                 "role": "system",
@@ -232,11 +232,11 @@ class GPT4Generator(QAGenerator):
                 "text": f"Question: {question}\nQuestioner's Answer: {answer}\nCriteria: {criteria}\nSubtask: {subtask}",
             },
         )
-        if infomation:
+        if information:
             content.append(
                 {
                     "type": "text",
-                    "text": str(infomation),
+                    "text": str(information),
                 },
             )
         content.append(
@@ -253,8 +253,8 @@ class GPT4Generator(QAGenerator):
         )
         return messages
 
-    def _check(self, images: ScreenImage, question, answer, criteria, subtask, *, max_tokens=4096, max_try_times=5, **kwargs):
-        messages = self.get_check_prompt(question, answer, criteria, subtask, images.images)
+    def _check(self, images: ScreenImage, question, answer, criteria, subtask, *, max_tokens=4096, max_try_times=5, information=None, **kwargs):
+        messages = self.get_check_prompt(question, answer, criteria, subtask, images.images, information)
         return gpt4v_generate_response(client=self.client, model=self.model, messages=messages, max_tokens=max_tokens, max_try_times=max_try_times, json_format=True, **kwargs)
 
     def format_checked_response(self, response: Response):
@@ -315,14 +315,14 @@ class GeminiGenerator(QAGenerator):
         else:
             self.check_prompt = check_prompt
 
-    def format_messages(self, images: List[Image.Image], example_image: Image.Image, example_output: str, infomation: ImageInfomation = None):
+    def format_messages(self, images: List[Image.Image], example_image: Image.Image, example_output: str, information: ImageInfomation = None):
         content = [self.prompt, "\n", "Example Image:", example_image, "\n", "Example Output:", example_output]
         content.extend(images)
-        content.append(str(infomation))
+        content.append(str(information))
         content.append("Please generate high-quality questions focusing on the information displayed within this webpage. Your response should be in the format of the examples provided above and in JSON format.")
         return content
 
-    def _generate(self, images: ScreenImage, *, max_tokens=4096, max_try_times=5, infomation: ImageInfomation = None, **kwargs):
+    def _generate(self, images: ScreenImage, *, max_tokens=4096, max_try_times=5, information: ImageInfomation = None, **kwargs):
         if self.example_path:
             example_image_path = os.path.join(self.example_path, "example_website.png")
             example_output_path = os.path.join(self.example_path, "example_output.json")
@@ -332,20 +332,20 @@ class GeminiGenerator(QAGenerator):
                 example_output = json.load(f)
                 example_output = json.dumps(example_output, indent=4)
 
-        messages = self.format_messages(images.images, example_image, example_output, infomation)
+        messages = self.format_messages(images.images, example_image, example_output, information)
 
         return gemini_generate_response(self.client, messages, max_tokens, max_try_times, **kwargs)
 
-    def get_check_prompt(self, question: str, answer: str, criteria, subtask, images: List[Image.Image], infomation: ImageInfomation = None):
+    def get_check_prompt(self, question: str, answer: str, criteria, subtask, images: List[Image.Image], information: ImageInfomation = None):
         content = [self.check_prompt] + images
         content.append(f"Question: {question}\nQuestioner's Answer: {answer}\nCriteria: {criteria}, Subtask: {subtask}")
         content.append("Your response should be strictly in the below format:\n\nQuestion: <question>\nAnswer: <answer>\nCriteria: <criteria>\nSubtask: <subtask>")
-        if infomation:
-            content.append(str(infomation))
+        if information:
+            content.append(str(information))
         return content
 
-    def _check(self, images: ScreenImage, question, answer, criteria, subtask, *, max_tokens=4096, max_try_times=5, infomation: ImageInfomation = None, **kwargs):
-        messages = self.get_check_prompt(question, answer, criteria, subtask, images.images, infomation)
+    def _check(self, images: ScreenImage, question, answer, criteria, subtask, *, max_tokens=4096, max_try_times=5, information: ImageInfomation = None, **kwargs):
+        messages = self.get_check_prompt(question, answer, criteria, subtask, images.images, information)
         return gemini_generate_response(self.client, messages, max_tokens, max_try_times, **kwargs)
 
     def format_checked_response(self, response: Response):
@@ -415,7 +415,7 @@ class ClaudeGenerator(QAGenerator):
         else:
             self.check_prompt = check_prompt
 
-    def format_messages(self, images: List[Image.Image], example_image: Image.Image, example_output: str, infomation: ImageInfomation):
+    def format_messages(self, images: List[Image.Image], example_image: Image.Image, example_output: str, information: ImageInfomation):
         example = [
             {
                 "type": "text",
@@ -428,8 +428,8 @@ class ClaudeGenerator(QAGenerator):
             },
         ]
         content = example + [format_claude_images(image) for image in images]
-        if infomation:
-            content.append({"type": "text", "text": str(infomation)})
+        if information:
+            content.append({"type": "text", "text": str(information)})
         content.append(
             {
                 "type": "text",
@@ -444,7 +444,7 @@ class ClaudeGenerator(QAGenerator):
         ]
         return messages
 
-    def _generate(self, images: ScreenImage, *, max_tokens=4096, max_try_times=5, infomation=None, **kwargs):
+    def _generate(self, images: ScreenImage, *, max_tokens=4096, max_try_times=5, information=None, **kwargs):
         if self.example_path:
             example_image_path = os.path.join(self.example_path, "example_website.png")
             example_output_path = os.path.join(self.example_path, "example_output.json")
@@ -454,11 +454,11 @@ class ClaudeGenerator(QAGenerator):
                 example_output = json.load(f)
                 example_output = json.dumps(example_output, indent=4)
 
-        messages = self.format_messages(images.images, example_image, example_output, infomation)
+        messages = self.format_messages(images.images, example_image, example_output, information)
 
         return claude_generate_response(client=self.client, model=self.model, messages=messages, max_tokens=max_tokens, max_try_times=max_try_times, json_format=True, system=self.prompt, **kwargs)
 
-    def get_check_prompt(self, question: str, answer: str, criteria, subtask, images: List[Image.Image], infomation: ImageInfomation = None):
+    def get_check_prompt(self, question: str, answer: str, criteria, subtask, images: List[Image.Image], information: ImageInfomation = None):
         messages = [
             {
                 "role": "system",
@@ -474,11 +474,11 @@ class ClaudeGenerator(QAGenerator):
                 "text": f"Question: {question}\nQuestioner's Answer: {answer}\nCriteria: {criteria}\nSubtask: {subtask}",
             },
         )
-        if infomation:
+        if information:
             content.append(
                 {
                     "type": "text",
-                    "text": str(infomation),
+                    "text": str(information),
                 },
             )
         content.append(

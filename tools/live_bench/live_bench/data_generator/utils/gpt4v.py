@@ -51,7 +51,7 @@ def format_printable_messages(messages):
     return messages
 
 
-def gpt4v_generate_response(messages, *, client=None, model="gpt-4o", max_tokens: int = 4096, max_try_times: int = 5, json_format="auto", test=False, system=None, **kwargs) -> Response:
+def gpt4v_generate_response(messages, *, client=None, model="gpt-4o", max_tokens: int = 4096, max_try_times: int = 5, json_format="auto", test=False, system=None, temperature=0.5, **kwargs) -> Response:
     if system:
         messages = [{"role": "system", "content": system}] + messages
 
@@ -76,7 +76,7 @@ def gpt4v_generate_response(messages, *, client=None, model="gpt-4o", max_tokens
         response_format = None
 
     def _generate():
-        return client.chat.completions.create(model=model, messages=messages, max_tokens=max_tokens, response_format=response_format, **kwargs)
+        return client.chat.completions.create(model=model, messages=messages, max_tokens=max_tokens, response_format=response_format, temperature=temperature, **kwargs)
 
     for times in range(max_try_times):
         try:

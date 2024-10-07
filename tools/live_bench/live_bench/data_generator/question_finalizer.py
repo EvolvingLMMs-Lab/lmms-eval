@@ -107,7 +107,7 @@ One thing as a reminder is that if you want to add a new line in the json string
 
 class QuestionFinalizer(object):
     def __init__(self, gpt4v_model: str = "gpt-4o", claude_model: str = "claude-3-5-sonnet-20240620", gemini_model: str = "gemini-1.5-pro"):
-        self.models = {"GPT4V": GPT4VAnswerGetter(gpt4v_model), "Claude": ClaudeAnswerGetter(claude_model), "Gemini": GeminiAnswerGetter(gemini_model)}
+        self.models = {"GPT4V": GPT4VAnswerGetter(gpt4v_model), "Claude": ClaudeAnswerGetter(claude_model)}
         self.client = get_openai_client()
         # self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", None))
         # self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", None))

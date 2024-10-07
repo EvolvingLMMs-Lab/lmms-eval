@@ -106,12 +106,12 @@ class InfomationExtractor(object):
         response = self.generate_response(messages=messages, model=self.model, client=self.client, json_format=False, **kwargs)
         return response
 
-    def extract_infomation(self, screen_image: ScreenImage, **kwargs) -> ImageInfomation:
+    def extract_information(self, screen_image: ScreenImage, **kwargs) -> ImageInfomation:
         ocrs = self.extract_text_from_html_from_gpt(screen_image)
-        infomation = ImageInfomation()
+        information = ImageInfomation()
         if ocrs.success:
             ocrs = f"Below is the text extracted from the website for you to take reference:\n{ocrs.content}"
-            infomation.text = ocrs
+            information.text = ocrs
         else:
             ocrs = ""
         messages = [
@@ -122,14 +122,14 @@ class InfomationExtractor(object):
         ]
         response = self.generate_response(messages=messages, model=self.model, client=self.client, json_format=False, **kwargs)
         if response.success:
-            infomation.image_features = response.content
+            information.image_features = response.content
         messages = [
             {
                 "role": "user",
-                "content": [{"type": "text", "text": f"{THINK_DIFFERENTLY_PROMPT}\n\n{str(infomation)}"}] + self.format_images(screen_image.images),
+                "content": [{"type": "text", "text": f"{THINK_DIFFERENTLY_PROMPT}\n\n{str(information)}"}] + self.format_images(screen_image.images),
             }
         ]
         response = self.generate_response(messages=messages, model=self.model, client=self.client, json_format=False, **kwargs)
         if response.success:
-            infomation.differnt_points = response.content
-        return infomation
+            information.differnt_points = response.content
+        return information

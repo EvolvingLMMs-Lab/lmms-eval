@@ -1,12 +1,12 @@
 import datasets
 from live_bench.data_generator.qa_generator import QAGenerator
 from live_bench.data_generator.question_finalizer import QuestionFinalizer
-from live_bench.data_generator.utils.extract_infomation import ImageInfomation
+from live_bench.data_generator.utils.extract_information import ImageInfomation
 from live_bench.screen_shoter.screen import ScreenImage
 
 
 class LiveBenchData(object):
-    SUBTASKS = ("Basic Understanding", "Analytical Questions", "Evaluative Questions", "Divergent Thinking")
+    SUBTASKS = ("Basic Understanding", "Analytical Questions", "Evaluative Questions", "Divergent Thinking", "Real-world Assistance")
 
     features = datasets.Features(
         {
@@ -37,7 +37,7 @@ class LiveBenchData(object):
         criteria: str,
         subtask: str,
         data_generator: str,
-        infomation: ImageInfomation = None,
+        information: ImageInfomation = None,
         score: int = None,
         reason: str = None,
         checker: QAGenerator = None,
@@ -51,10 +51,10 @@ class LiveBenchData(object):
         self.criteria = criteria
         self.subtask = subtask
         self.data_generator = data_generator
-        self.infomation = infomation
+        self.information = information
         self.checker = None
         if checker:
-            response = checker.check(screen, question, answer, criteria, subtask, infomation=infomation)
+            response = checker.check(screen, question, answer, criteria, subtask, information=information)
             if response.success:
                 formatted_response = checker.format_checked_response(response)
                 if formatted_response.question and formatted_response.answer and formatted_response.criteria:

@@ -8,6 +8,7 @@ Note that the subtask must be one of these four:
 - Analytical Questions
 - Evaluative Questions
 - Divergent Thinking
+- Real-world Assistance
 
 If you think the question does not correspond to the subtask, you have two options:
 1. Modify the question to correspond to the subtask.

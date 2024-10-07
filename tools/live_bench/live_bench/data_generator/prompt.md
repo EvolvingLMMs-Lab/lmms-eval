@@ -19,13 +19,24 @@ A well-crafted question about an event should allow respondents to gain deeper i
    - Example questions:
      - "Do you think the report's presentation was fair? Why or why not?"
      - "What evidence supports the reliability of the sources?"
-   - Reference: ClassPoint’s detailed examples for evaluation questions.
+     - "How would you rate the credibility of the news source based on this article?"
+     - "What are the potential implications of this event?"
+   - Reference: ClassPoint's detailed examples for evaluation questions.
 4. **Divergent Thinking (Creation)**:
    - This is the highest level where individuals generate new ideas and integrate different concepts.
    - Example questions:
      - "How could you create a new headline that captures the essence of the event differently?"
      - "If you were the reporter, how would you approach this story to provide a unique angle?"
    - Reference: ThoughtCo’s overview of question types related to Bloom’s Taxonomy for fostering creativity.
+5. **Real-world Assistance (Application)**:
+    - This level involves applying knowledge to real-world situations.
+    - Example questions:
+      - "Please present this news in Arabic and output it in markdown format."
+      - "Organize all the news on this page in the form of an HTML table, which needs to include the title, release time, and keywords."
+      - "Sort out the exchange rate data and plot them using Julia language."
+      - "Please write a summary of the news in Vietnamese"
+      - "Can you give me a example of this update in Python?" (Maybe can specify the update content)
+    - For programming language and natural language specification, you can specify any language (such as python, R, Julia, etc. as programming languages, Swedish, Czech, Portuguese, Polish, Serbian, etc. as natural languages).
 
 Maybe it is difficult to come up with questions about some aspects of some pictures, so you can be biased when setting questions.
 

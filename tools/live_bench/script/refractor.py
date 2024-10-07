@@ -1,8 +1,8 @@
 import os
 
 if __name__ == "__main__":
-    path = "/data/pufanyi/project/lmms-eval/tools/temp/images"
-    new_path = "/data/pufanyi/project/lmms-eval/tools/temp/processed_images"
+    path = "/data/pufanyi/project/lmms-eval/tools/temp/2024-09"
+    new_path = "/data/pufanyi/project/lmms-eval/tools/temp/processed_images_2"
     if not os.path.exists(new_path):
         os.makedirs(new_path)
     subjects = os.listdir(path)
