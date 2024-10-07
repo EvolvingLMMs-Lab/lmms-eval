@@ -1,4 +1,4 @@
-from live_bench import LiveBench
+from live_bench.data_generator import LiveBench
 from live_bench.websites import load_websites, load_websites_from_file
 
 
