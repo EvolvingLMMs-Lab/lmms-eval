@@ -132,4 +132,4 @@ def clotho_aqa_v2_aggregate_results(results):
             eval_score = 0.0
         score += eval_score
 
-    return score / (len(results) * 5)
+    return score / len(results) * 20
