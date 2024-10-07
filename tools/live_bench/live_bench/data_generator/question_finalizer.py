@@ -14,6 +14,7 @@ from live_bench.data_generator.utils.claude import (
 from live_bench.data_generator.utils.gemini import gemini_generate_response
 from live_bench.data_generator.utils.gpt4v import (
     format_gpt4v_images,
+    get_openai_client,
     gpt4v_generate_response,
 )
 from PIL import Image
@@ -30,11 +31,7 @@ class AnswerGetter(ABC):
 class GPT4VAnswerGetter(AnswerGetter):
     def __init__(self, model: str = "gpt-4o", api_key=None):
         self.model = model
-        if api_key is None:
-            self.api_key = os.getenv("OPENAI_API_KEY", None)
-        else:
-            self.api_key = api_key
-        self.client = openai.OpenAI(api_key=self.api_key)
+        self.client = get_openai_client()
 
     def get_answer(self, question: str, images: List[Image.Image]):
         messages = [{"role": "user", "content": format_gpt4v_images(images) + [{"type": "text", "text": question}]}]
@@ -110,8 +107,9 @@ One thing as a reminder is that if you want to add a new line in the json string
 
 class QuestionFinalizer(object):
     def __init__(self, gpt4v_model: str = "gpt-4o", claude_model: str = "claude-3-5-sonnet-20240620", gemini_model: str = "gemini-1.5-pro"):
-        self.models = {"GPT4V": GPT4VAnswerGetter(gpt4v_model), "Claude": ClaudeAnswerGetter(claude_model), "Gemini": GeminiAnswerGetter(gemini_model)}
-        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", None))
+        self.models = {"GPT4V": GPT4VAnswerGetter(gpt4v_model), "Claude": ClaudeAnswerGetter(claude_model)}
+        self.client = get_openai_client()
+        # self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", None))
         # self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", None))
 
     def finalize_question(self, question, answer, criteria, images: List[Image.Image]):

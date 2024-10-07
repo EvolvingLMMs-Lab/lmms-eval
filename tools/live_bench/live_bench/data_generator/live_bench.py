@@ -5,16 +5,20 @@ from datetime import datetime
 from typing import List, Tuple
 
 from datasets import Dataset, load_dataset
-from live_bench.data_generator import get_generator, get_random_generator
 from live_bench.data_generator.live_bench_data import LiveBenchData
-from live_bench.data_generator.qa_generator import QAData, QAGenerator
+from live_bench.data_generator.qa_generator import (
+    QAData,
+    QAGenerator,
+    get_generator,
+    get_random_generator,
+)
 from live_bench.data_generator.question_finalizer import QuestionFinalizer
 from live_bench.data_generator.response import Response
 from live_bench.data_generator.score_getter import (
     get_random_score_getter,
     get_score_getter,
 )
-from live_bench.data_generator.utils.extract_infomation import (
+from live_bench.data_generator.utils.extract_information import (
     ImageInfomation,
     InfomationExtractor,
 )
@@ -26,21 +30,21 @@ from tqdm import tqdm
 logger = logging.getLogger("lmms-eval")
 
 
-def get_qa_data(images: ScreenImage, qa_generator: QAGenerator, *, infomation_getter: InfomationExtractor = None, test=False) -> Tuple[List[QAData], Response]:
-    if infomation_getter:
-        infomation = infomation_getter.extract_infomation(images)
+def get_qa_data(images: ScreenImage, qa_generator: QAGenerator, *, information_getter: InfomationExtractor = None, test=False) -> Tuple[List[QAData], Response]:
+    if information_getter:
+        information = information_getter.extract_information(images)
     else:
-        infomation = None
-    response = qa_generator.generate(images, test=test, infomation=infomation)
+        information = None
+    response = qa_generator.generate(images, test=test, information=information)
     qa_data = qa_generator.format_response(response)
     return qa_data, response
 
 
 def get_live_bench_data(
-    driver, website: Website, screen_shoter: ScreenShoter, qa_generator: QAGenerator, checker: QAGenerator, infomation_getter: InfomationExtractor, question_finalizer: QuestionFinalizer, test=False, scorer=None, score_threshold=5
+    driver, website: Website, screen_shoter: ScreenShoter, qa_generator: QAGenerator, checker: QAGenerator, information_getter: InfomationExtractor, question_finalizer: QuestionFinalizer, test=False, scorer=None, score_threshold=5
 ) -> Tuple[List[LiveBenchData], Response]:
     images = screen_shoter.capture(driver, website)
-    qa_data, logs = get_qa_data(images, qa_generator, test=test, infomation_getter=infomation_getter)
+    qa_data, logs = get_qa_data(images, qa_generator, test=test, information_getter=information_getter)
     data = []
     for qa in qa_data:
         # qa_data = question_finalizer.finalize_question(qa, images.images)
@@ -137,10 +141,10 @@ class LiveBench(object):
         if question_finalizer is None:
             question_finalizer = QuestionFinalizer(**question_finalizer_kwargs)
         logs = []
-        infomation_getter = InfomationExtractor()
+        information_getter = InfomationExtractor()
         for website in tqdm(websites, desc="Capturing websites"):
             try:
-                data, log = get_live_bench_data(driver, website, screen_shoter, qa_generator, checker, test=test, scorer=scorer, infomation_getter=infomation_getter, question_finalizer=question_finalizer)
+                data, log = get_live_bench_data(driver, website, screen_shoter, qa_generator, checker, test=test, scorer=scorer, information_getter=information_getter, question_finalizer=question_finalizer)
                 logs.append(log.to_dict())
                 for d in data:
                     self.add(d)
