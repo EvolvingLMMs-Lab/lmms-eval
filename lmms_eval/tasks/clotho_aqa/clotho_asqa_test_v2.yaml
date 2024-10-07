@@ -11,7 +11,7 @@ lmms_eval_specific_kwargs:
     post_prompt: ""
 metric_list:
   - metric: gpt_eval
-    aggregation: mean
+    aggregation: !function utils.clotho_aqa_v2_aggregate_results
     higher_is_better: true
     ignore_case: true
     ignore_punctuation: true
