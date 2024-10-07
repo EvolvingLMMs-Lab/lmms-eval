@@ -1,4 +1,0 @@
-task: "clotho_aqa_val_majority"
-test_split: ClothoAQA_val_majority
-
-include: _default_template_yaml
