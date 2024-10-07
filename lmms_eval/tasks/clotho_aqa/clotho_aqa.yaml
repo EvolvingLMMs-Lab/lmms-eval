@@ -1,0 +1,4 @@
+group: clotho_aqa
+tasks:
+  - clotho_aqa_val
+  - clotho_aqa_test
