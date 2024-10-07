@@ -1,0 +1,10 @@
+dataset_path: lmms-lab/ClothoAQA
+dataset_kwargs:
+  token: True
+doc_to_target: "answer"
+doc_to_visual: !function utils.clotho_aqa_doc_to_audio
+doc_to_text: !function utils.clotho_aqa_doc_to_text
+
+metadata:
+  gpt_eval_model_name: gpt-4o-mini
+  version: 0.0

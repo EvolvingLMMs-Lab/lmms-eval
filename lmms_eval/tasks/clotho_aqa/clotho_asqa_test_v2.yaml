@@ -1,0 +1,19 @@
+task: "clotho_aqa_test"
+dataset_name: "clotho_asqa_test_v2"
+test_split: test
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  do_sample: False
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metric_list:
+  - metric: gpt_eval
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+
+include: _default_template_yaml
