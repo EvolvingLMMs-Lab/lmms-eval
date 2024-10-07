@@ -1,4 +1,0 @@
-task: "clotho_aqa_test_unanimous"
-test_split: ClothoAQA_test_unanimous
-
-include: _default_template_yaml
