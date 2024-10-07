@@ -24,6 +24,7 @@ def clotho_aqa_doc_to_text(doc, lmms_eval_specific_kwargs):
     post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
+
 # functions for the clotho_asqa_v2 task, need to be tested later
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -108,6 +109,7 @@ def get_eval(max_tokens: int, content: str):
         return "", ""
     return "", ""
 
+
 def clotho_aqa_v2_process_results(doc, result):
     pred = result[0]
     ground_truth_str = doc["answer"]
@@ -116,6 +118,7 @@ def clotho_aqa_v2_process_results(doc, result):
     return {
         "gpt_eval": {"eval_answer": eval_answer, "model_name": model_name},
     }
+
 
 def clotho_aqa_v2_aggregate_results(results):
     score = 0
@@ -129,5 +132,4 @@ def clotho_aqa_v2_aggregate_results(results):
             eval_score = 0.0
         score += eval_score
 
-    return score / (len(results)*5)
-
+    return score / (len(results) * 5)
