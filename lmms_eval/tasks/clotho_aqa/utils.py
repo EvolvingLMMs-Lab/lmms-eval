@@ -1,3 +1,4 @@
+
 import datetime
 import json
 import os
@@ -23,6 +24,7 @@ def clotho_aqa_doc_to_text(doc, lmms_eval_specific_kwargs):
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
+
 
 # functions for the clotho_asqa_v2 task, need to be tested later
 
