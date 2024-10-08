@@ -1,23 +1,23 @@
-dataset_path: nhiremath/HungarianDocQA_IT_SynQA_ocr_v2
-task: "docqa_hu_syn"
+dataset_path: hongfenglu/HungarianDocQA_IT_IFEvalQA
+task: "docvqa_hu_ifeval"
 output_type: generate_until
 test_split: test
 doc_to_visual: !function utils.docvqa_doc_to_visual
 doc_to_text: !function utils.docvqa_doc_to_text
 doc_to_target: !function utils.docvqa_doc_to_target
 generation_kwargs:
-  max_new_tokens: 128
+  max_new_tokens: 64
   temperature: 0
   do_sample: False
 model_specific_prompt_kwargs:
   default:
-    pre_prompt: "\nVálaszold meg a kérdést. "
-    post_prompt: "Válasz magyarul:"
+    pre_prompt: ""
+    post_prompt: ""
 metric_list:
   - metric: anls
     aggregation: mean
     higher_is_better: true
-  # - metric: sambajudge
-  #   aggregation: mean
-  #   higher_is_better: true
-  #   query: true
+  - metric: sambajudge
+    aggregation: mean
+    higher_is_better: true
+    query: true

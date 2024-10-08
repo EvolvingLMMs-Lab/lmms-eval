@@ -373,8 +373,8 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
                 extracted_number = extract_number_from_brackets(response_text)
                 if extracted_number is None:
                     print(f"Attempt failed with text: {response_text}.")
-                    print(response_text)
-                    breakpoint()
+                    score = 0.0
+                    break
                 score = int(extracted_number)
                 break
             except Exception as e:
