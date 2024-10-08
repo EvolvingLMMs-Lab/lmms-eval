@@ -1,0 +1,4 @@
+dataset_name: Japanese_History
+tag: "jmmmu_culture_specific"
+task: "jmmmu_japanese_history"
+include: _default_template_yaml

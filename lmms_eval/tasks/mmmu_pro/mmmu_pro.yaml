@@ -2,4 +2,4 @@ group: mmmu_pro
 task:
 - mmmu_pro_vision
 # - mmmu_pro_composite # removing composite task in formal MMMU-Pro evaluation
-- mmmu_pro_original
+- mmmu_pro_standard
