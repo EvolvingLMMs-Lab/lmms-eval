@@ -1001,6 +1001,15 @@ class ConfigurableTask(Task):
                             if not os.path.exists(os.path.join(cache_dir, os.path.basename(base_name))):
                                 untar_video_data(output_tar)
 
+                    # Link cache_path to cache_dir.
+                    if not os.path.exists(cache_dir) or os.path.islink(cache_dir):
+                        if os.path.islink(cache_dir):
+                            os.remove(cache_dir)
+                            print(f"Removed existing symbolic link: {cache_dir}")
+                        # Create a new symbolic link
+                        os.symlink(cache_path, cache_dir)
+                        print(f"Symbolic link created successfully: {cache_path} -> {cache_dir}")
+
                 accelerator.wait_for_everyone()
                 dataset_kwargs.pop("cache_dir")
                 dataset_kwargs.pop("video")
