@@ -1,4 +1,4 @@
-dataset_path: nhiremath/HungarianDocQA_IT_SynQA
+dataset_path: nhiremath/HungarianDocQA_IT_SynQA_ocr_v2
 task: "docqa_hu_syn"
 output_type: generate_until
 test_split: test
