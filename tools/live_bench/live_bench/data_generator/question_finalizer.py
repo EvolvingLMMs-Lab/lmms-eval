@@ -104,15 +104,6 @@ Ensure:
 """
 
 """
-1. The question is clear and unambiguous.
-2. The answer is correct and reasonable (although the original ground truth answer is mostly correct, it may not be perfect, and sometimes the answer maybe incorrect).
-3. The scoring criteria are rational and facilitate the accurate assessment of responses.
-4. The full score for the scoring criteria must be 10 points, and it must directly relate to the specific answer.
-5. Except for some multiple-choice questions or other questions with only one possible answer, the scoring criteria should not be an all-or-nothing system. Partially correct answers should receive proportional points.
-6. Ensure that the scoring system is flexible enough to accommodate slight variations in correct answers while still maintaining a standard for what is considered an acceptable answer.
-7. Clearly define what constitutes a full score, partial score, and zero score.
-8. The criteria should be as detailed as possible, even if a LLM without image understanding capabilities could still score the answer based on the criteria and ground truth answer correctly.
-9. Modify the criteria to appropriately increase the difficulty of scoring. If the answer demonstrates a complete lack of understanding of the image, a very low score (0-2 points) can be given. This is because the main focus of this question is to assess the understanding of the image. In other words, 'being able to comprehend the image' is a required skill for scoring.
 
 Your task is to finalize these standards, thus ensuring the correctness of the answer and the rationality of the scoring criteria.
 
@@ -133,7 +124,6 @@ Please provide the final question, answer, and scoring criteria in the following
 }
 
 <The final scoring criteria> should be a single string, not a dict / list object.
-"""
 
 
 class QuestionFinalizer(object):
