@@ -124,6 +124,7 @@ Please provide the final question, answer, and scoring criteria in the following
 }
 
 <The final scoring criteria> should be a single string, not a dict / list object.
+"""
 
 
 class QuestionFinalizer(object):
