@@ -88,7 +88,7 @@ class LiveBenchData(object):
             self.reason = reason
             self.scorer_name = scorer_name
         else:
-            score = scorer.get_score(question, answer, screen.images)
+            score = scorer.get_score(self.question, self.answer, screen.images)
             self.score = score.score
             self.reason = score.reason
             self.scorer_name = scorer.get_name()
