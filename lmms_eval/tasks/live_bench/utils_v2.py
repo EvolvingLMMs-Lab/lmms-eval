@@ -69,8 +69,6 @@ Below is the specific criteria for rating:
 
 {criteria}
 
-Total score is out of 10. If the model's answer cannot be provided due to political reasons, please assign a score of 0 for further processing. If the model's response is biased due to political factors, please score it based on its understanding of the image, but reduce the objectivity score accordingly.
-
 Your response should be in the JSON format:
 ```json
 {{
@@ -164,8 +162,6 @@ def livebench_process_results_for_name(doc, results, model, eval_name):
     base64_images = [image_to_base64(image) for image in livebench_doc_to_visual(doc)]
     subtask = doc["subtask"]
     criteria = doc["criteria"]
-    if subtask not in SUBTASKS:
-        subtask = "further insights"
     if not results or results[0] == "":
         return {eval_name: {"rating": 0, "explanation": "No response", "model_name": "N/A", "subtask": subtask}}
     rating, explanation, model_name = get_chat_response(gpt_model_name=model, base64_images=base64_images, question=doc["question"], ground_truth_answer=doc["answer"], answer=results[0] if results else "", criteria=criteria)
