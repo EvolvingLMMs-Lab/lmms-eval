@@ -155,7 +155,7 @@ def livebench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 
-SUBTASKS = ["Basic Understanding", "Analytical Questions", "Divergent Thinking", "Real-world Assistance"]
+SUBTASKS = ["Concrete Recognition", "Analytical Questions", "Divergent Thinking", "Real-world Assistance"]
 
 
 def livebench_process_results_for_name(doc, results, model, eval_name):

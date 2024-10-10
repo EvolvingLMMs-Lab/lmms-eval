@@ -2,7 +2,6 @@ dataset_path: lmms-lab/LiveBench
 dataset_kwargs:
   token: True
 test_split: test
-dataset_name: 2024-07
 output_type: generate_until
 doc_to_visual: !function utils_v2.livebench_doc_to_visual
 doc_to_text: !function utils_v2.livebench_doc_to_text
