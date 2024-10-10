@@ -1,12 +1,13 @@
-import yaml
+import json
 import os
 from pathlib import Path
-import pandas as pd
-import json
 
+import pandas as pd
+import yaml
 from loguru import logger as eval_logger
-from lmms_eval.tasks.mathvista.mathvista_evals import MathVistaEvaluator
+
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks.mathvista.mathvista_evals import MathVistaEvaluator
 
 with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
     raw_data = f.readlines()
@@ -25,7 +26,7 @@ def mathvista_doc_to_visual(doc):
     return [doc["decoded_image"].convert("RGB")]
 
 
-def mathvista_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mathvista_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     problem = {
         "question_type": doc["question_type"],
         "answer_type": doc["answer_type"],
@@ -39,10 +40,10 @@ def mathvista_doc_to_text(doc, model_specific_prompt_kwargs=None):
     }
     query_prompt = mathvista_evaluator.create_one_query(
         problem,
-        shot_num=model_specific_prompt_kwargs["shot"],
-        shot_type=model_specific_prompt_kwargs["shot_type"],
-        use_caption=model_specific_prompt_kwargs["use_caption"],
-        use_ocr=model_specific_prompt_kwargs["use_ocr"],
+        shot_num=lmms_eval_specific_kwargs["shot"],
+        shot_type=lmms_eval_specific_kwargs["shot_type"],
+        use_caption=lmms_eval_specific_kwargs["use_caption"],
+        use_ocr=lmms_eval_specific_kwargs["use_ocr"],
     )
     return query_prompt
 

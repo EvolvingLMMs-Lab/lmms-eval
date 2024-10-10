@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import List
 
-from lmms_eval.api.instance import Instance
 from datasets import Dataset
+
+from lmms_eval.api.instance import Instance
 
 
 class Filter:

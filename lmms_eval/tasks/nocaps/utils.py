@@ -1,13 +1,12 @@
-import os
 import json
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
+import os
+
+from loguru import logger as eval_logger
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-
-from loguru import logger as eval_logger
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,9 +17,9 @@ def nocaps_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def nocaps_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def nocaps_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     # question = "Please carefully observe the image and come up with a caption for the image"
-    return model_specific_prompt_kwargs["prompt"]
+    return lmms_eval_specific_kwargs["prompt"]
 
 
 def nocaps_process_result(doc, result):

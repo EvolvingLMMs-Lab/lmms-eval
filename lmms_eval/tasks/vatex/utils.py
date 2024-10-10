@@ -1,15 +1,15 @@
-import os
 import json
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
-from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-from pycocotools.coco import COCO
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import os
+import sys
 from pathlib import Path
 
 import yaml
-import sys
-
 from loguru import logger as eval_logger
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+from pycocotools.coco import COCO
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
@@ -77,14 +77,14 @@ def vatex_test_doc_to_visual(doc):
     return [video_path]
 
 
-def vatex_ZH_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def vatex_ZH_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     few_shot_prompt = """[视频1] 输出:一个穿黑运动服、戴红色头盔的男人正在攀登雪山。\n[视频2] 输出:一个戴着耳机男人在电脑面前模拟打架子鼓。\n[视频3] 输出:一个穿黑色短袖的男子的男子，双手十指交叉放在胸前，肘部放在面前的桌子上，桌子上有一台电脑，不一会儿，男子半个手臂都放在了桌子上。\n[视频4] 输出:一位女士在她的手上涂抹少量的面霜，并且在她的眼睛下涂抹。\n"""
-    return model_specific_prompt_kwargs["prompt"] + "\n" + few_shot_prompt
+    return lmms_eval_specific_kwargs["prompt"] + "\n" + few_shot_prompt
 
 
-def vatex_test_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def vatex_test_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     few_shot_prompt = """[video1] output: A man picks up a can of shoe paste, a towel, and brush from a table.\n[video2] output: A person places the frying pan on the stove and then another person flips over the food that is in it.\n[video3] output: A woman describes and demonstrates how to create a colorful cross stitch design.\n[video4] output: A little girl uses the grass in her yard as well as a blue mat to do flips.\n"""
-    return model_specific_prompt_kwargs["prompt"] + "\n" + few_shot_prompt
+    return lmms_eval_specific_kwargs["prompt"] + "\n" + few_shot_prompt
 
 
 def vatex_process_result(doc, result):

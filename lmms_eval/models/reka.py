@@ -1,20 +1,20 @@
-from PIL import Image
-from io import BytesIO
-from copy import deepcopy
-import numpy as np
-import os
 import base64
-from typing import List, Tuple
-from tqdm import tqdm
-import requests as url_requests
-import time
-
 import json
+import os
+import time
+from copy import deepcopy
+from io import BytesIO
+from typing import List, Tuple
+
+import numpy as np
+import requests as url_requests
+from accelerate import Accelerator, DistributedType
+from PIL import Image
+from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from accelerate import Accelerator, DistributedType
 
 NUM_SECONDS_TO_SLEEP = 30
 
@@ -23,9 +23,9 @@ from loguru import logger
 eval_logger = logger
 
 try:
-    from reka.client import Reka as RekaClient
-    from reka import ChatMessage
     from decord import VideoReader, cpu
+    from reka import ChatMessage
+    from reka.client import Reka as RekaClient
 except Exception as e:
     eval_logger.warning(f"Error importing reka: {e}")
 
@@ -193,3 +193,6 @@ class Reka(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "Reka not support loglikelihood"
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

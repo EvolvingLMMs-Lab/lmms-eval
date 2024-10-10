@@ -1,16 +1,17 @@
-import os
-import re
-import sys
-import yaml
-import json
-import inspect
-import pathlib
-import functools
-import subprocess
 import collections
-import importlib.util
-import fnmatch
 import datetime
+import fnmatch
+import functools
+import hashlib
+import importlib.util
+import inspect
+import json
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import warnings
 from typing import (
     Any,
     Callable,
@@ -24,22 +25,26 @@ from typing import (
     Union,
 )
 
-import warnings
+import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 import gc
+from itertools import islice
+
+import numpy as np
+import pytz
 import torch
 import transformers
-
 from jinja2 import BaseLoader, Environment, StrictUndefined
-from itertools import islice
-import pytz
-
 from loguru import logger as eval_logger
 
 SPACING = " " * 47
+HIGHER_IS_BETTER_SYMBOLS = {
+    True: "↑",
+    False: "↓",
+}
 
 
 def is_json(string):
@@ -48,6 +53,10 @@ def is_json(string):
         return True
     except json.JSONDecodeError:
         return False
+
+
+def hash_string(string: str) -> str:
+    return hashlib.sha256(string.encode("utf-8")).hexdigest()
 
 
 def escaped_split(text, sep_char, maxsplit=-1):
@@ -82,6 +91,27 @@ def handle_arg_string(arg):
         return float(arg)
     except ValueError:
         return arg
+
+
+def handle_non_serializable(o):
+    if isinstance(o, np.int64) or isinstance(o, np.int32):
+        return int(o)
+    elif isinstance(o, set):
+        return list(o)
+    else:
+        return str(o)
+
+
+def sanitize_list(sub):
+    """
+    Takes possible nested list and recursively converts all inner component to strings
+    """
+    if isinstance(sub, list):
+        return [sanitize_list(item) for item in sub]
+    if isinstance(sub, tuple):
+        return tuple(sanitize_list(item) for item in sub)
+    else:
+        return str(sub)
 
 
 def simple_parse_args_string(args_string):
@@ -177,8 +207,11 @@ def pattern_match(patterns, source_list):
 
     task_names = set()
     for pattern in patterns:
-        for matching in fnmatch.filter(source_list, pattern):
-            task_names.add(matching)
+        try:
+            for matching in fnmatch.filter(source_list, pattern):
+                task_names.add(matching)
+        except Exception as e:
+            eval_logger.error(f"Error matching pattern {pattern}: {e}")
     return sorted(list(task_names))
 
 
@@ -190,6 +223,60 @@ def general_detokenize(string):
     string = string.replace(' "', '"')
     string = re.sub(r" (['.,])", r"\1", string)
     return string
+
+
+def get_file_task_name(filename: str) -> str:
+    """
+    Given the sample results filenames, extracts and returns the task name.
+    """
+    return filename[filename.find("_") + 1 : filename.rfind("_")]
+
+
+def get_file_datetime(filename: str) -> str:
+    """
+    Given the results and sample results filenames, extracts and returns the datetime.
+    """
+    return filename[filename.rfind("_") + 1 :].replace(".jsonl", "")
+
+
+def sanitize_model_name(model_name: str, full_path: bool = False) -> str:
+    """
+    Given the model name, returns a sanitized version of it.
+    """
+    if full_path:
+        return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", model_name)
+    else:
+        parts = model_name.split("/")
+        last_two = "/".join(parts[-2:]) if len(parts) > 1 else parts[-1]  # accommondate for models that are in Hugging Face Hub format like lmms-lab/llava-onevision-qwen2-0.5b
+        return re.sub(r"[\"<>:/\|\\?\*\[\]]+", "__", last_two)
+
+
+def sanitize_task_name(task_name: str) -> str:
+    """
+    Given the task name, returns a sanitized version of it.
+    """
+    return re.sub(r"\W", "_", task_name)
+
+
+def get_latest_filename(filenames: List[str]) -> str:
+    """
+    Given a list of filenames, returns the filename with the latest datetime.
+    """
+    return max(filenames, key=lambda f: get_file_datetime(f))
+
+
+def get_results_filenames(filenames: List[str]) -> List[str]:
+    """
+    Extracts filenames that correspond to aggregated results.
+    """
+    return [f for f in filenames if "results" in f and ".json" in f]
+
+
+def get_sample_results_filenames(filenames: List[str]) -> List[str]:
+    """
+    Extracts filenames that correspond to sample results.
+    """
+    return [f for f in filenames if "/samples_" in f and ".json" in f]
 
 
 def get_rolling_token_windows(token_list, prefix_token, max_seq_len, context_len):
@@ -237,6 +324,18 @@ def make_disjoint_window(pair):
     """Takes output from get_rolling_token_windows and makes the context not overlap with the continuation"""
     a, b = pair
     return a[: len(a) - (len(b) - 1)], b
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    """
+    Provides a proper json encoding for the loggers and trackers json dumps.
+    Notably manages the json encoding of dataclasses.
+    """
+
+    def default(self, o):
+        if is_dataclass(o):
+            return asdict(o)
+        return super().default(o)
 
 
 class Reorderer:
@@ -345,9 +444,9 @@ class Grouper:
         return res
 
 
-def make_table(result_dict, column: str = "results"):
+def make_table(result_dict, column: str = "results", sort_results: bool = False):
     """Generate table of results."""
-    from pytablewriter import MarkdownTableWriter, LatexTableWriter
+    from pytablewriter import LatexTableWriter, MarkdownTableWriter
 
     if column == "results":
         column_name = "Tasks"
@@ -360,6 +459,7 @@ def make_table(result_dict, column: str = "results"):
         "Filter",
         "n-shot",
         "Metric",
+        "",
         "Value",
         "",
         "Stderr",
@@ -370,54 +470,53 @@ def make_table(result_dict, column: str = "results"):
     md_writer.headers = all_headers
     latex_writer.headers = all_headers
 
-    # Set column alignments for LaTeX
-    latex_writer.column_alignments = ["center"] * len(all_headers)
-
-    # Set padding for LaTeX columns (this will add space between columns)
-    latex_writer.column_format = " ".join(["|c"] * len(all_headers)) + "|"
-
     values = []
 
-    for k, dic in result_dict[column].items():
-        version = result_dict["versions"][k]
-        n = str(result_dict["n-shot"][k])
+    keys = result_dict[column].keys()
+    if sort_results:
+        # sort entries alphabetically by task or group name.
+        # NOTE: we default here to false, because order matters for multi-level table printing a la mmlu.
+        # sorting here would mess that up
+        keys = sorted(keys)
+    for k in keys:
+        dic = result_dict[column][k]
+        version = result_dict["versions"].get(k, "    N/A")
+        n = str(result_dict.get("n-shot", " ").get(k, " "))
+        higher_is_better = result_dict.get("higher_is_better", {}).get(k, {})
 
         if "alias" in dic:
             k = dic.pop("alias")
 
-        for (mf), v in dic.items():
+        metric_items = dic.items()
+        metric_items = sorted(metric_items)
+
+        for (mf), v in metric_items:
             m, _, f = mf.partition(",")
             if m.endswith("_stderr"):
                 continue
 
-            points = "N/A"
-            if v is not None:
-                if isinstance(v, str):
-                    points = v
-                else:
-                    # if 0 <= v <= 1:
-                    #     # v *= 100
-                    points = "%.4f" % v
+            hib = HIGHER_IS_BETTER_SYMBOLS.get(higher_is_better.get(m), "")
+
+            v = "%.4f" % v if isinstance(v, float) else v
+            if v == "" or v is None:
+                v = "N/A"
 
             if m + "_stderr" + "," + f in dic:
-                if v is None:
-                    se = "N/A"
-                else:
-                    se = dic[m + "_stderr" + "," + f]
-                if se != "N/A":
-                    se = "%.4f" % se
-                values.append([k, version, f, n, m, points, "±", se])
+                # if dic[m + "_stderr" + "," + f] != []:
+                se = dic[m + "_stderr" + "," + f]
+                se = "   N/A" if se == "N/A" or se == [] else "%.4f" % se
+                if v != []:
+                    values.append([k, version, f, n, m, hib, v, "±", se])
             else:
-                values.append([k, version, f, n, m, points, "", ""])
-            k = ""
-            version = ""
+                values.append([k, version, f, n, m, hib, v, "", ""])
+            # k = ""
+            # version = ""
     md_writer.value_matrix = values
     latex_writer.value_matrix = values
 
-    # Print LaTeX table to see how it looks
+    # todo: make latex table look good
     # print(latex_writer.dumps())
 
-    # Return Markdown table (note: column width and text alignment may not be supported)
     return md_writer.dumps()
 
 
@@ -495,7 +594,18 @@ def get_datetime_str(timezone="Asia/Singapore"):
     tz = pytz.timezone(timezone)
     utc_now = datetime.datetime.now(datetime.timezone.utc)
     local_time = utc_now.astimezone(tz)
-    return local_time.strftime("%m%d_%H%M")
+    return local_time.strftime("%Y%m%d_%H%M%S")
+    return local_time.strftime("%Y%m%d_%H%M%S")
+
+
+def sanitize_long_string(s, max_length=40):
+    if len(s) > max_length:
+        return s[: max_length // 2] + "..." + s[-max_length // 2 :]
+    return s
+
+
+def ignore_constructor(loader, node):
+    return node
 
 
 def import_function(loader, node):
@@ -503,7 +613,7 @@ def import_function(loader, node):
     yaml_path = os.path.dirname(loader.name)
 
     *module_name, function_name = function_name.split(".")
-    if type(module_name) == list:
+    if isinstance(module_name, list):
         module_name = ".".join(module_name)
     module_path = os.path.normpath(os.path.join(yaml_path, "{}.py".format(module_name)))
 
@@ -515,11 +625,14 @@ def import_function(loader, node):
     return function
 
 
-# Add the import_function constructor to the YAML loader
-yaml.add_constructor("!function", import_function)
+def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full"):
+    if mode == "simple":
+        constructor_fn = ignore_constructor
+    elif mode == "full":
+        constructor_fn = import_function
 
-
-def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None):
+    # Add the import_function constructor to the YAML loader
+    yaml.add_constructor("!function", constructor_fn)
     if yaml_config is None:
         with open(yaml_path, "rb") as file:
             yaml_config = yaml.full_load(file)
@@ -528,12 +641,12 @@ def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None):
         yaml_dir = os.path.dirname(yaml_path)
 
     assert yaml_dir is not None
-    assert yaml_config is not None, f"Failed to load yaml config from {yaml_path}"
+
     if "include" in yaml_config:
         include_path = yaml_config["include"]
         del yaml_config["include"]
 
-        if type(include_path) == str:
+        if isinstance(include_path, str):
             include_path = [include_path]
 
         # Load from the last one first
@@ -547,7 +660,7 @@ def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None):
                 path = os.path.join(yaml_dir, path)
 
             try:
-                included_yaml_config = load_yaml_config(path)
+                included_yaml_config = load_yaml_config(yaml_path=path, mode=mode)
                 final_yaml_config.update(included_yaml_config)
             except Exception as ex:
                 # If failed to load, ignore

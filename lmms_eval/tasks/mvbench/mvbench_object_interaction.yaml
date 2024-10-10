@@ -1,0 +1,8 @@
+include: _default_template_yaml
+task: mvbench_object_interaction
+dataset_name: object_interaction
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: object_interaction
+    post_prompt: "Only give the best option.\n"

@@ -1,10 +1,11 @@
 import json
 import re
 from collections import Counter, defaultdict
+
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 
-def q_bench_doc_to_text(doc, model_specific_prompt_kwargs):
+def q_bench_doc_to_text(doc, lmms_eval_specific_kwargs):
     candidates = []
     for i in range(4):
         candidate = doc.get(f"option{i}")
@@ -12,8 +13,8 @@ def q_bench_doc_to_text(doc, model_specific_prompt_kwargs):
             candidates.append(candidate)
 
     question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(candidates)])
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{question}\n{post_prompt}"
 
 

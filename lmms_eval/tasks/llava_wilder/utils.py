@@ -1,14 +1,14 @@
 import base64
-import yaml
 import os
-from pathlib import Path
-import requests
-
 import time
 from copy import deepcopy
-import numpy as np
 from http import HTTPStatus
 from io import BytesIO
+from pathlib import Path
+
+import numpy as np
+import requests
+import yaml
 
 # Set up a logger
 from loguru import logger as eval_logger
@@ -143,11 +143,11 @@ def llava_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def llava_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
-    pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
-    post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
+def llava_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['Question']}{post_prompt}"
 
 

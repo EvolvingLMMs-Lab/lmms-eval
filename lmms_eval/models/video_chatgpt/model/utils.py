@@ -1,6 +1,7 @@
 import torch
-from lmms_eval.models.video_chatgpt.model import *
 from transformers import StoppingCriteria
+
+from lmms_eval.models.video_chatgpt.model import *
 
 
 class KeywordsStoppingCriteria(StoppingCriteria):

@@ -1,19 +1,19 @@
-from io import BytesIO
-from copy import deepcopy
-import numpy as np
-import os
 import base64
-from typing import List, Tuple
-from tqdm import tqdm
-import requests as url_requests
-import time
 import json
+import os
+import time
+from copy import deepcopy
+from io import BytesIO
+from typing import List, Tuple
+
+import numpy as np
+import requests as url_requests
+from accelerate import Accelerator, DistributedType
+from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
-from accelerate import Accelerator, DistributedType
 
 try:
     from decord import VideoReader, cpu
@@ -109,6 +109,11 @@ class GPT4V(lmms):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+
+        # Ensure the last frame is included
+        if total_frame_num - 1 not in uniform_sampled_frames:
+            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
+
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
@@ -225,6 +230,9 @@ class GPT4V(lmms):
 
         pbar.close()
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for GPT4V")
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO

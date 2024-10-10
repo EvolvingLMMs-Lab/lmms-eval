@@ -1,9 +1,9 @@
-from lmms_eval.api.model import lmms
-
 from typing import Callable, Dict
-import evaluate as hf_evaluate
 
+import evaluate as hf_evaluate
 from loguru import logger as eval_logger
+
+from lmms_eval.api.model import lmms
 
 MODEL_REGISTRY = {}
 
@@ -33,6 +33,7 @@ def get_model(model_name):
 
 TASK_REGISTRY = {}  # Key: task name, Value: task ConfigurableTask class
 GROUP_REGISTRY = {}  # Key: group name, Value: list of task names or group names
+TASK_INITIALIZED = False
 ALL_TASKS = set()  # Set of all task names and group names
 func2task_index = {}  # Key: task ConfigurableTask class, Value: task name
 
@@ -75,6 +76,7 @@ DEFAULT_METRIC_REGISTRY = {
     ],
     "multiple_choice": ["acc", "acc_norm"],
     "generate_until": ["exact_match"],
+    "generate_until_multi_round": ["exact_match"],
 }
 
 

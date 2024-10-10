@@ -1,22 +1,21 @@
 import io
+import json
 import os
 import time
-
-import json
-
-from PIL import Image
 from typing import List, Tuple
-from tqdm import tqdm
-from lmms_eval.api.registry import register_model
-from lmms_eval.api.model import lmms
-from lmms_eval.api.instance import Instance
-from accelerate import Accelerator, DistributedType
 
+from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
+from PIL import Image
+from tqdm import tqdm
+
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 
 try:
     import google.generativeai as genai
-    from google.generativeai.types import HarmCategory, HarmBlockThreshold
+    from google.generativeai.types import HarmBlockThreshold, HarmCategory
 
     NUM_SECONDS_TO_SLEEP = 30
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -76,6 +75,13 @@ class GeminiAPI(lmms):
 
         self.modality = modality
 
+        self.video_pool = []
+
+    def free_video(self):
+        for video in self.video_pool:
+            video.delete()
+        self.video_pool = []
+
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -98,6 +104,7 @@ class GeminiAPI(lmms):
     def encode_video(self, video_path):
         uploaded_obj = genai.upload_file(path=video_path)
         time.sleep(5)
+        self.video_pool.append(uploaded_obj)
         return uploaded_obj
 
     def convert_video(self, images):
@@ -117,7 +124,7 @@ class GeminiAPI(lmms):
             return f"{task}___{split}___{doc_id}"
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            if self.continual_mode is True and self.cache_mode == "resume":
+            if self.continual_mode and self.cache_mode == "resume":
                 doc_uuid = get_uuid(task, split, doc_id)
                 if doc_uuid in self.response_cache:
                     content = self.response_cache[doc_uuid]
@@ -173,6 +180,8 @@ class GeminiAPI(lmms):
             res.append(content)
             pbar.update(1)
 
+            self.free_video()
+
             if self.continual_mode is True:  # Cache the response
                 doc_uuid = get_uuid(task, split, doc_id)
                 self.response_cache[doc_uuid] = content
@@ -181,6 +190,9 @@ class GeminiAPI(lmms):
 
         pbar.close()
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for Gemini API")
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO

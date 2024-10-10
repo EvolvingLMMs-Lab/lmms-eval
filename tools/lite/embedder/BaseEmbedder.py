@@ -1,11 +1,16 @@
-from abc import ABC, abstractmethod
-from typing import List, Optional, Union, Dict
 import os
-
-from lmms_eval.tasks import initialize_tasks, include_path, get_task_dict, ConfigurableTask
-from lmms_eval.api.registry import ALL_TASKS
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional, Union
 
 import torch.distributed as dist
+
+from lmms_eval.api.registry import ALL_TASKS
+from lmms_eval.tasks import (
+    ConfigurableTask,
+    get_task_dict,
+    include_path,
+    initialize_tasks,
+)
 
 
 def rank0_print(*args):

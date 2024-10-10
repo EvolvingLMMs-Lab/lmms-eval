@@ -13,7 +13,7 @@ process_results: !function utils.ii_bench_process_results
 metric_list:
   - metric: submission
     aggregation: !function utils.ii_bench_aggregate_submissions
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: "Instruction: Please try to answer the single-answer multiple choice question below based on the picture provided.\n"
     post_prompt: "\nAnswer:"

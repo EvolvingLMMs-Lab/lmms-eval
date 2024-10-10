@@ -1,12 +1,13 @@
-import yaml
+import json
 import os
 from pathlib import Path
-import pandas as pd
-import json
 
+import pandas as pd
+import yaml
 from loguru import logger as eval_logger
-from lmms_eval.tasks.mmbench.mmbench_evals import MMBench_Evaluator
+
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks.mmbench.mmbench_evals import MMBench_Evaluator
 
 with open(Path(__file__).parent / "mmbench.yaml", "r") as f:
     raw_data = f.readlines()
@@ -38,7 +39,7 @@ def mmbench_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def mmbench_cn_cc_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mmbench_cn_cc_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_candidate = ["A", "B", "C", "D", "E"]
     options_prompt, options_dict = mmbench_evaluator.create_options_prompt(doc, option_candidate)
 
@@ -55,8 +56,8 @@ def mmbench_cn_cc_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
     query_prompt = f"{data['question']} {data['options']}"
 
-    if model_specific_prompt_kwargs:
-        query_prompt = f"{query_prompt}\n{model_specific_prompt_kwargs['post_prompt']}"
+    if lmms_eval_specific_kwargs:
+        query_prompt = f"{query_prompt}\n{lmms_eval_specific_kwargs['post_prompt']}"
 
     return query_prompt
 

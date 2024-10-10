@@ -1,0 +1,8 @@
+include: _default_template_yaml
+task: mvbench_state_change
+dataset_name: state_change
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: state_change
+    post_prompt: "Only give the best option.\n"

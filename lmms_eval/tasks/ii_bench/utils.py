@@ -1,9 +1,10 @@
 import json
 import re
 from collections import Counter
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 from loguru import logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 PROMPT = """Question: {}
 (A) {}
@@ -14,10 +15,10 @@ PROMPT = """Question: {}
 (F) {}"""
 
 
-def ii_bench_doc_to_text(doc, model_specific_prompt_kwargs):
+def ii_bench_doc_to_text(doc, lmms_eval_specific_kwargs):
     question = PROMPT.format(doc["question"], doc["option1"], doc["option2"], doc["option3"], doc["option4"], doc["option5"], doc["option6"])
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
 

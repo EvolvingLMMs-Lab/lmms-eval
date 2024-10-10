@@ -1,3 +1,3 @@
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     prompt: "Describe this image in detail."

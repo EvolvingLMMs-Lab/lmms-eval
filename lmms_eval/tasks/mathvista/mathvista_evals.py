@@ -1,9 +1,8 @@
-import time
-import requests
 import re
+import time
+
+import requests
 from Levenshtein import distance
-
-
 from loguru import logger as eval_logger
 
 # pids: 799, 681, 615

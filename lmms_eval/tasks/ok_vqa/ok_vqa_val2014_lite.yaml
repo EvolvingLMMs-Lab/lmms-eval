@@ -1,4 +1,3 @@
-group: ok_vqa
 task: ok_vqa_val2014_lite
 test_split: lite 
 dataset_path: lmms-lab/LMMs-Eval-Lite
@@ -20,7 +19,7 @@ metric_list:
     aggregation: !function utils.ok_vqa_aggregate_submissions
     higher_is_better: true
 process_results: !function utils.ok_vqa_process_results
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."

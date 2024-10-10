@@ -1,16 +1,15 @@
-import torch
+from typing import List, Optional, Tuple, Union
 
+import torch
 from accelerate import Accelerator, DistributedType
+from loguru import logger as eval_logger
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoProcessor
+
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from tqdm import tqdm
-from transformers import AutoModelForCausalLM
-from transformers import AutoProcessor
-from typing import List, Optional, Tuple, Union
-
-from loguru import logger as eval_logger
 
 
 @register_model("phi3v")
@@ -217,3 +216,6 @@ class Phi3v(lmms):
         res = re_ords.get_original(res)
         pbar.close()
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

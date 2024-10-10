@@ -1,20 +1,19 @@
 import datetime
-import yaml
 import json
 import os
+from difflib import SequenceMatcher as SM
+from functools import partial
+from pathlib import Path
 
 import evaluate
 import numpy as np
 import spacy
+import yaml
+from loguru import logger as eval_logger
 from nltk.util import ngrams
 from spacy.cli import download
 
-from pathlib import Path
-from difflib import SequenceMatcher as SM
-from functools import partial
-
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "_default_template_vcr_yaml", "r") as f:
     raw_data = f.readlines()
@@ -73,11 +72,11 @@ def vcr_doc_to_visual(doc):
     return [doc["stacked_image"].convert("RGB")]
 
 
-def vcr_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+def vcr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{post_prompt}"
 
 

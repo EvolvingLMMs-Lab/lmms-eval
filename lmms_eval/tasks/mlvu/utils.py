@@ -1,16 +1,18 @@
-from collections import defaultdict
-import os
 import datetime
 import json
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-from pathlib import Path
-import yaml
-import sys
-from typing import List, Dict, Optional, Union
+import os
 import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
 import cv2
 import numpy as np
+import yaml
 from loguru import logger as eval_logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 TASK_TYPES = ["TR", "AR", "VS", "NQA", "ER", "PQA", "SSC", "AO", "AC"]
 
@@ -39,7 +41,7 @@ def mlvu_doc_to_visual(doc):
     return [video_path]
 
 
-def mlvu_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mlvu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     # option_prompt="Carefully watch this video and pay attention to every detail. Based on your observations, select the best option that accurately addresses the question."
     option_prompt = ""
     question = doc["question"] + "\nOnly give the best option.\n"
