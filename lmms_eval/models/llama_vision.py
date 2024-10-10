@@ -69,7 +69,6 @@ class LlamaVision(lmms):
             dtype = getattr(torch, dtype)
 
         self.max_frames_num = max_frames_num
-        self.prompt = "{image_tokens}<|begin_of_text|>{context}"
         self._model = MllamaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
         self.model.eval()
         self.processor = AutoProcessor.from_pretrained(pretrained)
@@ -189,13 +188,22 @@ class LlamaVision(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
 
+            messages = [{"role": "user", "content": []}]
+            images = []
+
             for visual in visuals:
-                if isinstance(visual[0], str):
+                if isinstance(visual, str):
                     frames = self.load_video(visual, self.max_frames_num)
                     frames = torch.from_numpy(frames).permute(0, 3, 1, 2)
-                    images = [to_pil_image(frame) for frame in frames]
-                    prompt = self.prompt.format(image_tokens=DEFAULT_IMAGE_TOKEN * len(images), context=contexts)
-                    inputs = self.processor(images, prompt, return_tensors="pt").to(self.model.device)
+                    images.extend([to_pil_image(frame) for frame in frames])
+                elif isinstance(visual, PIL.Image.Image):
+                    images.append(visual)
+
+            for _ in range(len(images)):
+                messages[-1]["content"].append({"type": "image"})
+            messages[-1]["content"].append({"type": "text", "content": contexts})
+            prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+            inputs = self.processor(images, prompt, return_tensors="pt").to(self.model.device)
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -205,12 +213,15 @@ class LlamaVision(lmms):
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
+            if "do_sample" not in gen_kwargs:
+                gen_kwargs["do_sample"] = False
 
             with torch.no_grad():
                 output = self.model.generate(
                     **inputs,
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                     temperature=gen_kwargs["temperature"],
+                    do_sample=gen_kwargs["do_sample"],
                 )
                 output = output[:, inputs["input_ids"].shape[-1] :]
                 res.append(self.processor.decode(output[0]))
