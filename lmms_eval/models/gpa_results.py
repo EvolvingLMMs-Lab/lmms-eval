@@ -189,6 +189,15 @@ class GQA_Results(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
+        
+        # read files
+        self.result_dict = {}
+        with open("gqa_results.json", "r") as f:
+            all_results = f.readlines()
+            for line in all_results:
+                item_list = json.loads(line)
+                item_id, answer, result, valid = item_list
+                self.result_dict[item_id] = (answer, result, valid)
 
     @property
     def config(self):
@@ -418,9 +427,15 @@ class GQA_Results(lmms):
                 gen_kwargs.pop("until")
 
             context = batched_contexts[0]
-            text_outputs = [self.task_dict[task][split][batched_doc_id[0]]['answer']]
+            # text_outputs = [self.task_dict[task][split][batched_doc_id[0]]['answer']]
+            if task == 'gqa':
+                qid = self.task_dict[task][split][batched_doc_id[0]]['id']
+                answer, result, valid = self.result_dict.get(qid, ("", "", None))
+                text_outputs = [result]
+            else:
+                raise ValueError(f"Task {task} not supported for generate_until")
             # print(batched_doc_id, ": ", self.task_dict[task][split][batched_doc_id[0]], "\n")
-            # print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]])
+            # print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]], "\n")
             res.extend(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
             pbar.update(1)
