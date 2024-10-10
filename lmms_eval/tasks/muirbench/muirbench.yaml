@@ -1,4 +1,3 @@
-
 dataset_path: MUIRBENCH/MUIRBENCH
 task: "muirbench"
 dataset_kwargs:
@@ -10,7 +9,7 @@ doc_to_text: !function utils.muir_doc_to_text
 doc_to_target: !function utils.muir_doc_to_target
 process_results: !function utils.muir_process_results
   
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer with the option's letter from the given choices directly."

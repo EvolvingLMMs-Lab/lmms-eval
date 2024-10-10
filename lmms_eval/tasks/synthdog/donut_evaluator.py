@@ -6,12 +6,10 @@ from typing import Any, Dict, List, Tuple, Union
 
 import torch
 from datasets import load_dataset
+from loguru import logger as eval_logger
 from nltk import edit_distance
 from torch.utils.data import Dataset
 from transformers.modeling_utils import PreTrainedModel
-
-
-from loguru import logger as eval_logger
 
 try:
     import zss

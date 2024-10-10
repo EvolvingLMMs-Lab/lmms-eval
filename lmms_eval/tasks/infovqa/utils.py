@@ -1,20 +1,19 @@
 import json
 import os
 
+from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-from loguru import logger as eval_logger
 
 
 def infovqa_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def infovqa_doc_to_text(doc, model_specific_prompt_kwargs):
+def infovqa_doc_to_text(doc, lmms_eval_specific_kwargs):
     question = doc["question"]
-    pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{question}{post_prompt}"
 
 

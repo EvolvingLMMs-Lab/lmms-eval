@@ -1,15 +1,14 @@
-import os
-import requests
-import time
-
-import yaml
-from pathlib import Path
-import re
 import json
+import os
+import re
+import time
+from pathlib import Path
+
+import requests
+import yaml
+from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "d170_cn.yaml", "r") as f:
     raw_data = f.readlines()

@@ -1,0 +1,28 @@
+dataset_path: longvideobench/LongVideoBench
+dataset_kwargs:
+  token: True
+  cache_dir: longvideobench
+  video: True
+  force_download: False
+  local_files_only: False
+  # From_YouTube: True
+task: longvideobench_test_v
+test_split: test
+doc_to_visual: !function utils.longvideobench_doc_to_visual_v
+doc_to_text: !function utils.longvideobench_doc_to_text
+doc_to_target: "correct_choice"
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: False
+process_results: !function utils.longvideobench_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.longvideobench_aggregate_results_for_submission
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Answer with the option's letter from the given choices directly.\n"
+  

@@ -4,3 +4,10 @@ repos:
     hooks:
       - id: black
         language_version: python3
+        args: ["--line-length=240"]
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        language_version: python3
+        args: ["--profile", "black"]

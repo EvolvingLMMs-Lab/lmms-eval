@@ -3,3 +3,6 @@ dataset_kwargs:
   token: True
   video: True
   cache_dir: nextqa
+metadata:
+  version: 0.0.1
+  load_package: True

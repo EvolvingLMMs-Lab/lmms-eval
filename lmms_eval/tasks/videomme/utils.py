@@ -1,19 +1,18 @@
-from collections import defaultdict
-import os
 import datetime
 import json
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-
-from pathlib import Path
-import yaml
-import sys
-from typing import List, Dict, Optional, Union
+import os
 import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
 import cv2
 import numpy as np
-
+import yaml
 from loguru import logger as eval_logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 VIDEO_TYPE = ["short", "medium", "long"]
 CATEGORIES = ["Knowledge", "Film & Television", "Sports Competition", "Artistic Performance", "Life Record", "Multilingual"]
@@ -177,7 +176,7 @@ def extract_subtitles(video_path, subtitle_path):
 def videomme_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["videoID"] + ".mp4"
-    video_path = os.path.join(cache_dir, video_path)
+    video_path = os.path.join(cache_dir, "data", video_path)
     if os.path.exists(video_path):
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
@@ -189,12 +188,13 @@ def videomme_doc_to_visual(doc):
     return [video_path]
 
 
-def videomme_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def videomme_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]
     option = str(doc["options"])
     question = question + "\n" + option
-    full_prompt = option_prompt + "\n" + question + "\n" + "The best answer is:"
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
+    full_prompt = option_prompt + "\n" + question + "\n" + post_prompt
     return full_prompt
 
 
@@ -211,9 +211,10 @@ def videomme_doc_to_text(doc, model_specific_prompt_kwargs=None):
 # The best answer is:
 
 
-def videomme_doc_to_text_subtitle(doc, model_specific_prompt_kwargs=None):
+def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["videoID"] + ".mp4"
+    video_path = os.path.join(cache_dir, "data", video_path)
     subtitle_path = os.path.join(cache_dir, "subtitle", doc["videoID"] + ".srt")
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(subtitle_path):  # Denote have subtitle
@@ -224,8 +225,8 @@ def videomme_doc_to_text_subtitle(doc, model_specific_prompt_kwargs=None):
     if subtitle == "":
         subtitle = "No subtitles available"
     else:
-        if "gemini_api_flag" in model_specific_prompt_kwargs:  # specific for gemini_api
-            if model_specific_prompt_kwargs["gemini_api_flag"] == "full subtitle":
+        if "gemini_api_flag" in lmms_eval_specific_kwargs:  # specific for gemini_api
+            if lmms_eval_specific_kwargs["gemini_api_flag"] == "full subtitle":
                 textlist = []
                 for ele in subtitle:
                     pattern = r'<font color="white" size=".72c">(.*?)</font>'
@@ -234,76 +235,8 @@ def videomme_doc_to_text_subtitle(doc, model_specific_prompt_kwargs=None):
                         textlist.append(matches[0])
                 subtitle_text = "\n".join(textlist)
         else:
-            if "frame_num" in model_specific_prompt_kwargs:
-                frame_num = model_specific_prompt_kwargs["frame_num"]
-                subtitle_by_frame, total_frame = extract_subtitles(video_path, subtitle_path)
-                uniform_sampled_frames = np.linspace(0, total_frame - 1, frame_num, dtype=int).tolist()
-
-                subtitle_by_frame_idx = []
-                for frame_idx in uniform_sampled_frames:
-                    for idx, title in enumerate(subtitle_by_frame):
-                        if frame_idx < title[1] and frame_idx >= title[0]:
-                            subtitle_by_frame_idx.append(idx)
-                subtitle_by_frame_idx = list(set(subtitle_by_frame_idx))
-
-                textlist = []
-                for idx in subtitle_by_frame_idx:
-                    pattern = r'<font color="white" size=".72c">(.*?)</font>'
-                    raw_text = re.findall(pattern, subtitle_by_frame[idx][2])
-                    try:
-                        textlist.append(raw_text[0])
-                    except:
-                        continue
-                subtitle_text = "\n".join(textlist)
-        subtitle = subtitle_text
-
-    option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
-    question = doc["question"]
-    option = str(doc["options"])
-    # option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
-    question = question + "\n" + option
-    full_prompt = option_prompt + "\n" + question + "\n" + "The best answer is:"
-    return full_prompt
-
-
-# Frames + Subs
-# This video's subtitles are listed below:
-# 【subtitles】
-
-# Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option.
-# 【question】
-# The best answer is:
-# Frames / Frames + Audio
-# Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, or D) of the correct option.
-# 【question】
-# The best answer is:
-
-
-def videomme_doc_to_text_subtitle(doc, model_specific_prompt_kwargs=None):
-    cache_dir = os.path.join(base_cache_dir, cache_name)
-    video_path = doc["videoID"] + ".mp4"
-    subtitle_path = os.path.join(cache_dir, "subtitle", doc["videoID"] + ".srt")
-    video_path = os.path.join(cache_dir, video_path)
-    if os.path.exists(subtitle_path):  # Denote have subtitle
-        subtitle = open(subtitle_path).readlines()
-    else:
-        subtitle = ""
-    subtitles_prompt = "This video's subtitles are listed below: \n"
-    if subtitle == "":
-        subtitle = "No subtitles available"
-    else:
-        if "gemini_api_flag" in model_specific_prompt_kwargs:  # specific for gemini_api
-            if model_specific_prompt_kwargs["gemini_api_flag"] == "full subtitle":
-                textlist = []
-                for ele in subtitle:
-                    pattern = r'<font color="white" size=".72c">(.*?)</font>'
-                    matches = re.findall(pattern, ele)
-                    if matches:
-                        textlist.append(matches[0])
-                subtitle_text = "\n".join(textlist)
-        else:
-            if "frame_num" in model_specific_prompt_kwargs:
-                frame_num = model_specific_prompt_kwargs["frame_num"]
+            if "frame_num" in lmms_eval_specific_kwargs:
+                frame_num = lmms_eval_specific_kwargs["frame_num"]
                 subtitle_by_frame, total_frame = extract_subtitles(video_path, subtitle_path)
                 uniform_sampled_frames = np.linspace(0, total_frame - 1, frame_num, dtype=int).tolist()
 

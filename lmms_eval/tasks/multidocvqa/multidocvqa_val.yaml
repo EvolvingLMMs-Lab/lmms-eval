@@ -17,7 +17,7 @@ metric_list:
   - metric: accuracy
     aggregation: !function utils.multidocvqa_aggregate_results_accuracy
     higher_is_better: true
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer the question using a single word or phrase."

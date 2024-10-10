@@ -1,6 +1,7 @@
 import dataclasses
-from enum import auto, Enum
+from enum import Enum, auto
 from typing import List
+
 from lmms_eval.models.video_chatgpt.eval.model_utils import load_video
 
 

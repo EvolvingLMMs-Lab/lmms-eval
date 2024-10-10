@@ -1,14 +1,46 @@
-I would like you to act as a quizmaster who designs questions based on a provided image that would challenge adults to think critically. The image in question is a screenshot from the homepage or section of a news website. You are to create high-quality questions focusing on the information displayed within this webpage, which might contain multiple news articles. Your questions should specifically target the picture and the thematic information of a single article. Your question should be answerable, and checkable. Please disregard redundant elements of the website such as headers, and focus on the events depicted in the images themselves. If it is challenging to pose questions about a specific article due to insufficient information, design questions around the main information and events depicted in the image.
+I would like you to act as a quizmaster who designs questions based on a provided image that would challenge adults to think critically. The image in question is a screenshot from the homepage or section of a news website. You are to create high-quality questions focusing on the information displayed within this webpage, which might contain multiple news articles. Your questions should specifically target the picture and the thematic information of a single article. Your question should be answerable, and checkable. If it is challenging to pose questions about a specific article due to insufficient information, design questions around the main information and events depicted in the image. Within your capabilities, try to make the questions more challenging.
 
 A well-crafted question about an event should allow respondents to gain deeper insights by observing and analyzing the event, paying attention to the following aspects:
 
-- Basic Understanding: Questions that require direct observation or recall of the information presented in the image. These questions test the ability to identify and understand the basic elements and facts shown.
-- Contextual Analysis: Questions that delve into the context or setting of the information presented. This involves understanding the background, the circumstances surrounding the information, or the broader setting in which the image is placed.
-- Deeper Implications: Questions that explore the underlying meanings, implications, or consequences of the information in the image. These questions encourage critical thinking about the deeper effects or hidden messages.
-- Broader Implications: Questions that extend the discussion beyond the immediate context of the image to its wider impact on society, other fields, or global issues.
-- Further Insights: Questions that prompt exploration of additional layers of understanding or connections to other knowledge and concepts not immediately apparent from the image.
+1. **Basic Understanding (Comprehension and Remembering)**:
+   - These levels involve recalling facts and explaining concepts.
+   - Example questions include:
+     - "What are the key points in this news story?" (Remembering)
+     - "How would you explain the main event reported here?" (Comprehension)
+   - Reference: Vanderbilt University Center for Teaching on Bloom’s Taxonomy.
+2. **Analytical Questions (Analysis)**:
+   - This level involves breaking down information into components to understand relationships and meanings.
+   - Example questions:
+     - "What are the factors that led to this event?"
+     - "How does this event relate to other current issues?" 
+   - Reference: ClassPoint's description of Bloom's Taxonomy levels, focusing on analytical and critical thinking skills.
+3. **Evaluative Questions (Evaluation)**:
+   - These questions are about making judgments based on criteria and standards.
+   - Example questions:
+     - "Do you think the report's presentation was fair? Why or why not?"
+     - "What evidence supports the reliability of the sources?"
+     - "How would you rate the credibility of the news source based on this article?"
+     - "What are the potential implications of this event?"
+   - Reference: ClassPoint's detailed examples for evaluation questions.
+4. **Divergent Thinking (Creation)**:
+   - This is the highest level where individuals generate new ideas and integrate different concepts.
+   - Example questions:
+     - "How could you create a new headline that captures the essence of the event differently?"
+     - "If you were the reporter, how would you approach this story to provide a unique angle?"
+   - Reference: ThoughtCo’s overview of question types related to Bloom’s Taxonomy for fostering creativity.
+5. **Real-world Assistance (Application)**:
+    - This level involves applying knowledge to real-world situations.
+    - Example questions:
+      - "Please present this news in Arabic and output it in markdown format."
+      - "Organize all the news on this page in the form of an HTML table, which needs to include the title, release time, and keywords."
+      - "Sort out the exchange rate data and plot them using Julia language."
+      - "Please write a summary of the news in Vietnamese"
+      - "Can you give me a example of this update in Python?" (Maybe can specify the update content)
+    - For programming language and natural language specification, you can specify any language (such as python, R, Julia, etc. as programming languages, Swedish, Czech, Portuguese, Polish, Serbian, etc. as natural languages).
 
-Consider designing a multi-round Q&A process, progressively deepening the understanding of the event’s essence. Always remember not to design questions that you are not sure of the answers to simply to increase the difficulty deliberately.
+Maybe it is difficult to come up with questions about some aspects of some pictures, so you can be biased when setting questions.
+
+Consider designing a multi-round Q&A process, progressively deepening the understanding of the event’s essence.
 
 Please note that although the image may contain a lot of political content, try to avoid questions with any political bias when asking questions. Your questions should focus on understanding and thinking about the image, not on political opinions.
 

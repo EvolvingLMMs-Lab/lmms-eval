@@ -1,12 +1,14 @@
-from .BaseShrinker import BaseShrinker
+import os
 import sys
-from .sampling_methods import AVAILABEL_METHODS
+from typing import Dict, List, Union
+
+import numpy as np
+import torch
+
 from lmms_eval.tasks import initialize_tasks
 
-import torch
-from typing import List, Dict, Union
-import numpy as np
-import os
+from .BaseShrinker import BaseShrinker
+from .sampling_methods import AVAILABEL_METHODS
 
 sys.path.append("..")
 from embedder import BaseEmbedder

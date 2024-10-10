@@ -1,22 +1,20 @@
 import argparse
-import torch
-import os
 import json
-from tqdm import tqdm
 import logging
-from typing import List, Optional, Union, Tuple
-from PIL import Image
 import math
+import os
+import signal
+from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from datetime import timedelta
 from decord import VideoReader, cpu
-
-
+from PIL import Image
 from torchvision.transforms import Resize
-
-import signal
+from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -25,17 +23,24 @@ from lmms_eval.api.registry import register_model
 eval_logger = logging.getLogger("lmms-eval")
 # import sys;sys.path.append("llava-video")
 try:
-    from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-    from llava.conversation import conv_templates, SeparatorStyle
-    from llava.model.builder import load_pretrained_model
+    from llava.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IMAGE_TOKEN_INDEX,
+    )
+    from llava.conversation import SeparatorStyle, conv_templates
     from llava.data.dataset import LazySupervisedDataset
+    from llava.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        process_images,
+        tokenizer_image_token,
+    )
+    from llava.model.builder import load_pretrained_model
     from llava.utils import disable_torch_init
-    from llava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-    from llava.mm_utils import process_images
 except ImportError as e:
-    print(e)
-
-    eval_logger.debug("VILA is not installed. Please install VILA to use this model. Error: {e}")
+    eval_logger.debug(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
 
 
 @register_model("vila")
@@ -81,7 +86,6 @@ class VILA(lmms):
         self.max_frames_num = max_frames_num
         # self._config = AutoConfig.from_pretrained(self.pretrained)
 
-        # import pdb; pdb.set_trace()
         self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, self.model_name, device_map=self.device_map, attn_implementation=attn_implementation)
 
         self.model.image_processor = self._image_processor
@@ -202,7 +206,6 @@ class VILA(lmms):
             return [Image.fromarray(img) for img in spare_frames]
         except Exception as e:
             eval_logger.error(f"Failed to load video {video_path} with error: {e}")
-
             return [Image.new("RGB", (448, 448), (0, 0, 0))] * max_frames_num
 
     def tok_decode(self, tokens):
@@ -278,31 +281,22 @@ class VILA(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            # if self.task_dict[task][split][doc_id]["duration"] != "short":
-            #
-            #     res.append("A")
-            #     pbar.update(1)
-            #     continue
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
 
             num_video_frames = self.model.config.num_video_frames
             videos = []
-
             if self.max_frames_num == 0:
                 images = [Image.new("RGB", (448, 448), (0, 0, 0))] * num_video_frames
                 video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
                 videos.append(video)
             else:
                 for visual in visuals:
-                    # images, video_loading_succeed = LazySupervisedDataset._load_video(visual, num_video_frames, self.model)
-
                     if self.video_decode_backend == "decord":
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
                         images = read_video_pyav(visual, num_frm=num_video_frames)
-
                     video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
                     videos.append(video)
 
@@ -369,7 +363,9 @@ class VILA(lmms):
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
             print("Question: ", cur_prompt)
             print("Answer: ", outputs)
-
             res.append(outputs)
             pbar.update(1)
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

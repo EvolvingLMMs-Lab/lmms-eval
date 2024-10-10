@@ -1,11 +1,13 @@
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
-import numpy as np
 import math
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import torch
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from loguru import logger
+from tqdm import tqdm
 from transformers import AutoConfig
 
 from lmms_eval import utils
@@ -14,11 +16,10 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
 
-from loguru import logger
-
 eval_logger = logger
 
-from transformers import VideoLlavaProcessor, VideoLlavaForConditionalGeneration
+from transformers import VideoLlavaForConditionalGeneration, VideoLlavaProcessor
+
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 
@@ -202,9 +203,12 @@ class VideoLLaVA(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            generate_ids = self.model.generate(**inputs, max_length=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
+            generate_ids = self.model.generate(**inputs, max_new_tokens=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
 
             outputs = self._processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].split("ASSISTANT:")[-1].strip()
             res.append(outputs)
             pbar.update(1)
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

@@ -1,0 +1,9 @@
+group: live_bench
+task:
+- live_bench_2406
+- live_bench_2407
+- live_bench_2409
+
+metadata:
+  api_type: azure
+  eval_with_mini: false

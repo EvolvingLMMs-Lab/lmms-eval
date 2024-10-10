@@ -1,27 +1,41 @@
 import abc
 import ast
+import copy
+import inspect
 import itertools
 import json
-
 import os
 import random
 import re
 import shutil
 import subprocess
 from collections.abc import Callable
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
+from functools import partial
 from glob import glob
-from typing import Any, List, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import datasets
 import numpy as np
-from PIL import ImageFile
+from accelerate import Accelerator
 from datasets import DownloadConfig, Image, Sequence
 from huggingface_hub import snapshot_download
-from tenacity import retry, stop_after_attempt, wait_fixed, stop_after_delay
+from loguru import logger as eval_logger
+from PIL import ImageFile
+from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
 
-from accelerate import Accelerator
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
@@ -35,9 +49,8 @@ from lmms_eval.api.registry import (
     get_metric_aggregation,
     is_higher_better,
 )
+from lmms_eval.caching.cache import load_from_cache, save_to_cache
 from lmms_eval.filters import build_filter_ensemble
-
-from loguru import logger as eval_logger
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
 # Include this inside code block to avoid error
@@ -47,6 +60,7 @@ ALL_OUTPUT_TYPES = [
     "loglikelihood",
     "multiple_choice",
     "generate_until",
+    "generate_until_multi_round",
 ]
 
 
@@ -55,6 +69,7 @@ class TaskConfig(dict):
     # task naming/registry
     task: str = None
     task_alias: str = None
+    tag: str = None
     group: Union[str, list] = None
     group_alias: Union[str, list] = None
     # HF dataset options.
@@ -67,8 +82,10 @@ class TaskConfig(dict):
     validation_split: str = None
     test_split: str = None
     fewshot_split: str = None  # TODO: assert that this not None if num_fewshot > 0. (?) assert if this is same split as one evaling (?)
+    full_docs: bool = False
     # formatting / prompting options.
     # see docs/advanced_task_guide.md for more info
+    process_results_use_image: bool = False
     process_docs: Callable = None
     doc_to_visual: Union[Callable, str] = None
     doc_to_text: Union[Callable, str] = None
@@ -93,7 +110,7 @@ class TaskConfig(dict):
 
     metadata: Union[str, list] = None  # by default, not used in the code. allows for users to pass arbitrary info to tasks
 
-    model_specific_prompt_kwargs: dict = None
+    lmms_eval_specific_kwargs: dict = None
     model_specific_generation_kwargs: dict = None
     model_specific_target_kwargs: dict = None
 
@@ -104,10 +121,20 @@ class TaskConfig(dict):
 
             # self.dataset_path = inspect.getfile(import_module(self.dataset_path))
 
+        if self.group is not None:
+            eval_logger.warning(
+                "A task YAML file was found to contain a `group` key. Groups which provide aggregate scores over several subtasks now require a separate config file--if not aggregating, you may want to use the `tag` config option instead within your config. Setting `group` within a TaskConfig will be deprecated in v0.4.4. Please see https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/task_guide.md for more information."
+            )
+
+            if self.tag is None:
+                self.tag = self.group
+            else:
+                raise ValueError("Got both a `group` and `tag` entry within a TaskConfig. Please use one or the other--`group` values will be deprecated in v0.4.4.")
+
         if self.generation_kwargs is not None:
-            if self.output_type != "generate_until":
+            if "generate_until" not in self.output_type:
                 eval_logger.warning(f"[{self.task}] passed `generation_kwargs`, but not using `output_type: generate_until`!")
-                assert self.output_type != "generate_until"
+                assert "generate_until" not in self.output_type
 
             if "temperature" in self.generation_kwargs:
                 self.generation_kwargs["temperature"] = float(self.generation_kwargs["temperature"])
@@ -115,7 +142,7 @@ class TaskConfig(dict):
             if "until" not in self.generation_kwargs:
                 self.generation_kwargs["until"] = [self.fewshot_delimiter]
         else:
-            if self.output_type == "generate_until":
+            if "generate_until" in self.output_type:
                 # ensure that we greedily generate in absence of explicit arguments otherwise
                 self.generation_kwargs = {
                     "until": None if self.fewshot_delimiter is None else [self.fewshot_delimiter],
@@ -352,7 +379,20 @@ class Task(abc.ABC):
         pass
 
     # @profile
-    def build_all_requests(self, limit=None, rank=None, world_size=None) -> None:
+    def build_all_requests(
+        self,
+        *,
+        limit: Union[int, None] = None,
+        rank: int = 0,
+        world_size: int = 1,
+        cache_requests: bool = False,
+        rewrite_requests_cache: bool = False,
+        system_instruction: Optional[str] = None,
+        apply_chat_template: bool = False,
+        fewshot_as_multiturn: bool = False,
+        chat_template: Optional[Callable] = None,
+        tokenizer_name: str = "",
+    ) -> None:
         """Build a set of Instances for a task, and store them in task.instances"""
         if self.has_test_docs():
             docs = self.test_docs()
@@ -363,28 +403,85 @@ class Task(abc.ABC):
         else:
             assert False, f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!"
 
-        eval_logger.info(f"Building contexts for task {self.CONFIG.task} on rank {rank}...")
+        # used with caching
+        og_limit = limit
+
+        cache_key = f"requests-{self._config.task}-{self.config.num_fewshot}shot-rank{rank}-world_size{world_size}"
+        cache_key += "-chat_template" if apply_chat_template else ""
+        cache_key += "-fewshot_as_multiturn" if fewshot_as_multiturn else ""
+        cache_key += f"-system_prompt_hash{utils.hash_string(system_instruction)}" if system_instruction is not None else ""
+        cache_key += f"-tokenizer{tokenizer_name}"
+
+        cached_instances = load_from_cache(file_name=cache_key)
+
+        if cache_requests and cached_instances and not rewrite_requests_cache:
+            cached_instances = cached_instances[:limit]
+
+            flattened_instances = [instance for instance_group in cached_instances for instance in instance_group]
+
+            self._instances = flattened_instances
+            return
+
+        eval_logger.info(f"Building contexts for {self.config.task} on rank {rank}...")
+
         instances = []
-        doc_id_iterator = utils.create_iterator([i for i in range(len(docs))], rank, world_size, limit)
-        doc_id_iterator, doc_id_iterator_counting = itertools.tee(doc_id_iterator)
-        total_docs = sum(1 for _ in doc_id_iterator_counting)
-        pbar = tqdm(total=total_docs, desc=f"Building context", disable=(rank != 0))
-        for doc_id in doc_id_iterator:
+
+        # process all documents when caching is specified for simplicity
+        if cache_requests and (not cached_instances or rewrite_requests_cache) and limit is not None:
+            limit = None
+
+        doc_id_docs = list(self.doc_iterator(rank=rank, limit=limit, world_size=world_size))
+
+        num_docs = len(doc_id_docs)
+
+        for doc_id, doc in tqdm(
+            doc_id_docs,
+            total=num_docs,
+        ):
             # sample fewshot context #TODO: need to offset doc_id by rank now!
-            fewshot_ctx = self.fewshot_context(doc_id, 0 if self.config.num_fewshot is None else self.config.num_fewshot, self.config.training_split if self.has_training_docs() else split)
+            fewshot_ctx = self.fewshot_context(
+                doc,
+                0 if self.config.num_fewshot is None else self.config.num_fewshot,
+                system_instruction,
+                apply_chat_template,
+                fewshot_as_multiturn,
+                chat_template,
+            )
 
             # TODO: we should override self.config.repeats if doing greedy gen so users don't waste time+compute
-            inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=(self.config["task"], doc_id, self.config.repeats), split=split)
+            per_task_metadata = {"task": self.config["task"], "doc_id": doc_id, "repeats": self.config.repeats, "split": split}
+            if self.config.metadata and type(self.config.metadata) == dict:  # TODO: temporary fix for metadata loading, ignore the list of dict type.
+                per_task_metadata.update(self.config.metadata)
+
+            inst = self.construct_requests(doc_id=doc_id, ctx=fewshot_ctx, metadata=per_task_metadata)
 
             if not isinstance(inst, list):
                 inst = [inst]
 
-            instances.extend(inst)
-            pbar.update(1)
+            instances.append(inst)
 
-        pbar.close()
-        self._instances = instances
-        assert len(self._instances) != 0, "task.build_requests() did not find any docs!"
+        # now flatten, this is to allow slicing to work with pickles
+
+        sliced_instances = instances[:og_limit]
+
+        flattened_instances = [instance for instance_group in sliced_instances for instance in instance_group]
+
+        self._instances = flattened_instances
+
+        if len(self._instances) == 0:
+            raise ValueError("task.build_requests() did not find any docs!")
+
+        if cache_requests and (not cached_instances or rewrite_requests_cache):
+            save_to_cache(file_name=cache_key, obj=instances)
+
+        # FIXME: Bo - We need to check if the doc_to_visual if it's exists and restore it. If we use cache, the doc_to_visual will be None since it's not serializable
+        for instance in self._instances:
+            if instance.arguments[2] is None:
+                arguments = (instance.arguments[0], instance.arguments[1], self.doc_to_visual, *instance.arguments[3:])
+            else:
+                arguments = instance.arguments
+
+            instance.arguments = arguments
 
     @abc.abstractmethod
     def construct_requests(self, doc_id, ctx, **kwargs):
@@ -510,6 +607,19 @@ class Task(abc.ABC):
         # (num_fewshot)
         return self.config.to_dict()
 
+    def set_config(self, key: str, value: Any, update: bool = False) -> None:
+        """Set or update the configuration for a given key."""
+        if key is None:
+            raise ValueError("Key must be provided.")
+
+        if update:
+            current_value = getattr(self._config, key, {})
+            if not isinstance(current_value, dict):
+                raise TypeError(f"Expected a dict for key '{key}', got {type(current_value).__name__} instead.")
+            current_value.update(value)
+        else:
+            setattr(self._config, key, value)
+
     def override_metric(self, metric_name: str) -> None:
         """
         Override the default metrics used for evaluation with custom metrics.
@@ -533,24 +643,72 @@ class Task(abc.ABC):
         setattr(self._config, "metric_list", [{"metric": metric_name}])
         setattr(self._config, "process_results", None)
 
+    def set_fewshot_seed(self, seed: Optional[int] = None) -> None:
+        self.fewshot_rnd = random.Random(seed)
+        if hasattr(self, "sampler"):
+            self.sampler.rnd = self.fewshot_rnd
+
+    @property
+    def eval_docs(self) -> Union[datasets.Dataset, List[dict]]:
+        if self.has_test_docs():
+            return self.test_docs()
+        elif self.has_validation_docs():
+            return self.validation_docs()
+        else:
+            raise ValueError(f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!")
+
+    def doc_iterator(self, *, rank: int = 0, limit: Union[int, None] = None, world_size: int = 1) -> Iterator[Tuple[int, Any]]:
+        limit = int(limit) if limit else None
+        doc_iterator = utils.create_iterator(
+            enumerate(self.eval_docs),
+            rank=int(rank),
+            limit=limit,
+            world_size=int(world_size),
+        )
+        return doc_iterator
+
 
 class ConfigurableTask(Task):
     VERSION = "Yaml"
     OUTPUT_TYPE = None
     CONFIG = None
 
-    def __init__(self, model_name) -> None:  # TODO no super() call here
+    def __init__(
+        self,
+        data_dir=None,
+        cache_dir=None,
+        download_mode=None,
+        config: Optional[dict] = None,
+        model_name: Optional[str] = None,
+    ) -> None:  # TODO no super() call here
         # Get pre-configured attributes
         self._config = self.CONFIG
-        # different model requires different prompt, we have to take those into account.
+
+        # Use new configurations if there was no preconfiguration
+        if self.config is None:
+            self._config = TaskConfig(**config)
+        # Overwrite configs
+        else:
+            if config is not None:
+                self._config.__dict__.update(config)
+
+        if self.config is None:
+            raise ValueError("Must pass a config to ConfigurableTask, either in cls.CONFIG or `config` kwarg")
+
+        if isinstance(self.config.metadata, dict):
+            if "version" in self.config.metadata:
+                self.VERSION = self.config.metadata["version"]
 
         self.model_name = model_name
         self._prepare_model_specific_config()
 
-        assert self.config.output_type in ALL_OUTPUT_TYPES
-        self.OUTPUT_TYPE = self.config.output_type
+        if self.config.output_type is not None:
+            if self.config.output_type not in ALL_OUTPUT_TYPES:
+                raise ValueError(f"Got invalid output_type '{self.config.output_type}', must be in '{','.join(ALL_OUTPUT_TYPES)}'")
+            self.OUTPUT_TYPE = self.config.output_type
 
-        self.DATASET_PATH = self.config.dataset_path
+        if self.config.dataset_path is not None:
+            self.DATASET_PATH = self.config.dataset_path
 
         if self.config.dataset_name is not None:
             self.DATASET_NAME = self.config.dataset_name
@@ -628,12 +786,14 @@ class ConfigurableTask(Task):
                     eval_logger.warning(f'Both target_delimiter "{self.config.target_delimiter}" and target choice: "{choice}" do not have whitespace, ignore if the language you are evaluating on does not require/use whitespace')
 
     def _prepare_model_specific_config(self):
-        self.model_specific_prompt_kwargs = self.config.model_specific_prompt_kwargs
-        if self.model_specific_prompt_kwargs is not None:
-            if self.model_name in self.model_specific_prompt_kwargs:
-                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs[self.model_name]
-            else:
-                self.model_specific_prompt_kwargs = self.model_specific_prompt_kwargs.get("default", None)
+        self.lmms_eval_specific_kwargs = self.config.lmms_eval_specific_kwargs
+        if self.lmms_eval_specific_kwargs is not None:
+            if self.model_name in self.lmms_eval_specific_kwargs:
+                self.lmms_eval_specific_kwargs = self.lmms_eval_specific_kwargs[self.model_name]
+            if "default" in self.lmms_eval_specific_kwargs:
+                self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("default", {}))
+            if "dataset" in self.lmms_eval_specific_kwargs:
+                self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("dataset", {}))
 
         self.model_specific_target_kwargs = self.config.model_specific_target_kwargs
         if self.model_specific_target_kwargs is not None:
@@ -770,22 +930,32 @@ class ConfigurableTask(Task):
 
             if "video" in dataset_kwargs and dataset_kwargs["video"]:
                 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+                hf_home = os.path.expanduser(hf_home)
                 cache_dir = dataset_kwargs["cache_dir"]
                 cache_dir = os.path.join(hf_home, cache_dir)
                 accelerator = Accelerator()
                 if accelerator.is_main_process:
                     force_download = dataset_kwargs.get("force_download", False)
                     force_unzip = dataset_kwargs.get("force_unzip", False)
-                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset", force_download=force_download, etag_timeout=60)
+                    revision = dataset_kwargs.get("revision", "main")
+                    create_link = dataset_kwargs.get("create_link", False)
+                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
 
                     def unzip_video_data(zip_file):
+                        import os
                         import zipfile
 
                         with zipfile.ZipFile(zip_file, "r") as zip_ref:
-                            zip_ref.extractall(cache_dir)
-                            eval_logger.info(f"Extracted all files from {zip_file} to {cache_dir}")
+                            for file_info in zip_ref.infolist():
+                                target_path = os.path.join(cache_dir, file_info.filename)
+                                if not os.path.exists(target_path):
+                                    zip_ref.extract(file_info, cache_dir)
+                                else:
+                                    eval_logger.info(f"Skipping existing file: {target_path}")
+
+                        eval_logger.info(f"Extracted all files from {zip_file} to {cache_dir}")
 
                     def untar_video_data(tar_file):
                         import tarfile
@@ -832,6 +1002,16 @@ class ConfigurableTask(Task):
                             if not os.path.exists(os.path.join(cache_dir, os.path.basename(base_name))):
                                 untar_video_data(output_tar)
 
+                    # Link cache_path to cache_dir if needed.
+                    if create_link:
+                        if not os.path.exists(cache_dir) or os.path.islink(cache_dir):
+                            if os.path.islink(cache_dir):
+                                os.remove(cache_dir)
+                                eval_logger.info(f"Removed existing symbolic link: {cache_dir}")
+                            # Create a new symbolic link
+                            os.symlink(cache_path, cache_dir)
+                            eval_logger.info(f"Symbolic link created successfully: {cache_path} -> {cache_dir}")
+
                 accelerator.wait_for_everyone()
                 dataset_kwargs.pop("cache_dir")
                 dataset_kwargs.pop("video")
@@ -850,6 +1030,9 @@ class ConfigurableTask(Task):
             if "local_files_only" in dataset_kwargs:
                 dataset_kwargs.pop("local_files_only")
 
+            if "create_link" in dataset_kwargs:
+                dataset_kwargs.pop("create_link")
+
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
@@ -857,13 +1040,14 @@ class ConfigurableTask(Task):
             download_config=download_config,
             **dataset_kwargs if dataset_kwargs is not None else {},
         )
-        self.dataset_no_image = datasets.load_dataset(
-            path=self.DATASET_PATH,
-            name=self.DATASET_NAME,
-            download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-            download_config=download_config,
-            **dataset_kwargs if dataset_kwargs is not None else {},
-        )
+
+        if self.config.process_docs is not None:
+            for split in self.dataset:
+                if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
+                    self.dataset[split] = self.config.process_docs(self.dataset[split])
+
+        # copy dataset, remove image features
+        self.dataset_no_image = self.dataset.copy()
         for doc_name in self.dataset_no_image:
             remove_cols = []
             features = self.dataset_no_image[doc_name].features
@@ -896,20 +1080,14 @@ class ConfigurableTask(Task):
 
     def training_docs(self) -> datasets.Dataset:
         if self.has_training_docs():
-            if self.config.process_docs is not None:
-                return self.config.process_docs(self.dataset[self.config.training_split])
             return self.dataset[self.config.training_split]
 
     def validation_docs(self) -> datasets.Dataset:
         if self.has_validation_docs():
-            if self.config.process_docs is not None:
-                return self.config.process_docs(self.dataset[self.config.validation_split])
             return self.dataset[self.config.validation_split]
 
     def test_docs(self) -> datasets.Dataset:
         if self.has_test_docs():
-            if self.config.process_docs is not None:
-                return self.config.process_docs(self.dataset[self.config.test_split])
             return self.dataset[self.config.test_split]
 
     def fewshot_docs(self):
@@ -921,34 +1099,104 @@ class ConfigurableTask(Task):
             return super().fewshot_docs()
 
     @utils.positional_deprecated
-    def fewshot_context(self, doc_id, num_fewshot, split):
+    def fewshot_context(
+        self,
+        doc: str,
+        num_fewshot: int,
+        system_instruction: Optional[str] = None,
+        apply_chat_template: bool = False,
+        fewshot_as_multiturn: bool = False,
+        chat_template: Optional[Callable] = None,
+    ) -> str:
         """Returns a fewshot context string that is made up of a prepended description
         (if provided), the `num_fewshot` number of examples, and an appended prompt example.
 
-        :param doc_id: str
-            The document id as returned from training_docs, validation_docs, or test_docs.
+        :param doc: str
+            The document as returned from training_docs, validation_docs, or test_docs.
         :param num_fewshot: int
             The number of fewshot examples to provide in the returned context string.
+        :param  system_instruction: str
+            System instruction to be applied to the prompt.
+        :param apply_chat_template: bool
+            Whether to apply the chat template to the fewshot context.
+        :param fewshot_as_multiturn: bool
+            Whether to provide the fewshot examples as a multiturn conversation or a single user turn.
+        :param chat_template:
+            callable (from lm.apply_chat_template) that takes in a list[Dict] chat transcript and renders it into a string.
         :returns: str
             The fewshot context.
         """
-        doc = self.dataset_no_image[split][doc_id]
-        if num_fewshot == 0:
-            # always prepend the (possibly empty) task description
-            labeled_examples = self.config.description
+
+        if apply_chat_template:
+            labeled_examples = []
         else:
-            labeled_examples = self.config.description + self.sampler.get_context(doc, num_fewshot)
-        example = self.doc_to_text(doc)
-        if type(example) == str:
-            return labeled_examples + example
-        elif type(example) == list:
-            return [labeled_examples + ex for ex in example]
-        elif type(example) == int:
-            if self.config.doc_to_choice is not None:
-                choices = self.doc_to_choice(doc)
-                return labeled_examples + choices[example]
+            labeled_examples = ""
+
+        # get task description
+        if description := self.config.description:
+            description = utils.apply_template(self.config.description, doc)
+
+        # create system prompt based on the provided system instruction and description
+        if system_instruction is not None and description:
+            system_prompt = f"{system_instruction}{self.sampler.fewshot_delimiter}{description}"
+        elif system_instruction is not None:
+            system_prompt = system_instruction
+        elif description:
+            system_prompt = description
+        else:
+            system_prompt = ""
+
+        # add system prompt if specified
+        if system_prompt:
+            if apply_chat_template:
+                labeled_examples.append({"role": "system", "content": system_prompt})
             else:
-                return labeled_examples + str(example)
+                labeled_examples = system_prompt
+
+        # if few-shot - append examples after the system prompt
+        if num_fewshot > 0:
+            if apply_chat_template:
+                labeled_examples.extend(self.sampler.get_chat_context(doc, num_fewshot, fewshot_as_multiturn))
+            else:
+                labeled_examples += self.sampler.get_context(doc, num_fewshot)
+
+        example = self.doc_to_text(doc)
+        if apply_chat_template:
+            if self.multiple_input:
+                return chat_template(labeled_examples)
+            if isinstance(example, str):
+                self.append_target_question(labeled_examples, example, fewshot_as_multiturn)
+            # for loglikelihood create a list of questions with appended choices
+            elif isinstance(example, list):
+                labeled_examples_list = []
+                # copy chat history for each example and append the answer
+                for ex in example:
+                    chat = deepcopy(labeled_examples)
+                    self.append_target_question(chat, ex, fewshot_as_multiturn)
+                    labeled_examples_list.append(chat_template(chat))
+                return labeled_examples_list
+            # if example is an integer, append the choice or convert to string
+            elif isinstance(example, int):
+                if self.config.doc_to_choice is not None:
+                    choices = self.doc_to_choice(doc)
+                    self.append_target_question(labeled_examples, choices[example], fewshot_as_multiturn)
+                else:
+                    self.append_target_question(labeled_examples, str(example), fewshot_as_multiturn)
+                # return lm.apply_chat_template(labeled_examples)
+            return chat_template(labeled_examples)
+        else:
+            if self.multiple_input:
+                return labeled_examples
+            if isinstance(example, str):
+                return labeled_examples + example
+            elif isinstance(example, list):
+                return [labeled_examples + ex for ex in example]
+            elif isinstance(example, int):
+                if self.config.doc_to_choice is not None:
+                    choices = self.doc_to_choice(doc)
+                    return labeled_examples + choices[example]
+                else:
+                    return labeled_examples + str(example)
 
     def apply_filters(self):
         if hasattr(self, "_filters"):
@@ -1004,8 +1252,8 @@ class ConfigurableTask(Task):
                     return text_string
         elif callable(doc_to_text):
             return (
-                doc_to_text(doc, self.model_specific_prompt_kwargs)
-                if self.model_specific_prompt_kwargs is not None
+                doc_to_text(doc, self.lmms_eval_specific_kwargs)
+                if self.lmms_eval_specific_kwargs is not None
                 else doc_to_text(
                     doc,
                 )
@@ -1065,13 +1313,21 @@ class ConfigurableTask(Task):
             assert self.config.doc_to_visual in self.features
             # Single image. Still return a list for consistency.
             return [doc[self.config.doc_to_visual]]
+        elif callable(self.config.doc_to_visual):
+            return (
+                self.config.doc_to_visual(doc, self.lmms_eval_specific_kwargs)
+                if self.lmms_eval_specific_kwargs is not None and len(inspect.signature(self.config.doc_to_visual).parameters) == 2
+                else self.config.doc_to_visual(
+                    doc,
+                )
+            )
         else:
-            assert callable(self.config.doc_to_visual)
-            return self.config.doc_to_visual(doc)
+            # eval_logger.warning("Note that doc_to_visual was called but not set in config. Please check if this is a text-only task.")
+            return self.config.doc_to_visual
 
     def doc_to_choice(self, doc: Any) -> List[str]:
         if self.config.doc_to_choice is None:
-            eval_logger.error("doc_to_choice was called but not set in config")
+            eval_logger.error("Note that doc_to_choice was called but not set in config.")
         else:
             doc_to_choice = self.config.doc_to_choice
 
@@ -1092,8 +1348,8 @@ class ConfigurableTask(Task):
             raise TypeError
 
     def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
-        split = kwargs.get("split")
-        kwargs.pop("split")
+        split = kwargs.get("metadata").get("split")
+        # kwargs.pop("split")
         if self.OUTPUT_TYPE == "loglikelihood":
             arguments = (ctx, self.doc_to_target, self.doc_to_visual, doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "multiple_choice":
@@ -1140,7 +1396,9 @@ class ConfigurableTask(Task):
             return request_list
 
         elif self.OUTPUT_TYPE == "generate_until":
-            arguments = (ctx, self.config.generation_kwargs, self.doc_to_visual, doc_id, self.config.task, split)
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
+        elif self.OUTPUT_TYPE == "generate_until_multi_round":
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
     # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
@@ -1230,7 +1488,7 @@ class ConfigurableTask(Task):
                 acc_mutual_info = 1.0 if np.argmax(lls_mutual_info) == gold else 0.0
                 result_dict["acc_mutual_info"] = acc_mutual_info
 
-        elif self.OUTPUT_TYPE == "generate_until":
+        elif "generate_until" in self.OUTPUT_TYPE:
             gold = self.doc_to_target(doc)
 
             result = results[0]
@@ -1297,7 +1555,7 @@ class ConfigurableTask(Task):
         else:
             raise ValueError(
                 f"Passed invalid output_type '{self.OUTPUT_TYPE}' ! Please use one of ",
-                "'loglikelihood','generate_until' or 'multiple_choice'",
+                "'loglikelihood','generate_until', 'generate_until_multi_round', or 'multiple_choice'",
             )
 
         return result_dict
@@ -1307,3 +1565,13 @@ class ConfigurableTask(Task):
 
     def higher_is_better(self):
         return self._higher_is_better
+
+    def get_config(self, key: str) -> Any:
+        return getattr(self._config, key, None)
+
+    @property
+    def task_name(self) -> Any:
+        return getattr(self.config, "task", None)
+
+    def __repr__(self):
+        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"num_samples={len(self.eval_docs)})"

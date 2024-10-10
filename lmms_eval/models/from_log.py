@@ -1,16 +1,16 @@
 import json
 import os
 import re
-
 from datetime import datetime
 from typing import List, Tuple
-from tqdm import tqdm
-from lmms_eval.api.registry import register_model
-from lmms_eval.api.model import lmms
-from lmms_eval.api.instance import Instance
-from accelerate import Accelerator, DistributedType
 
+from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
+from tqdm import tqdm
+
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 
 
 @register_model("from_log")
@@ -114,3 +114,6 @@ class FromLog(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "not support"
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        return generate_until(self, requests)

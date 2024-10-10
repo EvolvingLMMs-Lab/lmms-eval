@@ -1,17 +1,15 @@
-from collections import defaultdict
-import re
 import ast
-import random
-import numpy as np
-import os
 import json
+import os
+import random
+import re
+from collections import defaultdict
 
 import matplotlib.font_manager as fm
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
 
 
 def add_order_label(image, label, font_size=40):
@@ -20,7 +18,7 @@ def add_order_label(image, label, font_size=40):
 
     # Define font for the label
     # font_path = fm.findfont(fm.FontProperties(family=font_family))
-    font_path = "./arial.ttf"
+    font_path = os.path.join(__file__, os.pardir, "arial.ttf")
     font = ImageFont.truetype(font_path, font_size)
 
     # Calculate text size and position
