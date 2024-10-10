@@ -55,7 +55,7 @@ AVAILABLE_MODELS = {
     "srt_api": "SRT_API",
     "tinyllava": "TinyLlava",
     "mmllama_together": "MMLlamaTogether",
-    "mmllama_sambacloud": "MMLlamaSambaCloud"
+    "mmllama_sambacloud": "MMLlamaSambaCloud",
     "videoChatGPT": "VideoChatGPT",
     "video_llava": "VideoLLaVA",
     "vila": "VILA",
