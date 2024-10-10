@@ -1,5 +1,6 @@
 import base64
 import os
+import tempfile
 import time
 from copy import deepcopy
 from io import BytesIO
@@ -50,6 +51,11 @@ class Qwen_VL_API(lmms):
     def world_size(self):
         return self._world_size
 
+    def save_image_to_temp_file(self, image):
+        temp_file = tempfile.NamedTemporaryFile(suffix=".jpeg", delete=True)
+        image.save(temp_file.name)
+        return temp_file
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -62,8 +68,8 @@ class Qwen_VL_API(lmms):
             imgs = []
 
             for idx, visual in enumerate(visuals):
-                visual.save(os.path.join(self.tmp_folder, f"tmp_{idx}_{self.rank}_{self.world_size}.jpg"))
-                imgs.append(os.path.join(self.tmp_folder, f"tmp_{idx}_{self.rank}_{self.world_size}.jpg"))
+                temp_file = self.save_image_to_temp_file(visual)
+                imgs.append(temp_file.name)
 
             messages = [{"role": "user", "content": []}]
 
@@ -90,7 +96,8 @@ class Qwen_VL_API(lmms):
 
             for attempt in range(5):
                 try:
-                    response_data = dashscope.MultiModalConversation.call(model=self.model_version, messages=messages, api_key=API_KEY, max_length=gen_kwargs["max_new_tokens"])
+                    response_data = dashscope.MultiModalConversation.call(model=self.model_version, messages=messages, api_key=API_KEY, max_length=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
+                    break
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
