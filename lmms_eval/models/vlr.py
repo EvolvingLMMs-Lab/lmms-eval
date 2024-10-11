@@ -61,8 +61,8 @@ else:
     best_fit_attn_implementation = "eager"
 
 
-@register_model("gqa_results")
-class GQA_Results(lmms):
+@register_model("vlr")
+class VLR(lmms):
     """
     Llava Model
     """
@@ -264,6 +264,7 @@ class GQA_Results(lmms):
         except:
             return self.tokenizer.decode([tokens])
 
+    # original one
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")

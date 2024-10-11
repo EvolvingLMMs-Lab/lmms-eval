@@ -4,7 +4,7 @@ import sys
 
 import hf_transfer
 from loguru import logger
-from .gpa_results import GQA_Results
+from .vlr import VLR
 
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
@@ -44,7 +44,7 @@ AVAILABLE_MODELS = {
     "vila": "VILA",
     "xcomposer2_4KHD": "XComposer2_4KHD",
     "xcomposer2d5": "XComposer2D5",
-    "gpa_results": "GQA_Results"
+    "vlr": "VLR"
 }
 
 
