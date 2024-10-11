@@ -457,10 +457,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             if task_missing:
                 missing = ", ".join(task_missing)
                 eval_logger.error(
-                    f"Tasks were not found: {missing}\n" f"{utils.SPACING}Try `lm-eval --tasks list` for list of available tasks",
+                    f"Tasks were not found: {missing}\n" f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
                 )
                 raise ValueError(
-                    f"Tasks not found: {missing}. Try `lm-eval --tasks {{list_groups,list_subtasks,list_tags,list}}` to list out all available names for task groupings; only (sub)tasks; tags; or all of the above, or pass '--verbosity DEBUG' to troubleshoot task registration issues."
+                    f"Tasks not found: {missing}. Try `lmms-eval --tasks {{list_groups,list_subtasks,list_tags,list}}` to list out all available names for task groupings; only (sub)tasks; tags; or all of the above, or pass '--verbosity DEBUG' to troubleshoot task registration issues."
                 )
 
     eval_logger.info(f"Selected Tasks: {task_names}")
