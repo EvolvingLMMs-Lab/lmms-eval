@@ -1,0 +1,26 @@
+task: "air_bench_foundation_sound"
+dataset_name: "Foundation"
+test_split: sound
+doc_to_target: !function utils.air_bench_doc_to_target_foundation
+doc_to_visual: !function utils.air_bench_doc_to_audio
+doc_to_text: !function utils.air_bench_doc_to_text_foundation
+doc_to_choice: !function utils.air_bench_doc_to_choice_foundation
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  do_sample: False
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+  - metric: submission
+    aggregation: !function utils.air_bench_aggregate_results_for_submission
+    higher_is_better: true
+
+process_results: !function utils.air_bench_process_results_foundation
+
+include: _default_template_yaml

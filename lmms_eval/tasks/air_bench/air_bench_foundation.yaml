@@ -1,0 +1,5 @@
+group: air_bench_foundation
+tasks:
+  - air_bench_foundation_sound
+  - air_bench_foundation_music
+  - air_bench_foundation_speech
