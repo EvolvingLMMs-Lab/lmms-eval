@@ -5,7 +5,7 @@ doc_to_target: "answer_gt"
 doc_to_visual: !function utils.air_bench_doc_to_audio
 doc_to_text: !function utils.air_bench_doc_to_text_chat
 generation_kwargs:
-  max_new_tokens: 256
+  max_new_tokens: 512
   temperature: 0
   do_sample: False
 lmms_eval_specific_kwargs:

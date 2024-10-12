@@ -1,26 +1,30 @@
 import datetime
 import json
 import os
+import random
 import re
 import sys
 import time
 from pathlib import Path
+
 import numpy as np
 import requests
 import yaml
 from loguru import logger as eval_logger
-import random
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
+
 def air_bench_doc_to_audio(doc):
-    return [doc['audio']['array']]
+    return [doc["audio"]["array"]]
+
 
 def air_bench_doc_to_text_chat(doc, lmms_eval_specific_kwargs):
-    question = doc['question']
-    pre_prompt = lmms_eval_specific_kwargs['pre_prompt']
-    post_prompt = lmms_eval_specific_kwargs['post_prompt']
-    return f'{pre_prompt}{question}{post_prompt}'
+    question = doc["question"]
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+    return f"{pre_prompt}{question}{post_prompt}"
+
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -55,17 +59,19 @@ elif API_TYPE == "azure":
     }
 
 # prompt taken from the AIR-Bench repo
-eval_prompt = ( "You are a helpful and precise assistant for checking the quality of the answer.\n"
-                "[Detailed Audio Description]\nXAudioX\n[Question]\nXQuestionX\n"
-                "[The Start of Assistant 1s Answer]\nXAssistant1X\n[The End of Assistant 1s Answer]\n"
-                "[The Start of Assistant 2s Answer]\nXAssistant2X\n[The End of Assistant 2s Answer]\n[System]\n"
-                "We would like to request your feedback on the performance of two AI assistants in response to the user question "
-                "and audio description displayed above. AI assistants are provided with detailed audio descriptions and questions.\n"
-                "Please rate the helpfulness, relevance, accuracy, and comprehensiveness of their responses. "
-                "Each assistant receives an overall score on a scale of 1 to 10, where a higher score indicates better overall performance. "
-                "Please output a single line containing only two values indicating the scores for Assistant 1 and 2, respectively. "
-                "The two scores are separated by a space. Please only output the 2 required number and no text." 
-                )
+eval_prompt = (
+    "You are a helpful and precise assistant for checking the quality of the answer.\n"
+    "[Detailed Audio Description]\nXAudioX\n[Question]\nXQuestionX\n"
+    "[The Start of Assistant 1s Answer]\nXAssistant1X\n[The End of Assistant 1s Answer]\n"
+    "[The Start of Assistant 2s Answer]\nXAssistant2X\n[The End of Assistant 2s Answer]\n[System]\n"
+    "We would like to request your feedback on the performance of two AI assistants in response to the user question "
+    "and audio description displayed above. AI assistants are provided with detailed audio descriptions and questions.\n"
+    "Please rate the helpfulness, relevance, accuracy, and comprehensiveness of their responses. "
+    "Each assistant receives an overall score on a scale of 1 to 10, where a higher score indicates better overall performance. "
+    "Please output a single line containing only two values indicating the scores for Assistant 1 and 2, respectively. "
+    "The two scores are separated by a space. Please only output the 2 required number and no text."
+)
+
 
 def get_eval(max_tokens: int, content: str):
     global headers
@@ -94,23 +100,23 @@ def get_eval(max_tokens: int, content: str):
         return "", ""
     return "", ""
 
+
 def air_bench_process_results_chat(doc, result):
-    path = doc['path']
-    question = doc['question']
-    answer_gt = doc['answer_gt']
-    task_name = doc['task_name']
-    dataset_name = doc['dataset_name']
+    path = doc["path"]
+    question = doc["question"]
+    answer_gt = doc["answer_gt"]
+    task_name = doc["task_name"]
+    dataset_name = doc["dataset_name"]
     response = result[0]
 
     if response == None:
         exit(1)
 
-        
-    if doc['meta_info'] == None:
+    if doc["meta_info"] == None:
         print("lack meta info")
         exit(1)
     else:
-        meta_info = doc['meta_info']             
+        meta_info = doc["meta_info"]
 
     # Get the evaluation score 2 times: one with ourmodel as assistant 1 and the other with our model as assistant 2 to prevent position bias
     content = eval_prompt.replace("XAudioX", meta_info).replace("XQuestionX", question).replace("XAssistant1X", answer_gt).replace("XAssistant2X", response)
@@ -127,35 +133,38 @@ def air_bench_aggregate_results_chat(results):
     score = 0
     for result in results:
         eval_answer = result["eval_answer"]
-        eval_answer = [eval_answer[i].strip().replace('.', '') for i in range(len(eval_answer))]
-        pattern = r'\b(?:[1-9]|10)\b'
+        eval_answer = [eval_answer[i].strip().replace(".", "") for i in range(len(eval_answer))]
+        pattern = r"\b(?:[1-9]|10)\b"
 
         # Find all matches
         try:
             matches1 = re.findall(pattern, eval_answer[0])
             matches2 = re.findall(pattern, eval_answer[1])
             # Get the first two occurrences
-            eval_score = float(matches1[1])+float(matches2[0])
+            eval_score = float(matches1[1]) + float(matches2[0])
             score += eval_score
         except Exception as e:
             eval_logger.error(f"Error parsing eval_score: {e}")
             continue
 
+    return score / (2 * len(results))
 
-    return score / (2*len(results))
 
 # Functions for Foundation tasks
 
+
 def air_bench_doc_to_text_foundation(doc, lmms_eval_specific_kwargs):
-    question = doc['question']
-    answers = [doc['choice_a'], doc['choice_b'], doc.get('choice_c', None), doc.get('choice_d', None)]
-    question = f'{question}\nA. {answers[0]}\nB. {answers[1]}\nC. {answers[2]}\nD. {answers[3]}\n'
-    pre_prompt = lmms_eval_specific_kwargs['pre_prompt']
-    post_prompt = lmms_eval_specific_kwargs['post_prompt']
-    return f'{pre_prompt}{question}{post_prompt}'
+    question = doc["question"]
+    answers = [doc["choice_a"], doc["choice_b"], doc.get("choice_c", None), doc.get("choice_d", None)]
+    question = f"{question}\nA. {answers[0]}\nB. {answers[1]}\nC. {answers[2]}\nD. {answers[3]}\n"
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+    return f"{pre_prompt}{question}{post_prompt}"
+
 
 def air_bench_doc_to_target_foundation(doc):
     return get_gt(doc)
+
 
 def air_bench_doc_to_choice_foundation(doc):
     choices = []
@@ -174,7 +183,6 @@ def air_bench_process_results_foundation(doc, result):
     submission_dict = {}
     submission_dict = {doc.get("uniq_id", "unknown"): pred}
     return {"accuracy": score, "submission": submission_dict}
-
 
 
 def air_bench_aggregate_results_for_submission(results, args):
@@ -225,12 +233,13 @@ def parse_multi_choice_response(response, all_choices):
 
     return pred_index
 
+
 def get_gt(doc):
-    if doc['answer_gt'] == doc['choice_a']:
-        return 'A'
-    elif doc['answer_gt'] == doc['choice_b']:
-        return 'B'
-    elif doc['answer_gt'] == doc.get('choice_c', None):
-        return 'C'
-    elif doc['answer_gt'] == doc.get('choice_d', None):
-        return 'D'
+    if doc["answer_gt"] == doc["choice_a"]:
+        return "A"
+    elif doc["answer_gt"] == doc["choice_b"]:
+        return "B"
+    elif doc["answer_gt"] == doc.get("choice_c", None):
+        return "C"
+    elif doc["answer_gt"] == doc.get("choice_d", None):
+        return "D"
