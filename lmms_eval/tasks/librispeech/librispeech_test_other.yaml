@@ -1,4 +1,4 @@
-dataset_path: Alarak/librispeech
+dataset_path: lmms-lab/librispeech
 dataset_kwargs:
   token: True
 task : "librispeech_test_other"
