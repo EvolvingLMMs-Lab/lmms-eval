@@ -1,0 +1,22 @@
+dataset_path: lmms-lab/people_speech
+dataset_kwargs:
+  token: True
+task : "people_speech_val"
+test_split: val
+output_type: generate_until
+doc_to_visual: !function utils.people_speech_doc_to_audio
+doc_to_text: !function utils.people_speech_doc_to_text
+doc_to_target: "gt"
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.people_speech_process_result
+metric_list:
+  - metric: wer 
+    aggregation : !function utils.people_speech_wer
+    higher_is_better : false
+metadata:
+  - version: 0.0
