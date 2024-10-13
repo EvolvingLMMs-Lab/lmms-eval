@@ -99,7 +99,7 @@ class LlavaVid(lmms):
         mm_resampler_location: str = "before",
         mm_newline_position: str = "grid",
         overwrite: bool = True,
-        video_decode_backend: str = "pyav",
+        video_decode_backend: str = "decord",
         delay_load: bool = False,
         tie_weights: bool = True,
         force_sample: bool = False,
