@@ -1,12 +1,28 @@
 import base64
 import io
 import logging
+import os
 from time import sleep
 
+import openai
 from live_bench.data_generator.response import Response
 from PIL import Image
 
 logger = logging.getLogger("lmms-eval")
+
+
+def get_openai_client(api_version="2024-02-15-preview") -> openai.OpenAI:
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    if endpoint:
+        key = os.getenv("AZURE_OPENAI_API_KEY")
+        if not key:
+            raise ValueError("OPENAI_API_KEY environment variable not set.")
+        return openai.AzureOpenAI(azure_endpoint=endpoint, api_key=key, api_version=api_version)
+    else:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable not set.")
+        return openai.OpenAI(api_key=api_key)
 
 
 def format_gpt4v_images(image):
@@ -35,7 +51,7 @@ def format_printable_messages(messages):
     return messages
 
 
-def gpt4v_generate_response(messages, *, client=None, model="gpt-4o", max_tokens: int = 4096, max_try_times: int = 5, json_format="auto", test=False, system=None, **kwargs) -> Response:
+def gpt4v_generate_response(messages, *, client=None, model="gpt-4o", max_tokens: int = 4096, max_try_times: int = 5, json_format="auto", test=False, system=None, temperature=0.5, **kwargs) -> Response:
     if system:
         messages = [{"role": "system", "content": system}] + messages
 
@@ -60,7 +76,7 @@ def gpt4v_generate_response(messages, *, client=None, model="gpt-4o", max_tokens
         response_format = None
 
     def _generate():
-        return client.chat.completions.create(model=model, messages=messages, max_tokens=max_tokens, response_format=response_format, **kwargs)
+        return client.chat.completions.create(model=model, messages=messages, max_tokens=max_tokens, response_format=response_format, temperature=temperature, **kwargs)
 
     for times in range(max_try_times):
         try:
