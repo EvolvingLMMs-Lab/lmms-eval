@@ -154,6 +154,7 @@ def get_eval(question, answer, pred, max_tokens: int, retries: int = 5):
 
     return "", ""
 
+
 def parse_score(review):
     try:
         # Convert the string representation of a dictionary to an actual dictionary
@@ -255,7 +256,6 @@ def activitynetqa_aggregate_score(results, args):
             no_count += 1
 
         total_score += int(result_dict["score"])
-
 
     # Calculate accuracy and average score
     accuracy = yes_count / (yes_count + no_count) if (yes_count + no_count) > 0 else 0

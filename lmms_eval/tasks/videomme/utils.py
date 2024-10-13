@@ -91,7 +91,6 @@ with open(Path(__file__).parent / "videomme.yaml", "r") as f:
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
 
-
 def parse_subtitle_time(time_str):
     h, m, s_ms = time_str.split(":")
     s, ms = s_ms.split(",")

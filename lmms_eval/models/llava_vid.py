@@ -1,25 +1,41 @@
+import math
+import os
+from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
 from decord import VideoReader, cpu
-import numpy as np
-import math
-from datetime import timedelta
-from transformers import AutoConfig, AutoModelForCausalLM
-import os
-from PIL import Image
+from llava.constants import (
+    DEFAULT_IM_END_TOKEN,
+    DEFAULT_IM_START_TOKEN,
+    DEFAULT_IMAGE_TOKEN,
+    IGNORE_INDEX,
+    IMAGE_TOKEN_INDEX,
+)
+from llava.conversation import SeparatorStyle, conv_templates
+from llava.mm_utils import (
+    KeywordsStoppingCriteria,
+    get_model_name_from_path,
+    tokenizer_image_token,
+)
+from llava.model.builder import load_pretrained_model
+from llava.model.language_model.llava_llama import LlavaConfig
+from llava.model.language_model.llava_qwen import LlavaQwenConfig
 
+# eval_logger = logging.getLogger("lmms-eval")
+# import sys;sys.path.append("llava-video")
+from loguru import logger as eval_logger
+from PIL import Image
+from tqdm import tqdm
+from transformers import AutoConfig, AutoModelForCausalLM
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
-
-# eval_logger = logging.getLogger("lmms-eval")
-# import sys;sys.path.append("llava-video")
-from loguru import logger as eval_logger
 
 # try:
 #     from llavavid.model.builder import load_pretrained_model
@@ -49,12 +65,6 @@ from loguru import logger as eval_logger
 # AutoConfig.register("llava_qwen", LlavaQwenConfig)
 # AutoConfig.register("llava_llama", LlavaConfig)
 
-from llava.model.language_model.llava_llama import LlavaConfig
-from llava.model.language_model.llava_qwen import LlavaQwenConfig
-from llava.model.builder import load_pretrained_model
-from llava.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
-from llava.conversation import conv_templates, SeparatorStyle
 
 AutoConfig.register("llava_llama", LlavaConfig)
 AutoConfig.register("llava_qwen", LlavaQwenConfig)
@@ -128,7 +138,7 @@ class LlavaVid(lmms):
         self.delay_load = delay_load
         self.force_sample = force_sample
         self.add_time_instruction = add_time_instruction
-        print("force sample:",self.force_sample)
+        print("force sample:", self.force_sample)
         # self.add_faster_video = add_faster_video
         # self.faster_token_stride = faster_token_stride
         self.torch_dtype = torch_dtype
@@ -160,10 +170,10 @@ class LlavaVid(lmms):
                     overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
 
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
-                pretrained, None, self.model_name, device_map=self.device_map, torch_dtype=self.torch_dtype,overwrite_config=overwrite_config, attn_implementation=attn_implementation
+                pretrained, None, self.model_name, device_map=self.device_map, torch_dtype=self.torch_dtype, overwrite_config=overwrite_config, attn_implementation=attn_implementation
             )
         else:
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, torch_dtype=self.torch_dtype,attn_implementation=attn_implementation)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, torch_dtype=self.torch_dtype, attn_implementation=attn_implementation)
 
         self._config = self._model.config
 
@@ -298,25 +308,25 @@ class LlavaVid(lmms):
                 print(f"Failed to read frame at path: {frame_path}")
         return video
 
-    def load_video(self, video_path, max_frames_num,fps,force_sample=False):
+    def load_video(self, video_path, max_frames_num, fps, force_sample=False):
         if max_frames_num == 0:
             return np.zeros((1, 336, 336, 3))
-        vr = VideoReader(video_path, ctx=cpu(0),num_threads=1)
+        vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
         total_frame_num = len(vr)
         video_time = total_frame_num / vr.get_avg_fps()
-        fps = round(vr.get_avg_fps()/fps)
+        fps = round(vr.get_avg_fps() / fps)
         frame_idx = [i for i in range(0, len(vr), fps)]
-        frame_time = [i/fps for i in frame_idx]
+        frame_time = [i / fps for i in frame_idx]
         if len(frame_idx) > max_frames_num or force_sample:
             sample_fps = max_frames_num
             uniform_sampled_frames = np.linspace(0, total_frame_num - 1, sample_fps, dtype=int)
             frame_idx = uniform_sampled_frames.tolist()
-            frame_time = [i/vr.get_avg_fps() for i in frame_idx]
+            frame_time = [i / vr.get_avg_fps() for i in frame_idx]
         frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         # import pdb;pdb.set_trace()
 
-        return spare_frames,frame_time,video_time
+        return spare_frames, frame_time, video_time
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
@@ -335,7 +345,7 @@ class LlavaVid(lmms):
             visuals = self.flatten(visuals)
             videos = []
             for visual in visuals:
-                video,frame_time,video_time = self.load_video(visual, self.max_frames_num, self.fps, force_sample=self.force_sample)
+                video, frame_time, video_time = self.load_video(visual, self.max_frames_num, self.fps, force_sample=self.force_sample)
                 video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].cuda()
                 if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
@@ -404,16 +414,16 @@ class LlavaVid(lmms):
             # encode, pad, and truncate contexts for this batch
             # import pdb;pdb.set_trace()
             visuals = doc_to_visual(self.task_dict[task][split][doc_id])
-            # visuals = [visuals] 
+            # visuals = [visuals]
             # visuals = self.flatten(visuals)
             videos = []
             try:
                 # for visual in visuals:
                 if len(visuals) == 1:
                     if self.video_decode_backend == "decord":
-                        video,frame_time,video_time = self.load_video(visuals[0], self.max_frames_num, self.fps, force_sample=self.force_sample)
+                        video, frame_time, video_time = self.load_video(visuals[0], self.max_frames_num, self.fps, force_sample=self.force_sample)
                     elif self.video_decode_backend == "pyav":
-                        video,frame_time,video_time = read_video_pyav(visuals[0], self.max_frames_num, self.fps, force_sample=self.force_sample)
+                        video, frame_time, video_time = read_video_pyav(visuals[0], self.max_frames_num, self.fps, force_sample=self.force_sample)
                     elif self.video_decode_backend == "image":
                         video = self.load_image(visuals[0])
                 else:
@@ -424,11 +434,11 @@ class LlavaVid(lmms):
                     elif "mvbench" in task:
                         # video = visuals
                         # Reference: https://github.com/jayleicn/TVQA/blob/dfb0e5fe4582efca574dfddfeafd1008db3b33ef/data/README.md?plain=1#L50C34-L50C60
-                        fps = 3 
-                        video_time = len(visuals)/fps
+                        fps = 3
+                        video_time = len(visuals) / fps
                         sampled_indices = np.linspace(0, len(visuals) - 1, self.max_frames_num, dtype=int)
                         frame_idx = sampled_indices.tolist()
-                        frame_time = [i/fps for i in frame_idx]
+                        frame_time = [i / fps for i in frame_idx]
                         frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
                         video = [visuals[i] for i in frame_idx]
 
@@ -436,7 +446,7 @@ class LlavaVid(lmms):
                 if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
                 else:
-                    video = video.half()                
+                    video = video.half()
                 videos.append(video)
             except Exception as e:
                 # import pdb;pdb.set_trace()
@@ -451,7 +461,7 @@ class LlavaVid(lmms):
             # import pdb;pdb.set_trace()
             if self.add_time_instruction:
                 time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(video)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
-                qs = f'{time_instruciton}\n{qs}'
+                qs = f"{time_instruciton}\n{qs}"
             if self.model.config.mm_use_im_start_end:
                 qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
