@@ -172,19 +172,10 @@ def parse_score(review):
         return [pred, score]
     except SyntaxError as e:
         eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
-        import pdb
-
-        pdb.set_trace()
     except ValueError as e:
         eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
-        import pdb
-
-        pdb.set_trace()
     except Exception as e:
         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
-        import pdb
-
-        pdb.set_trace()
 
 
 def activitynetqa_process_results(doc, result):

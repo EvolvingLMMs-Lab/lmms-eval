@@ -790,9 +790,9 @@ class ConfigurableTask(Task):
         if self.lmms_eval_specific_kwargs is not None:
             if self.model_name in self.lmms_eval_specific_kwargs:
                 self.lmms_eval_specific_kwargs = self.lmms_eval_specific_kwargs[self.model_name]
-            if "default" in self.lmms_eval_specific_kwargs:
+            elif "default" in self.lmms_eval_specific_kwargs:
                 self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("default", {}))
-            if "dataset" in self.lmms_eval_specific_kwargs:
+            elif "dataset" in self.lmms_eval_specific_kwargs:
                 self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("dataset", {}))
 
         self.model_specific_target_kwargs = self.config.model_specific_target_kwargs

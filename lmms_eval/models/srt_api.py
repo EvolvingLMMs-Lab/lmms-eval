@@ -62,7 +62,7 @@ class SRT_API(lmms):
         self.continual_mode = continual_mode
         self.force_sample = force_sample
         self.add_time_instruction = add_time_instruction
-        print("force sample:",self.force_sample)
+        eval_logger.info(f"Force sample: {self.force_sample}")
         if self.continual_mode:
             if response_persistent_folder is None:
                 raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
@@ -227,9 +227,6 @@ class SRT_API(lmms):
 
     def generate_sync(self, request):
         contexts, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
-        if doc_id != 7:
-            response = "A"
-            return response
         visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
         visuals = self.flatten(visuals)
         imgs = []  # multiple images or frames for video
@@ -288,9 +285,8 @@ class SRT_API(lmms):
                     eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.")
                     response_text = ""
 
-        print("Question:",contexts)
-        print("Answer:",response_text)
-        import pdb; pdb.set_trace()
+        eval_logger.info("Question:",contexts)
+        eval_logger.info("Answer:",response_text)
 
         return response_text
 

@@ -153,7 +153,8 @@ class LlavaVid(lmms):
 
                 scaling_factor = math.ceil(least_token_number / 4096)
                 if scaling_factor >= 2:
-                    print(float(scaling_factor))
+                    eval_logger.info(f"Scaling factor: {scaling_factor}")
+                    # print(float(scaling_factor))
                     overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
                     overwrite_config["max_sequence_length"] = 4096 * scaling_factor
                     overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
@@ -336,12 +337,10 @@ class LlavaVid(lmms):
             for visual in visuals:
                 video,frame_time,video_time = self.load_video(visual, self.max_frames_num, self.fps, force_sample=self.force_sample)
                 video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].cuda()
-                if self.torch_dtype == "float16":
-                    video = video.half()
-                elif self.torch_dtype == "bfloat16":
+                if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
                 else:
-                    import pdb;pdb.set_trace()
+                    video = video.half()
                 videos.append(video)
 
             qs = contexts
@@ -396,12 +395,12 @@ class LlavaVid(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            if self.task_dict[task][split][doc_id]["duration"] != "short":
-            # if doc_id != 112:
-                # import pdb;pdb.set_trace()
-                res.append("A")
-                pbar.update(1)
-                continue
+            # if self.task_dict[task][split][doc_id]["duration"] != "short":
+            # # if doc_id != 112:
+            #     # import pdb;pdb.set_trace()
+            #     res.append("A")
+            #     pbar.update(1)
+            #     continue
             # encode, pad, and truncate contexts for this batch
             # import pdb;pdb.set_trace()
             visuals = doc_to_visual(self.task_dict[task][split][doc_id])
@@ -434,12 +433,10 @@ class LlavaVid(lmms):
                         video = [visuals[i] for i in frame_idx]
 
                 video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].cuda()
-                if self.torch_dtype == "float16":
-                    video = video.half()
-                elif self.torch_dtype == "bfloat16":
+                if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
                 else:
-                    import pdb;pdb.set_trace()                    
+                    video = video.half()                
                 videos.append(video)
             except Exception as e:
                 # import pdb;pdb.set_trace()
@@ -511,8 +508,8 @@ class LlavaVid(lmms):
                 # output_ids = self.model.generate(inputs=input_ids, images=videos, attention_mask=attention_masks, modalities="video", do_sample=True, temperature=0.2, max_new_tokens=50,use_cache=True)
 
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-            print("Question: ", cur_prompt)
-            print("Answer: ", outputs)
+            eval_logger.debug(f"Question: {cur_prompt}")
+            eval_logger.debug(f"Answer: {outputs}")
             # import pdb;pdb.set_trace()
             res.append(outputs)
             pbar.update(1)

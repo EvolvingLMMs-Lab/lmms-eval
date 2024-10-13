@@ -26,7 +26,7 @@ metric_list:
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "The best answer is:"
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
   gpt4v:
     pre_prompt: ""
     post_prompt: "Answer the question with A, B, C, or D."
