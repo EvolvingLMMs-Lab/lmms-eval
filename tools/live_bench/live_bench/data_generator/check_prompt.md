@@ -4,7 +4,7 @@ Now, you are given a screenshot of the homepage of a news website, with a alread
 
 Note that the subtask must be one of these four:
 
-- Basic Understanding
+- Concrete Recognition
 - Analytical Questions
 - Evaluative Questions
 - Divergent Thinking

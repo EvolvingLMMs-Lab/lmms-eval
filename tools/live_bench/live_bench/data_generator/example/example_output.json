@@ -1,5 +1,5 @@
 {
-    "Basic Understanding": [
+    "Concrete Recognition": [
         {
             "Question": "Sort all the news headlines that appear in the graph from new to old. Provide the headlines and their respective timestamps.",
             "Answer": "Here is a sorted list of the news headlines from new to old based on the timestamps:\n\n1. **Fire at famous Bangkok market kills 1,000 animals**  \n   - 2 hrs ago | Asia\n\n2. **Four US college instructors stabbed in public park in China**  \n   - 5 hrs ago | Asia\n\n3. **Baltimore shipping channel reopens after bridge collapse**  \n   - 5 hrs ago | US & Canada\n\n4. **Aircraft carrying Malawi vice-president goes missing**  \n   - 6 hrs ago | Africa\n\n5. **UN Security Council backs US Israel-Gaza ceasefire plan**  \n   - 7 hrs ago | Middle East\n\n6. **Apple brings ChatGPT to iPhones in AI overhaul**  \n   - 10 hrs ago | Technology\n\n7. **Netanyahu walks tightrope as US urges Gaza ceasefire deal**  \n   - 14 hrs ago | World",

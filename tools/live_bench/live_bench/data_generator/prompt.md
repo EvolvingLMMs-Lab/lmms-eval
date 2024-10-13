@@ -2,7 +2,7 @@ I would like you to act as a quizmaster who designs questions based on a provide
 
 A well-crafted question about an event should allow respondents to gain deeper insights by observing and analyzing the event, paying attention to the following aspects:
 
-1. **Basic Understanding (Comprehension and Remembering)**:
+1. **Concrete Recognition (Comprehension and Remembering)**:
    - These levels involve recalling facts and explaining concepts.
    - Example questions include:
      - "What are the key points in this news story?" (Remembering)
