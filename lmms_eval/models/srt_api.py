@@ -46,6 +46,8 @@ class SRT_API(lmms):
         continual_mode: bool = False,
         response_persistent_folder: str = None,
         num_processes: int = cpu_count() // 2,
+        force_sample: bool = False,
+        add_time_instruction: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -58,6 +60,9 @@ class SRT_API(lmms):
         self.image_token = "<image>"
         self.timeout = timeout
         self.continual_mode = continual_mode
+        self.force_sample = force_sample
+        self.add_time_instruction = add_time_instruction
+        eval_logger.info(f"Force sample: {self.force_sample}")
         if self.continual_mode:
             if response_persistent_folder is None:
                 raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
@@ -123,17 +128,26 @@ class SRT_API(lmms):
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
+        # import pdb; pdb.set_trace()
         if type(video_path) == str:
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
-        frames = vr.get_batch(frame_idx).asnumpy()
+        video_time = total_frame_num / vr.get_avg_fps()
+        fps = round(vr.get_avg_fps())
+        frame_idx = [i for i in range(0, len(vr), fps)]
+        frame_time = [i / fps for i in frame_idx]
+        if len(frame_idx) > for_get_frames_num or self.force_sample:
+            sample_fps = for_get_frames_num
+            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, sample_fps, dtype=int)
+            frame_idx = uniform_sampled_frames.tolist()
+            frame_time = [i / vr.get_avg_fps() for i in frame_idx]
+        frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
+        spare_frames = vr.get_batch(frame_idx).asnumpy()
 
         base64_frames = []
-        for frame in frames:
+        for frame in spare_frames:
             img = Image.fromarray(frame)
             output_buffer = BytesIO()
             img.save(output_buffer, format="PNG")
@@ -141,7 +155,7 @@ class SRT_API(lmms):
             base64_str = base64.b64encode(byte_data).decode("utf-8")
             base64_frames.append(base64_str)
 
-        return base64_frames
+        return base64_frames, frame_time, video_time
 
     def flatten(self, input):
         new_list = []
@@ -161,13 +175,18 @@ class SRT_API(lmms):
                 imgs.append(img)
             elif self.modality == "video":
                 try:
-                    frames = self.encode_video(visual, self.max_frames_num)
+                    frames, frame_time, video_time = self.encode_video(visual, self.max_frames_num)
                     imgs.extend(frames)
                 except Exception as e:
                     eval_logger.error(f"Exception : {e} \n When loading video {visual}")
                     imgs = None
                     break
 
+        time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
+        if self.add_time_instruction:
+            contexts = f"{time_instruciton}\n{contexts}"
+        else:
+            contexts = f"{contexts}"
         # Handling video decode error
         # If we can't even load using pyav, then we will skip
         if imgs is None:
@@ -217,13 +236,18 @@ class SRT_API(lmms):
                 imgs.append(img)
             elif self.modality == "video":
                 try:
-                    frames = self.encode_video(visual, self.max_frames_num)
+                    frames, frame_time, video_time = self.encode_video(visual, self.max_frames_num)
                     imgs.extend(frames)
                 except Exception as e:
                     eval_logger.error(f"Exception : {e} \n When loading video {visual}")
                     imgs = None
                     break
 
+        time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
+        if self.add_time_instruction:
+            contexts = f"{time_instruciton}\n{contexts}"
+        else:
+            contexts = f"{contexts}"
         # Handling video decode error
         # If we can't even load using pyav, then we will skip
         if imgs is None:
@@ -259,6 +283,9 @@ class SRT_API(lmms):
                 else:  # If this was the last attempt, log and return empty string
                     eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.")
                     response_text = ""
+
+        eval_logger.info("Question:", contexts)
+        eval_logger.info("Answer:", response_text)
 
         return response_text
 
