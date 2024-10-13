@@ -169,7 +169,7 @@ Adding a multiple choice metric has a few steps. To get it working you need to:
 
 The default metric and aggregation functions are in `lm_eval/api/metrics.py`, and you can add a function there if it's for general use. The metrics are towards the bottom of the file and look like this:
 
-
+```python
     @register_metric(
         metric="mcc",
         higher_is_better=True,
@@ -178,7 +178,7 @@ The default metric and aggregation functions are in `lm_eval/api/metrics.py`, an
     )
     def mcc_fn(items):  # This is a passthrough function
         return items
-
+```
 Note that many of these are passthrough functions, and for multiple choice (at least) this function is never actually called.
 
 Aggregation functions are defined towards the top of the file, here's an example:
@@ -192,7 +192,7 @@ Aggregation functions are defined towards the top of the file, here's an example
 
 This function returns a single numeric value. The input is defined in `Task.process_results` in `lm_eval/api/task.py`. There's a section that looks like this:
 
-
+```python
     result_dict = {
         **({"acc": acc} if "acc" in use_metric else {}),
         **({"f1": (gold, pred)} if "f1" in use_metric else {}),
@@ -200,6 +200,7 @@ This function returns a single numeric value. The input is defined in `Task.proc
         **({"acc_norm": acc_norm} if "acc_norm" in use_metric else {}),
         **({"exact_match": exact_match} if "exact_match" in use_metric else {}),
     }
+```
 
 The value here determines the input to the aggregation function, though the name used matches the metric function. These metrics all have simple needs and just need the accuracy or gold and predicted values, but immediately below this there are examples of metrics with more complicated needs you can use as reference.
 
