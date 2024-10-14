@@ -1,4 +1,4 @@
-dataset_path: nhiremath/HungarianDocQA_IT_SynQA_ocr_v2
+dataset_path: nhiremath/HungarianDocQA_IT_SynQA_ocr_v3_cleaned
 task: "docvqa_hu_syn"
 output_type: generate_until
 test_split: test
