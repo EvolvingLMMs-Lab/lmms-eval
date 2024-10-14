@@ -1,10 +1,9 @@
 import importlib
 import os
-import hf_transfer
-from loguru import logger
 import sys
 
 import hf_transfer
+from loguru import logger
 
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
@@ -12,13 +11,10 @@ logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
-    "llava": "Llava",
     "mllava": "MLlava",
     "qwen_vl": "Qwen_VL",
     "qwen2_vl": "Qwen2_VL",
     "fuyu": "Fuyu",
-    "batch_gpt4": "BatchGPT4",
-    # "docowl": "DocOwl",
     "gpt4v": "GPT4V",
     "hfmodel": "HFModel",
     "llama8b": "LLaMa8b",
@@ -26,38 +22,64 @@ AVAILABLE_MODELS = {
     "sambalingoja": "SambaLingoJA",
     "sambalingohu": "SambaLingoHU",
     "ocrgpt4": "OCRGPT4",
-    "minicpm_v": "MiniCPM_V",
-    "llava_vid": "LlavaVid",
-    "videoChatGPT": "VideoChatGPT",
-    "llama_vid": "LLaMAVid",
-    "video_llava": "VideoLLaVA",
     "ss_llava": "SambaStudioLLaVA",
-    "xcomposer2_4KHD": "XComposer2_4KHD",
+    "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
-    "qwen_vl_api": "Qwen_VL_API",
-    "llava_sglang": "LlavaSglang",
+    "cogvlm2": "CogVLM2",
+    "from_log": "FromLog",
+    # "docowl": "DocOwl",    
+    "fuyu": "Fuyu",
+    "gemini_api": "GeminiAPI",
+    "gpt4v": "GPT4V",
     "idefics2": "Idefics2",
+    "instructblip": "InstructBLIP",
     "internvl": "InternVLChat",
     "internvl2": "InternVL2",
-    "gemini_api": "GeminiAPI",
     "paligemma": "PaliGemma",
-    "reka": "Reka",
-    "from_log": "FromLog",
+    "llama_vid": "LLaMAVid",
+    "llava": "Llava",
+    "llava_hf": "LlavaHf",
+    "llava_onevision": "Llava_OneVision",
+    "llava_sglang": "LlavaSglang",
+    "llava_vid": "LlavaVid",
+    "longva": "LongVA",
+    "mantis": "Mantis",
+    "minicpm_v": "MiniCPM_V",
+    "minimonkey": "MiniMonkey",
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
+    "qwen_vl": "Qwen_VL",
+    "qwen2_vl": "Qwen2_VL",
+    "qwen_vl_api": "Qwen_VL_API",
+    "reka": "Reka",
+    "srt_api": "SRT_API",
     "tinyllava": "TinyLlava",
-    "llava_hf": "LlavaHf",
-    "longva": "LongVA",
-    "vila": "VILA",
     "mmllama_together": "MMLlamaTogether",
-    "mmllama_sambacloud": "MMLlamaSambaCloud"
+    "mmllama_sambacloud": "MMLlamaSambaCloud",
+    "videoChatGPT": "VideoChatGPT",
+    "video_llava": "VideoLLaVA",
+    "vila": "VILA",
+    "xcomposer2_4KHD": "XComposer2_4KHD",
+    "internvideo2": "InternVideo2",
+    "xcomposer2d5": "XComposer2D5",
+    "oryx": "Oryx",
+    "videochat2": "VideoChat2",
+    "llama_vision": "LlamaVision",
 }
 
-for model_name, model_class in AVAILABLE_MODELS.items():
+
+def get_model(model_name):
+    if model_name not in AVAILABLE_MODELS:
+        raise ValueError(f"Model {model_name} not found in available models.")
+
+    model_class = AVAILABLE_MODELS[model_name]
     try:
-        exec(f"from .{model_name} import {model_class}")
-    except ImportError as e:
-        logger.warning(f"Failed to import {model_class} from {model_name}: {e}")
+        module = __import__(f"lmms_eval.models.{model_name}", fromlist=[model_class])
+        return getattr(module, model_class)
+    except Exception as e:
+        logger.error(f"Failed to import {model_class} from {model_name}: {e}")
+        raise
+
 
 if os.environ.get("LMMS_EVAL_PLUGINS", None):
     # Allow specifying other packages to import models from
@@ -66,5 +88,5 @@ if os.environ.get("LMMS_EVAL_PLUGINS", None):
         for model_name, model_class in getattr(m, "AVAILABLE_MODELS").items():
             try:
                 exec(f"from {plugin}.models.{model_name} import {model_class}")
-            except ImportError:
-                logger.warning(f"Failed to import {model_class} from {model_name}")
+            except ImportError as e:
+                logger.debug(f"Failed to import {model_class} from {model_name}: {e}")

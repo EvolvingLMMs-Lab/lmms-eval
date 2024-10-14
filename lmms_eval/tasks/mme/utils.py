@@ -1,11 +1,11 @@
-from collections import defaultdict
-import os
 import datetime
 import json
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
+import os
+from collections import defaultdict
 
 from loguru import logger as eval_logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
@@ -38,14 +38,14 @@ def mme_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def mme_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mme_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["question"].strip()
-    if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
+    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
         question = question.replace(replace_prompt, "")
-        question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
+        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
+    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
         question = question.replace(replace_prompt, "")
-        question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
+        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
     return question
 
 

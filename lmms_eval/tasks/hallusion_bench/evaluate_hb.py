@@ -1,9 +1,16 @@
-import os
 import json
+import os
 
 from tqdm import tqdm
 
-from lmms_eval.tasks.hallusion_bench.utils import evaluate_by_chatgpt, check_same_by_chatgpt, assign_correctness, get_eval_all, get_eval_fig, get_eval_pair_all
+from lmms_eval.tasks.hallusion_bench.utils import (
+    assign_correctness,
+    check_same_by_chatgpt,
+    evaluate_by_chatgpt,
+    get_eval_all,
+    get_eval_fig,
+    get_eval_pair_all,
+)
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 output_entry = "model_prediction"
@@ -14,11 +21,11 @@ metric = ["aAcc", "fAcc", "qAcc"]
 from loguru import logger as eval_logger
 
 
-def hb_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
-    pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
-    post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
+def hb_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 

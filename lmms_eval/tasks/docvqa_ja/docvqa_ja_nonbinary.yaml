@@ -9,7 +9,7 @@ generation_kwargs:
   max_new_tokens: 256
   temperature: 0
   do_sample: False
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     pre_prompt: "\n1 つの単語またはフレーズを使用して質問に答えます。"
     post_prompt: "日本語での回答:"

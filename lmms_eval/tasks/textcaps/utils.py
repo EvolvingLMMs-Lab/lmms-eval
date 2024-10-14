@@ -1,12 +1,12 @@
-import os
 import json
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
-from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-from pycocotools.coco import COCO
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
+import os
 
 from loguru import logger as eval_logger
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+from pycocotools.coco import COCO
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
@@ -17,8 +17,8 @@ def textcaps_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def textcaps_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    return model_specific_prompt_kwargs["prompt"]
+def textcaps_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    return lmms_eval_specific_kwargs["prompt"]
 
 
 def textcaps_process_result(doc, result):

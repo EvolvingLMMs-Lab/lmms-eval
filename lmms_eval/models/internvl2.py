@@ -1,19 +1,21 @@
-from typing import Any, Dict, List, Tuple, Union
-from lmms_eval.api.instance import Instance
-from decord import VideoReader, cpu
+import logging
 import dataclasses
+from typing import List, Tuple
+
+import numpy as np
 import torch
 import torchvision.transforms as T
+from accelerate import Accelerator, DistributedType
+from decord import VideoReader, cpu
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
-import numpy as np
+from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
-from lmms_eval.api.registry import register_model
-from accelerate import Accelerator, DistributedType
+
+from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from enum import IntEnum, auto
-from tqdm import tqdm
-import logging
+from lmms_eval.api.registry import register_model
 
 eval_logger = logging.getLogger("eval_logger")
 
@@ -434,6 +436,7 @@ def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=3
 
 
 from datetime import timedelta
+
 from accelerate.state import AcceleratorState
 from accelerate.utils import InitProcessGroupKwargs
 
@@ -452,8 +455,8 @@ class InternVL2(lmms):
         super().__init__()
 
         self.path = pretrained
-        self.model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=False, trust_remote_code=True).eval().cuda()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
+        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, trust_remote_code=True).eval().cuda()
+        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
 
         batch_size = int(batch_size)
         assert batch_size == 1, f"Batch size should be 1 for InternVL2, but got {batch_size}."
@@ -504,8 +507,40 @@ class InternVL2(lmms):
             self._rank = 0
             self._world_size = 1
 
-        self.device = self._device
         self.modality = modality
+
+    @property
+    def config(self):
+        # return the associated transformers.AutoConfig for the given pretrained model.
+        return self._config
+
+    @property
+    def tokenizer(self):
+        return self._tokenizer
+
+    @property
+    def model(self):
+        # returns the model, unwrapping it if using Accelerate
+        if hasattr(self, "accelerator"):
+            return self.accelerator.unwrap_model(self._model)
+        else:
+            return self._model
+
+    @property
+    def batch_size(self):
+        return self.batch_size_per_gpu
+
+    @property
+    def device(self):
+        return self._device
+
+    @property
+    def rank(self):
+        return self._rank
+
+    @property
+    def world_size(self):
+        return self._world_size
 
     def flatten(self, input):
         new_list = []
@@ -521,23 +556,32 @@ class InternVL2(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if "until" in gen_kwargs:
                 gen_kwargs.pop("until")
-
             for k, v in DEFAULT_GEN_KWARGS.items():
                 if k not in gen_kwargs:
                     gen_kwargs[k] = v
 
+            pop_keys = []
+            for k, v in gen_kwargs.items():
+                if k not in DEFAULT_GEN_KWARGS:
+                    pop_keys.append(k)
+
+            for k in pop_keys:
+                gen_kwargs.pop(k)
+
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             if self.modality == "image":
-                visuals = [load_image(visual).to(torch.bfloat16).cuda() for visual in visuals]
-                pixel_values = torch.cat(visuals, dim=0)
-                num_patches_list = [visual.size(0) for visual in visuals]
                 if visuals:
+                    visuals = [load_image(visual).to(torch.bfloat16).cuda() for visual in visuals]
+                    pixel_values = torch.cat(visuals, dim=0)
+                    num_patches_list = [visual.size(0) for visual in visuals]
                     image_tokens = ["<image>"] * len(visuals)
                     image_tokens = " ".join(image_tokens)
                     contexts = image_tokens + "\n" + contexts
+                else:
+                    pixel_values = None
+                    num_patch_list = None
                 response, history = self.model.chat(self.tokenizer, pixel_values, contexts, gen_kwargs, num_patches_list=num_patches_list, history=None, return_history=True)
-
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."
                 video_path = visuals[0]
@@ -620,3 +664,6 @@ class InternVL2(lmms):
             pbar.update(1)
         pbar.update(1)
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for InternVL2")

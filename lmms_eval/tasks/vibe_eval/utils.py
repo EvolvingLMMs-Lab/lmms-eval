@@ -1,15 +1,26 @@
-from enum import Enum
+import os
+import re
+from copy import deepcopy
 from dataclasses import dataclass
-from typing import Optional, List
+from enum import Enum
 from pathlib import Path
+from typing import List, Optional
+
 import yaml
 
-from reka import ChatMessage
-from reka.client import Reka
+try:
+    from reka import ChatMessage
+    from reka.client import Reka
+except ImportError:
+    eval_logger.warning("Reka is not installed, please install it by `pip install reka-api`")
 
-import re
-import os
-from copy import deepcopy
+from loguru import logger as eval_logger
+
+try:
+    from reka import ChatMessage
+    from reka.client import Reka
+except ImportError:
+    eval_logger.warning("Reka is not installed, please install it by `pip install reka-api`")
 
 REKA_API_KEY = os.getenv("REKA_API_KEY", "YOUR_API_KEY")
 
@@ -136,12 +147,12 @@ def vibe_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def vibe_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def vibe_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["prompt"].strip()
-    if "pre_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["pre_prompt"] != "":
-        question = f"{model_specific_prompt_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in model_specific_prompt_kwargs and model_specific_prompt_kwargs["post_prompt"] != "":
-        question = f"{question}{model_specific_prompt_kwargs['post_prompt']}"
+    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
+        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
+    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
+        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
     return question
 
 

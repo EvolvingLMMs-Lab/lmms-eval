@@ -1,14 +1,15 @@
-import requests
-import time
 import ast
+import datetime
+import json
 import os
 import sys
-import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-import json
-
-import yaml
+import time
 from pathlib import Path
+
+import requests
+import yaml
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -64,15 +65,15 @@ def video_detail_description_doc_to_visual(doc):
 
 
 # format the question
-def video_detail_description_doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
-        model_specific_prompt_kwargs = {}
+def video_detail_description_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
-    if "pre_prompt" in model_specific_prompt_kwargs:
-        pre_prompt = model_specific_prompt_kwargs["pre_prompt"]
-    if "post_prompt" in model_specific_prompt_kwargs:
-        post_prompt = model_specific_prompt_kwargs["post_prompt"]
+    if "pre_prompt" in lmms_eval_specific_kwargs:
+        pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    if "post_prompt" in lmms_eval_specific_kwargs:
+        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
     question = doc["question"]
     return f"{pre_prompt}{question}{post_prompt}"

@@ -1,35 +1,52 @@
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-import torch
-from tqdm import tqdm
-from decord import VideoReader, cpu
-import numpy as np
+import copy
 import math
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import torch
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from decord import VideoReader, cpu
+from loguru import logger as eval_logger
+from tqdm import tqdm
 from transformers import AutoConfig
-import copy
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
 
-from loguru import logger as eval_logger
-
 try:
+    from llavavid.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IGNORE_INDEX,
+        IMAGE_TOKEN_INDEX,
+    )
+    from llavavid.conversation import SeparatorStyle, conv_templates
+    from llavavid.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        preprocess_llama3,
+        preprocess_qwen,
+        tokenizer_image_token,
+        tokenizer_image_token_qwen_merge,
+    )
     from llavavid.model.builder import load_pretrained_model
-    from llavavid.mm_utils import tokenizer_image_token, get_model_name_from_path, KeywordsStoppingCriteria
-    from llavavid.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, IGNORE_INDEX
-    from llavavid.conversation import conv_templates, SeparatorStyle
-    from llavavid.mm_utils import tokenizer_image_token_qwen_merge, preprocess_qwen, preprocess_llama3
 except ImportError:
     eval_logger.debug("LLaVA-Video is not installed. Please install LLaVA-Video to use this model.")
 
-from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+try:
+    from llavavid.model.language_model.llava_qwen import LlavaQwenConfig
+
+    AutoConfig.register("llava_qwen", LlavaQwenConfig)
+except ImportError:
+    eval_logger.debug("No Qwen for llava vid")
+
 from llavavid.model.language_model.llava_llama import LlavaConfig
 
-AutoConfig.register("llava_qwen", LlavaQwenConfig)
 AutoConfig.register("llava_llama", LlavaConfig)
 
 
@@ -57,6 +74,8 @@ class LlavaVid(lmms):
         mm_spatial_pool_stride: int = 2,
         mm_spatial_pool_out_channels: int = 1024,
         mm_spatial_pool_mode: str = "average",
+        mm_newline_position: str = "grid",
+        mm_pooling_position: str = "after",
         overwrite: bool = True,
         video_decode_backend: str = "pyav",
         delay_load: bool = False,
@@ -88,8 +107,10 @@ class LlavaVid(lmms):
         self.mm_spatial_pool_out_channels = int(mm_spatial_pool_out_channels)
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.max_frames_num = int(max_frames_num)
-        self.mm_resampler_location = mm_resampler_location
+        self.mm_resampler_location = mm_pooling_position
+        self.mm_newline_position = mm_newline_position
         self.delay_load = delay_load
+
         if self.overwrite == True:
             overwrite_config = {}
             overwrite_config["mm_resampler_type"] = self.mm_resampler_type
@@ -97,7 +118,7 @@ class LlavaVid(lmms):
             overwrite_config["mm_spatial_pool_out_channels"] = self.mm_spatial_pool_out_channels
             overwrite_config["mm_spatial_pool_mode"] = self.mm_spatial_pool_mode
             overwrite_config["mm_pooling_position"] = self.mm_resampler_location
-            overwrite_config["mm_newline_position"] = mm_newline_position
+            overwrite_config["mm_newline_position"] = self.mm_newline_position
             overwrite_config["add_faster_video"] = False
             overwrite_config["delay_load"] = self.delay_load
             # overwrite_config["attn_implementation"] = attn_implementation
@@ -117,13 +138,16 @@ class LlavaVid(lmms):
                     overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
 
             if "v1.5" in pretrained:  # A hardcode solution here to load v1.5 model, otherwise it will use LlavaConfig from hf transformers
+                from llavavid.model.language_model.llava_llama import (
+                    LlavaConfig,
+                    LlavaLlamaForCausalLM,
+                )
                 from transformers import AutoTokenizer
-                from llavavid.model.language_model.llava_llama import LlavaConfig, LlavaLlamaForCausalLM
 
                 self._tokenizer = AutoTokenizer.from_pretrained(pretrained, use_fast=False)
                 cfg_pretrained = LlavaConfig.from_pretrained(pretrained)
                 if overwrite_config is not None:
-                    print(f"Overwriting config with {overwrite_config}")
+                    eval_logger.log(f"Overwriting config with {overwrite_config}")
                     for k, v in overwrite_config.items():
                         setattr(cfg_pretrained, k, v)
                 kwargs["torch_dtype"] = torch.float16
@@ -409,3 +433,6 @@ class LlavaVid(lmms):
             res.append(outputs)
             pbar.update(1)
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for LLaVAVid")

@@ -3,4 +3,4 @@ dataset_kwargs:
     config: hindi
     token: True
 task: "llava_in_the_wild_hindi"
-include: _default_template.yaml
+include: _default_template_yaml

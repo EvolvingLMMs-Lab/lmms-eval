@@ -1,17 +1,16 @@
-import torch
+import warnings
+from typing import List, Optional, Tuple, Union
 
+import torch
+from accelerate import Accelerator, DistributedType
+from accelerate.state import AcceleratorState
 from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer
+
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from accelerate import Accelerator, DistributedType
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-from transformers import AutoModel, AutoTokenizer
-
-
-import warnings
 
 warnings.filterwarnings("ignore")
 
@@ -220,3 +219,6 @@ class MiniCPM_V(lmms):
 
         pbar.close()
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

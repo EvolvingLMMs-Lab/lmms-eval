@@ -1,0 +1,4 @@
+dataset_name: Accounting
+tag: "jmmmu_culture_agnostic"
+task: "jmmmu_accounting"
+include: _default_template_yaml

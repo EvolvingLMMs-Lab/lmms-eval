@@ -13,16 +13,15 @@
 # limitations under the License.
 
 
-import json
-
-import datasets
-from PIL import Image as PIL_Image
+import io
 import json
 from uuid import uuid4
-from datasets import Dataset, Features
+
+import datasets
 import pandas as pd
+from datasets import Dataset, Features
+from PIL import Image as PIL_Image
 from tqdm import tqdm
-import io
 
 # Find for instance the citation on arxiv or on the dataset repo/website
 _CITATION = """https://arxiv.org/abs/2305.07895"""

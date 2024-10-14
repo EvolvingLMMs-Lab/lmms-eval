@@ -1,26 +1,26 @@
 # Standard library imports
-from copy import deepcopy
-from io import BytesIO
 import base64
-
+import json
 import os
 import time
-import json
+from copy import deepcopy
+from io import BytesIO
+
+import numpy as np
+import requests as url_requests
 
 # Related third-party imports
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-import numpy as np
-from PIL import Image
-import requests as url_requests
-from tqdm import tqdm
+from loguru import logger as eval_logger
 from openai import OpenAI
+from PIL import Image
+from tqdm import tqdm
 
 # Local application/library specific imports
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from loguru import logger as eval_logger
 
 # Conditional imports
 try:
@@ -203,3 +203,6 @@ class BatchGPT4(lmms):
 
     def list_batches(self, limit=10):
         return self.client.batches.list(limit=limit)
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for BatchGPT4")

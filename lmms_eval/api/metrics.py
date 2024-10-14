@@ -1,19 +1,21 @@
+# the code is adapted from https://github.com/EleutherAI/lm-evaluation-harness
+import logging
 import math
+import random
+import re
+import string
 from collections.abc import Iterable
+from typing import List
 
 import numpy as np
 import sacrebleu
-import sklearn.metrics
-import random
-import evaluate
-import torch
-import copy
-import re
-from lmms_eval.api.registry import register_metric, register_aggregation
-from loguru import logger as eval_logger
 import os
 import time
 from transformers import AutoTokenizer
+
+from lmms_eval.api.registry import register_aggregation, register_metric
+
+eval_logger = logging.getLogger("lm-eval")
 
 
 # Register Aggregations First
@@ -36,9 +38,7 @@ def median(arr):
 # We use them as aggregation metrics, paired with no-op passthrough metric fns.
 @register_aggregation("perplexity")
 def perplexity(items):
-    # return math.exp(-mean(items))
-    items = torch.exp(torch.tensor(items)).tolist()
-    return sum(items) / len(items)
+    return math.exp(-mean(items))
 
 
 @register_aggregation("weighted_perplexity")
@@ -53,10 +53,13 @@ def bits_per_byte(items):
 
 @register_aggregation("f1")
 def f1_score(items):
+    from sklearn.metrics import f1_score
+
     unzipped_list = list(zip(*items))
     golds = unzipped_list[0]
     preds = unzipped_list[1]
-    fscore = sklearn.metrics.f1_score(golds, preds)
+    fscore = f1_score(golds, preds)
+
     return np.max(fscore)
 
 
@@ -91,11 +94,12 @@ def binary_f1_1_score(items):
 
 @register_aggregation("matthews_corrcoef")
 def matthews_corrcoef(items):
+    from sklearn.metrics import matthews_corrcoef
+
     unzipped_list = list(zip(*items))
     golds = unzipped_list[0]
     preds = unzipped_list[1]
-    # print(preds)
-    return sklearn.metrics.matthews_corrcoef(golds, preds)
+    return matthews_corrcoef(golds, preds)
 
 
 @register_aggregation("bleu")
@@ -147,6 +151,26 @@ def ter(items):
     return sacrebleu.corpus_ter(preds, refs).score
 
 
+@register_aggregation("brier_score")
+def brier_score(items):  # This is a passthrough function
+    gold, predictions = list(zip(*items))
+    bs, num_class = np.array(predictions).shape
+
+    gold = list(gold)
+    gold_one_hot = np.eye(num_class)[gold]
+    return np.mean(np.sum((predictions - gold_one_hot) ** 2, axis=1))
+
+
+@register_metric(
+    metric="brier_score",
+    higher_is_better=False,
+    output_type=["multiple_choice"],
+    aggregation="brier_score",
+)
+def brier_score_fn(items):  # This is a passthrough function
+    return items
+
+
 @register_metric(
     metric="acc",
     higher_is_better=True,
@@ -177,7 +201,60 @@ def acc_mutual_info_fn(items):  # This is a passthrough function
     return items
 
 
-exact_match = evaluate.load("exact_match")
+### the code used in the `exact_match_hf_evaluate` function is ported from
+### https://github.com/huggingface/evaluate/blob/main/metrics/exact_match/exact_match.py
+### which is under the apache license.
+
+# Copyright 2020 The HuggingFace Datasets Authors and the current dataset script contributor.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+def exact_match_hf_evaluate(
+    predictions,
+    references,
+    regexes_to_ignore=None,
+    ignore_case=False,
+    ignore_punctuation=False,
+    ignore_numbers=False,
+):
+    if regexes_to_ignore is not None:
+        for s in regexes_to_ignore:
+            predictions = np.array([re.sub(s, "", x) for x in predictions])
+            references = np.array([re.sub(s, "", x) for x in references])
+    else:
+        predictions = np.asarray(predictions)
+        references = np.asarray(references)
+
+    if ignore_case:
+        predictions = np.char.lower(predictions)
+        references = np.char.lower(references)
+
+    if ignore_punctuation:
+        repl_table = string.punctuation.maketrans("", "", string.punctuation)
+        predictions = np.char.translate(predictions, table=repl_table)
+        references = np.char.translate(references, table=repl_table)
+
+    if ignore_numbers:
+        repl_table = string.digits.maketrans("", "", string.digits)
+        predictions = np.char.translate(predictions, table=repl_table)
+        references = np.char.translate(references, table=repl_table)
+
+    score_list = predictions == references
+
+    return {"exact_match": np.mean(score_list)}
+
+
+###
 
 
 @register_metric(
@@ -187,7 +264,7 @@ exact_match = evaluate.load("exact_match")
     aggregation="mean",
 )
 def exact_match_fn(**kwargs):
-    return exact_match.compute(**kwargs)
+    return exact_match_hf_evaluate(**kwargs)
 
 
 @register_metric(
@@ -197,6 +274,36 @@ def exact_match_fn(**kwargs):
     aggregation="perplexity",
 )
 def perplexity_fn(items):  # This is a passthrough function
+    return items
+
+
+@register_metric(
+    metric="word_perplexity",
+    higher_is_better=False,
+    output_type="loglikelihood_rolling",
+    aggregation="weighted_perplexity",
+)
+def word_perplexity_fn(items):  # This is a passthrough function
+    return items
+
+
+@register_metric(
+    metric="byte_perplexity",
+    higher_is_better=False,
+    output_type="loglikelihood_rolling",
+    aggregation="weighted_perplexity",
+)
+def byte_perplexity_fn(items):  # This is a passthrough function
+    return items
+
+
+@register_metric(
+    metric="bits_per_byte",
+    higher_is_better=False,
+    output_type="loglikelihood_rolling",
+    aggregation="bits_per_byte",
+)
+def bits_per_byte_fn(items):  # This is a passthrough function
     return items
 
 
@@ -415,7 +522,7 @@ def mean_stderr(arr):
 @register_metric(
     metric="bypass",
     higher_is_better=True,
-    output_type=["loglikelihood", "multiple_choice", "generate_until"],
+    output_type=["loglikelihood", "multiple_choice", "generate_until", "generate_until_multi_round"],
     aggregation="bypass",
 )
 def bypass(items):
@@ -475,7 +582,7 @@ def f1_1_fn(items):  # This is a passthrough function
 @register_metric(
     metric="bleu",
     higher_is_better=True,
-    output_type="generate_until",
+    output_type=["generate_until", "generate_until_multi_round"],
     aggregation="bleu",
 )
 def bleu_fn(items):  # This is a passthrough function
@@ -485,7 +592,7 @@ def bleu_fn(items):  # This is a passthrough function
 @register_metric(
     metric="chrf",
     higher_is_better=True,
-    output_type="generate_until",
+    output_type=["generate_until", "generate_until_multi_round"],
     aggregation="chrf",
 )
 def chrf_fn(items):  # This is a passthrough function
@@ -495,7 +602,7 @@ def chrf_fn(items):  # This is a passthrough function
 @register_metric(
     metric="ter",
     higher_is_better=True,
-    output_type="generate_until",
+    output_type=["generate_until", "generate_until_multi_round"],
     aggregation="ter",
 )
 def ter_fn(items):  # This is a passthrough function
@@ -638,7 +745,11 @@ def bootstrap_stderr(f, xs, iters):
     return sample_stddev(res)
 
 
-def stderr_for_metric(metric, bootstrap_iters):
+def stderr_for_metric(metric, bootstrap_iters: int):
+    if bootstrap_iters <= 0:
+        # return no function (don't compute stderr) if bootstrap iters = 0
+        return None
+
     bootstrappable = [
         median,
         matthews_corrcoef,
@@ -655,3 +766,55 @@ def stderr_for_metric(metric, bootstrap_iters):
     stderr = {mean: mean_stderr, acc_all: acc_all_stderr}
 
     return stderr.get(metric, None)
+
+
+def pooled_sample_stderr(stderrs: List[float], sizes: List[int]):
+    # Used to aggregate bootstrapped stderrs across subtasks in a group,
+    # when we are weighting by the size of each subtask.
+    #
+
+    assert len(stderrs) == len(sizes)
+
+    # formula source: https://en.wikipedia.org/wiki/Pooled_variance
+    # and: https://stats.stackexchange.com/a/4841331
+    # this empirically seems to match running `stderr_for_metric` on all instances
+    # from the subtasks concatenated with each other.
+    pooled_sample_var = (sum([(size - 1) * stderr**2 * size for size, stderr in zip(sizes, stderrs)])) / (sum(sizes) - len(sizes))
+
+    return np.sqrt(pooled_sample_var / sum(sizes))
+
+
+def combined_sample_stderr(stderrs: List[float], sizes: List[int], metrics=None):
+    assert metrics is not None, "Need to pass a list of each subtask's metric for this stderr aggregation"
+    assert len(stderrs) == len(sizes) and len(sizes) == len(metrics)
+
+    # See https://github.com/EleutherAI/lm-evaluation-harness/pull/1390 for more documentation.
+    # This formula depends on sample means.
+    # removed because it seems to give erroneously huge stderrs for groupings of tasks
+    # and does not seem to match up with bootstrap-calculated stderrs for groups.
+
+    ### don't use this unless a statistician has told you it's the right thing to do ###
+
+    # accumulators: we'll aggregate pairwise N - 1 times
+    variance = stderrs[0] ** 2
+    curr_size = sizes[0]
+    curr_score = metrics[0]
+
+    for stderr, size, score in zip(stderrs[1:], sizes[1:], metrics[1:]):
+        curr_score = ((curr_score * curr_size) + (score * size)) / (curr_size + size)  # NOTE: this assumes our aggregation fn is "mean"
+
+        variance = ((curr_size - 1) * variance + (size - 1) * (stderr**2)) / (curr_size + size - 1) + curr_size * size / ((curr_size + size) * (curr_size + size - 1)) * (curr_score - score) ** 2
+
+    return np.sqrt(variance)
+
+
+def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
+    # A helper function that is used to aggregate
+    # subtask scores cross-task.
+    # TODO: does not hold for non-mean aggregations
+    if not weight_by_size:
+        sizes = [1] * len(sizes)
+
+    assert len(metrics) == len(sizes)
+
+    return sum([metric * size for metric, size in zip(metrics, sizes)]) / sum(sizes)

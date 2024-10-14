@@ -4,11 +4,12 @@ doc_to_text: !function utils.llava_doc_to_text
 doc_to_target: "gpt4v_answer"
 generation_kwargs:
   max_new_tokens: 4096
-  temperature: 0.7
+  temperature: 0
   top_p: 1.0
   num_beams: 1
   do_sample: false
 process_results: !function utils.llava_process_results
+process_results_use_image: true
 metric_list:
   - metric: gpt_eval_llava_all
     aggregation: !function utils.llava_all_aggregation

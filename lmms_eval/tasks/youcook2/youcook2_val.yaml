@@ -31,7 +31,7 @@ metric_list:
   #  aggregation : !function utils.youcook2_spice
   #  higher_is_better : true
 include: _default_template_yaml
-model_specific_prompt_kwargs:
+lmms_eval_specific_kwargs:
   default:
     prompt: Provide a one-sentence caption for the provided video.
   gemini_api:

@@ -1,11 +1,10 @@
 import os
-import requests
 import time
-
-import pandas as pd
-import yaml
 from pathlib import Path
 
+import pandas as pd
+import requests
+import yaml
 from loguru import logger as eval_logger
 
 with open(Path(__file__).parent / "mmvet.yaml", "r") as f:
@@ -203,11 +202,11 @@ def mmvet_aggregate_results(results):
     return overall_score
 
 
-def doc_to_text(doc, model_specific_prompt_kwargs=None):
-    if model_specific_prompt_kwargs is None:
+def doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
         return doc["question"]
     question = doc["question"]
-    pre_prompt = model_specific_prompt_kwargs.get("pre_prompt", "")
-    post_prompt = model_specific_prompt_kwargs.get("post_prompt", "")
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     return f"{pre_prompt}{question}{post_prompt}"

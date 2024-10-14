@@ -7,9 +7,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.2.1"
+version = "0.2.4"
 authors = [
-    { name = "LMMMs-Lab Evaluation Team", email = "lmms_eval@outlook.com" },
+    { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
 description = "A framework for evaluating large multi-modality language models"
 readme = "README.md"
@@ -23,6 +23,7 @@ license = { text = "MIT" }
 dependencies = [
     "accelerate>=0.29.1",
     "black==24.1.0",
+    "isort==5.13.2",
     "datasets==2.16.1",
     "evaluate>=0.4.0",
     "httpx==0.23.3",
@@ -34,7 +35,7 @@ dependencies = [
     "pytablewriter",
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
-    "sqlitedict",
+    "sqlitedict==2.1.0",
     "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
     "torchvision>=0.16.0",
     "timm",
@@ -44,13 +45,12 @@ dependencies = [
     "opencv-python-headless",
     "av",
     "hf_transfer",
-    "pywsd",
     "nltk",
     "sentencepiece==0.1.99",
     "yt-dlp",
     "pycocoevalcap",
     "tqdm-multiprocess",
-    "transformers==4.39.2",
+    "transformers>=4.39.2",
     "transformers-stream-generator",
     "zstandard",
     "pillow",
@@ -60,7 +60,6 @@ dependencies = [
     "Jinja2",
     "openpyxl",
     "loguru",
-    "Levenshtein",
     "hf_transfer",
     "tenacity==8.3.0",
     "wandb>=0.16.0",
@@ -70,23 +69,46 @@ dependencies = [
     "packaging",
     "decord",
     "zss",
+    "protobuf==3.20",
+]
+
+[project.optional-dependencies]
+metrics = [
     "pywsd",
     "spacy",
     "anls",
     "rouge",
     "capture_metric",
-]
-
-[project.optional-dependencies]
-vila = [
-    "s2wrapper@git+https://github.com/bfshi/scaling_on_scales"
+    "Levenshtein",
 ]
 gemini = [
     "google-generativeai",
 ]
+reka = [
+    "httpx==0.23.3",
+    "reka-api",
+]
+qwen = [
+    "decord",
+    "qwen_vl_utils",
+]
+mmsearch = [
+    "playwright",
+    "requests",
+    "matplotlib",
+    "duckduckgo_search",
+    "langchain",
+    "langchain-community",
+    "beautifulsoup4",
+    "FlagEmbedding",
+    "rouge",
+]
 all = [
-    "vila",
     "gemini",
+    "reka",
+    "metrics",
+    "qwen",
+    "mmsearch"
 ]
 
 [tool.setuptools.packages.find]

@@ -3,8 +3,14 @@ import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 
 import copy
-from tqdm import tqdm
+import warnings
 from datetime import timedelta
+from typing import List, Optional, Tuple, Union
+
+from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
+from accelerate.state import AcceleratorState
+from packaging import version
+from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -12,19 +18,13 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.utils import stop_sequences_criteria
 
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
-from typing import List, Optional, Union, Tuple
-from packaging import version
-import warnings
-
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
 
 try:
-    from tinyllava.model import load_pretrained_model
     from tinyllava.data import ImagePreprocess, TextPreprocess
+    from tinyllava.model import load_pretrained_model
     from tinyllava.utils.constants import DEFAULT_IMAGE_TOKEN
     from tinyllava.utils.message import Message
 except Exception as e:
@@ -408,3 +408,6 @@ class TinyLlava(lmms):
 
         pbar.close()
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")

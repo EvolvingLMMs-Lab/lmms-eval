@@ -1,15 +1,16 @@
-import yaml
-import os
-from pathlib import Path
-import pandas as pd
-import json
-from PIL import Image
-from io import BytesIO
 import base64
-from lmms_eval.tasks.mmupd.mmupd_evals import MMUPD_Evaluator
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+import json
+import os
+from io import BytesIO
+from pathlib import Path
 
+import pandas as pd
+import yaml
 from loguru import logger as eval_logger
+from PIL import Image
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks.mmupd.mmupd_evals import MMUPD_Evaluator
 
 with open(Path(__file__).parent / "mmupd.yaml", "r") as f:
     raw_data = f.readlines()
@@ -42,7 +43,7 @@ def mmupd_doc_to_visual(doc):
     return [Image.open(BytesIO(base64.b64decode(doc["image"])))]
 
 
-def mmupd_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def mmupd_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_candidate = ["A", "B", "C", "D", "E"]
     options_prompt, options_dict = mmupd_evaluator.create_options_prompt(doc, option_candidate)
 
@@ -61,8 +62,8 @@ def mmupd_doc_to_text(doc, model_specific_prompt_kwargs=None):
 
     query_prompt = f"{data['hint']}\n{data['question']}{data['options']}" if pd.notna(data["hint"]) and data["hint"] != "nan" else f"{data['question']}{data['options']}"
 
-    if model_specific_prompt_kwargs:
-        query_prompt = f"{query_prompt}{model_specific_prompt_kwargs['post_prompt']}"
+    if lmms_eval_specific_kwargs:
+        query_prompt = f"{query_prompt}{lmms_eval_specific_kwargs['post_prompt']}"
 
     return query_prompt
 

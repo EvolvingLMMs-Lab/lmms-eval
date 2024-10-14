@@ -20,6 +20,7 @@ signature for readability.
 """
 
 import abc
+
 import numpy as np
 
 
