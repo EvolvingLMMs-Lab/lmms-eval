@@ -12,19 +12,13 @@ A well-crafted question about an event should allow respondents to gain deeper i
    - Example questions:
      - "What are the factors that led to this event?"
      - "How does this event relate to other current issues?" 
-3. **Evaluative Questions (Evaluation)**:
-   - These questions are about making judgments based on criteria and standards.
-   - Example questions:
-     - "Do you think the report's presentation was fair? Why or why not?"
-     - "What evidence supports the reliability of the sources?"
-     - "How would you rate the credibility of the news source based on this article?"
-     - "What are the potential implications of this event?"
-4. **Divergent Thinking (Creation)**:
+3. **Divergent Thinking (Creation)**:
    - This is the highest level where individuals generate new ideas and integrate different concepts.
    - Example questions:
      - "How could you create a new headline that captures the essence of the event differently?"
      - "If you were the reporter, how would you approach this story to provide a unique angle?"
-5. **Real-world Assistance (Application)**:
+     - "Do you think the report's presentation was fair? Why or why not?"
+4. **Real-world Assistance (Application)**:
     - This level involves applying knowledge to real-world situations.
     - Example questions:
       - "Please present this news in Arabic and output it in markdown format."
