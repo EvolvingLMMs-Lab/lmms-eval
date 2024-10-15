@@ -1,5 +1,6 @@
-import logging
 import dataclasses
+import logging
+from enum import IntEnum, auto
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -14,7 +15,6 @@ from transformers import AutoModel, AutoTokenizer
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
-from enum import IntEnum, auto
 from lmms_eval.api.registry import register_model
 
 eval_logger = logging.getLogger("eval_logger")

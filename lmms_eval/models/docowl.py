@@ -1,24 +1,27 @@
-from io import BytesIO
-from copy import deepcopy
-import os
 import base64
-from typing import List, Tuple, Union
-from tqdm import tqdm
-import requests as url_requests
-import time
 import logging
+import os
 import sys
+import time
+from copy import deepcopy
+from io import BytesIO
+from typing import List, Tuple, Union
+
+import requests as url_requests
+from tqdm import tqdm
 
 sys.path.insert(0, "/nvmedata/jonathanl/mPLUG-DocOwl/DocOwl1.5/")
+from typing import List, Optional, Tuple, Union
+
+import torch
+from accelerate import Accelerator, DistributedType
 from docowl_infer import DocOwlInfer
+from tqdm import tqdm
+
+from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval import utils
-from typing import List, Optional, Union, Tuple
-from accelerate import Accelerator, DistributedType
-import torch
-from tqdm import tqdm
 
 
 @register_model("docowl")

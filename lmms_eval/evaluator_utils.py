@@ -7,11 +7,8 @@ import sys
 from typing import List, Optional, Tuple, Union
 
 from lmms_eval.api.group import ConfigurableGroup
-from lmms_eval.api.metrics import (
-    aggregate_subtask_metrics,
-    pooled_sample_stderr,
-    stderr_for_metric,
-)
+from lmms_eval.api.metrics import (aggregate_subtask_metrics,
+                                   pooled_sample_stderr, stderr_for_metric)
 from lmms_eval.api.task import Task
 from lmms_eval.utils import eval_logger, positional_deprecated
 

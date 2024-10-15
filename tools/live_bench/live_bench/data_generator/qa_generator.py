@@ -13,20 +13,14 @@ import anthropic
 import google.generativeai as genai
 import openai
 from live_bench.data_generator.response import Response
-from live_bench.data_generator.utils.claude import (
-    claude_generate_response,
-    format_claude_images,
-)
+from live_bench.data_generator.utils.claude import (claude_generate_response,
+                                                    format_claude_images)
 from live_bench.data_generator.utils.extract_information import (
-    ImageInfomation,
-    InfomationExtractor,
-)
+    ImageInfomation, InfomationExtractor)
 from live_bench.data_generator.utils.gemini import gemini_generate_response
-from live_bench.data_generator.utils.gpt4v import (
-    format_gpt4v_images,
-    get_openai_client,
-    gpt4v_generate_response,
-)
+from live_bench.data_generator.utils.gpt4v import (format_gpt4v_images,
+                                                   get_openai_client,
+                                                   gpt4v_generate_response)
 from live_bench.screen_shoter import ScreenImage
 from PIL import Image
 

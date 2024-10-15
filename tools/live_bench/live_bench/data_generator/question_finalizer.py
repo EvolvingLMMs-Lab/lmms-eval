@@ -7,16 +7,12 @@ import anthropic
 import google.generativeai as genai
 import openai
 from live_bench.data_generator.qa_generator import QAData
-from live_bench.data_generator.utils.claude import (
-    claude_generate_response,
-    format_claude_images,
-)
+from live_bench.data_generator.utils.claude import (claude_generate_response,
+                                                    format_claude_images)
 from live_bench.data_generator.utils.gemini import gemini_generate_response
-from live_bench.data_generator.utils.gpt4v import (
-    format_gpt4v_images,
-    get_openai_client,
-    gpt4v_generate_response,
-)
+from live_bench.data_generator.utils.gpt4v import (format_gpt4v_images,
+                                                   get_openai_client,
+                                                   gpt4v_generate_response)
 from PIL import Image
 
 REJECT_TO_ANSWER = "Reject to answer"

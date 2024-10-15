@@ -20,30 +20,18 @@ from tqdm import tqdm
 import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-from lmms_eval.evaluator_utils import (
-    consolidate_group_results,
-    consolidate_results,
-    get_sample_size,
-    get_subtask_list,
-    get_task_list,
-    prepare_print_tasks,
-    print_writeout,
-    run_task_tests,
-)
+from lmms_eval.evaluator_utils import (consolidate_group_results,
+                                       consolidate_results, get_sample_size,
+                                       get_subtask_list, get_task_list,
+                                       prepare_print_tasks, print_writeout,
+                                       run_task_tests)
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
 from lmms_eval.models import get_model
 from lmms_eval.tasks import TaskManager, get_task_dict
-from lmms_eval.utils import (
-    create_iterator,
-    get_datetime_str,
-    get_git_commit_hash,
-    handle_non_serializable,
-    hash_string,
-    make_table,
-    positional_deprecated,
-    run_task_tests,
-    simple_parse_args_string,
-)
+from lmms_eval.utils import (create_iterator, get_datetime_str,
+                             get_git_commit_hash, handle_non_serializable,
+                             hash_string, make_table, positional_deprecated,
+                             run_task_tests, simple_parse_args_string)
 
 
 @positional_deprecated

@@ -13,18 +13,8 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from functools import partial
 from glob import glob
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import (Any, Dict, Iterable, Iterator, List, Literal, Mapping,
+                    Optional, Tuple, Union)
 
 import datasets
 import numpy as np
@@ -39,16 +29,11 @@ from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance
-from lmms_eval.api.registry import (
-    AGGREGATION_REGISTRY,
-    DEFAULT_METRIC_REGISTRY,
-    METRIC_REGISTRY,
-    OUTPUT_TYPE_REGISTRY,
-    get_aggregation,
-    get_metric,
-    get_metric_aggregation,
-    is_higher_better,
-)
+from lmms_eval.api.registry import (AGGREGATION_REGISTRY,
+                                    DEFAULT_METRIC_REGISTRY, METRIC_REGISTRY,
+                                    OUTPUT_TYPE_REGISTRY, get_aggregation,
+                                    get_metric, get_metric_aggregation,
+                                    is_higher_better)
 from lmms_eval.caching.cache import load_from_cache, save_to_cache
 from lmms_eval.filters import build_filter_ensemble
 

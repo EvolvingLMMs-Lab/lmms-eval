@@ -10,7 +10,8 @@ from nltk.stem import WordNetLemmatizer
 from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import sent_tokenize as sent_tok
 
-from lmms_eval.tasks.mmsearch.retrieve_content.tokenization.utils import PickleWriteable
+from lmms_eval.tasks.mmsearch.retrieve_content.tokenization.utils import \
+    PickleWriteable
 
 QUOTES = re.compile("(\"|``|'')")
 

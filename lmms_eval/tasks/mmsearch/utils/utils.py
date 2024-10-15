@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import requests
-
 # get rank id for random seed
 from accelerate import Accelerator
 from duckduckgo_search import DDGS

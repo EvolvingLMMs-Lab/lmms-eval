@@ -1,16 +1,16 @@
-from io import BytesIO
 import base64
-from typing import List, Tuple
-from tqdm import tqdm
 import time
+from io import BytesIO
+from typing import List, Tuple
+
+from accelerate import Accelerator, DistributedType
+from PIL import Image
+from together import Together
+from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
-from accelerate import Accelerator, DistributedType
-from together import Together
-from PIL import Image
 
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger

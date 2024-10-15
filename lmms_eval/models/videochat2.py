@@ -14,12 +14,8 @@ decord.bridge.set_bridge("torch")
 import torch.nn.functional as F
 from PIL import Image
 from tqdm import tqdm
-from transformers import (
-    AutoModel,
-    AutoTokenizer,
-    StoppingCriteria,
-    StoppingCriteriaList,
-)
+from transformers import (AutoModel, AutoTokenizer, StoppingCriteria,
+                          StoppingCriteriaList)
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms

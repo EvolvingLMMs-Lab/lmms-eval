@@ -1,12 +1,13 @@
+from typing import List, Optional, Tuple, Union
+
+import torch
+from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from typing import List, Tuple, Union
+
+from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval import utils
-from typing import List, Optional, Union, Tuple
-from tqdm import tqdm
-import torch
 
 
 @register_model("hfmodel")

@@ -3,17 +3,10 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss
-from transformers import (
-    AutoConfig,
-    AutoModelForCausalLM,
-    LlamaConfig,
-    LlamaForCausalLM,
-    LlamaModel,
-)
-from transformers.modeling_outputs import (
-    BaseModelOutputWithPast,
-    CausalLMOutputWithPast,
-)
+from transformers import (AutoConfig, AutoModelForCausalLM, LlamaConfig,
+                          LlamaForCausalLM, LlamaModel)
+from transformers.modeling_outputs import (BaseModelOutputWithPast,
+                                           CausalLMOutputWithPast)
 
 DEFAULT_VIDEO_TOKEN = "<video>"
 DEFAULT_VIDEO_PATCH_TOKEN = "<vid_patch>"

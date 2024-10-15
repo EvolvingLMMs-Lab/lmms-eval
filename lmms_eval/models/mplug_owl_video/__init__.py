@@ -13,12 +13,8 @@
 # limitations under the License.
 from typing import TYPE_CHECKING
 
-from transformers.utils import (
-    OptionalDependencyNotAvailable,
-    _LazyModule,
-    is_tokenizers_available,
-    is_torch_available,
-)
+from transformers.utils import (OptionalDependencyNotAvailable, _LazyModule,
+                                is_tokenizers_available, is_torch_available)
 
 _import_structure = {
     "configuration_mplug_owl": ["MPLUG_OWL_PRETRAINED_CONFIG_ARCHIVE_MAP", "MplugOwlConfig"],
@@ -48,9 +44,7 @@ else:
 
 if TYPE_CHECKING:
     from .configuration_mplug_owl import (
-        MPLUG_OWL_PRETRAINED_CONFIG_ARCHIVE_MAP,
-        MplugOwlConfig,
-    )
+        MPLUG_OWL_PRETRAINED_CONFIG_ARCHIVE_MAP, MplugOwlConfig)
     from .tokenization_mplug_owl import MplugOwlTokenizer
 
     try:
@@ -67,10 +61,8 @@ if TYPE_CHECKING:
     else:
         from .modeling_mplug_owl import (
             MPLUG_OWL_PRETRAINED_MODEL_ARCHIVE_LIST,
-            MplugOwlForConditionalGeneration,
-            MplugOwlModel,
-            MplugOwlPreTrainedModel,
-        )
+            MplugOwlForConditionalGeneration, MplugOwlModel,
+            MplugOwlPreTrainedModel)
 
 
 else:

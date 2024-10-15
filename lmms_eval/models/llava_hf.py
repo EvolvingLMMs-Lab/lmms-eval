@@ -8,12 +8,9 @@ from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from tqdm import tqdm
-from transformers import (
-    AutoConfig,
-    AutoProcessor,
-    LlavaForConditionalGeneration,
-    LlavaNextForConditionalGeneration,
-)
+from transformers import (AutoConfig, AutoProcessor,
+                          LlavaForConditionalGeneration,
+                          LlavaNextForConditionalGeneration)
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance

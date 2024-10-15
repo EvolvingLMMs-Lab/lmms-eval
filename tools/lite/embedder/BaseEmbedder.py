@@ -5,12 +5,8 @@ from typing import Dict, List, Optional, Union
 import torch.distributed as dist
 
 from lmms_eval.api.registry import ALL_TASKS
-from lmms_eval.tasks import (
-    ConfigurableTask,
-    get_task_dict,
-    include_path,
-    initialize_tasks,
-)
+from lmms_eval.tasks import (ConfigurableTask, get_task_dict, include_path,
+                             initialize_tasks)
 
 
 def rank0_print(*args):

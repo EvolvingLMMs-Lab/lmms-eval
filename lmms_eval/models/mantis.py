@@ -26,7 +26,8 @@ try:
     from mantis.models.conversation import conv_mllava_v1 as default_conv
     from mantis.models.conversation import conv_templates
     from mantis.models.mfuyu import MFuyuForCausalLM, MFuyuProcessor
-    from mantis.models.mllava import LlavaForConditionalGeneration, MLlavaProcessor
+    from mantis.models.mllava import (LlavaForConditionalGeneration,
+                                      MLlavaProcessor)
 
 except Exception as e:
     eval_logger.debug("Mantis is not installed. Please install Mantis to use this model.\nError: %s" % e)

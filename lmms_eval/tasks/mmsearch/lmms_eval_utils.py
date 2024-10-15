@@ -12,7 +12,8 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.mmsearch.constants import *
 from lmms_eval.tasks.mmsearch.prompts.prompt import *
 from lmms_eval.tasks.mmsearch.prompts.prompt_w_imagesearch import *
-from lmms_eval.tasks.mmsearch.retrieve_content.retriever import Content_Retriever
+from lmms_eval.tasks.mmsearch.retrieve_content.retriever import \
+    Content_Retriever
 from lmms_eval.tasks.mmsearch.score.f1_score import get_f1_score
 from lmms_eval.tasks.mmsearch.score.req_score import get_requery_score
 from lmms_eval.tasks.mmsearch.score.result_summary import get_result_summary

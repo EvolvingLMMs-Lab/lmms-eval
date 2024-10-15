@@ -1,16 +1,16 @@
 # the code is adapted from https://github.com/EleutherAI/lm-evaluation-harness
 import logging
 import math
+import os
 import random
 import re
 import string
+import time
 from collections.abc import Iterable
 from typing import List
 
 import numpy as np
 import sacrebleu
-import os
-import time
 from transformers import AutoTokenizer
 
 from lmms_eval.api.registry import register_aggregation, register_metric
@@ -417,8 +417,9 @@ def sambajudge(references, predictions, query):  # This is a passthrough functio
     """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
     values = []
     responses = []
-    import requests
     import json
+
+    import requests
 
     NUM_SECONDS_TO_SLEEP = 30
     from openai import OpenAI

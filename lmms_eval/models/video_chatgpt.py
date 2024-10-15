@@ -18,14 +18,10 @@ eval_logger = logger
 
 try:
     from lmms_eval.models.video_chatgpt.eval.model_utils import (
-        initialize_model,
-        load_video,
-    )
+        initialize_model, load_video)
     from lmms_eval.models.video_chatgpt.inference import (
-        get_spatio_temporal_features_torch,
-        video_chatgpt_infer,
-        video_chatgpt_infer_ppl,
-    )
+        get_spatio_temporal_features_torch, video_chatgpt_infer,
+        video_chatgpt_infer_ppl)
 except ImportError:
     eval_logger.warning("Failed to import video_chatgpt modules")
 

@@ -23,20 +23,14 @@ import os
 import sys
 
 try:
-    from oryx.constants import (
-        DEFAULT_IM_END_TOKEN,
-        DEFAULT_IM_START_TOKEN,
-        DEFAULT_IMAGE_TOKEN,
-        IMAGE_TOKEN_INDEX,
-    )
+    from oryx.constants import (DEFAULT_IM_END_TOKEN, DEFAULT_IM_START_TOKEN,
+                                DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX)
     from oryx.conversation import SeparatorStyle, conv_templates
-    from oryx.mm_utils import (
-        KeywordsStoppingCriteria,
-        get_model_name_from_path,
-        process_anyres_highres_image_genli,
-        process_anyres_video_genli,
-        tokenizer_image_token,
-    )
+    from oryx.mm_utils import (KeywordsStoppingCriteria,
+                               get_model_name_from_path,
+                               process_anyres_highres_image_genli,
+                               process_anyres_video_genli,
+                               tokenizer_image_token)
     from oryx.model.builder import load_pretrained_model
     from oryx.model.language_model.oryx_llama import OryxConfig
 except ImportError:

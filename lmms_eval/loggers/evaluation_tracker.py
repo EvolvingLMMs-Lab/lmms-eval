@@ -11,21 +11,15 @@ from pathlib import Path
 from datasets import load_dataset
 from datasets.utils.metadata import MetadataConfigs
 from huggingface_hub import DatasetCard, DatasetCardData, HfApi, hf_hub_url
-from huggingface_hub.utils import build_hf_headers, get_session, hf_raise_for_status
+from huggingface_hub.utils import (build_hf_headers, get_session,
+                                   hf_raise_for_status)
 
-from lmms_eval.utils import (
-    eval_logger,
-    get_datetime_str,
-    get_file_datetime,
-    get_file_task_name,
-    get_results_filenames,
-    get_sample_results_filenames,
-    handle_non_serializable,
-    hash_string,
-    sanitize_list,
-    sanitize_model_name,
-    sanitize_task_name,
-)
+from lmms_eval.utils import (eval_logger, get_datetime_str, get_file_datetime,
+                             get_file_task_name, get_results_filenames,
+                             get_sample_results_filenames,
+                             handle_non_serializable, hash_string,
+                             sanitize_list, sanitize_model_name,
+                             sanitize_task_name)
 
 
 @dataclass(init=False)

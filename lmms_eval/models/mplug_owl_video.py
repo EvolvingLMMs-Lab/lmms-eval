@@ -11,13 +11,10 @@ from transformers import AutoTokenizer
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.mplug_owl_video.modeling_mplug_owl import (
-    MplugOwlForConditionalGeneration,
-)
+from lmms_eval.models.mplug_owl_video.modeling_mplug_owl import \
+    MplugOwlForConditionalGeneration
 from lmms_eval.models.mplug_owl_video.processing_mplug_owl import (
-    MplugOwlImageProcessor,
-    MplugOwlProcessor,
-)
+    MplugOwlImageProcessor, MplugOwlProcessor)
 
 eval_logger = logger
 

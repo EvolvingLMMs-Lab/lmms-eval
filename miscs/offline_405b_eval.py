@@ -1,11 +1,12 @@
 import argparse
 import json
 import os
-import jsonlines
-from tqdm import tqdm
 from pathlib import Path
 
-from lmms_eval.api.metrics import sambajudge, mean_stderr
+import jsonlines
+from tqdm import tqdm
+
+from lmms_eval.api.metrics import mean_stderr, sambajudge
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

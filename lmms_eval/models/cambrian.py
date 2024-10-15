@@ -22,11 +22,8 @@ from loguru import logger as eval_logger
 
 try:
     from cambrian.conversation import conv_templates
-    from cambrian.mm_utils import (
-        get_model_name_from_path,
-        process_images,
-        tokenizer_image_token,
-    )
+    from cambrian.mm_utils import (get_model_name_from_path, process_images,
+                                   tokenizer_image_token)
     from cambrian.model.builder import load_pretrained_model
 except ImportError:
     eval_logger.error("Cambrian is not installed. Please install it by running `pip install cambrian`.")

@@ -1,8 +1,9 @@
 from io import BytesIO
+
+import pint
 import skimage.io as skio
 from PIL import Image
 from pint import UnitRegistry, errors
-import pint
 from word2num import word2num
 
 ureg = UnitRegistry(autoconvert_offset_to_baseunit=True)

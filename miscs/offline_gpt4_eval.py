@@ -1,10 +1,11 @@
 import argparse
 import json
 import os
+from pathlib import Path
+
 import jsonlines
 import openai
 from tqdm import tqdm
-from pathlib import Path
 
 from lmms_eval.api.metrics import gpt4judge, mean_stderr
 

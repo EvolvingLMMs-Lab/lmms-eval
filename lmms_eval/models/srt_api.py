@@ -15,10 +15,8 @@ from loguru import logger as eval_logger
 from openai import AsyncOpenAI, OpenAI
 from PIL import Image
 from sglang.srt.utils import kill_child_process
-from sglang.test.test_utils import (
-    DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
-    popen_launch_server,
-)
+from sglang.test.test_utils import (DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
+                                    popen_launch_server)
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance

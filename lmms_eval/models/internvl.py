@@ -31,12 +31,13 @@ if not hasattr(eval_logger, "internvl_warning_logged"):
     eval_logger.internvl_warning_logged = False
 
 try:
-    from internvl.model.internlm2.modeling_internlm2 import InternLM2ForCausalLM
+    from internvl.model.internlm2.modeling_internlm2 import \
+        InternLM2ForCausalLM
     from internvl.model.internvl_chat import InternVLChatModel
-    from internvl.model.internvl_chat.configuration_internvl_chat import (
-        InternVLChatConfig,
-    )
-    from internvl.model.internvl_chat.modeling_intern_vit import InternVisionModel
+    from internvl.model.internvl_chat.configuration_internvl_chat import \
+        InternVLChatConfig
+    from internvl.model.internvl_chat.modeling_intern_vit import \
+        InternVisionModel
     from internvl.train.dataset import build_transform, dynamic_preprocess
 except ImportError:
     eval_logger.debug("InternVL is not installed. Please install InternVL to use this model.")
@@ -53,13 +54,8 @@ from huggingface_hub import snapshot_download
 from peft import LoraConfig, get_peft_model
 from torch import nn
 from torch.nn import CrossEntropyLoss
-from transformers import (
-    AutoModel,
-    AutoTokenizer,
-    GenerationConfig,
-    LlamaForCausalLM,
-    LlamaTokenizer,
-)
+from transformers import (AutoModel, AutoTokenizer, GenerationConfig,
+                          LlamaForCausalLM, LlamaTokenizer)
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
 

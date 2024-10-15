@@ -5,12 +5,8 @@ import embedder
 import torch.distributed as dist
 
 from lmms_eval.api.registry import ALL_TASKS, GROUP_REGISTRY
-from lmms_eval.tasks import (
-    ConfigurableTask,
-    get_task_dict,
-    include_path,
-    initialize_tasks,
-)
+from lmms_eval.tasks import (ConfigurableTask, get_task_dict, include_path,
+                             initialize_tasks)
 from lmms_eval.utils import simple_parse_args_string
 
 

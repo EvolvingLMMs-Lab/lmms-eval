@@ -12,18 +12,8 @@ import re
 import subprocess
 import sys
 import warnings
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import (Any, Callable, Iterable, Iterator, List, Literal, Optional,
+                    Tuple, Type, Union)
 
 import yaml
 

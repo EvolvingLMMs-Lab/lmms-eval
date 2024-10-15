@@ -1,10 +1,8 @@
 import os
 import re
 
-from lmms_eval.tasks.mmsearch.utils.image_utils import (
-    crop_and_split,
-    slim_image_and_save,
-)
+from lmms_eval.tasks.mmsearch.utils.image_utils import (crop_and_split,
+                                                        slim_image_and_save)
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 
