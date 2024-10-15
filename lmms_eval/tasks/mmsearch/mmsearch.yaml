@@ -1,6 +1,6 @@
 # the final score is computed using the script lmms_eval/tasks/mmsearch/get_final_scores.py
 # the score file in the submission folder of the three task (end2end, rerank, summarization) should be input as args
-group: mathverse
+group: mmsearch
 task:
   - mmsearch_end2end
   - mmsearch_rerank

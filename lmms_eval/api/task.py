@@ -790,9 +790,9 @@ class ConfigurableTask(Task):
         if self.lmms_eval_specific_kwargs is not None:
             if self.model_name in self.lmms_eval_specific_kwargs:
                 self.lmms_eval_specific_kwargs = self.lmms_eval_specific_kwargs[self.model_name]
-            if "default" in self.lmms_eval_specific_kwargs:
+            elif "default" in self.lmms_eval_specific_kwargs:
                 self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("default", {}))
-            if "dataset" in self.lmms_eval_specific_kwargs:
+            elif "dataset" in self.lmms_eval_specific_kwargs:
                 self.lmms_eval_specific_kwargs.update(self.lmms_eval_specific_kwargs.get("dataset", {}))
 
         self.model_specific_target_kwargs = self.config.model_specific_target_kwargs
@@ -938,6 +938,7 @@ class ConfigurableTask(Task):
                     force_download = dataset_kwargs.get("force_download", False)
                     force_unzip = dataset_kwargs.get("force_unzip", False)
                     revision = dataset_kwargs.get("revision", "main")
+                    create_link = dataset_kwargs.get("create_link", False)
                     cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
@@ -1001,6 +1002,16 @@ class ConfigurableTask(Task):
                             if not os.path.exists(os.path.join(cache_dir, os.path.basename(base_name))):
                                 untar_video_data(output_tar)
 
+                    # Link cache_path to cache_dir if needed.
+                    if create_link:
+                        if not os.path.exists(cache_dir) or os.path.islink(cache_dir):
+                            if os.path.islink(cache_dir):
+                                os.remove(cache_dir)
+                                eval_logger.info(f"Removed existing symbolic link: {cache_dir}")
+                            # Create a new symbolic link
+                            os.symlink(cache_path, cache_dir)
+                            eval_logger.info(f"Symbolic link created successfully: {cache_path} -> {cache_dir}")
+
                 accelerator.wait_for_everyone()
                 dataset_kwargs.pop("cache_dir")
                 dataset_kwargs.pop("video")
@@ -1018,6 +1029,9 @@ class ConfigurableTask(Task):
 
             if "local_files_only" in dataset_kwargs:
                 dataset_kwargs.pop("local_files_only")
+
+            if "create_link" in dataset_kwargs:
+                dataset_kwargs.pop("create_link")
 
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,

@@ -48,6 +48,7 @@ AVAILABLE_MODELS = {
     "xcomposer2d5": "XComposer2D5",
     "oryx": "Oryx",
     "videochat2": "VideoChat2",
+    "llama_vision": "LlamaVision",
 }
 
 

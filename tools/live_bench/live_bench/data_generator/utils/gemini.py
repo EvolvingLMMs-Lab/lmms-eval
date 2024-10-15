@@ -8,8 +8,8 @@ from live_bench.data_generator.response import Response
 logger = logging.getLogger("lmms-eval")
 
 
-def gemini_generate_response(client: genai.GenerativeModel, messages, max_tokens: int, max_try_times: int = 5, **kwargs):
-    generation_config = genai.GenerationConfig(max_output_tokens=max_tokens)
+def gemini_generate_response(client: genai.GenerativeModel, messages, max_tokens: int, max_try_times: int = 5, temperature=0.5, **kwargs):
+    generation_config = genai.GenerationConfig(max_output_tokens=max_tokens, temperature=temperature)
 
     def _generate():
         return client.generate_content(

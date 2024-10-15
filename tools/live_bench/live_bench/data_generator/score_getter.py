@@ -13,6 +13,7 @@ from live_bench.data_generator.utils.claude import (
 )
 from live_bench.data_generator.utils.gpt4v import (
     format_gpt4v_images,
+    get_openai_client,
     gpt4v_generate_response,
 )
 from live_bench.screen_shoter import ScreenImage
@@ -80,11 +81,12 @@ class GPT4VScoreGetter(ScoreGetter):
                 self.prompt = f.read()
         else:
             self.prompt = prompt
-        API_KEY = os.getenv("OPENAI_API_KEY")
-        if not API_KEY:
-            raise ValueError("OPENAI_API_KEY environment variable not set.")
-        self.api_key = API_KEY
-        self.client = openai.OpenAI(api_key=self.api_key)
+        # API_KEY = os.getenv("OPENAI_API_KEY")
+        # if not API_KEY:
+        #     raise ValueError("OPENAI_API_KEY environment variable not set.")
+        # self.api_key = API_KEY
+        # self.client = openai.OpenAI(api_key=self.api_key)
+        self.client = get_openai_client()
         self.model = model
         if os.path.exists(example_path) and os.path.isfile(os.path.join(example_path, "example_score_input.md")):
             with open(example_path, "r") as f:
