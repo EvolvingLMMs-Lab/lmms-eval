@@ -100,13 +100,13 @@ class SambaStudioLLaVA(lmms):
                 gen_kwargs["preprocessing"] = "llava-hf"
 
             payload["params"] = {
-                'max_tokens_to_generate': {"type":"int","value":str(gen_kwargs["max_new_tokens"])},
-                'temperature':{"type":"float","value":str(gen_kwargs["temperature"])},
-                'top_p':{"type":"float","value":str(gen_kwargs["top_p"])},
-                'do_sample':{"type":"bool","value":str(gen_kwargs["do_sample"])},
-                'top_k':{"type":"int","value":str(gen_kwargs["top_k"])},
-                'top_logprobs':{"type":"int","value":str(gen_kwargs["top_logprobs"])},
-                'preprocessing':{"type":"str","value":gen_kwargs["preprocessing"]}
+                "max_tokens_to_generate": {"type": "int", "value": str(gen_kwargs["max_new_tokens"])},
+                "temperature": {"type": "float", "value": str(gen_kwargs["temperature"])},
+                "top_p": {"type": "float", "value": str(gen_kwargs["top_p"])},
+                "do_sample": {"type": "bool", "value": str(gen_kwargs["do_sample"])},
+                "top_k": {"type": "int", "value": str(gen_kwargs["top_k"])},
+                "top_logprobs": {"type": "int", "value": str(gen_kwargs["top_logprobs"])},
+                "preprocessing": {"type": "str", "value": gen_kwargs["preprocessing"]},
             }
             for attempt in range(5):
                 try:

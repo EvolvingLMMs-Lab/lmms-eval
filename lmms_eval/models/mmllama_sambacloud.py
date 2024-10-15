@@ -16,6 +16,7 @@ from PIL import Image
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
 
+
 @register_model("mllama_sambacloud")
 class MMLlamaSambaCloud(lmms):
     def __init__(
@@ -73,7 +74,7 @@ class MMLlamaSambaCloud(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            
+
             img = self.encode_image(visuals[0])
 
             if "max_new_tokens" not in gen_kwargs:
@@ -85,22 +86,10 @@ class MMLlamaSambaCloud(lmms):
 
             payload = {
                 "stream": False,
-	            "model": "Llama-3.2-11B-Vision-Instruct",
+                "model": "Llama-3.2-11B-Vision-Instruct",
                 "max_tokens": gen_kwargs["max_new_tokens"],
                 "temperature": gen_kwargs["temperature"],
-                "messages":[{
-                            "role": "user",
-                            "content":[
-                                {"type":"text","text":contexts},
-                                {
-                                    "type":"image_url",
-                                    "image_url":{
-                                        "url":f"data:image/jpeg;base64,{img}"
-                                    }
-                                }
-                            ]
-                        }],
-                
+                "messages": [{"role": "user", "content": [{"type": "text", "text": contexts}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}]}],
             }
 
             for attempt in range(5):

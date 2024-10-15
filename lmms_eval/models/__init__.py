@@ -27,7 +27,7 @@ AVAILABLE_MODELS = {
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
     "from_log": "FromLog",
-    # "docowl": "DocOwl",    
+    # "docowl": "DocOwl",
     "fuyu": "Fuyu",
     "gemini_api": "GeminiAPI",
     "gpt4v": "GPT4V",
