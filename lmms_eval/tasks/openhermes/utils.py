@@ -1,11 +1,12 @@
 import datetime
 import json
 import os
+import random
 import re
 import sys
 import time
 from pathlib import Path
-import random
+
 import requests
 import yaml
 from loguru import logger as eval_logger
@@ -13,13 +14,16 @@ from loguru import logger as eval_logger
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 
+
 def doc_to_audio(doc):
     return [doc["context"]["array"]]
 
-def doc_to_text(doc, lmms_eval_specific_kwargs): 
+
+def doc_to_text(doc, lmms_eval_specific_kwargs):
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     return f"{pre_prompt}{post_prompt}"
+
 
 with open(Path(__file__).parent / "openhermes.yaml", "r") as f:
     raw_data = f.readlines()
@@ -86,16 +90,7 @@ def get_eval(max_tokens: int, content: str):
         {"role": "user", "content": content},
     ]
 
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": max_tokens,
-        "top_p": 0.95,
-        "frequency_penalty": 0,
-        "presence_penalty": 0,
-        "stop": None
-    }
+    payload = {"model": GPT_EVAL_MODEL_NAME, "messages": messages, "temperature": 0.7, "max_tokens": max_tokens, "top_p": 0.95, "frequency_penalty": 0, "presence_penalty": 0, "stop": None}
 
     try:
         response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
