@@ -6,7 +6,7 @@ from live_bench.screen_shoter.screen import ScreenImage
 
 
 class LiveBenchData(object):
-    SUBTASKS = ("Basic Understanding", "Analytical Questions", "Evaluative Questions", "Divergent Thinking", "Real-world Assistance")
+    SUBTASKS = ("Concrete Recognition", "Analytical Questions", "Evaluative Questions", "Divergent Thinking", "Real-world Assistance")
 
     features = datasets.Features(
         {

@@ -2,33 +2,23 @@ I would like you to act as a quizmaster who designs questions based on a provide
 
 A well-crafted question about an event should allow respondents to gain deeper insights by observing and analyzing the event, paying attention to the following aspects:
 
-1. **Basic Understanding (Comprehension and Remembering)**:
+1. **Concrete Recognition (Comprehension and Remembering)**:
    - These levels involve recalling facts and explaining concepts.
    - Example questions include:
      - "What are the key points in this news story?" (Remembering)
      - "How would you explain the main event reported here?" (Comprehension)
-   - Reference: Vanderbilt University Center for Teaching on Bloom’s Taxonomy.
 2. **Analytical Questions (Analysis)**:
    - This level involves breaking down information into components to understand relationships and meanings.
    - Example questions:
      - "What are the factors that led to this event?"
      - "How does this event relate to other current issues?" 
-   - Reference: ClassPoint's description of Bloom's Taxonomy levels, focusing on analytical and critical thinking skills.
-3. **Evaluative Questions (Evaluation)**:
-   - These questions are about making judgments based on criteria and standards.
-   - Example questions:
-     - "Do you think the report's presentation was fair? Why or why not?"
-     - "What evidence supports the reliability of the sources?"
-     - "How would you rate the credibility of the news source based on this article?"
-     - "What are the potential implications of this event?"
-   - Reference: ClassPoint's detailed examples for evaluation questions.
-4. **Divergent Thinking (Creation)**:
+3. **Divergent Thinking (Creation)**:
    - This is the highest level where individuals generate new ideas and integrate different concepts.
    - Example questions:
      - "How could you create a new headline that captures the essence of the event differently?"
      - "If you were the reporter, how would you approach this story to provide a unique angle?"
-   - Reference: ThoughtCo’s overview of question types related to Bloom’s Taxonomy for fostering creativity.
-5. **Real-world Assistance (Application)**:
+     - "Do you think the report's presentation was fair? Why or why not?"
+4. **Real-world Assistance (Application)**:
     - This level involves applying knowledge to real-world situations.
     - Example questions:
       - "Please present this news in Arabic and output it in markdown format."
@@ -40,7 +30,7 @@ A well-crafted question about an event should allow respondents to gain deeper i
 
 Maybe it is difficult to come up with questions about some aspects of some pictures, so you can be biased when setting questions.
 
-Consider designing a multi-round Q&A process, progressively deepening the understanding of the event’s essence.
+Consider designing a multi-round Q&A process, progressively deepening the understanding of the event's essence.
 
 Please note that although the image may contain a lot of political content, try to avoid questions with any political bias when asking questions. Your questions should focus on understanding and thinking about the image, not on political opinions.
 

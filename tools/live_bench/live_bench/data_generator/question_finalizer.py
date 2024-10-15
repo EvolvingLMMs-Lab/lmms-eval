@@ -74,45 +74,21 @@ class GeminiAnswerGetter(AnswerGetter):
 
 
 QUESTION_FINALIZER_PROMPT = """\
-You are a question setter, and your task is to format answer the scoring criteria to ensure the scoring criteria is better for human reading:
+You are a question setter, and your task is to finalize the question, answer, and scoring criteria. Make sure:
 
-1. It should be a natural language, don't use dict / json format for the criteria, human cannot understand it.
+1. The criteria should be a natural language, don't use dict / json format for the criteria, human cannot understand it.
 2. You can use bullet points / numbers to the list / yaml format to the criteria. But don't use python-like format.
 3. If the answer is in dict format, but there is no need to answer in dict format (means there is a way to answer in natural language, the question do not specify to answer in dict format), you should convert it to natural language.
 4. If the whole criteria is in other language, change it to English. But if you think some words should be in other language, you can keep it in that language. If question or answer is in other language, you don't need to change it.
-
-Ensure:
-1. The scoring criteria are rational and facilitate the accurate assessment of responses.
-2. The full score for the scoring criteria must be 10 points, and it must directly relate to the specific answer.
-3. The criteria should be in natural language instead of dict format. However, you can still use bullet points or numbers to list the criteria.
-4. You don't need to change the question, just format the answer and scoring criteria, but you still need to output the final question.
-5. Don't change the meaning of the question, answer, just format the answer and scoring criteria.
-"""
-
-"""3. The scoring criteria are rational and facilitate the accurate assessment of responses.
-4. The full score for the scoring criteria must be 10 points, and it must directly relate to the specific answer.
-5. The criteria should be in natural language instead of dict format. However, you can still use bullet points or numbers to list the criteria.
-Your task is to increase the difficulty of earning partial credit and ensure that the question and criteria are closely tied to the understanding of the image. What you need to keep in mind is that the original intent of this question is to assess the understanding of the image. Therefore, you can modify the question and criteria to make the scoring closely aligned with whether the image's content and details are correctly understood. Of course, while modifying the question and criteria, don't forget to adjust the answer to correspond with the revised question and criteria.
-
-Ensure:
-
-1. The question is clear and unambiguous.
-2. The answer is correct and reasonable (although the original ground truth answer is mostly correct, it may not be perfect, and sometimes the answer maybe incorrect).
-3. The scoring criteria are rational and facilitate the accurate assessment of responses.
-4. The full score for the scoring criteria must be 10 points, and it must directly relate to the specific answer.
-5. The criteria should be in natural language instead of dict format. However, you can still use bullet points or numbers to list the criteria.
-"""
-
-"""
-
-Your task is to finalize these standards, thus ensuring the correctness of the answer and the rationality of the scoring criteria.
+5. The scoring criteria are rational and facilitate the accurate assessment of responses.
+6. The full score for the scoring criteria must be 10 points, and it must directly relate to the specific answer.
+7. The question is clear and unambiguous.
+8. The answer is correct and reasonable (although the original ground truth answer is mostly correct, it may not be perfect, and sometimes the answer maybe incorrect).
 
 Some tips:
 
 1. For some extremely hard open-ended questions where answers may vary, hitting all points perfectly may not be realistic. In such cases, you can relax the criteria slightly. For example, if there are five possible points in an answer, but answering three adequately could merit full points. An other option is to change the question to a multiple-choice / multi-select question. But remember, it only applies to extremely hard open-ended questions which are impossible to answer perfectly.
 2. For some questions, changing the format might be beneficial. You can consider transforming them into different types of questions such as essay, fill-in-the-blank, ranking (e.g., based on time, importance, etc.), or matching questions to enhance the difficulty and rationality of the scoring criteria. But a very important point is that DO NOT CHANGE the question to multiple-choice questions. If the original question is multiple-choice, you need to change it to another type of question (e.g., open-source, fill-in-the-blank, etc.).
-
-Very important: Do not change the question to a multiple-choice question. If the original question is multiple-choice, you need to change it to another type of question (e.g., open-source, fill-in-the-blank, etc.). If you changed the question type, please make sure you also adjust the answer and scoring criteria accordingly. For example, if a question is like a MCQ, but it don't have choices, you need to change it to a open-ended question, and adjust the answer and scoring criteria to fit the open-ended question.
 """
 
 FINALIZER_OUTPUT_FORMAT_PROMPT = """\
