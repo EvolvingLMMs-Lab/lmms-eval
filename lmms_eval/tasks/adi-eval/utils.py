@@ -4,8 +4,10 @@ from PIL import Image
 from pint import UnitRegistry, errors
 import pint
 from word2num import word2num
+
 ureg = UnitRegistry(autoconvert_offset_to_baseunit=True)
 TOLERANCE_SCALE = 4
+
 
 def adi_eval_doc_to_visual(doc):
     with BytesIO(doc["image"]) as buf:
@@ -35,12 +37,13 @@ def adi_eval_process_results(doc, results):
         return_dict["augmented"] = score
     return return_dict
 
+
 def tolerance_correctness(prediction, target, axis_scale) -> bool:
     if prediction == target:
         return True, "Exact_Match"
-    
-    simplified_prediction = prediction.replace("µ","u").lower().rstrip(".")
-    simplified_target = target.replace("µ","u").lower().rstrip(".")
+
+    simplified_prediction = prediction.replace("µ", "u").lower().rstrip(".")
+    simplified_target = target.replace("µ", "u").lower().rstrip(".")
     if simplified_prediction == simplified_target:
         return True, "Match_on_Simplified_String"
     if simplified_prediction.split("=")[-1].strip() == simplified_target:
@@ -48,11 +51,11 @@ def tolerance_correctness(prediction, target, axis_scale) -> bool:
 
     if axis_scale is not None:
         try:
-            prediction_unit = ureg(prediction.replace("v","V"))
+            prediction_unit = ureg(prediction.replace("v", "V"))
         except:
             pass
         else:
-            target_unit = ureg(target.replace("v","V"))
+            target_unit = ureg(target.replace("v", "V"))
             if type(target_unit) == type(prediction_unit):
                 if isinstance(prediction_unit, pint.Quantity):
                     try:

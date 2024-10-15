@@ -488,6 +488,7 @@ def get_task_name_from_config(task_config: Dict[str, str]) -> str:
     else:
         return "{dataset_path}".format(**task_config)
 
+
 def get_task_name_from_object(task_object):
     if hasattr(task_object, "config"):
         return task_object._config["task"]

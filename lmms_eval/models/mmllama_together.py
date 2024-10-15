@@ -15,6 +15,7 @@ from PIL import Image
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
 
+
 @register_model("mmllama_together")
 class MMLlamaTogether(lmms):
     def __init__(
@@ -69,7 +70,7 @@ class MMLlamaTogether(lmms):
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            
+
             img = self.encode_image(visuals[0])
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -81,22 +82,11 @@ class MMLlamaTogether(lmms):
                 try:
                     response = self.client.chat.completions.create(
                         model="meta-llama/Llama-Vision-Free",
-                        messages=[{
-                            "role": "user",
-                            "content":[
-                                {"type":"text","text":contexts},
-                                {
-                                    "type":"image_url",
-                                    "image_url":{
-                                        "url":f"data:image/jpeg;base64,{img}"
-                                    }
-                                }
-                            ]
-                        }],
+                        messages=[{"role": "user", "content": [{"type": "text", "text": contexts}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}]}],
                         max_tokens=gen_kwargs["max_new_tokens"],
                         temperature=gen_kwargs["temperature"],
-                        stop=["<|eot_id|>","<|eom_id|>"],
-                        stream=False
+                        stop=["<|eot_id|>", "<|eom_id|>"],
+                        stream=False,
                     )
                     response_text = response.choices[0].message.content
                     break  # If successful, break out of the loop
