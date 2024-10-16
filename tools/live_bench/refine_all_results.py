@@ -3,11 +3,14 @@ from live_bench.data_generator.question_finalizer import QuestionFinalizer
 from tqdm import tqdm
 
 if __name__ == "__main__":
-    hf_data = load_dataset("lmms-lab/LiveBench", "2024-07", split="test")
+    hf_data = load_dataset("lmms-lab/LiveBench", "2024-09", split="test")
     finalizer = QuestionFinalizer()
 
     def load_results():
         for item in tqdm(hf_data):
+            # if item["subtask"] != "Divergent Thinking":
+            #     yield item
+            #     continue
             try:
                 res = finalizer.finalize_question(question=item["question"], answer=item["answer"], criteria=item["criteria"], images=item["images"])
                 final_answer = item.copy()
@@ -31,5 +34,5 @@ if __name__ == "__main__":
             final_data[item].append(value)
     # final_data = Dataset.from_generator(load_results)
     final_data = Dataset.from_dict(final_data, features=hf_data.features)
-    final_data.save_to_disk("logs/2024-07-final")
-    final_data.push_to_hub("lmms-lab/LiveBench", "2024-07")
+    final_data.save_to_disk("logs/2024-09-final")
+    final_data.push_to_hub("lmms-lab/LiveBench", "2024-09", split="test")

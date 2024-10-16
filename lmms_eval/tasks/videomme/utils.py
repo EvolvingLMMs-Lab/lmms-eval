@@ -132,47 +132,6 @@ def extract_subtitles(video_path, subtitle_path):
     return subtitle_frames, total_frame
 
 
-def parse_subtitle_time(time_str):
-    h, m, s_ms = time_str.split(":")
-    s, ms = s_ms.split(",")
-    return int(h) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000
-
-
-def load_subtitles(subtitle_path):
-    subtitles = {}
-    with open(subtitle_path, "r", encoding="utf-8") as file:
-        content = file.read().split("\n\n")
-        for section in content:
-            if section.strip():
-                lines = section.split("\n")
-                if len(lines) >= 3:
-                    time_range = lines[1].split(" --> ")
-                    start_time = parse_subtitle_time(time_range[0])
-                    end_time = parse_subtitle_time(time_range[1])
-                    text = " ".join(line for line in lines[2:])
-                    subtitles[(start_time, end_time)] = text
-    return subtitles
-
-
-def convert_time_to_frame(time_in_seconds, fps):
-    return int(time_in_seconds * fps)
-
-
-def extract_subtitles(video_path, subtitle_path):
-    video = cv2.VideoCapture(video_path)
-    fps = video.get(cv2.CAP_PROP_FPS)
-    total_frame = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    subtitles = load_subtitles(subtitle_path)
-
-    subtitle_frames = []
-    for (start_time, end_time), text in subtitles.items():
-        start_frame = convert_time_to_frame(start_time, fps)
-        end_frame = convert_time_to_frame(end_time, fps)
-        subtitle_frames.append((start_frame, end_frame, text))
-
-    return subtitle_frames, total_frame
-
-
 def videomme_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["videoID"] + ".mp4"
@@ -191,7 +150,7 @@ def videomme_doc_to_visual(doc):
 def videomme_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]
-    option = str(doc["options"])
+    option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
     question = question + "\n" + option
     post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
     full_prompt = option_prompt + "\n" + question + "\n" + post_prompt
@@ -238,6 +197,8 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
             if "frame_num" in lmms_eval_specific_kwargs:
                 frame_num = lmms_eval_specific_kwargs["frame_num"]
                 subtitle_by_frame, total_frame = extract_subtitles(video_path, subtitle_path)
+                if frame_num == -1:
+                    frame_num = total_frame
                 uniform_sampled_frames = np.linspace(0, total_frame - 1, frame_num, dtype=int).tolist()
 
                 subtitle_by_frame_idx = []
@@ -260,7 +221,7 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
 
     option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]
-    option = str(doc["options"])
+    option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
     question = question + "\n" + option
     full_prompt = subtitles_prompt + subtitle + "\n" + option_prompt + "\n" + question + "\n" + "The best answer is:"
     return full_prompt

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.2.3.dev0"
+version = "0.2.4"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
@@ -81,9 +81,6 @@ metrics = [
     "capture_metric",
     "Levenshtein",
 ]
-vila = [
-    "s2wrapper@git+https://github.com/bfshi/scaling_on_scales"
-]
 gemini = [
     "google-generativeai",
 ]
@@ -107,7 +104,6 @@ mmsearch = [
     "rouge",
 ]
 all = [
-    "vila",
     "gemini",
     "reka",
     "metrics",

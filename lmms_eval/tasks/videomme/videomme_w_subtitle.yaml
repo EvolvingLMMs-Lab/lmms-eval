@@ -30,6 +30,10 @@ lmms_eval_specific_kwargs:
     post_prompt: "\nAnswer the question using a single word or phrase."
   gemini_api:
     gemini_api_flag: "full subtitle"
+  llava_vid:
+    frame_num: 768
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
   # gpt4v:
   #   pre_prompt: ""
   #   post_prompt: 
