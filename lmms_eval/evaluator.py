@@ -169,7 +169,7 @@ def simple_evaluate(
         task_manager = TaskManager(verbosity, model_name=model)
 
     task_dict = get_task_dict(tasks, task_manager)
-    
+
     ModelClass = get_model(model)
     lm = ModelClass.create_from_arg_string(
         model_args,
