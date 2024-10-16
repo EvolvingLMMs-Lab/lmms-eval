@@ -195,27 +195,32 @@ class Qwen2_Audio(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            cont = self.model.generate(
-                **inputs,
-                do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                temperature=gen_kwargs["temperature"],
-                top_p=gen_kwargs["top_p"],
-                num_beams=gen_kwargs["num_beams"],
-                max_new_tokens=gen_kwargs["max_new_tokens"],
-                min_new_tokens=1,
-                use_cache=self.use_cache,
-            )
+            try:
+                cont = self.model.generate(
+                    **inputs,
+                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
+                    temperature=gen_kwargs["temperature"],
+                    top_p=gen_kwargs["top_p"],
+                    num_beams=gen_kwargs["num_beams"],
+                    max_new_tokens=gen_kwargs["max_new_tokens"],
+                    min_new_tokens=1,
+                    use_cache=self.use_cache,
+                )
 
-            # cont = self.model.generate(**inputs, max_new_tokens=256, min_new_tokens=1, do_sample=False)
+                # cont = self.model.generate(**inputs, max_new_tokens=256, min_new_tokens=1, do_sample=False)
 
-            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            # generated_ids_trimmed = cont[:, inputs.input_ids.size(1):]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-            for i, ans in enumerate(answers):
-                for term in until:
-                    if len(term) > 0:
-                        ans = ans.split(term)[0]
-                answers[i] = ans
+                generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
+                # generated_ids_trimmed = cont[:, inputs.input_ids.size(1):]
+                answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+                for i, ans in enumerate(answers):
+                    for term in until:
+                        if len(term) > 0:
+                            ans = ans.split(term)[0]
+                    answers[i] = ans
+
+            except Exception as e:
+                eval_logger.debug(f"Error while generating: {e}. It is possibly due to blank audio in {contexts}")
+                answers = [""] * len(contexts)
 
             for ans, context in zip(answers, contexts):
                 res.append(ans)
