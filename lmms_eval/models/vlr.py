@@ -193,6 +193,7 @@ class VLR(lmms):
         self.result_map = {
             "gqa": {"path": "gqa_results.json", "item_id": "id"},
             "realworldqa": {"path": "realworldqa_results.json", "item_id": "image_path"},
+            "mme": {"path": "mme_results.json"}
         }
 
         self.result_dicts = {}
@@ -439,10 +440,13 @@ class VLR(lmms):
 
             context = batched_contexts[0]
             # text_outputs = [self.task_dict[task][split][batched_doc_id[0]]['answer']]
+            qdict = self.task_dict[task][split][batched_doc_id[0]]
             if task not in self.result_dicts:
                 raise ValueError(f"Task {task} not supported for generate_until or result file not found")
-
-            item_id = self.task_dict[task][split][batched_doc_id[0]][self.result_map[task]["item_id"]]
+            if task == "mme":
+                item_id = qdict["question_id"] + qdict["question"]
+            else:
+                item_id = qdict[self.result_map[task]["item_id"]]
             answer, result, valid = self.result_dicts[task].get(item_id, ("", "", None))
             text_outputs = [result]
             # print(batched_doc_id, ": ", self.task_dict[task][split][batched_doc_id[0]], "\n")
