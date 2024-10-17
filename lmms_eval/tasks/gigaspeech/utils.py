@@ -16,7 +16,7 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
 def gigaspeech_doc_to_audio(doc):
-    return [doc["audio"]["array"]]
+    return [doc["audio"]]
 
 
 def gigaspeech_doc_to_text(doc):

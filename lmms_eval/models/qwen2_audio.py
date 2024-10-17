@@ -13,6 +13,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.audio_processing import downsample_audio
 
 
 @register_model("qwen2_audio")
@@ -153,8 +154,8 @@ class Qwen2_Audio(lmms):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            audios = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            audios = self.flatten(audios)
+            batched_audios = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
+            flattened_audios = self.flatten(batched_audios)
 
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
@@ -176,10 +177,20 @@ class Qwen2_Audio(lmms):
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
 
-            for i in range(len(contexts)):
-                contexts[i] = "<|audio_bos|><|AUDIO|><|audio_eos|>" + contexts[i]
+            conversations = []
+            for idx, context in enumerate(contexts):
+                conv = [{"role": "user", "content": []}]
+                for _ in batched_audios[idx]:
+                    # This placeholder is just use to make chat template work
+                    # We already have the sampled audio array
+                    conv[0]["content"].append({"type": "audio", "audio_url": "placeholder.wav"})
+                conv[0]["content"].append({"type": "text", "text": context})
+                conversations.append(conv)
 
-            inputs = self.processor(text=contexts, audios=audios, sampling_rate=self.processor.feature_extractor.sampling_rate, return_tensors="pt", padding=True)
+            text = [self.processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False) for conversation in conversations]
+            audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
+
+            inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.processor.feature_extractor.sampling_rate)
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")

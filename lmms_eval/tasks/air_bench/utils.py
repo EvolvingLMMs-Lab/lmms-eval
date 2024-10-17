@@ -16,7 +16,7 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 
 def air_bench_doc_to_audio(doc):
-    return [doc["audio"]["array"]]
+    return [doc["audio"]]
 
 
 def air_bench_doc_to_text_chat(doc, lmms_eval_specific_kwargs):

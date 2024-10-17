@@ -15,7 +15,7 @@ from lmms_eval.filters.extraction import ExtendedRegexFilter
 
 
 def clotho_aqa_doc_to_audio(doc):
-    return [doc["audio"]["array"]]
+    return [doc["audio"]]
 
 
 def clotho_aqa_doc_to_text(doc, lmms_eval_specific_kwargs):
