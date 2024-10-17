@@ -6,7 +6,7 @@ import re
 import warnings
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
-
+import os
 import numpy as np
 import PIL
 import torch
@@ -59,7 +59,6 @@ if version.parse(torch.__version__) >= version.parse("2.1.2"):
     best_fit_attn_implementation = "sdpa"
 else:
     best_fit_attn_implementation = "eager"
-
 
 @register_model("vlr")
 class VLR(lmms):
@@ -191,13 +190,24 @@ class VLR(lmms):
             self._world_size = 1
         
         # read files
-        self.result_dict = {}
-        with open("gqa_results.json", "r") as f:
-            all_results = f.readlines()
-            for line in all_results:
-                item_list = json.loads(line)
-                item_id, answer, result, valid = item_list
-                self.result_dict[item_id] = (answer, result, valid)
+        self.result_map = {
+            "gqa": {"path": "gqa_results.json", "item_id": "id"},
+            "realworldqa": {"path": "realworldqa_results.json", "item_id": "image_path"},
+        }
+
+        self.result_dicts = {}
+        for task_name, tdict in self.result_map.items():
+            if not os.path.exists(tdict["path"]):
+                continue
+
+            result_dict = {}
+            with open(tdict["path"], "r") as f:
+                all_results = f.readlines()
+                for line in all_results:
+                    item_list = json.loads(line)
+                    item_id, answer, result, valid = item_list
+                    result_dict[item_id] = (answer, result, valid)
+            self.result_dicts[task_name] = result_dict
 
     @property
     def config(self):
@@ -429,12 +439,12 @@ class VLR(lmms):
 
             context = batched_contexts[0]
             # text_outputs = [self.task_dict[task][split][batched_doc_id[0]]['answer']]
-            if task == 'gqa':
-                qid = self.task_dict[task][split][batched_doc_id[0]]['id']
-                answer, result, valid = self.result_dict.get(qid, ("", "", None))
-                text_outputs = [result]
-            else:
-                raise ValueError(f"Task {task} not supported for generate_until")
+            if task not in self.result_dicts:
+                raise ValueError(f"Task {task} not supported for generate_until or result file not found")
+
+            item_id = self.task_dict[task][split][batched_doc_id[0]][self.result_map[task]["item_id"]]
+            answer, result, valid = self.result_dicts[task].get(item_id, ("", "", None))
+            text_outputs = [result]
             # print(batched_doc_id, ": ", self.task_dict[task][split][batched_doc_id[0]], "\n")
             # print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]], "\n")
             res.extend(text_outputs)
