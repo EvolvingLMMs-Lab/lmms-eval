@@ -27,7 +27,7 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
 def people_speech_doc_to_audio(doc):
-    return [doc["audio"]["array"]]
+    return [doc["audio"]]
 
 
 def people_speech_doc_to_text(doc):
