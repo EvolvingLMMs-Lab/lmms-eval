@@ -16,7 +16,7 @@ from lmms_eval.filters.extraction import ExtendedRegexFilter
 
 
 def doc_to_audio(doc):
-    return [doc["context"]["array"]]
+    return [doc["context"]]
 
 
 def doc_to_text(doc, lmms_eval_specific_kwargs):
