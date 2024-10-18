@@ -1,0 +1,25 @@
+dataset_path: lmms-lab/muchomusic
+dataset_kwargs:
+  token: True
+
+task: "muchomusic"
+test_split: test
+doc_to_target: !function utils.muchomusic_doc_to_target
+doc_to_visual: !function utils.muchomusic_doc_to_audio
+doc_to_text: !function utils.muchomusic_doc_to_text
+doc_to_choice: !function utils.muchomusic_doc_to_choice
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly: "
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+
+process_results: !function utils.muchomusic_process_results
+
+metadata:
+  gpt_eval_model_name: gpt-4o
+  version: 0.0
