@@ -1,8 +1,8 @@
 dataset_path: lmms-lab/gigaspeech
-dataset_name: l
+dataset_name: xl
 dataset_kwargs:
   token: True
-task : "gigaspeech_l_dev"
+task : "gigaspeech_xl_dev"
 test_split: validation
 output_type: generate_until
 doc_to_visual: !function utils.gigaspeech_doc_to_audio
