@@ -48,8 +48,6 @@ def remove_sp(text):
     gt = re.sub(rf"\s+", r" ", gt)  # Replace consecutive spaces in the text with a single space.
     gt = re.sub(f" ?([{PUNCS}])", r"\1", gt)
     gt = gt.lstrip(" ")
-    # if language == "zh":
-    #     gt = re.sub(rf"\s+", r"", gt)
     return gt
 
 
@@ -162,19 +160,7 @@ def gigaspeech_wer(results, args):
     # print(f"source: {source}  cnt: {len(refs)} wer: {wer:.4f}")
     return wer * 100
 
-    # def gigaspeech_xl_wer(results, args):
-    #     refs, hyps = [], []
-    #     for result in results:
-    #         # lan = "en"
-    #         gt = result["text"]
-    #         response = result["pred"]
-    #         gt = remove_sp(gt)
-    #         response = remove_sp(response)
-    #         refs.append(gt)
-    #         hyps.append(response)
-    #     wer = compute_wer(refs, hyps)
-    # print(f"source: {source}  cnt: {len(refs)} wer: {wer:.4f}")
-    # return wer * 100
+  
 
     # for gt, response, source, audio_path in zip(merged_gts, merged_responses, merged_sources, merged_audio_paths):
     #     results.append({
