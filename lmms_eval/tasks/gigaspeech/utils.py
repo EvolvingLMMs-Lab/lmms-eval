@@ -159,35 +159,3 @@ def gigaspeech_wer(results, args):
     wer = compute_wer(refs, hyps)
     # print(f"source: {source}  cnt: {len(refs)} wer: {wer:.4f}")
     return wer * 100
-
-  
-
-    # for gt, response, source, audio_path in zip(merged_gts, merged_responses, merged_sources, merged_audio_paths):
-    #     results.append({
-    #         'gt': gt,
-    #         'response': response,
-    #         'source': source,
-    #         'audio_path': audio_path,
-    #     })
-    # time_prefix = time.strftime('%y%m%d%H%M%S', time.localtime())
-    # results_file = f'{args.dataset}_{time_prefix}.json'
-    # json.dump(results, open(results_file, 'w'))
-    results_dict = {}
-    for item in results:
-        source = item["source"]
-        results_dict.setdefault(source, []).append(item)
-    lan = ds_collections[args.dataset]["language"]
-    for source in results_dict:
-        refs, hyps = [], []
-        results_list = results_dict[source]
-        for result in results_list:
-            gt = result["gt"]
-            response = result["response"]
-            gt = remove_sp(gt, lan)
-            response = remove_sp(response, lan)
-            refs.append(gt)
-            hyps.append(response)
-        wer = compute_wer(refs, hyps, lan)
-        print(f"source: {source}  cnt: {len(refs)} wer: {wer:.4f}")
-
-    pass
