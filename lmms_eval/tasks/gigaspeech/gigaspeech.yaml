@@ -10,7 +10,7 @@ task:
   - gigaspeech_m_test
   - gigaspeech_l_dev
   - gigaspeech_l_test
-  # - gigaspeech_xl_dev       # This task is currently not available because of access issues with the dataset
-  # - gigaspeech_xl_test      # This task is currently not available because of access issues with the dataset
+  - gigaspeech_xl_dev
+  - gigaspeech_xl_test
 
 
