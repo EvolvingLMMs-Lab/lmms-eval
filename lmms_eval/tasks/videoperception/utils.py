@@ -36,20 +36,6 @@ cache_dir = os.path.join(HF_HOME, cache_dir)
 from loguru import logger as eval_logger
 
 
-# Pass in video path here
-# Can only work correctly with video llm
-def videoperception_doc_to_visual(doc):
-    video_path = doc["id"] + ".mp4"
-    video_path = os.path.join(cache_dir, video_path)
-    if os.path.exists(video_path):
-        video_path = video_path
-    elif os.path.exists(video_path.replace("mp4", "MP4")):
-        video_path = video_path.replace("mp4", "MP4")
-    else:
-        sys.exit(f"video path:{video_path} does not exist, please check")
-    return [video_path]
-
-
 # Define the mapping for subjects to their respective directories
 def get_cache_dir(subject):
     if subject in ["Art", "Art_Theory", "Design", "Music"]:
@@ -57,7 +43,7 @@ def get_cache_dir(subject):
     elif subject in ["Biology", "Chemistry", "Geography", "Math", "Physics"]:
         return "science"
     elif subject in ["History", "Literature", "Sociology", "Psychology"]:
-        return "human"
+        return "social"
     elif subject in [
         "Agriculture",
         "Architecture_and_Engineering",
@@ -115,7 +101,7 @@ def videoperception_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if doc["question_type"] == "multiple-choice":
         pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
         post_prompt = lmms_eval_specific_kwargs["post_mcq_prompt"]
-        parsed_options = parse_options(ast.literal_eval(doc["options"]))
+        parsed_options = parse_options(doc["options"])
         question += "\n" + parsed_options
     else:
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
@@ -147,7 +133,7 @@ def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=N
     if doc.get("question_type") == "multiple-choice":
         pre_prompt += lmms_eval_specific_kwargs.get("mcq_prompt", "")
         # post_prompt = lmms_eval_specific_kwargs.get("post_mcq_prompt", "")
-        parsed_options = parse_options(ast.literal_eval(doc.get("options", "[]")))
+        parsed_options = parse_options(doc.get("options", []))
         question += "\n" + parsed_options
     else:
         pre_prompt += lmms_eval_specific_kwargs.get("open_ended_prompt", "")
@@ -203,7 +189,7 @@ def videoperception_process_results(doc, results):
     # Handle the case where 'question_type' might be missing for perception and understanding
     question_type = doc.get("question_type", "perception")
     if question_type == "multiple-choice":
-        index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
+        index2ans, all_choices = get_multi_choice_info((doc["options"]))
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
     elif question_type == "open":
         parsed_pred = parse_open_response(pred)
