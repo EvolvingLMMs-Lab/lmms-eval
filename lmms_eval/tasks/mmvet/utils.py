@@ -17,8 +17,23 @@ with open(Path(__file__).parent / "mmvet.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+API_TYPE = os.getenv("API_TYPE", "openai")
+
+if API_TYPE == "openai":
+    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+elif API_TYPE == "azure":
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+    
 GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
 MM_VET_PROMPT = """Compare the ground truth and prediction from AI models, to give a correctness score for the prediction. <AND> in the ground truth means it is totally right only when all elements in the ground truth are present in the prediction, and <OR> means it is totally right when any one element in the ground truth is present in the prediction. The correctness score is 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Just complete the last space of the correctness score.
 gpt_query_prompt | Ground truth | Prediction | Correctness
@@ -49,6 +64,9 @@ def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, temperature=0.0, max_to
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+
+    if API_TYPE == "azure":
+        payload.pop("model")    
 
     while patience > 0:
         patience -= 1
