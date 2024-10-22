@@ -247,8 +247,14 @@ class Llava_OneVision(lmms):
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
+        origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
+
         for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             visual = doc_to_visual(self.task_dict[task][split][doc_id])
+
+            if origin_image_aspect_ratio is not None and self._config.image_aspect_ratio != origin_image_aspect_ratio:
+                self._config.image_aspect_ratio = origin_image_aspect_ratio
+                eval_logger.info(f"Resetting image aspect ratio to {origin_image_aspect_ratio}")
 
             if visual is None or visual == []:
                 visual = None
@@ -393,9 +399,9 @@ class Llava_OneVision(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
-        
+
         origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
-        
+
         for chunk in chunks:
             batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_id, batched_task, batched_split = zip(*chunk)
             task = batched_task[0]
@@ -581,6 +587,9 @@ class Llava_OneVision(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+
+        origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
+
         for chunk in chunks:
             batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_to_text, batched_doc_id, batched_task, batched_split = zip(*chunk)
             task = batched_task[0]
@@ -621,6 +630,11 @@ class Llava_OneVision(lmms):
                         break
 
                 for visual, context in zip(batched_visuals, batched_contexts):
+
+                    if origin_image_aspect_ratio is not None and self._config.image_aspect_ratio != origin_image_aspect_ratio:
+                        self._config.image_aspect_ratio = origin_image_aspect_ratio
+                        eval_logger.info(f"Resetting image aspect ratio to {origin_image_aspect_ratio}")
+
                     if visual is None or visual == []:  # for text-only tasks.
                         visual = None
                         task_type = "text"
