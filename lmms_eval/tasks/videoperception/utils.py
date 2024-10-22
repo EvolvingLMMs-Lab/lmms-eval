@@ -83,17 +83,15 @@ def get_cache_dir(subject):
 
 def videoperception_doc_to_visual_perception(doc):
 
-    # Extract the subject as the second element after the underscore
-    subject = doc["id"].split('_')[1]  # Assuming the subject is the second part after the underscore
+    # Extract the subject between the first and last underscores
+    subject = "_".join(doc["id"].split('_')[1:-1])
 
     # Get the appropriate cache directory based on the subject
     perception_cache_dir = os.path.join(HF_HOME, cache_dir, get_cache_dir(subject))
-    print(perception_cache_dir)
 
     video_path = doc["id"] + ".mp4"
     video_path = os.path.join(perception_cache_dir, video_path)
-    print("video path")
-    print(video_path)
+
     if os.path.exists(video_path):
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
