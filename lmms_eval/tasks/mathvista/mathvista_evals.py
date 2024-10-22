@@ -1,6 +1,6 @@
+import os
 import re
 import time
-import os
 
 import requests
 from Levenshtein import distance
