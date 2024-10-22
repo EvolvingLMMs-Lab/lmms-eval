@@ -418,7 +418,6 @@ class Llava_OneVision(lmms):
             question_input = []
             # import ipdb; ipdb.set_trace()
             for visual, context in zip(batched_visuals, batched_contexts):
-
                 if origin_image_aspect_ratio is not None and self._config.image_aspect_ratio != origin_image_aspect_ratio:
                     self._config.image_aspect_ratio = origin_image_aspect_ratio
                     eval_logger.info(f"Resetting image aspect ratio to {origin_image_aspect_ratio}")
@@ -630,7 +629,6 @@ class Llava_OneVision(lmms):
                         break
 
                 for visual, context in zip(batched_visuals, batched_contexts):
-
                     if origin_image_aspect_ratio is not None and self._config.image_aspect_ratio != origin_image_aspect_ratio:
                         self._config.image_aspect_ratio = origin_image_aspect_ratio
                         eval_logger.info(f"Resetting image aspect ratio to {origin_image_aspect_ratio}")
