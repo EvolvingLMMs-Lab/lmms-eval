@@ -1,5 +1,5 @@
-dataset_name: "perception"
-task: "videommmu_perception"
+dataset_name: "comprehension"
+task: "videommmu_comprehension"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.videoperception_doc_to_visual_perception
