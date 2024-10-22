@@ -65,6 +65,9 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
         "max_tokens": max_tokens,
     }
 
+    if API_TYPE == "azure":
+        payload.pop("model")
+
     for attempt in range(retries):
         try:
             response = requests.post(API_URL, headers=headers, json=payload, timeout=60)

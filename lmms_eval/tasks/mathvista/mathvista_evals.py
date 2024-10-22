@@ -1,3 +1,4 @@
+import os
 import re
 import time
 
@@ -145,7 +146,22 @@ Extracted answer: B
 
 
 class MathVistaEvaluator:
-    API_URL = "https://api.openai.com/v1/chat/completions"
+    API_TYPE = os.getenv("API_TYPE", "openai")
+
+    if API_TYPE == "openai":
+        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+    elif API_TYPE == "azure":
+        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+        headers = {
+            "api-key": API_KEY,
+            "Content-Type": "application/json",
+        }
 
     def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
         self.api_key = api_key
@@ -166,6 +182,9 @@ class MathVistaEvaluator:
             {"role": "user", "content": prompt},
         ]
         payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "n": n}
+
+        if self.API_TYPE == "azure":
+            payload.pop("model")
 
         while patience > 0:
             patience -= 1
