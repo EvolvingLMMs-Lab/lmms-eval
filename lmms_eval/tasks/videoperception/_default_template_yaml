@@ -1,9 +1,9 @@
-dataset_path: lmms-lab/VideoSearch
+dataset_path: lmms-lab/videoperception
 dataset_kwargs:
   token: True
   video: True
   #force_unzip: True
-  cache_dir: Combined_milestone
+  cache_dir: videommmu
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: "You should watch and learn the video content. Then apply what you learned to "
