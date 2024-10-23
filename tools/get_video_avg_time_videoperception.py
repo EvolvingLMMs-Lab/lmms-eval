@@ -1,6 +1,7 @@
 import json
-import av
 import os
+
+import av
 from tqdm import tqdm
 
 data_stats = {
@@ -17,7 +18,7 @@ data_stats = {
     },
     "average_length_seconds": 0,
     "average_length_minutes": 0,
-    "total_files": 0
+    "total_files": 0,
 }
 
 
@@ -27,6 +28,7 @@ def record_video_length_stream(container):
     video_length = float(video.duration * video.time_base)  # in seconds
     return video_length
 
+
 # This one works for all types of video
 def record_video_length_packet(container):
     video_length = 0
@@ -35,16 +37,17 @@ def record_video_length_packet(container):
             video_length = frame.time  # The last frame time represents the video time
     return video_length
 
+
 if __name__ == "__main__":
     directory = "/mnt/sfs-common/krhu/.cache/huggingface/Combined_milestone/videos"
     total_length = 0
-    mp4_files = [f for f in os.listdir(directory) if f.endswith('.mp4')]
+    mp4_files = [f for f in os.listdir(directory) if f.endswith(".mp4")]
     data_stats["total_files"] = len(mp4_files)
 
     for video_file in tqdm(mp4_files, desc="Processing videos"):
         video_path = os.path.join(directory, video_file)
         container = av.open(video_path)
-        
+
         if "webm" not in video_path and "mkv" not in video_path:
             try:
                 video_length = record_video_length_stream(container)  # in seconds
