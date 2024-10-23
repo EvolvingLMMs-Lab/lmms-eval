@@ -44,33 +44,19 @@ def get_cache_dir(subject):
         return "science"
     elif subject in ["History", "Literature", "Sociology", "Psychology"]:
         return "social"
-    elif subject in [
-        "Agriculture",
-        "Architecture_and_Engineering",
-        "Computer_Science",
-        "Electronics",
-        "Energy_and_Power",
-        "Materials",
-        "Mechanical_Engineering"
-    ]:
+    elif subject in ["Agriculture", "Architecture_and_Engineering", "Computer_Science", "Electronics", "Energy_and_Power", "Materials", "Mechanical_Engineering"]:
         return "engineering"
-    elif subject in [
-        "Basic_Medical_Science",
-        "Clinical_Medicine",
-        "Diagnostics_and_Laboratory_Medicine",
-        "Pharmacy",
-        "Public_Health"
-    ]:
+    elif subject in ["Basic_Medical_Science", "Clinical_Medicine", "Diagnostics_and_Laboratory_Medicine", "Pharmacy", "Public_Health"]:
         return "health"
     elif subject in ["Accounting", "Economics", "Finance", "Manage", "Marketing"]:
         return "business"
     else:
         raise ValueError(f"Subject {subject} not recognized.")
 
-def videoperception_doc_to_visual_perception(doc):
 
+def videoperception_doc_to_visual_perception(doc):
     # Extract the subject between the first and last underscores
-    subject = "_".join(doc["id"].split('_')[1:-1])
+    subject = "_".join(doc["id"].split("_")[1:-1])
 
     # Get the appropriate cache directory based on the subject
     perception_cache_dir = os.path.join(HF_HOME, cache_dir, get_cache_dir(subject))
@@ -84,7 +70,7 @@ def videoperception_doc_to_visual_perception(doc):
         video_path = video_path.replace("mp4", "MP4")
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
-    
+
     return [video_path]
 
 
@@ -114,11 +100,11 @@ def videoperception_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 def videoperception_doc_to_text_perception(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-        
+
     question = doc["question"]
     parsed_options = parse_options(doc["options"])
     question += "\n" + parsed_options
-    
+
     return f"{question}"
 
 
@@ -146,7 +132,7 @@ def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=N
     file_name = doc["id"]
     transcript_file = os.path.join(transcripts_dir, f"{file_name}.txt")
     transcript = ""
-    
+
     if os.path.exists(transcript_file):
         with open(transcript_file, "r") as f:
             transcript = f.read().strip()
@@ -165,18 +151,18 @@ def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=N
 #     # choices_str += "\nZ. I do not know\n\n"
 #     return choices_str
 
+
 def parse_options(options):
     # Define the option letters based on the number of options
     option_letters = [chr(ord("A") + i) for i in range(len(options))]
-    
+
     # Check if the options are already appended with letters
     if all(option.startswith(f"{letter}.") for option, letter in zip(options, option_letters)):
         return "\n".join(options)
-    
+
     # Otherwise, append option letters
     choices_str = "\n".join([f"{option_letter}. {option}" for option_letter, option in zip(option_letters, options)])
     return choices_str
-
 
 
 def videoperception_doc_to_answer(doc):
@@ -197,7 +183,7 @@ def videoperception_process_results(doc, results):
         # If it is the perception or understanding question
         index2ans, all_choices = get_multi_choice_info(doc["options"])
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-        
+
     id = doc["id"]
     mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": question_type, "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
@@ -229,7 +215,7 @@ def videoperception_aggregate_results_for_submission(results, args):
 def videoperception_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
-    
+
     # Filter out results where parsed_pred is an empty string, possibly due to GPT API error
     filtered_results = [result for result in results if result["parsed_pred"] != ""]
 
@@ -384,8 +370,8 @@ def evaluate_mmmu(samples):
         pred_i = sample["parsed_pred"]
         if sample["question_type"] == "multiple-choice":
             correct = eval_multi_choice(gold_i, pred_i)
-        elif sample["question_type"] == "perception": 
-            correct = eval_multi_choice(gold_i, pred_i) 
+        elif sample["question_type"] == "perception":
+            correct = eval_multi_choice(gold_i, pred_i)
         else:  # open question
             correct = eval_open(gold_i, pred_i)
 

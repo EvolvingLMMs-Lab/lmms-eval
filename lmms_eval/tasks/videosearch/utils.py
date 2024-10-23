@@ -89,11 +89,11 @@ def videosearch_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 def videosearch_doc_to_text_perception(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-        
+
     question = doc["question"]
     parsed_options = parse_options(doc["options"])
     question += "\n" + parsed_options
-    
+
     return f"{question}"
 
 
@@ -121,7 +121,7 @@ def videosearch_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=None,
     file_name = doc["id"]
     transcript_file = os.path.join(transcripts_dir, f"{file_name}.txt")
     transcript = ""
-    
+
     if os.path.exists(transcript_file):
         with open(transcript_file, "r") as f:
             transcript = f.read().strip()
@@ -159,7 +159,7 @@ def videosearch_process_results(doc, results):
         # If it is the perception or understanding question
         index2ans, all_choices = get_multi_choice_info(doc["options"])
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-        
+
     id = doc["id"]
     mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": question_type, "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
@@ -191,7 +191,7 @@ def videosearch_aggregate_results_for_submission(results, args):
 def videosearch_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
-    
+
     # Filter out results where parsed_pred is an empty string, possibly due to GPT API error
     filtered_results = [result for result in results if result["parsed_pred"] != ""]
 
@@ -346,8 +346,8 @@ def evaluate_mmmu(samples):
         pred_i = sample["parsed_pred"]
         if sample["question_type"] == "multiple-choice":
             correct = eval_multi_choice(gold_i, pred_i)
-        elif sample["question_type"] == "perception": 
-            correct = eval_multi_choice(gold_i, pred_i) 
+        elif sample["question_type"] == "perception":
+            correct = eval_multi_choice(gold_i, pred_i)
         else:  # open question
             correct = eval_open(gold_i, pred_i)
 
