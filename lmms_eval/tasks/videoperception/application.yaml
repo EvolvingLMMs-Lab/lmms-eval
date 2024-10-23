@@ -1,4 +1,4 @@
-dataset_name: "application"
+dataset_name: "application_augmented"
 task: "videommmu_application"
 test_split: test
 output_type: generate_until
