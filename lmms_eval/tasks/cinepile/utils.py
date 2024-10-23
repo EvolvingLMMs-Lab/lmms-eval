@@ -1,13 +1,13 @@
-import re
-import os
-import sys
-import yaml
 import logging
+import os
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from collections import defaultdict
-
-from pathlib import Path
+import yaml
 
 eval_logger = logging.getLogger("lmms-eval")
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
@@ -100,11 +100,6 @@ def evaluate_semantic_similarity(response, answer_key_number, answer_key_text, n
     """
     student_response_number, student_response_text = eval(normalize_fn)(response)
 
-    # print('-'*10)
-    # print(f'\t{answer_key_number} & {answer_key_text}')
-    # print(f'\t{response} -> {student_response_number} & {student_response_text}')
-    # print('-'*10)
-
     # Compare option numbers and option texts (if available) to determine a match
     if answer_key_number and student_response_number:
         if answer_key_number == student_response_number:
@@ -119,8 +114,10 @@ def evaluate_semantic_similarity(response, answer_key_number, answer_key_text, n
 
     return (0, student_response_number, student_response_text)
 
-def eval_response(response, answer_key_number, answer_key_text, normalize_fn='normalize_string'):
+
+def eval_response(response, answer_key_number, answer_key_text, normalize_fn="normalize_string"):
     return evaluate_semantic_similarity(response, answer_key_number, answer_key_text, normalize_fn)
+
 
 def cinepile_process_results(doc, results):
     """
@@ -200,5 +197,5 @@ def cinepile_aggregate_results(results):
             answered = cat2score[category][hard_split]["answered"]
             accuracy = 100 * correct / answered if answered > 0 else 0
             eval_logger.info(f"\t\t{category} Hard {hard_split}: {accuracy:.1f}%")
-    
+
     return aggregate_accuracy
