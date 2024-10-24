@@ -404,7 +404,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     # Step 2: If no candidates, look for choices with a period after (A. B. C. D.)
     for choice in all_choices:  # e.g., A. B. C. D.
         if f"{choice}." in response:
-            print(f"Found choice with period after: {choice}")
+            # print(f"Found choice with period after: {choice}")
             candidates.append(choice)
             ans_with_period = True
 
@@ -412,7 +412,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     if len(candidates) == 0:
         for choice in all_choices:  # e.g., (A) (B) (C) (D)
             if f"({choice})" in response:
-                print(f"Found choice with parentheses: {choice}")
+                # print(f"Found choice with parentheses: {choice}")
                 candidates.append(choice)
                 ans_with_brack = True
 
@@ -420,21 +420,21 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     if len(candidates) == 0:
         for choice in all_choices:  # e.g., A B C D
             if f"{choice} " in response:
-                print(f"Found choice without parentheses (space after): {choice}")
+                # print(f"Found choice without parentheses (space after): {choice}")
                 candidates.append(choice)
 
     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
     if len(candidates) == 0 and len(response.split()) > 5:
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
-                print(f"Found answer content match: {ans}")
+                # print(f"Found answer content match: {ans}")
                 candidates.append(index)
                 index_ans = False  # It's content answer, not an index
 
     # Step 6: If still no candidates, randomly choose one
     if len(candidates) == 0:
         pred_index = random.choice(all_choices)
-        print(f"No candidates found, randomly selected: {pred_index}")
+        # print(f"No candidates found, randomly selected: {pred_index}")
     # Step 7: If multiple candidates found, use the one appearing last
     elif len(candidates) > 1:
         start_indexes = []
@@ -442,30 +442,30 @@ def parse_multi_choice_response(response, all_choices, index2ans):
             if ans_with_period:
                 for can in candidates:
                     index = response.rfind(f"{can}.")
-                    print(f"Checking position of choice: {can} at {index}")
+                    # print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
             elif ans_with_brack:
                 for can in candidates:
                     index = response.rfind(f"({can})")
-                    print(f"Checking position of choice with parentheses: {can} at {index}")
+                    # print(f"Checking position of choice with parentheses: {can} at {index}")
                     start_indexes.append(index)
             else:
                 for can in candidates:
                     index = response.rfind(f" {can} ")
-                    print(f"Checking position of choice: {can} at {index}")
+                    # print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
         else:
             for can in candidates:
                 index = response.lower().rfind(index2ans[can].lower())
-                print(f"Checking position of content match: {can} at {index}")
+                # print(f"Checking position of content match: {can} at {index}")
                 start_indexes.append(index)
         # Get the last one (max index)
         pred_index = candidates[np.argmax(start_indexes)]
-        print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
+        # print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
     else:
         # If only one candidate, use it
         pred_index = candidates[0]
-        print(f"Only one candidate found, selected: {pred_index}")
+        # print(f"Only one candidate found, selected: {pred_index}")
 
     return pred_index
 
