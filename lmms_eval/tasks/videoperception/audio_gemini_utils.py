@@ -1,7 +1,7 @@
 import json
-import logging
 
 import pandas as pd
+from loguru import logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.videoperception.utils import (
@@ -10,8 +10,6 @@ from lmms_eval.tasks.videoperception.utils import (
 from lmms_eval.tasks.videoperception.utils import (
     videoperception_doc_to_text as original_doc_to_text,
 )
-
-logger = logging.getLogger(__name__)
 
 template = """\
 [System]
@@ -68,12 +66,23 @@ def process_results(doc, results: str):
     return {"audio": results}
 
 
-def aggregate_results(results, args):
-    path = generate_submission_file("video_mmmu_audio.xlsx", args)
+def aggregate_results_subtask(results, subtask, args):
+    path = generate_submission_file(f"video_mmmu_audio_{subtask}.xlsx", args)
     logger.info(f"Saving results to {path}")
     df = pd.DataFrame(results)
     df.to_excel(path, index=False)
     use_audios = df["use_audio"].value_counts()
-    print("Use audio counts:")
-    print(use_audios)
+    logger.info(f"Use audio counts: {use_audios.to_dict()}")
     return use_audios[1] if 1 in use_audios else 0
+
+
+def aggregate_results_application(results, args):
+    return aggregate_results_subtask(results, "application", args)
+
+
+def aggregate_results_comprehension(results, args):
+    return aggregate_results_subtask(results, "comprehension", args)
+
+
+def aggregate_results_videoperception(results, args):
+    return aggregate_results_subtask(results, "videoperception", args)
