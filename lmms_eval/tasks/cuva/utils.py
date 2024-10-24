@@ -1,21 +1,27 @@
-import re
-import os
-import sys
-from loguru import logger as eval_logger
 import datetime
+import json
+import os
+import re
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import requests
+import torch
+import yaml
+from bleurt_pytorch import (
+    BleurtConfig,
+    BleurtForSequenceClassification,
+    BleurtTokenizer,
+)
+from loguru import logger as eval_logger
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+from tqdm import tqdm
+
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.filters.extraction import ExtendedRegexFilter
-import json
-import yaml
-import torch
-from pathlib import Path
-import requests
-import time
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
-from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-from bleurt_pytorch import BleurtConfig, BleurtForSequenceClassification, BleurtTokenizer
-import numpy as np
-from tqdm import tqdm
 
 # import nltk
 # nltk.download('punkt')
@@ -49,10 +55,11 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 #
 #     return blue4_score
 
+
 # use pycocoevalcap to calculate BLEU-4 score
 def calculate_bleu4(reference, hypothesis):
-    ref = {0: [{'caption': reference}]}
-    hyp = {0: [{'caption': hypothesis}]}
+    ref = {0: [{"caption": reference}]}
+    hyp = {0: [{"caption": hypothesis}]}
 
     tokenizer = PTBTokenizer()
     ref_tokenized = tokenizer.tokenize(ref)
@@ -70,11 +77,11 @@ def calculate_bleu4(reference, hypothesis):
 #     rouge_score = rouge.get_scores(hypothesis, reference, avg=True)
 #     return rouge_score['rouge-l']['f']
 
+
 # use pycocoevalcap to calculate ROUGE-L score
 def calculate_rouge(reference, hypothesis):
-    ref = {0: [{'caption': reference}]}
-    hyp = {0: [{'caption': hypothesis}]}
-
+    ref = {0: [{"caption": reference}]}
+    hyp = {0: [{"caption": hypothesis}]}
 
     tokenizer = PTBTokenizer()
     ref_tokenized = tokenizer.tokenize(ref)
@@ -84,6 +91,7 @@ def calculate_rouge(reference, hypothesis):
     score, _ = scorer.compute_score(ref_tokenized, hyp_tokenized)
 
     return score
+
 
 # A bit ugly here
 # But the idea is that we will unzip all the zip files
@@ -113,10 +121,10 @@ def cuva_doc_to_visual(doc):
 
 # This is the place where you format your question
 def cuva_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    questions= {
+    questions = {
         "Description": "Watch the video and describe any anomaly events you see in the order they happen. Focus on what is different from normal, like who or what is involved and their actions.",
         "Cause": "Explain why the anomaly in the video are happening. Use what you see in the video to make logical reasoning about the root reasons behind these anomalies.Please ensure that your response is logically rigorous and directly related to the abnormal events in the video and the potential reasons behind them.",
-        "Result": "Figure out what results and effect these anomalies have. Link the anomaly directly to their outcomes, like how they affect people or the environment. Your answer should be as clear and specific as possible, avoiding generalities and focusing directly on the video rather than summarizing the impact of a type of event on society."
+        "Result": "Figure out what results and effect these anomalies have. Link the anomaly directly to their outcomes, like how they affect people or the environment. Your answer should be as clear and specific as possible, avoiding generalities and focusing directly on the video rather than summarizing the impact of a type of event on society.",
     }
     question = questions[doc["task"]]
     return question
@@ -136,17 +144,15 @@ def cuva_process_results(doc, result):
         "cuva_BLEURT": {"pred": pred, "answer": doc["answer"], "task": doc["task"]},
     }
 
+
 def cuva_aggregate_results(results, metric, args):
     # TODO: Add more metrics here
-    score_functions = {
-        "BLEU": calculate_bleu4,
-        "ROUGE": calculate_rouge
-    }
+    score_functions = {"BLEU": calculate_bleu4, "ROUGE": calculate_rouge}
 
     if metric not in score_functions:
         raise ValueError("Unsupported metric")
 
-    scores_dict = {'Description': [], 'Cause': [], 'Result': []}
+    scores_dict = {"Description": [], "Cause": [], "Result": []}
     eval_logger.info(f"Calculating {metric} score")
     for result in tqdm(results):
         gt = result["answer"]
@@ -166,14 +172,15 @@ def cuva_aggregate_results(results, metric, args):
     eval_logger.info(f"{metric} score file saved to {path}")
     return mean_score
 
+
 def cuva_aggregate_results_bleurt(results, args):
-    bleurt_version = 'lucadiliello/BLEURT-20'
+    bleurt_version = "lucadiliello/BLEURT-20"
     eval_logger.info(f"Loading BLEURT model {bleurt_version}, you can change to the small version BLEURT-20-D12 in tasks/cuva/utils.py")
     config = BleurtConfig.from_pretrained(bleurt_version)
     model = BleurtForSequenceClassification.from_pretrained(bleurt_version)
     tokenizer = BleurtTokenizer.from_pretrained(bleurt_version)
 
-    scores_dict = {'Description': [], 'Cause': [], 'Result': []}
+    scores_dict = {"Description": [], "Cause": [], "Result": []}
     eval_logger.info(f"Calculating BLEURT score")
     for result in tqdm(results):
         gt = result["answer"]
@@ -181,7 +188,7 @@ def cuva_aggregate_results_bleurt(results, args):
         task = result["task"]
         model.eval()
         with torch.no_grad():
-            inputs = tokenizer([gt], [pred], padding='longest', return_tensors='pt')
+            inputs = tokenizer([gt], [pred], padding="longest", return_tensors="pt")
             res = model(**inputs).logits.flatten().tolist()
         scores_dict[task].append(res[0])
 
@@ -197,14 +204,14 @@ def cuva_aggregate_results_bleurt(results, args):
     eval_logger.info(f"BLEURT score file saved to {path}")
     return mean_score
 
+
 def cuva_BLEU(results, args):
     return cuva_aggregate_results(results, "BLEU", args)
+
 
 def cuva_ROUGE(results, args):
     return cuva_aggregate_results(results, "ROUGE", args)
 
+
 def cuva_BLEURT(results, args):
     return cuva_aggregate_results_bleurt(results, args)
-
-
-

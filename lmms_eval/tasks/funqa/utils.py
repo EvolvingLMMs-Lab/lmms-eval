@@ -1,22 +1,29 @@
-from calendar import c
-import re
-import os
-import sys
 import datetime
+import json
+import os
+import re
+import sys
+import time
+from calendar import c
+from pathlib import Path
+
+import numpy as np
+import requests
+import torch
+import yaml
+from bleurt_pytorch import (
+    BleurtConfig,
+    BleurtForSequenceClassification,
+    BleurtTokenizer,
+)
 from loguru import logger as eval_logger
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
+from tqdm import tqdm
+
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.filters.extraction import ExtendedRegexFilter
-import json
-import yaml
-import torch
-from pathlib import Path
-import requests
-import time
-import numpy as np
-from pycocoevalcap.eval import COCOEvalCap, Bleu, Meteor, Rouge, Cider, Spice
-from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
-from bleurt_pytorch import BleurtConfig, BleurtForSequenceClassification, BleurtTokenizer
-from tqdm import tqdm
+
 # import nltk
 # nltk.download('punkt')
 # from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
@@ -56,10 +63,8 @@ elif API_TYPE == "azure":
     }
 
 
-
 system_messages = {
-    '2':
-        '''
+    "2": """
         You will be given two text segments in the following format: [text1][text2]. These two texts will be descriptions of a counterintuitive (humorous, creative, or magical) video. For text2, your task is to provide a score based on the following criteria:
         1. Content: Score out of 20 points. If the content is nearly identical, award 20 points. If the content differs slightly, deduct 5 points. If the content differs significantly, deduct 10 points. If the content differs greatly, deduct 15 points. If the content is completely different, deduct 20 points.
         2. Details: Score out of 50 points. Describe the video's details, including characters, scenes, actions, dialogues, etc. Deduct 5 points for each differing detail. Clearly identify and count the differing details to calculate the final score.
@@ -69,9 +74,8 @@ system_messages = {
         The output format is (remember not to have any comments, directly output scores) :
         [Content: Score], [Details: Score], [Logic: Score], [Language: Score], [Factor: 1 or 0.5 or 0.25]
         [Final Score]
-        ''',
-    '3':
-        '''
+        """,
+    "3": """
         You will be given two text segments in the following format: [text1][text2]. These two texts will be explanations for a counterintuitive video (humorous, creative, or magical). For text2, your task is to provide a score based on the following criteria:
         1. Language Expression: Score out of 5 points. Evaluate the fluency and word usage of the text. If the language expression is at a consistent level, award 5 points. If there are significant differences in language expression, award 0 points.
         2. Logic: Score out of 10 points. The explanation should be logically sound, preferably with logical words and cause-effect relationships. If the logic is nearly identical, award 10 points. If the logic is generally consistent but differs in details, award 5 points. If there are some differences in logic but still similar overall, award 5 points. If there are significant differences in logic, award 0 points.
@@ -83,9 +87,8 @@ system_messages = {
         The output format is (remember not to have any comments, directly output scores) :
         [Language: Score], [Logic: Score], [Common Sense Errors: Score], [Understanding: Score], [Details: Score], [Factor: 1 or 0.5 or 0.25]
         [Final Score]
-        ''',
-    '4':
-        '''
+        """,
+    "4": """
         You will be given four text segments in the following format: [Description][Explanation][text1][text2]. The first two texts are descriptions of a video and its explanation, respectively. The third text is a reference title. Your task is to evaluate whether the fourth text is a good title. Note that the fourth text may not be a title but a statement including the video. In that case, extract the actual title and evaluate it. Consider the following points while assigning a score:
         1. The title should mention the content of the video.
         2. A title with a certain level of humor or creativity is preferable.
@@ -93,20 +96,20 @@ system_messages = {
         The output format is:
         [Final Score]
         ('Final Score' are in square brackets remember! Just one line! Remember not to have any comments, directly output scores. Remember DO NOT GIVE ME EXPLANATION!!!!!!!!!) :
-        ''',
+        """,
 }
 
 
 def extract_last_number(string):
     # Use regular expression to match last number
-    match = re.search(r'\d+(\.\d*)?(?=[^\d.]*$)', string)
+    match = re.search(r"\d+(\.\d*)?(?=[^\d.]*$)", string)
 
     if match:
         last_integer = float(match.group())
         return last_integer
     else:
         # If there is no integer in the string, return None or other default value
-        print('No integers in this string.')
+        print("No integers in this string.")
         return 0
 
 
@@ -124,10 +127,11 @@ def extract_last_number(string):
 #
 #     return blue4_score
 
+
 # use pycocoevalcap to calculate BLEU-4 score
 def calculate_bleu4(reference, hypothesis):
-    ref = {0: [{'caption': reference}]}
-    hyp = {0: [{'caption': hypothesis}]}
+    ref = {0: [{"caption": reference}]}
+    hyp = {0: [{"caption": hypothesis}]}
 
     tokenizer = PTBTokenizer()
     ref_tokenized = tokenizer.tokenize(ref)
@@ -145,11 +149,11 @@ def calculate_bleu4(reference, hypothesis):
 #     rouge_score = rouge.get_scores(hypothesis, reference, avg=True)
 #     return rouge_score['rouge-l']['f']
 
+
 # use pycocoevalcap to calculate ROUGE-L score
 def calculate_rouge(reference, hypothesis):
-    ref = {0: [{'caption': reference}]}
-    hyp = {0: [{'caption': hypothesis}]}
-
+    ref = {0: [{"caption": reference}]}
+    hyp = {0: [{"caption": hypothesis}]}
 
     tokenizer = PTBTokenizer()
     ref_tokenized = tokenizer.tokenize(ref)
@@ -163,23 +167,14 @@ def calculate_rouge(reference, hypothesis):
 
 def get_eval(candidate: str, task: str, content: str, max_tokens: int, retries: int = 5):
     # TODO: Delete this line
-    # return "This is the evaluation answer of gpt4, Score: 80/100", "gpt_prompt", 100  
-    
+    # return "This is the evaluation answer of gpt4, Score: 80/100", "gpt_prompt", 100
+
     global headers
     # Truncate the candidate to the max length
-    max_len = {
-        'H2': 150,
-        'H3': 180,
-        'H4': 40,
-        'C2': 390,
-        'C3': 310,
-        'C4': 30,
-        'M2': 180,
-        'M3': 130
-    }
+    max_len = {"H2": 150, "H3": 180, "H4": 40, "C2": 390, "C3": 310, "C4": 30, "M2": 180, "M3": 130}
     if len(candidate) > max_len[task]:
-        candidate = candidate[:max_len[task]]
-    content = content + '[' + candidate + ']'
+        candidate = candidate[: max_len[task]]
+    content = content + "[" + candidate + "]"
     gpt_prompt = str(content)
     messages = [
         {"role": "system", "content": system_messages[task[1]]},
@@ -225,8 +220,6 @@ cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
 
 
-
-
 # Pass in video path here
 # Can only work correctly with video llm
 def funqa_doc_to_visual(doc):
@@ -256,13 +249,10 @@ def funqa_doc_to_answer(doc):
 def funqa_process_results(doc, result):
     pred = result[0]
     # content = eval_prompt.format(question=doc["question"], answer=doc["answer"], candidate=pred)
-    content, gpt_prompt, gpt_score= get_eval(candidate=pred, task=doc["task"], content=doc["prompt"],
-                                    max_tokens=1024)
+    content, gpt_prompt, gpt_score = get_eval(candidate=pred, task=doc["task"], content=doc["prompt"], max_tokens=1024)
     return {
-        "submission": {"pred": pred, "answer": doc["answer"], "task": doc["task"], 
-                       "eval_answer": content, gpt_prompt: gpt_prompt, "gpt_score": gpt_score},
-        "funqa_gpt": {"pred": pred, "answer": doc["answer"], "task": doc["task"], 
-                      "eval_answer": content, gpt_prompt: gpt_prompt, "gpt_score": gpt_score},
+        "submission": {"pred": pred, "answer": doc["answer"], "task": doc["task"], "eval_answer": content, gpt_prompt: gpt_prompt, "gpt_score": gpt_score},
+        "funqa_gpt": {"pred": pred, "answer": doc["answer"], "task": doc["task"], "eval_answer": content, gpt_prompt: gpt_prompt, "gpt_score": gpt_score},
         "funqa_BLEU": {"pred": pred, "answer": doc["answer"], "task": doc["task"]},
         "funqa_ROUGE": {"pred": pred, "answer": doc["answer"], "task": doc["task"]},
         "funqa_BLEURT": {"pred": pred, "answer": doc["answer"], "task": doc["task"]},
@@ -277,14 +267,15 @@ def funqa_aggregate_submissions(results, args, task):
         json.dump(results, f)
     eval_logger.info(f"Submission file saved to {path}")
 
+
 def funqa_aggregate_results_bleurt(results, args):
-    bleurt_version = 'lucadiliello/BLEURT-20'
+    bleurt_version = "lucadiliello/BLEURT-20"
     eval_logger.info(f"Loading BLEURT model {bleurt_version}, you can change to the small version BLEURT-20-D12 in tasks/funqa/utils.py")
     config = BleurtConfig.from_pretrained(bleurt_version)
     model = BleurtForSequenceClassification.from_pretrained(bleurt_version)
     tokenizer = BleurtTokenizer.from_pretrained(bleurt_version)
 
-    scores_dict = {'H2': [], 'H3': [], 'H4': [], 'C2': [], 'C3': [], 'C4': [], 'M2': [], 'M3': []}
+    scores_dict = {"H2": [], "H3": [], "H4": [], "C2": [], "C3": [], "C4": [], "M2": [], "M3": []}
     eval_logger.info(f"Calculating BLEURT score")
     for result in tqdm(results):
         gt = result["answer"]
@@ -292,7 +283,7 @@ def funqa_aggregate_results_bleurt(results, args):
         task = result["task"]
         model.eval()
         with torch.no_grad():
-            inputs = tokenizer([gt], [pred], padding='longest', return_tensors='pt')
+            inputs = tokenizer([gt], [pred], padding="longest", return_tensors="pt")
             res = model(**inputs).logits.flatten().tolist()
         scores_dict[task].append(res[0])
 
@@ -308,6 +299,7 @@ def funqa_aggregate_results_bleurt(results, args):
     eval_logger.info(f"BLEURT score file saved to {path}")
     return mean_score
 
+
 def funqa_aggregate_results(results, metric, args):
     # Add more metrics here
     score_functions = {
@@ -317,7 +309,7 @@ def funqa_aggregate_results(results, metric, args):
     if metric not in score_functions:
         raise ValueError("Unsupported metric")
 
-    scores_dict = {'H2': [], 'H3': [], 'H4': [], 'C2': [], 'C3': [], 'C4': [], 'M2': [], 'M3': []}
+    scores_dict = {"H2": [], "H3": [], "H4": [], "C2": [], "C3": [], "C4": [], "M2": [], "M3": []}
     eval_logger.info(f"Calculating {metric} score")
     for result in tqdm(results):
         gt = result["answer"]
@@ -339,7 +331,7 @@ def funqa_aggregate_results(results, metric, args):
 
 
 def funqa_GPT_eval(results, args):
-    scores_dict = {'H2': [], 'H3': [], 'H4': [], 'C2': [], 'C3': [], 'C4': [], 'M2': [], 'M3': []}
+    scores_dict = {"H2": [], "H3": [], "H4": [], "C2": [], "C3": [], "C4": [], "M2": [], "M3": []}
     for result in results:
         gpt_score = result["gpt_score"]
         scores_dict[result["task"]].append(gpt_score)
@@ -361,6 +353,7 @@ def funqa_GPT_eval(results, args):
 def funqa_aggregate(results, args):
     funqa_aggregate_submissions(results, args, "all")
 
+
 # ugly functions
 def funqa_BLEU(results, args):
     return funqa_aggregate_results(results, "BLEU", args)
@@ -368,6 +361,7 @@ def funqa_BLEU(results, args):
 
 def funqa_ROUGE(results, args):
     return funqa_aggregate_results(results, "ROUGE", args)
+
 
 def funqa_BLEURT(results, args):
     return funqa_aggregate_results_bleurt(results, args)
