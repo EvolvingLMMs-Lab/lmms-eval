@@ -1,0 +1,29 @@
+dataset_path: tomg-group-umd/cinepile
+dataset_kwargs:
+  cache_dir: cinepile_cache
+  From_YouTube: True
+task: cinepile
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.cinepile_doc_to_visual
+doc_to_text: !function utils.cinepile_doc_to_text
+doc_to_target: !function utils.cinepile_doc_to_target
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.cinepile_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "You will be provided with subtitles from a specific scene of a movie and all the video frames from that scene. After going through the movie scene and seeing the frames, please answer the question that follows. The question will have five possible answers labeled A, B, C, D, and E, please try to provide the most probable answer in your opinion. Your output should be just one of A,B,C,D,E and nothing else.\n**Output Format:**\n\t**Answer:** <Option_key>"
+    post_prompt: "Note: Follow the output format strictly. Only answer with the option key (A, B, C, D, E) and nothing else."
+metric_list: ##
+  - metric: cinepile_accuracy
+    aggregation: !function utils.cinepile_aggregate_results
+    higher_is_better: true
+metadata:
+  - version: 0.0
