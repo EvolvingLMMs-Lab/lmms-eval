@@ -1,0 +1,3 @@
+group: video_mmmu_audio_gemini
+task:
+- videommmu_audio_gemini_application

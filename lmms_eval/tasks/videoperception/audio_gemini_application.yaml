@@ -1,0 +1,13 @@
+dataset_name: "application_augmented"
+task: "videommmu_audio_gemini_application"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.videoperception_doc_to_visual_perception
+doc_to_text: !function audio_gemini_utils.doc_to_text
+doc_to_target: !function utils.videoperception_doc_to_answer
+process_results: !function audio_gemini_utils.process_results
+metric_list:
+  - metric: audio
+    aggregation: !function audio_gemini_utils.aggregate_results
+    higher_is_better: true
+include: _default_template_yaml
