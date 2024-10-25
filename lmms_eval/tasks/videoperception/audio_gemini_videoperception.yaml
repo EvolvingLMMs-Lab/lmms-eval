@@ -1,5 +1,5 @@
 dataset_name: "application_augmented"
-task: "videommmu_audio_gemini_application"
+task: "videommmu_audio_gemini_videoperception"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.videoperception_doc_to_visual_perception
@@ -8,6 +8,6 @@ doc_to_target: !function utils.videoperception_doc_to_answer
 process_results: !function audio_gemini_utils.process_results
 metric_list:
   - metric: audio
-    aggregation: !function audio_gemini_utils.aggregate_results_application
+    aggregation: !function audio_gemini_utils.aggregate_results_videoperception
     higher_is_better: true
 include: _default_template_yaml
