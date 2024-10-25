@@ -4,7 +4,20 @@ from io import BytesIO
 import av
 import numpy as np
 from av.codec.context import CodecContext
+from decord import VideoReader, cpu
 from PIL import Image
+
+
+def load_video_decord(video_path, max_frames_num):
+    if type(video_path) == str:
+        vr = VideoReader(video_path, ctx=cpu(0))
+    else:
+        vr = VideoReader(video_path[0], ctx=cpu(0))
+    total_frame_num = len(vr)
+    uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
+    frame_idx = uniform_sampled_frames.tolist()
+    spare_frames = vr.get_batch(frame_idx).asnumpy()
+    return spare_frames  # (frames, height, width, channels)
 
 
 # This one is faster
