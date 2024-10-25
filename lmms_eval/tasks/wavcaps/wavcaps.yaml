@@ -1,0 +1,27 @@
+dataset_path: AudioLLMs/wavcaps_test
+dataset_kwargs:
+  token: True
+task : "wavcaps"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.wavcaps_doc_to_audio
+doc_to_text: !function utils.wavcaps_doc_to_text
+doc_to_target: "answer"
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.wavcaps_process_results
+metric_list:
+  - metric: gpt_eval
+    aggregation: !function utils.wavcaps_aggregate_results
+    higher_is_better: true
+metadata:
+  gpt_eval_model_name: gpt-4o
+  version: 0.0
