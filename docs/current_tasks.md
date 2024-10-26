@@ -292,6 +292,17 @@
 
 - [YouCook2](http://youcook2.eecs.umich.edu/) (youcook2_val)
 
+- [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
+  - MovieChat Global Model (moviechat_global)
+  - MovieChat Breakpoint Model (moviechat_breakpoint)
+
+- [VDC](https://github.com/rese1f/aurora) (vdc)
+  - VDC Camera Caption (camera_test)
+  - VDC Short Caption (short_test)
+  - VDC Background Caption (background_test)
+  - VDC Main Object Caption (main_object_test)
+
+
 ## 4. Text Tasks
 
 - [GSM8K](https://github.com/openai/grade-school-math) (gsm8k)
