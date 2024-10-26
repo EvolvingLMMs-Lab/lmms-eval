@@ -1,14 +1,15 @@
-import requests
-import time
 import ast
+import datetime
+import json
 import os
 import sys
-import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-import json
-
-import yaml
+import time
 from pathlib import Path
+
+import requests
+import yaml
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -62,6 +63,7 @@ def moviechat_doc_to_visual(doc):
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
+
 def moviechat_doc_to_visual_breakpoint(doc):
     video_path = doc["video_name"]
     timestep = doc["time"]
@@ -74,10 +76,8 @@ def moviechat_doc_to_visual_breakpoint(doc):
         video_path = video_path.replace("mp4", "mkv")
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
-    return [{
-        "video_path": video_path,
-        "timestep": timestep
-    }]
+    return [{"video_path": video_path, "timestep": timestep}]
+
 
 # format the question
 def moviechat_doc_to_text(doc, model_specific_prompt_kwargs=None):
@@ -104,26 +104,24 @@ def get_eval_generic(question, answer, pred, max_tokens: int, retries: int = 5):
     messages = [
         {
             "role": "system",
-            "content": 
-                "You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
-                "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
-                "------"
-                "##INSTRUCTIONS: "
-                "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
-                "- Consider synonyms or paraphrases as valid matches.\n"
-                "- Evaluate the correctness of the prediction compared to the answer."
+            "content": "You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
+            "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
+            "------"
+            "##INSTRUCTIONS: "
+            "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
+            "- Consider synonyms or paraphrases as valid matches.\n"
+            "- Evaluate the correctness of the prediction compared to the answer.",
         },
         {
             "role": "user",
-            "content": 
-                "Please evaluate the following video-based question-answer pair:\n\n"
-                f"Question: {question}\n"
-                f"Correct Answer: {answer}\n"
-                f"Predicted Answer: {pred}\n\n"
-                "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
-                "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
-                "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
-                "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}."
+            "content": "Please evaluate the following video-based question-answer pair:\n\n"
+            f"Question: {question}\n"
+            f"Correct Answer: {answer}\n"
+            f"Predicted Answer: {pred}\n\n"
+            "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
+            "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
+            "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
+            "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}.",
         },
     ]
 
@@ -186,6 +184,7 @@ def parse_score(review):
         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
         return 0
 
+
 def parse_acc(review):
     try:
         # Convert the string representation of a dictionary to an actual dictionary
@@ -239,23 +238,10 @@ def moviechat_process_results_generic(doc, result):
     doc["pred"] = pred
     eval_results = gpt_eval(doc)
 
-    return {"gpt_eval_score": {
-                "video_name": doc["video_name"], 
-                "question": doc["question"], 
-                "answer": doc["answer"], 
-                "pred": pred, 
-                "score": eval_results["score"], 
-                "review": eval_results["review"]
-            },
-            "gpt_eval_acc": {
-                "video_name": doc["video_name"], 
-                "question": doc["question"], 
-                "answer": doc["answer"], 
-                "pred": pred, 
-                "acc": eval_results["acc"], 
-                "review": eval_results["review"]
-            }
-        }
+    return {
+        "gpt_eval_score": {"video_name": doc["video_name"], "question": doc["question"], "answer": doc["answer"], "pred": pred, "score": eval_results["score"], "review": eval_results["review"]},
+        "gpt_eval_acc": {"video_name": doc["video_name"], "question": doc["question"], "answer": doc["answer"], "pred": pred, "acc": eval_results["acc"], "review": eval_results["review"]},
+    }
 
 
 def moviechat_aggregate_score(results, args):
@@ -270,6 +256,7 @@ def moviechat_aggregate_score(results, args):
         score += eval_score
 
     return score / len(results)
+
 
 def moviechat_aggregate_acc(results, args):
     acc = 0

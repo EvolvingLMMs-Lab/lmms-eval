@@ -1,14 +1,16 @@
-import requests
-import time
 import ast
-import os
-import sys
 import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
+import os
 import random
-import yaml
+import sys
+import time
 from pathlib import Path
+
+import requests
+import yaml
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -70,8 +72,8 @@ DETAILED_CAPTION_PROMPTS = [
     "Visualize the video based on these frames and write a comprehensive description of what happens, describing the beginning, middle, and end in at least three sentences.",
     "Using these frames as a reference, imagine the full video and provide a thorough description of the plot, including key details and actions, in more than three sentences.",
     "Based on the sequence of these frames, describe the entire video in detail, mentioning important aspects such as the context, movements, and transitions in more than three sentences.",
-    "Imagine the video that corresponds to these frames and provide an elaborate description, covering the storyline, visual elements, and any notable features in at least three sentences."
-    ]
+    "Imagine the video that corresponds to these frames and provide an elaborate description, covering the storyline, visual elements, and any notable features in at least three sentences.",
+]
 
 BACKGROUND_CAPTION_PROMPTS = [
     "The images are given containing equally spaced video frames.Summary of the background. This should also include the objects, location, weather, and time.",
@@ -89,7 +91,7 @@ BACKGROUND_CAPTION_PROMPTS = [
     "Imagine the environment from these frames and write a detailed description of the background, including objects, location, weather, and time.",
     "Based on these frames, describe the setting in detail, mentioning the objects present, the specific location, the weather conditions, and the time of day.",
     "Provide an elaborate background description based on these frames, covering all aspects of the environment such as objects, location, weather, and time.",
-    "Using these frames as a reference, give a thorough description of the background, including details about the objects, location, weather, and time."
+    "Using these frames as a reference, give a thorough description of the background, including details about the objects, location, weather, and time.",
 ]
 
 SHORT_CAPTION_PROMPTS = [
@@ -108,7 +110,7 @@ SHORT_CAPTION_PROMPTS = [
     "Provide a one-sentence description that highlights the main subject and action depicted in the video.",
     "In one sentence, describe the primary visual and artistic elements of the video.",
     "Write a concise one-sentence summary that encapsulates the main action and visual style of the video.",
-    "Briefly one-sentence Summary of the visual, Photographic and artistic style."
+    "Briefly one-sentence Summary of the visual, Photographic and artistic style.",
 ]
 
 MAIN_OBJECT_CAPTION_PROMPTS = [
@@ -127,7 +129,7 @@ MAIN_OBJECT_CAPTION_PROMPTS = [
     "Describe the primary object or subject in the video, detailing their attributes, actions, positions, and movements in these frames.",
     "Based on these frames, provide a detailed description of the main subject, including their attributes, actions, positions, and how they navigate through the video.",
     "Using these frames, describe the main subject's attributes, actions, and movements, detailing their positions and how they interact with the environment.",
-    "Provide an elaborate description of the main object in the video, covering their attributes, actions, positions, and movements as shown in these frames."
+    "Provide an elaborate description of the main object in the video, covering their attributes, actions, positions, and movements as shown in these frames.",
 ]
 
 CAMERA_CAPTION_PROMPTS = [
@@ -146,8 +148,9 @@ CAMERA_CAPTION_PROMPTS = [
     "Describe the camera's movements and angles in detail, explaining how it follows the main subject and changes perspectives.",
     "Based on these frames, provide a detailed description of the camera's actions, including any pans, zooms, angle shifts, and how it captures the scene.",
     "Using these frames, describe the camera's movements, including its tracking of the main subject, changes in angles, and any zooms or pans.",
-    "Provide an elaborate description of the camera movements, covering pans, zooms, and changes in shooting angles as shown in these frames."
+    "Provide an elaborate description of the camera movements, covering pans, zooms, and changes in shooting angles as shown in these frames.",
 ]
+
 
 # Pass in video path here
 # Can only work correctly with video llm
@@ -164,22 +167,27 @@ def vdc_doc_to_visual(doc):
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
+
 # format the prompt
 def vdc_doc_to_text_short(doc, model_specific_prompt_kwargs=None):
     pre_prompt = random.choice(SHORT_CAPTION_PROMPTS)
     return f"{pre_prompt}"
 
+
 def vdc_doc_to_text_detailed(doc, model_specific_prompt_kwargs=None):
     pre_prompt = random.choice(DETAILED_CAPTION_PROMPTS)
     return f"{pre_prompt}"
+
 
 def vdc_doc_to_text_main_object(doc, model_specific_prompt_kwargs=None):
     pre_prompt = random.choice(MAIN_OBJECT_CAPTION_PROMPTS)
     return f"{pre_prompt}"
 
+
 def vdc_doc_to_text_camera(doc, model_specific_prompt_kwargs=None):
     pre_prompt = random.choice(CAMERA_CAPTION_PROMPTS)
     return f"{pre_prompt}"
+
 
 def vdc_doc_to_text_background(doc, model_specific_prompt_kwargs=None):
     pre_prompt = random.choice(BACKGROUND_CAPTION_PROMPTS)
@@ -195,20 +203,20 @@ def generate_response(question, caption, max_tokens: int, retries: int = 5):
 
     messages = [
         {
-            "role": "system", 
-            "content":  "You are an intelligent chatbot designed for providing accurate answers to questions related to the content based on a detailed description of a video or image."
-                        "Here's how you can accomplish the task:"
-                        "------"
-                        "##INSTRUCTIONS: "
-                        "- Read the detailed description carefully.\n"
-                        "- Answer the question only based on the detailed description.\n"
-                        "- The answer should be a short sentence or phrase.\n"
+            "role": "system",
+            "content": "You are an intelligent chatbot designed for providing accurate answers to questions related to the content based on a detailed description of a video or image."
+            "Here's how you can accomplish the task:"
+            "------"
+            "##INSTRUCTIONS: "
+            "- Read the detailed description carefully.\n"
+            "- Answer the question only based on the detailed description.\n"
+            "- The answer should be a short sentence or phrase.\n",
         },
         {
-            "role": "user", 
-            "content":  "Please provide accurate answers to questions related to the content based on a detailed description of a video or image:\n\n"
-                        f"detailed description: {caption}, question: {question}"
-                        "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide short but accurate answer."
+            "role": "user",
+            "content": "Please provide accurate answers to questions related to the content based on a detailed description of a video or image:\n\n"
+            f"detailed description: {caption}, question: {question}"
+            "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide short but accurate answer.",
         },
     ]
 
@@ -257,32 +265,29 @@ def generate_response(question, caption, max_tokens: int, retries: int = 5):
 def gpt_match(question, answer, pred_answer, max_tokens: int, retries: int = 5):
     global headers
 
-    messages=[
+    messages = [
         {
             "role": "system",
-            "content": 
-                "You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
-                "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
-                "------"
-                "##INSTRUCTIONS: "
-                "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
-                "- Consider synonyms or paraphrases as valid matches.\n"
-                "- Evaluate the correctness of the prediction compared to the answer."
+            "content": "You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
+            "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
+            "------"
+            "##INSTRUCTIONS: "
+            "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
+            "- Consider synonyms or paraphrases as valid matches.\n"
+            "- Evaluate the correctness of the prediction compared to the answer.",
         },
         {
             "role": "user",
-            "content":
-                "Please evaluate the following video-based question-answer pair:\n\n"
-                f"Question: {question}\n"
-                f"Correct Answer: {answer}\n"
-                f"Predicted Answer: {pred_answer}\n\n"
-                "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
-                "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
-                "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
-                "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}."
-        }
+            "content": "Please evaluate the following video-based question-answer pair:\n\n"
+            f"Question: {question}\n"
+            f"Correct Answer: {answer}\n"
+            f"Predicted Answer: {pred_answer}\n\n"
+            "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
+            "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
+            "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
+            "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}.",
+        },
     ]
-
 
     payload = {
         "model": GPT_EVAL_MODEL_NAME,
@@ -342,6 +347,7 @@ def parse_score(review):
         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
         return 0
 
+
 def parse_acc(review):
     try:
         # Convert the string representation of a dictionary to an actual dictionary
@@ -359,7 +365,6 @@ def parse_acc(review):
         return "no"
 
 
-
 def gpt_eval(data_dict):
     evaluated_results = []
 
@@ -375,20 +380,19 @@ def gpt_eval(data_dict):
         score_list = []
         acc_list = []
         for qa in qa_pairs:
-            review, model_name = gpt_match(qa['question'], qa['answer'], qa['pred_answer'], 64)
+            review, model_name = gpt_match(qa["question"], qa["answer"], qa["pred_answer"], 64)
             score = parse_score(review)
             acc = parse_acc(review)
             score_list.append(score)
-            acc_list.append(acc)    
-        
+            acc_list.append(acc)
+
         total_score, total_acc = 0, 0
         for score, acc in zip(score_list, acc_list):
             total_score += score
-            if acc == 'yes':
+            if acc == "yes":
                 total_acc += 1
         case_score = total_score / len(score_list)
         case_acc = total_acc / len(acc_list)
-
 
     except Exception as e:
         eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
@@ -414,21 +418,10 @@ def vdc_process_results_generic(doc, result):
     doc["pred"] = pred
     eval_results = gpt_eval(doc)
 
-    return {"gpt_eval_score": {
-                "video_name": doc["video_name"], 
-                "caption": doc["caption"], 
-                "pred": pred, 
-                "score": eval_results["score"], 
-                "review": eval_results["review"]
-            },
-            "gpt_eval_acc": {
-                "video_name": doc["video_name"],  
-                "caption": doc["caption"], 
-                "pred": pred, 
-                "acc": eval_results["acc"], 
-                "review": eval_results["review"]
-            }
-        }
+    return {
+        "gpt_eval_score": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "score": eval_results["score"], "review": eval_results["review"]},
+        "gpt_eval_acc": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "acc": eval_results["acc"], "review": eval_results["review"]},
+    }
 
 
 def vdc_aggregate_score(results, args):
@@ -443,6 +436,7 @@ def vdc_aggregate_score(results, args):
         score += eval_score
 
     return score / len(results)
+
 
 def vdc_aggregate_acc(results, args):
     acc = 0
