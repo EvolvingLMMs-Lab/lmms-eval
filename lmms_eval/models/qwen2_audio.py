@@ -30,6 +30,7 @@ class Qwen2_Audio(lmms):
         device_map: Optional[str] = "cuda",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
+        add_generation_prompt: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -37,6 +38,7 @@ class Qwen2_Audio(lmms):
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         accelerator = Accelerator()
+        self.add_generation_prompt = add_generation_prompt
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
@@ -187,7 +189,7 @@ class Qwen2_Audio(lmms):
                 conv[0]["content"].append({"type": "text", "text": context})
                 conversations.append(conv)
 
-            text = [self.processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False) for conversation in conversations]
+            text = [self.processor.apply_chat_template(conversation, add_generation_prompt=self.add_generation_prompt, tokenize=False) for conversation in conversations]
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
 
             inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.processor.feature_extractor.sampling_rate)
