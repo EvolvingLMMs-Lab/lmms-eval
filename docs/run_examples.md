@@ -434,3 +434,4 @@ accelerate launch --num_processes 8 --main_process_port 12345 -m lmms_eval \
     --log_samples_suffix $TASK_SUFFIX \
     --output_path ./logs/ 
 ```
+
