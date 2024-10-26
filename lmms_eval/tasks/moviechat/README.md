@@ -13,6 +13,16 @@ This repository contains an evaluation dataset designed for assessing the long v
 - `moviechat_global`: Given a video and a question, generate an answer using information from the entire video.
 - `moviechat_breakpoint`: Given a video, a specific timestamp, and a question, generate an answer using the video segments that occur before the specified timestamp.
   
+## Model Performance Comparison
+
+| **Model**            | **Global Acc** | **Global Score** |
+|----------------------|--------------------------|-------------------------|
+| MovieChat(VideoLLaMA)       | 62.3            | 3.23           | 
+| MovieChat+(VideoLLaMA)       | 71.2           | 3.51         | 
+| MovieChat(LLaVA-OneVision)       | 79.00             | 4.20           |
+
+
+
 ## Citation
 
 ```bibtex
