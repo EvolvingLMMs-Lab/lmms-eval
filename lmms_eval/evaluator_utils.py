@@ -346,7 +346,7 @@ def consolidate_group_results(
     task_root=None,
     show_group_table=False,
     task_aggregation_list=None,
-) -> Tuple[dict, dict, bool, Union[None,]]:
+) -> Tuple[dict, dict, bool, Union[None, dict]]:
     """
     (Recursively) calculates groups' aggregated metrics and updates the results and versions dictionaries with this info.
 
