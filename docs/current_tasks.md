@@ -216,6 +216,9 @@
   - egoschema_subset_mcppl
   - egoschema_subset
 - [LongVideoBench](https://github.com/longvideobench/LongVideoBench)
+- [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
+  - Global Mode for entire video (moviechat_global)
+  - Breakpoint Mode for specific moments (moviechat_breakpoint)
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
 - [MMT-Bench](https://mmt-bench.github.io/) (mmt)
   - MMT Validation (mmt_val)
@@ -292,11 +295,8 @@
 
 - [YouCook2](http://youcook2.eecs.umich.edu/) (youcook2_val)
 
-- [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
-  - MovieChat Global Model (moviechat_global)
-  - MovieChat Breakpoint Model (moviechat_breakpoint)
-
 - [VDC](https://github.com/rese1f/aurora) (vdc)
+  - VDC Detailed Caption (detailed_test)
   - VDC Camera Caption (camera_test)
   - VDC Short Caption (short_test)
   - VDC Background Caption (background_test)
