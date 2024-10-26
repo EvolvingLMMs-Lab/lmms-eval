@@ -64,6 +64,7 @@ else:
     best_fit_attn_implementation = "eager"
 
 
+# llava_onevision_moviechat uses the same memory consolidation mechanism with the original MovieChat, but changes the base model from VideoLLamA to LLava-OneVision
 @register_model("llava_onevision_moviechat")
 class Llava_OneVision_MovieChat(lmms):
     """
