@@ -3,6 +3,7 @@ dataset_kwargs:
   token: True
 task : "librispeech_test_other"
 test_split: librispeech_test_other
+dataset_name: librispeech_test_other
 output_type: generate_until
 doc_to_visual: !function utils.librispeech_doc_to_audio
 doc_to_text: !function utils.librispeech_doc_to_text
