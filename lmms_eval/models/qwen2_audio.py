@@ -30,6 +30,8 @@ class Qwen2_Audio(lmms):
         device_map: Optional[str] = "cuda",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
+        add_generation_prompt: bool = True,
+        add_system_prompt: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -37,6 +39,8 @@ class Qwen2_Audio(lmms):
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         accelerator = Accelerator()
+        self.add_generation_prompt = add_generation_prompt
+        self.add_system_prompt = add_system_prompt
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
@@ -56,6 +60,31 @@ class Qwen2_Audio(lmms):
         self.processor = AutoProcessor.from_pretrained(pretrained)
         self.processor.tokenizer.padding_side = "left"
         self._tokenizer = self.processor.tokenizer
+
+        if not self.add_system_prompt:
+            # Overwrite chat template to exclude system prompt
+            self.processor.chat_template = (
+                "{% set audio_count = namespace(value=0) %}"
+                "{% for message in messages %}"
+                "<|im_start|>{{ message['role'] }}\n"
+                "{% if message['content'] is string %}"
+                "{{ message['content'] }}<|im_end|>\n"
+                "{% else %}"
+                "{% for content in message['content'] %}"
+                "{% if 'audio' in content or 'audio_url' in content %}"
+                "{% set audio_count.value = audio_count.value + 1 %}"
+                "Audio {{ audio_count.value }}: <|audio_bos|><|AUDIO|><|audio_eos|>\n"
+                "{% elif 'text' in content %}"
+                "{{ content['text'] }}"
+                "{% endif %}"
+                "{% endfor %}"
+                "<|im_end|>\n"
+                "{% endif %}"
+                "{% endfor %}"
+                "{% if add_generation_prompt %}"
+                "<|im_start|>assistant\n"
+                "{% endif %}"
+            )
 
         self._config = self.model.config
         self.batch_size_per_gpu = int(batch_size)
@@ -187,7 +216,7 @@ class Qwen2_Audio(lmms):
                 conv[0]["content"].append({"type": "text", "text": context})
                 conversations.append(conv)
 
-            text = [self.processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False) for conversation in conversations]
+            text = [self.processor.apply_chat_template(conversation, add_generation_prompt=self.add_generation_prompt, tokenize=False) for conversation in conversations]
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
 
             inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.processor.feature_extractor.sampling_rate)
