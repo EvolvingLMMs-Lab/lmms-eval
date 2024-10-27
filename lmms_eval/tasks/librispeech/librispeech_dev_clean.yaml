@@ -3,6 +3,7 @@ dataset_kwargs:
   token: True
 task : "librispeech_dev_clean"
 test_split: librispeech_dev_clean
+dataset_name: librispeech_dev_clean
 output_type: generate_until
 doc_to_visual: !function utils.librispeech_doc_to_audio
 doc_to_text: !function utils.librispeech_doc_to_text
