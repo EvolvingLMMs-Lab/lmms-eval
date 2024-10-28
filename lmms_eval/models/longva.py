@@ -75,6 +75,7 @@ class LongVA(lmms):
         truncate_context: Optional[bool] = False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
         customized_config: Optional[str] = None,  # ends in json
         max_frames_num: Optional[int] = 32,
+        fps: Optional[float] = None,
         mm_spatial_pool_stride: Optional[int] = 2,
         mm_spatial_pool_mode: Optional[str] = "average",
         token_strategy: Optional[str] = "single",  # could be "single" or "multiple", "multiple" denotes adding multiple <image> tokens for each frame
@@ -112,6 +113,7 @@ class LongVA(lmms):
         self.pretrained = pretrained
         self.token_strategy = token_strategy
         self.max_frames_num = max_frames_num
+        self.fps = fps
         self.mm_spatial_pool_stride = mm_spatial_pool_stride
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.video_decode_backend = video_decode_backend
@@ -385,7 +387,7 @@ class LongVA(lmms):
                         if self.video_decode_backend == "decord":
                             frames = self.load_video(visual, self.max_frames_num)
                         elif self.video_decode_backend == "pyav":
-                            frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
+                            frames = read_video_pyav(visual[0], num_frm=self.max_frames_num, fps=self.fps)
                         frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
                         image_tensor.append(frames)
                     except Exception as e:

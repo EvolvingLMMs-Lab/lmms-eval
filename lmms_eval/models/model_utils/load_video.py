@@ -1,5 +1,6 @@
 import base64
 from io import BytesIO
+from typing import Optional
 
 import av
 import numpy as np
@@ -112,7 +113,7 @@ def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None,
     return [Image.fromarray(frame) for frame in frames]
 
 
-def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", img_format="PNG"):
+def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG"):
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
     base64_frames = []
     for frame in frames:
