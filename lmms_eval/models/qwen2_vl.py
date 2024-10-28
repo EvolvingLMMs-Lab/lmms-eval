@@ -212,7 +212,6 @@ class Qwen2_VL(lmms):
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                         if self.use_custom_video_loader:
                             visual = read_video_pyav_base64(visual, num_frm=self.max_num_frames, fps=self.fps, img_format="JPEG")
-                            print("=" * 100, len(visual))
                             image_contents = list(map(lambda x: f"data:image/jpeg;base64,{x}", visual))
                             message.append({"role": "user", "content": [{"type": "video", "video": image_contents}, {"type": "text", "text": context}]})
                         else:
