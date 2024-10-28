@@ -2,7 +2,7 @@ task: "vocalsound_val"
 test_split: val
 metric_list:
   - metric: accuracy
-    aggregation: mean
+    aggregation: !function utils.vocalsound_aggregate_results
     higher_is_better: true
   # - metric: submission
   #   aggregation: !function utils.vocalsound_aggregate_results_for_submission
