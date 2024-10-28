@@ -32,6 +32,7 @@ class Qwen2_Audio(lmms):
         use_cache=True,
         add_generation_prompt: bool = True,
         add_system_prompt: bool = True,
+        simple_prompt: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -41,6 +42,9 @@ class Qwen2_Audio(lmms):
         accelerator = Accelerator()
         self.add_generation_prompt = add_generation_prompt
         self.add_system_prompt = add_system_prompt
+        # If using simple prompt, only add "<|audio_bos|><|AUDIO|><|audio_eos|>"
+        # and then prompt to align with original Qwen2 Audio
+        self.simple_prompt = simple_prompt
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
@@ -206,17 +210,20 @@ class Qwen2_Audio(lmms):
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
 
-            conversations = []
-            for idx, context in enumerate(contexts):
-                conv = [{"role": "user", "content": []}]
-                for _ in batched_audios[idx]:
-                    # This placeholder is just use to make chat template work
-                    # We already have the sampled audio array
-                    conv[0]["content"].append({"type": "audio", "audio_url": "placeholder.wav"})
-                conv[0]["content"].append({"type": "text", "text": context})
-                conversations.append(conv)
+            if not self.simple_prompt:
+                conversations = []
+                for idx, context in enumerate(contexts):
+                    conv = [{"role": "user", "content": []}]
+                    for _ in batched_audios[idx]:
+                        # This placeholder is just use to make chat template work
+                        # We already have the sampled audio array
+                        conv[0]["content"].append({"type": "audio", "audio_url": "placeholder.wav"})
+                    conv[0]["content"].append({"type": "text", "text": context})
+                    conversations.append(conv)
 
-            text = [self.processor.apply_chat_template(conversation, add_generation_prompt=self.add_generation_prompt, tokenize=False) for conversation in conversations]
+                text = [self.processor.apply_chat_template(conversation, add_generation_prompt=self.add_generation_prompt, tokenize=False) for conversation in conversations]
+            else:
+                text = ["<|audio_bos|><|AUDIO|><|audio_eos|>" + context for context in contexts]
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
 
             inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.processor.feature_extractor.sampling_rate)
