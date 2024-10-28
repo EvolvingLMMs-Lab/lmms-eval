@@ -39,8 +39,6 @@ try:
     from llava.model.builder import load_pretrained_model
 except ImportError as e:
     eval_logger.debug(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
-    print("===============================================")
-    print(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
 
 
 @register_model("vila")
