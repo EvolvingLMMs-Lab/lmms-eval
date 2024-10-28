@@ -27,7 +27,7 @@ def format_claude_images(image: Union[Image.Image, List[Image.Image]]):
     }
 
 
-def claude_generate_response(client: anthropic.Anthropic, model, messages, max_tokens: int = 4096, max_try_times=5, system=None, json_format="auto", test=False, **kwargs):
+def claude_generate_response(client: anthropic.Anthropic, model, messages, max_tokens: int = 4096, max_try_times=5, system=None, json_format="auto", test=False, tempreture=0.5, **kwargs):
     if json_format == "auto":
         json_format = False
         for message in messages:
@@ -48,9 +48,9 @@ def claude_generate_response(client: anthropic.Anthropic, model, messages, max_t
 
     def _generate():
         if system:
-            return client.messages.create(model=model, messages=messages, max_tokens=max_tokens, system=system, **kwargs)
+            return client.messages.create(model=model, messages=messages, max_tokens=max_tokens, system=system, temperature=tempreture, **kwargs)
         else:
-            return client.messages.create(model=model, messages=messages, max_tokens=max_tokens, **kwargs)
+            return client.messages.create(model=model, messages=messages, max_tokens=max_tokens, temperature=tempreture, **kwargs)
 
     for times in range(max_try_times):
         try:

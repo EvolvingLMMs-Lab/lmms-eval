@@ -1,0 +1,27 @@
+dataset_path: HanSolo9682/Vinoground
+dataset_kwargs:
+  token: True
+  cache_dir: vinoground
+  video: True
+
+task: vinoground
+test_split: lmmseval
+output_type: generate_until
+doc_to_visual: !function utils.vinoground_doc_to_visual
+doc_to_text: !function utils.vinoground_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+#   temperature: 0
+#   top_p: 1.0
+#   num_beams: 1
+#   do_sample: false
+
+process_results: !function utils.vinoground_process_results
+
+metric_list:
+  - metric: vinoground_score
+    aggregation: !function utils.vinoground_aggregate_results
+    higher_is_better: true
+metadata:
+  - version: 1.0

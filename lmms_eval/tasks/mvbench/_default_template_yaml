@@ -4,6 +4,7 @@ dataset_kwargs:
   cache_dir: mvbench_video
   video: True
   revision: video
+  create_link: True
 generation_kwargs:
   max_new_tokens: 16
   temperature: 0
