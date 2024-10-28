@@ -11,6 +11,7 @@ logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
+    "auroracap": "AuroraCap",
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
@@ -26,12 +27,14 @@ AVAILABLE_MODELS = {
     "llava": "Llava",
     "llava_hf": "LlavaHf",
     "llava_onevision": "Llava_OneVision",
+    "llava_onevision_moviechat": "Llava_OneVision_MovieChat",
     "llava_sglang": "LlavaSglang",
     "llava_vid": "LlavaVid",
     "longva": "LongVA",
     "mantis": "Mantis",
     "minicpm_v": "MiniCPM_V",
     "minimonkey": "MiniMonkey",
+    "moviechat": "MovieChat",
     "mplug_owl_video": "mplug_Owl",
     "phi3v": "Phi3v",
     "qwen_vl": "Qwen_VL",
