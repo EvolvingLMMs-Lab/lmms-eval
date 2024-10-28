@@ -1034,19 +1034,14 @@ class ConfigurableTask(Task):
             if "create_link" in dataset_kwargs:
                 dataset_kwargs.pop("create_link")
 
-        if "load_from_disk" in dataset_kwargs and dataset_kwargs["load_from_disk"]:
-            dataset_kwargs.pop("load_from_disk")
-            # using local task in offline environment, need to process the online dataset into local format via
-            # `ds = load_datasets("lmms-lab/MMMU")`
-            self.dataset = datasets.load_from_disk(path=self.DATASET_PATH, name=self.DATASET_NAME)
-        else:
-            self.dataset = datasets.load_dataset(
-                path=self.DATASET_PATH,
-                name=self.DATASET_NAME,
-                download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-                download_config=download_config,
-                **dataset_kwargs if dataset_kwargs is not None else {},
-            )
+        # Check if the key exists first
+        self.dataset = datasets.load_dataset(
+            path=self.DATASET_PATH,
+            name=self.DATASET_NAME,
+            download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+            download_config=download_config,
+            **dataset_kwargs if dataset_kwargs is not None else {},
+        )
 
         if self.config.process_docs is not None:
             for split in self.dataset:
@@ -1114,6 +1109,7 @@ class ConfigurableTask(Task):
         apply_chat_template: bool = False,
         fewshot_as_multiturn: bool = False,
         chat_template: Optional[Callable] = None,
+        is_multimodal: bool = False,
     ) -> str:
         """Returns a fewshot context string that is made up of a prepended description
         (if provided), the `num_fewshot` number of examples, and an appended prompt example.
@@ -1162,48 +1158,73 @@ class ConfigurableTask(Task):
 
         # if few-shot - append examples after the system prompt
         if num_fewshot > 0:
-            if apply_chat_template:
-                labeled_examples.extend(self.sampler.get_chat_context(doc, num_fewshot, fewshot_as_multiturn))
+            if is_multimodal is False:
+                if apply_chat_template:
+                    labeled_examples.extend(self.sampler.get_chat_context(doc, num_fewshot, fewshot_as_multiturn))
+                else:
+                    labeled_examples += self.sampler.get_context(doc, num_fewshot)
             else:
-                labeled_examples += self.sampler.get_context(doc, num_fewshot)
+                if apply_chat_template:
+                    labeled_examples_text, labeled_examples_multimodal = self.sampler.get_multimodal_chat_context(doc, num_fewshot, fewshot_as_multiturn)
+                    labeled_examples.extend(labeled_examples_text)
+                else:
+                    labeled_examples_text, labeled_examples_multimodal = self.sampler.get_multimodal_context(doc, num_fewshot)
+                    labeled_examples += labeled_examples_text
 
         example = self.doc_to_text(doc)
-        if apply_chat_template:
-            if self.multiple_input:
+        if is_multimodal is False:
+            if apply_chat_template:
+                if self.multiple_input:
+                    return chat_template(labeled_examples)
+                if isinstance(example, str):
+                    self.append_target_question(labeled_examples, example, fewshot_as_multiturn)
+                # for loglikelihood create a list of questions with appended choices
+                elif isinstance(example, list):
+                    labeled_examples_list = []
+                    # copy chat history for each example and append the answer
+                    for ex in example:
+                        chat = copy.deepcopy(labeled_examples)
+                        self.append_target_question(chat, ex, fewshot_as_multiturn)
+                        labeled_examples_list.append(chat_template(chat))
+                    return labeled_examples_list
+                # if example is an integer, append the choice or convert to string
+                elif isinstance(example, int):
+                    if self.config.doc_to_choice is not None:
+                        choices = self.doc_to_choice(doc)
+                        self.append_target_question(labeled_examples, choices[example], fewshot_as_multiturn)
+                    else:
+                        self.append_target_question(labeled_examples, str(example), fewshot_as_multiturn)
+                    # return lm.apply_chat_template(labeled_examples)
                 return chat_template(labeled_examples)
-            if isinstance(example, str):
-                self.append_target_question(labeled_examples, example, fewshot_as_multiturn)
-            # for loglikelihood create a list of questions with appended choices
-            elif isinstance(example, list):
-                labeled_examples_list = []
-                # copy chat history for each example and append the answer
-                for ex in example:
-                    chat = deepcopy(labeled_examples)
-                    self.append_target_question(chat, ex, fewshot_as_multiturn)
-                    labeled_examples_list.append(chat_template(chat))
-                return labeled_examples_list
-            # if example is an integer, append the choice or convert to string
-            elif isinstance(example, int):
-                if self.config.doc_to_choice is not None:
-                    choices = self.doc_to_choice(doc)
-                    self.append_target_question(labeled_examples, choices[example], fewshot_as_multiturn)
-                else:
-                    self.append_target_question(labeled_examples, str(example), fewshot_as_multiturn)
-                # return lm.apply_chat_template(labeled_examples)
-            return chat_template(labeled_examples)
+            else:
+                if self.multiple_input:
+                    return labeled_examples
+                if isinstance(example, str):
+                    return labeled_examples + example
+                elif isinstance(example, list):
+                    return [labeled_examples + ex for ex in example]
+                elif isinstance(example, int):
+                    if self.config.doc_to_choice is not None:
+                        choices = self.doc_to_choice(doc)
+                        return labeled_examples + choices[example]
+                    else:
+                        return labeled_examples + str(example)
         else:
-            if self.multiple_input:
-                return labeled_examples
-            if isinstance(example, str):
-                return labeled_examples + example
-            elif isinstance(example, list):
-                return [labeled_examples + ex for ex in example]
-            elif isinstance(example, int):
-                if self.config.doc_to_choice is not None:
-                    choices = self.doc_to_choice(doc)
-                    return labeled_examples + choices[example]
-                else:
-                    return labeled_examples + str(example)
+            if apply_chat_template:
+                raise NotImplementedError("Multimodal chat template not implemented yet")
+            else:
+                if self.multiple_input:
+                    return labeled_examples, labeled_examples_multimodal
+                if isinstance(example, str):
+                    return labeled_examples + example, labeled_examples_multimodal
+                elif isinstance(example, list):
+                    return [labeled_examples + ex for ex in example]
+                elif isinstance(example, int):
+                    if self.config.doc_to_choice is not None:
+                        choices = self.doc_to_choice(doc)
+                        return labeled_examples + choices[example], labeled_examples_multimodal
+                    else:
+                        return labeled_examples + str(example), labeled_examples_multimodal
 
     def apply_filters(self):
         if hasattr(self, "_filters"):
