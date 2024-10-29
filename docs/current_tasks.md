@@ -77,6 +77,7 @@
   - llava_in_the_wild_russian
   - llava_in_the_wild_spanish
   - llava_in_the_wild_urdu
+- [NaturalBench](https://huggingface.co/datasets/BaiqiL/NaturalBench)  
 - [NoCaps](https://nocaps.org/) (nocaps)
   - NoCaps Validation (nocaps_val)
   - NoCaps Test (nocaps_test)
