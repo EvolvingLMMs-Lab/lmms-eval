@@ -1,8 +1,8 @@
 import datetime
 import json
 import os
-from collections import defaultdict
 import re
+from collections import defaultdict
 
 from loguru import logger as eval_logger
 
@@ -10,10 +10,8 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
-SUFFIX_FOR_VQA = {
-    "yes_no": "Please answer Yes or No.",
-    "multiple_choice": "Please output the letter corresponding to the correct option."
-} 
+SUFFIX_FOR_VQA = {"yes_no": "Please answer Yes or No.", "multiple_choice": "Please output the letter corresponding to the correct option."}
+
 
 def get_scores(scores):
     """
@@ -25,10 +23,10 @@ def get_scores(scores):
             - list: [[q0_i0 (1 or 0), q0_i1 (1 or 0), q1_i0 (1 or 0), q1_i1 (1 or 0)], ...]
 
     The keys "q0_i0", "q0_i1", "q1_i0", "q1_i1" represent combinations of questions and images:
-        - "q0_i0" means question_0 on image_0 
-        - "q0_i1" means question_0 on image_1 
-        - "q1_i0" means question_1 on image_0 
-        - "q1_i1" means question_1 on image_1 
+        - "q0_i0" means question_0 on image_0
+        - "q0_i1" means question_0 on image_1
+        - "q1_i0" means question_1 on image_0
+        - "q1_i1" means question_1 on image_1
 
     Returns:
         dict: A dictionary containing the calculated scores:
@@ -57,7 +55,7 @@ def get_scores(scores):
             if result[3] == 1.0 and result[1] == 0.0:
                 image_correct += 1
         return image_correct
-    
+
     def calculate_question_score(result):
         text_correct = 0
         if isinstance(result, dict):
@@ -91,9 +89,9 @@ def get_scores(scores):
         group_correct = 0
         if calculate_question_score(result) == 2 and calculate_image_score(result) == 2:
             group_correct += 1
-        
+
         return group_correct
-    
+
     if isinstance(scores, dict):
         for _, result in scores.items():
             question_score += calculate_question_score(result)
@@ -107,14 +105,10 @@ def get_scores(scores):
             binary_score += calculate_binary_score(result)
             group += calculate_group(result)
 
-    results = {
-        'question_score': question_score / float(num_samples * 2),
-        'image_score': image_score / float(num_samples * 2),
-        'binary_score': binary_score / float(num_samples * 4),
-        'group_score': group / num_samples
-    }
+    results = {"question_score": question_score / float(num_samples * 2), "image_score": image_score / float(num_samples * 2), "binary_score": binary_score / float(num_samples * 4), "group_score": group / num_samples}
 
     return results
+
 
 def extract_answer(output_string, task_type="yes_no"):
     """
@@ -125,23 +119,23 @@ def extract_answer(output_string, task_type="yes_no"):
     task_type (str): The type of task. Must be either "yes_no" or "multiple_choice".
 
     Returns:
-    int: 
-        1 if "yes" or "A" 
+    int:
+        1 if "yes" or "A"
         0 if "no" or "B"
         -1 if no relevant answer is found.
         Raises a ValueError if an unsupported task_type is provided.
     """
 
     def find_word_position(string, word):
-        pattern = r'\b' + re.escape(word) + r'\b'
+        pattern = r"\b" + re.escape(word) + r"\b"
         match = re.search(pattern, string, re.IGNORECASE)
         if match:
             return match.start()
         return -1
-    
+
     if task_type not in ["yes_no", "multiple_choice"]:
         raise ValueError("Task type not supported. Must be 'yes_no' or 'multiple_choice'.")
-    
+
     if task_type == "yes_no":
         position_yes_and_a = find_word_position(output_string, "yes")
         position_no_and_b = find_word_position(output_string, "no")
@@ -157,8 +151,10 @@ def extract_answer(output_string, task_type="yes_no"):
     else:
         return 0 if position_yes_and_a == -1 else 1
 
+
 def naturalbench_doc_to_visual(doc):
     return [doc["Image"].convert("RGB")]
+
 
 def naturalbench_doc_to_text(doc):
     question = doc["Question"]
@@ -167,6 +163,7 @@ def naturalbench_doc_to_text(doc):
     elif doc["Question_Type"] == "multiple_choice":
         question = question + " " + SUFFIX_FOR_VQA["multiple_choice"]
     return question
+
 
 def naturalbench_process_results(doc, results):
     """
@@ -179,7 +176,7 @@ def naturalbench_process_results(doc, results):
     pred = results[0]
     type = doc["Question_Type"]
     gt_ans = extract_answer(pred, task_type=type)
-    return {'naturalbench_score': {"id": doc["Index"], "score": gt_ans}}
+    return {"naturalbench_score": {"id": doc["Index"], "score": gt_ans}}
 
 
 def naturalbench_aggregate_results(results):
@@ -189,42 +186,19 @@ def naturalbench_aggregate_results(results):
     Returns:
         A score
     """
-    assert len(results) == 1900*4
+    assert len(results) == 1900 * 4
     answers = {}
-    number_answered_samples = len(results)//4
+    number_answered_samples = len(results) // 4
     for i in range(number_answered_samples):
-        assert int(results[i*4]["id"]) == i*4
-        assert int(results[i*4+1]["id"]) == i*4+1
-        assert int(results[i*4+2]["id"]) == i*4+2
-        assert int(results[i*4+3]["id"]) == i*4+3
-        answers[i] = {
-            "q0_i0": results[i*4]["score"],
-            "q0_i1": results[i*4 + 1]["score"],
-            "q1_i0": results[i*4 + 2]["score"],
-            "q1_i1": results[i*4 + 3]["score"]
-        }
+        assert int(results[i * 4]["id"]) == i * 4
+        assert int(results[i * 4 + 1]["id"]) == i * 4 + 1
+        assert int(results[i * 4 + 2]["id"]) == i * 4 + 2
+        assert int(results[i * 4 + 3]["id"]) == i * 4 + 3
+        answers[i] = {"q0_i0": results[i * 4]["score"], "q0_i1": results[i * 4 + 1]["score"], "q1_i0": results[i * 4 + 2]["score"], "q1_i1": results[i * 4 + 3]["score"]}
 
     scores = get_scores(answers)
 
     for category, avg_score in scores.items():
         eval_logger.info(f"{category}: {avg_score:.2f}")
 
-    return scores['group_score']
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return scores["group_score"]
