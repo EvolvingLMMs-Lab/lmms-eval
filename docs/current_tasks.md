@@ -279,6 +279,7 @@
   - Video-ChatGPT Temporal (videochatgpt_temporal)
   - Video-ChatGPT Consistency (videochatgpt_consistency)
 - [Video-MME](https://video-mme.github.io/) (videomme)
+- [Vinoground](https://vinoground.github.io) (vinoground)
 - [VITATECS](https://github.com/lscpku/VITATECS) (vitatecs)
 
   - VITATECS Direction (vitatecs_direction)
