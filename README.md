@@ -245,6 +245,16 @@ During the initial stage of our project, we thank:
 ## Citations
 
 ```shell
+@misc{zhang2024lmmsevalrealitycheckevaluation,
+      title={LMMs-Eval: Reality Check on the Evaluation of Large Multimodal Models}, 
+      author={Kaichen Zhang and Bo Li and Peiyuan Zhang and Fanyi Pu and Joshua Adrian Cahyono and Kairui Hu and Shuai Liu and Yuanhan Zhang and Jingkang Yang and Chunyuan Li and Ziwei Liu},
+      year={2024},
+      eprint={2407.12772},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2407.12772}, 
+}
+
 @misc{lmms_eval2024,
     title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
     url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
