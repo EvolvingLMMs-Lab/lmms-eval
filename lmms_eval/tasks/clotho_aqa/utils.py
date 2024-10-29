@@ -40,7 +40,7 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 
 NUM_SECONDS_TO_SLEEP = 2
 GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
-API_TYPE = os.getenv("API_TYPE", "openai")
+API_TYPE = os.getenv("API_TYPE", "azure")
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
