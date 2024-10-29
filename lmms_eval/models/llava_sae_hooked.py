@@ -66,6 +66,8 @@ class LlavaSaeHooked(lmms):
         use_cache: bool = True,
         specified_eot_token_id: Optional[int] = None,
         sae_path: Optional[str] = None,
+        clamped_idx: int = 0,
+        clamped_value: float = 50,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -81,6 +83,8 @@ class LlavaSaeHooked(lmms):
             self.device_map = device_map
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
+        self.clamped_idx = (clamped_idx,)
+        self.clamped_value = clamped_value
 
         config = AutoConfig.from_pretrained(pretrained)
         model_type = getattr(config, "model_type", "llava")
@@ -119,7 +123,7 @@ class LlavaSaeHooked(lmms):
                 self._model = accelerator.prepare(self.model)
             else:
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
-                self.module_dict = {k: accelerator.prepare_model(v) for k, v in self.module_dict.items()}
+                # self.module_dict = {k: accelerator.prepare_model(v) for k, v in self.module_dict.items()}
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
@@ -177,6 +181,30 @@ class LlavaSaeHooked(lmms):
     @property
     def world_size(self):
         return self._world_size
+
+    def clamp_features_max(self, sae: Sae, feature: int, hooked_module: torch.nn.Module, k: float = 10):
+        def hook(module: torch.nn.Module, _, outputs):
+            # Maybe unpack tuple outputs
+            if isinstance(outputs, tuple):
+                unpack_outputs = list(outputs)
+            else:
+                unpack_outputs = list(outputs)
+            latents = sae.pre_acts(unpack_outputs[0])
+            # Only clamp the feature for the first forward
+            if latents.shape[1] != 1:
+                latents[:, :, feature] = k
+            top_acts, top_indices = sae.select_topk(latents)
+            sae_out = sae.decode(top_acts[0], top_indices[0]).unsqueeze(0).to(torch.float16)
+            unpack_outputs[0] = sae_out
+            if isinstance(outputs, tuple):
+                outputs = tuple(unpack_outputs)
+            else:
+                outputs = unpack_outputs[0]
+            return outputs
+
+        handles = [hooked_module.register_forward_hook(hook)]
+
+        return handles
 
     def tok_encode(self, string: str, left_truncate_len=None, add_special_tokens=None) -> List[int]:
         """ """
@@ -326,23 +354,9 @@ class LlavaSaeHooked(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            def hook(module: torch.nn.Module, _, outputs):
-                # Maybe unpack tuple outputs
-                if isinstance(outputs, tuple):
-                    unpack_outputs = list(outputs)
-                else:
-                    unpack_outputs = list(outputs)
-                name = self.module_to_name[module]
-                sae = self.module_dict[name]
-                sae_out = sae(unpack_outputs[0][0]).sae_out.unsqueeze(0).to(torch.float16)
-                unpack_outputs[0] = sae_out
-                if isinstance(outputs, tuple):
-                    outputs = tuple(unpack_outputs)
-                else:
-                    outputs = unpack_outputs[0]
-                return outputs
-
-            handles = [mod.register_forward_hook(hook) for mod in self.name_to_module.values()]
+            handles = []
+            for name, mod in self.name_to_module.items():
+                handles.extend(self.clamp_features_max(self.module_dict[name], self.clamped_idx, mod, self.clamped_value))
             try:
                 cont = self.model.generate(
                     **inputs,
@@ -374,3 +388,6 @@ class LlavaSaeHooked(lmms):
 
         pbar.close()
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation for LLaVAHF")
