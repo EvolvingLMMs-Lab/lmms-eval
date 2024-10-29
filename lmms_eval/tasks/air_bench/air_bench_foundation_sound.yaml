@@ -15,7 +15,7 @@ lmms_eval_specific_kwargs:
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
 metric_list:
   - metric: accuracy
-    aggregation: mean
+    aggregation: !function utils.air_bench_aggregate_results_foundation
     higher_is_better: true
   - metric: submission
     aggregation: !function utils.air_bench_aggregate_results_for_submission

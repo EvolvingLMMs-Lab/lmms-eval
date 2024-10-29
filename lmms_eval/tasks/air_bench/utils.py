@@ -72,8 +72,11 @@ eval_prompt = (
     "The two scores are separated by a space. Please only output the 2 required number and no text."
 )
 
+retries = 3
+NUM_SECONDS_TO_SLEEP = 5
 
-def get_eval(max_tokens: int, content: str):
+
+def get_eval(max_tokens: int, content: str, retries: int = retries):
     global headers
 
     messages = [
@@ -83,21 +86,28 @@ def get_eval(max_tokens: int, content: str):
     payload = {
         "model": GPT_EVAL_MODEL_NAME,
         "messages": messages,
-        "temperature": 0.2,
+        "temperature": 0,
         "max_tokens": max_tokens,
     }
 
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
-        response_data = response.json()
+    for attempt in range(retries):
+        try:
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()
+            response_data = response.json()
 
-        content = response_data["choices"][0]["message"]["content"].strip()
-        if content != "":
-            return content, response_data["model"]
-    except Exception as e:
-        eval_logger.info(f"Attempt failed with error: {e}")
-        return "", ""
+            content = response_data["choices"][0]["message"]["content"].strip()
+            if content != "":
+                return content, response_data["model"]
+            break  # If successful, break out of the loop
+
+        except Exception as e:
+            eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
+            if attempt < retries:  # If we have retries left, sleep and then continue to next attempt
+                time.sleep(NUM_SECONDS_TO_SLEEP)
+            else:  # If this was the last attempt, log and return empty
+                eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+                return "", ""
     return "", ""
 
 
@@ -182,7 +192,7 @@ def air_bench_process_results_foundation(doc, result):
     score = 1.0 if pred == gt_ans else 0.0
     submission_dict = {}
     submission_dict = {doc.get("uniq_id", "unknown"): pred}
-    return {"accuracy": score, "submission": submission_dict}
+    return {"accuracy": {"score": score, "task": doc["task_name"]}, "submission": submission_dict}
 
 
 def air_bench_aggregate_results_for_submission(results, args):
@@ -190,6 +200,21 @@ def air_bench_aggregate_results_for_submission(results, args):
     with open(path, "w") as f:
         json.dump(results, f)
     eval_logger.info(f"Results saved to {path}.")
+
+
+def air_bench_aggregate_results_foundation(results):
+    score = 0
+    categorical_correct = {}
+    categorical_total = {}
+    for result in results:
+        score += result["score"]
+        if result["task"] not in categorical_correct.keys():
+            categorical_correct[result["task"]] = 0
+            categorical_total[result["task"]] = 0
+        categorical_correct[result["task"]] += result["score"]
+        categorical_total[result["task"]] += 1
+
+    return {"overall_accuracy": score / len(results), "categorical_accuracy": {task: categorical_correct[task] / categorical_total[task] for task in categorical_correct.keys()}}
 
 
 def parse_multi_choice_response(response, all_choices):
