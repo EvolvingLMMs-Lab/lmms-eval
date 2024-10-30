@@ -48,11 +48,8 @@ if API_TYPE == "openai":
         "Content-Type": "application/json",
     }
 elif API_TYPE == "azure":
-    API_KEY = os.getenv("AZURE_API_KEY", None)
-    deployment_name = os.getenv("AZURE_DEPLOYMENT_NAME", None)
-    resource_name = os.getenv("AZURE_RESOURCE_NAME", None)
-    api_version = os.getenv("AZURE_API_VERSION", None)
-    API_URL = f"https://{resource_name}.openai.azure.com/openai/deployments/{deployment_name}/chat/completions?api-version={api_version}"
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     headers = {
         "api-key": API_KEY,
         "Content-Type": "application/json",
