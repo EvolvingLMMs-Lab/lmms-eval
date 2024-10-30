@@ -1,0 +1,6 @@
+generation_kwargs:
+  max_new_tokens: 1024
+
+metadata:
+  version: 0.0
+  interleaved_format: false
