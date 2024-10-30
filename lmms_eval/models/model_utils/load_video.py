@@ -1,6 +1,6 @@
 import base64
 from io import BytesIO
-from typing import Optional
+from typing import Optional, Tuple
 
 import av
 import numpy as np
@@ -113,11 +113,20 @@ def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None,
     return [Image.fromarray(frame) for frame in frames]
 
 
-def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG"):
+def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Tuple[int, int] | int] = None, resize_strategy: str = "resize"):
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
     base64_frames = []
     for frame in frames:
         img = Image.fromarray(frame)
+        if max_image_size:
+            if resize_strategy == "resize":
+                if isinstance(max_image_size, int):
+                    max_image_size = (max_image_size, max_image_size)
+                img = img.resize(max_image_size)
+            elif resize_strategy == "thumbnail":
+                img.thumbnail(max_image_size)
+            else:
+                raise ValueError(f"Unknown resize strategy: {resize_strategy}")
         output_buffer = BytesIO()
         img.save(output_buffer, format=img_format)
         byte_data = output_buffer.getvalue()
