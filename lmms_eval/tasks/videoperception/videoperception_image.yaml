@@ -1,0 +1,16 @@
+dataset_name: "perception"
+task: "videommmu_perception_image"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.videoperception_doc_to_visual_image
+doc_to_text: !function utils.videoperception_doc_to_text_perception
+doc_to_target: !function utils.videoperception_doc_to_answer
+process_results: !function utils.videoperception_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.videoperception_aggregate_results_for_submission
+    higher_is_better: true
+  - metric: mmmu_acc
+    aggregation: !function utils.videoperception_aggregate_results
+    higher_is_better: true
+include: _default_template_yaml
