@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple, Union
 
 import decord
 import numpy as np
+import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -15,6 +16,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
 from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
 
 try:
@@ -54,6 +56,11 @@ class Qwen2_VL(lmms):
         if self.fps and not self.use_custom_video_loader:
             raise ValueError("FPS is only applicable if use_custom_video_loader is True")
 
+        self.use_custom_video_loader = use_custom_video_loader
+        self.fps = fps
+        if self.fps and not self.use_custom_video_loader:
+            raise ValueError("FPS is only applicable if use_custom_video_loader is True")
+
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
@@ -74,6 +81,10 @@ class Qwen2_VL(lmms):
             ).eval()
         else:
             self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
+        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
+        self.max_pixels = max_pixels
+        self.min_pixels = min_pixels
+        self.max_num_frames = max_num_frames
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
@@ -210,6 +221,16 @@ class Qwen2_VL(lmms):
                 if len(visuals) > 0:
                     visual = visuals[i] if i < len(visuals) else None
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                        if self.use_custom_video_loader:
+                            visual = read_video_pyav_base64(visual, num_frm=self.max_num_frames, fps=self.fps, img_format="JPEG")
+                            image_contents = list(map(lambda x: f"data:image/jpeg;base64,{x}", visual))
+                            message.append({"role": "user", "content": [{"type": "video", "video": image_contents}, {"type": "text", "text": context}]})
+                        else:
+                            vr = decord.VideoReader(visual)
+                            first_frame = vr[0].asnumpy()
+                            height, width = first_frame.shape[:2]
+                            # max_pixels = height * width
+                            message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": self.max_pixels}, {"type": "text", "text": context}]})
                         if self.use_custom_video_loader:
                             visual = read_video_pyav_base64(visual, num_frm=self.max_num_frames, fps=self.fps, img_format="JPEG")
                             image_contents = list(map(lambda x: f"data:image/jpeg;base64,{x}", visual))
