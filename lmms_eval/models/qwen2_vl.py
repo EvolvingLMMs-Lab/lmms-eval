@@ -40,9 +40,10 @@ class Qwen2_VL(lmms):
         use_flash_attention_2: Optional[bool] = True,
         max_pixels: int = 12845056,
         min_pixels: int = 3136,
-        max_num_frames: int = 32,
+        max_num_frames: int = 256,
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
+        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
         **kwargs,
     ) -> None:
         super().__init__()
@@ -53,6 +54,9 @@ class Qwen2_VL(lmms):
         self.fps = fps
         if self.fps and not self.use_custom_video_loader:
             raise ValueError("FPS is only applicable if use_custom_video_loader is True")
+        self.max_image_size = max_image_size
+        if self.max_image_size and not self.use_custom_video_loader:
+            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -211,7 +215,7 @@ class Qwen2_VL(lmms):
                     visual = visuals[i] if i < len(visuals) else None
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                         if self.use_custom_video_loader:
-                            visual = read_video_pyav_base64(visual, num_frm=self.max_num_frames, fps=self.fps, img_format="JPEG")
+                            visual = read_video_pyav_base64(visual, num_frm=self.max_num_frames, fps=self.fps, img_format="JPEG", max_image_size=self.max_image_size)
                             image_contents = list(map(lambda x: f"data:image/jpeg;base64,{x}", visual))
                             message.append({"role": "user", "content": [{"type": "video", "video": image_contents}, {"type": "text", "text": context}]})
                         else:
