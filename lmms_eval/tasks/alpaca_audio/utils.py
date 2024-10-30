@@ -48,11 +48,8 @@ if API_TYPE == "openai":
     }
 
 elif API_TYPE == "azure":
-    API_KEY = os.getenv("AZURE_API_KEY", None)
-    deployment_name = os.getenv("AZURE_DEPLOYMENT_NAME", None)
-    resource_name = os.getenv("AZURE_RESOURCE_NAME", None)
-    api_version = os.getenv("AZURE_API_VERSION", None)
-    API_URL = f"https://{resource_name}.openai.azure.com/openai/deployments/{deployment_name}/chat/completions?api-version={api_version}"
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     headers = {
         "api-key": API_KEY,
         "Content-Type": "application/json",
@@ -82,8 +79,11 @@ eval_prompt = """
             Explanation: (Provide a concise explanation of your rating, comparing the reference answer with the model's response. "The reference answer is [XXX], while the model's answer is [YYY]. I think ...")
             Rating: (int)"""
 
+retries = 3
+NUM_SECONDS_TO_SLEEP = 5
 
-def get_eval(max_tokens: int, content: str):
+
+def get_eval(max_tokens: int, content: str, retries: int = retries):
     global headers
 
     messages = [
@@ -92,17 +92,24 @@ def get_eval(max_tokens: int, content: str):
 
     payload = {"model": GPT_EVAL_MODEL_NAME, "messages": messages, "temperature": 0.7, "max_tokens": max_tokens, "top_p": 0.95, "frequency_penalty": 0, "presence_penalty": 0, "stop": None}
 
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
-        response_data = response.json()
+    for attempt in range(retries):
+        try:
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()
+            response_data = response.json()
 
-        content = response_data["choices"][0]["message"]["content"].strip()
-        if content != "":
-            return content, response_data["model"]
-    except Exception as e:
-        eval_logger.info(f"Attempt failed with error: {e}")
-        return "", ""
+            content = response_data["choices"][0]["message"]["content"].strip()
+            if content != "":
+                return content, response_data["model"]
+            break  # If successful, break out of the loop
+
+        except Exception as e:
+            eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
+            if attempt < retries:  # If we have retries left, sleep and then continue to next attempt
+                time.sleep(NUM_SECONDS_TO_SLEEP)
+            else:  # If this was the last attempt, log and return empty
+                eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+                return "", ""
     return "", ""
 
 
