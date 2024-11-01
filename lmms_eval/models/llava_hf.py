@@ -73,7 +73,6 @@ class LlavaHf(lmms):
         device_map: str = "",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
-        specified_eot_token_id: Optional[int] = None,
         max_frames_num: Optional[int] = 32,
         **kwargs,
     ) -> None:
@@ -106,7 +105,6 @@ class LlavaHf(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.chat_template = chat_template
         self.use_cache = use_cache
-        self.specified_eot_token_id = specified_eot_token_id
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -368,8 +366,8 @@ class LlavaHf(lmms):
                     num_beams=gen_kwargs["num_beams"],
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                     use_cache=self.use_cache,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                    eos_token_id=self.specified_eot_token_id,
+                    pad_token_id=self.eot_token_id,
+                    eos_token_id=self.eot_token_id,
                 )
                 cont = cont[:, inputs["input_ids"].shape[-1] :]
             except Exception as e:
