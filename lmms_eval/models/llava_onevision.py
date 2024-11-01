@@ -555,7 +555,7 @@ class Llava_OneVision(lmms):
                 raise e
 
             text_outputs = [response.strip() for response in text_outputs]
-            # print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]])
+            # print("\nchunk\n", chunk, "\nres\n", text_outputs, "\ninfo\n", self.task_dict[task][split][batched_doc_id[0]])
             res.extend(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
             pbar.update(1)
