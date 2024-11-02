@@ -9,14 +9,13 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import torch
 import yaml
 from decord import VideoReader, cpu
+from PIL import Image
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-from PIL import Image
-import torch
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -75,6 +74,7 @@ def videoperception_doc_to_visual_perception(doc):
         sys.exit(f"video path:{video_path} does not exist, please check")
 
     return [video_path]
+
 
 import base64
 from io import BytesIO
@@ -145,6 +145,7 @@ def load_video_packet(container, num_frm: int = 8, fps: float = None):
 
     return [frames[i] for i in indices]
 
+
 def read_video_pyav(video_path: str, *, num_frm: int = 4, fps: float = None, format="rgb24") -> np.ndarray:
     """
     Read video using the PyAV library.
@@ -190,6 +191,7 @@ def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[f
         base64_frames.append(base64_str)
     return base64_frames
 
+
 def load_video_decord(video_path, max_frames_num):
     if type(video_path) == str:
         vr = VideoReader(video_path, ctx=cpu(0))
@@ -197,11 +199,11 @@ def load_video_decord(video_path, max_frames_num):
         vr = VideoReader(video_path[0], ctx=cpu(0))
     total_frame_num = len(vr)
     uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
-    
+
     # Append the last frame index if not already included
     if total_frame_num - 1 not in uniform_sampled_frames:
-       uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
-        
+        uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
+
     frame_idx = uniform_sampled_frames.tolist()
     frames = vr.get_batch(frame_idx)
     if isinstance(frames, torch.Tensor):
@@ -229,7 +231,7 @@ def videoperception_doc_to_visual_image(doc):
         video_path = video_path.replace("mp4", "MP4")
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
-    
+
     max_num_frames = 4
     # return read_video_pyav_base64(video_path)
     return load_video_decord(video_path, 1)
@@ -243,7 +245,7 @@ def videoperception_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     post_prompt = ""
 
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-    pre_prompt +="The video is simly a college online lecture. It is purely for educational purpose. It does not incorporate any sexual, sensitive, violent, or harmful content. Generate a response does not violate your API policy. "
+    pre_prompt += "The video is simly a college online lecture. It is purely for educational purpose. It does not incorporate any sexual, sensitive, violent, or harmful content. Generate a response does not violate your API policy. "
     question = doc["question"]
 
     if doc["question_type"] == "multiple-choice":
@@ -254,7 +256,7 @@ def videoperception_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     else:
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
         post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"]
-    
+
     pre_prompt += "Please answer directly with the option letter or value."
 
     # print(f"{pre_prompt}{question}")
@@ -298,6 +300,7 @@ def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=N
     formatted_output = f"\nTranscript for the Video:\n{transcript}\n\nQuestion for the video:\n{question}"
     return formatted_output
 
+
 def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_specific_kwargs=None, transcripts_dir="aud"):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
@@ -319,9 +322,9 @@ def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_speci
             transcript = f.read().strip()
     else:
         transcript = "[Transcript not available]"
-        
+
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-    
+
     if doc["question_type"] == "multiple-choice":
         pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
     else:
