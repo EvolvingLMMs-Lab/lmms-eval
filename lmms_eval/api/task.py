@@ -1444,8 +1444,12 @@ class ConfigurableTask(Task):
                 # and this stores our "regular" conditional loglikelihoods
                 lls = lls[::2]
 
-            pred = np.argmax(lls)
-            pred_norm = np.argmax(lls / completion_len)
+            # Warning :
+            # Here may be different from original lm-eval
+            # since we return the actual loss in many model loglikelihood
+            # we just use the argmin here
+            pred = np.argmin(lls)
+            pred_norm = np.argmin(lls / completion_len)
 
             if self.multiple_input:
                 gold = self.doc_to_text(doc)
