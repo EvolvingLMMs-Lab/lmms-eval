@@ -58,9 +58,9 @@ def format_question_and_options(question, options):
     return formatted_string
 
 
-def cinepile_doc_to_text(doc, model_specific_prompt_kwargs=None):
+def cinepile_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     formatted_question = format_question_and_options(doc["question"], doc["choices"])
-    model_input = f"{model_specific_prompt_kwargs['pre_prompt']}\n\n**Subtitles:**\n{doc['subtitles']}\n\n{formatted_question}\n{model_specific_prompt_kwargs['post_prompt']}"
+    model_input = f"{lmms_eval_specific_kwargs['pre_prompt']}\n\n**Subtitles:**\n{doc['subtitles']}\n\n{formatted_question}\n{lmms_eval_specific_kwargs['post_prompt']}"
     return model_input
 
 

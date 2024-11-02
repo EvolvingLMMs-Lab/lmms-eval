@@ -169,27 +169,27 @@ def vdc_doc_to_visual(doc):
 
 
 # format the prompt
-def vdc_doc_to_text_short(doc, model_specific_prompt_kwargs=None):
+def vdc_doc_to_text_short(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = random.choice(SHORT_CAPTION_PROMPTS)
     return f"{pre_prompt}"
 
 
-def vdc_doc_to_text_detailed(doc, model_specific_prompt_kwargs=None):
+def vdc_doc_to_text_detailed(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = random.choice(DETAILED_CAPTION_PROMPTS)
     return f"{pre_prompt}"
 
 
-def vdc_doc_to_text_main_object(doc, model_specific_prompt_kwargs=None):
+def vdc_doc_to_text_main_object(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = random.choice(MAIN_OBJECT_CAPTION_PROMPTS)
     return f"{pre_prompt}"
 
 
-def vdc_doc_to_text_camera(doc, model_specific_prompt_kwargs=None):
+def vdc_doc_to_text_camera(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = random.choice(CAMERA_CAPTION_PROMPTS)
     return f"{pre_prompt}"
 
 
-def vdc_doc_to_text_background(doc, model_specific_prompt_kwargs=None):
+def vdc_doc_to_text_background(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = random.choice(BACKGROUND_CAPTION_PROMPTS)
     return f"{pre_prompt}"
 
