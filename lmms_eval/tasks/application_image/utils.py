@@ -67,11 +67,11 @@ def mmmu_doc_to_visual(doc):
     image_tokens = re.findall(r"<image \d+>", prompt)
     # Remove <> and  swap space as _
     image_tokens = sorted(list(set([image_token.strip("<>").replace(" ", "_") for image_token in image_tokens])))
-    #print(image_tokens)
-    #visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
+    # print(image_tokens)
+    # visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
     visual = None
-    if doc['image_1'] != None:
-       visual = [doc['image_1'].convert("RGB") ]
+    if doc["image_1"] != None:
+        visual = [doc["image_1"].convert("RGB")]
     return visual
 
 
@@ -335,7 +335,6 @@ def evaluate_mmmu(samples):
 #         pred_index = candidates[0]
 
 #     return pred_index
-
 
 
 def parse_multi_choice_response(response, all_choices, index2ans):

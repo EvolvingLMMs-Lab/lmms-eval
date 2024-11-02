@@ -333,7 +333,6 @@ def evaluate_mmmu(samples):
 #     return pred_index
 
 
-
 def parse_multi_choice_response(response, all_choices, index2ans):
     """
     Parse the prediction from the generated response.

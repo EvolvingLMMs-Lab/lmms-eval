@@ -4,7 +4,6 @@ from typing import List, Optional, Tuple, Union
 
 import decord
 import numpy as np
-import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -16,7 +15,6 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
 from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
 
 try:
