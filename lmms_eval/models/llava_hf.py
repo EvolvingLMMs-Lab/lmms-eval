@@ -225,10 +225,10 @@ class LlavaHf(lmms):
 
             formatted_contexts = [prompt]
             formatted_continuation = [prompt_and_continuation]
-            model_inputs = self._image_processor(text=formatted_continuation, images=visuals).to(self._device, self.model.dtype)
+            model_inputs = self._image_processor(text=formatted_continuation, images=visuals, return_tensors="pt").to(self._device, self.model.dtype)
             labels = model_inputs["input_ids"].clone()
             contxt_id = self._image_processor(text=formatted_contexts, return_tensors="pt")["input_ids"]
-            labels[: len(contxt_id)] = -100
+            labels[:, : contxt_id.shape[1]] = -100
 
             if self.accelerator.is_main_process and doc_id % 100 == 0:
                 eval_logger.debug(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
