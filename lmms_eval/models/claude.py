@@ -18,6 +18,8 @@ NUM_SECONDS_TO_SLEEP = 5
 
 from loguru import logger
 
+from lmms_eval.models.model_utils.load_video import read_video_pyav_pil
+
 eval_logger = logger
 
 try:
@@ -42,6 +44,7 @@ class Claude(lmms):
         max_frames_num: int = 10,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
+        fps=None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -50,6 +53,7 @@ class Claude(lmms):
         self.system_prompt = system_prompt
         self.modality = modality
         self.max_frames_num = max_frames_num
+        self.fps = fps
 
         self.continual_mode = continual_mode
         if self.continual_mode:
@@ -131,15 +135,15 @@ class Claude(lmms):
         return self.shrink_image_to_file_size(img, max_file_size)
 
     def encode_video(self, video_path):
-        vr = VideoReader(video_path, ctx=cpu(0))
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
-        frames = vr.get_batch(frame_idx).asnumpy()
+        # vr = VideoReader(video_path, ctx=cpu(0))
+        # total_frame_num = len(vr)
+        # uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_num, dtype=int)
+        # frame_idx = uniform_sampled_frames.tolist()
+        # frames = vr.get_batch(frame_idx).asnumpy()
+        frames = read_video_pyav_pil(video_path, num_frm=self.max_frames_num, fps=self.fps)
 
         base64_frames = []
-        for frame in frames:
-            img = Image.fromarray(frame)
+        for img in frames:
             output_buffer = BytesIO()
             img.save(output_buffer, format="JPEG")
             byte_data = output_buffer.getvalue()
