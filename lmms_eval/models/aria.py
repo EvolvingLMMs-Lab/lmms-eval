@@ -257,6 +257,11 @@ class Aria(lmms):
             messages = [{"role": "user", "content": context}]
             
             text = self._image_processor.apply_chat_template(messages, add_generation_prompt=True)
+            
+            # removing redundant placeholders
+            text = re.sub(r"<image \d+>", "", text)
+            text = re.sub(r"<image>", "", text)
+            
             eval_logger.debug("DEBUGGING FOR ARIA:"+text)
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
