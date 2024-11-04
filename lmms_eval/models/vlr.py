@@ -194,7 +194,8 @@ class VLR(lmms):
             "gqa": {"path": "gqa_results.json", "item_id": "id"},
             "realworldqa": {"path": "realworldqa_results.json", "item_id": "image_path"},
             "mme": {"path": "mme_results.json"},
-            "mmmu": {"path": "mmmu_results.json", "item_id": "id"}
+            "mmmu_val": {"path": "mmmu_results.json", "item_id": "id"},
+            "seedbench2plus": {"path": "seedbench2plus_results.json", "item_id": "question_id"}
         }
 
         self.result_dicts = {}
@@ -450,8 +451,8 @@ class VLR(lmms):
                 item_id = qdict[self.result_map[task]["item_id"]]
             answer, result, valid = self.result_dicts[task].get(item_id, ("", "", None))
             text_outputs = [result]
-            print(batched_doc_id, ": ", self.task_dict[task][split][batched_doc_id[0]], "\n")
-            print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]], "\n")
+            # print(batched_doc_id, ": ", self.task_dict[task][split][batched_doc_id[0]], "\n")
+            # print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]], "\n")
             res.extend(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
             pbar.update(1)
