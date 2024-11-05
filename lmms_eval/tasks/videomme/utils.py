@@ -275,8 +275,8 @@ def videomme_process_results(doc, results):
     task_category = doc["task_type"]
     data_dict = {"question_id": doc["question_id"], "duration": doc["duration"], "category": category, "sub_category": sub_category, "task_category": task_category, "pred_answer": pred_ans, "answer": doc["answer"]}
 
-    # return {f"videomme_percetion_score": data_dict for metric in matrices}
-    return {f"videomme_percetion_score": data_dict}
+    # return {f"videomme_perception_score": data_dict for metric in matrices}
+    return {f"videomme_perception_score": data_dict}
 
 
 def videomme_aggregate_results(results):

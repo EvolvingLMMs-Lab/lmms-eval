@@ -86,7 +86,7 @@ def mlvu_process_results(doc, results):
     task_type = doc["task_type"]
     data_dict = {"question_id": doc["question"], "task_type": task_type, "pred_answer": pred_ans, "answer": doc["answer"]}
 
-    return {f"mlvu_percetion_score": data_dict}
+    return {f"mlvu_perception_score": data_dict}
 
 
 def mlvu_aggregate_results(results):
