@@ -78,7 +78,7 @@ process_results: !function utils.mme_process_results
 # So `mme_process_results` function should return the dict `{"mme_perception_score": {sub_k:sub_v, ..., } }`
 # And the `mme_aggregate_results` function could get the dict `{sub_k:sub_v, ..., }`, and use the information to gather the final accuracy.
 metric_list:
-  - metric: mme_percetion_score # The name of the metric to use for evaluation. The process_results function should return the metric name and the metric value, in format of `{metric_name: results}`. And the aggregation function will use the results to get the final score.
+  - metric: mme_perception_score # The name of the metric to use for evaluation. The process_results function should return the metric name and the metric value, in format of `{metric_name: results}`. And the aggregation function will use the results to get the final score.
     aggregation: !function utils.mme_aggregate_results # The name of the aggregation function to use for evaluation.
     higher_is_better: true # Whether the metric is better when the value is higher.
   - metric: mme_cognition_score
@@ -235,7 +235,7 @@ process_results: !function utils.mme_process_results
 # So `mme_process_results` function should return the dict `{"mme_perception_score": {sub_k:sub_v, ..., } }`
 # And the `mme_aggregate_results` function could get the dict `{sub_k:sub_v, ..., }`, and use the information to gather the final accuracy.
 metric_list:
-  - metric: mme_percetion_score
+  - metric: mme_perception_score
     aggregation: !function utils.mme_aggregate_results
     higher_is_better: true
   - metric: mme_cognition_score
