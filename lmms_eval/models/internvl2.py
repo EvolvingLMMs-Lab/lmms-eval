@@ -269,7 +269,6 @@ class InternVL2(lmms):
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."
                 video_path = visuals[0]
-                print("=" * 1000)
                 pixel_values, num_patches_list = load_video(video_path, num_segments=8, max_num=1)
                 pixel_values = pixel_values.to(torch.bfloat16).cuda()
                 video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
