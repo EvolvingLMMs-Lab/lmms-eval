@@ -139,8 +139,8 @@ class InternVL2(lmms):
         super().__init__()
 
         self.path = pretrained
-        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, trust_remote_code=True).eval().cuda()
-        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
+        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, trust_remote_code=True, device_map=device_map).eval()
+        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True, device_map=device_map)
 
         batch_size = int(batch_size)
         assert batch_size == 1, f"Batch size should be 1 for InternVL2, but got {batch_size}."
@@ -269,6 +269,7 @@ class InternVL2(lmms):
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."
                 video_path = visuals[0]
+                print("=" * 1000)
                 pixel_values, num_patches_list = load_video(video_path, num_segments=8, max_num=1)
                 pixel_values = pixel_values.to(torch.bfloat16).cuda()
                 video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
