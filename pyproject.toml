@@ -70,6 +70,7 @@ dependencies = [
     "decord",
     "zss",
     "protobuf==3.20",
+    "sentence_transformers",
 ]
 
 [project.optional-dependencies]
