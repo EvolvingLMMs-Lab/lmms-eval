@@ -235,31 +235,31 @@ class Claude(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
+            response_text = ""
+
             for attempt in range(5):
                 retry_flag = True
                 try:
                     message = client.messages.create(model=self.model_version, max_tokens=gen_kwargs["max_new_tokens"], system=self.system_prompt, temperature=gen_kwargs["temperature"], top_p=gen_kwargs["top_p"], messages=messages)
                     retry_flag = False
+                    response_text = message.content[0].text
                 except Exception as e:
                     eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
                     if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
-                        res.append("")
                         pbar.update(1)
                         continue
                 if not retry_flag:
                     break
                 eval_logger.info("Retrying...")
 
-            response_text = message.content[0].text
-            res.append(message.content[0].text)
+            res.append(response_text)
             pbar.update(1)
 
             ###################### CONTINUAL MODE ######################
             if self.continual_mode is True:  # Cache the response
-                response_text = message.content[0].text
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 self.response_cache[doc_uuid] = response_text
                 with open(self.response_persistent_file, "w") as f:
