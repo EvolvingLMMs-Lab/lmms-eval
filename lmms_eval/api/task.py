@@ -1034,7 +1034,7 @@ class ConfigurableTask(Task):
             if "create_link" in dataset_kwargs:
                 dataset_kwargs.pop("create_link")
 
-        if "load_from_disk" in dataset_kwargs and dataset_kwargs["load_from_disk"]:
+        if dataset_kwargs is not None and "load_from_disk" in dataset_kwargs and dataset_kwargs["load_from_disk"]:
             dataset_kwargs.pop("load_from_disk")
             # using local task in offline environment, need to process the online dataset into local format via
             # `ds = load_datasets("lmms-lab/MMMU")`
