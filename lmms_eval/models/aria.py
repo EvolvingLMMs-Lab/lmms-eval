@@ -9,13 +9,12 @@ from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
-from transformers import AutoConfig, AutoProcessor, MllamaForConditionalGeneration
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav_pil
 
 warnings.filterwarnings("ignore")
 
@@ -24,21 +23,17 @@ from loguru import logger as eval_logger
 DEFAULT_IMAGE_TOKEN = "<|image|>"
 
 
-@register_model("llama_vision")
-class LlamaVision(lmms):
+@register_model("aria")
+class Aria(lmms):
     def __init__(
         self,
-        pretrained: str = "meta-llama/Llama-3.2-11B-Vision",
-        revision: str = "main",
+        pretrained: str = "rhymes-ai/Aria",
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
-        batch_size: int = 1,
         trust_remote_code: Optional[bool] = True,
         attn_implementation: Optional[str] = None,
         device_map: str = "",
         max_frames_num: Optional[int] = 32,
-        fps: Optional[int] = None,
-        max_image_size: Optional[int] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -55,12 +50,10 @@ class LlamaVision(lmms):
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
 
-        self.fps = fps
         self.max_frames_num = max_frames_num
-        self.max_image_size = max_image_size
-        self._model = MllamaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
-        self.model.eval()
-        self.processor = AutoProcessor.from_pretrained(pretrained)
+        self._model = AutoModelForCausalLM.from_pretrained(pretrained, device_map="auto", torch_dtype=torch.bfloat16, trust_remote_code=trust_remote_code)
+
+        self.processor = AutoProcessor.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -135,27 +128,8 @@ class LlamaVision(lmms):
     def world_size(self):
         return self._world_size
 
-    def tok_encode(self, string: str, left_truncate_len=None, add_special_tokens=None) -> List[int]:
-        """ """
-        add_special_tokens = False if add_special_tokens is None else add_special_tokens
-        encoding = self.tokenizer.encode(string, add_special_tokens=add_special_tokens)
-        # left-truncate the encoded context to be at most `left_truncate_len` tokens long
-        if left_truncate_len:
-            encoding = encoding[-left_truncate_len:]
-        return encoding
-
-    def tok_decode(self, tokens):
-        return self.tokenizer.decode(tokens)
-
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "Not implemented"
-
-    def flatten(self, input):
-        new_list = []
-        for i in input:
-            for j in i:
-                new_list.append(j)
-        return new_list
 
     def load_video(self, video_path, max_frames_num):
         if type(video_path) == str:
@@ -168,57 +142,64 @@ class LlamaVision(lmms):
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         return spare_frames  # (frames, height, width, channels)
 
+    def flatten(self, input):
+        new_list = []
+        for i in input:
+            for j in i:
+                new_list.append(j)
+        return new_list
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            visuals = self.flatten(visuals)
+        with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.bfloat16):
+            for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+                visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+                visuals = self.flatten(visuals)
 
-            messages = [{"role": "user", "content": []}]
-            images = []
+                messages = [{"role": "user", "content": []}]
+                images = []
 
-            for visual in visuals:
-                if isinstance(visual, str):
-                    frames = read_video_pyav_pil(visual, num_frm=self.max_frames_num, fps=self.fps, max_image_size=self.max_image_size)
-                    images.extend(frames)
-                    # frames = self.load_video(visual, self.max_frames_num)
-                    # frames = torch.from_numpy(frames).permute(0, 3, 1, 2)
-                    # images.extend([to_pil_image(frame) for frame in frames])
-                elif isinstance(visual, PIL.Image.Image):
-                    images.append(visual)
+                for visual in visuals:
+                    if isinstance(visual, str):
+                        frames = self.load_video(visual, self.max_frames_num)
+                        frames = torch.from_numpy(frames).permute(0, 3, 1, 2)
+                        images.extend([to_pil_image(frame) for frame in frames])
+                    elif isinstance(visual, PIL.Image.Image):
+                        images.append(visual)
 
-            for _ in range(len(images)):
-                messages[-1]["content"].append({"type": "image"})
-            messages[-1]["content"].append({"type": "text", "text": contexts})
-            prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
-            inputs = self.processor(images, prompt, return_tensors="pt").to(self.model.device)
+                for _ in range(len(images)):
+                    messages[-1]["content"].append({"type": "image"})
+                messages[-1]["content"].append({"type": "text", "content": contexts})
+                prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+                inputs = self.processor(images, prompt, return_tensors="pt").to(self.model.device)
 
-            if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 1024
-            if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
-            if "num_beams" not in gen_kwargs:
-                gen_kwargs["num_beams"] = 1
-            if "do_sample" not in gen_kwargs:
-                gen_kwargs["do_sample"] = False
+                if "max_new_tokens" not in gen_kwargs:
+                    gen_kwargs["max_new_tokens"] = 1024
+                if "temperature" not in gen_kwargs:
+                    gen_kwargs["temperature"] = 0
+                if "top_p" not in gen_kwargs:
+                    gen_kwargs["top_p"] = None
+                if "num_beams" not in gen_kwargs:
+                    gen_kwargs["num_beams"] = 1
+                if "do_sample" not in gen_kwargs:
+                    gen_kwargs["do_sample"] = False
 
-            with torch.no_grad():
-                output = self.model.generate(
-                    **inputs,
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                    temperature=gen_kwargs["temperature"],
-                    do_sample=gen_kwargs["do_sample"],
-                )
-                output = output[:, inputs["input_ids"].shape[-1] :]
-                res.append(self.processor.decode(output[0]))
+                with torch.no_grad():
+                    output = self.model.generate(
+                        **inputs,
+                        max_new_tokens=gen_kwargs["max_new_tokens"],
+                        temperature=gen_kwargs["temperature"],
+                        do_sample=gen_kwargs["do_sample"],
+                    )
+                    output = output[:, inputs["input_ids"].shape[-1] :]
+                    res.append(self.processor.decode(output[0]))
 
-            pbar.update(1)
+                pbar.update(1)
         pbar.close()
+
         return res
 
     def generate_until_multi_round(self, requests) -> List[str]:
