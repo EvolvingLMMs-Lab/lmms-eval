@@ -38,7 +38,6 @@ try:
         tokenizer_image_token,
     )
     from oryx.model.builder import load_pretrained_model
-    from oryx.model.language_model.oryx_llama import OryxConfig
 except ImportError:
     eval_logger.debug("Oryx is not installed. Please install Oryx to use this model.")
 
@@ -473,3 +472,6 @@ class Oryx(lmms):
                 pbar.update(1)
                 continue
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")
