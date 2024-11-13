@@ -22,6 +22,24 @@ eval_logger = logging.getLogger("lmms-eval")
 import os
 import sys
 
+# Oryx uses a lot of environment variables to configure its behavior. It should be set before importing Oryx.
+
+SYSTEM_CONFIG = dict(
+    lowres_resize="384x32",
+    video_resize="0x64",
+    highres_base="0x32",
+    maxres=1536,
+    video_maxres=480,
+    video_minres=288,
+)
+
+for k, v in SYSTEM_CONFIG.items():
+    if v is not None:
+        if k.upper() in os.environ:
+            eval_logger.info(f"System config {k.upper()} is already in the environment. The value is {os.environ[k.upper()]}")
+        else:
+            os.environ[k.upper()] = str(v)
+
 try:
     from oryx.constants import (
         DEFAULT_IM_END_TOKEN,
@@ -71,12 +89,6 @@ class Oryx(lmms):
         mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
         video_decode_backend: str = "decord",
-        lowres_resize: Optional[str] = "384x32",
-        video_resize: Optional[str] = "0x64",
-        highres_base: Optional[str] = "0x32",
-        maxres: Optional[int] = 1536,
-        video_maxres: Optional[int] = 480,
-        video_minres: Optional[int] = 288,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -159,20 +171,6 @@ class Oryx(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
-
-        self.set_config(
-            lowres_resize=lowres_resize,
-            video_resize=video_resize,
-            highres_base=highres_base,
-            maxres=maxres,
-            video_maxres=video_maxres,
-            video_minres=video_minres,
-        )
-
-    def set_config(self, **kwargs):
-        for k, v in kwargs.items():
-            if v is not None:
-                os.environ[k.upper()] = str(v)
 
     @property
     def config(self):
