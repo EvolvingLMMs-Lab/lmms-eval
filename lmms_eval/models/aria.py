@@ -3,14 +3,13 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import PIL
+import requests
 import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
-from tqdm import tqdm
-import requests
-import torch
 from PIL import Image
+from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoProcessor
 
 from lmms_eval import utils
@@ -78,7 +77,7 @@ class Aria(lmms):
         self.pretrained = pretrained
         self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=True)
         self._tokenizer = self._image_processor.tokenizer
-       
+
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
         self.chat_template = chat_template
@@ -230,9 +229,9 @@ class Aria(lmms):
             assert self.batch_size_per_gpu == 1, "Do not support batch_size_per_gpu > 1 for now"
             text_context = contexts[0]
             text_context = text_context.replace("\n\n", "\n")
-            
+
             context = []
-            
+
             if task_type == "video":
                 try:
                     visuals = self.load_video(visuals, self.max_frames_num)
@@ -241,7 +240,6 @@ class Aria(lmms):
                     eval_logger.info(f"Error {e} when loading video : {visuals}")
                     pbar.update(1)
 
-            
             if DEFAULT_IMAGE_TOKEN not in context:
                 context += [{"text": None, "type": "image"}] * len(visuals)
                 context += [{"text": "\n" + text_context, "type": "text"}]
@@ -252,47 +250,44 @@ class Aria(lmms):
                     if i < len(visuals):
                         context += [{"text": None, "type": "image"}] * len(visuals)
                         context += [{"text": "\n", "type": "text"}]
-        
+
             # Apply chat template
             messages = [{"role": "user", "content": context}]
-            
+
             text = self._image_processor.apply_chat_template(messages, add_generation_prompt=True)
-            
+
             # removing redundant placeholders
             text = re.sub(r"<image \d+>", "", text)
             text = re.sub(r"<image>", "", text)
-            
-            eval_logger.debug("DEBUGGING FOR ARIA:"+text)
+
+            eval_logger.debug("DEBUGGING FOR ARIA:" + text)
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
-
-            
 
             if task_type == "video":
                 inputs = self._image_processor(images=visuals, text=text, return_tensors="pt", max_image_size=490)
             else:
                 inputs = self._image_processor(images=visuals, text=text, return_tensors="pt", max_image_size=980)
-                
+
             inputs["pixel_values"] = inputs["pixel_values"].to(self.model.dtype)
             inputs = {k: v.to(self._device) for k, v in inputs.items()}
 
-            
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
             if "top_p" not in gen_kwargs:
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
-                
+
             gen_kwargs["do_sample"] = False
             gen_kwargs["max_new_tokens"] = 1024
-                
+
             if "until" in gen_kwargs:
                 gen_kwargs.pop("until")
-                
+
             eval_logger.debug(f"generate kwargs: {gen_kwargs}")
-            
+
             try:
                 with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.bfloat16):
                     output = self.model.generate(
@@ -301,11 +296,11 @@ class Aria(lmms):
                         tokenizer=self._image_processor.tokenizer,
                         **gen_kwargs,
                     )
-                    output_ids = output[0][inputs["input_ids"].shape[1]:]
-                    text_outputs = self._image_processor.decode(output_ids, skip_special_tokens=True).replace("<|im_end|>","")
-                    
+                    output_ids = output[0][inputs["input_ids"].shape[1] :]
+                    text_outputs = self._image_processor.decode(output_ids, skip_special_tokens=True).replace("<|im_end|>", "")
+
                     ### Basic Model-wise Parsing for CoT-alike Outputs
-                    '''
+                    """
                     keywords = [
                         "Answer:",
                         "answer is:", "choice is:", "option is:", 
@@ -319,7 +314,7 @@ class Aria(lmms):
                             eval_logger.debug(f"ARIA Original generated output simplified by keyword [{keyword}]: {text_outputs}")
                             text_outputs = text_outputs.split(keyword, 1)[-1]
                             break
-                    '''      
+                    """
                     eval_logger.debug(f"Generated output: {text_outputs}")
             except Exception as ex:
                 eval_logger.debug(f"Generation failed: {ex}")
@@ -337,5 +332,3 @@ class Aria(lmms):
 
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation for LLaVAHF")
-
-        
