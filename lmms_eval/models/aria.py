@@ -50,7 +50,7 @@ class Aria(lmms):
         dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: int = 1,
         attn_implementation: Optional[str] = None,
-        device_map: str = "",
+        device_map: str = "auto",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
         specified_eot_token_id: Optional[int] = None,
