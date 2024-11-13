@@ -77,6 +77,7 @@
   - llava_in_the_wild_russian
   - llava_in_the_wild_spanish
   - llava_in_the_wild_urdu
+- [NaturalBench](https://huggingface.co/datasets/BaiqiL/NaturalBench)  
 - [NoCaps](https://nocaps.org/) (nocaps)
   - NoCaps Validation (nocaps_val)
   - NoCaps Test (nocaps_test)
@@ -216,6 +217,9 @@
   - egoschema_subset_mcppl
   - egoschema_subset
 - [LongVideoBench](https://github.com/longvideobench/LongVideoBench)
+- [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
+  - Global Mode for entire video (moviechat_global)
+  - Breakpoint Mode for specific moments (moviechat_breakpoint)
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
 - [MMT-Bench](https://mmt-bench.github.io/) (mmt)
   - MMT Validation (mmt_val)
@@ -265,6 +269,14 @@
   - tempcompass_caption_matching
   - tempcompass_captioning
 
+
+- [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench) (temporalbench)
+
+  - temporalbench_short_qa
+  - temporalbench_long_qa
+  - temporalbench_short_caption
+
+
 - [Vatex](https://eric-xw.github.io/vatex-website/index.html) (vatex)
 
   - Vatex Chinese (vatex_val_zh)
@@ -276,6 +288,7 @@
   - Video-ChatGPT Temporal (videochatgpt_temporal)
   - Video-ChatGPT Consistency (videochatgpt_consistency)
 - [Video-MME](https://video-mme.github.io/) (videomme)
+- [Vinoground](https://vinoground.github.io) (vinoground)
 - [VITATECS](https://github.com/lscpku/VITATECS) (vitatecs)
 
   - VITATECS Direction (vitatecs_direction)
@@ -291,6 +304,14 @@
   - WorldQA Multiple Choice (worldqa_mc)
 
 - [YouCook2](http://youcook2.eecs.umich.edu/) (youcook2_val)
+
+- [VDC](https://github.com/rese1f/aurora) (vdc)
+  - VDC Detailed Caption (detailed_test)
+  - VDC Camera Caption (camera_test)
+  - VDC Short Caption (short_test)
+  - VDC Background Caption (background_test)
+  - VDC Main Object Caption (main_object_test)
+
 
 ## 4. Text Tasks
 

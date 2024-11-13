@@ -12,3 +12,5 @@ lmms_eval_specific_kwargs:
     open_ended_prompt: "answer the following open-ended question. The image for this question is at the end of the video. \n"
     post_mcq_prompt: "Answer with the option's letter from the given choices directly. If you do not know the answer of a question, please generate 'Z' rather than randomly choose an option.\n"
     post_open_ended_prompt: "Answer the question using a single word or phrase. If you do not know the answer of a question, please generate 'Z' rather than random guess the answer.\n"
+generation_kwargs:
+  max_new_tokens: 1024

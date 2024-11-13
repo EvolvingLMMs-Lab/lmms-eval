@@ -7,3 +7,6 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""
+  aria:
+    pre_prompt: "Please provide a detailed answer on the following user instruction:\n"
+    post_prompt: ""

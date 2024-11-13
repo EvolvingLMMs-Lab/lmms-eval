@@ -35,7 +35,7 @@ def hb_doc_to_visual(doc):
 
 def hb_process_results(doc, result):
     sample = doc
-    # doc.pop("image")
+    doc.pop("image")
     sample["model_prediction"] = result[0]
     return {k: sample for k in metric}
 

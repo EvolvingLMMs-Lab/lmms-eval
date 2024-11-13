@@ -1,3 +1,4 @@
+import os
 import time
 
 import pandas as pd
@@ -72,11 +73,27 @@ Judgement: """
 
 
 class MathVerseEvaluator:
-    API_URL = "https://api.openai.com/v1/chat/completions"
+    API_TYPE = os.getenv("API_TYPE", "openai")
 
-    def __init__(self, api_key, gpt_model="gpt-3.5-turbo"):
+    if API_TYPE == "openai":
+        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+    elif API_TYPE == "azure":
+        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+        headers = {
+            "api-key": API_KEY,
+            "Content-Type": "application/json",
+        }
+
+    def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
         self.api_key = api_key
         self.gpt_model = gpt_model
+        self.quick_extract = quick_extract
 
     def _post_request(self, payload):
         headers = {
