@@ -71,6 +71,12 @@ class Oryx(lmms):
         mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
         video_decode_backend: str = "decord",
+        lowres_resize: Optional[str] = "384x32",
+        video_resize: Optional[str] = "0x64",
+        highres_base: Optional[str] = "0x32",
+        maxres: Optional[int] = 1536,
+        video_maxres: Optional[int] = 480,
+        video_minres: Optional[int] = 288,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -153,6 +159,20 @@ class Oryx(lmms):
             self.model.to(self._device)
             self._rank = 0
             self._world_size = 1
+
+        self.set_config(
+            lowres_resize=lowres_resize,
+            video_resize=video_resize,
+            highres_base=highres_base,
+            maxres=maxres,
+            video_maxres=video_maxres,
+            video_minres=video_minres,
+        )
+
+    def set_config(self, **kwargs):
+        for k, v in kwargs.items():
+            if v is not None:
+                os.environ[k.upper()] = str(v)
 
     @property
     def config(self):
