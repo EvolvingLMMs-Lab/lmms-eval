@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -16,34 +17,45 @@ with open(Path(__file__).parent / "vinoground.yaml", "r") as f:
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
 
-def vinoground_doc_to_visual(doc):
-    cache_dir = os.path.join(base_cache_dir, cache_name)
+textscore_dict, videoscore_dict = {}, {}
 
-    if doc["index"].split("_")[2] == "text":
-        video_path = os.path.join(cache_dir, "vinoground_videos", "_".join(doc["index"].split("_")[:2]) + ".mp4")
-    else:
-        video_path = os.path.join(cache_dir, "vinoground_videos_concated", doc["index"].split("_")[0] + ".mp4")
+
+def prep_data():
+    global textscore_dict, videoscore_dict
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    with open(os.path.join(cache_dir, "vinoground_videos", "vinoground_textscore.json")) as f:
+        textscore_list = json.load(f)
+    textscore_dict = {}
+    for item in textscore_list:
+        textscore_dict[item["idx"]] = item
+    with open(os.path.join(cache_dir, "vinoground_videos_concated", "vinoground_videoscore.json")) as f:
+        videoscore_list = json.load(f)
+    videoscore_dict = {}
+    for item in videoscore_list:
+        videoscore_dict[item["idx"]] = item
+    return textscore_dict, videoscore_dict
+
+
+def vinoground_doc_to_visual(doc):
+    if len(textscore_dict) == 0:
+        prep_data()
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    idx, question_type = "_".join(doc["index"].split("_")[:2]), doc["index"].split("_")[2]
+    scoredict = textscore_dict if question_type == "text" else videoscore_dict
+
+    video_path = os.path.join(cache_dir, scoredict[idx]["video_name"])
     if not os.path.exists(video_path):
         raise Exception(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
 
 def vinoground_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    if doc["index"].split("_")[2] == "text":
-        pre_prompt = "Which caption best describes this video?"
-        option_a = "A. " + doc["pos_cap"]
-        option_b = "B. " + doc["neg_cap"]
-        post_prompt = "Answer with the option's letter from the given choices directly. Please only output 1 English character."
-        full_prompt = pre_prompt + "\n" + option_a + "\n" + option_b + "\n" + post_prompt
-    else:
-        pos_neg = doc["index"].split("_")[1]
-        caption_in_question = doc[f"{pos_neg}_cap"]
-        pre_prompt = "Which video segment matches this caption? Note: The video contains two segments separated by a 2-second black frame."
-        caption = f"Caption: {caption_in_question}"
-        options = "A. The first fragment (before black frame)\nB. The second fragment (after black frame)"
-        post_prompt = "Answer with the option's letter from the given choices directly. Please only output 1 English character."
-        full_prompt = pre_prompt + "\n" + caption + "\n" + options + "\n" + post_prompt
-    return full_prompt
+    if len(textscore_dict) == 0:
+        prep_data()
+    idx, question_type = "_".join(doc["index"].split("_")[:2]), doc["index"].split("_")[2]
+    scoredict = textscore_dict if question_type == "text" else videoscore_dict
+
+    return scoredict[idx]["question"] + "\nPlease only output one English character."
 
 
 def vinoground_process_results(doc, results):
@@ -51,17 +63,18 @@ def vinoground_process_results(doc, results):
 
     major = doc["major"]
     minors = doc["minor"]
-    categories = [major]
+    categories = ["all", major]
     if minors is not None:
         categories.extend(minors.split(";"))
-    question_type = doc["index"].split("_")[2]
-    data_dict = {"index": doc["index"], "categories": categories, "question_type": question_type, "pred": pred}
+    idx, question_type = "_".join(doc["index"].split("_")[:2]), doc["index"].split("_")[2]
+    data_dict = {"index": idx, "categories": categories, "question_type": question_type, "pred": pred}
 
     return {"vinoground_score": data_dict}
 
 
 def vinoground_aggregate_results(results):
     matrix = np.zeros((500, 7), dtype=np.int8)
+    textscore_dict, videoscore_dict = prep_data()
 
     category_all = {}
     category_text = {}
@@ -70,15 +83,17 @@ def vinoground_aggregate_results(results):
     index_to_categories = {}
 
     for result in results:
-        index, categories, question_type, pred = result["index"], result["categories"], result["question_type"], result["pred"]
-        matrix_col = 0 if "pos" in index else 1
+        idx, categories, question_type, pred = result["index"], result["categories"], result["question_type"], result["pred"]
+        matrix_col = 0 if "pos" in idx else 1
         if question_type == "video":
             matrix_col += 3
-        gt = "A" if "pos" in index else "B"
-        idx = int(index.split("_")[0])
+        if question_type == "text":
+            gt = textscore_dict[idx]["GT"]
+        else:
+            gt = videoscore_dict[idx]["GT"]
+        idx = int(idx.split("_")[0])
         matrix[idx, matrix_col] = pred[0].lower() == gt.lower()
 
-        categories.append("all")
         if idx not in index_to_categories.keys():
             index_to_categories[idx] = categories
 

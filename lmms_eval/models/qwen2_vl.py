@@ -269,6 +269,13 @@ class Qwen2_VL(lmms):
 
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
             image_inputs, video_inputs = process_vision_info(messages)
+            if video_inputs is not None:
+                total_frames = video_inputs[0].shape[0]
+                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
+                # Append the last frame index if not already included
+                if total_frames - 1 not in indices:
+                    indices = np.append(indices, total_frames - 1)
+                video_inputs[0] = video_inputs[0][indices]
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
             if self.device_map == "auto":

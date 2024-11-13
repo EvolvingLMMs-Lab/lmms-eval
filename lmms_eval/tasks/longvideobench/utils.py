@@ -202,63 +202,31 @@ def get_multi_choice_info(options):
 
 def parse_multi_choice_response(response, all_choices, index2ans):
     """
-    Parse the prediction from the generated response.
-    Return the predicted index e.g., A, B, C, D.
-    https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
+    Changed from MMMU-style complex parsing into simple parsing.
+    Fixed to avoid 'D. A book' be parsed as A.
+    Same as original LongVideoBench paper (from author Haoning Wu), if parsing failed, it will assign a random choice to model.
     """
-    for char in [",", ".", "!", "?", ";", ":", "'"]:
-        response = response.strip(char)
-    response = " " + response + " "  # add space to avoid partial match
+    s = response.strip()
+    answer_prefixes = [
+        "The best answer is",
+        "The correct answer is",
+        "The answer is",
+        "The answer",
+        "The best option is",
+        "The correct option is",
+        "Best answer:",
+        "Best option:",
+    ]
+    for answer_prefix in answer_prefixes:
+        s = s.replace(answer_prefix, "")
 
-    index_ans = True
-    ans_with_brack = False
-    candidates = []
-    for choice in all_choices:  # e.g., (A) (B) (C) (D)
-        if f"({choice})" in response:
-            candidates.append(choice)
-            ans_with_brack = True
+    if len(s.split()) > 10 and not re.search("[ABCDE]", s):
+        return random.choice(all_choices)
 
-    if len(candidates) == 0:
-        for choice in all_choices:  # e.g., A B C D
-            if f"{choice} " in response:
-                candidates.append(choice)
-
-    if len(candidates) == 0:
-        for choice in all_choices:  # e.g., A. B. C. D.
-            if f"{choice}." in response:
-                candidates.append(choice)
-
-    # if all above doesn't get candidates, check if the content is larger than 5 tokens and try to parse the example
-    if len(candidates) == 0 and len(response.split()) > 5:
-        for index, ans in index2ans.items():
-            if ans.lower() in response.lower():
-                candidates.append(index)
-                index_ans = False  # it's content ans.
-
-    if len(candidates) == 0:  # still not get answer, randomly choose one.
-        pred_index = random.choice(all_choices)
-    elif len(candidates) > 1:
-        start_indexes = []
-        if index_ans:
-            if ans_with_brack:
-                for can in candidates:
-                    index = response.rfind(f"({can})")
-                    start_indexes.append(index)  # -1 will be ignored anyway
-                # start_indexes = [generated_response.index(f'({can})') for can in candidates]
-            else:
-                for can in candidates:
-                    index = response.rfind(f" {can} ")
-                    start_indexes.append(index)
-        else:
-            for can in candidates:
-                index = response.lower().rfind(index2ans[can].lower())
-                start_indexes.append(index)
-        # get the last one
-        pred_index = candidates[np.argmax(start_indexes)]
-    else:  # if only one candidate, use it.
-        pred_index = candidates[0]
-
-    return pred_index
+    matches = re.search(r"[ABCDE]", s)
+    if matches is None:
+        return random.choice(all_choices)
+    return matches[0]
 
 
 def evaluate_longvideobench(samples):
@@ -320,7 +288,7 @@ def longvideobench_process_results(doc, results):
         all_choices.append(chr(ord("A") + i))
 
     parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    id = doc["video_id"]
+    id = doc["id"]
     lvb_acc = {"id": id, "duration_group": doc["duration_group"], "question_category": doc["question_category"], "answer": chr(ord("A") + doc["correct_choice"]), "parsed_pred": parsed_pred}
     return {
         "lvb_acc": lvb_acc,

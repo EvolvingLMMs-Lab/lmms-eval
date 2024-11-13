@@ -118,7 +118,7 @@ def mme_realworld_process_results(doc, results):
     task_category = doc["l2-category"]
     data_dict = {"question_id": doc["index"], "category": category, "sub_category": sub_category, "task_category": task_category, "pred_answer": pred_ans, "answer": doc["answer"]}
 
-    # return {f"mme_realworld_percetion_score": data_dict for metric in matrices}
+    # return {f"mme_realworld_perception_score": data_dict for metric in matrices}
     return {f"mme_realworld_score": data_dict}
 
 

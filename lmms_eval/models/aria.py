@@ -8,12 +8,10 @@ from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from tqdm import tqdm
-from transformers import (
-    AutoConfig,
-    AutoProcessor,
-    LlavaForConditionalGeneration,
-    LlavaNextForConditionalGeneration,
-)
+import requests
+import torch
+from PIL import Image
+from transformers import AutoModelForCausalLM, AutoProcessor
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -25,36 +23,20 @@ warnings.filterwarnings("ignore")
 from loguru import logger as eval_logger
 
 DEFAULT_IMAGE_TOKEN = "<image>"
-DEFAULT_VIDEO_TOKEN = "<video>"
-
-# Default chat for llava-hf/llava-1.5 models: https://huggingface.co/collections/llava-hf/llava-15-65f762d5b6941db5c2ba07e0
-VICUNA_CHAT_TEMPLATE = "{% for message in messages %}{% if loop.index0 == 0 %}A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER: {{ message['content'] }} {% elif message['role'] == 'user' %}USER: {{ message['content'] }} {% else %} ASSISTANT: {{ message['content'] }}{{ eos_token }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}"
-
-model_map = {
-    "llava": LlavaForConditionalGeneration,
-    "llava_next": LlavaNextForConditionalGeneration,
-}
-
-try:
-    from transformers import LlavaOnevisionForConditionalGeneration
-
-    model_map["llava_onevision"] = LlavaOnevisionForConditionalGeneration
-except Exception as e:
-    eval_logger.debug("Transformers version does not support llava-onevision. Skipping.")
 
 
-@register_model("llava_hf")
-class LlavaHf(lmms):
+@register_model("aria")
+class Aria(lmms):
     """
     Llava Model for Hugging Face Transformers: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava
 
-    Adapted from the InstructBLIP model in lmms_eval/models/instructblip.py
+    Adapted from the LLaVA-HF model in lmms_eval/models/llava_hf.py
 
     Example usage:
 
     accelerate launch --num_processes=8 --main_process_port 12345 -m lmms_eval \
-        --model llava_hf \
-        --model_args pretrained=llava-hf/llava-1.5-7b-hf \
+        --model aria \
+        --model_args pretrained=rhymes-ai/Aria \
         --tasks seedbench \
         --batch_size 1 \
         --output_path ./logs/ \
@@ -63,17 +45,17 @@ class LlavaHf(lmms):
 
     def __init__(
         self,
-        pretrained: str = "llava-hf/llava-1.5-7b-hf",
+        pretrained: str = "rhymes-ai/Aria",
         revision: str = "main",
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: int = 1,
-        trust_remote_code: Optional[bool] = False,
         attn_implementation: Optional[str] = None,
         device_map: str = "",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
-        max_frames_num: Optional[int] = 32,
+        specified_eot_token_id: Optional[int] = None,
+        max_frames_num: Optional[int] = 64,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -90,21 +72,17 @@ class LlavaHf(lmms):
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
 
-        config = AutoConfig.from_pretrained(pretrained)
         self.max_frames_num = max_frames_num
-        model_type = getattr(config, "model_type", "llava")
-        model_type = model_map[model_type]
-        self._model = model_type.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
+        self._model = AutoModelForCausalLM.from_pretrained(pretrained, revision=revision, device_map=self.device_map, torch_dtype=torch.bfloat16, trust_remote_code=True, attn_implementation=attn_implementation)
 
         self.pretrained = pretrained
-        self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
-        # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
-        self._image_processor.tokenizer.padding_side = "left"
+        self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=True)
         self._tokenizer = self._image_processor.tokenizer
+       
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
         self.chat_template = chat_template
-        self.use_cache = use_cache
+        self.specified_eot_token_id = specified_eot_token_id
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -192,59 +170,7 @@ class LlavaHf(lmms):
         return self.tokenizer.decode(tokens)
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        res = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
-
-        for context, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            # encode, pad, and truncate contexts for this batch
-            if type(doc_to_target) == str:
-                continuation = doc_to_target
-            else:
-                continuation = doc_to_target(self.task_dict[task][split][doc_id])
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            visuals = self.flatten(visuals)
-
-            image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
-            image_tokens = " ".join(image_tokens)
-            context = f"{image_tokens}\n{context}"
-            # Apply chat template
-            messages = [{"role": "user", "content": context}, {"role": "assistant", "content": continuation}]
-            if self.chat_template is not None:
-                self.tokenizer.chat_template = self.chat_template
-                prompt = self.tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
-                prompt_and_continuation = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-            elif self.tokenizer.chat_template is not None:
-                prompt = self.tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
-                prompt_and_continuation = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-            else:
-                self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
-                prompt = self.tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
-                prompt_and_continuation = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-
-            formatted_contexts = [prompt]
-            formatted_continuation = [prompt_and_continuation]
-            model_inputs = self._image_processor(text=formatted_continuation, images=visuals, return_tensors="pt").to(self._device, self.model.dtype)
-            labels = model_inputs["input_ids"].clone()
-            contxt_id = self._image_processor(text=formatted_contexts, return_tensors="pt")["input_ids"]
-            labels[:, : contxt_id.shape[1]] = -100
-
-            if self.accelerator.is_main_process and doc_id % 100 == 0:
-                eval_logger.debug(f"Prompt for doc ID {doc_id}:\n\n{formatted_contexts[0]}\n")
-                eval_logger.debug(f"Prompt and continuation for doc ID {doc_id}:\n\n{formatted_continuation[0]}\n")
-
-            with torch.inference_mode():
-                outputs = self.model(**model_inputs, labels=labels)
-            loss = outputs["loss"]
-            logits = outputs["logits"]
-            greedy_tokens = logits.argmax(dim=-1)
-            cont_toks = model_inputs["input_ids"][:, contxt_id.shape[1] :]  # [1, seq]
-            greedy_tokens = greedy_tokens[:, contxt_id.shape[1] : model_inputs["input_ids"].shape[1]]  # [1, seq]
-            max_equal = (greedy_tokens == cont_toks).all()
-            res.append((float(loss.item()), bool(max_equal)))
-            pbar.update(1)
-
-        pbar.close()
-        return res
+        raise NotImplementedError("Not implemented for Aria.")
 
     def flatten(self, input):
         new_list = []
@@ -262,6 +188,7 @@ class LlavaHf(lmms):
         uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
         spare_frames = vr.get_batch(frame_idx).asnumpy()
+        spare_frames = [Image.fromarray(x) for x in spare_frames]
         return spare_frames  # (frames, height, width, channels)
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
@@ -300,80 +227,102 @@ class LlavaHf(lmms):
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
 
-            # Set default values for until and max_new_tokens
-            until = [self.tok_decode(self.eot_token_id)]
-
-            # Update values from gen_kwargs if present
-            if "until" in gen_kwargs:
-                until = gen_kwargs.pop("until")
-                if isinstance(until, str):
-                    until = [until]
-                elif not isinstance(until, list):
-                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
             assert self.batch_size_per_gpu == 1, "Do not support batch_size_per_gpu > 1 for now"
-            context = contexts[0]
-
-            # Some benchmarks like MME do not contain image tokens, so we prepend them to the prompt.
-            if DEFAULT_IMAGE_TOKEN not in context:
-                if task_type == "image":
-                    image_tokens = [DEFAULT_IMAGE_TOKEN] * len(visuals)
-                elif task_type == "video":
-                    image_tokens = [DEFAULT_VIDEO_TOKEN] * len(visuals)
-                image_tokens = " ".join(image_tokens)
-                context = f"{image_tokens}\n{context}"
-            # Apply chat template
-            messages = [{"role": "user", "content": context}]
-            if self.chat_template is not None:
-                self.tokenizer.chat_template = self.chat_template
-                text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            elif self.tokenizer.chat_template is not None:
-                text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            else:
-                self.tokenizer.chat_template = VICUNA_CHAT_TEMPLATE
-                text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-
-            if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
-                eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
-
+            text_context = contexts[0]
+            text_context = text_context.replace("\n\n", "\n")
+            
+            context = []
+            
             if task_type == "video":
                 try:
-                    visuals = [self.load_video(visuals, self.max_frames_num)]
+                    visuals = self.load_video(visuals, self.max_frames_num)
                 except Exception as e:
                     res.append("")
                     eval_logger.info(f"Error {e} when loading video : {visuals}")
                     pbar.update(1)
 
-            if task_type == "image":
-                inputs = self._image_processor(images=visuals, text=text, return_tensors="pt").to(self._device, self.model.dtype)
-            elif task_type == "video":
-                inputs = self._image_processor(videos=visuals, text=text, return_tensors="pt").to(self._device, self.model.dtype)
+            
+            if DEFAULT_IMAGE_TOKEN not in context:
+                context += [{"text": None, "type": "image"}] * len(visuals)
+                context += [{"text": "\n" + text_context, "type": "text"}]
+            else:
+                assert text_context.count(DEFAULT_IMAGE_TOKEN) == len(visuals)
+                for i, text_chunk in enumerate(text_context.split(DEFAULT_IMAGE_TOKEN)):
+                    context += [{"text": text_chunk, "type": "text"}]
+                    if i < len(visuals):
+                        context += [{"text": None, "type": "image"}] * len(visuals)
+                        context += [{"text": "\n", "type": "text"}]
+        
+            # Apply chat template
+            messages = [{"role": "user", "content": context}]
+            
+            text = self._image_processor.apply_chat_template(messages, add_generation_prompt=True)
+            
+            # removing redundant placeholders
+            text = re.sub(r"<image \d+>", "", text)
+            text = re.sub(r"<image>", "", text)
+            
+            eval_logger.debug("DEBUGGING FOR ARIA:"+text)
 
-            gen_kwargs["image_sizes"] = [visuals[idx].size for idx in range(len(visuals))]
-            if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 1024
+            if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
+                eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
+
+            
+
+            if task_type == "video":
+                inputs = self._image_processor(images=visuals, text=text, return_tensors="pt", max_image_size=490)
+            else:
+                inputs = self._image_processor(images=visuals, text=text, return_tensors="pt", max_image_size=980)
+                
+            inputs["pixel_values"] = inputs["pixel_values"].to(self.model.dtype)
+            inputs = {k: v.to(self._device) for k, v in inputs.items()}
+
+            
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
             if "top_p" not in gen_kwargs:
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
+                
+            gen_kwargs["do_sample"] = False
+            gen_kwargs["max_new_tokens"] = 1024
+                
+            if "until" in gen_kwargs:
+                gen_kwargs.pop("until")
+                
+            eval_logger.debug(f"generate kwargs: {gen_kwargs}")
+            
             try:
-                cont = self.model.generate(
-                    **inputs,
-                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                    temperature=gen_kwargs["temperature"],
-                    top_p=gen_kwargs["top_p"],
-                    num_beams=gen_kwargs["num_beams"],
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                    use_cache=self.use_cache,
-                    pad_token_id=self.eot_token_id,
-                    eos_token_id=self.eot_token_id,
-                )
-                cont = cont[:, inputs["input_ids"].shape[-1] :]
-            except Exception as e:
-                eval_logger.error(f"Error {e} in generating")
-                cont = ""
-            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
+                with torch.inference_mode(), torch.cuda.amp.autocast(dtype=torch.bfloat16):
+                    output = self.model.generate(
+                        **inputs,
+                        stop_strings=["<|im_end|>"],
+                        tokenizer=self._image_processor.tokenizer,
+                        **gen_kwargs,
+                    )
+                    output_ids = output[0][inputs["input_ids"].shape[1]:]
+                    text_outputs = self._image_processor.decode(output_ids, skip_special_tokens=True).replace("<|im_end|>","")
+                    
+                    ### Basic Model-wise Parsing for CoT-alike Outputs
+                    '''
+                    keywords = [
+                        "Answer:",
+                        "answer is:", "choice is:", "option is:", 
+                        "Answer is:", "Choice is:", "Option is:",
+                        "answer is", "choice is", "option is",
+                        "Answer is", "Choice is", "Option is"
+                    ]
+
+                    for keyword in keywords:
+                        if keyword in text_outputs:
+                            eval_logger.debug(f"ARIA Original generated output simplified by keyword [{keyword}]: {text_outputs}")
+                            text_outputs = text_outputs.split(keyword, 1)[-1]
+                            break
+                    '''      
+                    eval_logger.debug(f"Generated output: {text_outputs}")
+            except Exception as ex:
+                eval_logger.debug(f"Generation failed: {ex}")
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
 
@@ -388,3 +337,5 @@ class LlavaHf(lmms):
 
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation for LLaVAHF")
+
+        
