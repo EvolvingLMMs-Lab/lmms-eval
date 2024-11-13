@@ -1,3 +1,4 @@
+import re
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -16,6 +17,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import read_video_pyav_pil
 
 warnings.filterwarnings("ignore")
 
@@ -179,16 +181,10 @@ class Aria(lmms):
         return new_list
 
     def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
-            vr = VideoReader(video_path, ctx=cpu(0))
-        else:
-            vr = VideoReader(video_path[0], ctx=cpu(0))
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
-        spare_frames = vr.get_batch(frame_idx).asnumpy()
-        spare_frames = [Image.fromarray(x) for x in spare_frames]
-        return spare_frames  # (frames, height, width, channels)
+        if isinstance(video_path, str):
+            video_path = [video_path]
+        visuals = [read_video_pyav_pil(visual, num_frm=max_frames_num) for visual in video_path]
+        return self.flatten(visuals)
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
@@ -235,6 +231,7 @@ class Aria(lmms):
             if task_type == "video":
                 try:
                     visuals = self.load_video(visuals, self.max_frames_num)
+                    # visuals = [read_video_pyav_pil(visual, num_frm=self.max_frames_num) for visual in visuals]
                 except Exception as e:
                     res.append("")
                     eval_logger.info(f"Error {e} when loading video : {visuals}")
