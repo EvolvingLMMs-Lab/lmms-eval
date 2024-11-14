@@ -209,8 +209,6 @@ class Aria(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
-        print("=" * 100)
-        print(self.force_include_last_frame)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
