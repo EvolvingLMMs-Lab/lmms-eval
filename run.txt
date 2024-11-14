@@ -126,6 +126,10 @@ res
 |mme        |Yaml   |none            |     0|mme_percetion_score|↑  |982.6932|±  |   N/A|
 |realworldqa|Yaml   |flexible-extract|     0|exact_match        |↑  |  0.2941|±  |0.0165|
 
+|   Tasks   |Version|     Filter     |n-shot|  Metric   |   |Value |   |Stderr|
+|-----------|-------|----------------|-----:|-----------|---|-----:|---|-----:|
+|realworldqa|Yaml   |flexible-extract|     0|exact_match|↑  |0.3791|±  |0.0176|
+
 |     Tasks      |Version|Filter|n-shot|        Metric        |   |Value |   |Stderr|
 |----------------|-------|------|-----:|----------------------|---|-----:|---|------|
 |seedbench_2_plus|Yaml   |none  |     0|seedbench_2_plus_Chart|↑  |0.1346|±  |   N/A|

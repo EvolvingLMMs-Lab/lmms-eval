@@ -450,6 +450,8 @@ class VLR(lmms):
             else:
                 item_id = qdict[self.result_map[task]["item_id"]]
             answer, result, valid = self.result_dicts[task].get(item_id, ("", "", None))
+            if result is None:
+                result = ""
             text_outputs = [result]
             # print(batched_doc_id, ": ", self.task_dict[task][split][batched_doc_id[0]], "\n")
             # print("chunk\n", chunk, "\nres\n", text_outputs, "info\n", self.task_dict[task][split][batched_doc_id[0]], "\n")
