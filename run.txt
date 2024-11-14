@@ -126,9 +126,15 @@ res
 |mme        |Yaml   |none            |     0|mme_percetion_score|↑  |982.6932|±  |   N/A|
 |realworldqa|Yaml   |flexible-extract|     0|exact_match        |↑  |  0.2941|±  |0.0165|
 
+v2 add image description
 |   Tasks   |Version|     Filter     |n-shot|  Metric   |   |Value |   |Stderr|
 |-----------|-------|----------------|-----:|-----------|---|-----:|---|-----:|
 |realworldqa|Yaml   |flexible-extract|     0|exact_match|↑  |0.3791|±  |0.0176|
+
+v3 chat GPT
+|   Tasks   |Version|     Filter     |n-shot|  Metric   |   |Value |   |Stderr|
+|-----------|-------|----------------|-----:|-----------|---|-----:|---|-----:|
+|realworldqa|Yaml   |flexible-extract|     0|exact_match|↑  |0.2614|±  |0.0159|
 
 |     Tasks      |Version|Filter|n-shot|        Metric        |   |Value |   |Stderr|
 |----------------|-------|------|-----:|----------------------|---|-----:|---|------|
