@@ -14,3 +14,4 @@ lmms_eval_specific_kwargs:
     post_open_ended_prompt: "Answer the question using a single word or phrase. If you do not know the answer of a question, please generate 'Z' rather than random guess the answer.\n"
 generation_kwargs:
   max_new_tokens: 1024
+  force_include_last_frame: True

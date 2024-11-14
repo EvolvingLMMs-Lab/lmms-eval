@@ -57,11 +57,14 @@ class Aria(lmms):
         use_cache: bool = True,
         specified_eot_token_id: Optional[int] = None,
         max_frames_num: Optional[int] = 64,
+        force_include_last_frame: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
         # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
+
+        self.force_include_last_frame = force_include_last_frame
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1 and device_map == "":
@@ -183,7 +186,7 @@ class Aria(lmms):
     def load_video(self, video_path, max_frames_num):
         if isinstance(video_path, str):
             video_path = [video_path]
-        visuals = [read_video_pyav_pil(visual, num_frm=max_frames_num) for visual in video_path]
+        visuals = [read_video_pyav_pil(visual, num_frm=max_frames_num, force_include_last_frame=self.force_include_last_frame) for visual in video_path]
         return self.flatten(visuals)
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
@@ -206,6 +209,8 @@ class Aria(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+        print("=" * 100)
+        print(self.force_include_last_frame)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
