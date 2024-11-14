@@ -1,8 +1,6 @@
 dataset_path: yifanzhang114/MME-RealWorld-Lmms-eval
 dataset_kwargs:
   token: True
-  cache_dir: mmerealworld
-  video: True
   # From_YouTube: True
 task: mmerealworld
 test_split: train
