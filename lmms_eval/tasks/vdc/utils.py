@@ -12,6 +12,12 @@ import yaml
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 
+try:
+    import sglang as sgl
+    from sglang import function, system, user, assistant, gen, set_default_backend, RuntimeEndpoint
+except ImportError:
+    eval_logger.debug("SGLang is not installed. If you want to use llava_sglang, please install it using pip install 'sglang[all]' ")
+
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -23,19 +29,6 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 
-NUM_SECONDS_TO_SLEEP = 5
-
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
-
-API_TYPE = os.getenv("API_TYPE", "openai")
-
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
 
 # A bit ugly here
 # But the idea is that we will unzip all the zip files
@@ -197,176 +190,67 @@ def vdc_doc_to_text_background(doc, lmms_eval_specific_kwargs=None):
 def vdc_doc_to_answer(doc):
     return doc["caption"]
 
+@function
+def gener_pred_response(s, pred_cap, q):
+    s += system(
+        "You are an intelligent chatbot designed for providing accurate answers to questions related to the content based on a detailed description of a video or image."
+        "Here's how you can accomplish the task:"
+        "------"
+        "##INSTRUCTIONS: "
+        "- Read the detailed description carefully.\n"
+        "- Answer the question only based on the detailed description.\n"
+        "- The answer should be a short sentence or phrase.\n"
+    )
+    s += user(
+        "Please provide accurate answers to questions related to the content based on a detailed description of a video or image:\n\n"
+        f"detailed description: {pred_cap}, question: {q}"
+        "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide short but accurate answer."
+    )
+    s += assistant(gen("answer_1", max_tokens=256))
 
-def generate_response(question, caption, max_tokens: int, retries: int = 5):
-    global headers
-
-    messages = [
-        {
-            "role": "system",
-            "content": "You are an intelligent chatbot designed for providing accurate answers to questions related to the content based on a detailed description of a video or image."
-            "Here's how you can accomplish the task:"
-            "------"
-            "##INSTRUCTIONS: "
-            "- Read the detailed description carefully.\n"
-            "- Answer the question only based on the detailed description.\n"
-            "- The answer should be a short sentence or phrase.\n",
-        },
-        {
-            "role": "user",
-            "content": "Please provide accurate answers to questions related to the content based on a detailed description of a video or image:\n\n"
-            f"detailed description: {caption}, question: {question}"
-            "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide short but accurate answer.",
-        },
-    ]
-
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": messages,
-        "temperature": 0,
-        "max_tokens": max_tokens,
-    }
-
-    for attempt in range(retries):
-        try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()  # Raises HTTPError for bad responses
-            try:
-                response_data = response.json()  # Attempt to parse JSON
-            except requests.exceptions.JSONDecodeError:
-                eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
-                continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
-            if content != "":
-                return content, response_data["model"]
-        # Handle HTTP errors separately
-        except requests.exceptions.HTTPError as e:
-            eval_logger.error(f"HTTP error on attempt {attempt + 1}: {e}")
-        # Handle other requests-related errors
-        except requests.exceptions.RequestException as e:
-            eval_logger.error(f"Request exception on attempt {attempt + 1}: {e}")
-        except Exception as e:
-            eval_logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
-
-        if "Sorry! We've encountered an issue with repetitive patterns in your prompt. Please try again with a different prompt." in json.loads(response.content)["error"]["message"]:
-            eval_logger.error(f"Repetitive patterns in prompt. Drop this data.")
-            return "", ""
-
-        # Handle other unexpected errors
-        if attempt < retries - 1:
-            time.sleep(NUM_SECONDS_TO_SLEEP)
-        else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed.")
-            return "", ""
-
-    return "", ""
+def generate_response(question, caption):
+    state = gener_pred_response.run(
+        pred_cap=caption,
+        q=question,
+    )
+    return state["answer_1"]
 
 
-def gpt_match(question, answer, pred_answer, max_tokens: int, retries: int = 5):
-    global headers
-
-    messages = [
-        {
-            "role": "system",
-            "content": "You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
-            "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
-            "------"
-            "##INSTRUCTIONS: "
-            "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
-            "- Consider synonyms or paraphrases as valid matches.\n"
-            "- Evaluate the correctness of the prediction compared to the answer.",
-        },
-        {
-            "role": "user",
-            "content": "Please evaluate the following video-based question-answer pair:\n\n"
-            f"Question: {question}\n"
-            f"Correct Answer: {answer}\n"
-            f"Predicted Answer: {pred_answer}\n\n"
-            "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
-            "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
-            "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
-            "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}.",
-        },
-    ]
-
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": messages,
-        "temperature": 0,
-        "max_tokens": max_tokens,
-    }
-
-    for attempt in range(retries):
-        try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()  # Raises HTTPError for bad responses
-            try:
-                response_data = response.json()  # Attempt to parse JSON
-            except requests.exceptions.JSONDecodeError:
-                eval_logger.error(f"JSON decode error on attempt {attempt + 1}. Response text: {response.text}")
-                continue  # Skip to next retry
-            content = response_data["choices"][0]["message"]["content"].strip()
-            if content != "":
-                return content, response_data["model"]
-        # Handle HTTP errors separately
-        except requests.exceptions.HTTPError as e:
-            eval_logger.error(f"HTTP error on attempt {attempt + 1}: {e}")
-        # Handle other requests-related errors
-        except requests.exceptions.RequestException as e:
-            eval_logger.error(f"Request exception on attempt {attempt + 1}: {e}")
-        except Exception as e:
-            eval_logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
-
-        if "Sorry! We've encountered an issue with repetitive patterns in your prompt. Please try again with a different prompt." in json.loads(response.content)["error"]["message"]:
-            eval_logger.error(f"Repetitive patterns in prompt. Drop this data.")
-            return "", ""
-
-        # Handle other unexpected errors
-        if attempt < retries - 1:
-            time.sleep(NUM_SECONDS_TO_SLEEP)
-        else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed.")
-            return "", ""
-
-    return "", ""
+@function
+def gener_pred_score(s, qa):
+    s += system(
+        "You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
+        "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
+        "------"
+        "##INSTRUCTIONS: "
+        "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
+        "- Consider synonyms or paraphrases as valid matches.\n"
+        "- Evaluate the correctness of the prediction compared to the answer."
+    )
+    s += user(
+        "Please evaluate the following video-based question-answer pair:\n\n"
+        f"Question: {qa['question']}\n"
+        f"Correct Answer: {qa['answer']}\n"
+        f"Predicted Answer: {qa['pred_answer']}\n\n"
+        "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
+        "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
+        "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
+        "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}."
+    )
+    s += assistant(gen("answer_1", max_tokens=256))
 
 
-def parse_score(review):
-    try:
-        # Convert the string representation of a dictionary to an actual dictionary
-        review_dict = ast.literal_eval(review)
-        score = review_dict.get("score", 0)
-        return int(score)
-    except SyntaxError as e:
-        eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
-        return 0
-    except ValueError as e:
-        eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
-        return 0
-    except Exception as e:
-        eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
-        return 0
+def gpt_match(qa):
+    state = gener_pred_score.run(
+        qa=qa,
+    )
+    response_dict = ast.literal_eval(state["answer_1"])
+
+    return response_dict
 
 
-def parse_acc(review):
-    try:
-        # Convert the string representation of a dictionary to an actual dictionary
-        review_dict = ast.literal_eval(review)
-        pred = review_dict.get("pred", "no")
-        return str(pred)
-    except SyntaxError as e:
-        eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
-        return "no"
-    except ValueError as e:
-        eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
-        return "no"
-    except Exception as e:
-        eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
-        return "no"
-
-
-def gpt_eval(data_dict):
-    evaluated_results = []
+def llm_eval(data_dict):
+    set_default_backend(RuntimeEndpoint("http://localhost:30000"))
 
     try:
         qa_pairs = data_dict["qa_list"]
@@ -374,17 +258,19 @@ def gpt_eval(data_dict):
 
         for qa_pair in qa_pairs:
             question = qa_pair["question"]
-            pred_answer, model_name = generate_response(question, caption, 64)
+            pred_answer = generate_response(question, caption)
             qa_pair.update({"pred_answer": pred_answer})
 
         score_list = []
         acc_list = []
         for qa in qa_pairs:
-            review, model_name = gpt_match(qa["question"], qa["answer"], qa["pred_answer"], 64)
-            score = parse_score(review)
-            acc = parse_acc(review)
-            score_list.append(score)
-            acc_list.append(acc)
+            response = gpt_match(qa)
+            
+            if 'pred' in response and 'score' in response:
+                score = response['score']
+                acc = response['pred']
+                score_list.append(score)
+                acc_list.append(acc)
 
         total_score, total_acc = 0, 0
         for score, acc in zip(score_list, acc_list):
@@ -396,7 +282,7 @@ def gpt_eval(data_dict):
 
     except Exception as e:
         eval_logger.error(f"Error for Video Name: {data_dict.get('video_name', 'Unknown')}: {e}")
-        review = "Failed to Get a Proper Review."
+        print(e)
         model_name = ""
         score = 0
         acc = "no"
@@ -404,7 +290,6 @@ def gpt_eval(data_dict):
     # Update the dictionary with the new entries
     updated_dict = {
         "video_name": data_dict["video_name"],
-        "review": review,
         "score": case_score,
         "acc": case_acc,
     }
@@ -416,11 +301,11 @@ def gpt_eval(data_dict):
 def vdc_process_results_generic(doc, result):
     pred = result[0]
     doc["pred"] = pred
-    eval_results = gpt_eval(doc)
+    eval_results = llm_eval(doc)
 
     return {
-        "gpt_eval_score": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "score": eval_results["score"], "review": eval_results["review"]},
-        "gpt_eval_acc": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "acc": eval_results["acc"], "review": eval_results["review"]},
+        "llm_eval_score": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "score": eval_results["score"]},
+        "llm_eval_acc": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "acc": eval_results["acc"]},
     }
 
 
