@@ -4,7 +4,7 @@
 
 This repository contains an evaluation dataset designed for assessing the video detailed structure captioning performance of video models. The dataset includes ChatGPT-generated question-answer pairs based on the video descriptions in different aspects.
 
-- GPT-4o Evaluation: The answers are evaluated using the prompts designed by Video-ChatGPT, which rates the responses based on the aforementioned dimensions with `gpt-4o-mini`.
+- LLM Evaluation: The answers are evaluated using the prompts designed by VDCScore. We use LLama3.1-8B to evaluate the answers, and accelerate with SGLang. Before evaluation, you need to install Sglang (Installation [here](https://sgl-project.github.io/start/install.html)), and launch the SGLang server with `python -m sglang.launch_server --model-path meta-llama/Llama-3.1-8B-Instruct --tp $num_process --mem-fraction-static $ratio`. If OOM occurs, you can reduce the `mem-fraction-static` parameter. More details about SGLang can be found in [SGLang](https://github.com/sgl-project/sglang/blob/32c9a7ec11b8dde282f637614f7f8e51a2f20b11/docs/backend/backend.md).
 
 ## Groups & Tasks
 

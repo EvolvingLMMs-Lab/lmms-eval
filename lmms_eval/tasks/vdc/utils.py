@@ -14,7 +14,15 @@ import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 try:
     import sglang as sgl
-    from sglang import function, system, user, assistant, gen, set_default_backend, RuntimeEndpoint
+    from sglang import (
+        RuntimeEndpoint,
+        assistant,
+        function,
+        gen,
+        set_default_backend,
+        system,
+        user,
+    )
 except ImportError:
     eval_logger.debug("SGLang is not installed. If you want to use llava_sglang, please install it using pip install 'sglang[all]' ")
 
@@ -27,7 +35,6 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
             safe_data.append(line)
 
     config = yaml.safe_load("".join(safe_data))
-
 
 
 # A bit ugly here
@@ -190,6 +197,7 @@ def vdc_doc_to_text_background(doc, lmms_eval_specific_kwargs=None):
 def vdc_doc_to_answer(doc):
     return doc["caption"]
 
+
 @function
 def gener_pred_response(s, pred_cap, q):
     s += system(
@@ -207,6 +215,7 @@ def gener_pred_response(s, pred_cap, q):
         "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide short but accurate answer."
     )
     s += assistant(gen("answer_1", max_tokens=256))
+
 
 def generate_response(question, caption):
     state = gener_pred_response.run(
@@ -265,10 +274,10 @@ def llm_eval(data_dict):
         acc_list = []
         for qa in qa_pairs:
             response = gpt_match(qa)
-            
-            if 'pred' in response and 'score' in response:
-                score = response['score']
-                acc = response['pred']
+
+            if "pred" in response and "score" in response:
+                score = response["score"]
+                acc = response["pred"]
                 score_list.append(score)
                 acc_list.append(acc)
 
