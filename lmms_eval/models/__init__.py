@@ -30,6 +30,7 @@ AVAILABLE_MODELS = {
     "llava_onevision_moviechat": "Llava_OneVision_MovieChat",
     "llava_sglang": "LlavaSglang",
     "llava_vid": "LlavaVid",
+    "slime": "Slime",
     "longva": "LongVA",
     "mantis": "Mantis",
     "minicpm_v": "MiniCPM_V",
@@ -52,6 +53,7 @@ AVAILABLE_MODELS = {
     "oryx": "Oryx",
     "videochat2": "VideoChat2",
     "llama_vision": "LlamaVision",
+    "aria": "Aria",
 }
 
 

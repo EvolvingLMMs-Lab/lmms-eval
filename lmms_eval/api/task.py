@@ -1034,7 +1034,7 @@ class ConfigurableTask(Task):
             if "create_link" in dataset_kwargs:
                 dataset_kwargs.pop("create_link")
 
-        if "load_from_disk" in dataset_kwargs and dataset_kwargs["load_from_disk"]:
+        if dataset_kwargs is not None and "load_from_disk" in dataset_kwargs and dataset_kwargs["load_from_disk"]:
             dataset_kwargs.pop("load_from_disk")
             # using local task in offline environment, need to process the online dataset into local format via
             # `ds = load_datasets("lmms-lab/MMMU")`
@@ -1444,8 +1444,12 @@ class ConfigurableTask(Task):
                 # and this stores our "regular" conditional loglikelihoods
                 lls = lls[::2]
 
-            pred = np.argmax(lls)
-            pred_norm = np.argmax(lls / completion_len)
+            # Warning :
+            # Here may be different from original lm-eval
+            # since we return the actual loss in many model loglikelihood
+            # we just use the argmin here
+            pred = np.argmin(lls)
+            pred_norm = np.argmin(lls / completion_len)
 
             if self.multiple_input:
                 gold = self.doc_to_text(doc)
@@ -1508,7 +1512,7 @@ class ConfigurableTask(Task):
                 gold = type(result)(gold)
 
             for metric in self._metric_fn_list.keys():
-                if self.multiple_target:
+                if self.multiple_target and metric != "anls":
                     # in the case where we have multiple targets,
                     # return true if any are true
                     # TODO: this may break for multipLe_target, non zero-or-1 metrics
@@ -1535,9 +1539,11 @@ class ConfigurableTask(Task):
                     else:
                         result_score = 0.0
                 else:
+                    if not isinstance(gold, list):
+                        gold = [gold]
                     try:
                         result_score = self._metric_fn_list[metric](
-                            references=[gold],
+                            references=gold,
                             predictions=[result],
                             **self._metric_fn_kwargs[metric],
                         )

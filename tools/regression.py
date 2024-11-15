@@ -101,7 +101,7 @@ def extract_value(args, results, model, task, err=False):
     elif task == "ocrbench":
         return results["ocrbench_accuracy,none"]
     elif task == "videomme":
-        return results["videomme_percetion_score,none"]
+        return results["videomme_perception_score,none"]
     elif task == "muirbench":
         return results["muirbench_score_overall,flexible-extract"]
     return 0

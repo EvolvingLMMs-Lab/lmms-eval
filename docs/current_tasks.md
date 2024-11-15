@@ -269,6 +269,14 @@
   - tempcompass_caption_matching
   - tempcompass_captioning
 
+
+- [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench) (temporalbench)
+
+  - temporalbench_short_qa
+  - temporalbench_long_qa
+  - temporalbench_short_caption
+
+
 - [Vatex](https://eric-xw.github.io/vatex-website/index.html) (vatex)
 
   - Vatex Chinese (vatex_val_zh)
