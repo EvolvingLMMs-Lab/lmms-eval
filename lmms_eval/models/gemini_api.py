@@ -4,6 +4,7 @@ import os
 import time
 from typing import List, Tuple
 
+import datasets
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
@@ -25,16 +26,22 @@ except Exception as e:
     eval_logger.error(f"Error importing generativeai: {str(e)}")
     genai = None
 
+try:
+    import soundfile as sf
+except Exception as e:
+    eval_logger.warning(f"Error importing soundfile, audio generation will not work: {str(e)}")
+
 
 @register_model("gemini_api")
 class GeminiAPI(lmms):
     def __init__(
         self,
         model_version: str = "gemini-1.5-pro",
-        modality: str = "image",
+        # modality: str = "image",
         timeout: int = 120,
         continual_mode: bool = False,
-        response_persistent_folder: str = None,  # We will cache the Gemini API response in this path and use it for future requests
+        response_persistent_folder: str = "./logs/gemini_persistent_folder",
+        # We will cache the Gemini API response in this path and use it for future requests
         **kwargs,
     ) -> None:
         super().__init__()
@@ -42,12 +49,13 @@ class GeminiAPI(lmms):
         self.timeout = timeout
         self.model = genai.GenerativeModel(model_version)
         self.continual_mode = continual_mode
-        if self.continual_mode and response_persistent_folder is None:
-            raise ValueError("Continual mode requires a persistent path for the response. We will cache the Gemini API response in this path and use it for future requests. Please provide a valid path.")
-        self.response_persistent_folder = response_persistent_folder
-        if not os.path.exists(self.response_persistent_folder):
-            os.makedirs(self.response_persistent_folder)
-        self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+        # if self.continual_mode and response_persistent_folder is None:
+        #     raise ValueError("Continual mode requires a persistent path for the response. We will cache the Gemini API response in this path and use it for future requests. Please provide a valid path.")
+        if self.continual_mode:
+            self.response_persistent_folder = response_persistent_folder
+            if not os.path.exists(self.response_persistent_folder):
+                os.makedirs(self.response_persistent_folder)
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
 
         if os.path.exists(self.response_persistent_file):
             with open(self.response_persistent_file, "r") as f:
@@ -73,7 +81,7 @@ class GeminiAPI(lmms):
 
         self.device = self.accelerator.device
 
-        self.modality = modality
+        # self.modality = modality
 
         self.video_pool = []
 
@@ -107,9 +115,17 @@ class GeminiAPI(lmms):
         self.video_pool.append(uploaded_obj)
         return uploaded_obj
 
-    def convert_video(self, images):
+    def encode_audio(self, audio):
+        mp3_audio_io = io.BytesIO()
+        sf.write(mp3_audio_io, audio["array"], audio["sampling_rate"], format="WAV")
+        return genai.upload_file(mp3_audio_io, mime_type="audio/wav")
+
+    def convert_modality(self, images):
         for idx, img in enumerate(images):
-            if self.modality == "video" and isinstance(img, str):
+            if isinstance(img, dict) and "sampling_rate" in img:  # audio
+                audio = self.encode_audio(img)
+                images[idx] = audio
+            elif isinstance(img, str):  # video
                 try:
                     images[idx] = self.encode_video(img)
                 except Exception as e:
@@ -145,7 +161,7 @@ class GeminiAPI(lmms):
 
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            visuals = self.convert_video(visuals)
+            visuals = self.convert_modality(visuals)
 
             message = [contexts] + visuals
 
