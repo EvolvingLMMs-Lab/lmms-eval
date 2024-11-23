@@ -1,5 +1,5 @@
 group: air_bench_chat
-tasks:
+task:
   - air_bench_chat_sound
   - air_bench_chat_music
   - air_bench_chat_speech
