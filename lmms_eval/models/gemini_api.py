@@ -116,9 +116,9 @@ class GeminiAPI(lmms):
         return uploaded_obj
 
     def encode_audio(self, audio):
-        mp3_audio_io = io.BytesIO()
-        sf.write(mp3_audio_io, audio["array"], audio["sampling_rate"], format="WAV")
-        return genai.upload_file(mp3_audio_io, mime_type="audio/wav")
+        audio_io = io.BytesIO()
+        sf.write(audio_io, audio["array"], audio["sampling_rate"], format="WAV")
+        return genai.upload_file(audio_io, mime_type="audio/wav")
 
     def convert_modality(self, images):
         for idx, img in enumerate(images):
