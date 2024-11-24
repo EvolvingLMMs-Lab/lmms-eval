@@ -1,0 +1,24 @@
+dataset_path: lmms-lab/MIA-Bench
+dataset_kwargs:
+  token: True
+task: "mia_bench"
+test_split: test
+doc_to_visual: !function utils.mia_bench_doc_to_visual
+doc_to_text: !function utils.mia_bench_doc_to_text
+doc_to_target: ""
+process_results: !function utils.mia_bench_process_results
+metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function utils.mia_bench_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+generation_kwargs:
+  max_new_tokens: 512
+metadata:
+  version: 0.0
+  task_type: image
+  gpt_eval_model_name: "gpt-4o-2024-08-06"
