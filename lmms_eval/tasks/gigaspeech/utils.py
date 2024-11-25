@@ -19,9 +19,10 @@ def gigaspeech_doc_to_audio(doc):
     return [doc["audio"]]
 
 
-def gigaspeech_doc_to_text(doc):
-    lan = "en"
-    return f"Detect the language and recognize the speech: <|{lan}|>"
+def gigaspeech_doc_to_text(doc, lmms_eval_specific_kwargs):
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+    return f"{pre_prompt}Please recognize the speech and only output the recognized content:{post_prompt}"
 
 
 def gigaspeech_process_result(doc, result):
