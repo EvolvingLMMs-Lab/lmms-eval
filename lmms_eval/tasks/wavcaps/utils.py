@@ -32,8 +32,8 @@ with open(Path(__file__).parent / "wavcaps.yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 
-NUM_SECONDS_TO_SLEEP = 2
-GPT_EVAL_MODEL_NAME = config["metadata"]["api_version"]
+NUM_SECONDS_TO_SLEEP = 5
+GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
 API_TYPE = os.getenv("API_TYPE", "azure")
 
 if API_TYPE == "openai":
@@ -80,24 +80,30 @@ eval_prompt = """
 def get_eval(max_tokens: int, content: str):
     global headers
 
-    time.sleep(NUM_SECONDS_TO_SLEEP)
     messages = [
         {"role": "user", "content": content},
     ]
 
     payload = {"model": GPT_EVAL_MODEL_NAME, "messages": messages, "temperature": 0, "max_tokens": max_tokens, "n": 1}
 
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
-        response_data = response.json()
-        content = response_data["choices"][0]["message"]["content"].strip()
+    for attempt in range(5):
+        try:
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()
+            response_data = response.json()
 
-        if content != "":
-            return content, payload["model"]
-    except Exception as e:
-        eval_logger.info(f"Attempt failed with error: {e}")
-        return "", ""
+            content = response_data["choices"][0]["message"]["content"].strip()
+            if content != "":
+                return content, response_data["model"]
+            break  # If successful, break out of the loop
+
+        except Exception as e:
+            eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
+            if attempt < 5:  # If we have retries left, sleep and then continue to next attempt
+                time.sleep(NUM_SECONDS_TO_SLEEP)
+            else:  # If this was the last attempt, log and return empty
+                eval_logger.error(f"All 5 attempts failed. Last error message: {e}")
+                return "", ""
     return "", ""
 
 
