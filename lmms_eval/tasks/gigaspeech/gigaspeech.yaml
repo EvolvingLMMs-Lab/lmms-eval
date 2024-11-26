@@ -2,15 +2,3 @@ group: gigaspeech
 task:
   - gigaspeech_dev
   - gigaspeech_test
-  - gigaspeech_xs_dev
-  - gigaspeech_xs_test
-  - gigaspeech_s_dev
-  - gigaspeech_s_test
-  - gigaspeech_m_dev
-  - gigaspeech_m_test
-  - gigaspeech_l_dev
-  - gigaspeech_l_test
-  - gigaspeech_xl_dev
-  - gigaspeech_xl_test
-
-
