@@ -116,7 +116,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 | **Clotho-AQA** | 2022 | clotho_aqa | test \| val | AIF | Accuracy | test_v2 (2.06k), test \| val (1.44k \| 1.05k) | 1. Audio Question Answering<br> 2. single word answer<br> 3. text based question |
 | **Common_voice** | 2023 | common_voice_15 | test | ASR | WER (align with Qwen-audio) | en (16.4k) \| fr (16.1k) \| zh (10.6k) | 1. real people voice<br> 2. captioning |
 | **GigaSpeech** | 2021 | gigaspeech | test \| dev | ASR | WER | dev (6.75k) \| test (25.6k) | 1. transciption<br> 2. audio book<br> 3. YouTube<br> 4. podcasts |
-| **LibriSpeech** | 2015 | librispeech | dev-clean \| dev-other \| test-clean \| test-other | ASR | WER | dev-clean (~2.48k) \|dev-other (~2.66k) \|test-clean(~2.55k) \| test-other (~2.70k) | 1. Transcription (audio book) |
+| **LibriSpeech** | 2015 | librispeech | dev-clean \| dev-other \| test-clean \| test-other | ASR | WER | dev-clean (~2.48k) \|<br>dev-other (~2.66k) \|<br>test-clean(~2.55k) \|<br> test-other (~2.70k) | 1. Transcription (audio book) |
 | **OpenHermes** | 2024 | openhermes | test | AIF | GPT-Eval | 100 | 1. synthetic voice |
 | **MuchoMusic** | 2024 | muchomusic | test | AIF | Accuracy | 1.19k | 1. Music understanding |
 | **People_speech** | 2021 | people_speech_val | val | ASR | WER | 18.6k | 1. real people voice<br> 2. captioning |
@@ -126,11 +126,11 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 
 ### Alignment Check for Audio Datasets
 
-<!-- #### Table 2: Alignment check for audio datasets
+#### Table 2: Alignment check for audio datasets
 
 |  |  | **Metric** | **Qwen2-Audio-Instruct (lmms-eval)** | **Qwen2-Audio (lmms-eval)** |
 | --- | --- | --- | --- | --- |
-| **AIRBench-Chat** | Speech | <td rowspan="4" align="center">GPT-Eval</td>  | 7.16 |  |
+| **AIRBench-Chat** | Speech | GPT-Eval  | 7.16 |  |
 |  | Sound |  | 6.14 |  |
 |  | Music |  | 6.66 |  |
 |  | Mixed |  | 5.75 |  |
@@ -154,8 +154,8 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 | **Tedium** | val |WER| 10.92 | 8.29 |
 | **VocalSound** | test | Acc | 0.936 | 0.81 |
 |  | val |  | 0.9288 | 0.8 |
-| **WavCaps** | test | GPT-Eval | 1.73 |  | -->
-#### Table 2: Alignment check for audio datasets
+| **WavCaps** | test | GPT-Eval | 1.73 |  |
+<!-- #### Table 2: Alignment check for audio datasets
 
 <table>
   <tr>
@@ -325,7 +325,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
     <td>1.73</td>
     <td></td>
   </tr>
-</table>
+</table> -->
 
 
 The result might be inconsistent with the reported result as we do not have the original prompt and we have to maintain the fair environment for all the models. For the base model, we do not test on the Chat Benchmarks.
