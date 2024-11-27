@@ -43,7 +43,9 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
     3. **Process results:**  Model outputs are evaluated using metrics from either official dataset implementations or aligning with the implementation in [AudioBench](https://github.com/AudioLLMs/AudioBench). We primarily adopt three types of metrics:
         
         **a. Accuracy:** Used for tasks with definitive ground truth answers, such as multiple-choice questions
+
         **b. WER:** Applied to some Audio Speech Recognition (ASR) tasks.
+
         **c. GPT-4 Eval:** Applied to open-ended responses. We align the evaluation prompt with the implementation in [AudioBench](https://github.com/AudioLLMs/AudioBench).
         
         - The code specifically demonstrates an example prompt for GPT-4 Evaluation.
@@ -103,10 +105,12 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
     4. **Voice Understanding:** The capability to analyze non-speech human vocal information, including emotional states, accents, and speaker characteristics
     5. **Specialized Audio Processing:** The ability to analyze other audio types, such as musical compositions and multilingual content
 
-    Our goal is to provide a comprehensive evaluation framework that assesses models' abilities to interpret audio content and respond appropriately to user queries, ranging from basic transcription to complex audio-based reasoning tasks.
+    Our selected audio benchmarks collectively form a comprehensive evaluation of different audio-based capabilities across diverse scenarios.
 
 ### **Meta Information for Audio Datasets**
-<caption>Table 1: Meta informantion for audio datasets</caption>
+
+##### Table 1: Meta informantion for audio datasets
+
 | **Dataset** | **Year** | **Task Name in lmms-eval** | **Split** | **Task Format** | **Evaluation Metric** | **Number of QAs** | **Feature** |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | **AIRBench** | 2024 | air_bench_chat \| air_bench_foundation | chat, foundation | AIF | GPT-4 Eval (chat) \| Accuracy (foundation) | 2k (chat) \| 19k (foundation) | Comprhensive tasks and audio types |
@@ -123,7 +127,9 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 | **WavCaps** | 2024 | wavcaps | test | ASR | GPT-4 Eval | 1.73k | 1. Audio Captioning<br> 2. ChatGPT-augmented captions |
 
 ### Alignment Check for Audio Datasets
-<caption>Table 2: Alignment check for audio datasets</caption>
+
+##### Table 2: Alignment check for audio datasets
+
 |  |  | **metric** | **Qwen2-Audio-Instruct (lmms-eval)** | **Qwen2-Audio (lmms-eval)** |
 | --- | --- | --- | --- | --- |
 | **AIRBench-Chat** | Speech | GPT-Eval | 7.16 |  |
@@ -167,7 +173,8 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 
     This basic format is then combined with various question prompts for different evaluation scenarios. However, this prompt format is not in an instruction format and when applying a chat template, the performance of the model may changes significantly.
 
-<caption>Table 3: Impact of Chat Template on Qwen-7B-Instruct's Performance</caption>
+##### Table 3: Impact of Chat Template on Qwen-7B-Instruct's Performance
+
 | Impact of Chat Template |  |  | Chat Template (Off) | Chat Template (On) |
 | --- | --- | --- | --- | --- |
 | LibriSpeech | dev-clean | WER(↓) | 2.65 | 4.24 |
@@ -195,7 +202,9 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 ### Batch Size
 
     We perform an exploratory batch inference experiment on Qwen2-Audio with the following results:
-<caption>Table 4: Impact of batch size</caption>
+
+##### Table 4: Impact of batch size
+
 |  | **Split** | **Metric** | **Qwen2-Audio (BS=4)** | **Qwen2-Audio (BS=1)** |
 | --- | --- | --- | --- | --- |
 | **LibriSpeech** | dev-clean | wer(↓) | 1.66 | 1.66 |
