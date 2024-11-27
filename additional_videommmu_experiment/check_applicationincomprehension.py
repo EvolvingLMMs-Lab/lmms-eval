@@ -1,14 +1,14 @@
 import json
 
 # Paths to your JSON files
-file1 = 'perception_gpt4o.json'
-file2 = 'comprehension_gpt4o.json'
-file3 = 'application_gpt4o.json'
-file4 = 'w2r_gpt4o.json'
-file5 = 'r2w_gpt4o.json'
+file1 = "perception_gpt4o.json"
+file2 = "comprehension_gpt4o.json"
+file3 = "application_gpt4o.json"
+file4 = "w2r_gpt4o.json"
+file5 = "r2w_gpt4o.json"
 
 # Load the IDs from each file
-with open(file1, 'r') as f1, open(file2, 'r') as f2, open(file3, 'r') as f3, open(file4, 'r') as f4, open(file5, 'r') as f5:
+with open(file1, "r") as f1, open(file2, "r") as f2, open(file3, "r") as f3, open(file4, "r") as f4, open(file5, "r") as f5:
     data1 = json.load(f1)
     data2 = json.load(f2)
     data3 = json.load(f3)

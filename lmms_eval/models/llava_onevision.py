@@ -131,11 +131,11 @@ class Llava_OneVision(lmms):
         llava_model_args["overwrite_config"] = overwrite_config
         try:
             # Try to load the model with the multimodal argument
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, torch_dtype=self.torch_dtype,device_map=self.device_map, **llava_model_args)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, torch_dtype=self.torch_dtype, device_map=self.device_map, **llava_model_args)
         except TypeError:
             # for older versions of LLaVA that don't have multimodal argument
             llava_model_args.pop("multimodal", None)
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, torch_dtype=self.torch_dtype,device_map=self.device_map, **llava_model_args)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, torch_dtype=self.torch_dtype, device_map=self.device_map, **llava_model_args)
 
         self._config = self._model.config
         self.model.eval()
@@ -481,7 +481,7 @@ class Llava_OneVision(lmms):
                                 frames = frames.bfloat16()
                             else:
                                 frames = frames.half()
-                            
+
                             image_tensor.append(frames)
                         except Exception as e:
                             eval_logger.error(f"Error {e} in loading video")

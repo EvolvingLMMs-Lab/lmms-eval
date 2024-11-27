@@ -3,10 +3,10 @@ import json
 # Paths to your two JSON files
 # file1 = 'eightframe_llavavid.json'  # Replace with your actual first JSON file path
 # file2 = 'application_llavavid.json'  # Replace with your actual second JSON file path
-file1 = 'application_gpt4o.json'  # Replace with your actual first JSON file path
-file2 = 'image_gpt4o.json' 
+file1 = "application_gpt4o.json"  # Replace with your actual first JSON file path
+file2 = "image_gpt4o.json"
 # Load the IDs from each file
-with open(file1, 'r') as f1, open(file2, 'r') as f2:
+with open(file1, "r") as f1, open(file2, "r") as f2:
     data1 = json.load(f1)
     data2 = json.load(f2)
 

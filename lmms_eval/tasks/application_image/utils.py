@@ -62,7 +62,6 @@ def mmmu_doc_to_text(doc):
     return question
 
 
-
 def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_specific_kwargs=None, transcripts_dir="aud"):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
