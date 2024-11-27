@@ -1,6 +1,5 @@
 # Integration of Audio Evaluation in LMMs-Eval
 
----
 
 # LMMs-Eval Analysis - Release of Audio Evaluations
 
@@ -110,30 +109,18 @@ Our goal is to provide a comprehensive evaluation framework that assesses models
 
 | **Dataset** | **Year** | **Task Name in lmms-eval** | **Split** | **Task Format** | **Evaluation Metric** | **Number of QAs** | **Feature** |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **AIRBench** | 2024 | air_bench_chat, air_bench_foundation | **Chat** (Speech/Sound/Music/Mixed-Audio),
-**Foundation** (Music/Sound/Speech) | AIF | GPT-4 Eval (Chat), Accuracy (Foundation) | 19k (Foundation), 2k (Chat) | comprehensive and diverse tasks and audio types |
+| **AIRBench** | 2024 | air_bench_chat, air_bench_foundation | **Chat** (Speech/Sound/Music/Mixed-Audio), **Foundation** (Music/Sound/Speech) | AIF | GPT-4 Eval (Chat), Accuracy (Foundation) | 19k (Foundation), 2k (Chat) | comprehensive and diverse tasks and audio types |
 | **Alpaca Audio** | 2024 | alpaca_audio | test | AIF | GPT-4 Eval | 100 | synthetic voice |
-| **Clotho-AQA** | 2022 | clotho_aqa | test | val | AIF | Accuracy | test_v2 (2.06k), test | val (1.44k | 1.05k) | Audio Question Answering; single word answer, text based question |
-| **Common_voice** | 2023 | common_voice_15 | test | ASR | WER* (CER in Common Voice paper, but we align to Qwen-audio) | en (16.4k)
-fr (16.1k)
-zh (10.6k) | real people voice, captioning |
-| **GigaSpeech** | 2021 | gigaspeech | test | dev | ASR | WER | dev (6.75k) |
-test (25.6k) | transciption, audio book, youtube, podcasts |
-| **LibriSpeech** | 2015 | librispeech | dev-clean | dev-other |
-test-clean | test-other | ASR | WER | dev-clean (~2.48k) |
-dev-other (~2.66k) |
-test-clean
-(~2.55k) | 
-test-other (~2.70k) | Transcription (audio book) |
+| **Clotho-AQA** | 2022 | clotho_aqa | test | val | AIF | Accuracy | test_v2 (2.06k), test \| val (1.44k \| 1.05k) | Audio Question Answering; single word answer, text based question |
+| **Common_voice** | 2023 | common_voice_15 | test | ASR | WER* (CER in Common Voice paper, but we align to Qwen-audio) | en (16.4k) fr (16.1k) zh (10.6k) | real people voice, captioning |
+| **GigaSpeech** | 2021 | gigaspeech | test | dev | ASR | WER | dev (6.75k) | test (25.6k) | transciption, audio book, youtube, podcasts |
+| **LibriSpeech** | 2015 | librispeech | dev-clean \| dev-other \| test-clean \| test-other | ASR | WER | dev-clean (~2.48k) \|dev-other (~2.66k) \|test-clean(~2.55k) \| test-other (~2.70k) | Transcription (audio book) |
 | **OpenHermes** | 2024 | openhermes | test | AIF | GPT-Eval | 100 | synthetic voice |
 | **MuchoMusic** | 2024 | muchomusic | test | AIF | Accuracy | 1.19k | Music understanding |
 | **People_speech** | 2021 | people_speech_val | val | ASR | WER | 18.6k | real people voice, captioning |
 | **Tedium v3** | 2018 | tedlium_dev_test | val | ASR | WER | 591 | ted talk, real people asr, captioning |
-| **VocalSound** | 2022 | vocalsound_test | test | val | AIF | Accuracy | test (3.59k) |
-val (1.86k) | 1. Vocal sound recognition
-2. Non-speech |
-| **WavCaps** | 2024 | wavcaps | test | ASR | GPT-4 Eval | 1.73k | 1. Audio Captioning
-2. ChatGPT-augmented captions |
+| **VocalSound** | 2022 | vocalsound_test | test | val | AIF | Accuracy | test (3.59k) | val (1.86k) | 1. Vocal sound recognition 2. Non-speech |
+| **WavCaps** | 2024 | wavcaps | test | ASR | GPT-4 Eval | 1.73k | 1. Audio Captioning 2. ChatGPT-augmented captions |
 
 ### Alignment Check for Audio Datasets
 
