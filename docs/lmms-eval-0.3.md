@@ -159,7 +159,7 @@ AIF refers to Audio Instruction Following, and ASR refers to Audio Speech Recogn
 
 The result might be inconsistent with the reported result as we do not have the original prompt and we have to maintain the fair environment for all the models. For the base model, we do not test on the Chat Benchmarks.
 
-Certain datasets face alignment challenge: Datasets with WER, CIDEr, BLEU as metrics cannot accurately align due to their rigid, reference-based formats. Model response sensitive to prompt, we will investigate more deeply in Section [Robustness of the model](https://www.notion.so/Robustness-of-the-model-b89c005d3e044cb6aff51165929cea45?pvs=21) .
+Certain datasets face alignment challenge: Datasets with WER, CIDEr, BLEU as metrics cannot accurately align due to their rigid output formats. Model responses are sensitive to prompt, we will investigate more deeply in Section [Robustness of the model](https://www.notion.so/Robustness-of-the-model-b89c005d3e044cb6aff51165929cea45?pvs=21) .
 
 ## Evaluation Analysis and Thinking:
 
