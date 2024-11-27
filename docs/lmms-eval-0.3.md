@@ -95,15 +95,13 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
     
 2. **Audio-based Capabilities**
 
-    Our selected benchmarks assess the following key audio processing abilities, as inspired by [AudioBench](https://github.com/AudioLLMs/AudioBench):
+    Our selected benchmarks collectively evaluate various essential audio-based capabilities, as inspired by [AudioBench](https://github.com/AudioLLMs/AudioBench):
 
     1. **Audio Captioning:** The ability to accurately transcribe human speech and convert audio content into text.
     2. **Speech Understanding:** The capability to comprehend the semantic meaning of human speech, enabling appropriate responses to questions and audio instructions.
     3. **Audio Scene Understanding:** The ability to interpret non-human sounds, such as environment sounds.
     4. **Voice Understanding:** The capability to analyze non-speech human vocal information, including emotional states, accents, and speaker characteristics.
     5. **Specialized Audio Processing:** The ability to analyze other audio types, such as musical compositions and multilingual content.
-
-    Our selected audio benchmarks collectively form a comprehensive evaluation of different audio-based capabilities across diverse scenarios.
 
 ### **Meta Information for Audio Datasets**
 
