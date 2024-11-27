@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from random import sample
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import av
 import numpy as np
@@ -110,7 +110,7 @@ def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, for
     return np.stack([x.to_ndarray(format=format) for x in frames])
 
 
-def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", max_image_size: Optional[Tuple[int, int], int] = None, resize_strategy: str = "resize", force_include_last_frame=False):
+def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize", force_include_last_frame=False):
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format, force_include_last_frame=force_include_last_frame)
     pil_frames = []
     for frame in frames:
