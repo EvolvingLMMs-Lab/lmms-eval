@@ -114,13 +114,13 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 | **AIRBench** | 2024 | air_bench_chat \| air_bench_foundation | chat, foundation | AIF | GPT-4 Eval (chat) \| Accuracy (foundation) | 2k (chat) \| 19k (foundation) | 1. comprhensive tasks and audio types |
 | **Alpaca Audio** | 2024 | alpaca_audio | test | AIF | GPT-4 Eval | 100 | 1. synthetic voice |
 | **Clotho-AQA** | 2022 | clotho_aqa | test \| val | AIF | Accuracy | test_v2 (2.06k), test \| val (1.44k \| 1.05k) | 1. Audio Question Answering<br> 2. single word answer<br> 3. text based question |
-| **Common_voice** | 2023 | common_voice_15 | test | ASR | WER (align with Qwen-audio) | en (16.4k) \| fr (16.1k) \| zh (10.6k) | 1. real people voice<br> 2. captioning |
-| **GigaSpeech** | 2021 | gigaspeech | test \| dev | ASR | WER | dev (6.75k) \| test (25.6k) | 1. transciption<br> 2. audio book<br> 3. YouTube<br> 4. podcasts |
-| **LibriSpeech** | 2015 | librispeech | dev-clean \| dev-other \| test-clean \| test-other | ASR | WER | dev-clean (~2.48k) \|<br>dev-other (~2.66k) \|<br>test-clean(~2.55k) \|<br> test-other (~2.70k) | 1. Transcription (audio book) |
+| **Common_voice** | 2023 | common_voice_15 | test | ASR | WER(↓)(align with Qwen-audio) | en (16.4k) \| fr (16.1k) \| zh (10.6k) | 1. real people voice<br> 2. captioning |
+| **GigaSpeech** | 2021 | gigaspeech | test \| dev | ASR | WER(↓)| dev (6.75k) \| test (25.6k) | 1. transciption<br> 2. audio book<br> 3. YouTube<br> 4. podcasts |
+| **LibriSpeech** | 2015 | librispeech | dev-clean \| dev-other \| test-clean \| test-other | ASR | WER(↓)| dev-clean (~2.48k) \|<br>dev-other (~2.66k) \|<br>test-clean(~2.55k) \|<br> test-other (~2.70k) | 1. Transcription (audio book) |
 | **OpenHermes** | 2024 | openhermes | test | AIF | GPT-Eval | 100 | 1. synthetic voice |
 | **MuchoMusic** | 2024 | muchomusic | test | AIF | Accuracy | 1.19k | 1. Music understanding |
-| **People_speech** | 2021 | people_speech_val | val | ASR | WER | 18.6k | 1. real people voice<br> 2. captioning |
-| **Tedium v3** | 2018 | tedlium_dev_test | val | ASR | WER | 591 | 1. ted talk<br>  2. real people asr<br>  3. captioning |
+| **People_speech** | 2021 | people_speech_val | val | ASR | WER(↓)| 18.6k | 1. real people voice<br> 2. captioning |
+| **Tedium v3** | 2018 | tedlium_dev_test | val | ASR | WER(↓)| 591 | 1. ted talk<br>  2. real people asr<br>  3. captioning |
 | **VocalSound** | 2022 | vocalsound_test | test \| val | AIF | Accuracy | test (3.59k) \| val (1.86k) | 1. Vocal sound recognition<br> 2. Non-speech |
 | **WavCaps** | 2024 | wavcaps | test | ASR | GPT-4 Eval | 1.73k | 1. Audio Captioning<br> 2. ChatGPT-augmented captions |
 
@@ -141,19 +141,19 @@ AIF refers to Audio Instruction Following, and ASR refers to Audio Speech Recogn
 |  | Music |  | 56.77 |  |
 | **Alpaca** | test | GPT-Eval | 51.8 |  |
 | **Clotho_aqa** | test | GPT-Eval | 0.7587 |  |
-| **Common_voice** | zh |WER| 15.78 | 6.7 |
+| **Common_voice** | zh |WER(↓)| 15.78 | 6.7 |
 |  | en |  | 36.01 | 27.9 |
 |  | fr |  | 39.88 | 34.8 |
-| **GigaSpeech** | dev |WER| 19.45 | 14 |
+| **GigaSpeech** | dev |WER(↓)| 19.45 | 14 |
 |  | test |  | 22.6 | 15.01 |
-| **LibriSpeech** | dev-clean |WER| 4.24 | 1.66 |
+| **LibriSpeech** | dev-clean |WER(↓)| 4.24 | 1.66 |
 |  | dev-others |  | 6.54 | 3.66 |
 |  | test-clean |  | 3.59 | 1.74 |
 |  | test-others |  | 7.46 | 3.87 |
 | **MuchoMusic** | test | Acc | 68.32 | 45.07 |
 | **OpenHermes** | test | GPT-Eval | 46.8 |  |
-| **People_speech** | val |WER| 25.86 | 17.1 |
-| **Tedium** | val |WER| 10.92 | 8.29 |
+| **People_speech** | val |WER(↓)| 25.86 | 17.1 |
+| **Tedium** | val |WER(↓)| 10.92 | 8.29 |
 | **VocalSound** | test | Acc | 0.936 | 0.81 |
 |  | val |  | 0.9288 | 0.8 |
 | **WavCaps** | test | GPT-Eval | 1.73 |  |
