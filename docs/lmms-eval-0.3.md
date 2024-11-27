@@ -258,8 +258,8 @@ As shown in the above results, the batch inference (BS=4) can significantly save
 
 **Core Contributors**
 
-Pengyun Wang, Cong Pham Ba, Yingluo Li, Fanyi Pu
+[Pengyun Wang](), [Cong Pham Ba](https://www.linkedin.com/in/pbcong?originalSubdomain=sg), [Yingluo Li](https://www.linkedin.com/in/yingluo-li-985387212/?originalSubdomain=au), [Fanyi Pu](https://pufanyi.github.io/), [Jingkang Yang](https://scholar.google.com/citations?user=S-YjbUYAAAAJ&hl=en)
 
 **Release Managers**
 
-Kairui Hu, Kaichen Zhang, Bo Li
+[Kairui Hu](https://scholar.google.com.sg/citations?user=_oHHACwAAAAJ&hl=en), [Kaichen Zhang](https://scholar.google.com/citations?user=4_mo8-oAAAAJ&hl=en), [Bo Li](https://scholar.google.com/citations?user=1_zc1-IAAAAJ&hl=en)
