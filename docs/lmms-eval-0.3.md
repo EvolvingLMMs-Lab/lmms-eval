@@ -111,7 +111,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 
 | **Dataset** | **Year** | **Task Name in lmms-eval** | **Split** | **Task Format** | **Evaluation Metric** | **Number of QAs** | **Feature** |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| **AIRBench** | 2024 | air_bench_chat \| air_bench_foundation | chat, foundation | AIF | GPT-4 Eval (chat) \| Accuracy (foundation) | 2k (chat) \| 19k (foundation) | 1. Comprhensive tasks and audio types |
+| **AIRBench** | 2024 | air_bench_chat \| air_bench_foundation | chat, foundation | AIF | GPT-4 Eval (chat) \| Accuracy (foundation) | 2k (chat) \| 19k (foundation) | 1. comprhensive tasks and audio types |
 | **Alpaca Audio** | 2024 | alpaca_audio | test | AIF | GPT-4 Eval | 100 | 1. synthetic voice |
 | **Clotho-AQA** | 2022 | clotho_aqa | test \| val | AIF | Accuracy | test_v2 (2.06k), test \| val (1.44k \| 1.05k) | 1. Audio Question Answering<br> 2. single word answer<br> 3. text based question |
 | **Common_voice** | 2023 | common_voice_15 | test | ASR | WER (align with Qwen-audio) | en (16.4k) \| fr (16.1k) \| zh (10.6k) | 1. real people voice<br> 2. captioning |
