@@ -1,8 +1,6 @@
 # Integration of Audio Evaluation in LMMs-Eval
 
 
-# LMMs-Eval Analysis - Release of Audio Evaluations
-
 ## **Introduction**
 
 Humans perceive the world through both sight and sound, integrating visual cues with auditory signals such as speech, environmental sounds, and emotional tones. 
@@ -99,11 +97,11 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 
     Our selected benchmarks assess the following key audio processing abilities, as inspired by [AudioBench](https://github.com/AudioLLMs/AudioBench):
 
-    1. **Audio Captioning:** The ability to accurately transcribe human speech and convert audio content into text
-    2. **Speech Understanding:** The capability to comprehend the semantic meaning of human speech, enabling appropriate responses to questions and audio instructions
-    3. **Audio Scene Understanding:** The ability to interpret non-human sounds, such as environment sounds
-    4. **Voice Understanding:** The capability to analyze non-speech human vocal information, including emotional states, accents, and speaker characteristics
-    5. **Specialized Audio Processing:** The ability to analyze other audio types, such as musical compositions and multilingual content
+    1. **Audio Captioning:** The ability to accurately transcribe human speech and convert audio content into text.
+    2. **Speech Understanding:** The capability to comprehend the semantic meaning of human speech, enabling appropriate responses to questions and audio instructions.
+    3. **Audio Scene Understanding:** The ability to interpret non-human sounds, such as environment sounds.
+    4. **Voice Understanding:** The capability to analyze non-speech human vocal information, including emotional states, accents, and speaker characteristics.
+    5. **Specialized Audio Processing:** The ability to analyze other audio types, such as musical compositions and multilingual content.
 
     Our selected audio benchmarks collectively form a comprehensive evaluation of different audio-based capabilities across diverse scenarios.
 
@@ -132,7 +130,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 
 |  |  | **Metric** | **Qwen2-Audio-Instruct (lmms-eval)** | **Qwen2-Audio (lmms-eval)** |
 | --- | --- | --- | --- | --- |
-| **AIRBench-Chat** | Speech | <div style="position: relative; top: 30px">GPT-Eval</div>| 7.16 |  |
+| **AIRBench-Chat** | Speech | <td rowspan="4" align="center">GPT-Eval</td>  | 7.16 |  |
 |  | Sound |  | 6.14 |  |
 |  | Music |  | 6.66 |  |
 |  | Mixed |  | 5.75 |  |
@@ -201,19 +199,19 @@ Looking ahead, model-based evaluators such as GPT-4 could offer a more flexible 
 
 ### Batch Size
 
-    We perform an exploratory batch inference experiment on Qwen2-Audio with the following results:
+We perform an exploratory batch inference experiment on Qwen2-Audio with the following results:
 
 #### Table 4: Impact of batch size
 
 |  | **Split** | **Metric** | **Qwen2-Audio (BS=4)** | **Qwen2-Audio (BS=1)** |
 | --- | --- | --- | --- | --- |
-| **LibriSpeech** | dev-clean | wer(↓) | 1.66 | 1.66 |
+| **LibriSpeech** | dev-clean | WER(↓) | 1.66 | 1.66 |
 |  | dev-others |  | 4.4 | 3.66 |
 |  | test-clean |  | 1.75 | 1.74 |
 |  | test-others |  | 4.06 | 3.87 |
 | **Total Time** |  |  | 10 mins 50 seconds | 5 min 23 seconds |
 
-    As shown in the above results, the batch inference (BS=4) can significantly saves the inference time, it could lead to evaluation inconsistencies compared to single-sample processing (BS=1). This is a known issue in the `transformers` library that currently lacks a solution.
+As shown in the above results, the batch inference (BS=4) can significantly saves the inference time, it could lead to evaluation inconsistencies compared to single-sample processing (BS=1). This is a known issue in the `transformers` library that currently lacks a solution.
 
 ### More Details and Feature Updates with `v0.3.0`
 
