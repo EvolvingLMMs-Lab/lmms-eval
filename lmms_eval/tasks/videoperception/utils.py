@@ -234,7 +234,7 @@ def videoperception_doc_to_visual_image(doc):
 
     max_num_frames = 4
     # return read_video_pyav_base64(video_path)
-    return load_video_decord(video_path, 1)
+    return load_video_decord(video_path, 4)
 
 
 # This is the place to format the input
@@ -256,8 +256,8 @@ def videoperception_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     else:
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
         post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"]
-
-    pre_prompt += "Please answer directly with the option letter or value."
+    
+    # pre_prompt += "Please answer directly with the option letter or value."
 
     # print(f"{pre_prompt}{question}")
     return f"{pre_prompt}{question}"

@@ -1,0 +1,26 @@
+{
+    "total_ids_in_application_not_in_image": 21,
+    "ids": [
+        "dev_Biology_3",
+        "new_Art_1",
+        "new_Art_Theory_1",
+        "new_Art_Theory_2",
+        "new_Art_Theory_5",
+        "new_Design_5",
+        "new_Design_8",
+        "new_History_1",
+        "new_Psychology_1",
+        "new_Psychology_3",
+        "validation_Agriculture_2",
+        "validation_Basic_Medical_Science_12",
+        "validation_Basic_Medical_Science_13",
+        "validation_Clinical_Medicine_6",
+        "validation_Design_12",
+        "validation_Economics_11",
+        "validation_Finance_13",
+        "validation_Marketing_14",
+        "validation_Music_8",
+        "validation_Pharmacy_8",
+        "validation_Physics_15"
+    ]
+}

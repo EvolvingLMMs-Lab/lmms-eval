@@ -72,6 +72,7 @@ class Llava_OneVision(lmms):
         pretrained: str = "liuhaotian/llava-v1.5-7b",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
+        torch_dtype: Optional[Union[str, torch.dtype]] = "bfloat16",
         batch_size: Optional[Union[int, str]] = 1,
         model_name: Optional[str] = None,
         attn_implementation: Optional[str] = best_fit_attn_implementation,
@@ -120,6 +121,7 @@ class Llava_OneVision(lmms):
         self.mm_spatial_pool_stride = mm_spatial_pool_stride
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.video_decode_backend = video_decode_backend
+        self.torch_dtype = torch_dtype
 
         overwrite_config = {}
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
@@ -129,11 +131,11 @@ class Llava_OneVision(lmms):
         llava_model_args["overwrite_config"] = overwrite_config
         try:
             # Try to load the model with the multimodal argument
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, torch_dtype=self.torch_dtype,device_map=self.device_map, **llava_model_args)
         except TypeError:
             # for older versions of LLaVA that don't have multimodal argument
             llava_model_args.pop("multimodal", None)
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, device_map=self.device_map, **llava_model_args)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, model_name, torch_dtype=self.torch_dtype,device_map=self.device_map, **llava_model_args)
 
         self._config = self._model.config
         self.model.eval()
@@ -295,7 +297,11 @@ class Llava_OneVision(lmms):
                             frames = self.load_video(visual, self.max_frames_num)
                         elif self.video_decode_backend == "pyav":
                             frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
-                        frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                        frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].cuda()
+                        if self.torch_dtype == "bfloat16":
+                            frames = frames.bfloat16()
+                        else:
+                            frames = frames.half()
                         image_tensor.append(frames)
                     except Exception as e:
                         eval_logger.error(f"Error {e} in loading video")
@@ -470,7 +476,12 @@ class Llava_OneVision(lmms):
                                 frames = self.load_video(visual, self.max_frames_num)
                             elif self.video_decode_backend == "pyav":
                                 frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
-                            frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().cuda()
+                            frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].cuda()
+                            if self.torch_dtype == "bfloat16":
+                                frames = frames.bfloat16()
+                            else:
+                                frames = frames.half()
+                            
                             image_tensor.append(frames)
                         except Exception as e:
                             eval_logger.error(f"Error {e} in loading video")

@@ -48,10 +48,10 @@ def construct_prompt(doc):
         parsed_options = parse_options(doc["options"])
         # parsed_options already prepends a newline so no need to add space here
         # question = f"{question}\n{parsed_options}\n\n{MULTI_CHOICE_PROMPT}"
-        question = f"{question}\n{parsed_options}\n Please directly answer with the value or option letter."
+        question = f"{question}\n{parsed_options}\n"
     else:
         # question = f"{question}\n\n{OPEN_ENDED_PROMPT}"
-        question = f"{question}\n Please directly answer with the value or option letter."
+        question = f"{question}\n"
     return question
 
 
@@ -60,6 +60,32 @@ def mmmu_doc_to_text(doc):
     if config["metadata"]["interleaved_format"]:
         question = replace_images_tokens(question)
     return question
+
+
+
+def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_specific_kwargs=None, transcripts_dir="aud"):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
+
+    question = construct_prompt(doc)
+
+    # Get the transcript from the corresponding file using the doc_id
+    HF_HOME = os.environ["HF_HOME"]
+    parent_cache_dir = os.path.join(HF_HOME, "videommmu")
+    transcripts_dir = os.path.join(parent_cache_dir, "aud")
+    file_name = doc["id"]
+    transcript_file = os.path.join(transcripts_dir, f"{file_name}.txt")
+    transcript = ""
+
+    if os.path.exists(transcript_file):
+        with open(transcript_file, "r") as f:
+            transcript = f.read().strip()
+    else:
+        transcript = "[Transcript not available]"
+
+    # Combine the pre_prompt, transcript, and question
+    formatted_output = f"Additional knowledge for reference:\n{transcript}\n\nQuestion for the video:\n{question}"
+    return formatted_output
 
 
 def mmmu_doc_to_visual(doc):

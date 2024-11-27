@@ -80,7 +80,7 @@ class LlavaVid(lmms):
         self,
         pretrained: str = "liuhaotian/llava-v1.5-7b",
         truncation: Optional[bool] = True,
-        torch_dtype: Optional[Union[str, torch.dtype]] = "float16",
+        torch_dtype: Optional[Union[str, torch.dtype]] = "bfloat16",
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
         attn_implementation=(
@@ -321,6 +321,7 @@ class LlavaVid(lmms):
             sample_fps = max_frames_num
             uniform_sampled_frames = np.linspace(0, total_frame_num - 1, sample_fps, dtype=int)
             frame_idx = uniform_sampled_frames.tolist()
+            # frame_idx = [total_frame_num - 1]
             frame_time = [i / vr.get_avg_fps() for i in frame_idx]
         frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
         spare_frames = vr.get_batch(frame_idx).asnumpy()
