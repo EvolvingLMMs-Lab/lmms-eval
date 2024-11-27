@@ -155,7 +155,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 | **VocalSound** | test | Acc | 0.936 | 0.81 |
 |  | val |  | 0.9288 | 0.8 |
 | **WavCaps** | test | GPT-Eval | 1.73 |  |
-<!-- #### Table 2: Alignment check for audio datasets
+#### Table 2: Alignment check for audio datasets
 
 <table>
   <tr>
@@ -190,7 +190,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
   <tr>
     <td rowspan="3" align="center">AIRBench-Foundation</td>
     <td>Speech</td>
-    <td>Acc</td>
+    <td rowspan="3" align="center">Acc</td>
     <td>62.89</td>
     <td></td>
   </tr>
@@ -223,7 +223,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
   <tr>
     <td rowspan="3" align="center">Common_voice</td>
     <td>zh</td>
-    <td>WER</td>
+    <td rowspan="3" align="center">WER</td>
     <td>15.78</td>
     <td>6.7</td>
   </tr>
@@ -242,7 +242,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
   <tr>
     <td rowspan="2" align="center">GigaSpeech</td>
     <td>dev</td>
-    <td>WER</td>
+    <td rowspan="2" align="center">WER</td>
     <td>19.45</td>
     <td>14</td>
   </tr>
@@ -255,7 +255,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
   <tr>
     <td rowspan="4" align="center">LibriSpeech</td>
     <td>dev-clean</td>
-    <td>WER</td>
+    <td rowspan="4" align="center">WER</td>
     <td>4.24</td>
     <td>1.66</td>
   </tr>
@@ -308,7 +308,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
   <tr>
     <td rowspan="2" align="center">VocalSound</td>
     <td>test</td>
-    <td>Acc</td>
+    <td rowspan="2" align="center">Acc</td>
     <td>0.936</td>
     <td>0.81</td>
   </tr>
@@ -325,7 +325,7 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
     <td>1.73</td>
     <td></td>
   </tr>
-</table> -->
+</table>
 
 
 The result might be inconsistent with the reported result as we do not have the original prompt and we have to maintain the fair environment for all the models. For the base model, we do not test on the Chat Benchmarks.
