@@ -173,14 +173,14 @@ This basic format is then combined with various question prompts for different e
 
 #### Table 3: Impact of Chat Template on Qwen-7B-Instruct's Performance
 
-| Impact of Chat Template |  |  | Chat Template (Off) | Chat Template (On) |
+| **Impact of Chat Template** | **Split** | **Metric** | **Chat Template (Off)** | **Chat Template (On)** |
 | --- | --- | --- | --- | --- |
-| LibriSpeech | dev-clean | WER(↓) | 2.65 | 4.24 |
+| **LibriSpeech** | dev-clean | WER(↓) | 2.65 | 4.24 |
 |  | dev-others |  | 5.36 | 6.54 |
 |  | test-clean |  | 2.91 | 3.59 |
 |  | test-others |  | 5.14 | 7.46 |
-| People_speech | val | WER(↓) | 21.92 | 25.86 |
-| Tedium | dev_test | WER(↓) | 9.56 | 10.92 |
+| **People_speech** | val | WER(↓) | 21.92 | 25.86 |
+| **Tedium** | dev_test | WER(↓) | 9.56 | 10.92 |
 
 More specifically, we founds out that as shown in the above table, the influence of the chat template is very huge. We believe that these demonstrate the actual robustness of the model and signifies that current audio model may eventually not being stable enough when coping different text input. Also, it again leads us into another thinking: “Is current metrics good at evaluating a model’s performance?
 
