@@ -124,6 +124,8 @@ This upgrade includes multiple benchmarks for audio understanding and instructio
 | **VocalSound** | 2022 | vocalsound_test | test \| val | AIF | Accuracy | test (3.59k) \| val (1.86k) | 1. Vocal sound recognition<br> 2. Non-speech |
 | **WavCaps** | 2024 | wavcaps | test | ASR | GPT-4 Eval | 1.73k | 1. Audio Captioning<br> 2. ChatGPT-augmented captions |
 
+AIF refers to Audio Instruction Following, and ASR refers to Audio Speech Recognition. 
+
 ### Alignment Check for Audio Datasets
 
 #### Table 2: Alignment check for audio datasets
