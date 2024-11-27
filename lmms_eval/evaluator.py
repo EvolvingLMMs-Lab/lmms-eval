@@ -492,7 +492,15 @@ def evaluate(
                 metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
                 if log_samples:
                     target = task.doc_to_target(doc)
-                    saved_doc = {key: value for key, value in doc.items() if "image" not in key}
+                    saved_doc = {}
+                    for key, value in doc.items():
+                        # If image is not in key
+                        if "image" not in key:
+                            # If audio is also not the value
+                            if isinstance(value, dict) and "array" in value:
+                                continue
+                            else:
+                                saved_doc[key] = value
                     filtered_arguments = []
                     for req in requests:
                         # check if req.args is a list of tuples, and each item in the list is a serializable object

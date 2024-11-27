@@ -641,6 +641,7 @@ def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full
         yaml_dir = os.path.dirname(yaml_path)
 
     assert yaml_dir is not None
+    assert yaml_config is not None
 
     if "include" in yaml_config:
         include_path = yaml_config["include"]
