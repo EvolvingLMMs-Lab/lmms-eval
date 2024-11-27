@@ -1,0 +1,4 @@
+group: gigaspeech
+task:
+  - gigaspeech_dev
+  - gigaspeech_test

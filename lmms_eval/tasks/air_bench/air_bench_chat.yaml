@@ -1,0 +1,6 @@
+group: air_bench_chat
+task:
+  - air_bench_chat_sound
+  - air_bench_chat_music
+  - air_bench_chat_speech
+  - air_bench_chat_mixed

@@ -1,0 +1,5 @@
+group: common_voice_15
+task:
+- common_voice_15_zh-CN
+- common_voice_15_en
+- common_voice_15_fr
