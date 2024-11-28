@@ -129,7 +129,7 @@ def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None,
     # return [Image.fromarray(frame) for frame in frames]
 
 
-def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Tuple[int, int] | int] = None, resize_strategy: str = "resize"):
+def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize"):
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
     base64_frames = []
     for frame in frames:
