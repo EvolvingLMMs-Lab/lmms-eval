@@ -201,7 +201,7 @@ class LlamaVision(lmms):
 
             for _ in range(len(images)):
                 messages[-1]["content"].append({"type": "image"})
-            messages[-1]["content"].append({"type": "text", "content": contexts})
+            messages[-1]["content"].append({"type": "text", "text": contexts})
             prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
             inputs = self.processor(images, prompt, return_tensors="pt").to(self.model.device)
 
