@@ -1,5 +1,0 @@
-group: mix_evals_video2text
-task:
-# - mix_evals_video2text_openconv
-- mix_evals_video2text_mc
-- mix_evals_video2text_freeform

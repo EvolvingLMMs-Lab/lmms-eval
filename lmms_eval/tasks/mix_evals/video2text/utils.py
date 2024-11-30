@@ -115,18 +115,32 @@ cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir)
 
 
-# Pass in video path here
-# Can only work correctly with video llm
+def mix_evals_doc_to_visual(doc, modality):
+    visual = []
+    for video_path in doc["input_file"]:
+        video_path = os.path.join(cache_dir, video_path)
+        if os.path.exists(video_path):
+            video_path = video_path
+        elif os.path.exists(video_path.replace("mp4", "MP4")):
+            video_path = video_path.replace("mp4", "MP4")
+        else:
+            sys.exit(f"video path:{video_path} does not exist, please check")
+
+        if modality == "video":
+            visual.append(video_path)
+        elif modality == "image":
+            visual.append(video_path)
+        else:
+            sys.exit(f"modality:{modality} is not supported, please check")
+    return visual
+
+
 def mix_evals_video2text_doc_to_visual(doc):
-    video_path = doc["video_path"]
-    video_path = os.path.join(cache_dir, video_path)
-    if os.path.exists(video_path):
-        video_path = video_path
-    elif os.path.exists(video_path.replace("mp4", "MP4")):
-        video_path = video_path.replace("mp4", "MP4")
-    else:
-        sys.exit(f"video path:{video_path} does not exist, please check")
-    return [video_path]
+    return mix_evals_doc_to_visual(doc, "video")
+
+
+def mix_evals_image2text_doc_to_visual(doc):
+    return mix_evals_doc_to_visual(doc, "image")
 
 
 # This is the place where you format your question
@@ -140,7 +154,7 @@ def mix_evals_video2text_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if "post_prompt" in lmms_eval_specific_kwargs:
         post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
-    user_prompt = doc["prompt"]
+    user_prompt = doc["query"]
 
     if "options" in doc:
         option_prompt = "Here are the options:\n"

@@ -1,7 +1,7 @@
 include: _default_template_yaml
-dataset_name: "video2text_openended"
-task: "mix_evals_video2text_openconv"
-test_split: test
+dataset_name: "open_ended"
+task: "mix_evals_video2text_openended"
+test_split: video2text
 output_type: generate_until
 doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
 doc_to_text: !function utils.mix_evals_video2text_doc_to_text_open_convs
