@@ -232,13 +232,13 @@ def mix_evals_video2text_process_results_open_convs(doc, result):
 
 def mix_evals_video2text_process_results_freeform(doc, result):
     pred = result[0]
-    ground_truth_str = ", ".join([f'"{gt}"' for gt in doc["target"]])
+    ground_truth_str = ", ".join([f'"{gt}"' for gt in doc["reference_answer"]])
     ground_truth_str = f"[{ground_truth_str}]"
     content = eval_prompt.format(model_response=pred, ground_truth=ground_truth_str)
     eval_answer, model_name = get_eval(model_response=pred, ground_truth=ground_truth_str, max_tokens=1024)
     return {
-        "submission": {"pred": pred, "question_idx": doc["question_index"], "target": doc["target"], "eval_answer": eval_answer, "gpt_prompt": content},
-        "gpt_eval": {"pred": pred, "question_idx": doc["question_index"], "target": doc["target"], "eval_answer": eval_answer, "gpt_prompt": content},
+        "submission": {"pred": pred, "question_idx": doc["id"], "target": doc["reference_answer"], "eval_answer": eval_answer, "gpt_prompt": content},
+        "gpt_eval": {"pred": pred, "question_idx": doc["id"], "target": doc["reference_answer"], "eval_answer": eval_answer, "gpt_prompt": content},
     }
 
 

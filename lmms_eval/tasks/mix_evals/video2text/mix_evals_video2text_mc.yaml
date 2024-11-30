@@ -1,11 +1,11 @@
 include: _default_template_yaml
-dataset_name: "video2text_closeended_multiple-choice"
 task: "mix_evals_video2text_mc"
-test_split: test
+dataset_name: "video2text"
+test_split: multiple_choice
 output_type: generate_until
 doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
 doc_to_text: !function utils.mix_evals_video2text_doc_to_text
-doc_to_target: "{{target}}"
+doc_to_target: "{{reference_answer}}"
 
 generation_kwargs:
   max_new_tokens: 5
