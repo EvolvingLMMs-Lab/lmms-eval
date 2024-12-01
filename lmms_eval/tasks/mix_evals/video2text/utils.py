@@ -386,8 +386,9 @@ class GPTMultiChoiceFilter(Filter):
                     # response.raise_for_status()
 
                     # content =["choices"][0]["message"]["content"].strip()
-                    content = response.choices[0].message.content.strip()
-                    if content != "":
+                    content = response.choices[0].message.content
+                    if content:
+                        content = content.strip()
                         match = re.search(r"r'\b([A-Z])\.?\b'", content)
                         if match:
                             result = ord(match.group(1)) - ord("A")
