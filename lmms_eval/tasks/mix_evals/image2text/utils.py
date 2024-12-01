@@ -361,16 +361,27 @@ class GPTMultiChoiceFilter(Filter):
             for attempt in range(self.retries):
                 try:
                     # response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+                    # print(payload)
                     response = client.chat.completions.create(**payload)
+                    # print(response)
                     # response.raise_for_status()
 
                     # content =["choices"][0]["message"]["content"].strip()
                     content = response.choices[0].message.content
+                    # print("content:", content)
                     if content:
-                        content = content.strip()
-                        match = re.search(r"r'\b([A-Z])\.?\b'", content)
+                        match = re.search(r"\[\[([A-Z])\]\]", content)
+                        # print("match:", match)
+                        if not match:
+                            match = re.search(r"r'\b([A-Z])\.?\b'", content)
+                            # print("match:", match)
                         if match:
+                            # print("=====")
+                            # print(match.group(1))
                             result = ord(match.group(1)) - ord("A")
+                            # print("result:", result)
+                            # print("=====")
+                            # print(content, result)
                         else:
                             result = 0
                     break  # If successful, break out of the loop
