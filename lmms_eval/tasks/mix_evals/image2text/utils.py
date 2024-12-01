@@ -304,7 +304,7 @@ def mix_evals_image2text_process_results_freeform(doc, result):
 
 def mix_evals_image2text_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"mix_evals_video2text_{task}-{now_date_time}.json"
+    submission_file_name = f"mix_evals_image2text_{task}-{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
     with open(path, "w") as f:
         json.dump(results, f)
@@ -365,8 +365,9 @@ class GPTMultiChoiceFilter(Filter):
                     # response.raise_for_status()
 
                     # content =["choices"][0]["message"]["content"].strip()
-                    content = response.choices[0].message.content.strip()
-                    if content != "":
+                    content = response.choices[0].message.content
+                    if content:
+                        content = content.strip()
                         match = re.search(r"r'\b([A-Z])\.?\b'", content)
                         if match:
                             result = ord(match.group(1)) - ord("A")
