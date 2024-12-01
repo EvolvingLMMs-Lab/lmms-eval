@@ -1,7 +1,7 @@
 include: _default_template_yaml
-task: "mix_evals_video2text_mc"
+task: "mix_evals_video2text_mc_hard"
 dataset_name: "video2text"
-test_split: multiple_choice
+test_split: multiple_choice_hard
 output_type: generate_until
 doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
 doc_to_text: !function utils.mix_evals_video2text_doc_to_text
