@@ -1,0 +1,12 @@
+dataset_path: MixEval/MixEval-X
+dataset_kwargs:
+  cache_dir: mix_evals_image2text
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: ""
+    pre_prompt: ""
+  gpt4v:
+    post_prompt: ""
+    pre_prompt: ""
+metadata:
+  version: 0

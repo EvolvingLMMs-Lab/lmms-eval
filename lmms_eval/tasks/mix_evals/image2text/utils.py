@@ -9,7 +9,6 @@ import time
 from pathlib import Path
 
 import openai
-import requests
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image
@@ -46,34 +45,82 @@ elif API_TYPE == "azure":
     client = openai.AzureOpenAI(api_key=API_KEY, azure_endpoint=API_URL)
 
 
-video2text_gpt_judge_for_closeended_freeform = lambda prompt, gold_ans, response: [
+image2text_gpt_judge_for_closeended_freeform = lambda prompt, gold_ans, response: [
     {"role": "system", "content": f"In this task, I want you to act as a judge."},
     {
         "role": "user",
-        "content": f"""You will be provided with a question, its golden answer(s), and the model's answer, while the context of the question, which is one or more videos, is not given here. Your task is to judge how correct the model's answer is based on the golden answer(s), without seeing the input videos of the question, and then give a correctness score. The correctness score should be one of the below numbers: 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Your should first briefly give your reasoning process regarding how the model's answer conforms to or contradicts the golden answer(s), and then give the correctness score. The correctness score must strictly follow this format: \"[[score]]\", e.g., \"The correctness score: [[0.5]]\". Below are some examples. 
+        "content": f"""You will be provided with a question, its golden answer(s), and the model's answer, while the context of the question, which is one or more images, is not given here. Your task is to judge how correct the model's answer is based on the golden answer(s), without seeing the input images of the question, and then give a correctness score. The correctness score should be one of the below numbers: 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Your should first briefly give your reasoning process regarding how the model's answer conforms to or contradicts the golden answer(s), and then give the correctness score. The correctness score must strictly follow this format: \"[[score]]\", e.g., \"The correctness score: [[0.5]]\". Below are some examples. 
 
-Example 1:
-Question: what does this video want to express
-Golden Answer(s): <answer 1> introduce method of playing
-Model's Answer: Volleyball serve \n
-Your Judgment: The model's answer "Volleyball serve" suggests a specific action, which may be part of what the video demonstrates. However, it misses the broader educational intent implied by the golden answer "introduce method of playing". Therefore, the answer is partially correct. The Correctness Score: [[0.5]]
+Example 1: 
+Question: what is this advertising?
+Golden Answer(s): <answer 1> garden annual; <answer 2> seeds; <answer 3> seeds; <answer 4> seeds; <answer 5> seeds; <answer 6> seeds; <answer 7> seeds; <answer 8> seeds; <answer 9> seeds; <answer 10> cole's garden annual
+Model's Answer: Seed
+Your Judgment: The golden answers consistently mention "seeds" suggesting an advertisement for a seed catalog. The model's answer, "Seed", aligns exactly with this description. The Correctness Score: [[1.0]]
 
-Example 2:
-Question: who do two other boys with surprised looks assist up?
-Golden Answer(s): <answer 1> boy
-Model's Answer: Boy.
-Your Judgment: The model's answer "Boy." precisely matches the golden answer which states the two other boys assist a "boy". The Correctness Score: [[1.0]]
+Example 2: 
+Question: Who is making a face?
+Golden Answer: <answer 1> child
+Model's Answer: A man.
+Your Judgment: The golden answer specifies a "child" making a face, but the model answered "A man", which is incorrect as it refers to a different age group. The Correctness Score: [[0.0]]
 
-Example 3:
-Question: what did the lady do at the end of the video after their performance
-Golden Answer(s): <answer 1> picks up her phone
-Model's Answer: Nothing.
-Your Judgment: The model's answer "Nothing." directly contradicts the golden answer which states that the lady "picks up her phone" at the end of the video after their performance. Since the model's response completely misses the specific action described in the golden answer, it is incorrect. The Correctness Score: [[0.0]]
+Example 3: 
+Question: what road is to the right?
+Golden Answer: <answer 1> troublesome valley rd; <answer 2> troublesome valley rd.; <answer 3> troublesome valley; <answer 4> troublesome valley road; <answer 5> valley road; <answer 6> troublesome valley; <answer 7> troublesome valley road; <answer 8> troublesome valley ; <answer 9> troublesome valley rd; <answer 10> troublesome valley rd.
+Model's Answer: troublesome road
+Your Judgment: The golden answers all specify the name of the road as "troublesome valley rd" or variations of this phrase with consistent reference to "troublesome valley." The model's answer, "troublesome road," captures the "troublesome" aspect but omits the critical "valley" part of the name, which is crucial for full accuracy. Thus, the model's answer partially matches the golden answer but lacks complete specificity. The Correctness Score: [[0.6]]
 
 Note that each one of the golden answers is considered correct. Thus if the model's answer matches any one of the golden answers, it should be considered correct. Judge the below case, give the brief reasoning process and the correctness score.
 
 Question: {prompt}
 Golden Answer(s): {gold_ans}
+Model's Answer: {response}
+Your Judgment: 
+""",
+    },
+]
+
+image2text_gpt_judge_for_closeended_multiplechoice = lambda prompt, options, response: [
+    {"role": "system", "content": f"In this task, I want you to act as an option extractor."},
+    {
+        "role": "user",
+        "content": f"""You will be provided with a multiple-choice question, its options, and the model's answer, while the context of the question, which is one or more images, is not given here. Your task is to extract or judge which option is chosen by the model based on its response, without seeing the context of the question. The extracted option should be one of the provided option letters. Your should first briefly give your reasoning process, and then give the extracted option letter. The extracted option must strictly follow this format: \"[[option letter]]\", e.g., \"The option chosen by the model: [[A]]\".
+Below are some examples. 
+
+Example 1: 
+Question: Where are the cast of the television show located in the image?
+Options:
+A. In the foreground
+B. In the background
+C. In the center
+D. At the edges
+Model's Answer: C. In the center
+Your Judgment: The model's answer clearly states "C. In the center", indicating that the correct option, according to the model, is in the center. The option chosen by the model: [[C]].
+
+Example 2: 
+Question: <image_1> on the left was painted during the 
+Options:
+A. first or second century C. E.
+B. sixth or seventh century C. E.
+C. tenth or eleventh century C.E.
+D. fourteenth or fifteenth century C. E.
+Model's Answer: The correct answer is option D, the fourteenth or fifteenth century C.E.
+Your Judgment: The model's response specifies "option D, the fourteenth or fifteenth century C.E." directly as the correct answer. The option chosen by the model: [[D]].   
+
+Example 3: 
+Question: what does the diagram show's you information about
+Options:
+A. Photosynthesis
+B. The plant getting fed
+C. A picture of the plant
+D. What happens to a plant daily
+Model's Answer: The diagram shows the process of photosynthesis, which is the process by which plants convert sunlight, carbon dioxide, and water into oxygen and glucose. 
+Your Judgment: The model's answer mentions "the process of photosynthesis," which directly corresponds to option A, "Photosynthesis". Therefore, the correct option according to the model is photosynthesis.  The option chosen by the model: [[A]].
+
+Give the brief reasoning process and the extracted option for the below case:
+
+Question: {prompt}
+Options: 
+{options}
 Model's Answer: {response}
 Your Judgment: 
 """,
@@ -102,7 +149,7 @@ def get_score_from_judge(judge_response):
 
 def get_eval(question, model_response: str, ground_truth: str, max_tokens: int, retries: int = 5):
     global client
-    messages = video2text_gpt_judge_for_closeended_freeform(prompt=question, gold_ans=ground_truth, response=model_response)
+    messages = image2text_gpt_judge_for_closeended_freeform(prompt=question, gold_ans=ground_truth, response=model_response)
 
     payload = {
         "model": MODEL_VERSION,
@@ -144,36 +191,20 @@ cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir)
 
 
-def mix_evals_doc_to_visual(doc, modality):
+def mix_evals_image2text_doc_to_visual(doc):
     visual = []
-    for video_path in doc["input_file"]:
-        video_path = os.path.join(cache_dir, video_path)
-        if os.path.exists(video_path):
-            video_path = video_path
-        elif os.path.exists(video_path.replace("mp4", "MP4")):
-            video_path = video_path.replace("mp4", "MP4")
-        else:
-            sys.exit(f"video path:{video_path} does not exist, please check")
+    for image_path in doc["input_file"]:
+        image_path = os.path.join(cache_dir, image_path)
+        if os.path.exists(image_path):
+            image_path = image_path
 
-        if modality == "video":
-            visual.append(video_path)
-        elif modality == "image":
-            visual.append(Image.open(video_path).convert("RGB"))
-        else:
-            sys.exit(f"modality:{modality} is not supported, please check")
+        visual.append(Image.open(image_path).convert("RGB"))
+
     return visual
 
 
-def mix_evals_video2text_doc_to_visual(doc):
-    return mix_evals_doc_to_visual(doc, "video")
-
-
-def mix_evals_image2text_doc_to_visual(doc):
-    return mix_evals_doc_to_visual(doc, "image")
-
-
 # This is the place where you format your question
-def mix_evals_video2text_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def mix_evals_image2text_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
     pre_prompt = ""
@@ -209,7 +240,7 @@ OPEN_CONVS_PROMPT = """{PRE}
 """
 
 
-def mix_evals_video2text_doc_to_text_open_convs(doc, lmms_eval_specific_kwargs=None):
+def mix_evals_image2text_doc_to_text_open_convs(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
     pre_prompt = ""
@@ -235,7 +266,7 @@ MODEL_CONVS_PROMPT = """{FIRST}
 """
 
 
-def mix_evals_video2text_doc_to_text_open_2nd_convs(doc, lmms_eval_specific_kwargs=None):
+def mix_evals_image2text_doc_to_text_open_2nd_convs(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
     pre_prompt = ""
@@ -254,16 +285,16 @@ def mix_evals_video2text_doc_to_text_open_2nd_convs(doc, lmms_eval_specific_kwar
     )
 
 
-def mix_evals_video2text_process_results_open_convs(doc, result):
+def mix_evals_image2text_process_results_open_convs(doc, result):
     pred = result[0]
     return {"submission": {"pred": pred, "question_idx": doc["question_index"], "first_turn_video_caption": doc["first_turn_video_caption"], "target": ""}}
 
 
-def mix_evals_video2text_process_results_freeform(doc, result):
+def mix_evals_image2text_process_results_freeform(doc, result):
     pred = result[0]
     ground_truth_str = ", ".join([f'"{gt}"' for gt in doc["reference_answer"]])
     ground_truth_str = f"[{ground_truth_str}]"
-    content = video2text_gpt_judge_for_closeended_freeform(response=pred, gold_ans=ground_truth_str, prompt=doc["query"])
+    content = image2text_gpt_judge_for_closeended_freeform(response=pred, gold_ans=ground_truth_str, prompt=doc["query"])
     eval_answer = get_eval(model_response=pred, ground_truth=ground_truth_str, max_tokens=MAX_NEW_TOKENS, question=doc["query"])
     return {
         "submission": {"pred": pred, "question_idx": doc["id"], "target": doc["reference_answer"], "eval_answer": eval_answer, "gpt_prompt": content},
@@ -271,7 +302,7 @@ def mix_evals_video2text_process_results_freeform(doc, result):
     }
 
 
-def mix_evals_video2text_aggregate_submissions(results, args, task):
+def mix_evals_image2text_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     submission_file_name = f"mix_evals_video2text_{task}-{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
@@ -280,7 +311,7 @@ def mix_evals_video2text_aggregate_submissions(results, args, task):
     eval_logger.info(f"Submission file saved to {path}")
 
 
-def mix_evals_video2text_gpt_eval(results, args):
+def mix_evals_image2text_gpt_eval(results, args):
     score = 0
     for result in results:
         eval_answer = result["eval_answer"]
@@ -291,60 +322,8 @@ def mix_evals_video2text_gpt_eval(results, args):
 
 
 # Factory into different aggregate
-def mix_evals_video2text_aggregate_gen(results, args):
-    mix_evals_video2text_aggregate_submissions(results, args, "OpenConvs")
-
-
-video2text_gpt_judge_for_closeended_multiplechoice = lambda prompt, options, response: [
-    {"role": "system", "content": f"In this task, I want you to act as an option extractor."},
-    {
-        "role": "user",
-        "content": f"""You will be provided with a multiple-choice question, its options, and the model's answer, while the context of the question, which is one or more videos, is not given here. Your task is to extract or judge which option is chosen by the model based on its response, without seeing the context of the question. The extracted option should be one of the provided option letters. Your should first briefly give your reasoning process, and then give the extracted option letter. The extracted option must strictly follow this format: \"[[option letter]]\", e.g., \"The option chosen by the model: [[A]]\".
-Below are some examples. 
-
-Example 1:
-Question: What did he do to the car?
-Options:
-A. Paint the car
-B. Put plastic over the car
-C. Put metal over the car
-D. Cut the car
-Model's Answer: put plastic over the car.
-Your Judgment: The model's response directly aligns with option B, which is "Put plastic over the car." The response given is a paraphrase of this option without deviating in meaning. The option chosen by the model: [[B]]
-
-Example 2:
-Question: How did Eddie know Pam and Justin before Justin was killed?
-Options:
-A. They were part of the theater company
-B. They were high school friends
-C. They went to college together
-D. They were cousins
-E. They were siblings
-Model's Answer: A.
-Your Judgment: The model's answer directly provides the option letter "A." The option chosen by the model: [[A]]
-
-Example 3:
-Question: why do the people move in the same manner
-Options:
-A. uniform
-B. dancing with the baby
-C. exercising together
-D. stay together
-E. singing and dancing
-Model's Answer: sing and dance
-Your Judgment: The model's response "sing and dance" closely aligns with option E, which is "singing and dancing." The response provided is a direct paraphrase of this option, modifying only slightly the form of the words (from gerund to infinitive) but maintaining the same core activities described in the option. The option chosen by the model: [[E]]
-
-When you think that the model's answer does not match any of the given options, please choose the option that is the closest to the model's answer.
-Give the brief reasoning process and the extracted option for the below case. 
-
-Question: {prompt}
-Options: 
-{options}
-Model's Answer: {response}
-Your Judgment: 
-""",
-    },
-]
+def mix_evals_image2text_aggregate_gen(results, args):
+    mix_evals_image2text_aggregate_submissions(results, args, "OpenConvs")
 
 
 class GPTMultiChoiceFilter(Filter):
@@ -372,7 +351,7 @@ class GPTMultiChoiceFilter(Filter):
         for response, doc in zip(resps, docs):
             query = doc["query"]
             options = "\n".join([f"{chr(ord('A') + idx)}. {option}" for idx, option in enumerate(doc["options"])])
-            message = video2text_gpt_judge_for_closeended_multiplechoice(prompt=query, options=options, response=response)
+            message = image2text_gpt_judge_for_closeended_multiplechoice(prompt=query, options=options, response=response)
             payload = {
                 "model": self.gpt_version,
                 "messages": message,
