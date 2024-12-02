@@ -21,5 +21,5 @@ lmms_eval_specific_kwargs:
     pre_prompt: "These are frames from a video. Please answer the following questions about the video."
     post_prompt: ""
   gpt4v:
-    pre_prompt: "These are frames from a video. Please answer the following questions about the video with a short phrase."
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
     post_prompt: ""
