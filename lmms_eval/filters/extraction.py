@@ -1,6 +1,9 @@
+import os
 import re
 import sys
 import unicodedata
+
+import openai
 
 from lmms_eval.api.filter import Filter
 

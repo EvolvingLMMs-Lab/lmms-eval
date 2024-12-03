@@ -1,0 +1,4 @@
+group: mix_evals_image2text
+task:
+- mix_evals_image2text_mc
+- mix_evals_image2text_freeform

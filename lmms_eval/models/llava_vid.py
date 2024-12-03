@@ -90,7 +90,7 @@ class LlavaVid(lmms):
         conv_template="vicuna_v1",
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
-        max_frames_num: int = 3,
+        max_frames_num: int = 20,
         video_fps: int = 1,
         mm_resampler_type: str = "spatial_pool",
         mm_spatial_pool_stride: int = 2,

@@ -1,17 +1,20 @@
-include: _default_template_yaml
-dataset_name: "video2text_openended"
-task: "mix_evals_video2text_openconv"
-test_split: test
+task: "mix_evals_video2text_freeform"
+dataset_name: "video2text"
+test_split: free_form
 output_type: generate_until
 doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
-doc_to_text: !function utils.mix_evals_video2text_doc_to_text_open_convs
-doc_to_target: ""
-process_results: !function utils.mix_evals_video2text_process_results_open_convs
-
+doc_to_text: !function utils.mix_evals_video2text_doc_to_text
+doc_to_target: "{{reference_answer}}"
+process_results: !function utils.mix_evals_video2text_process_results_freeform
 metric_list:
-  - metric: submission
-    aggregation: !function utils.mix_evals_video2text_aggregate_gen
+  - metric: gpt_eval
+    aggregation: !function utils.mix_evals_video2text_gpt_eval
     higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 1024
+
+include: _default_template_yaml
 
 lmms_eval_specific_kwargs:
   default:

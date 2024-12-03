@@ -15,6 +15,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.load_video import read_video_pyav_pil
 
 warnings.filterwarnings("ignore")
 
@@ -25,22 +26,6 @@ DEFAULT_IMAGE_TOKEN = "<|image|>"
 
 @register_model("llama_vision")
 class LlamaVision(lmms):
-    """
-    Llava Model for Hugging Face Transformers: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava
-
-    Adapted from the InstructBLIP model in lmms_eval/models/instructblip.py
-
-    Example usage:
-
-    accelerate launch --num_processes=8 --main_process_port 12345 -m lmms_eval \
-        --model llava_hf \
-        --model_args pretrained=llava-hf/llava-1.5-7b-hf \
-        --tasks seedbench \
-        --batch_size 1 \
-        --output_path ./logs/ \
-        --log_samples
-    """
-
     def __init__(
         self,
         pretrained: str = "meta-llama/Llama-3.2-11B-Vision",
@@ -48,10 +33,12 @@ class LlamaVision(lmms):
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: int = 1,
-        trust_remote_code: Optional[bool] = False,
+        trust_remote_code: Optional[bool] = True,
         attn_implementation: Optional[str] = None,
         device_map: str = "",
         max_frames_num: Optional[int] = 32,
+        fps: Optional[int] = None,
+        max_image_size: Optional[int] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -68,7 +55,9 @@ class LlamaVision(lmms):
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
 
+        self.fps = fps
         self.max_frames_num = max_frames_num
+        self.max_image_size = max_image_size
         self._model = MllamaForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
         self.model.eval()
         self.processor = AutoProcessor.from_pretrained(pretrained)
@@ -193,9 +182,11 @@ class LlamaVision(lmms):
 
             for visual in visuals:
                 if isinstance(visual, str):
-                    frames = self.load_video(visual, self.max_frames_num)
-                    frames = torch.from_numpy(frames).permute(0, 3, 1, 2)
-                    images.extend([to_pil_image(frame) for frame in frames])
+                    frames = read_video_pyav_pil(visual, num_frm=self.max_frames_num, fps=self.fps, max_image_size=self.max_image_size)
+                    images.extend(frames)
+                    # frames = self.load_video(visual, self.max_frames_num)
+                    # frames = torch.from_numpy(frames).permute(0, 3, 1, 2)
+                    # images.extend([to_pil_image(frame) for frame in frames])
                 elif isinstance(visual, PIL.Image.Image):
                     images.append(visual)
 

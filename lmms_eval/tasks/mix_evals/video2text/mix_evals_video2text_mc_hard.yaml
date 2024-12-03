@@ -1,14 +1,14 @@
 include: _default_template_yaml
-dataset_name: "video2text_closeended_multiple-choice"
-task: "mix_evals_video2text_mc"
-test_split: test
+task: "mix_evals_video2text_mc_hard"
+dataset_name: "video2text"
+test_split: multiple_choice_hard
 output_type: generate_until
 doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
 doc_to_text: !function utils.mix_evals_video2text_doc_to_text
-doc_to_target: "{{target}}"
+doc_to_target: "{{reference_answer}}"
 
 generation_kwargs:
-  max_new_tokens: 5
+  max_new_tokens: 1024
 
 metric_list:
   - metric: exact_match
@@ -20,10 +20,7 @@ metric_list:
 filter_list:
   - name: "flexible-extract"
     filter:
-      - function: !function utils.MultiChoiceRegexFilter
-        group_select: 0
-        ignore_case: true
-        ignore_punctuation: true
+      - function: !function utils.GPTMultiChoiceFilter
 
 lmms_eval_specific_kwargs:
   default:
