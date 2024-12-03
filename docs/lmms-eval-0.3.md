@@ -12,7 +12,7 @@ While many models have made progress in integrating audio understanding, there i
 
 To address this, we introduce an upgrade to the `lmms-eval` framework, focusing on audio understanding. Building on the success of `lmms-eval/v0.2.0`, the new `lmms-eval/v0.3.0` includes dedicated modules and designs for audio tasks, ensuring consistent evaluation across audio and visual modalities. 
 
-This upgrade includes multiple benchmarks for audio understanding and instruction following, enabling standardized and reproducible comparisons of various audio models.
+Our upgrade also includes many new features, including faster model and task loading, SGLang/GPT4 Batch API integrations, and LMMs-Eval analysis tool for improving evaluation efficiency and comprehensiveness.
 
 ## Audio Evaluation Pipeline
 
