@@ -1,5 +1,6 @@
 # Integration of Audio Evaluation in LMMs-Eval
 
+[![image.webp](https://i.postimg.cc/BbKbyRDd/image.webp)](https://postimg.cc/n9nn9R3k)
 
 ## **Introduction**
 
