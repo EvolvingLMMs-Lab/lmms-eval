@@ -2,6 +2,31 @@
 
 [Homepage](https://mixeval-x.github.io/) / [arXiv](https://arxiv.org/abs/2410.13754)
 
+## Usage
+
+Tasks:
+
+- `mix_evals_image2text`
+    - `mix_evals_image2text_freeform`
+    - `mix_evals_image2text_mc`
+- `mix_evals_image2text_hard`
+    - `mix_evals_image2text_freeform_hard`
+    - `mix_evals_image2text_mc_hard`
+- `mix_evals_video2text`
+    - `mix_evals_video2text_freeform`
+    - `mix_evals_video2text_mc`
+- `mix_evals_video2text_hard`
+    - `mix_evals_video2text_freeform_hard`
+    - `mix_evals_video2text_mc_hard`
+- `mix_evals_audio2text`
+    - `mix_evals_audio2text_freeform`
+- `mix_evals_audio2text_hard`
+    - `mix_evals_audio2text_freeform_hard`
+
+```bash
+lmms-eval --model=llava_vid --model_args=pretrained=lmms-lab/LLaVA-NeXT-Video-7B --tasks=mix_evals_video2text --batch_size=1 --log_samples --output_path=./logs/
+```
+
 ## Citation
 
 ```bib
