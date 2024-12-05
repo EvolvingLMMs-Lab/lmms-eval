@@ -8,21 +8,21 @@ Here is the list of tasks in MixEval-X:
 
 ```
 mix_evals_image2text
- ├── mix_evals_image2text_freeform: 998 rows
- └── mix_evals_image2text_mc: 990 rows
+ ├── mix_evals_image2text_freeform ---------- 998 rows
+ └── mix_evals_image2text_mc ---------------- 990 rows
 mix_evals_image2text_hard
- ├── mix_evals_image2text_freeform_hard: 498 rows
- └── mix_evals_image2text_mc_hard: 500 rows
+ ├── mix_evals_image2text_freeform_hard ----- 498 rows
+ └── mix_evals_image2text_mc_hard ----------- 500 rows
 mix_evals_video2text
- ├── mix_evals_video2text_freeform: 968 rows
- └── mix_evals_video2text_mc: 634 rows
+ ├── mix_evals_video2text_freeform ---------- 968 rows
+ └── mix_evals_video2text_mc ---------------- 634 rows
 mix_evals_video2text_hard
- ├── mix_evals_video2text_freeform_hard: 499 rows
- └── mix_evals_video2text_mc_hard: 324 rows
+ ├── mix_evals_video2text_freeform_hard ----- 499 rows
+ └── mix_evals_video2text_mc_hard ----------- 324 rows
 mix_evals_audio2text
- └── mix_evals_audio2text_freeform: 962 rows
+ └── mix_evals_audio2text_freeform ---------- 962 rows
 mix_evals_audio2text_hard
- └── mix_evals_audio2text_freeform_hard: 505 rows
+ └── mix_evals_audio2text_freeform_hard ----- 505 rows
 ```
 
 You can run the command:
