@@ -25,6 +25,8 @@ mix_evals_audio2text_hard
  └── mix_evals_audio2text_freeform_hard ----- 505 rows
 ```
 
+The HowToQA and Social-IQ-2.0 was removed from the Video2Text benchmark pool due to annotation issues. A key advantage of MixEval-X is its capacity for self-refinement, enabling the benchmark pool to adapt and grow with time.
+
 You can run the command:
 
 ```bash
@@ -50,6 +52,24 @@ lmms-eval   --model=llava_vid \
 ```
 
 For more details, please refer to the [readme](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main) and [documentation](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/docs).
+
+## Final Results Calculation
+
+The final results are calculated by the weighted average of the results from the two tasks in each benchmark pool. The weights are determined by the number of rows in each task. For example, the final results for `mix_evals_video2text` are calculated as follows:
+
+```python
+NUM_ROWS = {
+    "mix_evals_video2text_freeform": 968,
+    "mix_evals_video2text_mc": 634,
+}
+
+results = {
+    "mix_evals_video2text_freeform": 0.5,
+    "mix_evals_video2text_mc": 0.6,
+}
+
+final_result = sum([results[task] * NUM_ROWS[task] for task in NUM_ROWS]) / sum(NUM_ROWS.values())
+```
 
 ## Citation
 
