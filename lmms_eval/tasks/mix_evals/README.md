@@ -49,6 +49,8 @@ lmms-eval   --model=llava_vid \
             --output_path=./logs/
 ```
 
+For more details, please refer to the [readme](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main) and [documentation](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/docs).
+
 ## Citation
 
 ```bib
