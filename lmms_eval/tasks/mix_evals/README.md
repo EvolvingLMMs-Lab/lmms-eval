@@ -6,6 +6,26 @@
 
 Tasks:
 
+```
+mix_evals_image2text
+ ├── mix_evals_image2text_freeform
+ └── mix_evals_image2text_mc
+mix_evals_image2text_hard
+ ├── mix_evals_image2text_freeform_hard
+ └── mix_evals_image2text_mc_hard
+mix_evals_video2text
+ ├── mix_evals_video2text_freeform
+ └── mix_evals_video2text_mc
+mix_evals_video2text_hard
+ ├── mix_evals_video2text_freeform_hard
+ └── mix_evals_video2text_mc_hard
+mix_evals_audio2text
+ └── mix_evals_audio2text_freeform
+mix_evals_audio2text_hard
+ └── mix_evals_audio2text_freeform_hard
+```
+
+
 - `mix_evals_image2text`
     - `mix_evals_image2text_freeform`
     - `mix_evals_image2text_mc`
