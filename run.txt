@@ -136,6 +136,11 @@ v3 chat GPT
 |-----------|-------|----------------|-----:|-----------|---|-----:|---|-----:|
 |realworldqa|Yaml   |flexible-extract|     0|exact_match|↑  |0.2614|±  |0.0159|
 
+add depth
+|   Tasks   |Version|     Filter     |n-shot|  Metric   |   |Value |   |Stderr|
+|-----------|-------|----------------|-----:|-----------|---|-----:|---|-----:|
+|realworldqa|Yaml   |flexible-extract|     0|exact_match|↑  |0.2366|±  |0.0154|
+
 |     Tasks      |Version|Filter|n-shot|        Metric        |   |Value |   |Stderr|
 |----------------|-------|------|-----:|----------------------|---|-----:|---|------|
 |seedbench_2_plus|Yaml   |none  |     0|seedbench_2_plus_Chart|↑  |0.1346|±  |   N/A|
