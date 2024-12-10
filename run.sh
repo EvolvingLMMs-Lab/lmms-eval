@@ -1,3 +1,14 @@
+###############################################
+## Installations after clone the repo##
+cd lmms-eval
+pip install -e .
+## make sure llava is installed ##
+git clone https://github.com/LLaVA-VL/LLaVA-NeXT
+cd LLaVA-NeXT
+pip install -e .
+###############################################
+
+# Run llavaone 0.5 for mme
 accelerate launch --num_processes=1 \
 -m lmms_eval \
 --model llava_onevision \
@@ -7,7 +18,7 @@ accelerate launch --num_processes=1 \
 --log_samples \
 --log_samples_suffix llava_onevision \
 --output_path ./logs/
-
+# Run llavaone 0.5 for gqa
 accelerate launch --num_processes=1 \
 -m lmms_eval \
 --model llava_onevision \
