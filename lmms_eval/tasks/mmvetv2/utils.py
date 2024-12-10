@@ -4,11 +4,10 @@ import time
 from pathlib import Path
 
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont
-
 import requests
 import yaml
 from loguru import logger as eval_logger
+from PIL import Image, ImageDraw, ImageFont
 
 
 def add_order_label(image, label, font_size=40):
