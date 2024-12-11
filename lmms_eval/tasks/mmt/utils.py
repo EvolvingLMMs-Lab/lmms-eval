@@ -125,16 +125,24 @@ def mmt_aggregate_results(results):
         # Overall accuracy
         total_correct += result["overall"]
         total_examples += 1
+
         # Sub-category accuracy
         for category, score in result.items():
             if category != "overall":
                 category_correct[category] += score
                 category_total[category] += 1
+
     overall_accuracy = (total_correct / total_examples) * 100 if total_examples > 0 else 0.0
-    category_accuracy = {category: ((category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0) for category in category_correct}
-    final_results = {"overall_accuracy": round(overall_accuracy, 5), "category_accuracy": {category: round(acc, 5) for category, acc in category_accuracy.items()}}
-    print(final_results)
-    return final_results
+    category_accuracy = {category: (category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0 for category in category_correct}
+
+    eval_logger.info("=" * 50)
+    eval_logger.info(f"Overall Accuracy: {overall_accuracy:.2f}%")
+    eval_logger.info("Category-wise Accuracy:")
+    for category, acc in category_accuracy.items():
+        eval_logger.info(f"  {category}: {acc:.2f}%")
+    eval_logger.info("=" * 50)
+
+    return round(overall_accuracy, 5)
 
 
 def mmt_test_aggregate_results_for_submission(results, args):
