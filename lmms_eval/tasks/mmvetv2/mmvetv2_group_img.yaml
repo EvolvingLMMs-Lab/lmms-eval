@@ -1,3 +1,5 @@
+# This task differs from MMVet2 in that it combines multiple images into a single composite image, enabling compatibility with models that do not support multiple image inputs.
+
 dataset_path: lmms-lab/MMVet-v2
 dataset_kwargs:
   token: True
