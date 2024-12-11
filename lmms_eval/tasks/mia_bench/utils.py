@@ -157,9 +157,15 @@ def process_rawscore(component_type, raw_score):
         score_ = first_sentence[i].split(""":""")[1][1:].split("""/""")
         score = int(score_[0]) / int(score_[1])
         score_dict[component_type[i]] = score
-    total_score_ = first_sentence[i + 1].split(""":""")[1][1:].split("""/""")
-    total_score = int(total_score_[0]) / int(total_score_[1])
-    score_dict["total_score"] = total_score
+
+    # Ensure that the loop has executed at least once
+    if len(first_sentence) > 1:
+        total_score_ = first_sentence[-1].split(""":""")[1][1:].split("""/""")
+        total_score = int(total_score_[0]) / int(total_score_[1])
+        score_dict["total_score"] = total_score
+    else:
+        score_dict["total_score"] = 0  # or handle this case as needed
+
     return score_dict
 
 
