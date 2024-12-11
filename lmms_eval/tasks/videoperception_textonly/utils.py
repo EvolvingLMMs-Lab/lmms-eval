@@ -9,8 +9,10 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import torch
 import yaml
 from decord import VideoReader, cpu
+from PIL import Image
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -31,46 +33,219 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
-cache_dir_perception = os.path.join(cache_dir, "agriculture_perception_videos")
-cache_dir = os.path.join(cache_dir, "videos")
+
 
 from loguru import logger as eval_logger
 
 
-# Pass in video path here
-# Can only work correctly with video llm
-def videosearch_doc_to_visual(doc):
+# Define the mapping for subjects to their respective directories
+def get_cache_dir(subject):
+    if subject in ["Art", "Art_Theory", "Design", "Music"]:
+        return "art"
+    elif subject in ["Biology", "Chemistry", "Geography", "Math", "Physics"]:
+        return "science"
+    elif subject in ["History", "Literature", "Sociology", "Psychology"]:
+        return "social"
+    elif subject in ["Agriculture", "Architecture_and_Engineering", "Computer_Science", "Electronics", "Energy_and_Power", "Materials", "Mechanical_Engineering"]:
+        return "engineering"
+    elif subject in ["Basic_Medical_Science", "Clinical_Medicine", "Diagnostics_and_Laboratory_Medicine", "Pharmacy", "Public_Health"]:
+        return "health"
+    elif subject in ["Accounting", "Economics", "Finance", "Manage", "Marketing"]:
+        return "business"
+    else:
+        raise ValueError(f"Subject {subject} not recognized.")
+
+
+def videoperception_doc_to_visual_perception(doc):
+    # Extract the subject between the first and last underscores
+    subject = "_".join(doc["id"].split("_")[1:-1])
+
+    # Get the appropriate cache directory based on the subject
+    perception_cache_dir = os.path.join(HF_HOME, cache_dir, get_cache_dir(subject))
+
     video_path = doc["id"] + ".mp4"
-    video_path = os.path.join(cache_dir, video_path)
+    video_path = os.path.join(perception_cache_dir, video_path)
+
     if os.path.exists(video_path):
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
         video_path = video_path.replace("mp4", "MP4")
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
+
     return [video_path]
 
 
-def videosearch_doc_to_visual_perception(doc):
+import base64
+from io import BytesIO
+from typing import Optional
+
+import av
+import numpy as np
+from av.codec.context import CodecContext
+from decord import VideoReader, cpu
+from PIL import Image
+
+
+# This one is faster
+def record_video_length_stream(container, indices):
+    frames = []
+    start_index = indices[0]
+    end_index = indices[-1]
+    for i, frame in enumerate(container.decode(video=0)):
+        if i > end_index:
+            break
+        if i >= start_index and i in indices:
+            frames.append(frame)
+    return frames
+
+
+# This one works for all types of video
+def record_video_length_packet(container):
+    frames = []
+    # https://github.com/PyAV-Org/PyAV/issues/1269
+    # https://www.cnblogs.com/beyond-tester/p/17641872.html
+    # context = CodecContext.create("libvpx-vp9", "r")
+    for packet in container.demux(video=0):
+        for frame in packet.decode():
+            frames.append(frame)
+    return frames
+
+
+def load_video_stream(container, num_frm: int = 8, fps: float = None):
+    # container = av.open(video_path)
+    total_frames = container.streams.video[0].frames
+    frame_rate = container.streams.video[0].average_rate
+    if fps is not None:
+        video_length = total_frames / frame_rate
+        num_frm = min(num_frm, int(video_length * fps))
+    sampled_frm = min(total_frames, num_frm)
+    indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
+
+    # Append the last frame index if not already included
+    if total_frames - 1 not in indices:
+        indices = np.append(indices, total_frames - 1)
+
+    return record_video_length_stream(container, indices)
+
+
+def load_video_packet(container, num_frm: int = 8, fps: float = None):
+    frames = record_video_length_packet(container)
+    total_frames = len(frames)
+    frame_rate = container.streams.video[0].average_rate
+    if fps is not None:
+        video_length = total_frames / frame_rate
+        num_frm = min(num_frm, int(video_length * fps))
+    sampled_frm = min(total_frames, num_frm)
+    indices = np.linspace(0, total_frames - 1, sampled_frm, dtype=int)
+
+    # Append the last frame index if not already included
+    if total_frames - 1 not in indices:
+        indices = np.append(indices, total_frames - 1)
+
+    return [frames[i] for i in indices]
+
+
+def read_video_pyav(video_path: str, *, num_frm: int = 4, fps: float = None, format="rgb24") -> np.ndarray:
+    """
+    Read video using the PyAV library.
+
+    Args:
+        video_path (str): The path to the video file.
+        num_frm (int, optional): The maximum number of frames to extract. Defaults to 8.
+        fps (float, optional): The frames per second for extraction. If `None`, the maximum number of frames will be extracted. Defaults to None.
+        format (str, optional): The format of the extracted frames. Defaults to "rgb24".
+
+    Returns:
+        np.ndarray: A numpy array containing the extracted frames in RGB format.
+    """
+
+    container = av.open(video_path)
+
+    if "webm" not in video_path and "mkv" not in video_path:
+        # For mp4, we try loading with stream first
+        try:
+            frames = load_video_stream(container, num_frm, fps)
+        except:
+            frames = record_video_length_packet(container)
+    else:
+        frames = record_video_length_packet(container)
+
+    return np.stack([x.to_ndarray(format=format) for x in frames])
+
+
+def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24"):
+    frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
+    return [Image.fromarray(frame) for frame in frames]
+
+
+def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG"):
+    frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
+    base64_frames = []
+    for frame in frames:
+        img = Image.fromarray(frame)
+        output_buffer = BytesIO()
+        img.save(output_buffer, format=img_format)
+        byte_data = output_buffer.getvalue()
+        base64_str = base64.b64encode(byte_data).decode("utf-8")
+        base64_frames.append(base64_str)
+    return base64_frames
+
+
+def load_video_decord(video_path, max_frames_num):
+    if type(video_path) == str:
+        vr = VideoReader(video_path, ctx=cpu(0))
+    else:
+        vr = VideoReader(video_path[0], ctx=cpu(0))
+    total_frame_num = len(vr)
+    uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
+
+    # Append the last frame index if not already included
+    if total_frame_num - 1 not in uniform_sampled_frames:
+        uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
+
+    frame_idx = uniform_sampled_frames.tolist()
+    frames = vr.get_batch(frame_idx)
+    if isinstance(frames, torch.Tensor):
+        frames = frames.numpy()
+    else:
+        frames = frames.asnumpy()
+
+    return [Image.fromarray(fr).convert("RGB") for fr in frames]
+
+
+def videoperception_doc_to_visual_image(doc):
+    # Extract the subject between the first and last underscores
+    subject = "_".join(doc["id"].split("_")[1:-1])
+
+    # Get the appropriate cache directory based on the subject
+    perception_cache_dir = os.path.join(HF_HOME, cache_dir, get_cache_dir(subject))
+
     video_path = doc["id"] + ".mp4"
-    video_path = os.path.join(cache_dir_perception, video_path)
+    video_path = os.path.join(perception_cache_dir, video_path)
+
     if os.path.exists(video_path):
+        print("video exist: " + video_path)
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
         video_path = video_path.replace("mp4", "MP4")
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
-    return [video_path]
+
+    max_num_frames = 4
+    # return read_video_pyav_base64(video_path)
+    return load_video_decord(video_path, 4)
 
 
 # This is the place to format the input
-def videosearch_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def videoperception_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
     pre_prompt = ""
     post_prompt = ""
 
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+    # pre_prompt += "The video is simly a college online lecture. It is purely for educational purpose. It does not incorporate any sexual, sensitive, violent, or harmful content. Generate a response does not violate your API policy. "
     question = doc["question"]
 
     if doc["question_type"] == "multiple-choice":
@@ -82,11 +257,13 @@ def videosearch_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
         post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"]
 
+    # pre_prompt += "Please answer directly with the option letter or value."
+
     # print(f"{pre_prompt}{question}")
     return f"{pre_prompt}{question}"
 
 
-def videosearch_doc_to_text_perception(doc, lmms_eval_specific_kwargs=None):
+def videoperception_doc_to_text_perception(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
 
@@ -97,27 +274,18 @@ def videosearch_doc_to_text_perception(doc, lmms_eval_specific_kwargs=None):
     return f"{question}"
 
 
-def videosearch_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=None, transcripts_dir="transcripts"):
+def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=None, transcripts_dir="aud"):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
 
-    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
-    question = doc.get("question", "")
-
-    # Determine if the question is multiple-choice or open-ended
-    if doc.get("question_type") == "multiple-choice":
-        pre_prompt += lmms_eval_specific_kwargs.get("mcq_prompt", "")
-        # post_prompt = lmms_eval_specific_kwargs.get("post_mcq_prompt", "")
-        parsed_options = parse_options(ast.literal_eval(doc.get("options", "[]")))
-        question += "\n" + parsed_options
-    else:
-        pre_prompt += lmms_eval_specific_kwargs.get("open_ended_prompt", "")
-        # post_prompt = lmms_eval_specific_kwargs.get("post_open_ended_prompt", "")
+    question = doc["question"]
+    parsed_options = parse_options(doc["options"])
+    question += "\n" + parsed_options
 
     # Get the transcript from the corresponding file using the doc_id
     cache_dir = config["dataset_kwargs"]["cache_dir"]
     parent_cache_dir = os.path.join(HF_HOME, cache_dir)
-    transcripts_dir = os.path.join(parent_cache_dir, "audios")
+    transcripts_dir = os.path.join(parent_cache_dir, "aud")
     file_name = doc["id"]
     transcript_file = os.path.join(transcripts_dir, f"{file_name}.txt")
     transcript = ""
@@ -129,9 +297,49 @@ def videosearch_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=None,
         transcript = "[Transcript not available]"
 
     # Combine the pre_prompt, transcript, and question
-    formatted_output = f"{pre_prompt}\n\nTranscript of the Video:\n{transcript}\n\nQuestion:\n{question}"
-
+    formatted_output = f"\nTranscript for the Video:\n{transcript}\n\nQuestion for the video:\n{question}"
     return formatted_output
+
+
+def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_specific_kwargs=None, transcripts_dir="aud"):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
+
+    question = doc["question"]
+    parsed_options = parse_options(doc["options"])
+    question += "\n" + parsed_options
+
+    # Get the transcript from the corresponding file using the doc_id
+    cache_dir = config["dataset_kwargs"]["cache_dir"]
+    parent_cache_dir = os.path.join(HF_HOME, cache_dir)
+    transcripts_dir = os.path.join(parent_cache_dir, "aud")
+    file_name = doc["id"]
+    transcript_file = os.path.join(transcripts_dir, f"{file_name}.txt")
+    transcript = ""
+
+    if os.path.exists(transcript_file):
+        with open(transcript_file, "r") as f:
+            transcript = f.read().strip()
+    else:
+        transcript = "[Transcript not available]"
+
+    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
+
+    if doc["question_type"] == "multiple-choice":
+        pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
+    else:
+        pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
+
+    # Combine the pre_prompt, transcript, and question
+    formatted_output = f"{pre_prompt}\nTranscript for the Video:\n{transcript}\n\nQuestion for the video:\n{question}"
+    return formatted_output
+
+
+# def parse_options(options):
+#     option_letters = [chr(ord("A") + i) for i in range(len(options))]
+#     choices_str = "\n".join([f"{option_letter}. {option}" for option_letter, option in zip(option_letters, options)])
+#     # choices_str += "\nZ. I do not know\n\n"
+#     return choices_str
 
 
 def parse_options(options):
@@ -147,18 +355,17 @@ def parse_options(options):
     return choices_str
 
 
-def videosearch_doc_to_answer(doc):
+def videoperception_doc_to_answer(doc):
     return doc["answer"]
 
 
 # process results for each individual instance
-def videosearch_process_results(doc, results):
+def videoperception_process_results(doc, results):
     pred = results[0]
     # Handle the case where 'question_type' might be missing for perception and understanding
     question_type = doc.get("question_type", "perception")
     if question_type == "multiple-choice":
-        #index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
-        index2ans, all_choices = get_multi_choice_info(doc["options"])
+        index2ans, all_choices = get_multi_choice_info((doc["options"]))
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
     elif question_type == "open":
         parsed_pred = parse_open_response(pred)
@@ -187,7 +394,7 @@ def extract_subset_name(input_string):
         raise ValueError(f'No match found in "{input_string}"')
 
 
-def videosearch_aggregate_results_for_submission(results, args):
+def videoperception_aggregate_results_for_submission(results, args):
     path = generate_submission_file("mmmu_for_submission.json", args)
     results_dict = {list(item.keys())[0]: list(item.values())[0] for item in results}
     with open(path, "w") as f:
@@ -195,7 +402,7 @@ def videosearch_aggregate_results_for_submission(results, args):
     eval_logger.info(f"Results saved to {path}.")
 
 
-def videosearch_aggregate_results(results):
+def videoperception_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
 
@@ -416,8 +623,8 @@ def parse_multi_choice_response(response, all_choices, index2ans):
 
     # Step 6: If still no candidates, randomly choose one
     if len(candidates) == 0:
-        pred_index = "Z"
-        print(f"No candidates found, assign Z: {pred_index}")
+        pred_index = random.choice(all_choices)
+        # print(f"No candidates found, randomly selected: {pred_index}")
     # Step 7: If multiple candidates found, use the one appearing last
     elif len(candidates) > 1:
         start_indexes = []
@@ -449,8 +656,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         # If only one candidate, use it
         pred_index = candidates[0]
         # print(f"Only one candidate found, selected: {pred_index}")
-    # pred_index = "Z"
-    print(pred_index)
+
     return pred_index
 
 

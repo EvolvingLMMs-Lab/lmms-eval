@@ -31,35 +31,51 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
-cache_dir_perception = os.path.join(cache_dir, "agriculture_perception_videos")
-cache_dir = os.path.join(cache_dir, "videos")
+cache_dir_business = os.path.join(cache_dir, "video_1206_business")
+cache_dir_engineering = os.path.join(cache_dir, "video_1206_1633")
+cache_dir_science = os.path.join(cache_dir, "science_1210")
 
 from loguru import logger as eval_logger
 
 
 # Pass in video path here
 # Can only work correctly with video llm
-def videosearch_doc_to_visual(doc):
+def videosearch_doc_to_visual_business(doc):
     video_path = doc["id"] + ".mp4"
-    video_path = os.path.join(cache_dir, video_path)
+    video_path = os.path.join(cache_dir_business, video_path)
     if os.path.exists(video_path):
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
         video_path = video_path.replace("mp4", "MP4")
     else:
-        sys.exit(f"video path:{video_path} does not exist, please check")
+        video_path = os.path.join(cache_dir_business, "validation_Accounting_15.mp4") 
+        #sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
-
-def videosearch_doc_to_visual_perception(doc):
+def videosearch_doc_to_visual_science(doc):
     video_path = doc["id"] + ".mp4"
-    video_path = os.path.join(cache_dir_perception, video_path)
+    video_path = os.path.join(cache_dir_science, video_path)
     if os.path.exists(video_path):
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
         video_path = video_path.replace("mp4", "MP4")
     else:
-        sys.exit(f"video path:{video_path} does not exist, please check")
+        video_path = os.path.join(cache_dir_science, "validation_Math_14.mp4") 
+        print(video_path)
+        print("Not found")
+        #sys.exit(f"video path:{video_path} does not exist, please check")
+    return [video_path]
+
+def videosearch_doc_to_visual_engineering(doc):
+    video_path = doc["id"] + ".mp4"
+    video_path = os.path.join(cache_dir_engineering, video_path)
+    if os.path.exists(video_path):
+        video_path = video_path
+    elif os.path.exists(video_path.replace("mp4", "MP4")):
+        video_path = video_path.replace("mp4", "MP4")
+    else:
+        video_path = os.path.join(cache_dir_engineering, "validation_Agriculture_1.mp4") 
+        #sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
 
@@ -73,16 +89,11 @@ def videosearch_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     question = doc["question"]
 
-    if doc["question_type"] == "multiple-choice":
-        pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
-        post_prompt = lmms_eval_specific_kwargs["post_mcq_prompt"]
-        parsed_options = parse_options(doc["options"])
-        question += "\n" + parsed_options
-    else:
-        pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
-        post_prompt = lmms_eval_specific_kwargs["post_open_ended_prompt"]
+    pre_prompt += lmms_eval_specific_kwargs["mcq_prompt"]
+    parsed_options = parse_options(doc["options"])
+    question += "\n" + parsed_options
 
-    # print(f"{pre_prompt}{question}")
+    #print(f"{pre_prompt}{question}")
     return f"{pre_prompt}{question}"
 
 
@@ -104,15 +115,15 @@ def videosearch_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=None,
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     question = doc.get("question", "")
 
-    # Determine if the question is multiple-choice or open-ended
-    if doc.get("question_type") == "multiple-choice":
-        pre_prompt += lmms_eval_specific_kwargs.get("mcq_prompt", "")
-        # post_prompt = lmms_eval_specific_kwargs.get("post_mcq_prompt", "")
-        parsed_options = parse_options(ast.literal_eval(doc.get("options", "[]")))
-        question += "\n" + parsed_options
-    else:
-        pre_prompt += lmms_eval_specific_kwargs.get("open_ended_prompt", "")
-        # post_prompt = lmms_eval_specific_kwargs.get("post_open_ended_prompt", "")
+    # # Determine if the question is multiple-choice or open-ended
+    # if doc.get("question_type") == "multiple-choice":
+    #     pre_prompt += lmms_eval_specific_kwargs.get("mcq_prompt", "")
+    #     # post_prompt = lmms_eval_specific_kwargs.get("post_mcq_prompt", "")
+    #     parsed_options = parse_options(ast.literal_eval(doc.get("options", "[]")))
+    #     question += "\n" + parsed_options
+    # else:
+    #     pre_prompt += lmms_eval_specific_kwargs.get("open_ended_prompt", "")
+    #     # post_prompt = lmms_eval_specific_kwargs.get("post_open_ended_prompt", "")
 
     # Get the transcript from the corresponding file using the doc_id
     cache_dir = config["dataset_kwargs"]["cache_dir"]
@@ -154,21 +165,13 @@ def videosearch_doc_to_answer(doc):
 # process results for each individual instance
 def videosearch_process_results(doc, results):
     pred = results[0]
-    # Handle the case where 'question_type' might be missing for perception and understanding
-    question_type = doc.get("question_type", "perception")
-    if question_type == "multiple-choice":
-        #index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
-        index2ans, all_choices = get_multi_choice_info(doc["options"])
-        parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    elif question_type == "open":
-        parsed_pred = parse_open_response(pred)
-    else:
-        # If it is the perception or understanding question
-        index2ans, all_choices = get_multi_choice_info(doc["options"])
-        parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
+
+    # If it is the perception or understanding question
+    index2ans, all_choices = get_multi_choice_info(doc["options"])
+    parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
 
     id = doc["id"]
-    mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": question_type, "answer": doc["answer"], "parsed_pred": parsed_pred}
+    mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
         "mmmu_acc": mmmu_acc,
         "submission": {id: parsed_pred},
@@ -351,12 +354,14 @@ def evaluate_mmmu(samples):
     for sample in samples:
         gold_i = sample["answer"]
         pred_i = sample["parsed_pred"]
-        if sample["question_type"] == "multiple-choice":
-            correct = eval_multi_choice(gold_i, pred_i)
-        elif sample["question_type"] == "perception":
-            correct = eval_multi_choice(gold_i, pred_i)
-        else:  # open question
-            correct = eval_open(gold_i, pred_i)
+        correct = eval_multi_choice(gold_i, pred_i)
+        if "question_type" in sample:
+            if sample["question_type"] == "multiple-choice":
+                correct = eval_multi_choice(gold_i, pred_i)
+            elif sample["question_type"] == "perception":
+                correct = eval_multi_choice(gold_i, pred_i)
+            else:  # open question
+                correct = eval_open(gold_i, pred_i)
 
         if correct:
             judge_dict[sample["id"]] = "Correct"
@@ -368,7 +373,6 @@ def evaluate_mmmu(samples):
         return {"acc": 0}
     return judge_dict, {"acc": pred_correct / len(samples)}
 
-
 def parse_multi_choice_response(response, all_choices, index2ans):
     """
     Parse the prediction from the generated response.
@@ -378,6 +382,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "  # Add space to avoid partial match
+    #print(response)
 
     index_ans = True
     ans_with_brack = False
@@ -387,9 +392,15 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     # Step 2: If no candidates, look for choices with a period after (A. B. C. D.)
     for choice in all_choices:  # e.g., A. B. C. D.
         if f"{choice}." in response:
-            # print(f"Found choice with period after: {choice}")
+            #print(f"Found choice with period after: {choice}")
             candidates.append(choice)
             ans_with_period = True
+    # Step 2.1: If no candidates, look for choices with a period after (A. B. C. D.)
+    for choice in all_choices:  # e.g., A. B. C. D.
+        if f"{choice}:" in response:
+            #print(f"Found choice with semicolon after: {choice}")
+            candidates.append(choice)
+            ans_with_colon = True
 
     # Step 3: Look for choices with parentheses e.g., (A) (B) (C) (D)
     if len(candidates) == 0:
@@ -403,14 +414,14 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     if len(candidates) == 0:
         for choice in all_choices:  # e.g., A B C D
             if f"{choice} " in response:
-                # print(f"Found choice without parentheses (space after): {choice}")
+                #print(f"Found choice without parentheses (space after): {choice}")
                 candidates.append(choice)
 
     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
     if len(candidates) == 0 and len(response.split()) > 5:
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
-                # print(f"Found answer content match: {ans}")
+                #print(f"Found answer content match: {ans}")
                 candidates.append(index)
                 index_ans = False  # It's content answer, not an index
 
@@ -425,32 +436,37 @@ def parse_multi_choice_response(response, all_choices, index2ans):
             if ans_with_period:
                 for can in candidates:
                     index = response.rfind(f"{can}.")
-                    # print(f"Checking position of choice: {can} at {index}")
+                    #print(f"Checking position of choice: {can} at {index}")
+                    start_indexes.append(index)
+            elif ans_with_colon:
+                for can in candidates:
+                    index = response.rfind(f"{can}:")
+                    #print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
             elif ans_with_brack:
                 for can in candidates:
                     index = response.rfind(f"({can})")
-                    # print(f"Checking position of choice with parentheses: {can} at {index}")
+                    #print(f"Checking position of choice with parentheses: {can} at {index}")
                     start_indexes.append(index)
             else:
                 for can in candidates:
                     index = response.rfind(f" {can} ")
-                    # print(f"Checking position of choice: {can} at {index}")
+                    #print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
         else:
             for can in candidates:
                 index = response.lower().rfind(index2ans[can].lower())
-                # print(f"Checking position of content match: {can} at {index}")
+                #print(f"Checking position of content match: {can} at {index}")
                 start_indexes.append(index)
         # Get the last one (max index)
         pred_index = candidates[np.argmax(start_indexes)]
-        # print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
+        #print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
     else:
         # If only one candidate, use it
         pred_index = candidates[0]
-        # print(f"Only one candidate found, selected: {pred_index}")
+        #print(f"Only one candidate found, selected: {pred_index}")
     # pred_index = "Z"
-    print(pred_index)
+    # print(pred_index)
     return pred_index
 
 

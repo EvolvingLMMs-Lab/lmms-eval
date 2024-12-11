@@ -1,0 +1,17 @@
+dataset_path: lmms-lab/MMMU_for_testing
+dataset_name: "new_1206"
+task: "mmmu_testing_new_1206"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mmmu_doc_to_visual
+doc_to_text: !function utils.mmmu_doc_to_text
+doc_to_target: "answer"
+# The return value of process_results will be used by metrics
+process_results: !function utils.mmmu_process_results
+
+metric_list:
+  - metric: mmmu_acc
+    aggregation: !function utils.mmmu_aggregate_results
+    higher_is_better: true
+
+include: _default_template_yaml
