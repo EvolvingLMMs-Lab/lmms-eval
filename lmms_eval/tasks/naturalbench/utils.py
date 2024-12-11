@@ -30,15 +30,15 @@ def get_scores(scores):
 
     Returns:
         dict: A dictionary containing the calculated scores:
-            - 'question_score': Average question score
-            - 'image_score': Average image score
-            - 'binary_score': Average binary VQA score
-            - 'group_score': Average group score
+            - 'Acc': Average binary VQA acc
+            - 'Q_Acc': Average question acc
+            - 'I_Acc': Average image acc
+            - 'G_Acc': Average group acc
     """
-    question_score = 0.0
-    image_score = 0.0
-    binary_score = 0.0
-    group = 0.0
+    Q_Acc = 0.0
+    I_Acc = 0.0
+    Acc = 0.0
+    G_Acc = 0.0
 
     num_samples = len(scores)
 
@@ -85,7 +85,7 @@ def get_scores(scores):
 
         return binary_score_correct
 
-    def calculate_group(result):
+    def calculate_group_score(result):
         group_correct = 0
         if calculate_question_score(result) == 2 and calculate_image_score(result) == 2:
             group_correct += 1
@@ -94,18 +94,18 @@ def get_scores(scores):
 
     if isinstance(scores, dict):
         for _, result in scores.items():
-            question_score += calculate_question_score(result)
-            image_score += calculate_image_score(result)
-            binary_score += calculate_binary_score(result)
-            group += calculate_group(result)
+            Q_Acc += calculate_question_score(result)
+            I_Acc += calculate_image_score(result)
+            Acc += calculate_binary_score(result)
+            G_Acc += calculate_group_score(result)
     else:
         for result in scores:
-            question_score += calculate_question_score(result)
-            image_score += calculate_image_score(result)
-            binary_score += calculate_binary_score(result)
-            group += calculate_group(result)
+            Q_Acc += calculate_question_score(result)
+            I_Acc += calculate_image_score(result)
+            Acc += calculate_binary_score(result)
+            G_Acc += calculate_group_score(result)
 
-    results = {"question_score": question_score / float(num_samples * 2), "image_score": image_score / float(num_samples * 2), "binary_score": binary_score / float(num_samples * 4), "group_score": group / num_samples}
+    results = {"Q_Acc": Q_Acc / float(num_samples * 2), "I_Acc": I_Acc / float(num_samples * 2), "Acc": Acc / float(num_samples * 4), "G_Acc": G_Acc / num_samples}
 
     return results
 
@@ -176,10 +176,15 @@ def naturalbench_process_results(doc, results):
     pred = results[0]
     type = doc["Question_Type"]
     gt_ans = extract_answer(pred, task_type=type)
-    return {"naturalbench_score": {"id": doc["Index"], "score": gt_ans}}
+    return {
+        "naturalbench_G_ACC": {"id": doc["Index"], "score": gt_ans},
+        "naturalbench_Q_ACC": {"id": doc["Index"], "score": gt_ans},
+        "naturalbench_I_ACC": {"id": doc["Index"], "score": gt_ans},
+        "naturalbench_Acc": {"id": doc["Index"], "score": gt_ans},
+    }
 
 
-def naturalbench_aggregate_results(results):
+def naturalbench_aggregate_results_G_ACC(results):
     """
     Args:
         results: a list of values returned by process_results
@@ -198,7 +203,78 @@ def naturalbench_aggregate_results(results):
 
     scores = get_scores(answers)
 
-    for category, avg_score in scores.items():
-        eval_logger.info(f"{category}: {avg_score:.2f}")
+    # eval_logger.info(f"G_Acc: {scores["G_Acc"]:.2f}")
 
-    return scores["group_score"]
+    return scores["G_Acc"]
+
+
+def naturalbench_aggregate_results_Q_ACC(results):
+    """
+    Args:
+        results: a list of values returned by process_results
+    Returns:
+        A score
+    """
+    assert len(results) == 1900 * 4
+    answers = {}
+    number_answered_samples = len(results) // 4
+    for i in range(number_answered_samples):
+        assert int(results[i * 4]["id"]) == i * 4
+        assert int(results[i * 4 + 1]["id"]) == i * 4 + 1
+        assert int(results[i * 4 + 2]["id"]) == i * 4 + 2
+        assert int(results[i * 4 + 3]["id"]) == i * 4 + 3
+        answers[i] = {"q0_i0": results[i * 4]["score"], "q0_i1": results[i * 4 + 1]["score"], "q1_i0": results[i * 4 + 2]["score"], "q1_i1": results[i * 4 + 3]["score"]}
+
+    scores = get_scores(answers)
+
+    # eval_logger.info(f"Q_Acc: {scores["Q_Acc"]:.2f}")
+
+    return scores["Q_Acc"]
+
+
+def naturalbench_aggregate_results_I_ACC(results):
+    """
+    Args:
+        results: a list of values returned by process_results
+    Returns:
+        A score
+    """
+    assert len(results) == 1900 * 4
+    answers = {}
+    number_answered_samples = len(results) // 4
+    for i in range(number_answered_samples):
+        assert int(results[i * 4]["id"]) == i * 4
+        assert int(results[i * 4 + 1]["id"]) == i * 4 + 1
+        assert int(results[i * 4 + 2]["id"]) == i * 4 + 2
+        assert int(results[i * 4 + 3]["id"]) == i * 4 + 3
+        answers[i] = {"q0_i0": results[i * 4]["score"], "q0_i1": results[i * 4 + 1]["score"], "q1_i0": results[i * 4 + 2]["score"], "q1_i1": results[i * 4 + 3]["score"]}
+
+    scores = get_scores(answers)
+
+    # eval_logger.info(f"I_Acc: {scores["I_Acc"]:.2f}")
+
+    return scores["I_Acc"]
+
+
+def naturalbench_aggregate_results_ACC(results):
+    """
+    Args:
+        results: a list of values returned by process_results
+    Returns:
+        A score
+    """
+    assert len(results) == 1900 * 4
+    answers = {}
+    number_answered_samples = len(results) // 4
+    for i in range(number_answered_samples):
+        assert int(results[i * 4]["id"]) == i * 4
+        assert int(results[i * 4 + 1]["id"]) == i * 4 + 1
+        assert int(results[i * 4 + 2]["id"]) == i * 4 + 2
+        assert int(results[i * 4 + 3]["id"]) == i * 4 + 3
+        answers[i] = {"q0_i0": results[i * 4]["score"], "q0_i1": results[i * 4 + 1]["score"], "q1_i0": results[i * 4 + 2]["score"], "q1_i1": results[i * 4 + 3]["score"]}
+
+    scores = get_scores(answers)
+
+    # eval_logger.info(f"Acc: {scores["Acc"]:.2f}")
+
+    return scores["Acc"]
