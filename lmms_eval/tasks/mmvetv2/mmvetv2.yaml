@@ -1,0 +1,27 @@
+dataset_path: lmms-lab/MMVet-v2
+dataset_kwargs:
+  token: True
+task: "mmvetv2"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mmvet_doc_to_visual
+doc_to_text: !function utils.doc_to_text # Such that {{question}} will be replaced by doc["question"]
+doc_to_target: "{{answer}}"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0.2
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.mmvet_process_results # apply gpt eval here
+metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function utils.mmvet_aggregate_results
+    higher_is_better: true
+metadata:
+  version: 0.0
+  gpt_eval_model_name: "gpt-4-0613"
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "First please perform reasoning, and think step by step to provide best answer to the following question: \n\n"
+    post_prompt: ""
