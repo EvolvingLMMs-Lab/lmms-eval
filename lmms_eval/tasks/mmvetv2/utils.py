@@ -7,6 +7,7 @@ import pandas as pd
 import requests
 import yaml
 from loguru import logger as eval_logger
+from openai import AzureOpenAI, OpenAI
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -137,9 +138,6 @@ def process_images(images, size=1008):
         return concat_horizontal
 
 
-#
-
-
 def get_images_tokens(input_string):
     images = []
     queries = input_string.split("<IMG>")
@@ -169,12 +167,6 @@ def mmvet_doc_to_visual(doc):
     image_tokens = get_images_tokens(prompt)
     visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
     return visual
-
-
-# def mmvet_doc_to_visual(doc):
-#     if doc["image"] is None:
-#         return []
-#     return [doc["image"].convert("RGB")]
 
 
 def replace_images_tokens(input_string):
@@ -213,19 +205,9 @@ with open(Path(__file__).parent / "mmvetv2.yaml", "r") as f:
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
+    client = OpenAI()
 elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
+    client = AzureOpenAI()
 
 GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
 MM_VET_PROMPT = """Compare the ground truth and prediction from AI models, to give a correctness score for the prediction. <AND> in the ground truth means it is totally right only when all elements in the ground truth are present in the prediction, and <OR> means it is totally right when any one element in the ground truth is present in the prediction. The correctness score is 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Just complete the last space of the correctness score.
@@ -249,11 +231,6 @@ def get_chat_response(
     patience=3,
     sleep_time=5,
 ):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
     messages = [
         {"role": "user", "content": prompt},
     ]
@@ -263,26 +240,29 @@ def get_chat_response(
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        # "response_format": { "type": "json_object" }
     }
-
-    if API_TYPE == "azure":
-        payload.pop("model")
 
     while patience > 0:
         patience -= 1
         try:
-            response = requests.post(
-                API_URL,
-                headers=headers,
-                json=payload,
-                timeout=60,
-            )
-            response.raise_for_status()
-            response_data = response.json()
+            response = client.chat.completions.create(**payload)
+            content = response.choices[0].message.content.strip()
+            print("content", content)
+            if content:
+                return content, response.model
+            # response = requests.post(
+            #     API_URL,
+            #     headers=headers,
+            #     json=payload,
+            #     timeout=60,
+            # )
+            # response.raise_for_status()
+            # response_data = response.json()
 
-            content = response_data["choices"][0]["message"]["content"].strip()
-            if content != "":
-                return content, response_data["model"]
+            # content = response_data["choices"][0]["message"]["content"].strip()
+            # if content != "":
+            #     return content, response_data["model"]
 
         except Exception as e:
             eval_logger.error(f"Error: {e}")
@@ -292,12 +272,6 @@ def get_chat_response(
             eval_logger.info(f"Retrying...Patience left: {patience}")
 
     return "", ""
-
-
-def mmvet_doc_to_visual(doc):
-    if doc["image"] is None:
-        return []
-    return [doc["image"].convert("RGB")]
 
 
 def mmvet_process_results(doc, results):
@@ -339,7 +313,7 @@ def mmvet_process_results(doc, results):
 
     return {
         f"gpt_eval_score": {
-            "question_id": doc["question_id"],
+            "question_id": doc["id"],
             "question": doc["question"],
             "gt_answer": doc["answer"],
             "capabilities": doc["capability"],
@@ -423,7 +397,7 @@ def mmvet_aggregate_results(results):
                 cap_counts[cap] += 1
         for detail in cap_details_scores:
             detail_set = set(detail.split("_"))
-            result_detail_set = set(result["capabilities"].split(","))
+            result_detail_set = set(result["capabilities"])
             if detail_set == result_detail_set:
                 cap_details_scores[detail] += result["score"]
                 cap_details_counts[detail] += 1
