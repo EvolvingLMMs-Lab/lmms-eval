@@ -138,48 +138,30 @@ def process_images(images, size=1008):
         return concat_horizontal
 
 
-def get_images_tokens(input_string):
-    images = []
-    queries = input_string.split("<IMG>")
-    for query in queries:
-        query = query.strip()
-        if query.endswith((".jpg", ".png", ".jpeg")):
-            # image_path = os.path.join(image_folder, query)
-            # images.append(Image.open(image_path).convert("RGB"))
-            images.append(query)
-    return images
-
-
 def mmvet_group_img_doc_to_visual(doc):
-    # if doc["image"] is None:
-    #     return []
     prompt = doc["question"]
-    image_tokens = get_images_tokens(prompt)
-    visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
+    image_tokens = re.findall(r"<image_\d+>", prompt)
+    visual = [doc[image_token.strip("<>")].convert("RGB") for image_token in image_tokens]
     visual = process_images(visual)
     return [visual]
 
 
 def mmvet_doc_to_visual(doc):
-    # if doc["image"] is None:
-    #     return []
     prompt = doc["question"]
-    image_tokens = get_images_tokens(prompt)
-    visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
+    image_tokens = re.findall(r"<image_\d+>", prompt)
+    visual = [doc[image_token.strip("<>")].convert("RGB") for image_token in image_tokens]
     return visual
 
 
 def replace_images_tokens(input_string):
-    text_queries = []
+    if config["metadata"]["interleaved_format"]:
+        for i in range(0, 18):
+            question_text = f"<image_{i}>"
+            query_text = "<image>"
+            if question_text in input_string:
+                input_string = input_string.replace(question_text, query_text)
     queries = input_string.split("<IMG>")
-    for query in queries:
-        query = query.strip()
-        if query.endswith((".jpg", ".png", ".jpeg")):
-            text_queries.append("[<IMG_PLH>]")
-        else:
-            text_queries.append(query)
-    question = "".join(text_queries)
-    return question
+    return "".join(queries)
 
 
 def doc_to_text(doc, lmms_eval_specific_kwargs=None):
