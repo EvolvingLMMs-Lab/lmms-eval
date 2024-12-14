@@ -1,0 +1,14 @@
+dataset_path: lmms-lab/videofinal
+dataset_kwargs:
+  token: True
+  video: True
+  # force_download: True
+  # force_unzip: True
+  cache_dir: videommmu_1213
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "You should watch and learn the video content. Then apply what you learned to "
+    mcq_prompt: "answer the following multi-choice question. The image for this question is at the end of the video.\n"
+    open_ended_prompt: "answer the following open-ended question. The image for this question is at the end of the video.\n"
+generation_kwargs:
+  max_new_tokens: 1024
