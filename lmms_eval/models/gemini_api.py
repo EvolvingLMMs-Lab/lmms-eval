@@ -9,6 +9,8 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
+import pathlib
+import re
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -39,7 +41,7 @@ class GeminiAPI(lmms):
         model_version: str = "gemini-1.5-pro",
         # modality: str = "image",
         timeout: int = 120,
-        continual_mode: bool = False,
+        continual_mode: bool = True,
         response_persistent_folder: str = "./logs/gemini_persistent_folder",
         # We will cache the Gemini API response in this path and use it for future requests
         **kwargs,
@@ -159,11 +161,38 @@ class GeminiAPI(lmms):
                 temperature=gen_kwargs["temperature"],
             )
 
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            visuals = self.flatten(visuals)
-            visuals = self.convert_modality(visuals)
 
-            message = [contexts] + visuals
+            if task == 'av_odyssey':
+
+                visuals_audios_mix = doc_to_visual(self.task_dict[task][split][doc_id])
+                
+                images = []
+                audios = []
+                videos = []
+
+                # 遍历列表，分类元素
+                for item in visuals_audios_mix:
+                    if item.endswith('.png'): 
+                        images.append(item)
+                    elif item.endswith('.wav'): 
+                        audios.append(item)
+                    elif item.endswith('.mp4'): 
+                        videos.append(item)
+                
+                if videos == []:
+                    message = self.get_image_audio_text_interleaved_messsage(images, audios, contexts)
+                if images == []:
+                    message = self.get_video_audio_text_interleaved_message(videos, audios, contexts)
+                
+                # res.append('The answer is A.')
+                # continue
+                
+                            
+            else:
+                visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]            
+                visuals = self.flatten(visuals)
+                visuals = self.convert_modality(visuals)
+                message = [contexts] + visuals 
 
             for attempt in range(5):
                 try:
@@ -213,3 +242,82 @@ class GeminiAPI(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "Gemini API not support"
+        
+    def get_image_audio_text_interleaved_messsage(self, image_path, audio_path, question):
+        # image_path for list of image path
+        # audio_path for list of audio path
+        # question for question
+
+        # fixed image token and no audio in text
+        for index in range(1, 1 + len(image_path)):
+            question = question.replace(f"[img{index}]", "<image>") 
+        for index in range(1, 1 + len(audio_path)):
+            question = question.replace(f'[audio{index}]', '<audio>')
+        
+        text = question
+        
+        info_list = []
+        image_counter = 0
+        audio_counter = 0
+        for part in re.split(r'(<image>|<audio>)', text):
+            if part == '<image>':
+                info_list.append(Image.open(image_path[image_counter]))
+                image_counter += 1
+            elif part == '<audio>':
+                info_list.append(
+                    {
+                        "mime_type": "audio/wav",
+                        "data": pathlib.Path(audio_path[audio_counter]).read_bytes()
+                    }
+                    )
+                audio_counter += 1
+            else:
+                if part == ' ':
+                    continue
+                info_list.append(part)
+
+        return info_list
+
+    def get_video_audio_text_interleaved_message(self, video_path, audio_path, question):
+        # image_path for list of image path
+        # audio_path for list of audio path
+        # question for question
+
+        # fixed video token and no audio in text
+        for index in range(1, 1 + len(video_path)):
+            question = question.replace(f"[video{index}]", "<video>") 
+        for index in range(1, 1 + len(audio_path)):
+            question = question.replace(f'[audio{index}]', '<audio>')
+
+        text = question
+
+        info_list = []
+        video_counter = 0
+        audio_counter = 0
+        for part in re.split(r'(<video>|<audio>)', text):
+            if part == '<video>':
+                current_video_file_name = video_path[video_counter]
+                current_video_file = genai.upload_file(path = current_video_file_name)
+                while current_video_file.state.name == 'processing':
+                    print("uploading file")
+                    time.sleep(5)
+                    current_video_file = genai.get_file(current_video_file.name)
+                if current_video_file.state.name == 'FAILED':
+                    print("uploading file failed, next question")
+                    return 0
+                info_list.append(current_video_file)
+                video_counter += 1
+            elif part == '<audio>':
+                info_list.append(
+                    {
+                        "mime_type": "audio/wav",
+                        "data": pathlib.Path(audio_path[audio_counter]).read_bytes()
+                    }
+                    )
+                audio_counter += 1
+            else:
+                if part == ' ':
+                    continue
+                info_list.append(part)
+
+        return info_list
