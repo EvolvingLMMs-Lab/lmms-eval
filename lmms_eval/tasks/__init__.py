@@ -417,8 +417,6 @@ class TaskManager:
                             "yaml_path": yaml_path,
                         }
                     elif self._config_is_group(config):
-                        if f.endswith("mix_evals_image2text.yaml"):
-                            print(config)
                         # This is a group config
                         tasks_and_groups[config["group"]] = {
                             "type": "group",
@@ -479,7 +477,6 @@ class TaskManager:
                     else:
                         self.logger.debug(f"File {f} in {root} could not be loaded as a task or group")
 
-        print(tasks_and_groups["mix_evals_image2text"])
         return tasks_and_groups
 
 
