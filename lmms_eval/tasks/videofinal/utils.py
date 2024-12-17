@@ -15,7 +15,6 @@ from decord import VideoReader, cpu
 from PIL import Image
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -32,6 +31,7 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 # And load it here
 HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
+cache_dir = os.path.join(HF_HOME, cache_dir)
 
 
 from loguru import logger as eval_logger
@@ -128,7 +128,7 @@ def videoperception_doc_to_text_perception_comprehension(doc, lmms_eval_specific
     return f"{question}{post_prompt}"
 
 
-def videoperception_doc_to_text_with_transcript_perception_comprehension(doc, lmms_eval_specific_kwargs=None, transcripts_dir):
+def videoperception_doc_to_text_with_transcript_perception_comprehension(doc, lmms_eval_specific_kwargs=None, transcripts_dir="transcripts"):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
 
@@ -156,7 +156,7 @@ def videoperception_doc_to_text_with_transcript_perception_comprehension(doc, lm
     return formatted_output
 
 
-def videoperception_doc_to_text_with_transcript_adaptation(doc, lmms_eval_specific_kwargs=None, transcripts_dir=):
+def videoperception_doc_to_text_with_transcript_adaptation(doc, lmms_eval_specific_kwargs=None, transcripts_dir="transcripts"):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
 
@@ -217,8 +217,7 @@ def videoperception_process_results(doc, results):
 
     mmmu_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": question_type, "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
-        "mmmu_acc": mmmu_acc,
-        "submission": {id: parsed_pred},
+        "mmmu_acc": mmmu_acc
     }
 
 
@@ -234,14 +233,6 @@ def extract_subset_name(input_string):
         raise ValueError(f'No match found in "{input_string}"')
 
 
-def videoperception_aggregate_results_for_submission(results, args):
-    path = generate_submission_file("mmmu_for_submission.json", args)
-    results_dict = {list(item.keys())[0]: list(item.values())[0] for item in results}
-    with open(path, "w") as f:
-        json.dump(results_dict, f)
-    eval_logger.info(f"Results saved to {path}.")
-
-
 def videoperception_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
@@ -255,8 +246,6 @@ def videoperception_aggregate_results(results):
     for subset, sub_eval_samples in subset_to_eval_samples.items():
         judge_dict, metric_dict = evaluate_mmmu(sub_eval_samples)
         metric_dict.update({"num_example": len(sub_eval_samples)})
-        print("num_example: ")
-        print(len(sub_eval_samples))
         evaluation_result[subset] = metric_dict
 
     printable_results = {}
