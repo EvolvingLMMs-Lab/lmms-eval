@@ -43,6 +43,7 @@ class GeminiAPI(lmms):
         timeout: int = 120,
         continual_mode: bool = True,
         response_persistent_folder: str = "./logs/gemini_persistent_folder",
+        interleave: bool = False,
         # We will cache the Gemini API response in this path and use it for future requests
         **kwargs,
     ) -> None:
@@ -51,6 +52,7 @@ class GeminiAPI(lmms):
         self.timeout = timeout
         self.model = genai.GenerativeModel(model_version)
         self.continual_mode = continual_mode
+        self.interleave = interleave
         # if self.continual_mode and response_persistent_folder is None:
         #     raise ValueError("Continual mode requires a persistent path for the response. We will cache the Gemini API response in this path and use it for future requests. Please provide a valid path.")
         if self.continual_mode:
@@ -134,6 +136,20 @@ class GeminiAPI(lmms):
                     eval_logger.error(f"Error converting video: {str(e)}")
         return images
 
+    def construct_interleaved_input(self, content, media):
+        pattern = r'<media_(\d+)>'
+        parts = re.split(pattern, content)
+        result = []
+        for i, part in enumerate(parts):
+            if i % 2 == 0:
+                if part == "":
+                    continue
+                result.append(part)
+            else:
+                result.append(media[int(part)])
+                
+        return result
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -162,38 +178,15 @@ class GeminiAPI(lmms):
             )
 
 
-            if task == 'av_odyssey':
+            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]            
+            visuals = self.flatten(visuals)
+            visuals = self.convert_modality(visuals)
 
-                visuals_audios_mix = doc_to_visual(self.task_dict[task][split][doc_id])
-                
-                images = []
-                audios = []
-                videos = []
-
-                # 遍历列表，分类元素
-                for item in visuals_audios_mix:
-                    if item.endswith('.png'): 
-                        images.append(item)
-                    elif item.endswith('.wav'): 
-                        audios.append(item)
-                    elif item.endswith('.mp4'): 
-                        videos.append(item)
-                
-                if videos == []:
-                    message = self.get_image_audio_text_interleaved_messsage(images, audios, contexts)
-                if images == []:
-                    message = self.get_video_audio_text_interleaved_message(videos, audios, contexts)
-                
-                # res.append('The answer is A.')
-                # continue
-                
-                            
+            if self.interleave:
+                message = self.construct_interleaved_input(contexts, visuals)
             else:
-                visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]            
-                visuals = self.flatten(visuals)
-                visuals = self.convert_modality(visuals)
                 message = [contexts] + visuals 
-
+            
             for attempt in range(5):
                 try:
                     content = self.model.generate_content(
