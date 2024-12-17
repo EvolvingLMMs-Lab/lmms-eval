@@ -207,20 +207,15 @@ def videoperception_doc_to_answer(doc):
 # process results for each individual instance
 def videoperception_process_results(doc, results):
     pred = results[0]
-    # Handle the case where 'question_type' might be missing for perception and understanding
-    question_type = doc.get("question_type", "perception")
+
+    question_type = doc.get("question_type", "None")
     if question_type == "multiple-choice":
         index2ans, all_choices = get_multi_choice_info((doc["options"]))
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    elif question_type == "open":
-        parsed_pred = parse_open_response(pred)
     else:
-        # If it is the perception or understanding question
-        index2ans, all_choices = get_multi_choice_info(doc["options"])
-        parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
+        parsed_pred = parse_open_response(pred)
 
-    id = doc["id"]
-    mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": question_type, "answer": doc["answer"], "parsed_pred": parsed_pred}
+    mmmu_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": question_type, "answer": doc["answer"], "parsed_pred": parsed_pred}
     return {
         "mmmu_acc": mmmu_acc,
         "submission": {id: parsed_pred},
@@ -251,31 +246,32 @@ def videoperception_aggregate_results(results):
     evaluation_result = {}
     subset_to_eval_samples = defaultdict(list)
 
-    # Filter out results where parsed_pred is an empty string, possibly due to GPT API error
-    filtered_results = [result for result in results if result["parsed_pred"] != ""]
+    # Filter out results where parsed_pred is "API Error"
+    valid_results = [result for result in results if result["parsed_pred"] != "API Error"]
 
-    for result in filtered_results:
+    for result in valid_results:
         subset_to_eval_samples[result["subdomain"]].append(result)
 
     for subset, sub_eval_samples in subset_to_eval_samples.items():
         judge_dict, metric_dict = evaluate_mmmu(sub_eval_samples)
         metric_dict.update({"num_example": len(sub_eval_samples)})
+        print("num_example: ")
+        print(len(sub_eval_samples))
         evaluation_result[subset] = metric_dict
+
     printable_results = {}
     for domain, in_domain_cats in DOMAIN_CAT2SUB_CAT.items():
         in_domain_cat_results = {}
         for cat_name in in_domain_cats:
             if cat_name in evaluation_result.keys():
                 in_domain_cat_results[cat_name] = evaluation_result[cat_name]
-            else:
-                pass
         in_domain_ins_acc = calculate_ins_level_acc(in_domain_cat_results)
         in_domain_data_num = sum([cat_results["num_example"] for cat_results in in_domain_cat_results.values()])
         printable_results["Overall-" + domain] = {
             "num": int(in_domain_data_num),
             "acc": round(in_domain_ins_acc, 5),
         }
-        # add sub category
+        # Add subcategory
         for cat_name, cat_results in in_domain_cat_results.items():
             printable_results[cat_name] = {
                 "num": int(cat_results["num_example"]),
@@ -288,6 +284,7 @@ def videoperception_aggregate_results(results):
     }
     print(printable_results)
     return printable_results["Overall"]["acc"]
+
 
 
 ##################
@@ -426,6 +423,9 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Parse the prediction from the generated response.
     Return the predicted index e.g., A, B, C, D.
     """
+    if response == "API Error" or response == "":
+        return "API Error"
+        
     # Step 1: Clean up punctuation from the response
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
@@ -476,8 +476,8 @@ def parse_multi_choice_response(response, all_choices, index2ans):
 
     # Step 6: If still no candidates, randomly choose one
     if len(candidates) == 0:
-        pred_index = "Z"
-        #print(f"No candidates found, assign Z: {pred_index}")
+        pred_index = "No Answere Found"
+        #print(f"No candidates found.")
     # Step 7: If multiple candidates found, use the one appearing last
     elif len(candidates) > 1:
         start_indexes = []
@@ -587,6 +587,8 @@ def parse_open_response(response):
     Return a list of predicted strings or numbers.
     https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L122
     """
+    if response == "API Error" or response == "":
+        return "API Error"
 
     # content = content.strip("\n").strip(".").strip(" ")
     def get_key_subresponses(response):
