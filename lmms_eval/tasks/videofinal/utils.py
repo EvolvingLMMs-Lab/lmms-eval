@@ -32,7 +32,6 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 # And load it here
 HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
-cache_dir = os.path.join(HF_HOME, cache_dir)
 
 
 from loguru import logger as eval_logger
@@ -61,10 +60,10 @@ def videoperception_doc_to_visual(doc):
     subject = "_".join(doc["id"].split("_")[1:-1])
 
     # Get the appropriate cache directory based on the subject
-    perception_cache_dir = os.path.join(HF_HOME, cache_dir, get_cache_dir(subject))
+    videommmu_cache_dir = os.path.join(HF_HOME, cache_dir, get_cache_dir(subject))
 
     video_path = doc["id"] + ".mp4"
-    video_path = os.path.join(perception_cache_dir, video_path)
+    video_path = os.path.join(videommmu_cache_dir, video_path)
 
     if os.path.exists(video_path):
         video_path = video_path
@@ -73,7 +72,7 @@ def videoperception_doc_to_visual(doc):
 
     return [video_path]
 
-def videoperception_doc_to_visual_no_video(doc):
+def videoperception_doc_to_visual_question_only(doc):
     video_path = doc["id"] + "_image" + ".mp4"
     question_only_cache_dir =  os.path.join(cache_dir, "question_only") 
     video_path = os.path.join(question_only_cache_dir, video_path)
@@ -117,7 +116,19 @@ def videoperception_doc_to_text_no_preprompt(doc, lmms_eval_specific_kwargs=None
     return f"{question}"
 
 
-def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=None, transcripts_dir="aud"):
+def videoperception_doc_to_text_perception_comprehension(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
+    post_prompt = ""
+    post_prompt += lmms_eval_specific_kwargs["perception_and_comprehension_prompt"]
+    question = doc["question"]
+    parsed_options = parse_options(doc["options"])
+    question += "\n" + parsed_options
+
+    return f"{question}{post_prompt}"
+
+
+def videoperception_doc_to_text_with_transcript_perception_comprehension(doc, lmms_eval_specific_kwargs=None, transcripts_dir):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
 
@@ -126,9 +137,7 @@ def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=N
     question += "\n" + parsed_options
 
     # Get the transcript from the corresponding file using the doc_id
-    cache_dir = config["dataset_kwargs"]["cache_dir"]
-    parent_cache_dir = os.path.join(HF_HOME, cache_dir)
-    transcripts_dir = os.path.join(parent_cache_dir, "aud")
+    transcripts_dir = os.path.join(cache_dir, "transcripts")
     file_name = doc["id"]
     transcript_file = os.path.join(transcripts_dir, f"{file_name}.txt")
     transcript = ""
@@ -138,13 +147,16 @@ def videoperception_doc_to_text_with_transcript(doc, lmms_eval_specific_kwargs=N
             transcript = f.read().strip()
     else:
         transcript = "[Transcript not available]"
-
-    # Combine the pre_prompt, transcript, and question
-    formatted_output = f"\nTranscript for the Video:\n{transcript}\n\nQuestion for the video:\n{question}"
+        
+    post_prompt = ""
+    post_prompt += lmms_eval_specific_kwargs["perception_and_comprehension_prompt"]
+    
+    formatted_output = f"\nTranscript for the Video:\n{transcript}\n\nQuestion for the video:\n{question}{post_prompt}"
+    
     return formatted_output
 
 
-def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_specific_kwargs=None, transcripts_dir="aud"):
+def videoperception_doc_to_text_with_transcript_adaptation(doc, lmms_eval_specific_kwargs=None, transcripts_dir=):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
 
@@ -153,9 +165,7 @@ def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_speci
     question += "\n" + parsed_options
 
     # Get the transcript from the corresponding file using the doc_id
-    cache_dir = config["dataset_kwargs"]["cache_dir"]
-    parent_cache_dir = os.path.join(HF_HOME, cache_dir)
-    transcripts_dir = os.path.join(parent_cache_dir, "aud")
+    transcripts_dir = os.path.join(cache_dir, "transcripts")
     file_name = doc["id"]
     transcript_file = os.path.join(transcripts_dir, f"{file_name}.txt")
     transcript = ""
@@ -173,7 +183,6 @@ def videoperception_doc_to_text_with_transcript_application(doc, lmms_eval_speci
     else:
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
 
-    # Combine the pre_prompt, transcript, and question
     formatted_output = f"{pre_prompt}\nTranscript for the Video:\n{transcript}\n\nQuestion for the video:\n{question}"
     return formatted_output
 
@@ -585,16 +594,14 @@ def parse_open_response(response):
         response = response.strip().strip(".").lower()
         sub_responses = re.split(r"\.\s(?=[A-Z])|\n", response)
         indicators_of_keys = [
-            "could be ",
-            "so ",
-            "is ",
-            "thus ",
-            "therefore ",
-            "final ",
-            "answer ",
-            "result ",
-            "are",
+            # Common explanation or conclusion phrases
+            "could be ", "so ", "is ", "thus ", "therefore ", "final ", "answer ",
+            "result ", "are ", "in total ", "total ", "identify ", "recognize ", 
+            "calculated as ", "counted as ", "measured as ", "observed as ", 
+            "concluded as ", "found to be ", "equals ", "determined to be ",
+            "number of ", "value is ", "adds up to ", "have ", "has "
         ]
+
         key_responses = []
         for index, resp in enumerate(sub_responses):
             # if last one, accept it's an equation (the entire response can be just one sentence with equation)

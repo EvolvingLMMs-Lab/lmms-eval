@@ -1,9 +1,9 @@
-dataset_name: "comprehension"
-task: "videommmu_comprehension"
+dataset_name: "Comprehension"
+task: "video_mmmu_comprehension"
 test_split: test
 output_type: generate_until
-doc_to_visual: !function utils.videoperception_doc_to_visual_perception
-doc_to_text: !function utils.videoperception_doc_to_text_perception
+doc_to_visual: !function utils.videoperception_doc_to_visual
+doc_to_text: !function utils.videoperception_doc_to_text_perception_comprehension
 doc_to_target: !function utils.videoperception_doc_to_answer
 process_results: !function utils.videoperception_process_results
 metric_list:

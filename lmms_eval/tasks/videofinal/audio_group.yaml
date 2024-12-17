@@ -1,5 +1,0 @@
-group: videommmu_audio
-task:
-- videommmu_application_audio
-- videommmu_comprehension_audio
-- videommmu_perception_audio

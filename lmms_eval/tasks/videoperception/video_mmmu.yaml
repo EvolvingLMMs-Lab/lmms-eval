@@ -1,4 +1,4 @@
-group: video_mmmu
+group: video_mmmu_old
 task:
 - videommmu_application
 - videommmu_comprehension

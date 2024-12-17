@@ -4,10 +4,11 @@ dataset_kwargs:
   video: True
   # force_download: True
   # force_unzip: True
-  cache_dir: videommmu_1213
+  cache_dir: video_mmmu
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: "You should watch and learn the video content. Then apply what you learned to "
+    perception_and_comprehension_prompt: "\nPlease ignore the Quiz question in last frame of the video."
     mcq_prompt: "answer the following multi-choice question. The image for this question is at the end of the video.\n"
     open_ended_prompt: "answer the following open-ended question. The image for this question is at the end of the video.\n"
 generation_kwargs:

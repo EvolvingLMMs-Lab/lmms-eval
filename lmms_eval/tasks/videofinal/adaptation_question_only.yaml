@@ -2,7 +2,7 @@ dataset_name: "Adaptation"
 task: "video_mmmu_adaptation_no_video"
 test_split: test
 output_type: generate_until
-doc_to_visual: !function utils.videoperception_doc_to_visual_no_video
+doc_to_visual: !function utils.videoperception_doc_to_visual_question_only
 doc_to_text: !function utils.videoperception_doc_to_text_no_preprompt
 doc_to_target: !function utils.videoperception_doc_to_answer
 process_results: !function utils.videoperception_process_results

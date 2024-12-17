@@ -1,5 +1,5 @@
 group: video_mmmu
 task:
-- videommmu_application
-- videommmu_comprehension
-- videommmu_perception
+- video_mmmu_application
+- video_mmmu_comprehension
+- video_mmmu_perception
