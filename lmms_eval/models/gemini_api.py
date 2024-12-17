@@ -1,6 +1,8 @@
 import io
 import json
 import os
+import pathlib
+import re
 import time
 from typing import List, Tuple
 
@@ -9,8 +11,6 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-import pathlib
-import re
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -137,7 +137,7 @@ class GeminiAPI(lmms):
         return images
 
     def construct_interleaved_input(self, content, media):
-        pattern = r'<media_(\d+)>'
+        pattern = r"<media_(\d+)>"
         parts = re.split(pattern, content)
         result = []
         for i, part in enumerate(parts):
@@ -147,7 +147,7 @@ class GeminiAPI(lmms):
                 result.append(part)
             else:
                 result.append(media[int(part)])
-                
+
         return result
 
     def generate_until(self, requests) -> List[str]:
@@ -177,16 +177,15 @@ class GeminiAPI(lmms):
                 temperature=gen_kwargs["temperature"],
             )
 
-
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]            
+            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             visuals = self.convert_modality(visuals)
 
             if self.interleave:
                 message = self.construct_interleaved_input(contexts, visuals)
             else:
-                message = [contexts] + visuals 
-            
+                message = [contexts] + visuals
+
             for attempt in range(5):
                 try:
                     content = self.model.generate_content(
@@ -235,7 +234,7 @@ class GeminiAPI(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         assert False, "Gemini API not support"
-        
+
     def get_image_audio_text_interleaved_messsage(self, image_path, audio_path, question):
         # image_path for list of image path
         # audio_path for list of audio path
@@ -243,29 +242,24 @@ class GeminiAPI(lmms):
 
         # fixed image token and no audio in text
         for index in range(1, 1 + len(image_path)):
-            question = question.replace(f"[img{index}]", "<image>") 
+            question = question.replace(f"[img{index}]", "<image>")
         for index in range(1, 1 + len(audio_path)):
-            question = question.replace(f'[audio{index}]', '<audio>')
-        
+            question = question.replace(f"[audio{index}]", "<audio>")
+
         text = question
-        
+
         info_list = []
         image_counter = 0
         audio_counter = 0
-        for part in re.split(r'(<image>|<audio>)', text):
-            if part == '<image>':
+        for part in re.split(r"(<image>|<audio>)", text):
+            if part == "<image>":
                 info_list.append(Image.open(image_path[image_counter]))
                 image_counter += 1
-            elif part == '<audio>':
-                info_list.append(
-                    {
-                        "mime_type": "audio/wav",
-                        "data": pathlib.Path(audio_path[audio_counter]).read_bytes()
-                    }
-                    )
+            elif part == "<audio>":
+                info_list.append({"mime_type": "audio/wav", "data": pathlib.Path(audio_path[audio_counter]).read_bytes()})
                 audio_counter += 1
             else:
-                if part == ' ':
+                if part == " ":
                     continue
                 info_list.append(part)
 
@@ -278,38 +272,33 @@ class GeminiAPI(lmms):
 
         # fixed video token and no audio in text
         for index in range(1, 1 + len(video_path)):
-            question = question.replace(f"[video{index}]", "<video>") 
+            question = question.replace(f"[video{index}]", "<video>")
         for index in range(1, 1 + len(audio_path)):
-            question = question.replace(f'[audio{index}]', '<audio>')
+            question = question.replace(f"[audio{index}]", "<audio>")
 
         text = question
 
         info_list = []
         video_counter = 0
         audio_counter = 0
-        for part in re.split(r'(<video>|<audio>)', text):
-            if part == '<video>':
+        for part in re.split(r"(<video>|<audio>)", text):
+            if part == "<video>":
                 current_video_file_name = video_path[video_counter]
-                current_video_file = genai.upload_file(path = current_video_file_name)
-                while current_video_file.state.name == 'processing':
+                current_video_file = genai.upload_file(path=current_video_file_name)
+                while current_video_file.state.name == "processing":
                     print("uploading file")
                     time.sleep(5)
                     current_video_file = genai.get_file(current_video_file.name)
-                if current_video_file.state.name == 'FAILED':
+                if current_video_file.state.name == "FAILED":
                     print("uploading file failed, next question")
                     return 0
                 info_list.append(current_video_file)
                 video_counter += 1
-            elif part == '<audio>':
-                info_list.append(
-                    {
-                        "mime_type": "audio/wav",
-                        "data": pathlib.Path(audio_path[audio_counter]).read_bytes()
-                    }
-                    )
+            elif part == "<audio>":
+                info_list.append({"mime_type": "audio/wav", "data": pathlib.Path(audio_path[audio_counter]).read_bytes()})
                 audio_counter += 1
             else:
-                if part == ' ':
+                if part == " ":
                     continue
                 info_list.append(part)
 
