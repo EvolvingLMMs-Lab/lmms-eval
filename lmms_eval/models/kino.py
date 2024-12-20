@@ -47,7 +47,7 @@ class Kino(lmms):
 
     def __init__(
         self,
-        pretrained: str = "kcz358/kino-7b-init",
+        pretrained: str = "Evo-LMM/kino-7b-init",
         revision: str = "main",
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
@@ -89,7 +89,7 @@ class Kino(lmms):
             eval_logger.info(f"Loaded audio_modal_projector weights from {pretrained_mlp_projector}. Incompatible keys: {incompatible_keys}")
 
         self.pretrained = pretrained
-        self._processor = KinoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
+        self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-7b-init", revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._processor.tokenizer.padding_side = "left"
         self._tokenizer = self._processor.tokenizer
