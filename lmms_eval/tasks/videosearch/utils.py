@@ -157,7 +157,7 @@ def videosearch_process_results(doc, results):
     # Handle the case where 'question_type' might be missing for perception and understanding
     question_type = doc.get("question_type", "perception")
     if question_type == "multiple-choice":
-        #index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
+        # index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
         index2ans, all_choices = get_multi_choice_info(doc["options"])
         parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
     elif question_type == "open":
