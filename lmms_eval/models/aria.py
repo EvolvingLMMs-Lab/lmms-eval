@@ -269,8 +269,6 @@ class Aria(lmms):
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
 
-            print(visuals)
-
             if task_type == "video":
                 inputs = self._image_processor(images=visuals, text=text, return_tensors="pt", max_image_size=490)
             else:

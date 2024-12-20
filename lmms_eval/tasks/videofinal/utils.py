@@ -72,9 +72,10 @@ def videoperception_doc_to_visual(doc):
 
     return [video_path]
 
+
 def videoperception_doc_to_visual_question_only(doc):
     video_path = doc["id"] + "_image" + ".mp4"
-    question_only_cache_dir =  os.path.join(cache_dir, "question_only") 
+    question_only_cache_dir = os.path.join(cache_dir, "question_only")
     video_path = os.path.join(question_only_cache_dir, video_path)
 
     if os.path.exists(video_path):
@@ -101,7 +102,7 @@ def videoperception_doc_to_text_adaptation(doc, lmms_eval_specific_kwargs=None):
         question += "\n" + parsed_options
     else:
         pre_prompt += lmms_eval_specific_kwargs["open_ended_prompt"]
-        
+
     return f"{pre_prompt}{question}"
 
 
@@ -147,12 +148,12 @@ def videoperception_doc_to_text_with_transcript_perception_comprehension(doc, lm
             transcript = f.read().strip()
     else:
         transcript = "[Transcript not available]"
-        
+
     post_prompt = ""
     post_prompt += lmms_eval_specific_kwargs["perception_and_comprehension_prompt"]
-    
+
     formatted_output = f"\nTranscript for the Video:\n{transcript}\n\nQuestion for the video:\n{question}{post_prompt}"
-    
+
     return formatted_output
 
 
@@ -216,9 +217,7 @@ def videoperception_process_results(doc, results):
         parsed_pred = parse_open_response(pred)
 
     mmmu_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": question_type, "answer": doc["answer"], "parsed_pred": parsed_pred}
-    return {
-        "mmmu_acc": mmmu_acc
-    }
+    return {"mmmu_acc": mmmu_acc}
 
 
 # return subset name
@@ -273,7 +272,6 @@ def videoperception_aggregate_results(results):
     }
     print(printable_results)
     return printable_results["Overall"]["acc"]
-
 
 
 ##################
@@ -414,12 +412,12 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     """
     if response == "API Error" or response == "":
         return "API Error"
-        
+
     # Step 1: Clean up punctuation from the response
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
     response = " " + response + " "  # Add space to avoid partial match
-    #print(response)
+    # print(response)
 
     index_ans = True
     ans_with_brack = False
@@ -430,13 +428,13 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     # Step 2: If no candidates, look for choices with a period after (A. B. C. D.)
     for choice in all_choices:  # e.g., A. B. C. D.
         if f"{choice}." in response:
-            #print(f"Found choice with period after: {choice}")
+            # print(f"Found choice with period after: {choice}")
             candidates.append(choice)
             ans_with_period = True
     # Step 2.1: If no candidates, look for choices with a colon after (A: B: C: D:)
     for choice in all_choices:  # e.g., A: B: C: D:
         if f"{choice}:" in response:
-            #print(f"Found choice with semicolon after: {choice}")
+            # print(f"Found choice with semicolon after: {choice}")
             candidates.append(choice)
             ans_with_colon = True
 
@@ -452,21 +450,21 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     if len(candidates) == 0:
         for choice in all_choices:  # e.g., A B C D
             if f"{choice} " in response:
-                #print(f"Found choice without parentheses (space after): {choice}")
+                # print(f"Found choice without parentheses (space after): {choice}")
                 candidates.append(choice)
 
     # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
     if len(candidates) == 0 and len(response.split()) > 5:
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
-                #print(f"Found answer content match: {ans}")
+                # print(f"Found answer content match: {ans}")
                 candidates.append(index)
                 index_ans = False  # It's content answer, not an index
 
     # Step 6: If still no candidates, randomly choose one
     if len(candidates) == 0:
         pred_index = "No Answere Found"
-        #print(f"No candidates found.")
+        # print(f"No candidates found.")
     # Step 7: If multiple candidates found, use the one appearing last
     elif len(candidates) > 1:
         start_indexes = []
@@ -474,35 +472,35 @@ def parse_multi_choice_response(response, all_choices, index2ans):
             if ans_with_period:
                 for can in candidates:
                     index = response.rfind(f"{can}.")
-                    #print(f"Checking position of choice: {can} at {index}")
+                    # print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
             elif ans_with_colon:
                 for can in candidates:
                     index = response.rfind(f"{can}:")
-                    #print(f"Checking position of choice: {can} at {index}")
+                    # print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
             elif ans_with_brack:
                 for can in candidates:
                     index = response.rfind(f"({can})")
-                    #print(f"Checking position of choice with parentheses: {can} at {index}")
+                    # print(f"Checking position of choice with parentheses: {can} at {index}")
                     start_indexes.append(index)
             else:
                 for can in candidates:
                     index = response.rfind(f" {can} ")
-                    #print(f"Checking position of choice: {can} at {index}")
+                    # print(f"Checking position of choice: {can} at {index}")
                     start_indexes.append(index)
         else:
             for can in candidates:
                 index = response.lower().rfind(index2ans[can].lower())
-                #print(f"Checking position of content match: {can} at {index}")
+                # print(f"Checking position of content match: {can} at {index}")
                 start_indexes.append(index)
         # Get the last one (max index)
         pred_index = candidates[np.argmax(start_indexes)]
-        #print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
+        # print(f"Multiple candidates, selected based on last occurrence: {pred_index}")
     else:
         # If only one candidate, use it
         pred_index = candidates[0]
-        #print(f"Only one candidate found, selected: {pred_index}")
+        # print(f"Only one candidate found, selected: {pred_index}")
 
     return pred_index
 
@@ -586,11 +584,32 @@ def parse_open_response(response):
         sub_responses = re.split(r"\.\s(?=[A-Z])|\n", response)
         indicators_of_keys = [
             # Common explanation or conclusion phrases
-            "could be ", "so ", "is ", "thus ", "therefore ", "final ", "answer ",
-            "result ", "are ", "in total ", "total ", "identify ", "recognize ", 
-            "calculated as ", "counted as ", "measured as ", "observed as ", 
-            "concluded as ", "found to be ", "equals ", "determined to be ",
-            "number of ", "value is ", "adds up to ", "have ", "has "
+            "could be ",
+            "so ",
+            "is ",
+            "thus ",
+            "therefore ",
+            "final ",
+            "answer ",
+            "result ",
+            "are ",
+            "in total ",
+            "total ",
+            "identify ",
+            "recognize ",
+            "calculated as ",
+            "counted as ",
+            "measured as ",
+            "observed as ",
+            "concluded as ",
+            "found to be ",
+            "equals ",
+            "determined to be ",
+            "number of ",
+            "value is ",
+            "adds up to ",
+            "have ",
+            "has ",
         ]
 
         key_responses = []
