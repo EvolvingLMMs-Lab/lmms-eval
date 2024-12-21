@@ -25,6 +25,7 @@
 - [GQA](https://cs.stanford.edu/people/dorarad/gqa/index.html) (gqa)
 - [GQA-ru](https://huggingface.co/datasets/deepvk/GQA-ru) (gqa_ru)
 - [II-Bench](https://github.com/II-Bench/II-Bench) (ii_bench)
+- [IllusionVQA](https://illusionvqa.github.io/) (illusionvqa)
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
   - Infographic VQA Validation (infovqa_val)
   - Infographic VQA Test (infovqa_test)
