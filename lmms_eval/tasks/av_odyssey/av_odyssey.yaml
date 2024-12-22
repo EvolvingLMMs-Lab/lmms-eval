@@ -1,0 +1,24 @@
+dataset_path: AV-Odyssey/AV_Odyssey_Bench_LMMs_Eval
+dataset_kwargs:
+  token: True
+  cache_dir: AV_Odyssey
+  video: True
+task: "av_odyssey"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.av_odyssey_doc_to_visual
+doc_to_text: !function utils.av_odyssey_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.av_odyssey_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: av_odyssey_score
+    aggregation: !function utils.av_odyssey_aggregate_results
+    higher_is_better: true
