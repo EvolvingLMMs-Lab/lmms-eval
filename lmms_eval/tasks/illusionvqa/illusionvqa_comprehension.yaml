@@ -1,0 +1,3 @@
+include: illusionvqa.yaml
+task: illusionvqa_comprehension
+dataset_path: csebuetnlp/illusionVQA-Comprehension
