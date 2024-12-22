@@ -279,7 +279,8 @@ class Llava_OneVision(lmms):
 
                     task_type = "video"
 
-                elif type(visual[0]) == PIL.Image.Image:
+                # elif type(visual[0]) == PIL.Image.Image:
+                elif isinstance(visual[0], PIL.Image.Image):
                     image_tensor = process_images(visual, self._image_processor, self._config)
                     if type(image_tensor) is list:
                         image_tensor = [_image.to(dtype=torch.float16, device=self.device) for _image in image_tensor]
