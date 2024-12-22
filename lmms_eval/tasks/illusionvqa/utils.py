@@ -1,5 +1,6 @@
 # adapted from ai2d/utils.py
 import re
+
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 
 
@@ -13,11 +14,11 @@ def illusionvqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     choices_str = "\n".join([f"{option}. {choice}" for option, choice in zip(options, choices)])
     return f"{pre_prompt}{question}\n{choices_str}{post_prompt}"
 
+
 def illusionvqa_doc_to_target(doc):
     len_choices = len(doc["options"])
     options = [chr(ord("A") + i) for i in range(len_choices)]
     return options[doc["options"].index(doc["answer"])]
-
 
 
 class MultiChoiceRegexFilter(ExtendedRegexFilter):
