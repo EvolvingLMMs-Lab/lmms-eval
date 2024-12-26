@@ -22,6 +22,14 @@ eval_logger = logging.getLogger("lmms-eval")
 import os
 import sys
 
+os.environ["LOWRES_RESIZE"] = "384x32"
+os.environ["VIDEO_RESIZE"] = "0x64"
+os.environ["HIGHRES_BASE"] = "0x32"
+os.environ["MAXRES"] = "1536"
+os.environ["MINRES"] = "0"
+os.environ["VIDEO_MAXRES"] = "480"
+os.environ["VIDEO_MINRES"] = "288"
+
 try:
     from oryx.constants import (
         DEFAULT_IM_END_TOKEN,
@@ -471,6 +479,8 @@ class Oryx(lmms):
                 res.append(outputs)
                 pbar.update(1)
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 eval_logger.info(f"{e}")
                 eval_logger.info(f"Video {visuals} generate failed, check the source")
                 video_path = "\n".join(visuals)
