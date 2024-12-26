@@ -38,7 +38,6 @@ try:
         tokenizer_image_token,
     )
     from oryx.model.builder import load_pretrained_model
-    from oryx.model.language_model.oryx_llama import OryxConfig
 except ImportError:
     eval_logger.debug("Oryx is not installed. Please install Oryx to use this model.")
 
@@ -67,6 +66,9 @@ class Oryx(lmms):
         truncate_context=False,
         max_frames_num: int = 32,
         mm_resampler_type: str = "spatial_pool",
+        mm_spatial_pool_stride: int = 2,
+        mm_spatial_pool_out_channels: int = 1024,
+        mm_spatial_pool_mode: str = "average",
         overwrite: bool = True,
         video_decode_backend: str = "decord",
         **kwargs,
@@ -98,6 +100,9 @@ class Oryx(lmms):
             overwrite_config["mm_resampler_type"] = self.mm_resampler_type
             overwrite_config["patchify_video_feature"] = False
             overwrite_config["attn_implementation"] = attn_implementation
+            overwrite_config["mm_spatial_pool_stride"] = mm_spatial_pool_stride
+            overwrite_config["mm_spatial_pool_out_channels"] = mm_spatial_pool_out_channels
+            overwrite_config["mm_spatial_pool_mode"] = mm_spatial_pool_mode
 
             cfg_pretrained = AutoConfig.from_pretrained(self.pretrained)
 
@@ -473,3 +478,6 @@ class Oryx(lmms):
                 pbar.update(1)
                 continue
         return res
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("TODO: Implement multi-round generation")
