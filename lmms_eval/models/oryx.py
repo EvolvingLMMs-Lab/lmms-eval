@@ -25,10 +25,10 @@ import sys
 os.environ["LOWRES_RESIZE"] = "384x32"
 os.environ["VIDEO_RESIZE"] = "0x64"
 os.environ["HIGHRES_BASE"] = "0x32"
-os.environ["MAXRES"] = "1536"
-os.environ["MINRES"] = "0"
-os.environ["VIDEO_MAXRES"] = "480"
-os.environ["VIDEO_MINRES"] = "288"
+os.environ["MAXRES"] = 1536
+os.environ["MINRES"] = 0
+os.environ["VIDEO_MAXRES"] = 480
+os.environ["VIDEO_MINRES"] = 288
 
 try:
     from oryx.constants import (
