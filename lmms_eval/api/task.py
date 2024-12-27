@@ -1093,9 +1093,26 @@ class ConfigurableTask(Task):
         if self.has_validation_docs():
             return self.dataset[self.config.validation_split]
 
+    def validation_docs_no_media(self) -> datasets.Dataset:
+        if self.has_validation_docs():
+            return self.dataset_no_image[self.config.validation_split]
+
     def test_docs(self) -> datasets.Dataset:
         if self.has_test_docs():
             return self.dataset[self.config.test_split]
+
+    def test_docs_no_media(self) -> datasets.Dataset:
+        if self.has_test_docs():
+            return self.dataset_no_image[self.config.test_split]
+
+    @property
+    def eval_docs_no_media(self) -> Union[datasets.Dataset, List[dict]]:
+        if self.has_test_docs():
+            return self.test_docs_no_media()
+        elif self.has_validation_docs():
+            return self.validation_docs_no_media()
+        else:
+            raise ValueError(f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!")
 
     def fewshot_docs(self):
         if self.config.fewshot_split is not None:
