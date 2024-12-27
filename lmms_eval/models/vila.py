@@ -1,9 +1,9 @@
 import argparse
+import copy
 import json
 import logging
 import math
 import os
-import signal
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
@@ -38,7 +38,24 @@ try:
     )
     from llava.model.builder import load_pretrained_model
 except ImportError as e:
-    eval_logger.debug(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
+    eval_logger.debug(f"VILA is not installed. Please install VILA to use this model. Error: {e}. You need to make sure the newest repo is for NVILA, so you need to rollback to the commit before the NVILA update.")
+
+CONVERSATION_MODE_MAPPING = {
+    "vila1.5-3b": "vicuna_v1",
+    "vila1.5-8b": "llama_3",
+    "vila1.5-13b": "vicuna_v1",
+    "vila1.5-40b": "hermes-2",
+    "llama-3": "llama_3",
+    "llama3": "llama_3",
+}
+
+
+def auto_set_conversation_mode(model_name_or_path: str) -> str:
+    for k, v in CONVERSATION_MODE_MAPPING.items():
+        if k in model_name_or_path.lower():
+            print(f"Setting conversation mode to `{v}` based on model name/path `{model_name_or_path}`.")
+            return v
+    raise ValueError(f"Could not determine conversation mode for model name/path `{model_name_or_path}`.")
 
 
 @register_model("vila")
@@ -58,7 +75,7 @@ class VILA(lmms):
             "sdpa" if torch.__version__ >= "2.1.2" else "eager"
         ),  # inference implementation for attention, can be "sdpa", "eager", "flash_attention_2". Seems FA2 is not effective during inference: https://discuss.huggingface.co/t/flash-attention-has-no-effect-on-inference/73453/5
         device_map="cuda:0",
-        conv_template="hermes-2",
+        conv_template="auto",
         use_cache=True,
         truncate_context=False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
         video_decode_backend="decord",
@@ -101,6 +118,8 @@ class VILA(lmms):
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
         self.conv_template = conv_template
+        if self.conv_template == "auto":
+            self.conv_template = auto_set_conversation_mode(self.model_name)
         self.use_cache = use_cache
         self.truncate_context = truncate_context
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
