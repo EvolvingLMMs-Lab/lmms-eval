@@ -29,7 +29,7 @@ from typing import (
 import datasets
 import numpy as np
 from accelerate import Accelerator
-from datasets import DownloadConfig, Image, Sequence
+from datasets import Audio, DownloadConfig, Image, Sequence
 from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import ImageFile
@@ -1064,6 +1064,8 @@ class ConfigurableTask(Task):
                 if isinstance(features[feature], Image):
                     remove_cols.append(feature)
                 elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
+                    remove_cols.append(feature)
+                elif isinstance(features[feature], Audio):
                     remove_cols.append(feature)
             for remove_col in remove_cols:
                 self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
