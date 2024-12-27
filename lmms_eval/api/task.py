@@ -29,7 +29,7 @@ from typing import (
 import datasets
 import numpy as np
 from accelerate import Accelerator
-from datasets import DownloadConfig, Image, Sequence
+from datasets import Audio, DownloadConfig, Image, Sequence
 from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import ImageFile
@@ -430,9 +430,10 @@ class Task(abc.ABC):
         if cache_requests and (not cached_instances or rewrite_requests_cache) and limit is not None:
             limit = None
 
-        doc_id_docs = list(self.doc_iterator(rank=rank, limit=limit, world_size=world_size))
+        doc_id_docs = self.doc_iterator(rank=rank, limit=limit, world_size=world_size)
+        doc_iterator_for_counting = itertools.islice(range(len(self.test_docs())), rank, limit, world_size) if self.has_test_docs() else itertools.islice(range(len(self.validation_docs())), rank, limit, world_size)
 
-        num_docs = len(doc_id_docs)
+        num_docs = sum(1 for _ in doc_iterator_for_counting)
 
         for doc_id, doc in tqdm(
             doc_id_docs,
@@ -1064,6 +1065,8 @@ class ConfigurableTask(Task):
                     remove_cols.append(feature)
                 elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
                     remove_cols.append(feature)
+                elif isinstance(features[feature], Audio):
+                    remove_cols.append(feature)
             for remove_col in remove_cols:
                 self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
 
@@ -1093,9 +1096,26 @@ class ConfigurableTask(Task):
         if self.has_validation_docs():
             return self.dataset[self.config.validation_split]
 
+    def validation_docs_no_media(self) -> datasets.Dataset:
+        if self.has_validation_docs():
+            return self.dataset_no_image[self.config.validation_split]
+
     def test_docs(self) -> datasets.Dataset:
         if self.has_test_docs():
             return self.dataset[self.config.test_split]
+
+    def test_docs_no_media(self) -> datasets.Dataset:
+        if self.has_test_docs():
+            return self.dataset_no_image[self.config.test_split]
+
+    @property
+    def eval_docs_no_media(self) -> Union[datasets.Dataset, List[dict]]:
+        if self.has_test_docs():
+            return self.test_docs_no_media()
+        elif self.has_validation_docs():
+            return self.validation_docs_no_media()
+        else:
+            raise ValueError(f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!")
 
     def fewshot_docs(self):
         if self.config.fewshot_split is not None:
