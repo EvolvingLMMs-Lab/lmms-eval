@@ -1,12 +1,13 @@
-import datetime
 import json
 import os
-from collections import defaultdict
 import random
-from loguru import logger as eval_logger
 import re
+from collections import defaultdict
+
 import requests
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from loguru import logger as eval_logger
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -49,7 +50,7 @@ def vlrewardbench_doc_to_visual(doc):
 def vlrewardbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     # we randomly choose the order of the answers to avoid positional bias
     random_number = sum(len(res) for res in doc["response"]) % 2  # we use the length sum % 2 as a random number generator to decide the order of the answers
-    # doc["random_number"] = random_number  # save it for later use Notes: This cannot be done as the doc iterator would be reset 
+    # doc["random_number"] = random_number  # save it for later use Notes: This cannot be done as the doc iterator would be reset
     query_prompt = get_prompt(doc, random_number)
 
     return query_prompt
@@ -110,7 +111,7 @@ def vlrewardbench_process_results(doc, results):
     pred = results[0]
     pred_ans = parse_pred_ans(pred)
     random_number = sum(len(res) for res in doc["response"]) % 2  # we use the length sum % 2 as a random number generator to decide the order of the answers
-   
+
     gt_ans = doc["human_ranking"].index(1 if random_number == 0 else 0) + 1
     if pred_ans == gt_ans:
         score = 1.0
