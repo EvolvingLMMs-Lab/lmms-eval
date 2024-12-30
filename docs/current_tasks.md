@@ -148,6 +148,7 @@
 - [VizWizVQA](https://vizwiz.org/tasks-and-datasets/vqa/) (vizwiz_vqa)
   - VizWizVQA Validation (vizwiz_vqa_val)
   - VizWizVQA Test (vizwiz_vqa_test)
+- [VL-RewardBench](https://vl-rewardbench.github.io) (vl_rewardbench)
 - [VQAv2](https://visualqa.org/) (vqav2)
   - VQAv2 Validation (vqav2_val)
   - VQAv2 Test (vqav2_test)
