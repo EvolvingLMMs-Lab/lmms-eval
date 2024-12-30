@@ -7,7 +7,6 @@ from collections import defaultdict
 import requests
 from loguru import logger as eval_logger
 
-
 LLM_PARSE_ANSWER_PROMPT = """
 You are given a pairwise judgement for two responses. Please return the better response according to the judgement.
 Return the Answer X ONLY. e.g., Answer 1 or Answer 2.
@@ -102,9 +101,9 @@ def vlrewardbench_process_results(doc, results):
         a dictionary with key: metric name (in this case mme score), value: metric value
     """
     pred = results[0]
-    pred_ans = parse_pred_ans(pred) # 1 or 2 indicte which one is better 
+    pred_ans = parse_pred_ans(pred)  # 1 or 2 indicte which one is better
     random_number = sum(len(res) for res in doc["response"]) % 2  # we use the length sum % 2 as a random number generator to decide the order of the answers
-    # Note: human_ranking [0, 1] -> answer 1 is better,  [1, 0] -> answer 2 is better 
+    # Note: human_ranking [0, 1] -> answer 1 is better,  [1, 0] -> answer 2 is better
     gt_ans = doc["human_ranking"].index(0 if random_number == 0 else 1) + 1
 
     if pred_ans == gt_ans:
