@@ -5,10 +5,7 @@ import re
 from collections import defaultdict
 
 import requests
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from loguru import logger as eval_logger
-
-dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
 LLM_PARSE_ANSWER_PROMPT = """
@@ -17,6 +14,16 @@ Return the Answer X ONLY. e.g., Answer 1 or Answer 2.
 
 Judgement: {judgement}
 """
+
+API_TYPE = os.getenv("API_TYPE", "openai")
+
+if API_TYPE == "openai":
+    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
 
 
 def get_prompt(data_obj, random_number):
@@ -47,32 +54,18 @@ def vlrewardbench_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def vlrewardbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def vlrewardbench_doc_to_text(doc):
     # we randomly choose the order of the answers to avoid positional bias
     random_number = sum(len(res) for res in doc["response"]) % 2  # we use the length sum % 2 as a random number generator to decide the order of the answers
-    # doc["random_number"] = random_number  # save it for later use Notes: This cannot be done as the doc iterator would be reset
     query_prompt = get_prompt(doc, random_number)
-
     return query_prompt
 
 
-API_TYPE = os.getenv("API_TYPE", "openai")
-
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-
 def parse_pred_ans(pred_ans):
-    pred_ans = pred_ans.lower().strip()
-    pattern = r"(?:overall judgment|therefore)\s*.*\s*-*\s*answer\s*(\d+)\s*is\s*(?:the\s*)?(?:slightly\s*)?better"
+    pred_ans = pred_ans.strip()
+    pattern = r"(?:Overall Judgment|Therefore)\s*.*\s*-*\s*Answer\s*(\d+)\s*is\s*(?:the\s*)?(?:slightly\s*)?better"
     match = re.search(pattern, pred_ans.replace("\n", "").replace("*", ""), re.IGNORECASE)
     flag_choice = -1
-
     if match:
         answer_number = int(match.group(1))
         flag_choice = answer_number
@@ -92,7 +85,7 @@ def parse_pred_ans(pred_ans):
 
 def parse_by_llm(response, model="gpt-4o-mini", max_tokens=32):
     # get the judgement from response using gpt-4o
-    data = {"max_tokens": max_tokens, "model": model, "temperature": 0.0, "top_p": 1, "presence_penalty": 1, "messages": [{"role": "user", "content": LLM_PARSE_ANSWER_PROMPT.format(judgement=response)}]}
+    data = {"max_tokens": max_tokens, "model": model, "temperature": 0.0, "top_p": 1.0, "presence_penalty": 1, "messages": [{"role": "user", "content": LLM_PARSE_ANSWER_PROMPT.format(judgement=response)}]}
     response = requests.post(API_URL, headers=headers, data=json.dumps(data).encode("utf-8"))
     result = response.content.decode("utf-8")
     dict_result = json.loads(result)
@@ -109,10 +102,11 @@ def vlrewardbench_process_results(doc, results):
         a dictionary with key: metric name (in this case mme score), value: metric value
     """
     pred = results[0]
-    pred_ans = parse_pred_ans(pred)
+    pred_ans = parse_pred_ans(pred) # 1 or 2 indicte which one is better 
     random_number = sum(len(res) for res in doc["response"]) % 2  # we use the length sum % 2 as a random number generator to decide the order of the answers
+    # Note: human_ranking [0, 1] -> answer 1 is better,  [1, 0] -> answer 2 is better 
+    gt_ans = doc["human_ranking"].index(0 if random_number == 0 else 1) + 1
 
-    gt_ans = doc["human_ranking"].index(1 if random_number == 0 else 0) + 1
     if pred_ans == gt_ans:
         score = 1.0
     else:

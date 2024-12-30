@@ -9,20 +9,15 @@ doc_to_text: !function utils.vlrewardbench_doc_to_text
 doc_to_target: "human_ranking"
 generation_kwargs:
   max_new_tokens: 1024 
-  temperature: 0
-  top_p: 1.0
+  temperature: 1.0 
+  top_p: 1.0 
   num_beams: 1
-  do_sample: false
+  do_sample: true 
 # The return value of process_results will be used by metrics
 process_results: !function utils.vlrewardbench_process_results
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
-# e.g. Following metrics `mme_perception_score` is custom defined. 
-# So `mme_process_results` function should return the dict `{"mme_perception_score": {sub_k:sub_v, ..., } }`
-# And the `mme_aggregate_results` function could get the dict `{sub_k:sub_v, ..., }`, and use the information to gather the final accuracy.
 metric_list:
   - metric: vlreward_score
     aggregation: !function utils.vlrewardbench_aggregate_results
     higher_is_better: true
-
 metadata:
   - version: 0.0
