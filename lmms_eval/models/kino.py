@@ -89,7 +89,10 @@ class Kino(lmms):
             eval_logger.info(f"Loaded audio_modal_projector weights from {pretrained_mlp_projector}. Incompatible keys: {incompatible_keys}")
 
         self.pretrained = pretrained
-        self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-7b-init", revision=revision, trust_remote_code=trust_remote_code)
+        if self.model.config.vision_aspect_ratio == "navit":
+            self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-maas-7B_v12_18000_init", revision=revision, trust_remote_code=trust_remote_code)
+        else:
+            self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-7b-init", revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._processor.tokenizer.padding_side = "left"
         self._tokenizer = self._processor.tokenizer
