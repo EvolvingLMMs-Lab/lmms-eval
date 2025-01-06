@@ -256,10 +256,6 @@ def simple_evaluate(
         cli_args=cli_args,
     )
 
-    if hasattr(lm, "_model"):
-        del lm._model
-        torch.cuda.empty_cache()
-
     if lm.rank == 0:
         if isinstance(model, str):
             model_name = model
@@ -538,6 +534,10 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
+
+    if hasattr(lm, "_model"):
+        del lm._model
+        torch.cuda.empty_cache()
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
