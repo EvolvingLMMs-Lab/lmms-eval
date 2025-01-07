@@ -149,6 +149,8 @@ class GeminiAPI(lmms):
 
             message = [contexts] + visuals
 
+            content = ""
+
             for attempt in range(5):
                 try:
                     content = self.model.generate_content(
@@ -172,7 +174,7 @@ class GeminiAPI(lmms):
                             break
                         except Exception:
                             pass
-                    if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
+                    if attempt < 4 - 1:  # If we have retries left, sleep and then continue to next attempt
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
