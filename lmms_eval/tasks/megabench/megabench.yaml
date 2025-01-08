@@ -1,0 +1,6 @@
+group: megabench
+task:
+- megabench_core
+- megabench_open
+- megabench_core_si
+- megabench_open_si
