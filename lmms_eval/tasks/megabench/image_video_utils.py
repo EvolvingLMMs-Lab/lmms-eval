@@ -7,9 +7,7 @@ import os
 from ast import literal_eval
 
 
-##Image utils
-
-
+## Image reading utils
 def read_image(image_path):
     image = Image.open(image_path)
     # Handle the alpha channel
@@ -25,7 +23,7 @@ def _rgba_to_rgb(image):
     return Image.alpha_composite(background, image).convert("RGB")
 
 
-## Video utils
+## Video loading and subsampling utils
 def subsample_video(video_path, max_nframes):
     """
     Process video file and return uniformly sampled frames as PIL Images.
@@ -78,7 +76,6 @@ def is_video_file(file_path):
 
 ## Handle tasks with mixed image and video inputs.
 ## Need to subsample video frames to multiple images
-
 
 def load_media_content(media_path, max_nframes):
     # normalize media path

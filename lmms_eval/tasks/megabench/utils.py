@@ -3,6 +3,9 @@ import yaml
 from pathlib import Path
 from itertools import chain
 from ast import literal_eval
+from collections import defaultdict
+import json
+
 
 from loguru import logger as eval_logger
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -12,7 +15,7 @@ from lmms_eval.tasks.megabench.image_video_utils import read_image, is_video_fil
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
+with open(Path(__file__).parent / "_default_template_yaml", "r", encoding="utf-8") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):
@@ -62,8 +65,8 @@ def megabench_doc_to_visual(doc, lmms_eval_specific_kwargs=None):
         medias = all_media_paths
     else:  # mixed video and image input, convert video to image frames
         cache_dir = os.path.join(base_cache_dir, cache_name)
-        process_text_and_mixed_media(doc, lmms_eval_specific_kwargs["max_video_subsample_frame"], cache_dir)
-
+        _, medias = process_text_and_mixed_media(doc, lmms_eval_specific_kwargs["max_video_subsample_frame"], cache_dir)
+    
     return medias
 
 
@@ -73,20 +76,43 @@ def megabench_doc_to_target(doc):
 
 def megabench_process_results(doc, result):
     response = result[0]  # this is model's raw output
+    # Follow the response format in original megabench eval results
     data_dict = {
         "task_name": doc["task_name"],
-        "global_idx": doc["global_idx"],
+        "global_idx": doc["id"],
+        "eval_context": literal_eval(doc["eval_context"]),
+        "images": literal_eval(doc["query_media"]),
+        "query_text": doc["query_text"],
+        "global_images": literal_eval(doc["global_media"]),
+        "global_description": doc["task_description"],
+        "example_info": {
+            "image_paths": literal_eval(doc["example_media"]),
+            "example_text": doc["example_text"],
+        },
+        "correct_answer": literal_eval(doc["answer"]),
         "response": response,
-        "correct_answer": doc["answer"],
-        "eval_context": doc["eval_context"],
-        "images": doc["query_images"],
     }
 
     return {"submission": data_dict}
 
 
 def megabench_aggregate_results_for_submission(results, args):
-    import pdb
-
-    pdb.set_trace()
-    pass
+    results_by_task = defaultdict(list)
+    for result in results:
+        results_by_task[result["task_name"]].append(result)
+    submission_results = []
+    task_level_keys = ["task_name", "global_images", "global_description", "example_info"]
+    sample_level_keys = ["response", "correct_answer", "global_idx", "images", "query_text"]
+    for per_task_results in results_by_task.values():
+        task_result = {key: per_task_results[0][key] for key in task_level_keys}
+        all_query_response = []
+        for sample in per_task_results:
+            sample_response = {key: sample[key] for key in sample_level_keys}
+            all_query_response.append(sample_response)
+        task_result["query_response"] = all_query_response
+        submission_results.append(task_result)
+    
+    submission_path = generate_submission_file(f"{args.tasks}_all_query_responses.json", args)
+    with open(submission_path, "w", encoding="utf-8") as fd:
+        json.dump(submission_results, fd, indent=4)
+    eval_logger.info(f"Results saved to {submission_path}.")
