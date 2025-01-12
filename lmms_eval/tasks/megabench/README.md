@@ -31,6 +31,14 @@ python3 -m accelerate.commands.launch \
 
 
 ## Run MEGA-Bench metrics to obtain the evaluation scores
+
+
+Install the dependencies of MEGA-Bench's evaluation metrics.
+
+```bash
+pip install -r requirements.txt
+```
+
 Example: evaluate the submission file with stand-alone evaluator adapted from MEGA-Bench's codebase.
 
 ```bash
