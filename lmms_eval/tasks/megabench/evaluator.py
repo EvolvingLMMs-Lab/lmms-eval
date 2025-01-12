@@ -30,6 +30,7 @@ class MEGABenchEvaluator:
             else {"data": self.data}
         )
         self.output_file = output_file
+        
 
         # Build a dict of {task_name -> metric configuration} for quick lookup
         self.scoring_functions = {}
@@ -225,6 +226,7 @@ class MEGABenchEvaluator:
                 mean_score = 0.0
             task["task_score"] = task_score_sum
             task["mean_task_score"] = mean_score
+            task['eval_type'] = 'llm' if isinstance(metric, VLMJudgeScore) else 'rule'
 
             total_query_score += task_score_sum
             total_task_score += mean_score
@@ -393,6 +395,9 @@ class MEGABenchEvaluator:
         Safe-write a JSON file via temp file + replace.
         Since the results file is long, this avoid breaking the file in case of a crash.
         """
+        # Create output directory if it doesn't exist
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
         temp_filename = f"{file_path}.tmp"
         with open(temp_filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
