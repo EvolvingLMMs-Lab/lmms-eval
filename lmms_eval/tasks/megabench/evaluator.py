@@ -7,7 +7,7 @@ import ast
 from datasets import load_dataset
 from metrics import MetricType, AggregationType, ResponseParseType
 from metrics.parsing.common.utils import evaluate_as_string
-#from metrics.scoring.gpt_4o_as_judge import GPT4OJudgeScore
+from metrics.scoring.vlm_as_judge import VLMJudgeScore
 
 
 class MEGABenchEvaluator:
@@ -24,6 +24,11 @@ class MEGABenchEvaluator:
         """
         self.hf_data = self._load_hf(subset_name)  # e.g. same structure used previously
         self.data = self._load_json(responses_file)  # The model's output
+        self.eval_results = (
+            self._load_json(output_file)
+            if os.path.exists(output_file)
+            else {"data": self.data}
+        )
         self.output_file = output_file
 
         # Build a dict of {task_name -> metric configuration} for quick lookup
@@ -58,6 +63,49 @@ class MEGABenchEvaluator:
         
         eval_context = ast.literal_eval(eval_context)
         return eval_context
+    
+    def _task_needs_eval(self, task: Dict) -> bool:
+        task_in_results = False
+        for existing_task in self.eval_results["data"]:
+            if task.get("task_name") == existing_task.get("task_name"):
+                task_in_results = True
+                if not "mean_task_score" in existing_task or not "task_score" in existing_task:
+                    return True
+
+                if len(task["query_response"]) != len(existing_task["query_response"]):
+                    return True
+                for res_example, saved_example in zip(
+                    task["query_response"], existing_task["query_response"]
+                ):
+                    if (
+                        res_example["response"] != saved_example["response"]
+                        or res_example["correct_answer"]
+                        != saved_example["correct_answer"]
+                    ):
+                        # model response or gt answer changed
+                        return True
+                    elif (
+                        "scores" not in saved_example
+                        or "query" not in saved_example["scores"]
+                    ):
+                        # no existing eval results (not evaluated before)
+                        return True
+                    elif (
+                        saved_example["scores"]["query"] == -1
+                        and len(saved_example["scores"]["field"]) == 0
+                    ):
+                        return True
+                    else:
+                        # nothing changed, using the old eval results
+                        res_example["scores"] = saved_example["scores"]
+
+                task["mean_task_score"] = existing_task["mean_task_score"]
+                task["task_score"] = existing_task["task_score"]
+
+        if not task_in_results:
+            return True
+
+        return False
 
     def evaluate(self):
         """
@@ -71,6 +119,16 @@ class MEGABenchEvaluator:
         # Evaluate each task
         for task in self.data:
             task_name = task.get("task_name", "")
+
+            need_eval = self._task_needs_eval(task)
+            if not need_eval:
+                # Add stats for previously evaluated tasks
+                num_tasks += 1
+                num_queries += len(task["query_response"])
+                total_task_score += task["mean_task_score"]
+                total_query_score += task["task_score"]
+                print(f"[Task: {task_name}] Using cached results: Score = {task['task_score']} / {len(task['query_response'])}")
+                continue
 
             # If no scoring config is found for the given task_name, skip
             score_config = self.scoring_functions.get(
@@ -172,6 +230,16 @@ class MEGABenchEvaluator:
             total_task_score += mean_score
 
             print(f"[Task: {task_name}] Score = {task_score_sum} / {len(task['query_response'])}")
+            self._save_results(
+                self.output_file,
+                {
+                    "data": self.data,
+                    "temp_summary": {
+                        "num_tasks": num_tasks,
+                        "num_queries": num_queries,
+                    },
+                },
+            )
 
         # Produce overall summary stats
         summary = {}
@@ -226,6 +294,21 @@ class MEGABenchEvaluator:
             query["scores"]["info"][field] = eval_info
         elif metric == MetricType.XML_NORM_POINT_IN_BBOX:
             score, eval_info = metric.match(response_obj.get(field), eval_context)
+            query["scores"]["field"][field] = score
+            query["scores"]["info"][field] = eval_info
+        elif isinstance(metric, VLMJudgeScore):
+            response_info = (
+                response_obj.get(field)
+                if isinstance(response_obj, dict)
+                else response_obj
+            )
+            score, eval_info = metric.match(
+                response_info,
+                correct_answer,
+                query["images"],
+                query["query_text"],
+                eval_context,
+            )
             query["scores"]["field"][field] = score
             query["scores"]["info"][field] = eval_info
         else:
@@ -289,14 +372,14 @@ class MEGABenchEvaluator:
 
     def _build_metric(self, metric_name: str, score_config: Dict[str, Any]):
         """
-        Given a string for the metric (e.g. 'gpt_4o_as_judge'),
+        Given a string for the metric (e.g. 'exact_str_match'),
         return the actual MetricType or a specialized metric class.
         """
         metric = MetricType.from_string(metric_name)
-        if metric == MetricType.GPT_4O_AS_JUDGE:
-            # Build the GPT4O metric using the provided config
-            gpt4o_configs = score_config.get("gpt4o_eval_configs", {})
-            metric = metric.class_impl(gpt4o_configs)
+        if metric == MetricType.VLM_AS_JUDGE or metric == MetricType.ASCII_ART_VLM_JUDGE:
+            # Build the VLM-as-judge metric using the provided config
+            vlm_eval_configs = score_config.get("gpt4o_eval_configs", None)
+            metric = metric.class_impl(vlm_eval_configs)
         return metric
 
     @staticmethod

@@ -48,9 +48,9 @@ from metrics.scoring.multi_ref_phrase import MultipleReferencePhraseEval
 from metrics.scoring.constrained_generation import ConstrainedGenerationEval
 from metrics.scoring.unsupported_scoring import UnsupportedScoring
 
-## TODO: refactor the vlm-judge metrics
-#from metrics.scoring.gpt_4o_as_judge import GPT4OJudgeScore
-#from metrics.scoring.ascii_art_gpt4o_judge import AsciiArtGPT4OJudge
+## The vlm-judge metrics
+from metrics.scoring.vlm_as_judge import VLMJudgeScore
+from metrics.scoring.ascii_art_vlm_judge import AsciiArtVLMJudgeScore
 
 
 class MetricType(Enum):
@@ -76,7 +76,6 @@ class MetricType(Enum):
     POSITIVE_INT_MATCH = "positive_int_match"
     CHESS_MOVE_LIST_JACCARD_INDEX = "chess_move_list_jaccard_index"
     LONGEST_COMMON_LIST_PREFIX_RATIO = "longest_common_list_prefix_ratio"
-    ASCII_ART_GPT4O_JUDGE = "ascii_art_gpt4o_judge"
     NLI_ENTAILMENT = "nli_entailment"
     BLEU = "bleu"
     GLEU_CN = "gleu_cn"
@@ -104,61 +103,62 @@ class MetricType(Enum):
     BOXED_SINGLE_NUMERICAL_MATCH = "boxed_single_numerical_match"
     SEQUENCE_COORDS_SIMILARITY = "sequence_coords_similarity"
     CONSTRAINED_GENERATION = "constrained_generation"
-    GPT_4O_AS_JUDGE = "gpt_4o_as_judge"
+    VLM_AS_JUDGE = "gpt_4o_as_judge"
+    ASCII_ART_VLM_JUDGE = "ascii_art_gpt4o_judge"
     UNSUPPORTED = "unsupported"
 
     @cached_property
     def class_impl(self):
         implementations = {
-            MetricType.SIMPLE_STR_MATCH: SimpleStrMatch(),
-            MetricType.EXACT_STR_MATCH: ExactStrMatch(),
-            MetricType.CODE_RESULT_EXACT_STR_MATCH: CodeResultExactStrMatch(),
-            MetricType.DICT_EXACT_STR_MATCH_AGG_RECALL: DictExactStrMatchAggRecall(),
-            MetricType.EXACT_STR_MATCH_CASE_INSENSITIVE: ExactStrMatchCaseInsensitive(),
-            MetricType.NORM_SIM_DAMERAU_LEVENSHTEIN: NormalizedSimilarityDamerauLevenshtein(),
-            MetricType.NEAR_STR_MATCH: NearStrMatch(),
-            MetricType.NUMBER_RELATIVE_DIFF_RATIO: NumberRelDiffRatio(),
-            MetricType.SET_EQUALITY: SetEquality(),
-            MetricType.SET_EQUALITY_CASE_INSENSITIVE: SetEqualityCaseInsensitive(),
-            MetricType.DICT_SET_EQUALITY_AGG_JACCARD: DictSetEqualityAggJaccard(),
-            MetricType.DICT_EQUALITY: DictEquality(),
-            MetricType.DICT_PRECISION: DictPrecision(),
-            MetricType.JACCARD_INDEX: Jaccard(),
-            MetricType.JACCARD_INDEX_CASE_INSENSITIVE: JaccardCaseInsensitive(),
-            MetricType.DICT_JACCARD_AGG_JACCARD: DictJaccardAggJaccard(),
-            MetricType.SET_PRECISION: SetPrecision(),
-            MetricType.POSITIVE_INT_MATCH: PositiveIntMatch(),
-            MetricType.CHESS_MOVE_LIST_JACCARD_INDEX: ChessMoveJaccard(),
-            MetricType.LONGEST_COMMON_LIST_PREFIX_RATIO: LongestCommonListPrefixRatio(),
-            MetricType.NLI_ENTAILMENT: NliEntailment(),
-            MetricType.BLEU: Bleu(),
-            MetricType.GLEU_CN: GLEUChinese(),
-            MetricType.XML_NORM_BBOX_IOU_SINGLE: XmlNbboxIouSingle(),
-            MetricType.BOXED_SINGLE_NUMERICAL_MATCH: BoxedSingleNumericalMatch(),
-            MetricType.GENERAL_SINGLE_NUMERICAL_MATCH: GeneralSingleNumericalMatch(),
-            MetricType.SEQUENCE_COORDS_SIMILARITY: CoordsSequenceSimilarity(),
-            MetricType.LATEX_EXPR_EQUALITY: LatexExprEquality(),
-            MetricType.TEXT_WITH_LATEX_EXPR_EQUALITY: TextLatexExprEquality(),
-            MetricType.NORM_BBOX_IOU_TUPLE: NbboxIouTuple(),
-            MetricType.NORM_BBOX_IOU_SINGLE: NbboxIouSingle(),
-            MetricType.NORM_BBOX_IOU_SEQUENCE: NbboxIouSequence(),
-            MetricType.DICT_NORM_BBOX_IOU_TUPLE_AGG_JACCARD: DictNbboxIouTupleAggJaccard(),
-            MetricType.XML_NORM_POINT_IN_BBOX: XmlNormPointInBbox(),
-            MetricType.XML_NORM_POINT_DISTANCE: XmlNormPointDistance(),
-            MetricType.GEO_PROXIMITY_LOCATION_DICT: GeoProximityLocationDict(),
-            MetricType.NORMALIZED_RMSE: NormalizedRMSE(),
-            MetricType.PROGRAM_JUDGE: ProgramJudge(),
-            MetricType.STR_SET_EQUALITY_LINE_BREAK: StringSetEqualityLineSplit(),
-            MetricType.STR_SET_EQUALITY_COMMA: StringSetEqualityCommaSplit(),
-            MetricType.SEQUENCE_EQUALITY: SequenceEquality(),
-            MetricType.SEQUENCE_EQUALITY_CASE_INSENSITIVE: SequenceEqualityCaseInsensitive(),
-            MetricType.SEQUENCE_ACCURACY_CASE_INSENSITIVE: SequenceAccuracyCaseInsensitive(),
-            MetricType.ANGLE_SEQ_FLOAT_RMSE: AngleSeqFloatRMSE(),
-            MetricType.SYMBOLIC_PLANNING_TEST: SymbolicPlanningMetricTest(),
-            MetricType.MULTI_REF_PHRASE_EVAL: MultipleReferencePhraseEval(),
-            MetricType.CONSTRAINED_GENERATION: ConstrainedGenerationEval(),
-            #MetricType.GPT_4O_AS_JUDGE: GPT4OJudgeScore(),
-            #MetricType.ASCII_ART_GPT4O_JUDGE: AsciiArtGPT4OJudge(),
+            MetricType.SIMPLE_STR_MATCH: SimpleStrMatch,
+            MetricType.EXACT_STR_MATCH: ExactStrMatch,
+            MetricType.CODE_RESULT_EXACT_STR_MATCH: CodeResultExactStrMatch,
+            MetricType.DICT_EXACT_STR_MATCH_AGG_RECALL: DictExactStrMatchAggRecall,
+            MetricType.EXACT_STR_MATCH_CASE_INSENSITIVE: ExactStrMatchCaseInsensitive,
+            MetricType.NORM_SIM_DAMERAU_LEVENSHTEIN: NormalizedSimilarityDamerauLevenshtein,
+            MetricType.NEAR_STR_MATCH: NearStrMatch,
+            MetricType.NUMBER_RELATIVE_DIFF_RATIO: NumberRelDiffRatio,
+            MetricType.SET_EQUALITY: SetEquality,
+            MetricType.SET_EQUALITY_CASE_INSENSITIVE: SetEqualityCaseInsensitive,
+            MetricType.DICT_SET_EQUALITY_AGG_JACCARD: DictSetEqualityAggJaccard,
+            MetricType.DICT_EQUALITY: DictEquality,
+            MetricType.DICT_PRECISION: DictPrecision,
+            MetricType.JACCARD_INDEX: Jaccard,
+            MetricType.JACCARD_INDEX_CASE_INSENSITIVE: JaccardCaseInsensitive,
+            MetricType.DICT_JACCARD_AGG_JACCARD: DictJaccardAggJaccard,
+            MetricType.SET_PRECISION: SetPrecision,
+            MetricType.POSITIVE_INT_MATCH: PositiveIntMatch,
+            MetricType.CHESS_MOVE_LIST_JACCARD_INDEX: ChessMoveJaccard,
+            MetricType.LONGEST_COMMON_LIST_PREFIX_RATIO: LongestCommonListPrefixRatio,
+            MetricType.NLI_ENTAILMENT: NliEntailment,
+            MetricType.BLEU: Bleu,
+            MetricType.GLEU_CN: GLEUChinese,
+            MetricType.XML_NORM_BBOX_IOU_SINGLE: XmlNbboxIouSingle,
+            MetricType.BOXED_SINGLE_NUMERICAL_MATCH: BoxedSingleNumericalMatch,
+            MetricType.GENERAL_SINGLE_NUMERICAL_MATCH: GeneralSingleNumericalMatch,
+            MetricType.SEQUENCE_COORDS_SIMILARITY: CoordsSequenceSimilarity,
+            MetricType.LATEX_EXPR_EQUALITY: LatexExprEquality,
+            MetricType.TEXT_WITH_LATEX_EXPR_EQUALITY: TextLatexExprEquality,
+            MetricType.NORM_BBOX_IOU_TUPLE: NbboxIouTuple,
+            MetricType.NORM_BBOX_IOU_SINGLE: NbboxIouSingle,
+            MetricType.NORM_BBOX_IOU_SEQUENCE: NbboxIouSequence,
+            MetricType.DICT_NORM_BBOX_IOU_TUPLE_AGG_JACCARD: DictNbboxIouTupleAggJaccard,
+            MetricType.XML_NORM_POINT_IN_BBOX: XmlNormPointInBbox,
+            MetricType.XML_NORM_POINT_DISTANCE: XmlNormPointDistance,
+            MetricType.GEO_PROXIMITY_LOCATION_DICT: GeoProximityLocationDict,
+            MetricType.NORMALIZED_RMSE: NormalizedRMSE,
+            MetricType.PROGRAM_JUDGE: ProgramJudge,
+            MetricType.STR_SET_EQUALITY_LINE_BREAK: StringSetEqualityLineSplit,
+            MetricType.STR_SET_EQUALITY_COMMA: StringSetEqualityCommaSplit,
+            MetricType.SEQUENCE_EQUALITY: SequenceEquality,
+            MetricType.SEQUENCE_EQUALITY_CASE_INSENSITIVE: SequenceEqualityCaseInsensitive,
+            MetricType.SEQUENCE_ACCURACY_CASE_INSENSITIVE: SequenceAccuracyCaseInsensitive,
+            MetricType.ANGLE_SEQ_FLOAT_RMSE: AngleSeqFloatRMSE,
+            MetricType.SYMBOLIC_PLANNING_TEST: SymbolicPlanningMetricTest,
+            MetricType.MULTI_REF_PHRASE_EVAL: MultipleReferencePhraseEval,
+            MetricType.CONSTRAINED_GENERATION: ConstrainedGenerationEval,
+            MetricType.VLM_AS_JUDGE: VLMJudgeScore,
+            MetricType.ASCII_ART_VLM_JUDGE: AsciiArtVLMJudgeScore,
         }
 
         if self not in implementations:
@@ -167,11 +167,8 @@ class MetricType(Enum):
         
         return implementations[self]
 
-    def match(self, response: str, correct_answer: str, task_info=None):
-        if not task_info:
-            return self.class_impl.match(response, correct_answer)
-        else:
-            return self.class_impl.match(response, correct_answer, task_info)
+    def match(self, response: str, correct_answer: str):
+        return self.class_impl.match(response, correct_answer)
 
     @classmethod
     def from_string(cls, s):
