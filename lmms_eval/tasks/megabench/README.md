@@ -1,7 +1,9 @@
 # MEGA-Bench: Scaling Multimodal Evaluation to over 500 Real-World Tasks
 
+TODO: some introduction
 
-## Get the model response files with lmms-eval
+
+## Step-1: Get the model response files with lmms-eval
 
 ```bash
 # Core set (440 tasks)
@@ -30,7 +32,7 @@ python3 -m accelerate.commands.launch \
 ```
 
 
-## Run MEGA-Bench metrics to obtain the evaluation scores
+## Step-2: Run MEGA-Bench metrics to obtain the evaluation scores
 
 
 Install the dependencies of MEGA-Bench's evaluation metrics.
@@ -49,7 +51,7 @@ python lmms_eval/tasks/megabench/evaluator.py --subset_name core --submission_fi
 python lmms_eval/tasks/megabench/evaluator.py --subset_name open --submission_file logs/llava-ov-7b/submissions/megabench_open_all_query_responses.json  --output_file logs/llava-ov-7b/megabench_scores/megabench_open_data_with_scores.json
 
 # Derive the breakdown results
-python lmms_eval/tasks/megabench/derive_breakdown_results.py  --input_dir logs/llava-ov-7b/megabench_scores
+python lmms_eval/tasks/megabench/breakdown/derive_breakdown_results.py  --input_dir logs/llava-ov-7b/megabench_scores
 
 ```
 
