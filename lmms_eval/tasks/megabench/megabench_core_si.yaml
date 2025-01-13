@@ -1,0 +1,3 @@
+dataset_name: core_single_image
+task: "megabench_core_si"
+include: _default_template_yaml
