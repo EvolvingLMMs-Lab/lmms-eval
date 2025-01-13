@@ -1,6 +1,8 @@
 # MEGA-Bench: Scaling Multimodal Evaluation to over 500 Real-World Tasks
 
-TODO: some introduction
+![image](https://github.com/user-attachments/assets/5fd44fa9-0ec2-4298-ad0c-e883cb1edf7f)
+
+MEGA-Bench contains 505 multimodal tasks with diverse data sources, input/output formats, and skill requirements. The taxonomy tree is derived from the application dimension, which guides and calibrates the annotation process. The benchmark is equiped with a suite of 45 evaluation metrics to handle various output formats beyond multiple-choice questions.
 
 
 ## Step-1: Get the model response files with lmms-eval
