@@ -1,0 +1,31 @@
+dataset_path: TIGER-Lab/MEGA-Bench
+test_split: test
+dataset_kwargs:
+  token: True
+  cache_dir: megabench_data
+  video: True
+  create_link: True
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  do_sample: false
+  top_p: 1.0
+  num_beams: 1
+
+output_type: generate_until
+doc_to_visual: !function utils.megabench_doc_to_visual
+doc_to_text: !function utils.megabench_doc_to_text
+doc_to_target: !function utils.megabench_doc_to_target
+process_results: !function utils.megabench_process_results
+
+metric_list:
+  - metric: submission
+    aggregation: !function utils.megabench_aggregate_results_for_submission
+    higher_is_better: true
+  
+lmms_eval_specific_kwargs:
+  default:
+    max_video_subsample_frame: 64
+  
+metadata:
+  - version: 0.0
