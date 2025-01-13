@@ -187,7 +187,7 @@ class LlamaVision(lmms):
                 messages[-1]["content"].append({"type": "image"})
             messages[-1]["content"].append({"type": "text", "text": contexts})
             prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
-            inputs = self.processor(images, prompt, return_tensors="pt").to(self.model.device)
+            inputs = self.processor(images, prompt, add_special_tokens=False, return_tensors="pt").to(self.model.device)
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -208,7 +208,7 @@ class LlamaVision(lmms):
                     do_sample=gen_kwargs["do_sample"],
                 )
                 output = output[:, inputs["input_ids"].shape[-1] :]
-                res.append(self.processor.decode(output[0]))
+                res.append(self.processor.decode(output[0], skip_special_tokens=True))
 
             pbar.update(1)
         pbar.close()
