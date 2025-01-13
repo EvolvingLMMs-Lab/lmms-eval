@@ -1,4 +1,5 @@
 from numbers import Number
+
 from metrics.scoring.common.conversions import str_to_iterable
 from metrics.scoring.simple_str_match import SimpleStrMatch
 

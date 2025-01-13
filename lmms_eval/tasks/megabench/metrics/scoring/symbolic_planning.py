@@ -52,9 +52,7 @@ def parse_pddl_attr_from_string(
     if len(s_attr) == 1:
         return "", []
     elif len(s_attr) == 2:
-        outer_str, inner_str, _ = parse_outer_inner_str(
-            s_attr[1], attr_ender, inner_starter, inner_ender
-        )
+        outer_str, inner_str, _ = parse_outer_inner_str(s_attr[1], attr_ender, inner_starter, inner_ender)
         return attr_starter + outer_str, inner_str
     else:
         matched_dict = {}
@@ -63,18 +61,14 @@ def parse_pddl_attr_from_string(
             while len(s.split(attr_starter)) > 1:
                 s = s.split(attr_starter, 1)[1]
                 name = re.split(r"\s+", s.strip())[0]
-                outer_str, inner_str, end_point = parse_outer_inner_str(
-                    s, attr_ender, inner_starter, inner_ender
-                )
+                outer_str, inner_str, end_point = parse_outer_inner_str(s, attr_ender, inner_starter, inner_ender)
                 outer_list.append(attr_starter + outer_str)
                 matched_dict[name] = inner_str
                 s = s[end_point:]
         else:
             for seg in s_attr[1:]:
                 name = re.split(r"\s+", seg.strip())[0]
-                outer_str, inner_str, _ = parse_outer_inner_str(
-                    seg, attr_ender, inner_starter, inner_ender
-                )
+                outer_str, inner_str, _ = parse_outer_inner_str(seg, attr_ender, inner_starter, inner_ender)
                 outer_list.append(attr_starter + outer_str)
                 matched_dict[name] = inner_str
         return outer_list, matched_dict
@@ -120,19 +114,13 @@ class Domain:
     def __init__(self, domain_pddl):
         # Domain files
         self.domain_pddl = domain_pddl
-        self.action_name, self.action_params, self.action_params_dict = (
-            self.get_domain_action()
-        )
+        self.action_name, self.action_params, self.action_params_dict = self.get_domain_action()
         self.gt_cond_dict = self.parse_gt_pre_post_cond()
 
     def get_domain_action(self):
-        action_pddl_str_list, all_actions = parse_pddl_attr_from_string(
-            self.domain_pddl, attr_starter="(:action"
-        )
+        action_pddl_str_list, all_actions = parse_pddl_attr_from_string(self.domain_pddl, attr_starter="(:action")
         action_name, action_params, action_params_dict = [], [], []
-        for action_pddl_str, (name, action_attr) in zip(
-            action_pddl_str_list, all_actions.items()
-        ):
+        for action_pddl_str, (name, action_attr) in zip(action_pddl_str_list, all_actions.items()):
             assert len(action_attr) == 3
             param_str, pre_cond_str, post_cond_str = action_attr
             action_name.append(name)
@@ -171,9 +159,7 @@ def construct_param_to_obj(domain, action):
 def state_transition(current_state, effects, param_to_obj):
     for obj_cond in effects:
         for param in param_to_obj:
-            obj_cond = re.sub(
-                r"\?{}(?=[^\w-])".format(param), param_to_obj[param], obj_cond
-            )
+            obj_cond = re.sub(r"\?{}(?=[^\w-])".format(param), param_to_obj[param], obj_cond)
         _, reversed_cond = parse_pddl_attr_from_string(obj_cond, attr_starter="(not ")
         if reversed_cond:
             assert len(reversed_cond) == 1
@@ -187,12 +173,8 @@ def state_transition(current_state, effects, param_to_obj):
 def check_pre_conds_satisfy(current_state, pre_conds, param_to_obj):
     for obj_cond in pre_conds:
         for param in param_to_obj:
-            obj_cond = re.sub(
-                r"\?{}(?=[^\w-])".format(param), param_to_obj[param], obj_cond
-            )
-        if (obj_cond.startswith("(not ") and obj_cond in current_state) or (
-            not obj_cond.startswith("(not ") and obj_cond not in current_state
-        ):
+            obj_cond = re.sub(r"\?{}(?=[^\w-])".format(param), param_to_obj[param], obj_cond)
+        if (obj_cond.startswith("(not ") and obj_cond in current_state) or (not obj_cond.startswith("(not ") and obj_cond not in current_state):
             return False
     return True
 
@@ -211,15 +193,12 @@ class SymbolicPlanningMetricTest:
 
         ## Parse trajectory, setup initial and goal state
         # response = eval_context["gt_plan"]  # for debug
-        match response:
-            case str():
-                candidates = response.split("\n")
-            case tuple() | list():
-                candidates = list(response)
-            case _:
-                raise ValueError(
-                    f"`response` has unsupported type: {type(response)=}, {response=}"
-                )
+        if isinstance(response, str):
+            candidates = response.split("\n")
+        elif isinstance(response, (tuple, list)):
+            candidates = list(response)
+        else:
+            raise ValueError(f"`response` has unsupported type: {type(response)=}, {response=}")
         cand_traj = [cand_a.strip() for cand_a in candidates if cand_a.startswith("(")]
         try:
             task_pddl = eval_context["task_pddl"]
@@ -234,22 +213,16 @@ class SymbolicPlanningMetricTest:
             ## State transitions and check if satisfy the preconditions
             for cand_a in cand_traj:
                 param_to_obj, a_name = construct_param_to_obj(domain, cand_a)
-                if not check_pre_conds_satisfy(
-                    cur_state, domain.gt_cond_dict[f"{a_name}_pre"], param_to_obj
-                ):
+                if not check_pre_conds_satisfy(cur_state, domain.gt_cond_dict[f"{a_name}_pre"], param_to_obj):
                     print(f"precondition of the action {cand_a} is not satisfied!")
                     score = 0
                     break
-                cur_state = state_transition(
-                    cur_state, domain.gt_cond_dict[f"{a_name}_post"], param_to_obj
-                )
+                cur_state = state_transition(cur_state, domain.gt_cond_dict[f"{a_name}_post"], param_to_obj)
 
             ## Check if goal conditions are reached in the final state
             if score == 1:
                 for g_state in goal_state:
-                    if (g_state.startswith("(not ") and g_state in cur_state) or (
-                        not g_state.startswith("(not ") and g_state not in cur_state
-                    ):
+                    if (g_state.startswith("(not ") and g_state in cur_state) or (not g_state.startswith("(not ") and g_state not in cur_state):
                         print(f"goal state {g_state} is not reached!")
                         score = 0
                         break

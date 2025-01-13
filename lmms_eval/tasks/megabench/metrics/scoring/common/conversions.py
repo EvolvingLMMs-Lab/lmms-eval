@@ -1,11 +1,12 @@
 import ast
 import json
 import re
-from matplotlib import font_manager
-from PIL import Image, ImageDraw, ImageFont
-from metrics.parsing.common.parsers import parse_json
 from numbers import Number
 from typing import Tuple, Union
+
+from matplotlib import font_manager
+from metrics.parsing.common.parsers import parse_json
+from PIL import Image, ImageDraw, ImageFont
 
 
 def freeze_structure(obj):
@@ -190,9 +191,7 @@ MONOSPACE_FONTS = ("Courier New", "DejaVu Sans Mono", "Consolas", "SF Mono")
 MONOSPACE_FONT_FILES = []
 for font_name in MONOSPACE_FONTS:
     try:
-        MONOSPACE_FONT_FILES.append(
-            font_manager.findfont(font_name, fallback_to_default=False)
-        )
+        MONOSPACE_FONT_FILES.append(font_manager.findfont(font_name, fallback_to_default=False))
     except ValueError:
         continue
 
@@ -214,9 +213,7 @@ def ascii_text_to_image(
     # Calculate initial image size based on text
     char_width = font_size * 0.6  # Approximate width of a character
     init_width = int(max(len(line) for line in lines) * char_width + 2 * padding)
-    init_height = int(
-        (len(lines) * font_size * line_spacing) + 2 * padding
-    )  # 1.2 for line spacing
+    init_height = int((len(lines) * font_size * line_spacing) + 2 * padding)  # 1.2 for line spacing
 
     # Create a new image with the calculated size
     image = Image.new("RGB", (init_width, init_height), color=bg_color)

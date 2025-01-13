@@ -1,5 +1,5 @@
-from metrics.scoring.jaccard import Jaccard
 from metrics.scoring.common.conversions import cast_to_dict
+from metrics.scoring.jaccard import Jaccard
 
 
 class DictJaccardAggJaccard:

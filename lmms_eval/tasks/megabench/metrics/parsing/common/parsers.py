@@ -1,10 +1,11 @@
 import ast
 import json
 import re
-import regex  # Supports the non-standard ?R regex operator
 from typing import List
-from .utils import extract_code_block_content, extract_answer_at_beginning_of_line
 
+import regex  # Supports the non-standard ?R regex operator
+
+from .utils import extract_answer_at_beginning_of_line, extract_code_block_content
 
 PARSING_TIMEOUT = 0.1
 
@@ -23,9 +24,7 @@ def parse_json(response: str):
 
     # Find all potential JSON objects
     try:
-        potential_jsons = regex.findall(
-            json_pattern, response_, timeout=PARSING_TIMEOUT
-        )
+        potential_jsons = regex.findall(json_pattern, response_, timeout=PARSING_TIMEOUT)
     except TimeoutError:
         if response_.startswith("["):
             return []
@@ -44,11 +43,7 @@ def parse_json(response: str):
         # Process each string literal
         for s in strings:
             # Unescape the string content
-            unescaped = (
-                s[1:-1]
-                .replace("__DOUBLE_QUOTE__", '"')
-                .replace("__SINGLE_QUOTE__", "'")
-            )
+            unescaped = s[1:-1].replace("__DOUBLE_QUOTE__", '"').replace("__SINGLE_QUOTE__", "'")
             # Try to parse it as JSON
             try:
                 parsed = json.loads(unescaped)
