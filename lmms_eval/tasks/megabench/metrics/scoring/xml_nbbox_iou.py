@@ -14,7 +14,6 @@ class XmlNbboxIouSingle:
 
     @classmethod
     def match(cls, responses, targets) -> float:
-
         logging.debug(f"{responses=}, {targets=}")
         if not isinstance(responses, (tuple | list)):
             responses = parse_bboxes_from_xml(responses)

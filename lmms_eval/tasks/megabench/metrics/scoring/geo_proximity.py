@@ -6,7 +6,13 @@ import ssl
 from datetime import timedelta
 
 import requests_cache
-from geopy.adapters import RequestsAdapter, RequestsHTTPAdapter, RequestsHTTPWithSSLContextAdapter, _normalize_proxies, requests_available
+from geopy.adapters import (
+    RequestsAdapter,
+    RequestsHTTPAdapter,
+    RequestsHTTPWithSSLContextAdapter,
+    _normalize_proxies,
+    requests_available,
+)
 from geopy.distance import distance
 from geopy.extra.rate_limiter import RateLimiter
 from geopy.geocoders import Nominatim

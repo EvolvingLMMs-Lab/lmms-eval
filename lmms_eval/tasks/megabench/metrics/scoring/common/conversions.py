@@ -162,7 +162,6 @@ def parse_point_2d_from_xml(xml_string) -> Union[Tuple[float, float], None]:
 
 
 def parse_bboxes_from_xml(xml_string: str) -> list:
-
     if not isinstance(xml_string, str):
         return []
 
@@ -171,7 +170,6 @@ def parse_bboxes_from_xml(xml_string: str) -> list:
 
     new_bboxes = []
     for match in matches:
-
         coords = match.split(",")
         if len(coords) != 4:
             continue

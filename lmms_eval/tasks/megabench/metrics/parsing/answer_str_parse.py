@@ -1,7 +1,12 @@
 import logging
 
 from metrics.parsing.common.parsers import parse_json
-from metrics.parsing.common.utils import drop_additional_text, evaluate_as_string, extract_answer_content, extract_code_block_content
+from metrics.parsing.common.utils import (
+    drop_additional_text,
+    evaluate_as_string,
+    extract_answer_content,
+    extract_code_block_content,
+)
 
 logger = logging.getLogger("errorLogger")
 
