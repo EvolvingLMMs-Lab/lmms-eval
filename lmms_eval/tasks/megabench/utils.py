@@ -99,6 +99,9 @@ def megabench_process_results(doc, result):
     return {"submission": data_dict}
 
 
+import time
+
+
 def megabench_aggregate_results_for_submission(results, args):
     results_by_task = defaultdict(list)
     for result in results:
@@ -115,7 +118,8 @@ def megabench_aggregate_results_for_submission(results, args):
         task_result["query_response"] = all_query_response
         submission_results.append(task_result)
 
-    submission_path = generate_submission_file(f"{args.tasks}_all_query_responses.json", args)
+    timestamp = time.strftime("%m-%d-%H-%M")
+    submission_path = generate_submission_file(f"megabench_all_query_responses_{timestamp}.json", args)
     with open(submission_path, "w", encoding="utf-8") as fd:
         json.dump(submission_results, fd, indent=4)
     eval_logger.info(f"Results saved to {submission_path}.")
