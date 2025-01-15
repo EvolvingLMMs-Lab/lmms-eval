@@ -22,7 +22,6 @@ class DictEquality:
 
 
 class DictPrecision:
-
     @classmethod
     def match(cls, responses, targets) -> float:
         """Return the aggregated Jaccard index between targets and responses."""

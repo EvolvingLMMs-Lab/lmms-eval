@@ -1,15 +1,16 @@
 import collections
 import itertools
 import logging
-from numbers import Number
 import re
-from nltk.tokenize import sent_tokenize, word_tokenize
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
-import pronouncing
-from metrics.scoring.common.conversions import str_to_iterable
-from metrics.parsing.common.parsers import parse_nested_str_list, parse_syllable_ranges
 import signal
+from numbers import Number
+
+import pronouncing
+from metrics.parsing.common.parsers import parse_nested_str_list, parse_syllable_ranges
+from metrics.scoring.common.conversions import str_to_iterable
+from nltk.corpus import wordnet
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import sent_tokenize, word_tokenize
 
 
 def custom_lemmatize(word, lemmatizer):
@@ -78,10 +79,7 @@ def phones_for_word(text: str) -> list[str]:
         text = text.removesuffix("'s")
 
     if text in custom_phones_for_word:
-        return [
-            pr + suffix
-            for pr, suffix in itertools.product(custom_phones_for_word[text], suffixes)
-        ]
+        return [pr + suffix for pr, suffix in itertools.product(custom_phones_for_word[text], suffixes)]
 
     pronunciations = pronouncing.phones_for_word(text)
 
@@ -115,12 +113,7 @@ def phones_for_word(text: str) -> list[str]:
                 prefixes_to_remove = ["AH0 "]
                 text = "a" + text.removeprefix("'")
         pronunciations = pronouncing.phones_for_word(text)
-    pronunciations = [
-        (prefix + pr + suffix).removeprefix(prefix_to_remove)
-        for prefix, pr, suffix, prefix_to_remove in itertools.product(
-            prefixes, pronunciations, suffixes, prefixes_to_remove
-        )
-    ]
+    pronunciations = [(prefix + pr + suffix).removeprefix(prefix_to_remove) for prefix, pr, suffix, prefix_to_remove in itertools.product(prefixes, pronunciations, suffixes, prefixes_to_remove)]
 
     if not pronunciations:
         file_logger.error(f"OOV: {text}")
@@ -158,9 +151,7 @@ def count_syllables(text: str) -> list[int]:
     pronunciations = [phones_for_word(p) for p in text.split()]
     syllable_counts = []
     for pronun_possibility in itertools.product(*pronunciations):
-        syllable_counts.append(
-            sum([pronouncing.syllable_count(p) for p in pronun_possibility])
-        )
+        syllable_counts.append(sum([pronouncing.syllable_count(p) for p in pronun_possibility]))
     return syllable_counts
 
 
@@ -193,10 +184,7 @@ def find_string_occurrences_with_variations(text, search_string):
 def word_to_stresses(word: str) -> list[list[int]]:
     """Convert a word to a list of stresses, for each valid pronunciation."""
     pronunciations = phones_for_word(word)
-    stresses = {
-        tuple(int(stress) for stress in pronouncing.stresses(pronunc))
-        for pronunc in pronunciations
-    }
+    stresses = {tuple(int(stress) for stress in pronouncing.stresses(pronunc)) for pronunc in pronunciations}
     return [list(pronunc_stresses) for pronunc_stresses in stresses]
 
 
@@ -233,9 +221,7 @@ def is_line_iambic(line: str) -> bool:
                 word_syllable_index += 1
 
             word_valid_iambic_pairs = True
-            for stress1, stress2 in grouper_ignore_last(
-                stress_pattern[word_syllable_index:], 2
-            ):
+            for stress1, stress2 in grouper_ignore_last(stress_pattern[word_syllable_index:], 2):
                 if not is_iambic_pair(stress1, stress2):
                     word_valid_iambic_pairs = False
                     break
@@ -259,9 +245,7 @@ def is_line_iambic(line: str) -> bool:
 
         return False
 
-    return backtrack(
-        0, 0, -1
-    )  # Start with -1 as prev_stress as a placeholder for the first syllable
+    return backtrack(0, 0, -1)  # Start with -1 as prev_stress as a placeholder for the first syllable
 
 
 def parse_constraints(key_string, value_string):
@@ -280,9 +264,7 @@ def parse_constraints(key_string, value_string):
 
     # Combine keys and values into a dictionary
     if len(key_components) == len(value_components):
-        result = {
-            key.lower(): value for key, value in zip(key_components, value_components)
-        }
+        result = {key.lower(): value for key, value in zip(key_components, value_components)}
     elif len(key_components) == 1 and len(value_components) == 1:
         result = {key_components[0].lower(): value_components[0]}
     else:
@@ -305,9 +287,7 @@ def check_constraint(response, constraint, constraint_val):
             for cond in conditions:
                 count, occurs = 0, []
                 for item in cond:  # check one condition
-                    count_, occurs_ = find_string_occurrences_with_variations(
-                        response, item
-                    )
+                    count_, occurs_ = find_string_occurrences_with_variations(response, item)
                     if count_ > 0:
                         count += count_
                         occurs.extend(occurs_)
@@ -319,9 +299,7 @@ def check_constraint(response, constraint, constraint_val):
             items = str_to_iterable(list, parsed_constraint["contain"])
             count, occurs = 0, []
             for item in items:
-                count_, occurs_ = find_string_occurrences_with_variations(
-                    response, item
-                )
+                count_, occurs_ = find_string_occurrences_with_variations(response, item)
                 if count_ > 0:
                     count += count_
                     occurs.extend(occurs_)
@@ -402,70 +380,54 @@ def check_constraint(response, constraint, constraint_val):
         response = response.replace('"', "")
         response = response.replace("-", " ")
         response = response.replace("—", " ")
-        response = re.sub(
-            " *\(\w\) *(?=\n|$)", "", response
-        )  # The parenthesized letter in the rhyming scheme
+        response = re.sub(" *\(\w\) *(?=\n|$)", "", response)  # The parenthesized letter in the rhyming scheme
 
         lines = response.lower().split("\n")
-        match constraint:
-            case "syllables":
-                syllable_count_intervals = parse_syllable_ranges(constraint_val)
-                if len(lines) != len(syllable_count_intervals):
-                    return 0
-                try:
-                    all_match = all(
-                        any(
-                            min_count <= syll_count <= max_count
-                            for syll_count in count_syllables(line)
-                        )
-                        for line, (min_count, max_count) in zip(
-                            lines, syllable_count_intervals
-                        )
-                    )
-                except IndexError:
-                    all_match = None
-                score = 1 if all_match else 0
-            case "rhyming_scheme":
-                # Ensure that the number of lines is the same as the number in the rhyming scheme
-                if len(lines) != len(constraint_val):
-                    return 0
-                last_words = [line.split()[-1] if line != "" else "" for line in lines]
+        # Replace match-case with if-elif
+        if constraint == "syllables":
+            syllable_count_intervals = parse_syllable_ranges(constraint_val)
+            if len(lines) != len(syllable_count_intervals):
+                return 0
+            try:
+                all_match = all(any(min_count <= syll_count <= max_count for syll_count in count_syllables(line)) for line, (min_count, max_count) in zip(lines, syllable_count_intervals))
+            except IndexError:
+                all_match = None
+            score = 1 if all_match else 0
+        elif constraint == "rhyming_scheme":
+            # Ensure that the number of lines is the same as the number in the rhyming scheme
+            if len(lines) != len(constraint_val):
+                return 0
+            last_words = [line.split()[-1] if line != "" else "" for line in lines]
 
-                # Map each rhyming scheme letter to the last word of a line
-                letter_to_words = collections.defaultdict(set)
-                for rhyme_letter, word in zip(constraint_val, last_words):
-                    if rhyme_letter == " ":
-                        if word != "":
-                            return 0
-                    else:
-                        letter_to_words[rhyme_letter].add(word)
+            # Map each rhyming scheme letter to the last word of a line
+            letter_to_words = collections.defaultdict(set)
+            for rhyme_letter, word in zip(constraint_val, last_words):
+                if rhyme_letter == " ":
+                    if word != "":
+                        return 0
+                else:
+                    letter_to_words[rhyme_letter].add(word)
 
-                # Check that 1. The words for the same letter all rhyme
-                letter_to_rhyming_parts = {}
-                for letter, words in letter_to_words.items():
-                    rhyming_parts: list[set[str]] = [
-                        {
-                            rhyming_part_include_unstressed(pronunciations)
-                            for pronunciations in phones_for_word(word)
-                        }
-                        for word in words
-                    ]
-                    common_rhyming_parts = set.intersection(*rhyming_parts)
-                    if not common_rhyming_parts:
-                        return 0
-                    letter_to_rhyming_parts[letter] = common_rhyming_parts
-                # Check that 2. The words for different letters do not rhyme
-                for a, b in itertools.combinations(letter_to_rhyming_parts, 2):
-                    # To simplify things, if there are any shared pronunciations between two different letters, we reject it
-                    if letter_to_rhyming_parts[a] & letter_to_rhyming_parts[b]:
-                        return 0
-                score = 1
-            case "poetry_meter":
-                all_match = all(is_line_iambic(line) for line in lines)
-                score = 1 if all_match else 0
-            case _:
-                file_logger.warning(f"Unknown constraint type {constraint}")
-                score = 0
+            # Check that 1. The words for the same letter all rhyme
+            letter_to_rhyming_parts = {}
+            for letter, words in letter_to_words.items():
+                rhyming_parts: list[set[str]] = [{rhyming_part_include_unstressed(pronunciations) for pronunciations in phones_for_word(word)} for word in words]
+                common_rhyming_parts = set.intersection(*rhyming_parts)
+                if not common_rhyming_parts:
+                    return 0
+                letter_to_rhyming_parts[letter] = common_rhyming_parts
+            # Check that 2. The words for different letters do not rhyme
+            for a, b in itertools.combinations(letter_to_rhyming_parts, 2):
+                # To simplify things, if there are any shared pronunciations between two different letters, we reject it
+                if letter_to_rhyming_parts[a] & letter_to_rhyming_parts[b]:
+                    return 0
+            score = 1
+        elif constraint == "poetry_meter":
+            all_match = all(is_line_iambic(line) for line in lines)
+            score = 1 if all_match else 0
+        else:
+            file_logger.warning(f"Unknown constraint type {constraint}")
+            score = 0
 
     return score
 

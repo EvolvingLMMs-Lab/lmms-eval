@@ -1,15 +1,16 @@
 import io
-import pathlib
 import json
 import multiprocessing
-from unittest.mock import patch
+import pathlib
 from multiprocessing.queues import Empty
+from unittest.mock import patch
 
 BIG_BENCH_PATH = pathlib.Path(__file__).resolve().parent.parent.parent
 
 
 class ProgramJudge:
     """Python Program Judging."""
+
     @staticmethod
     def match(response: str, eval_context: str) -> int:
         # Load all test cases from the benchmark_tasks directory
@@ -36,9 +37,7 @@ class CodeTester:
     def run_user_code(self, input_data):
         input_str = "\n".join(input_data) + "\n"
         output_queue = multiprocessing.Queue()
-        process = multiprocessing.Process(
-            target=self.target, args=(output_queue, input_str)
-        )
+        process = multiprocessing.Process(target=self.target, args=(output_queue, input_str))
         process.start()
 
         process.join(self.timeout)
@@ -85,9 +84,7 @@ class CodeTester:
         results = []
 
         for i, test_case in enumerate(self.test_cases, 1):
-            result, output = self.evaluate_test_case(
-                test_case["input"], test_case["expected"]
-            )
+            result, output = self.evaluate_test_case(test_case["input"], test_case["expected"])
 
             test_result = {
                 "response": self.user_code,
@@ -104,9 +101,7 @@ class CodeTester:
                 passed_tests += 1
             else:
                 if self.verbose:
-                    print(
-                        f"Test case {i}: Failed - Expected {test_case['expected']} but got {output}"
-                    )
+                    print(f"Test case {i}: Failed - Expected {test_case['expected']} but got {output}")
 
         score = passed_tests / total_tests if total_tests > 0 else 0
         return score, results

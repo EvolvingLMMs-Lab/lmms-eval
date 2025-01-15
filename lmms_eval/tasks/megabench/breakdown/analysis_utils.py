@@ -1,9 +1,10 @@
 import json
-from collections import defaultdict
 import os
+from collections import defaultdict
 
 # Add path definition at the top after imports
 all_task_meta_path = os.path.join(os.path.dirname(__file__), "all_task_meta.json")
+
 
 def task_list_refine(task_list):
     task_results = []
@@ -47,12 +48,7 @@ def derive_keyword_stats(task_results_with_meta, include_per_task_info=False):
             if include_per_task_info:
                 skills_stats[skill]["tasks"].append((task_name, score))
 
-        for stat_dict, key in [
-            (input_format_stats, "input_format"),
-            (output_format_stats, "output_format"),
-            (input_num_stats, "num_input"),
-            (app_stats, "app")
-        ]:
+        for stat_dict, key in [(input_format_stats, "input_format"), (output_format_stats, "output_format"), (input_num_stats, "num_input"), (app_stats, "app")]:
             if value := task.get(key):
                 stat_dict[value]["count"] += 1
                 stat_dict[value]["total_score"] += score
@@ -83,10 +79,10 @@ def collect_task_metadata(model_results):
     # Load the complete task metadata
     with open(all_task_meta_path, "r") as f:
         all_meta = json.load(f)
-    
+
     # Create result dictionary
     all_task_meta = {}
-    
+
     # Match results with metadata
     for task_result in model_results:
         task_name = task_result["name"]
@@ -94,5 +90,5 @@ def collect_task_metadata(model_results):
             meta = all_meta[task_name].copy()  # Create a copy to avoid modifying original
             meta.update(task_result)
             all_task_meta[task_name] = meta
-    
+
     return all_task_meta

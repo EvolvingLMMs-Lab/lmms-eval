@@ -1,5 +1,5 @@
-from collections.abc import Iterable
 import math
+from collections.abc import Iterable
 from numbers import Number
 
 
@@ -94,9 +94,5 @@ def mse(predicted: Number, target: Number) -> Number:
 def point_distance(predicted: tuple[float, ...], target: tuple[float, ...]):
     """Return the distance between two points."""
     if len(predicted) != len(target):
-        raise ValueError(
-            "point_distance: Predicted and target points have different dimensions."
-        )
-    return math.sqrt(
-        sum((comp_res - comp_tar) ** 2 for comp_res, comp_tar in zip(predicted, target))
-    )
+        raise ValueError("point_distance: Predicted and target points have different dimensions.")
+    return math.sqrt(sum((comp_res - comp_tar) ** 2 for comp_res, comp_tar in zip(predicted, target)))

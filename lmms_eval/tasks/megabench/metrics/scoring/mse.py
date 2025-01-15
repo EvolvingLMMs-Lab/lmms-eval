@@ -1,8 +1,9 @@
 import ast
-import numpy as np
 import math
-from metrics.scoring.common.metrics import mse
+
+import numpy as np
 from metrics.scoring.common.conversions import str_to_list
+from metrics.scoring.common.metrics import mse
 
 
 class MSE:

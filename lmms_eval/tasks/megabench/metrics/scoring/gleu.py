@@ -1,4 +1,5 @@
 from numbers import Number
+
 import jieba
 from nltk.translate.gleu_score import sentence_gleu
 

@@ -1,10 +1,11 @@
 import re
-from sympy.parsing.latex import parse_latex
-from sympy.parsing.latex.errors import LaTeXParsingError
-from sympy.core.sympify import SympifyError
+import signal
+
 from metrics.scoring.common.transformations import normalize_latex
 from metrics.scoring.simple_str_match import SimpleStrMatch
-import signal
+from sympy.core.sympify import SympifyError
+from sympy.parsing.latex import parse_latex
+from sympy.parsing.latex.errors import LaTeXParsingError
 
 
 class TimeoutException(Exception):

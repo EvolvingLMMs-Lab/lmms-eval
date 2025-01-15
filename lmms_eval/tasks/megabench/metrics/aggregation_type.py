@@ -1,5 +1,6 @@
 from enum import Enum
 from functools import cached_property
+
 from metrics.aggregation.mean_agg import MeanAggregation
 from metrics.aggregation.min_agg import MinAggregation
 from metrics.aggregation.unsupported_agg import UnsupportedAggregation

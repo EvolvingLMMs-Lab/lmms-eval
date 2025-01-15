@@ -18,6 +18,4 @@ class NearStrMatch:
             return 0
         response = approximate(response)
         correct_answer = approximate(correct_answer)
-        return rapidfuzz.distance.DamerauLevenshtein.normalized_similarity(
-            response, correct_answer, score_cutoff=threshold
-        )
+        return rapidfuzz.distance.DamerauLevenshtein.normalized_similarity(response, correct_answer, score_cutoff=threshold)
