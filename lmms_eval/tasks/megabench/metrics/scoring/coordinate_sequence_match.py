@@ -1,6 +1,7 @@
 import logging
-from metrics.scoring.common.conversions import str_to_coords
+
 import numpy as np
+from metrics.scoring.common.conversions import str_to_coords
 
 
 class CoordsSequenceSimilarity:

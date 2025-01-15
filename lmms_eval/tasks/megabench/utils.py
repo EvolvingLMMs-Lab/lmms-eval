@@ -1,16 +1,19 @@
+import json
 import os
-import yaml
-from pathlib import Path
-from itertools import chain
 from ast import literal_eval
 from collections import defaultdict
-import json
+from itertools import chain
+from pathlib import Path
 
-
+import yaml
 from loguru import logger as eval_logger
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-from lmms_eval.tasks.megabench.image_video_utils import read_image, is_video_file, process_text_and_mixed_media
 
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks.megabench.image_video_utils import (
+    is_video_file,
+    process_text_and_mixed_media,
+    read_image,
+)
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
@@ -66,7 +69,7 @@ def megabench_doc_to_visual(doc, lmms_eval_specific_kwargs=None):
     else:  # mixed video and image input, convert video to image frames
         cache_dir = os.path.join(base_cache_dir, cache_name)
         _, medias = process_text_and_mixed_media(doc, lmms_eval_specific_kwargs["max_video_subsample_frame"], cache_dir)
-    
+
     return medias
 
 
@@ -96,6 +99,9 @@ def megabench_process_results(doc, result):
     return {"submission": data_dict}
 
 
+import time
+
+
 def megabench_aggregate_results_for_submission(results, args):
     results_by_task = defaultdict(list)
     for result in results:
@@ -111,8 +117,9 @@ def megabench_aggregate_results_for_submission(results, args):
             all_query_response.append(sample_response)
         task_result["query_response"] = all_query_response
         submission_results.append(task_result)
-    
-    submission_path = generate_submission_file(f"{args.tasks}_all_query_responses.json", args)
+
+    timestamp = time.strftime("%m-%d-%H-%M")
+    submission_path = generate_submission_file(f"megabench_all_query_responses_{timestamp}.json", args)
     with open(submission_path, "w", encoding="utf-8") as fd:
         json.dump(submission_results, fd, indent=4)
     eval_logger.info(f"Results saved to {submission_path}.")

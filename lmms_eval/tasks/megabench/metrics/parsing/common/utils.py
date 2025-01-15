@@ -1,5 +1,5 @@
-import re
 import ast
+import re
 
 
 def extract_code_block_content(
@@ -39,7 +39,7 @@ def extract_code_block_content(
 
 def keep_the_last_answer(s: str):
     # 1. Find the last occurrence
-    s = s.replace('answer:', 'Answer:')
+    s = s.replace("answer:", "Answer:")
     last_index = s.rfind("Answer:")
 
     # If "Answer:" is found in the string
@@ -47,10 +47,10 @@ def keep_the_last_answer(s: str):
         # 2. Separate into prefix and suffix
         prefix = s[:last_index]
         suffix = s[last_index:]
-        
+
         # 3. Remove all earlier occurrences of "Answer:"
         cleaned_prefix = prefix.replace("Answer:", "")
-        
+
         # 4. Combine them back together
         result = cleaned_prefix + suffix
     else:
@@ -60,16 +60,12 @@ def keep_the_last_answer(s: str):
     return result
 
 
-def extract_answer_content(
-    response, is_ascii_art=False, should_remove_surrounding_whitespace=True
-):
+def extract_answer_content(response, is_ascii_art=False, should_remove_surrounding_whitespace=True):
     response = keep_the_last_answer(response)
     if is_ascii_art:
         match = re.search(r"\*\*?Answer:(.*?)\*\*?|\bAnswer:(.*)", response, re.DOTALL)
     else:
-        match = re.search(
-            r"\*\*?Answer:\s*(.*?)\*\*?|\bAnswer:\s*(.*)", response, re.DOTALL
-        )
+        match = re.search(r"\*\*?Answer:\s*(.*?)\*\*?|\bAnswer:\s*(.*)", response, re.DOTALL)
     if match:
         # Extract the content after "Answer:"
         response = match.group(1) or match.group(2)
@@ -113,11 +109,7 @@ def drop_additional_text(result):
         result_first_paragraph,
     )
 
-    only_return_first_paragraph = (
-        potential_ans_in_single_line
-        and result_first_paragraph.strip() != ""
-        and not _is_multiline_answer(result)
-    )
+    only_return_first_paragraph = potential_ans_in_single_line and result_first_paragraph.strip() != "" and not _is_multiline_answer(result)
 
     if only_return_first_paragraph:
         return result_first_paragraph

@@ -1,12 +1,13 @@
-from functools import cached_property
 from enum import Enum
-from metrics.parsing.json_parse import JsonParse
+from functools import cached_property
+
 from metrics.parsing.answer_str_parse import (
     AnswerStrParse,
     AsciiAnswerStrParse,
     VerbatimAnswerStrParse,
 )
 from metrics.parsing.dummy_parse import DummyParse
+from metrics.parsing.json_parse import JsonParse
 
 
 class ResponseParseType(Enum):

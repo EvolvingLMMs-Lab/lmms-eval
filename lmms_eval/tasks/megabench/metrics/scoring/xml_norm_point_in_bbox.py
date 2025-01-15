@@ -12,12 +12,8 @@ class XmlNormPointInBbox:
     def match(cls, responses, eval_context) -> int:
         """Determine if the point is in the bounding box
         and return which bounding box was matched, if any."""
-        bounding_box_has_match = {
-            bbox: False for bbox in eval_context["bounding_boxes"]
-        }
-        bounding_boxes = [
-            str_to_bboxes(bbox_str)[0] for bbox_str in eval_context["bounding_boxes"]
-        ]
+        bounding_box_has_match = {bbox: False for bbox in eval_context["bounding_boxes"]}
+        bounding_boxes = [str_to_bboxes(bbox_str)[0] for bbox_str in eval_context["bounding_boxes"]]
         assert bounding_boxes
 
         if not isinstance(responses, (tuple | list)):

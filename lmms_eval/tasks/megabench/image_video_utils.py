@@ -1,10 +1,11 @@
+import os
+import re
+from ast import literal_eval
 from mimetypes import guess_type
+
 import cv2
 import numpy as np
 from PIL import Image
-import re
-import os
-from ast import literal_eval
 
 
 ## Image reading utils
@@ -76,6 +77,7 @@ def is_video_file(file_path):
 
 ## Handle tasks with mixed image and video inputs.
 ## Need to subsample video frames to multiple images
+
 
 def load_media_content(media_path, max_nframes):
     # normalize media path

@@ -1,7 +1,8 @@
 import logging
-from metrics.scoring.common.metrics import calculate_iou
-from metrics.scoring.common.conversions import parse_bboxes_from_xml
 from numbers import Number
+
+from metrics.scoring.common.conversions import parse_bboxes_from_xml
+from metrics.scoring.common.metrics import calculate_iou
 
 
 class XmlNbboxIouSingle:
@@ -13,7 +14,6 @@ class XmlNbboxIouSingle:
 
     @classmethod
     def match(cls, responses, targets) -> float:
-
         logging.debug(f"{responses=}, {targets=}")
         if not isinstance(responses, (tuple | list)):
             responses = parse_bboxes_from_xml(responses)

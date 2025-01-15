@@ -1,11 +1,8 @@
 import torch
 from transformers import pipeline
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-pipe = pipeline(
-    "text-classification", model="microsoft/deberta-large-mnli", device=device
-)
+pipe = pipeline("text-classification", model="microsoft/deberta-large-mnli", device=device)
 
 
 class NliEntailment:

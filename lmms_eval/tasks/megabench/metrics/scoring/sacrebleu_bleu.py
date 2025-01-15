@@ -1,4 +1,5 @@
 from numbers import Number
+
 import sacrebleu
 
 
@@ -11,9 +12,7 @@ class Bleu:
         if isinstance(response, str) and isinstance(correct_answer, str):
             resp = [response]
             corr = [correct_answer]
-        elif isinstance(response, (list, tuple)) and isinstance(
-            correct_answer, (list, tuple)
-        ):
+        elif isinstance(response, (list, tuple)) and isinstance(correct_answer, (list, tuple)):
             resp = tuple(response)
             corr = tuple(correct_answer)
         else:
