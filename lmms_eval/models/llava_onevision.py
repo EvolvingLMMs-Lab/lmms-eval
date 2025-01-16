@@ -361,13 +361,12 @@ class Llava_OneVision(lmms):
         pbar.close()
         return res
 
-
     def flatten(self, input):
-        if not input or any(i is None for i in input):  
-            return []  
+        if not input or any(i is None for i in input):
+            return []
         new_list = []
         for i in input:
-            if i:  
+            if i:
                 for j in i:
                     new_list.append(j)
         return new_list

@@ -185,17 +185,16 @@ class TinyLlava(lmms):
         except:
             return self.tokenizer.decode([tokens])
 
-
     def flatten(self, input):
-        if not input or any(i is None for i in input):  
-            return []  
+        if not input or any(i is None for i in input):
+            return []
         new_list = []
         for i in input:
-            if i:  
+            if i:
                 for j in i:
                     new_list.append(j)
         return new_list
-        
+
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         # TODO
         res = []
@@ -238,17 +237,42 @@ class TinyLlava(lmms):
 
             msg = Message()
             msg.add_message(prompts_input)
+
+            # Process text input and get input_ids
             contxt_id = self._text_processor(msg.messages, mode="eval")["input_ids"]
-            # Add the answer of the second role
+
+            # Set the continuation as the second role's response
             msg._messages[1]["value"] = continuation
             input_ids = self._text_processor(msg.messages, mode="eval")["input_ids"]
 
+            # Prepare labels and ensure the correct shape
             labels = input_ids.clone()
-            # Context part no need to calculate for loss
-            labels[0, : contxt_id.shape[1]] = -100
+            if labels.dim() == 1:
+                labels = labels.unsqueeze(0)  # Convert to (1, seq_len) if needed
 
-            with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, image_sizes=image_sizes)
+            if len(contxt_id.shape) == 1:
+                contxt_id = contxt_id.unsqueeze(0)  # Convert to (1, context_len)
+
+            # Mask the context part to ignore it in loss computation
+            labels[:, : contxt_id.shape[1]] = -100
+
+            # Move tensors to the correct device
+            device = self.device
+            input_ids = input_ids.to(device)
+            labels = labels.to(device)
+
+            if len(input_ids.shape) == 1:
+                input_ids = input_ids.unsqueeze(0)  # Ensure it is (batch_size, seq_len)
+
+            # Handle image input if available
+            if image is None:
+                image_sizes = []
+                with torch.inference_mode():
+                    outputs = self.model(input_ids=input_ids, labels=labels, use_cache=True)
+            else:
+                with torch.inference_mode():
+                    outputs = self.model(input_ids=input_ids, labels=labels, images=image, use_cache=True, image_sizes=image_sizes)
+
             loss = outputs["loss"]
             # loss = torch.exp(loss)
             logits = outputs["logits"]
