@@ -278,10 +278,13 @@ class Llava(lmms):
         return res
 
     def flatten(self, input):
+        if not input or any(i is None for i in input):
+            return []
         new_list = []
         for i in input:
-            for j in i:
-                new_list.append(j)
+            if i:
+                for j in i:
+                    new_list.append(j)
         return new_list
 
     def generate_until(self, requests: List[Instance]) -> List[str]:

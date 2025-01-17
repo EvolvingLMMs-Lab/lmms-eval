@@ -362,10 +362,13 @@ class Llava_OneVision(lmms):
         return res
 
     def flatten(self, input):
+        if not input or any(i is None for i in input):
+            return []
         new_list = []
         for i in input:
-            for j in i:
-                new_list.append(j)
+            if i:
+                for j in i:
+                    new_list.append(j)
         return new_list
 
     def load_video(self, video_path, max_frames_num):
