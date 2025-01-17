@@ -52,6 +52,7 @@ class GeminiAPI(lmms):
         self.timeout = timeout
         self.model = genai.GenerativeModel(model_version)
         self.continual_mode = continual_mode
+        self.response_persistent_file = ""
         self.interleave = interleave
         # if self.continual_mode and response_persistent_folder is None:
         #     raise ValueError("Continual mode requires a persistent path for the response. We will cache the Gemini API response in this path and use it for future requests. Please provide a valid path.")

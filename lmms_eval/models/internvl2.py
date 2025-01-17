@@ -312,7 +312,7 @@ class InternVL2(lmms):
                     contexts = image_tokens + "\n" + contexts
                 else:
                     pixel_values = None
-                    num_patch_list = None
+                    num_patches_list = None
                 response, history = self.model.chat(self.tokenizer, pixel_values, contexts, gen_kwargs, num_patches_list=num_patches_list, history=None, return_history=True)
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."
