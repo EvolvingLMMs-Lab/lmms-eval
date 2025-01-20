@@ -182,7 +182,6 @@ def simple_evaluate(
             },
         )
     elif isinstance(model, lmms_eval.model.lmms):
-        #   use existing model instance
         lm = model
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
