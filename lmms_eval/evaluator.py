@@ -170,14 +170,20 @@ def simple_evaluate(
 
     task_dict = get_task_dict(tasks, task_manager)
 
-    ModelClass = get_model(model)
-    lm = ModelClass.create_from_arg_string(
-        model_args,
-        {
-            "batch_size": batch_size,
-            "device": device,
-        },
-    )
+    if isinstance(model, str):
+        if model_args is None:
+            model_args = ""
+        lm = lmms_eval.models.get_model(model).create_from_arg_string(
+            model_args,
+            {
+                "batch_size": batch_size,
+                "max_batch_size": max_batch_size,
+                "device": device,
+            },
+        )
+    elif isinstance(model, lmms_eval.model.lmms):
+        #   use existing model instance
+        lm = model
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
