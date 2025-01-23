@@ -58,7 +58,7 @@ class Qwen2_Audio(lmms):
         self._model = Qwen2AudioForConditionalGeneration.from_pretrained(
             pretrained,
             torch_dtype="auto",
-            device_map=device_map,
+            device_map=self.device_map,
         ).eval()
 
         self.processor = AutoProcessor.from_pretrained(pretrained)
