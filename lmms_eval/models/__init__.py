@@ -18,6 +18,7 @@ AVAILABLE_MODELS = {
     "from_log": "FromLog",
     "fuyu": "Fuyu",
     "gemini_api": "GeminiAPI",
+    "gpt": "GPT",
     "gpt4v": "GPT4V",
     "idefics2": "Idefics2",
     "instructblip": "InstructBLIP",
