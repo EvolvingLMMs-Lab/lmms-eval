@@ -29,7 +29,7 @@ LABEL_TO_SCORE = {
 }
 
 # 載入配置文件
-with open(Path(__file__).parent / "ragbench.yaml", "r") as f:
+with open(Path(__file__).parent / "genai_rqa.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):
@@ -113,7 +113,7 @@ def parse_evaluation(review):
             'comments': "Failed to parse evaluation response"
         }
     
-def ragbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def genai_rqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """將文檔轉換為文本格式"""
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
@@ -121,7 +121,7 @@ def ragbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
-def ragbench_process_results(doc, results):
+def genai_rqa_process_results(doc, results):
     """Process evaluation results using LLM-as-judge approach"""
     try:
         question = doc.get("question", "")
@@ -176,7 +176,7 @@ def ragbench_process_results(doc, results):
             "error": str(e)
         } for metric in RAG_METRICS}
 
-def ragbench_metric_aggregation(results, metric_key):
+def genai_rqa_metric_aggregation(results, metric_key):
     """Aggregate results for a specific metric"""
     try:
         scores = [result["score"] for result in results if "score" in result]
@@ -187,14 +187,14 @@ def ragbench_metric_aggregation(results, metric_key):
         eval_logger.info(f"Error in {metric_key} aggregation: {e}")
         return None
 
-def ragbench_correctness_aggregation(results):
+def genai_rqa_correctness_aggregation(results):
     """Aggregate correctness scores"""
-    return ragbench_metric_aggregation(results, "correctness")
+    return genai_rqa_metric_aggregation(results, "correctness")
 
-def ragbench_richness_aggregation(results):
+def genai_rqa_richness_aggregation(results):
     """Aggregate richness scores"""
-    return ragbench_metric_aggregation(results, "richness")
+    return genai_rqa_metric_aggregation(results, "richness")
 
-def ragbench_completeness_aggregation(results):
+def genai_rqa_completeness_aggregation(results):
     """Aggregate completeness scores"""
-    return ragbench_metric_aggregation(results, "completeness")
+    return genai_rqa_metric_aggregation(results, "completeness")
