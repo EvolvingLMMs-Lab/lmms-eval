@@ -1,5 +1,6 @@
 **/.cache
 env
+.env
 *.pyc
 output/
 data/

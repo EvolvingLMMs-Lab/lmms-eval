@@ -7,6 +7,7 @@ import sys
 import traceback
 import warnings
 from functools import partial
+from dotenv import load_dotenv
 
 import numpy as np
 import yaml
@@ -32,6 +33,7 @@ from lmms_eval.utils import (
     simple_parse_args_string,
 )
 
+load_dotenv()
 
 def _int_or_none_list_arg_type(min_len: int, max_len: int, defaults: str, value: str, split_char: str = ","):
     def parse_value(item):
