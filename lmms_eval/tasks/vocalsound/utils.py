@@ -63,16 +63,21 @@ def vocalsound_aggregate_results(results):
         group_totals[age_group] += 1
         group_correct[age_group] += accuracy
 
-    return {
-        "overall_accuracy": total_correct / len(results),
-        "categorical_accuracy": {
-            "male_accuracy": round(group_correct["male"] / group_totals.get("male", 1), 5),  # Avoid division by zero
-            "female_accuracy": round(group_correct["female"] / group_totals.get("female", 1), 5),
-            "age_18_25_accuracy": round(group_correct["age1"] / group_totals.get("age1", 1), 5),
-            "age_26_48_accuracy": round(group_correct["age2"] / group_totals.get("age2", 1), 5),
-            "age_49_80_accuracy": round(group_correct["age3"] / group_totals.get("age3", 1), 5),
-        },
+    overall_accuracy = round(total_correct / len(results), 5)
+    categorical_accuracy = {
+        "male_accuracy": round(group_correct["male"] / group_totals.get("male", 1), 5),  # Avoid division by zero
+        "female_accuracy": round(group_correct["female"] / group_totals.get("female", 1), 5),
+        "age_18_25_accuracy": round(group_correct["age1"] / group_totals.get("age1", 1), 5),
+        "age_26_48_accuracy": round(group_correct["age2"] / group_totals.get("age2", 1), 5),
+        "age_49_80_accuracy": round(group_correct["age3"] / group_totals.get("age3", 1), 5),
     }
+    eval_logger.info("=" * 50)
+    eval_logger.info(f"Overall accuracy: {overall_accuracy}")
+    eval_logger.info("Categorical accuracy: ")
+    for key, value in categorical_accuracy.items():
+        eval_logger.info(f"{key} accuracy: {value}")
+    eval_logger.info("=" * 50)
+    return overall_accuracy
 
 
 def get_answer(response):
