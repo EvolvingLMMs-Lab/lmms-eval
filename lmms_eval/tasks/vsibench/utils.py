@@ -150,4 +150,4 @@ def vsibench_aggregate_results(results):
     
     output['overall'] = sum([_ for _ in output.values()]) / len(output)
     eval_logger.info(f"Evaluation results: {output}")
-    return output['overall'] * 100.
+    return output
