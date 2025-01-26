@@ -170,7 +170,10 @@ class Qwen2_VL(lmms):
             task = task[0]
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            visuals = self.flatten(visuals)
+            if None in visuals:
+                visuals = []
+            else:
+                visuals = self.flatten(visuals)
 
             gen_kwargs = all_gen_kwargs[0]
 

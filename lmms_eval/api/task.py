@@ -1432,7 +1432,10 @@ class ConfigurableTask(Task):
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
     def process_results(self, doc, results, full_docs=None):
         if self.OUTPUT_TYPE == "generate_until":
-            results[0] = results[0].strip()
+            if isinstance(results, list) and isinstance(results[0], list):
+                results = [res.strip() for res in results[0]]
+            else:
+                results = [res.strip() for res in results]
 
         kwargs = {}
         if full_docs is not None:
@@ -1518,7 +1521,7 @@ class ConfigurableTask(Task):
 
         elif "generate_until" in self.OUTPUT_TYPE:
             gold = self.doc_to_target(doc)
-            result = results[0]
+            result = [res.strip() for res in results]
             if self.config.doc_to_choice is not None:
                 # If you set doc_to_choice,
                 # it assumes that doc_to_target returns a number.
