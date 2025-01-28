@@ -68,7 +68,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
         "model": GPT_EVAL_MODEL_NAME,
         "messages": messages,
         "temperature": 0.2,
-        "max_tokens": max_tokens,
+        "max_tokens": min(max_tokens, 16384),  # Output limit max_tokens to leave room for input (input + output )
         "response_format": EVALUATION_RESPONSE_SCHEMA
     }
     if API_TYPE == "azure":
@@ -76,15 +76,17 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
         payload.pop("response_format")  # Azure OpenAI might not support this yet
     for attempt in range(retries):
         try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60) # ok
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
             response.raise_for_status()
-            content = response.choices[0].message.content
-            content = json.loads(content)
             response_data = response.json()
+            content = response_data["choices"][0]["message"]["content"]
+            content = json.loads(content)
             if content != "":
                 return content, response_data["model"]
             break
         except Exception as e:
+            if isinstance(e, requests.exceptions.HTTPError):
+                print(f"Response error details: {response.text}")  # Print full error response
             eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries:
                 time.sleep(NUM_SECONDS_TO_SLEEP)
@@ -140,7 +142,7 @@ def genai_rqa_process_results(doc, results):
         )
         
         # Get evaluation from LLM
-        review, model_name = get_eval(content, 128000)
+        review, model_name = get_eval(content=content, max_tokens=16384)
         eval_results = parse_evaluation(review)
         
         # Create result dictionary
