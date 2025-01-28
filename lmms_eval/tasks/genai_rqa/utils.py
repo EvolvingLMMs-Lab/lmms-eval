@@ -7,7 +7,7 @@ import numpy as np
 import requests
 import yaml
 from loguru import logger as eval_logger
-from prompt_new import (
+from lmms_eval.tasks.genai_rqa.prompt import (
     EVALUATION_SYSTEM_PROMPT,
     EVALUATION_USER_PROMPT,
     EVALUATION_RESPONSE_SCHEMA
@@ -76,10 +76,11 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
         payload.pop("response_format")  # Azure OpenAI might not support this yet
     for attempt in range(retries):
         try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60) # ok
             response.raise_for_status()
+            content = response.choices[0].message.content
+            content = json.loads(content)
             response_data = response.json()
-            content = response_data["choices"][0]["message"]["content"].strip()
             if content != "":
                 return content, response_data["model"]
             break
@@ -124,17 +125,18 @@ def genai_rqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 def genai_rqa_process_results(doc, results):
     """Process evaluation results using LLM-as-judge approach"""
     try:
+        model_response = results[0].strip()
+        
         question = doc.get("question", "")
         context = doc.get("context", "")
         expected_answer = doc.get("answer", "")
-        generated_answer = results.strip()
 
-        # Format content using prompt from prompt_new.py
+        # Format content using prompt from prompt.py
         content = EVALUATION_USER_PROMPT.format(
             chunk_text=context,
             question=question,
-            expected_answer=expected_answer,
-            generated_answer=generated_answer
+            # expected_answer=expected_answer,
+            generated_answer=model_response
         )
         
         # Get evaluation from LLM
@@ -146,7 +148,7 @@ def genai_rqa_process_results(doc, results):
             "question": question,
             "context": context,
             "expected_answer": expected_answer,
-            "generated_answer": generated_answer,
+            "generated_answer": model_response,
             "review": review,
             "eval_model": model_name,
             "reasoning": eval_results['reasoning'],
