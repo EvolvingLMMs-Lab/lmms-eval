@@ -45,6 +45,11 @@ from lmms_eval.utils import (
     simple_parse_args_string,
 )
 
+"""
+Disabel accelerator for now, as we don't use it.
+"""
+DISABLE_ACCELERATOR = bool(1)
+
 
 @positional_deprecated
 def simple_evaluate(
@@ -431,15 +436,21 @@ def evaluate(
             reqtype = instance.request_type
             requests[reqtype].append(instance)
 
-        if lm.world_size > 1:
+        if lm.world_size > 1 and not DISABLE_ACCELERATOR:
             instances_rnk = torch.tensor(len(task._instances), device=lm.device)
             gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
-            # "multiple_choice" task types dispatch (several) "loglikelihood" request types
-            reqtype = "loglikelihood" if task.OUTPUT_TYPE == "multiple_choice" else task.OUTPUT_TYPE
-            # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
-            numpad = max(gathered_item) - gathered_item[lm.rank]
-            # todo: may not account for padding in cases like SquadV2 which has multiple req types
-            padding_requests[reqtype] += numpad
+        else:
+            instances_rnk = torch.tensor(len(task._instances), device=lm.device)
+            gathered_item = torch.zeros(lm.world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
+            dist.all_gather_into_tensor(gathered_item, instances_rnk)
+            gathered_item = gathered_item.cpu().detach().numpy().tolist()
+
+        # "multiple_choice" task types dispatch (several) "loglikelihood" request types
+        reqtype = "loglikelihood" if task.OUTPUT_TYPE == "multiple_choice" else task.OUTPUT_TYPE
+        # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
+        numpad = max(gathered_item) - gathered_item[lm.rank]
+        # todo: may not account for padding in cases like SquadV2 which has multiple req types
+        padding_requests[reqtype] += numpad
 
     ### Run LMM on inputs, get all outputs ###
     # execute each type of request
@@ -461,8 +472,10 @@ def evaluate(
         for x, req in zip(resps, cloned_reqs):
             req.resps.append(x)
 
-        if lm.world_size > 1:
+        if lm.world_size > 1 and not DISABLE_ACCELERATOR:
             lm.accelerator.wait_for_everyone()
+        else:
+            dist.barrier()
 
     RANK = lm.rank
     WORLD_SIZE = lm.world_size
@@ -638,8 +651,10 @@ def evaluate(
     else:
         results_dict = None
 
-    if hasattr(lm, "accelerator"):
+    if hasattr(lm, "accelerator") and not DISABLE_ACCELERATOR:
         lm.accelerator.wait_for_everyone()
+    else:
+        dist.barrier()
 
     return results_dict
 
