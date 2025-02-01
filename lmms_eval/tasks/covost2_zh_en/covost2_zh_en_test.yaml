@@ -1,0 +1,3 @@
+task: "covost2_zh_en_test"
+test_split: test
+include: _default_template_yaml

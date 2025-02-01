@@ -1,0 +1,28 @@
+dataset_path: lmms-lab/covost2
+dataset_name: zh_en
+dataset_kwargs:
+  token: True
+output_type: generate_until
+doc_to_visual: !function utils.covost2_doc_to_audio
+doc_to_text: !function utils.covost2_doc_to_text
+doc_to_target: "gt"
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.covost2_process_result
+metric_list:
+  - metric: bleu
+    aggregation: !function utils.covost2_bleu
+    higher_is_better: true
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Translate the speech into English and only output the translation:"
+    post_prompt: ""
+  qwen2_audio:
+    pre_prompt: "Translate the speech into English and only output the translation: <|zh|>"
+    post_prompt: ""
