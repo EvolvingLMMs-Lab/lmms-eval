@@ -98,21 +98,19 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
 def parse_evaluation(review):
     """Parse the evaluation response"""
     try:
-        # review is already a dictionary, no need to parse it
-        eval_data = review
         return {
-            'correctness': LABEL_TO_SCORE[eval_data['correctness_label']],
-            'richness': float(eval_data['richness_score']),
-            'completeness': float(eval_data['completeness_score']),
-            'reasoning': eval_data['reasoning_steps'],
-            'comments': eval_data['output_comments'],
-            'richness_comments': eval_data['richness_comments'],
-            'completeness_comments': eval_data['completeness_comments']
+            'correctness': LABEL_TO_SCORE[review['correctness_label']],
+            'richness': float(review['richness_score']),
+            'completeness': float(review['completeness_score']),
+            'reasoning': review['reasoning_steps'],
+            'comments': review['output_comments'],
+            'richness_comments': review['richness_comments'],
+            'completeness_comments': review['completeness_comments']
         }
     except Exception as e:
         eval_logger.debug(f"Error parsing evaluation: {e}. Returning default scores")
         return {
-            'correctness': -1.0,
+            'correctness': 0.0,
             'richness': 1.0,
             'completeness': 1.0,
             'reasoning': f"Error parsing evaluation: {str(e)}",
@@ -153,15 +151,10 @@ def genai_rqa_process_results(doc, results):
         # Create result dictionary
         result_dict = {
             "question": question,
-            "context": context,
             "expected_answer": expected_answer,
             "generated_answer": model_response,
             "review": review,
             "eval_model": model_name,
-            "reasoning": review.get('reasoning_steps', ''),
-            "comments": review.get('output_comments', ''),
-            "richness_comments": eval_results.get('richness_comments', ''),
-            "completeness_comments": eval_results.get('completeness_comments', '')
         }
         
         # Create metric-specific dictionaries
@@ -184,17 +177,7 @@ def genai_rqa_process_results(doc, results):
         eval_logger.error(f"Error processing results: {e}")
         error_dict = {
             "score": -1,
-            "error": str(e),
-            "question": "",
-            "context": "",
-            "expected_answer": "",
-            "generated_answer": "",
-            "review": {},
-            "eval_model": "",
-            "reasoning": "",
-            "comments": "",
-            "richness_comments": "",
-            "completeness_comments": ""
+            "error": str(e)
         }
         return {metric: error_dict for metric in RAG_METRICS}
 
