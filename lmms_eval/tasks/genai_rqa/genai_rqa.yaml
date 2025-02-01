@@ -1,0 +1,34 @@
+dataset_path: nightlighttw/genai_rqa
+dataset_kwargs:
+  token: True
+task: "genai_rqa"
+test_split: train
+output_type: generate_until
+doc_to_text: !function utils.genai_rqa_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 16384
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.genai_rqa_process_results
+metric_list:
+  - metric: gpt_eval_rag_correctness
+    aggregation: !function utils.genai_rqa_correctness_aggregation
+    higher_is_better: true
+  - metric: gpt_eval_rag_richness
+    aggregation: !function utils.genai_rqa_richness_aggregation
+    higher_is_better: true
+  - metric: gpt_eval_rag_completeness
+    aggregation: !function utils.genai_rqa_completeness_aggregation
+    higher_is_better: true
+metadata:
+  version: 0.0
+  gpt_eval_model_name: "gpt-4o-mini"
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
