@@ -1,0 +1,5 @@
+group : pope_full
+task:
+  - pope_adv_binary
+  - pope_pop_binary
+  - pope_random_binary

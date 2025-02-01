@@ -1,0 +1,35 @@
+dataset_path: lmms-lab/POPE
+dataset_name: Full
+dataset_kwargs:
+  token: True
+task: "pope_pop_binary"
+test_split: popular 
+output_type: generate_until
+doc_to_visual: !function utils.pope_doc_to_visual
+doc_to_text: !function utils.pope_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.pope_process_results
+metric_list:
+  - metric: pope_accuracy
+    aggregation: !function utils.pope_aggregate_accuracy
+    higher_is_better: true
+  - metric: pope_precision
+    aggregation: !function utils.pope_aggregate_precision
+    higher_is_better: true
+  - metric: pope_recall
+    aggregation: !function utils.pope_aggregate_recall
+    higher_is_better: true
+  - metric: pope_f1_score
+    aggregation: !function utils.pope_aggregate_f1_score
+    higher_is_better: true
+  - metric: pope_yes_ratio
+    aggregation: !function utils.pope_aggregate_yes_ratio
+    higher_is_better: true
+metadata:
+  - version: 0.0
