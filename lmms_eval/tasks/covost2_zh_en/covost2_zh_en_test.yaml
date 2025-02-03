@@ -23,5 +23,5 @@ metadata:
   - version: 0.0
 lmms_eval_specific_kwargs:
   default:
-    pre_prompt: "Detect the language and translate the speech into English: <|zh|>"
+    pre_prompt: "Translate the speech into English and only output the translation: <|zh|>"
     post_prompt: ""
