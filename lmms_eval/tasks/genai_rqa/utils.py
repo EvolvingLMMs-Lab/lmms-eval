@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import requests
 import yaml
+import weave
 from loguru import logger as eval_logger
 from lmms_eval.tasks.genai_rqa.prompt import (
     EVALUATION_SYSTEM_PROMPT,
@@ -54,47 +55,51 @@ elif API_TYPE == "azure":
         "Content-Type": "application/json",
     }
     
+@weave.op()
 def get_eval(content: str, max_tokens: int, retries: int = 5):
     """Call API for evaluation using structured prompts"""
     global headers
     messages = [
-        {
-            "role": "system",
-            "content": EVALUATION_SYSTEM_PROMPT
-        },
+        {"role": "system", "content": EVALUATION_SYSTEM_PROMPT},
         {"role": "user", "content": content},
     ]
     payload = {
         "model": GPT_EVAL_MODEL_NAME,
         "messages": messages,
         "temperature": 0.2,
-        "max_tokens": min(max_tokens, 16384),  # Output limit max_tokens to leave room for input (input + output )
+        "max_tokens": min(max_tokens, 16384),
         "response_format": EVALUATION_RESPONSE_SCHEMA
     }
     if API_TYPE == "azure":
         payload.pop("model")
-        payload.pop("response_format")  # Azure OpenAI might not support this yet
+        payload.pop("response_format")
+
     for attempt in range(retries):
         try:
             response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
             response.raise_for_status()
             response_data = response.json()
+            
+            model_name = response_data.get("model", GPT_EVAL_MODEL_NAME)
+            usage = response_data.get("usage", {})
             content = response_data["choices"][0]["message"]["content"]
             content = json.loads(content)
-            if content != "":
-                return content, response_data["model"]
-            break
+
+            return {
+                "content": content,
+                "model": model_name,
+                "tokens": usage
+            }
         except Exception as e:
-            if isinstance(e, requests.exceptions.HTTPError):
-                print(f"Response error details: {response.text}")  # Print full error response
             eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
             if attempt < retries:
                 time.sleep(NUM_SECONDS_TO_SLEEP)
             else:
                 eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
-                return "", ""
-    return "", ""
+                return {"content": "", "model": "", "tokens": {}}
     
+    return {"content": "", "model": "", "tokens": {}}
+   
 def parse_evaluation(review):
     """Parse the evaluation response"""
     try:
@@ -140,12 +145,16 @@ def genai_rqa_process_results(doc, results):
         content = EVALUATION_USER_PROMPT.format(
             chunk_text=context,
             question=question,
-            # expected_answer=expected_answer,
             generated_answer=model_response
         )
         
         # Get evaluation from LLM
-        review, model_name = get_eval(content=content, max_tokens=16384)
+        eval_response = get_eval(content=content, max_tokens=16384)
+
+        review = eval_response.get("content", {})
+        model_name = eval_response.get("model", "Unknown")
+        tokens = eval_response.get("tokens", {})
+
         eval_results = parse_evaluation(review)
         
         # Create result dictionary
@@ -155,6 +164,7 @@ def genai_rqa_process_results(doc, results):
             "generated_answer": model_response,
             "review": review,
             "eval_model": model_name,
+            "tokens": tokens
         }
         
         # Create metric-specific dictionaries
