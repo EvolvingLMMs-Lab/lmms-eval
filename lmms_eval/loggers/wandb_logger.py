@@ -13,10 +13,6 @@ from lmms_eval.loggers.utils import _handle_non_serializable, remove_none_patter
 
 def get_wandb_printer() -> Literal["Printer"]:
     """Returns a wandb printer instance for pretty stdout."""
-    # from wandb.sdk.lib.printer import get_printer
-    # from wandb.sdk.wandb_settings import Settings
-
-    # printer = get_printer(Settings()._jupyter)
     from wandb.sdk.lib.printer import new_printer
     printer = new_printer()
     return printer
@@ -48,6 +44,11 @@ class WandbLogger:
         # initialize a W&B run
         if wandb.run is None:
             self.run = wandb.init(**self.wandb_args)
+            
+            import weave
+            weave_args = {"project_name": self.wandb_args["project"]} if "project" in self.wandb_args else {}
+            weave.init(**weave_args)
+                
         else:
             self.run = wandb.run
 
