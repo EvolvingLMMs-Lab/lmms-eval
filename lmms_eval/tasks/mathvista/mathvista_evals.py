@@ -146,33 +146,29 @@ Extracted answer: B
 
 
 class MathVistaEvaluator:
-    API_TYPE = os.getenv("API_TYPE", "openai")
-
-    if API_TYPE == "openai":
-        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-        }
-    elif API_TYPE == "azure":
-        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "api-key": API_KEY,
-            "Content-Type": "application/json",
-        }
-
     def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
         self.api_key = api_key
         self.gpt_model = gpt_model
         self.quick_extract = quick_extract
+        API_TYPE = os.getenv("API_TYPE", "openai")
+
+        if API_TYPE == "openai":
+            self.API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+            self.headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+        elif API_TYPE == "azure":
+            self.API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+            self.API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+            self.headers = {
+                "api-key": self.api_key,
+                "Content-Type": "application/json",
+            }
+        self.API_TYPE = API_TYPE
 
     def _post_request(self, payload):
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        headers = self.headers
         response = requests.post(self.API_URL, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         return response.json()
@@ -183,8 +179,8 @@ class MathVistaEvaluator:
         ]
         payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "n": n}
 
-        if self.API_TYPE == "azure":
-            payload.pop("model")
+        # if self.API_TYPE == "azure":
+        # payload.pop("model")
 
         while patience > 0:
             patience -= 1

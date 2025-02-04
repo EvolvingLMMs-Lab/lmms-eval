@@ -17,4 +17,4 @@ metric_list:
 metadata:
   version: 0.0
   api_type : openai
-  gpt_eval_model_name: "gpt-4-vision-preview"
+  gpt_eval_model_name: "gpt-4o-2024-08-06"
