@@ -41,7 +41,7 @@ with open(Path(__file__).parent / "mmmu_val_reasoning.yaml", "r") as f:
 
 NUM_SECONDS_TO_SLEEP = 5
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
 JUDGE_RULES = """You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
 # Input
