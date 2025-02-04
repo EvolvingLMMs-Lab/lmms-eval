@@ -332,42 +332,46 @@ class VITA(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            with torch.inference_mode():
-                output_ids = self.model.generate(
-                    input_ids,
-                    images=image_tensor,
-                    audios=audios,
-                    do_sample=False,
-                    temperature=gen_kwargs["temperature"],
-                    top_p=gen_kwargs["top_p"],
-                    num_beams=gen_kwargs["num_beams"],
-                    output_scores=True,
-                    return_dict_in_generate=True,
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                    use_cache=True,
-                    stopping_criteria=[stopping_criteria],
-                    shared_v_pid_stride=None,  # 2#16#8#4#1#None,
-                )
-            output_ids = output_ids.sequences
-            input_token_len = input_ids.shape[1]
-            if self.model_type == "mixtral-8x7b":
-                n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()
-                if n_diff_input_output > 0:
-                    print(f"[Warning] {n_diff_input_output} output_ids are not the same as the input_ids")
-                    output_ids = output_ids[:, input_token_len:]
-            outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=False)[0]
+            try:
+                with torch.inference_mode():
+                    output_ids = self.model.generate(
+                        input_ids,
+                        images=image_tensor,
+                        audios=audios,
+                        do_sample=False,
+                        temperature=gen_kwargs["temperature"],
+                        top_p=gen_kwargs["top_p"],
+                        num_beams=gen_kwargs["num_beams"],
+                        output_scores=True,
+                        return_dict_in_generate=True,
+                        max_new_tokens=gen_kwargs["max_new_tokens"],
+                        use_cache=True,
+                        stopping_criteria=[stopping_criteria],
+                        shared_v_pid_stride=None,  # 2#16#8#4#1#None,
+                    )
+                output_ids = output_ids.sequences
+                input_token_len = input_ids.shape[1]
+                if self.model_type == "mixtral-8x7b":
+                    n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()
+                    if n_diff_input_output > 0:
+                        print(f"[Warning] {n_diff_input_output} output_ids are not the same as the input_ids")
+                        output_ids = output_ids[:, input_token_len:]
+                outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=False)[0]
 
-            outputs = outputs.strip()
-            # Sometimes it contains a ☜, I remove it here
-            if outputs.startswith(self.tokenizer.decode(145789)):
-                outputs = outputs[len(self.tokenizer.decode(145789)) :]
-            if stop_str == "<|im_start|>":
-                actual_stop_str = "<|im_end|>"
-            else:
-                actual_stop_str = stop_str
-            if outputs.endswith(actual_stop_str):
-                outputs = outputs[: -len(actual_stop_str)]
-            outputs = outputs.strip()
+                outputs = outputs.strip()
+                # Sometimes it contains a ☜, I remove it here
+                if outputs.startswith(self.tokenizer.decode(145789)):
+                    outputs = outputs[len(self.tokenizer.decode(145789)) :]
+                if stop_str == "<|im_start|>":
+                    actual_stop_str = "<|im_end|>"
+                else:
+                    actual_stop_str = stop_str
+                if outputs.endswith(actual_stop_str):
+                    outputs = outputs[: -len(actual_stop_str)]
+                outputs = outputs.strip()
+            except Exception as e:
+                eval_logger.info(f"Erro {e} : When generating")
+                outputs = ""
             res.append(outputs)
             self.cache_hook.add_partial("generate_until", (prompt, gen_kwargs), outputs)
             pbar.update(1)
