@@ -5,4 +5,4 @@ dataset_kwargs:
   cache_dir: multi-hop-reasoning 
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4-0613"
+  gpt_eval_model_name: "gpt-4o-2024-08-06"
