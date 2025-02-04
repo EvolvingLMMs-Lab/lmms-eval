@@ -14,6 +14,13 @@ basic_normalizer = BasicTextNormalizer()
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
+SPECIAL_TOKENS = {
+    "<COMMA>": ",",
+    "<PERIOD>": ".",
+    "<QUESTION>": "?",
+    "<EXCLAMATION>": "!",
+}
+
 
 def gigaspeech_doc_to_audio(doc):
     return [doc["audio"]]
@@ -28,6 +35,8 @@ def gigaspeech_doc_to_text(doc, lmms_eval_specific_kwargs):
 def gigaspeech_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
     gt = doc["gt"]
+    for token, replaced in SPECIAL_TOKENS.items():
+        gt = gt.replace(token, replaced)
     data_dict = {"gt": gt, "pred": pred}
 
     return {"wer": data_dict}
@@ -36,6 +45,8 @@ def gigaspeech_process_result(doc, result):
 def gigaspeech_xl_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
     gt = doc["text"]
+    for token, replaced in SPECIAL_TOKENS.items():
+        gt = gt.replace(token, replaced)
     data_dict = {"gt": gt, "pred": pred}
 
     return {"wer": data_dict}
