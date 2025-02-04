@@ -23,5 +23,5 @@ metric_list:
     aggregation: !function utils.wavcaps_aggregate_results
     higher_is_better: true
 metadata:
-  gpt_eval_model_name: gpt-4o
+  gpt_eval_model_name: gpt-4o-2024-08-06
   version: 0.0
