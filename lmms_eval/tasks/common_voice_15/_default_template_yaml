@@ -1,4 +1,4 @@
-dataset_path: mozilla-foundation/common_voice_15_0
+dataset_path: lmms-lab/common_voice_15
 dataset_kwargs:
   token: True
 test_split: test
