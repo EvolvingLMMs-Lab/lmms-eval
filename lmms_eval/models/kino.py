@@ -284,6 +284,14 @@ class Kino(lmms):
                         eval_logger.info(f"Error {e} when loading video : {visuals}")
                         pbar.update(1)
                 elif isinstance(visual, PIL.Image.Image):
+                    height = visual.size[0]
+                    width = visual.size[1]
+                    if width < 28 and height < 28:
+                        visual = visual.resize((28, 28))
+                    elif height < 28:
+                        visual = visual.resize((28, width))
+                    elif width < 28:
+                        visual = visual.resize((height, 28))
                     images.append(visual)
                 elif isinstance(visual, dict) and "array" in visual:
                     audios.append(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
