@@ -1,0 +1,21 @@
+dataset_path: mozilla-foundation/common_voice_15_0
+dataset_kwargs:
+  token: True
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.common_voice_15_doc_to_audio
+doc_to_text: !function utils.common_voice_15_doc_to_text
+doc_to_target: "sentence"
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.common_voice_15_process_result
+metric_list:
+  - metric: wer 
+    aggregation : !function utils.common_voice_15_wer
+    higher_is_better : false
+metadata:
+  - version: 0.0

@@ -39,9 +39,9 @@ def common_voice_15_doc_to_text(doc, lmms_eval_specific_kwargs):
 def common_voice_15_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
 
-    gt = doc["gt"]
-    source = doc["source"]
-    task = doc["task"]
+    gt = doc["sentence"]
+    source = doc["path"]
+    task = doc["locale"]
 
     data_dict = {"gt": gt, "pred": pred, "source": source, "task": task}
 
@@ -171,7 +171,7 @@ def compute_wer(refs, hyps, language):
 def common_voice_15_wer(results, args):
     refs, hyps = [], []
     for result in results:
-        lan = result["task"][4:]
+        lan = result["task"]
         gt = result["gt"]
         response = result["pred"]
         gt = remove_sp(gt, lan)
