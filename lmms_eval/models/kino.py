@@ -59,6 +59,8 @@ class Kino(lmms):
         use_cache: bool = True,
         max_frames_num: Optional[int] = 32,
         pretrained_mlp_projector: Optional[str] = None,
+        max_pixels: Optional[int] = None,
+        min_pixels: Optional[int] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -91,6 +93,12 @@ class Kino(lmms):
         self.pretrained = pretrained
         if self.model.config.vision_aspect_ratio == "navit":
             self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-maas-7B_v12_18000_init", revision=revision, trust_remote_code=trust_remote_code)
+            if max_pixels:
+                self._processor.image_processor.max_pixels = max_pixels
+                self._processor.video_processor.max_pixels = max_pixels
+            if min_pixels:
+                self._processor.image_processor.min_pixels = min_pixels
+                self._processor.video_processor.min_pixels = min_pixels
         else:
             self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-7b-init", revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
@@ -312,7 +320,11 @@ class Kino(lmms):
                 cont = cont[:, inputs["input_ids"].shape[-1] :]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
-                cont = ""
+                text_outputs = ""
+                res.append(text_outputs)
+                pbar.update(1)
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
+                continue
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
