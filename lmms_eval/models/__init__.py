@@ -59,6 +59,7 @@ AVAILABLE_MODELS = {
     "aria": "Aria",
     "ross": "Ross",
     "vita": "VITA",
+    "kino": "Kino",
 }
 
 
