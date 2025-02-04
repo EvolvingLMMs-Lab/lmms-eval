@@ -56,7 +56,7 @@ def remove_sp(text, language):
     gt = re.sub(rf"\s+", r" ", gt)  # Replace consecutive spaces in the text with a single space.
     gt = re.sub(f" ?([{PUNCS}])", r"\1", gt)
     gt = gt.lstrip(" ")
-    if language == "zh":
+    if language == "zh-CN":
         gt = re.sub(rf"\s+", r"", gt)
     return gt
 
@@ -147,7 +147,7 @@ def compute_wer(refs, hyps, language):
         if language in ["en"]:
             ref = english_normalizer(ref)
             pred = english_normalizer(pred)
-        if language in ["zh"]:
+        if language in ["zh-CN"]:
             ref = chinese_normalizer(ref)
             pred = chinese_normalizer(pred)
         else:
@@ -155,7 +155,7 @@ def compute_wer(refs, hyps, language):
             pred = basic_normalizer(pred)
         ref_items = tokenizer.tokenize(ref).split()
         pred_items = tokenizer.tokenize(pred).split()
-        if language in ["zh", "yue"]:
+        if language in ["zh-CN", "yue"]:
             ref_items = [x for x in "".join(ref_items)]
             pred_items = [x for x in "".join(pred_items)]
         if i == 0:
