@@ -1,4 +1,4 @@
-task : "common_voice_15_zh"
+task : "common_voice_15_zh-CN"
 dataset_name: zh-CN
 lmms_eval_specific_kwargs:
   default:
