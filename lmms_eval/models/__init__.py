@@ -25,6 +25,8 @@ AVAILABLE_MODELS = {
     "internvideo2": "InternVideo2",
     "internvl": "InternVLChat",
     "internvl2": "InternVL2",
+    "kino": "Kino",
+    "kino_qwen_2_5": "KinoQwen2_5",
     "llama_vid": "LLaMAVid",
     "llama_vision": "LlamaVision",
     "llava": "Llava",

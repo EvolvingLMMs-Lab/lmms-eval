@@ -18,7 +18,7 @@ class OpenAIVLMJudger(abc.ABC):
     def __init__(
         self,
         metric_config,
-        model="gpt-4o-2024-08-06",
+        model="gpt-4o-2024-11-20",
         resize=True,
         max_side=1000,
     ):

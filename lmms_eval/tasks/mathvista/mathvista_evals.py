@@ -159,32 +159,41 @@ with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
 
 
 class MathVistaEvaluator:
-    API_TYPE = os.getenv("API_TYPE", "openai")
-    if API_TYPE == "openai":
-        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-        }
-        client = OpenAI(api_key=API_KEY)
-        gpt_model = config["metadata"]["gpt_eval_model_name"]
-
-    elif API_TYPE == "azure":
-        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-        API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
-        client = AzureOpenAI(azure_endpoint=API_URL, api_version=API_VERSION, api_key=API_KEY)
-        gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
-
-    def __init__(self, quick_extract=False):
+    def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
+        self.api_key = api_key
+        self.gpt_model = gpt_model
         self.quick_extract = quick_extract
+        API_TYPE = os.getenv("API_TYPE", "openai")
+
+        if API_TYPE == "openai":
+            self.API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+            self.headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+        elif API_TYPE == "azure":
+            self.API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+            self.API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+            self.headers = {
+                "api-key": self.api_key,
+                "Content-Type": "application/json",
+            }
+        self.API_TYPE = API_TYPE
+
+    def _post_request(self, payload):
+        headers = self.headers
+        response = requests.post(self.API_URL, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        return response.json()
 
     def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=5, sleep_time=0):
         messages = [
             {"role": "user", "content": prompt},
         ]
-        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "n": n}
+
+        # if self.API_TYPE == "azure":
+        # payload.pop("model")
 
         while patience > 0:
             patience -= 1
