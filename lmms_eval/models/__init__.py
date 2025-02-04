@@ -60,6 +60,7 @@ AVAILABLE_MODELS = {
     "ross": "Ross",
     "vita": "VITA",
     "kino": "Kino",
+    "kino_qwen_2_5": "KinoQwen2_5",
 }
 
 
