@@ -10,4 +10,4 @@ lmms_eval_specific_kwargs:
 
 metadata:
   version: 0.0
-  gpt_eval_model_name: gpt-3.5-turbo-0613
+  gpt_eval_model_name: gpt-4o-2024-11-20

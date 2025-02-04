@@ -35,6 +35,13 @@ if API_TYPE == "openai":
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     }
+elif API_TYPE == "azure":
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
 
 # A bit ugly here
 # But the idea is that we will unzip all the zip files
