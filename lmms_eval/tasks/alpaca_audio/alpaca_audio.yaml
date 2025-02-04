@@ -26,5 +26,5 @@ metric_list:
 process_results: !function utils.alpaca_audio_process_results
 
 metadata:
-  gpt_eval_model_name: gpt-4o
+  gpt_eval_model_name: gpt-4o-2024-11-20
   version: 0.0
