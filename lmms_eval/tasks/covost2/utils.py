@@ -4,10 +4,8 @@ import unicodedata
 
 from sacrebleu import corpus_bleu
 
-from lmms_eval.tasks.gigaspeech.whisper_normalizer.basic import \
-    BasicTextNormalizer
-from lmms_eval.tasks.gigaspeech.whisper_normalizer.english import \
-    EnglishTextNormalizer
+from lmms_eval.tasks.gigaspeech.whisper_normalizer.basic import BasicTextNormalizer
+from lmms_eval.tasks.gigaspeech.whisper_normalizer.english import EnglishTextNormalizer
 from lmms_eval.tasks.librispeech.cn_tn import TextNorm
 
 english_normalizer = EnglishTextNormalizer()
@@ -110,8 +108,7 @@ class EvaluationTokenizer(object):
     ):
         from sacrebleu.tokenizers.tokenizer_13a import Tokenizer13a
         from sacrebleu.tokenizers.tokenizer_char import TokenizerChar
-        from sacrebleu.tokenizers.tokenizer_intl import \
-            TokenizerV14International
+        from sacrebleu.tokenizers.tokenizer_intl import TokenizerV14International
         from sacrebleu.tokenizers.tokenizer_ja_mecab import TokenizerJaMecab
         from sacrebleu.tokenizers.tokenizer_none import NoneTokenizer
         from sacrebleu.tokenizers.tokenizer_zh import TokenizerZh
