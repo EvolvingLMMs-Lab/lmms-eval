@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+import soundfile as sf
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
@@ -22,23 +23,28 @@ from lmms_eval.utils import stop_sequences_criteria
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
-from vita.constants import (
-    DEFAULT_AUDIO_TOKEN,
-    DEFAULT_IMAGE_TOKEN,
-    DEFAULT_VIDEO_TOKEN,
-    IGNORE_INDEX,
-    IMAGE_TOKEN_INDEX,
-    MAX_IMAGE_LENGTH,
-)
-from vita.conversation import SeparatorStyle, conv_templates
-from vita.model.builder import load_pretrained_model
-from vita.util.mm_utils import (
-    KeywordsStoppingCriteria,
-    get_model_name_from_path,
-    tokenizer_image_audio_token,
-    tokenizer_image_token,
-)
-from vita.util.utils import disable_torch_init
+
+try:
+    from vita.constants import (
+        DEFAULT_AUDIO_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        DEFAULT_VIDEO_TOKEN,
+        IGNORE_INDEX,
+        IMAGE_TOKEN_INDEX,
+        MAX_IMAGE_LENGTH,
+    )
+    from vita.conversation import SeparatorStyle, conv_templates
+    from vita.model.builder import load_pretrained_model
+    from vita.util.mm_utils import (
+        KeywordsStoppingCriteria,
+        get_model_name_from_path,
+        tokenizer_image_audio_token,
+        tokenizer_image_token,
+    )
+    from vita.util.utils import disable_torch_init
+except Exception as e:
+    eval_logger.error(f"Error {e} in loading VITA")
+    eval_logger.debug("You can set PYTHONPATH to include vita to make the import successful if it is not relative to deps")
 
 
 class VITA(lmms):
@@ -48,7 +54,6 @@ class VITA(lmms):
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
-        model_name=None,
         model_base=None,
         model_type="qwen2p5_instruct",
         frameCat=False,
@@ -76,10 +81,11 @@ class VITA(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
-        model_path = os.path.expanduser(model_path)
-        model_name = model_name if model_name is not None else get_model_name_from_path(pretrained)
+        model_path = os.path.expanduser(pretrained)
+        model_name = get_model_name_from_path(model_path)
         self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(model_path, model_base, model_name, model_type, device_map=self.device_map)
         self.model.resize_token_embeddings(len(self.tokenizer))
+        self.model_type = model_type
 
         vision_tower = self.model.get_vision_tower()
         if not vision_tower.is_loaded:
@@ -101,8 +107,12 @@ class VITA(lmms):
         self.frameCat = frameCat
         if self.frameCat:
             from vita.util.data_utils_video_audio_neg_frameCat import dynamic_preprocess
+
+            self.dynamic_preprocess = dynamic_preprocess
         else:
             from vita.util.data_utils_video_audio_neg_patch import dynamic_preprocess
+
+            self.dynamic_preprocess = dynamic_preprocess
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
@@ -244,7 +254,7 @@ class VITA(lmms):
 
             gen_kwargs = all_gen_kwargs[0]
 
-            prompts_input = contexts[0] if isinstance(contexts, list) else contexts
+            prompts_input = contexts[0] if isinstance(contexts, list) or isinstance(contexts, tuple) else contexts
 
             audios = None
             for visual in visuals:
@@ -261,18 +271,20 @@ class VITA(lmms):
                     prompts_input = DEFAULT_IMAGE_TOKEN * slice_len + "\n" + prompts_input
                     modality = "video"
                 elif isinstance(visual, Image.Image):
-                    image = Image.open(visual).convert("RGB")
+                    image = visual
                     if self.frameCat:
-                        image, p_num = dynamic_preprocess(image, min_num=2, max_num=12, image_size=448, use_thumbnail=True, img_mean=self._image_processor.image_mean)
+                        image, p_num = self.dynamic_preprocess(image, min_num=2, max_num=12, image_size=448, use_thumbnail=True, img_mean=self._image_processor.image_mean)
                     else:
-                        image, p_num = dynamic_preprocess(image, min_num=1, max_num=12, image_size=448, use_thumbnail=True)
+                        image, p_num = self.dynamic_preprocess(image, min_num=1, max_num=12, image_size=448, use_thumbnail=True)
                     assert len(p_num) == 1
                     image_tensor = self.model.process_images(image, self.model.config).to(dtype=self.model.dtype, device="cuda")
                     # Same situation with video
-                    qs = DEFAULT_IMAGE_TOKEN * p_num[0] + "\n" + qs
+                    prompts_input = DEFAULT_IMAGE_TOKEN * p_num[0] + "\n" + prompts_input
                     modality = "image"
                 elif isinstance(visual, dict) and "array" in visual:
-                    audio, audio_for_llm_lens = self.audio_processor.process(os.path.join(visual))
+                    temp_file_name = f"temp_{self._rank}.wav"
+                    sf.write(temp_file_name, visual["array"], visual["sampling_rate"])
+                    audio, audio_for_llm_lens = self._audio_processor.process(temp_file_name)
                     audio_length = audio.shape[0]
                     audio = torch.unsqueeze(audio, dim=0)
                     audio_length = torch.unsqueeze(torch.tensor(audio_length), dim=0)
@@ -284,9 +296,22 @@ class VITA(lmms):
                     image_tensor = torch.zeros((1, 3, 448, 448)).to(dtype=self.model.dtype, device="cuda")
                     prompts_input = prompts_input + DEFAULT_AUDIO_TOKEN
                     modality = "lang"
+                    os.remove(temp_file_name)
+
+            if not audios:
+                audio = torch.zeros(400, 80)
+                audio_length = audio.shape[0]
+                audio_for_llm_lens = 60
+                audio = torch.unsqueeze(audio, dim=0)
+                audio_length = torch.unsqueeze(torch.tensor(audio_length), dim=0)
+                audio_for_llm_lens = torch.unsqueeze(torch.tensor(audio_for_llm_lens), dim=0)
+                audios = dict()
+                audios["audios"] = audio.half().cuda()
+                audios["lengths"] = audio_length.half().cuda()
+                audios["lengths_for_llm"] = audio_for_llm_lens.cuda()
 
             conv = conv_templates[self.conv_template].copy()
-            conv.append_message(conv.roles[0], qs)
+            conv.append_message(conv.roles[0], prompts_input)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt(modality)
 
