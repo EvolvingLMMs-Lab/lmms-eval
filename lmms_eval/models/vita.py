@@ -298,18 +298,6 @@ class VITA(lmms):
                     modality = "lang"
                     os.remove(temp_file_name)
 
-            if not audios:
-                audio = torch.zeros(400, 80)
-                audio_length = audio.shape[0]
-                audio_for_llm_lens = 60
-                audio = torch.unsqueeze(audio, dim=0)
-                audio_length = torch.unsqueeze(torch.tensor(audio_length), dim=0)
-                audio_for_llm_lens = torch.unsqueeze(torch.tensor(audio_for_llm_lens), dim=0)
-                audios = dict()
-                audios["audios"] = audio.half().cuda()
-                audios["lengths"] = audio_length.half().cuda()
-                audios["lengths_for_llm"] = audio_for_llm_lens.cuda()
-
             conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], prompts_input)
             conv.append_message(conv.roles[1], None)
@@ -322,6 +310,18 @@ class VITA(lmms):
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
             stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
+
+            if not audios:
+                audio = torch.zeros(400, 80)
+                audio_length = audio.shape[0]
+                audio_for_llm_lens = 60
+                audio = torch.unsqueeze(audio, dim=0)
+                audio_length = torch.unsqueeze(torch.tensor(audio_length), dim=0)
+                audio_for_llm_lens = torch.unsqueeze(torch.tensor(audio_for_llm_lens), dim=0)
+                audios = dict()
+                audios["audios"] = audio.half().cuda()
+                audios["lengths"] = audio_length.half().cuda()
+                audios["lengths_for_llm"] = audio_for_llm_lens.cuda()
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -358,10 +358,17 @@ class VITA(lmms):
             outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=False)[0]
 
             outputs = outputs.strip()
-            if outputs.endswith(stop_str):
-                outputs = outputs[: -len(stop_str)]
+            # Sometimes it contains a ☜, I remove it here
+            if outputs.startswith(self.tokenizer.decode(145789)):
+                outputs = outputs[len(self.tokenizer.decode(145789)) :]
+            if stop_str == "<|im_start|>":
+                actual_stop_str = "<|im_end|>"
+            else:
+                actual_stop_str = stop_str
+            if outputs.endswith(actual_stop_str):
+                outputs = outputs[: -len(actual_stop_str)]
             outputs = outputs.strip()
-            res.extend(outputs)
+            res.append(outputs)
             self.cache_hook.add_partial("generate_until", (prompt, gen_kwargs), outputs)
             pbar.update(1)
 
