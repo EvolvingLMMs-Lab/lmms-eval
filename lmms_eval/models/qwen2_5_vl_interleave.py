@@ -40,7 +40,7 @@ class Qwen2_5_VL_Interleave(lmms):
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
-        use_flash_attention_2: Optional[bool] =  False,
+        use_flash_attention_2: Optional[bool] = False,
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 256 * 28 * 28,
         max_num_frames: int = 32,
@@ -334,7 +334,7 @@ class Qwen2_5_VL_Interleave(lmms):
 
                 messages.append(message)
             # print(messages)
-            
+
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
             image_inputs, video_inputs = process_vision_info(messages)
 
@@ -343,8 +343,8 @@ class Qwen2_5_VL_Interleave(lmms):
                 images=image_inputs,
                 videos=video_inputs,
                 padding=True,
-                #fps=self.fps,
-                return_tensors="pt"
+                # fps=self.fps,
+                return_tensors="pt",
             )
 
             if self.device_map == "auto":
@@ -374,7 +374,7 @@ class Qwen2_5_VL_Interleave(lmms):
                 max_new_tokens=gen_kwargs["max_new_tokens"],
                 use_cache=self.use_cache,
             )
-            #cont = self.model.generate(**inputs, max_new_tokens=1024)
+            # cont = self.model.generate(**inputs, max_new_tokens=1024)
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)

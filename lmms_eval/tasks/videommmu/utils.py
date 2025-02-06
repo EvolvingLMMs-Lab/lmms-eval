@@ -270,7 +270,7 @@ DOMAIN_CAT2SUB_CAT = {
 # Evaluate a multiple choice instance.
 def eval_multi_choice(gold_i, pred_i):
     correct = False
-    
+
     # only they are exactly the same, we consider it as correct
     if isinstance(gold_i, list):
         for answer in gold_i:

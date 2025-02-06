@@ -37,7 +37,7 @@ class Qwen2_5_VL(lmms):
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
-        use_flash_attention_2: Optional[bool] =  False,
+        use_flash_attention_2: Optional[bool] = False,
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
@@ -70,14 +70,14 @@ class Qwen2_5_VL(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         if use_flash_attention_2:
-            self._model =Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                 pretrained,
                 torch_dtype=torch.bfloat16,
                 device_map=self.device_map,
                 attn_implementation="flash_attention_2",
             ).eval()
         else:
-            self._model =Qwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
+            self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
@@ -199,7 +199,7 @@ class Qwen2_5_VL(lmms):
 
             # if isinstance(contexts, tuple):
             #     contexts = list(contexts)
-            
+
             # for i in range(len(contexts)):
             #     for j in range(32):
             #         if f"<image {j}>" in contexts[i]:
@@ -235,7 +235,7 @@ class Qwen2_5_VL(lmms):
                             first_frame = vr[0].asnumpy()
                             height, width = first_frame.shape[:2]
                             # max_pixels = height * width
-                            message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": 360*420}, {"type": "text", "text": context}]})
+                            message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": 360 * 420}, {"type": "text", "text": context}]})
                     elif isinstance(visual, Image.Image):  # Single image
                         base64_image = visual.convert("RGB")
                         buffer = BytesIO()
@@ -261,17 +261,15 @@ class Qwen2_5_VL(lmms):
                 messages.append(message)
             # print("message")
 
-            text = self.processor.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
+            text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             image_inputs, video_inputs = process_vision_info(messages)
             inputs = self.processor(
                 text=text,
                 images=image_inputs,
                 videos=video_inputs,
-                #fps=self.fps,
+                # fps=self.fps,
                 padding=True,
-                return_tensors="pt"
+                return_tensors="pt",
             )
 
             if self.device_map == "auto":
