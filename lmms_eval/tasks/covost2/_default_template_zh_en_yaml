@@ -15,7 +15,7 @@ generation_kwargs:
 process_results: !function utils.covost2_zh_en_process_result
 metric_list:
   - metric: bleu
-    aggregation: !function utils.covost2_bleu
+    aggregation: !function utils.covost2_bleu_en
     higher_is_better: true
 metadata:
   - version: 0.0

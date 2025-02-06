@@ -61,6 +61,19 @@ def covost2_bleu(results, args):
     return round(bleu, 5)
 
 
+def covost2_bleu_en(results, args):
+    refs, hyps = [], []
+    for result in results:
+        gt = result["gt"]
+        response = result["pred"]
+        gt = remove_sp(gt)
+        response = remove_sp(response)
+        refs.append(gt)
+        hyps.append(response)
+    bleu = compute_bleu_en(refs, hyps)
+    return round(bleu, 5)
+
+
 def remove_sp(text):
     gt = re.sub(r"<\|.*?\|>", " ", text)
     gt = re.sub(rf"\s+", r" ", gt)
