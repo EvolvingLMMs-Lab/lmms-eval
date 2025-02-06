@@ -4,6 +4,8 @@
 
 MEGA-Bench contains 505 multimodal tasks with diverse data sources, input/output formats, and skill requirements. The taxonomy tree is derived from the application dimension, which guides and calibrates the annotation process. The benchmark is equiped with a suite of 45 evaluation metrics to handle various output formats beyond multiple-choice questions.
 
+Following this doc, the final evaluation file has a consistent format with [MEGA-Bench Leaderboard](https://huggingface.co/spaces/TIGER-Lab/MEGA-Bench).
+
 
 ## Step-1: Get the model response files with lmms-eval
 
@@ -34,7 +36,7 @@ python3 -m accelerate.commands.launch \
 ```
 
 
-## Step-2: Run MEGA-Bench metrics to obtain the evaluation scores
+## Step-2: Run MEGA-Bench metrics to obtain the evaluation scores and breakdown analysis
 
 
 Install the dependencies of MEGA-Bench's evaluation metrics.
@@ -43,15 +45,19 @@ Install the dependencies of MEGA-Bench's evaluation metrics.
 pip install -r requirements.txt
 ```
 
-Example: evaluate the submission file with stand-alone evaluator adapted from MEGA-Bench's codebase.
+Evaluate the submission file with stand-alone evaluator adapted from [MEGA-Bench's codebase](https://github.com/TIGER-AI-Lab/MEGA-Bench).
 
 ```bash
 # Run the metrics for the core set
 python lmms_eval/tasks/megabench/evaluator.py --subset_name core --submission_file logs/llava-ov-7b/submissions/megabench_core_all_query_responses.json  --output_file logs/llava-ov-7b/megabench_scores/megabench_core_data_with_scores.json
+```
 
+```bash
 # Run the metrics for the open-ended set
 python lmms_eval/tasks/megabench/evaluator.py --subset_name open --submission_file logs/llava-ov-7b/submissions/megabench_open_all_query_responses.json  --output_file logs/llava-ov-7b/megabench_scores/megabench_open_data_with_scores.json
+```
 
+```bash
 # Derive the breakdown results
 python lmms_eval/tasks/megabench/breakdown/derive_breakdown_results.py  --input_dir logs/llava-ov-7b/megabench_scores
 
