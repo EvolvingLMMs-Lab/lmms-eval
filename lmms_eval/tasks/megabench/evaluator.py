@@ -101,6 +101,7 @@ class MEGABenchEvaluator:
         # Evaluate each task
         for task in self.data:
             task_name = task.get("task_name", "")
+            has_vlm_metric = False  # Track if any VLM metric is used in this task
 
             need_eval = self._task_needs_eval(task)
             if not need_eval:
@@ -166,11 +167,15 @@ class MEGABenchEvaluator:
                 # 2) Evaluate each field
                 for fld, fld_metric_name in field_score_functions.items():
                     metric = self._build_metric(fld_metric_name, score_config)
+                    if isinstance(metric, VLMJudgeScore):
+                        has_vlm_metric = True
                     self._evaluate_field(task_name, metric, fld, response_obj, correct_answer, query)
 
                 # Evaluate global auxiliary metrics (if any)
                 for fld, fld_metric_name in global_aux_metrics.items():
                     metric = self._build_metric(fld_metric_name, score_config)
+                    if isinstance(metric, VLMJudgeScore):
+                        has_vlm_metric = True
                     # Some tasks want the entire response object to do an additional check
                     # So, pass original `response_obj` under `fld` key:
                     tmp_obj = {fld: response_obj}
@@ -200,7 +205,7 @@ class MEGABenchEvaluator:
                 mean_score = 0.0
             task["task_score"] = task_score_sum
             task["mean_task_score"] = mean_score
-            task["eval_type"] = "llm" if isinstance(metric, VLMJudgeScore) else "rule"
+            task["eval_type"] = "llm" if has_vlm_metric else "rule"
 
             total_query_score += task_score_sum
             total_task_score += mean_score
