@@ -12,7 +12,11 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoProcessor, AutoTokenizer, Qwen2_5_VLForConditionalGeneration
+from transformers import (
+    AutoProcessor,
+    AutoTokenizer,
+    Qwen2_5_VLForConditionalGeneration,
+)
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
