@@ -1,4 +1,4 @@
-dataset_path: /mnt/data/users/wenbinwang/datasets/HR-Bench
+dataset_path: DreamMr/HR-Bench
 dataset_name: hrbench_version_split
 dataset_kwargs:
   token: True
