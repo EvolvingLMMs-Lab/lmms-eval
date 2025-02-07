@@ -1,177 +1,0 @@
-2025-02-07 05:37:40,935 - lmdeploy - [37mINFO[0m - async_engine.py:142 - input backend=turbomind, backend_config=TurbomindEngineConfig(dtype='auto', model_format=None, tp=4, session_len=None, max_batch_size=256, cache_max_entry_count=0.1, cache_chunk_size=-1, cache_block_seq_len=64, enable_prefix_caching=False, quant_policy=0, rope_scaling_factor=0.0, use_logn_attn=False, download_dir=None, revision=None, max_prefill_token_num=8192, num_tokens_per_iter=0, max_prefill_iters=1)
-2025-02-07 05:37:40,935 - lmdeploy - [37mINFO[0m - async_engine.py:144 - input chat_template_config=None
-2025-02-07 05:37:40,959 - lmdeploy - [37mINFO[0m - async_engine.py:154 - updated chat_template_onfig=ChatTemplateConfig(model_name='qwen', system=None, meta_instruction=None, eosys=None, user=None, eoh=None, assistant=None, eoa=None, separator=None, capability=None, stop_words=None)
-2025-02-07 05:37:40,960 - lmdeploy - [37mINFO[0m - turbomind.py:301 - model_source: hf_model
-2025-02-07 05:37:41,439 - lmdeploy - [37mINFO[0m - turbomind.py:200 - turbomind model config:
-
-{
-  "model_config": {
-    "model_name": "",
-    "chat_template": "",
-    "model_arch": "Qwen2ForCausalLM",
-    "head_num": 28,
-    "kv_head_num": 4,
-    "hidden_units": 3584,
-    "vocab_size": 152064,
-    "embedding_size": 152064,
-    "num_layer": 28,
-    "inter_size": 18944,
-    "norm_eps": 1e-06,
-    "attn_bias": 1,
-    "start_id": 151643,
-    "end_id": 151645,
-    "size_per_head": 128,
-    "group_size": 128,
-    "weight_type": "bfloat16",
-    "session_len": 32768,
-    "tp": 4,
-    "model_format": "hf",
-    "expert_num": 0,
-    "expert_inter_size": 0,
-    "experts_per_token": 0,
-    "moe_shared_gate": 0,
-    "moe_norm_topk": 0
-  },
-  "attention_config": {
-    "rotary_embedding": 128,
-    "rope_theta": 1000000.0,
-    "attention_factor": -1.0,
-    "max_position_embeddings": 32768,
-    "original_max_position_embeddings": 0,
-    "rope_scaling_type": "",
-    "rope_scaling_factor": 0.0,
-    "use_dynamic_ntk": 0,
-    "low_freq_factor": 1.0,
-    "high_freq_factor": 1.0,
-    "beta_fast": 32.0,
-    "beta_slow": 1.0,
-    "use_logn_attn": 0,
-    "cache_block_seq_len": 64
-  },
-  "lora_config": {
-    "lora_policy": "",
-    "lora_r": 0,
-    "lora_scale": 0.0,
-    "lora_max_wo_r": 0,
-    "lora_rank_pattern": "",
-    "lora_scale_pattern": ""
-  },
-  "engine_config": {
-    "dtype": "auto",
-    "model_format": null,
-    "tp": 4,
-    "session_len": null,
-    "max_batch_size": 256,
-    "cache_max_entry_count": 0.1,
-    "cache_chunk_size": -1,
-    "cache_block_seq_len": 64,
-    "enable_prefix_caching": false,
-    "quant_policy": 0,
-    "rope_scaling_factor": 0.0,
-    "use_logn_attn": false,
-    "download_dir": null,
-    "revision": null,
-    "max_prefill_token_num": 8192,
-    "num_tokens_per_iter": 8192,
-    "max_prefill_iters": 4
-  }
-}
-[TM][WARNING] [LlamaTritonModel] `max_context_token_num` is not set, default to 32768.
-[TM][INFO] Model: 
-head_num: 28
-kv_head_num: 4
-size_per_head: 128
-inter_size: 18944
-num_layer: 28
-vocab_size: 152064
-attn_bias: 1
-max_batch_size: 256
-max_prefill_token_num: 8192
-max_context_token_num: 32768
-num_tokens_per_iter: 8192
-max_prefill_iters: 4
-session_len: 32768
-cache_max_entry_count: 0.1
-cache_block_seq_len: 64
-cache_chunk_size: -1
-enable_prefix_caching: 0
-start_id: 151643
-tensor_para_size: 4
-pipeline_para_size: 1
-enable_custom_all_reduce: 0
-model_name: 
-model_dir: 
-quant_policy: 0
-group_size: 128
-expert_num: 0
-expert_per_token: 0
-moe_method: 1
-
-[TM][INFO] TM_FUSE_SILU_ACT=1
-2025-02-07 05:37:45,043 - lmdeploy - [33mWARNING[0m - turbomind.py:231 - get 849 model params
-Convert to turbomind format:   0%|          | 0/28 [00:00<?, ?it/s]Convert to turbomind format:   4%|▎         | 1/28 [00:02<01:09,  2.56s/it]Convert to turbomind format:   7%|▋         | 2/28 [00:03<00:37,  1.45s/it]Convert to turbomind format:  11%|█         | 3/28 [00:03<00:27,  1.09s/it]Convert to turbomind format:  14%|█▍        | 4/28 [00:04<00:21,  1.09it/s]Convert to turbomind format:  18%|█▊        | 5/28 [00:05<00:19,  1.21it/s]Convert to turbomind format:  21%|██▏       | 6/28 [00:05<00:16,  1.34it/s]Convert to turbomind format:  25%|██▌       | 7/28 [00:07<00:19,  1.10it/s]Convert to turbomind format:  29%|██▊       | 8/28 [00:07<00:16,  1.22it/s]Convert to turbomind format:  32%|███▏      | 9/28 [00:08<00:14,  1.32it/s]Convert to turbomind format:  36%|███▌      | 10/28 [00:08<00:12,  1.41it/s]Convert to turbomind format:  43%|████▎     | 12/28 [00:09<00:07,  2.16it/s]Convert to turbomind format:  46%|████▋     | 13/28 [00:09<00:06,  2.47it/CConvert to turbomind format:  50%|█████     | 14/28 [00:11<00:09,  1.42it/s]Convert to turbomind format:  54%|█████▎    | 15/28 [00:13<00:13,  1.07s/it]Convert to turbomind format:  57%|█████▋    | 16/28 [00:14<00:14,  1.19s/it]Convert to turbomind format:  61%|██████    | 17/28 [00:16<00:14,  1.27sConConvert to turbomind format:  64%|██████▍   | 18/28 [00:17<00:13,  1.3ConveConvert to turbomind format:  68%|██████▊   | 19/28 [00:19<00:12,  1.42s/it]Convert to turbomind format:  71%|███████▏  | 20/28 [00:20<00:11,  1.47s/it]Convert to turbomind format:  75%|███████▌  | 21/28 [00:22<00:10,  1ConvertConvert to turbomind format:  79%|███████▊  | 22/28 [00:23<00:08,  1.45s/it]Convert to turbomind format:  82%|████████▏ | 23/28 [00:25<00:07,  1.51s/it]Convert to turbomind format:  86%|████████▌ | 24/28 [00:26<00:06,  1.51s/it]Convert to turbomind format:  89%|████████▉ | 25/28 [00:28<00:04,  1.44s/it]Convert to turbomind format:  93%|█████████▎| 26/28 [00:29<00:02,  1.38s/it]Convert to turbomind format:  96%|█████████▋| 27/28 [00:30<00:01,  1.38s/it]Convert to turbomind format: 100%|██████████| 28/28 [00:32<00:00Convert to                                                                             [TM][INFO] [LlamaWeight<T>::prepare] workspace size: 67895296
-
-[TM][INFO] [LlamaWeight<T>::prepare] workspace size: 67895296
-
-[TM][INFO] [LlamaWeight<T>::prepare] workspace size: 67895296
-
-[TM][INFO] [LlamaWeight<T>::prepare] workspace size: 67895296
-
-[WARNING] gemm_config.in is not found; using default GEMM algo
-[WARNING] gemm_config.in is not found; using default GEMM algo
-[WARNING] gemm_config.in is not found; using default GEMM algo
-[WARNING] gemm_config.in is not found; using default GEMM algo
-[TM][INFO] [BlockManager] block_size = 0 MB
-[TM][INFO] [BlockManager] block_size = 0 MB
-[TM][INFO] [BlockManager] block_size = 0 MB
-[TM][INFO] [BlockManager] block_size = 0 MB
-[TM][INFO] [BlockManager] max_block_count = 4284
-[TM][INFO] [BlockManager] max_block_count = 4284
-[TM][INFO] [BlockManager] max_block_count = 4284
-[TM][INFO] [BlockManager] max_block_count = 4284
-[TM][INFO] [BlockManager] chunk_size = 4284
-[TM][INFO] [BlockManager] chunk_size = 4284
-[TM][INFO] [BlockManager] chunk_size = 4284
-[TM][INFO] [BlockManager] chunk_size = 4284
-[TM][INFO] LlamaBatch<T>::Start()
-[TM][INFO] LlamaBatch<T>::Start()
-[TM][INFO] LlamaBatch<T>::Start()
-[TM][INFO] LlamaBatch<T>::Start()
-[TM][INFO] [Gemm2] Tuning sequence: 8, 16, 32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144, 8192
-[TM][INFO] [Gemm2] 8
-[TM][INFO] [Gemm2] 16
-[TM][INFO] [Gemm2] 32
-[TM][INFO] [Gemm2] 48
-[TM][INFO] [Gemm2] 64
-[TM][INFO] [Gemm2] 96
-[TM][INFO] [Gemm2] [TM][INFO] [Gemm2] 48
-[TM][INFO] [Gemm2] 64
-[TM][INFO] [Gemm2] 96
-[TM][INFO] [Gemm2] 128
-[TM][INFO] [Gemm2] 192
-[TM][INFO] [Gemm2] 256
-[TM][INFO] [Gemm2] 384
-[TM][INFO] [Gemm2] 512
-[TM][INFO] [Gemm2] 768
-[TM][INFO] [Gemm2] 1024
-[TM][INFO] [Gemm2] 1536
-[TM][INFO] [Gemm2] 2048
-[TM][INFO] [Gemm2] 3072
-[TM][INFO] [Gemm2] 4096
-[TM][INFO] [Gemm2] 6144
-[TM][INFO] [Gemm2] 8192
-[TM][INFO] [Gemm2] Tuning finished in 0.48 seconds.
-2025-02-07 05:38:22,061 - lmdeploy - [37mINFO[0m - async_engine.py:168 - updated backend_config=TurbomindEngineConfig(dtype='auto', model_format=None, tp=4, session_len=None, max_batch_size=256, cache_max_entry_count=0.1, cache_chunk_size=-1, cache_block_seq_len=64, enable_prefix_caching=False, quant_policy=0, rope_scaling_factor=0.0, use_logn_attn=False, download_dir=None, revisHINT:    Please open [93m[1mhttp://0.0.0.0:23335[0m in a browser for detailed api HINT:    Please open [93m[1mhttp://0.0.0.0:23335[0m in a browser for detailed api usage!!!
-HINT:    Please open [93m[1mhttp://0.0.0.0:23335[0m in a browser for detailed api usage!!!
-HINT:    INFO:     Started server process [599105]
-INFO:     Waiting for application startup.
-INFO:     Started server process [598636]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 23335): address already in use
-[TM][INFO] [InternalThreadEntry] stop requested.
-[TM][INFO] [InternalThreadEntry] sto[TM][INFO] [InternalThreadEntry] stop requested.
-[TM][INFO] [InternalThreadEntry] stop requested.
-[TM][INFO] [InternalThreadEntry] stop requested.
-[TM][INFO] [InternalThreadEntry] stop requested.
-[TM][INFO] [OutputThreadEntry] stop requested.
