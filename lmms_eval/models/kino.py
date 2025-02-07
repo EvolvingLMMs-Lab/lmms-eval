@@ -1,6 +1,9 @@
+import os
 import warnings
 from typing import List, Optional, Tuple, Union
 
+import librosa
+import moviepy as mp
 import numpy as np
 import PIL
 import torch
@@ -61,6 +64,7 @@ class Kino(lmms):
         pretrained_mlp_projector: Optional[str] = None,
         max_pixels: Optional[int] = None,
         min_pixels: Optional[int] = None,
+        use_video_audio: Optional[bool] = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -162,6 +166,23 @@ class Kino(lmms):
         # we use EOT because end of *text* is more accurate for what we're doing than end of *sentence*
         return self.tokenizer.eos_token_id
 
+    def extract_audio(self, videos_file_path):
+        my_clip = mp.VideoFileClip(videos_file_path)
+        return my_clip.audio
+
+    def split_audio(self, audio_arrays):
+        CHUNK_LIM = 480000
+        SAMPLE_RATE = 16000
+        audio_splits = []
+        # Split the loaded audio to 30s chunks and extend the messages content
+        for i in range(
+            0,
+            len(audio_arrays),
+            CHUNK_LIM,
+        ):
+            audio_splits.append(audio_arrays[i : i + CHUNK_LIM])
+        return audio_splits
+
     @property
     def max_length(self):
         return self._max_length
@@ -242,12 +263,41 @@ class Kino(lmms):
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
             messages = [{"role": "user", "content": []}]
+            videos = []
+            images = []
+            audios = []
             for visual in visuals:
                 if isinstance(visual, str):
+                    try:
+                        videos.append(self.load_video([visual], self.max_frames_num))
+                    except Exception as e:
+                        res.append("")
+                        eval_logger.info(f"Error {e} when loading video : {visuals}")
+                        pbar.update(1)
                     messages[0]["content"].append({"type": "video"})
+                    if self.use_video_audio:
+                        video_audio = self.extract_audio(visual)
+                        temp_audio_path = f"temp_video_audio_{self._rank}.wav"
+                        video_audio.write_audiofile(temp_audio_path)
+                        video_audio = librosa.load(temp_audio_path, sr=self._processor.audio_processor.sampling_rate)[0]
+                        splited_video_audio = self.split_audio(video_audio)
+                        audios.extend(splited_video_audio)
+                        for _ in range(len(splited_video_audio)):
+                            messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+                        os.remove(temp_audio_path)
                 elif isinstance(visual, PIL.Image.Image):
+                    height = visual.size[0]
+                    width = visual.size[1]
+                    if width < 28 and height < 28:
+                        visual = visual.resize((28, 28))
+                    elif height < 28:
+                        visual = visual.resize((28, width))
+                    elif width < 28:
+                        visual = visual.resize((height, 28))
+                    images.append(visual)
                     messages[0]["content"].append({"type": "image"})
                 elif isinstance(visual, dict) and "array" in visual:
+                    audios.append(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
                     messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
@@ -271,30 +321,6 @@ class Kino(lmms):
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
-
-            videos = []
-            images = []
-            audios = []
-            for visual in visuals:
-                if isinstance(visual, str):
-                    try:
-                        videos.append(self.load_video([visual], self.max_frames_num))
-                    except Exception as e:
-                        res.append("")
-                        eval_logger.info(f"Error {e} when loading video : {visuals}")
-                        pbar.update(1)
-                elif isinstance(visual, PIL.Image.Image):
-                    height = visual.size[0]
-                    width = visual.size[1]
-                    if width < 28 and height < 28:
-                        visual = visual.resize((28, 28))
-                    elif height < 28:
-                        visual = visual.resize((28, width))
-                    elif width < 28:
-                        visual = visual.resize((height, 28))
-                    images.append(visual)
-                elif isinstance(visual, dict) and "array" in visual:
-                    audios.append(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
 
             if len(videos) == 0:
                 videos = None
