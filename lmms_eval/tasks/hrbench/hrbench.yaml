@@ -1,6 +1,6 @@
 group: hrbench
 task:
-  #- hrbench4k
+  - hrbench4k
   - hrbench8k
 metadata:
   version: 0.0
