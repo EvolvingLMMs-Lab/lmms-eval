@@ -590,7 +590,8 @@ class Task(abc.ABC):
         example = self.doc_to_text(doc)
         return description + labeled_examples + example
 
-    def apply_filters(self):
+    def apply_filters(self) -> Optional[List[Instance]]:
+        """Iterates over FilterEnsembles and applies them to instances"""
         if hasattr(self, "_filters"):
             for f in self._filters:
                 f.apply(self._instances, None)
@@ -1134,6 +1135,7 @@ class ConfigurableTask(Task):
         apply_chat_template: bool = False,
         fewshot_as_multiturn: bool = False,
         chat_template: Optional[Callable] = None,
+        is_multimodal: bool = False,
     ) -> str:
         """Returns a fewshot context string that is made up of a prepended description
         (if provided), the `num_fewshot` number of examples, and an appended prompt example.
@@ -1182,50 +1184,78 @@ class ConfigurableTask(Task):
 
         # if few-shot - append examples after the system prompt
         if num_fewshot > 0:
-            if apply_chat_template:
-                labeled_examples.extend(self.sampler.get_chat_context(doc, num_fewshot, fewshot_as_multiturn))
+            if is_multimodal is False:
+                if apply_chat_template:
+                    labeled_examples.extend(self.sampler.get_chat_context(doc, num_fewshot, fewshot_as_multiturn))
+                else:
+                    labeled_examples += self.sampler.get_context(doc, num_fewshot)
             else:
-                labeled_examples += self.sampler.get_context(doc, num_fewshot)
+                if apply_chat_template:
+                    labeled_examples_text, labeled_examples_multimodal = self.sampler.get_multimodal_chat_context(doc, num_fewshot, fewshot_as_multiturn)
+                    labeled_examples.extend(labeled_examples_text)
+                else:
+                    labeled_examples_text, labeled_examples_multimodal = self.sampler.get_multimodal_context(doc, num_fewshot)
+                    labeled_examples += labeled_examples_text
 
         example = self.doc_to_text(doc)
-        if apply_chat_template:
-            if self.multiple_input:
+        if is_multimodal is False:
+            if apply_chat_template:
+                if self.multiple_input:
+                    return chat_template(labeled_examples)
+                if isinstance(example, str):
+                    self.append_target_question(labeled_examples, example, fewshot_as_multiturn)
+                # for loglikelihood create a list of questions with appended choices
+                elif isinstance(example, list):
+                    labeled_examples_list = []
+                    # copy chat history for each example and append the answer
+                    for ex in example:
+                        chat = copy.deepcopy(labeled_examples)
+                        self.append_target_question(chat, ex, fewshot_as_multiturn)
+                        labeled_examples_list.append(chat_template(chat))
+                    return labeled_examples_list
+                # if example is an integer, append the choice or convert to string
+                elif isinstance(example, int):
+                    if self.config.doc_to_choice is not None:
+                        choices = self.doc_to_choice(doc)
+                        self.append_target_question(labeled_examples, choices[example], fewshot_as_multiturn)
+                    else:
+                        self.append_target_question(labeled_examples, str(example), fewshot_as_multiturn)
+                    # return lm.apply_chat_template(labeled_examples)
                 return chat_template(labeled_examples)
-            if isinstance(example, str):
-                self.append_target_question(labeled_examples, example, fewshot_as_multiturn)
-            # for loglikelihood create a list of questions with appended choices
-            elif isinstance(example, list):
-                labeled_examples_list = []
-                # copy chat history for each example and append the answer
-                for ex in example:
-                    chat = deepcopy(labeled_examples)
-                    self.append_target_question(chat, ex, fewshot_as_multiturn)
-                    labeled_examples_list.append(chat_template(chat))
-                return labeled_examples_list
-            # if example is an integer, append the choice or convert to string
-            elif isinstance(example, int):
-                if self.config.doc_to_choice is not None:
-                    choices = self.doc_to_choice(doc)
-                    self.append_target_question(labeled_examples, choices[example], fewshot_as_multiturn)
-                else:
-                    self.append_target_question(labeled_examples, str(example), fewshot_as_multiturn)
-                # return lm.apply_chat_template(labeled_examples)
-            return chat_template(labeled_examples)
+            else:
+                if self.multiple_input:
+                    return labeled_examples
+                if isinstance(example, str):
+                    return labeled_examples + example
+                elif isinstance(example, list):
+                    return [labeled_examples + ex for ex in example]
+                elif isinstance(example, int):
+                    if self.config.doc_to_choice is not None:
+                        choices = self.doc_to_choice(doc)
+                        return labeled_examples + choices[example]
+                    else:
+                        return labeled_examples + str(example)
         else:
-            if self.multiple_input:
-                return labeled_examples
-            if isinstance(example, str):
-                return labeled_examples + example
-            elif isinstance(example, list):
-                return [labeled_examples + ex for ex in example]
-            elif isinstance(example, int):
-                if self.config.doc_to_choice is not None:
-                    choices = self.doc_to_choice(doc)
-                    return labeled_examples + choices[example]
+            if apply_chat_template:
+                raise NotImplementedError("Multimodal chat template not implemented yet")
+            else:
+                if self.multiple_input:
+                    return labeled_examples + "<image> " + example, labeled_examples_multimodal
+                if isinstance(example, str):
+                    return labeled_examples + "<image> " + example, labeled_examples_multimodal
                 else:
-                    return labeled_examples + str(example)
+                    raise NotImplementedError("Multimodal not implemented yet")
+                # elif isinstance(example, list):
+                #     return [labeled_examples + ex for ex in example]
+                # elif isinstance(example, int):
+                #     if self.config.doc_to_choice is not None:
+                #         choices = self.doc_to_choice(doc)
+                #         return labeled_examples + choices[example], labeled_examples_multimodal
+                #     else:
+                #         return labeled_examples + str(example), labeled_examples_multimodal
 
-    def apply_filters(self):
+    def apply_filters(self) -> Optional[List[Instance]]:
+        """Iterates over FilterEnsembles and applies them to instances"""
         if hasattr(self, "_filters"):
             for f in self._filters:
                 f.apply(self._instances, self.task_docs)
@@ -1446,7 +1476,6 @@ class ConfigurableTask(Task):
         result_dict = {}
         use_metric = list(self._metric_fn_list.keys())
         if self.OUTPUT_TYPE == "loglikelihood":
-            results = results[0]
             ll, is_greedy = results
             return {
                 **({"perplexity": ll} if "perplexity" in use_metric else {}),
@@ -1530,9 +1559,9 @@ class ConfigurableTask(Task):
             # we expect multiple_targets to be a list.
             elif self.multiple_target:
                 gold = list(gold)
-            elif type(gold) != type(result):
-                # cast gold to the same type as result
-                gold = type(result)(gold)
+            # elif type(gold) != type(result):
+            #     # cast gold to the same type as result
+            #     gold = type(result)(gold)
 
             for metric in self._metric_fn_list.keys():
                 if self.multiple_target and metric != "anls":
@@ -1548,7 +1577,7 @@ class ConfigurableTask(Task):
                         try:
                             result_score = self._metric_fn_list[metric](
                                 references=[gold_option],
-                                predictions=[result],
+                                predictions=result,
                                 **self._metric_fn_kwargs[metric],
                             )
                         except TypeError:  # TODO: this is hacky and I don't want to do it
@@ -1567,7 +1596,7 @@ class ConfigurableTask(Task):
                     try:
                         result_score = self._metric_fn_list[metric](
                             references=gold,
-                            predictions=[result],
+                            predictions=result,
                             **self._metric_fn_kwargs[metric],
                         )
                     except TypeError:  # needed for now in order to use a different interface between our own metrics and HF Evaluate metrics

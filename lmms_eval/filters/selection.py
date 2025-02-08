@@ -1,8 +1,14 @@
 from collections import Counter
 
 from lmms_eval.api.filter import Filter
+from lmms_eval.api.registry import register_filter
+
+# TODO: implement "arg_max" filter. either it should take in an arbitrary "scoring"/reward function
+# that takes an input and returns a scalar and then should select the max reward,
+# or should implement different filters for different ways of handling a reward model's inference.
 
 
+@register_filter("take_first")
 class TakeFirstFilter(Filter):
     def __init__(self) -> None:
         """
@@ -16,18 +22,23 @@ class TakeFirstFilter(Filter):
         return map(lambda r: r[0], resps)
 
 
+@register_filter("take_first_k")
 class TakeKFilter(Filter):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         self.k = kwargs.pop("k")
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
 
     def apply(self, resps, docs):
+        # need resp to be subscriptable to check below
+        resps = list(resps)
         # check we have at least k responses per doc, else we can't take the first k
         assert len(resps[0]) >= self.k, f"Need at least {self.k} responses per doc to take first {self.k}, but got {len(resps[0])} only! Please increase TaskConfig.repeats ."
-        return map(lambda r: r[: self.k], resps)
+        selected = map(lambda r: r[: self.k], resps)
+        return selected
 
 
+@register_filter("majority_vote")
 class MajorityVoteFilter(Filter):
     def __init__(self) -> None:
         """
