@@ -10,6 +10,7 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
+from qwen_vl_utils import process_vision_info
 from synvo_engine.models.qwen2_5_vl_audio import (
     KinoQwen2_5_VLForConditionalGeneration,
     KinoQwen2_5_VLProcessor,
@@ -62,6 +63,8 @@ class KinoQwen2_5(lmms):
         pretrained_mlp_projector: Optional[str] = None,
         max_pixels: Optional[int] = None,
         min_pixels: Optional[int] = None,
+        video_max_pixels: Optional[int] = 360 * 420,
+        fps: Optional[int] = 1,
         use_video_audio: Optional[bool] = False,
         **kwargs,
     ) -> None:
@@ -107,6 +110,8 @@ class KinoQwen2_5(lmms):
         self.chat_template = chat_template
         self.use_cache = use_cache
         self.use_video_audio = use_video_audio
+        self.fps = fps
+        self.video_max_pixels = video_max_pixels
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -258,18 +263,10 @@ class KinoQwen2_5(lmms):
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
             messages = [{"role": "user", "content": []}]
-            videos = []
-            images = []
             audios = []
             for visual in visuals:
                 if isinstance(visual, str):
-                    try:
-                        videos.append(self.load_video([visual], self.max_frames_num))
-                    except Exception as e:
-                        res.append("")
-                        eval_logger.info(f"Error {e} when loading video : {visuals}")
-                        pbar.update(1)
-                    messages[0]["content"].append({"type": "video"})
+                    messages[0]["content"].append({"type": "video", "video": visual, "max_pixels": self.video_max_pixels, "fps": self.fps})
                     if self.use_video_audio:
                         video_audio = self.extract_audio(visual)
                         temp_audio_path = f"temp_video_audio_{self._rank}.wav"
@@ -289,10 +286,11 @@ class KinoQwen2_5(lmms):
                         visual = visual.resize((28, width))
                     elif width < 28:
                         visual = visual.resize((height, 28))
-                    images.append(visual)
-                    messages[0]["content"].append({"type": "image"})
+                    # images.append(visual)
+                    messages[0]["content"].append({"type": "image", "image": visual})
                 elif isinstance(visual, dict) and "array" in visual:
-                    audios.append(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
+                    splited_video_audio = self.split_audio(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
+                    audios.extend(splited_video_audio)
                     messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
@@ -309,22 +307,20 @@ class KinoQwen2_5(lmms):
                 elif not isinstance(until, list):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
             assert self.batch_size_per_gpu == 1, "Do not support batch_size_per_gpu > 1 for now"
+            # Okay be I am assuming bs always == 1
             context = contexts[0]
             messages[0]["content"].append({"type": "text", "text": context})
+            image_inputs, video_inputs, video_kwargs = process_vision_info(messages, return_video_kwargs=True)
 
             text = self._processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{text}\n")
 
-            if len(videos) == 0:
-                videos = None
-            if len(images) == 0:
-                images = None
             if len(audios) == 0:
                 audios = None
 
-            inputs = self._processor(images=images, videos=videos, audios=audios, text=text, sampling_rate=self._processor.audio_processor.sampling_rate, return_tensors="pt").to(self._device, self.model.dtype)
+            inputs = self._processor(images=image_inputs, videos=video_inputs, audios=audios, text=text, sampling_rate=self._processor.audio_processor.sampling_rate, return_tensors="pt", **video_kwargs).to(self._device, self.model.dtype)
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
