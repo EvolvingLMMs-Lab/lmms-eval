@@ -418,7 +418,9 @@ def consolidate_group_results(
 
                 for metric_config in agg_metric_list:
                     for filter_name in metric_config["filter_list"]:
-                        if metric != ",".join([metric_config["metric"], filter_name]):
+                        # if metric != ",".join([metric_config["metric"], filter_name]):
+                        #     continue
+                        if metric_config["metric"] not in metric:
                             continue
 
                         # compute group's pooled metric and stderr
