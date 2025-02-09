@@ -1,5 +1,4 @@
 # the code is adapted from https://github.com/EleutherAI/lm-evaluation-harness
-import logging
 import math
 import random
 import re
@@ -9,10 +8,9 @@ from typing import List
 
 import numpy as np
 import sacrebleu
+from loguru import logger as eval_logger
 
 from lmms_eval.api.registry import register_aggregation, register_metric
-
-eval_logger = logging.getLogger("lm-eval")
 
 
 # Register Aggregations First
@@ -301,17 +299,19 @@ def anls(
     references,
     predictions,
     thresh_hold=0.5,
-):  # This is a passthrough function
+):
     """https://github.com/QwenLM/Qwen-VL/blob/master/eval_mm/infographicsvqa_eval.py"""
     values = []
+    # Unwrap predictions if it's a nested list
+    pred = predictions[0] if isinstance(predictions[0], str) else predictions[0][0]
+
     for answer in references:
         # preprocess both the answers - gt and prediction
         gt_answer = " ".join(answer.strip().lower().split())
-        det_answer = " ".join(predictions[0].strip().lower().split())
+        det_answer = " ".join(pred.strip().lower().split())
 
-        # dist = levenshtein_distance(answer.lower(), detObject['answer'].lower())
         dist = levenshtein_distance(gt_answer, det_answer)
-        length = max(len(answer.upper()), len(predictions[0].upper()))
+        length = max(len(answer.upper()), len(pred.upper()))
         values.append(0.0 if length == 0 else float(dist) / float(length))
 
     question_result = 1 - min(values)

@@ -1,0 +1,31 @@
+dataset_path: lmms-lab/MMMU
+task: "mmmu_val_reasoning"
+test_split: validation
+output_type: generate_until
+doc_to_visual: !function utils.mmmu_doc_to_visual
+doc_to_text: !function utils.mmmu_doc_to_text
+doc_to_target: "answer"
+# The return value of process_results will be used by metrics
+process_results: !function utils.mmmu_reasoning_process_results
+
+metric_list:
+  - metric: mmmu_judge_acc
+    aggregation: !function utils.mmmu_aggregate_judge_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_type: "reasoning"
+    multiple_choice_prompt: "Please show step-by-step reasoning, and answer the question with option letter from given choices."
+    open_ended_prompt: "Please show step-by-step reasoning, and answer the question using a single word or phrase."
+
+generation_kwargs:
+  max_new_tokens: 256
+  until:
+    - "</s>"
+    - "Q:"
+    - "<|im_end|>"
+
+metadata:
+  version: 0.0
+  interleaved_format: false
