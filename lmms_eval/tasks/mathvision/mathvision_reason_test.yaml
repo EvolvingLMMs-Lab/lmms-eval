@@ -1,0 +1,26 @@
+dataset_path: MathLLMs/MathVision
+dataset_kwargs:
+  token: True
+task: "mathvision_reason_test"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mathvision_doc_to_visual
+doc_to_text: !function utils.mathvision_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.mathvision_gpt_eval_process_results
+metric_list:
+  - metric: mathvision_gpt_eval_score
+    aggregation: !function utils.mathvision_aggregate_results_eval
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_format: solution
+    mc_prompt: "Answer the question with the option's letter from the given choices directly."
+    short_answer_prompt: "Answer the question with a number directly."
