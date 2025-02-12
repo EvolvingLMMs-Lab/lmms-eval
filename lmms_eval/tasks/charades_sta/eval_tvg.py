@@ -14,6 +14,8 @@ def read_json(path):
     return datas
 
 
+
+
 def write_json(path, data):
     with open(path, "w") as fout:
         json.dump(data, fout)
@@ -115,20 +117,29 @@ if __name__ == "__main__":
 
 
     num = len(datas)
+
+    #miou
+    ious = []
+    for k in datas.keys():
+        vid, caption, gt = k.split(">>>")
+        pred = datas[k]
+        gt = eval(gt)
+        timestamps = extract_time(pred)
+        if len(timestamps) != 1:
+            print(f"pred={pred},timestamps={timestamps}")
+            timestamps = [[gt[1]+10, gt[1]+20]]
+        # print(f"GT: {gt}, Pred: {timestamps[0]}")
+        
+        ious.append(iou(gt, timestamps[0]))
+
     Result = {0.3:0, 0.5:0, 0.7:0}
     for c_iou in [0.3, 0.5, 0.7]:
-        for k in datas.keys():
-            vid, caption, gt = k.split(">>>")
-            pred = datas[k]
-            gt = eval(gt)
-            timestamps = extract_time(pred)
-            if len(timestamps) != 1:
-                print(f"pred={pred},timestamps={timestamps}")
-                timestamps = [[gt[1]+10, gt[1]+20]]
-            print(f"GT: {gt}, Pred: {timestamps[0]}")
-            if(iou(gt, timestamps[0]) >= c_iou):
+        for cur_iou in ious:
+            if(cur_iou >= c_iou):
                 Result[c_iou] = Result[c_iou] + 1
 
-    print("IOU 0.3: {0}\nIOU 0.5: {1}\nIOU 0.7: {2}".format(Result[0.3]*100/num, Result[0.5]*100/num, Result[0.7]*100/num))
+
+
+    print("IOU 0.3: {0}\nIOU 0.5: {1}\nIOU 0.7: {2}\nmIOU".format(Result[0.3]*100/num, Result[0.5]*100/num, Result[0.7]*100/num), sum(ious)*100/num)
 
 
