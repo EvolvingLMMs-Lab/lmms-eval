@@ -71,7 +71,7 @@ class Qwen_VL(lmms):
         else:
             self.model.to(self._device)
             self._rank = 0
-            self._word_size = 1
+            self._world_size = 1
 
     @property
     def config(self):
