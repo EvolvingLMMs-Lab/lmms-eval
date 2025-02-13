@@ -106,12 +106,12 @@ class Aria(lmms):
         elif accelerator.num_processes == 1 and device_map == "auto":
             eval_logger.info(f"Using {accelerator.num_processes} devices with pipeline parallelism")
             self._rank = 0
-            self._word_size = 1
+            self._world_size = 1
         else:
             eval_logger.info(f"Using single device: {self._device}")
             self.model.to(self._device)
             self._rank = 0
-            self._word_size = 1
+            self._world_size = 1
         self.accelerator = accelerator
 
     @property
@@ -303,7 +303,7 @@ class Aria(lmms):
                     """
                     keywords = [
                         "Answer:",
-                        "answer is:", "choice is:", "option is:", 
+                        "answer is:", "choice is:", "option is:",
                         "Answer is:", "Choice is:", "Option is:",
                         "answer is", "choice is", "option is",
                         "Answer is", "Choice is", "Option is"

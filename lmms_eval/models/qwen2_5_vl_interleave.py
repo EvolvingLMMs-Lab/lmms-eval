@@ -111,7 +111,7 @@ class Qwen2_5_VL_Interleave(lmms):
             self._world_size = self.accelerator.num_processes
         else:
             self._rank = 0
-            self._word_size = 1
+            self._world_size = 1
 
         # self.continual_mode = continual_mode
         # if self.continual_mode and response_persistent_folder is None:
