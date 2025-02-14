@@ -1,0 +1,30 @@
+dataset_path: lmms-lab/charades_sta
+dataset_kwargs:
+  token: True
+  cache_dir: charades_sta
+  video: True
+task: temporal_grounding_charades
+test_split: test
+
+generation_kwargs:
+  max_new_tokens: 50
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+output_type: generate_until
+doc_to_visual: !function utils.temporal_grounding_doc_to_visual
+doc_to_text: !function utils.temporal_grounding_doc_to_text
+doc_to_target: !function utils.temporal_grounding_doc_to_answer
+process_results: !function utils.temporal_grounding_process_results_generation
+
+
+metric_list:
+  - metric: submission
+    aggregation: !function utils.temporal_grounding_aggregate_charades
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Please find the visual event described by a sentence in the video, determining its starting and ending times. The format should be: 'The event happens in the start time - end time'. For example, The event 'person turn a light on' happens in the 24.3 - 30.4 seonds. Now I will give you the textual sentence: "
+    post_prompt: "Please return its start time and end time."
