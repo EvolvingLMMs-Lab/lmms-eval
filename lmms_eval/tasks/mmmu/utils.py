@@ -3,10 +3,12 @@ import json
 import os
 import random
 import re
+import time
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import requests
 import yaml
 from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
@@ -142,7 +144,10 @@ def construct_prompt(doc, mc_prompt="", open_ended_prompt=""):
 
 
 def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
+    if lmms_eval_specific_kwargs is not None and "multiple_choice_prompt" in lmms_eval_specific_kwargs:
+        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
+    else:
+        question = construct_prompt(doc)
     if config["metadata"]["interleaved_format"]:
         question = replace_images_tokens(question)
     return question
