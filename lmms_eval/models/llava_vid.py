@@ -1,5 +1,6 @@
 import math
 import os
+import glob
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
@@ -416,6 +417,8 @@ class LlavaVid(lmms):
             visuals = doc_to_visual(self.task_dict[task][split][doc_id])
             # visuals = [visuals]
             # visuals = self.flatten(visuals)
+            if os.path.isdir(visuals[0]):
+                visuals = glob.glob(visuals[0] + '/*')
             videos = []
             try:
                 # for visual in visuals:
@@ -440,7 +443,8 @@ class LlavaVid(lmms):
                         frame_idx = sampled_indices.tolist()
                         frame_time = [i / fps for i in frame_idx]
                         frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
-                        video = [visuals[i] for i in frame_idx]
+                        # video = [visuals[i] for i in frame_idx]
+                        video = np.stack([np.array(Image.open(visuals[i])) for i in frame_idx], axis=0)
 
                 video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].cuda()
                 if self.torch_dtype == "bfloat16":
