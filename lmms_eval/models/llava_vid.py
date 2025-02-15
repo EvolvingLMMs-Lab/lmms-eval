@@ -1,6 +1,6 @@
+import glob
 import math
 import os
-import glob
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
@@ -418,7 +418,7 @@ class LlavaVid(lmms):
             # visuals = [visuals]
             # visuals = self.flatten(visuals)
             if os.path.isdir(visuals[0]):
-                visuals = glob.glob(visuals[0] + '/*')
+                visuals = glob.glob(visuals[0] + "/*")
             videos = []
             try:
                 # for visual in visuals:
