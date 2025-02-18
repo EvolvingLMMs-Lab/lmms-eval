@@ -1,8 +1,9 @@
-from datasets import Dataset, Features, Value, Image, Sequence
-import pandas as pd
-from tqdm import tqdm
-import os
 import json
+import os
+
+import pandas as pd
+from datasets import Dataset, Features, Image, Sequence, Value
+from tqdm import tqdm
 
 # Define the features for the dataset
 features = Features(
@@ -25,7 +26,6 @@ with open(json_path, "r") as f:
     data = json.load(f)
 
 
-
 # Iterate over the rows of the data
 for cur_meta in data:
     video = cur_meta["video"]
@@ -36,7 +36,9 @@ for cur_meta in data:
     df_items["caption"].append(caption)
     df_items["timestamp"].append(timestamp)
 
-import pdb;pdb.set_trace()
+import pdb
+
+pdb.set_trace()
 
 df_items = pd.DataFrame(df_items)
 
@@ -58,7 +60,7 @@ dataset.push_to_hub(repo_id=hub_dataset_path, split="test")
 #         commit_message (str): Commit message for the upload.
 #     """
 #     api = HfApi()
-    
+
 #     # Upload file to the dataset repo
 #     api.upload_file(
 #         path_or_fileobj=zip_path,
@@ -77,6 +79,3 @@ dataset.push_to_hub(repo_id=hub_dataset_path, split="test")
 #     if filename.endswith(".zip"):
 #         file_path = os.path.join(directory_path, filename)
 #         upload_zip_to_huggingface("lmms-lab/charades_sta", file_path)
-
-
-

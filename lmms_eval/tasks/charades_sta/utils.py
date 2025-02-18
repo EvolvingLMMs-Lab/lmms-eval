@@ -1,14 +1,16 @@
-from decord import VideoReader, cpu
-import numpy as np
-import os
-import sys
 import datetime
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 import json
-
-import yaml
+import os
 import random
+import sys
 from pathlib import Path
+
+import numpy as np
+import yaml
+from decord import VideoReader, cpu
+from loguru import logger as eval_logger
+
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 # with open(Path(__file__).parent / "_default_template.yaml", "r") as f:
 #     raw_data = f.readlines()
@@ -20,8 +22,6 @@ from pathlib import Path
 
 #     config = yaml.safe_load("".join(safe_data))
 
-
-from loguru import logger as eval_logger
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 # cache_dir = os.path.join(hf_home, cache_dir)
@@ -66,7 +66,7 @@ def temporal_grounding_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
     question = doc["caption"]
-    
+
     return f"{pre_prompt}{question}. {post_prompt}"
 
 
@@ -82,7 +82,8 @@ def temporal_grounding_process_results_generation(doc, result):
 
 def temporal_grounding_aggregate_charades(results, args):
     temporal_grounding_aggregate_submissions(results, args, "charades")
-    
+
+
 def temporal_grounding_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     submission_file_name = f"inference_results_temporal_grounding_{task}_{now_date_time}.json"
@@ -99,9 +100,3 @@ def temporal_grounding_aggregate_submissions(results, args, task):
         json.dump(combined_submission, f, indent=4)
 
     eval_logger.info(f"Submission file saved to {path}")
-
-
-
-
-
-
