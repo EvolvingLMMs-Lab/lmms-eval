@@ -83,7 +83,7 @@ class Fuyu(lmms):
         else:
             self.model.to(self._device)
             self._rank = 0
-            self._word_size = 1
+            self._world_size = 1
 
         """if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [

@@ -3,17 +3,17 @@ import json
 import os
 import random
 import re
+import time
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import requests
 import yaml
 from loguru import logger as eval_logger
+from openai import AzureOpenAI, OpenAI
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-MULTI_CHOICE_PROMPT = "Answer with the option's letter from the given choices directly."
-OPEN_ENDED_PROMPT = "Answer the question using a single word or phrase."
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -24,6 +24,96 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
             safe_data.append(line)
 
     config = yaml.safe_load("".join(safe_data))
+
+
+with open(Path(__file__).parent / "mmmu_val_reasoning.yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+
+    reasoning_config = yaml.safe_load("".join(safe_data))
+    MC_PROMPT = reasoning_config["lmms_eval_specific_kwargs"]["default"]["multiple_choice_prompt"]
+    OPEN_ENDED_PROMPT = reasoning_config["lmms_eval_specific_kwargs"]["default"]["open_ended_prompt"]
+
+
+NUM_SECONDS_TO_SLEEP = 5
+API_TYPE = os.getenv("API_TYPE", "openai")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+
+JUDGE_RULES = """You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
+# Input
+Question:
+```
+{question}
+```
+Ground Truth Answer:
+```
+{answer}
+```
+Model Prediction:
+```
+{pred}
+```
+
+# Evaluation Rules
+- The model prediction contains the reasoning process, you should spot the final answer from the it.
+- For multiple-choice questions: Score 1 if the predicted answer matches the correct answer.
+- For open-ended questions:
+  * Score 1 if the prediction matches the answer semantically and contains all key elements
+  * Score 0 for partially correct answers or answers with extra incorrect information, even if the reasoning process is correct.
+- Ignore minor differences in formatting, capitalization, or spacing since the model may explain in a different way.
+- Treat numerical answers as correct if they match within reasonable precision
+- For questions requiring units, both value and unit must be correct
+
+# Strict Output format
+[0/1]"""
+
+if API_TYPE == "openai":
+    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+    client = OpenAI(api_key=API_KEY)
+elif API_TYPE == "azure":
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+    client = AzureOpenAI(azure_endpoint=API_URL, api_version="2023-07-01-preview", api_key=API_KEY)
+
+
+def get_chat_response(content: str, max_tokens: int, retries: int = 5):
+    global MODEL_VERSION
+    global client
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful and precise assistant for checking the correctness of the answer.",
+        },
+        {"role": "user", "content": content},
+    ]
+
+    payload = {
+        "model": MODEL_VERSION,
+        "messages": messages,
+        "temperature": 0.2,
+        "max_tokens": max_tokens,
+    }
+
+    for attempt in range(retries):
+        try:
+            response = client.chat.completions.create(**payload)
+            content = response.choices[0].message.content.strip()
+            return content
+        except requests.exceptions.RequestException as e:
+            eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
+            time.sleep(NUM_SECONDS_TO_SLEEP)
+            if attempt == retries - 1:
+                eval_logger.error(f"Failed to get response after {retries} attempts")
+                return ""
+        except Exception as e:
+            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
+            return ""
 
 
 def replace_images_tokens(input_string):
@@ -41,20 +131,23 @@ def parse_options(options):
     return choices_str
 
 
-def construct_prompt(doc):
+def construct_prompt(doc, mc_prompt="", open_ended_prompt=""):
     question = doc["question"]
     if doc["question_type"] == "multiple-choice":
         # Weirdly, data["options"] is a string in MMMU Huggingface dataset
         parsed_options = parse_options(ast.literal_eval(doc["options"]))
         # parsed_options already prepends a newline so no need to add space here
-        question = f"{question}\n{parsed_options}\n\n{MULTI_CHOICE_PROMPT}"
+        question = f"{question}\n{parsed_options}\n\n{mc_prompt}"
     else:
-        question = f"{question}\n\n{OPEN_ENDED_PROMPT}"
+        question = f"{question}\n\n{open_ended_prompt}"
     return question
 
 
-def mmmu_doc_to_text(doc):
-    question = construct_prompt(doc)
+def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is not None and "multiple_choice_prompt" in lmms_eval_specific_kwargs:
+        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
+    else:
+        question = construct_prompt(doc)
     if config["metadata"]["interleaved_format"]:
         question = replace_images_tokens(question)
     return question
@@ -70,20 +163,27 @@ def mmmu_doc_to_visual(doc):
 
 
 def mmmu_process_results(doc, results):
+    parsed_preds = []
+    for pred in results:
+        if doc["question_type"] == "multiple-choice":
+            index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
+            parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
+        else:
+            parsed_pred = parse_open_response(pred)
+
+        parsed_preds.append(parsed_pred)
+
+    mmmu_exact_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_preds}
+    return {"mmmu_acc": mmmu_exact_acc, "mmmu_acc_pass_at_k": mmmu_exact_acc}
+
+
+def mmmu_reasoning_process_results(doc, results):
     pred = results[0]
-    if doc["question_type"] == "multiple-choice":
-        index2ans, all_choices = get_multi_choice_info(ast.literal_eval(doc["options"]))
-        parsed_pred = parse_multi_choice_response(pred, all_choices, index2ans)
-    else:
-        parsed_pred = parse_open_response(pred)
-    id = doc["id"]
-    mmmu_acc = {"id": id, "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_pred}
-    return {
-        "mmmu_acc": mmmu_acc,
-        "submission": {
-            id: pred,
-        },
-    }
+    formatted_question = construct_prompt(doc, MC_PROMPT, OPEN_ENDED_PROMPT)
+    llm_judge_prompt = JUDGE_RULES.format(question=formatted_question, answer=doc["answer"], pred=pred)
+    llm_judge_score = get_chat_response(llm_judge_prompt, max_tokens=20, retries=3)
+    mmmu_judge_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "pred": pred, "score": llm_judge_score}
+    return {"mmmu_judge_acc": mmmu_judge_acc}
 
 
 def extract_subset_name(input_string):
@@ -141,6 +241,17 @@ def mmmu_aggregate_results(results):
     }
     print(printable_results)
     return printable_results["Overall"]["acc"]
+
+
+def mmmu_aggregate_judge_results(results):
+    total_score = 0
+    for result in results:
+        try:
+            total_score += int(result["score"])
+        except:
+            eval_logger.warning(f"Failed to convert score to int for {result['id']}: {result['score']}")
+            total_score += 0
+    return total_score / len(results)
 
 
 ##################
@@ -253,16 +364,20 @@ def evaluate_mmmu(samples):
     judge_dict = dict()
     for sample in samples:
         gold_i = sample["answer"]
-        pred_i = sample["parsed_pred"]
-        if sample["question_type"] == "multiple-choice":
-            correct = eval_multi_choice(gold_i, pred_i)
-        else:  # open question
-            correct = eval_open(gold_i, pred_i)
+        pred_list = sample["parsed_pred"]
+        correct = False
+        for pred_i in pred_list:
+            if sample["question_type"] == "multiple-choice":
+                correct = eval_multi_choice(gold_i, pred_i)
+            else:  # open question
+                correct = eval_open(gold_i, pred_i)
 
-        if correct:
-            judge_dict[sample["id"]] = "Correct"
-            pred_correct += 1
-        else:
+            if correct:
+                judge_dict[sample["id"]] = "Correct"
+                pred_correct += 1
+                break
+
+        if not correct:
             judge_dict[sample["id"]] = "Wrong"
 
     if len(samples) == 0:

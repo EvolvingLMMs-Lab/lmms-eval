@@ -39,9 +39,9 @@ def common_voice_15_doc_to_text(doc, lmms_eval_specific_kwargs):
 def common_voice_15_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
 
-    gt = doc["gt"]
-    source = doc["source"]
-    task = doc["task"]
+    gt = doc["sentence"]
+    source = doc["path"]
+    task = doc["locale"]
 
     data_dict = {"gt": gt, "pred": pred, "source": source, "task": task}
 
@@ -56,7 +56,7 @@ def remove_sp(text, language):
     gt = re.sub(rf"\s+", r" ", gt)  # Replace consecutive spaces in the text with a single space.
     gt = re.sub(f" ?([{PUNCS}])", r"\1", gt)
     gt = gt.lstrip(" ")
-    if language == "zh":
+    if language == "zh-CN":
         gt = re.sub(rf"\s+", r"", gt)
     return gt
 
@@ -147,7 +147,7 @@ def compute_wer(refs, hyps, language):
         if language in ["en"]:
             ref = english_normalizer(ref)
             pred = english_normalizer(pred)
-        if language in ["zh"]:
+        if language in ["zh-CN"]:
             ref = chinese_normalizer(ref)
             pred = chinese_normalizer(pred)
         else:
@@ -155,7 +155,7 @@ def compute_wer(refs, hyps, language):
             pred = basic_normalizer(pred)
         ref_items = tokenizer.tokenize(ref).split()
         pred_items = tokenizer.tokenize(pred).split()
-        if language in ["zh", "yue"]:
+        if language in ["zh-CN", "yue"]:
             ref_items = [x for x in "".join(ref_items)]
             pred_items = [x for x in "".join(pred_items)]
         if i == 0:
@@ -171,7 +171,7 @@ def compute_wer(refs, hyps, language):
 def common_voice_15_wer(results, args):
     refs, hyps = [], []
     for result in results:
-        lan = result["task"][4:]
+        lan = result["task"]
         gt = result["gt"]
         response = result["pred"]
         gt = remove_sp(gt, lan)
