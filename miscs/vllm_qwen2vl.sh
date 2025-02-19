@@ -4,6 +4,10 @@
 
 # cd ~/prod/lmms-eval-public
 # pip3 install -e .
+export VLLM_WORKER_MULTIPROC_METHOD=spawn
+export NCCL_BLOCKING_WAIT=1
+export NCCL_TIMEOUT=18000000
+export NCCL_DEBUG=DEBUG
 
 python3 -m lmms_eval \
     --model vllm \
