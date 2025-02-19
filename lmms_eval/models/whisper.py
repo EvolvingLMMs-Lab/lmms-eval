@@ -176,13 +176,8 @@ class Whisper(lmms):
                 contexts = list(contexts)
 
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
-            #audios = [audio["array"] for audio in flattened_audios]
-            print(audios)
 
             inputs = self.processor(audio=audios, return_tensors="pt", sampling_rate=self.processor.feature_extractor.sampling_rate)
-            # inputs = self.processor(audio=audios, return_tensors="pt", sampling_rate=srs[0])
-
-            print(inputs["input_features"])
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -200,7 +195,7 @@ class Whisper(lmms):
 
             #try:
             #self.model.config.forced_decoder_ids = None
-            cont = self.model.generate(**inputs, task="transcribe", language="en")
+            cont = self.model.generate(**inputs, temperature=gen_kwargs["temperature"], task="transcribe", language="en")
             # cont = self.model.generate(
             #     **inputs,
             #     # do_sample=True if gen_kwargs["temperature"] > 0 else False,
@@ -215,9 +210,7 @@ class Whisper(lmms):
             #     # prompt_ids=self.processor.tokenizer.get_prompt_ids(prompt_template)
             # )
 
-            print(cont)
             answers = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-            print(answers)
             for i, ans in enumerate(answers):
                 for term in until:
                     if len(term) > 0:

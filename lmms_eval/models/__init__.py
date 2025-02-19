@@ -57,6 +57,7 @@ AVAILABLE_MODELS = {
     "aria": "Aria",
     "ross": "Ross",
     "whisper": "Whisper",
+    "whisper_vllm": "WhisperVllm",
 }
 
 
