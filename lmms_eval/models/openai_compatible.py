@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import time
-from copy import deepcopy
 from io import BytesIO
 from typing import List, Tuple, Union
 
@@ -27,6 +26,7 @@ from PIL import Image
 
 load_dotenv(verbose=True)
 
+
 @register_model("openai_compatible")
 class OpenAICompatible(lmms):
     def __init__(
@@ -43,7 +43,7 @@ class OpenAICompatible(lmms):
         self.model_version = model_version
         self.timeout = timeout
         self.max_retries = max_retries
-        self.max_size_in_mb = max_size_in_mb # some models have a limit on the size of the image
+        self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         self.continual_mode = continual_mode
         if self.continual_mode:
             if response_persistent_folder is None:
@@ -62,7 +62,7 @@ class OpenAICompatible(lmms):
                 self.cache_mode = "start"
 
         self.client = OpenAI(api_key=os.getenv("OPENAI_COMPATIBLE_API_KEY"), base_url=os.getenv("OPENAI_COMPATIBLE_API_URL"))
-        
+
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
