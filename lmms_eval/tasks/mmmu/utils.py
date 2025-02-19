@@ -59,17 +59,17 @@ Model Prediction:
 ```
 
 # Evaluation Rules
-- The model prediction contains the reasoning process, you should spot the final answer from the it.
-- For multiple-choice questions: Score 1 if the predicted answer matches the correct answer.
+- The model prediction may contain the reasoning process, you should spot the final answer from it.
+- For multiple-choice questions: Score 1 if the predicted answer matches the ground truth answer, it can be directly in option letters or the content of the options.
 - For open-ended questions:
-  * Score 1 if the prediction matches the answer semantically and contains all key elements
+  * Score 1 if the prediction matches the answer semantically, it can be in different format.
   * Score 0 for partially correct answers or answers with extra incorrect information, even if the reasoning process is correct.
 - Ignore minor differences in formatting, capitalization, or spacing since the model may explain in a different way.
 - Treat numerical answers as correct if they match within reasonable precision
 - For questions requiring units, both value and unit must be correct
 
 # Strict Output format
-[0/1]"""
+0 or 1"""
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
@@ -96,7 +96,7 @@ def get_chat_response(content: str, max_tokens: int, retries: int = 5):
     payload = {
         "model": MODEL_VERSION,
         "messages": messages,
-        "temperature": 0.2,
+        "temperature": 0.0,
         "max_tokens": max_tokens,
     }
 
@@ -144,10 +144,7 @@ def construct_prompt(doc, mc_prompt="", open_ended_prompt=""):
 
 
 def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    if lmms_eval_specific_kwargs is not None and "multiple_choice_prompt" in lmms_eval_specific_kwargs:
-        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
-    else:
-        question = construct_prompt(doc)
+    question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
     if config["metadata"]["interleaved_format"]:
         question = replace_images_tokens(question)
     return question
@@ -178,11 +175,16 @@ def mmmu_process_results(doc, results):
 
 
 def mmmu_reasoning_process_results(doc, results):
-    pred = results[0]
-    formatted_question = construct_prompt(doc, MC_PROMPT, OPEN_ENDED_PROMPT)
-    llm_judge_prompt = JUDGE_RULES.format(question=formatted_question, answer=doc["answer"], pred=pred)
-    llm_judge_score = get_chat_response(llm_judge_prompt, max_tokens=20, retries=3)
-    mmmu_judge_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "pred": pred, "score": llm_judge_score}
+    parsed_preds = []
+    scores = []
+    for pred in results:
+        formatted_question = construct_prompt(doc, MC_PROMPT, OPEN_ENDED_PROMPT)
+        llm_judge_prompt = JUDGE_RULES.format(question=formatted_question, answer=doc["answer"], pred=pred)
+        llm_judge_score = get_chat_response(llm_judge_prompt, max_tokens=20, retries=3)
+        scores.append(llm_judge_score)
+        parsed_preds.append(pred)
+
+    mmmu_judge_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "pred": parsed_preds, "score": scores}
     return {"mmmu_judge_acc": mmmu_judge_acc}
 
 
@@ -247,7 +249,8 @@ def mmmu_aggregate_judge_results(results):
     total_score = 0
     for result in results:
         try:
-            total_score += int(result["score"])
+            item_score = 1 if "1" in result["score"] or "[1]" in result["score"] else 0
+            total_score += item_score
         except:
             eval_logger.warning(f"Failed to convert score to int for {result['id']}: {result['score']}")
             total_score += 0
