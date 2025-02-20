@@ -69,14 +69,9 @@ class VLLM(lmms):
         if isinstance(image, str):
             img = Image.open(image).convert("RGB")
         else:
-            img = image.copy()
+            img = image.convert("RGB")
 
-        output_buffer = BytesIO()
-        img.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+        return img
 
     # Function to encode the video
     def encode_video(self, video_path, max_frames_num=8):
@@ -91,16 +86,12 @@ class VLLM(lmms):
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
-        base64_frames = []
+        pil_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
+            pil_frames.append(img)
 
-        return base64_frames
+        return pil_frames
 
     def flatten(self, input):
         new_list = []
