@@ -7,6 +7,16 @@ doc_to_text: !function utils.mmmu_doc_to_text
 doc_to_target: "answer"
 # The return value of process_results will be used by metrics
 process_results: !function utils.mmmu_reasoning_process_results
+# repeats: 8
+# filter_list:
+#   # - name: "pass@64"
+#   #   filter:
+#   #     - function: "take_first_k"
+#   #       k: 64
+#   - name: "pass@8"
+#     filter:
+#       - function: "take_first_k"
+#         k: 8
 
 metric_list:
   - metric: mmmu_judge_acc
@@ -16,11 +26,15 @@ metric_list:
 lmms_eval_specific_kwargs:
   default:
     prompt_type: "reasoning"
-    multiple_choice_prompt: "Please show step-by-step reasoning, and answer the question with option letter from given choices."
-    open_ended_prompt: "Please show step-by-step reasoning, and answer the question using a single word or phrase."
+    multiple_choice_prompt: "Please reason step by step, and answer the question with option letter from given choices in the format of Answer: <option letter>."
+    open_ended_prompt: "Please reason step by step, and answer the question using a single word or phrase in the format of Answer: <answer>."
 
 generation_kwargs:
-  max_new_tokens: 256
+  max_new_tokens: 16384
+  temperature: 0.7
+  do_sample: true
+  top_p: 0.95
+  top_k: 50
   until:
     - "</s>"
     - "Q:"
