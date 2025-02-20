@@ -2,14 +2,12 @@ import base64
 import json
 import os
 import time
-from copy import deepcopy
 from io import BytesIO
 from typing import List, Tuple, Union
 
 import numpy as np
 import requests as url_requests
 from accelerate import Accelerator, DistributedType
-from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
@@ -21,43 +19,31 @@ try:
 except ImportError:
     pass
 
+from dotenv import find_dotenv, load_dotenv
 from loguru import logger as eval_logger
+from openai import OpenAI
 from PIL import Image
 
-API_TYPE = os.getenv("API_TYPE", "openai")
-NUM_SECONDS_TO_SLEEP = 10
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
+load_dotenv(verbose=True)
 
 
-@register_model("gpt4v")
-class GPT4V(lmms):
+@register_model("openai_compatible")
+class OpenAICompatible(lmms):
     def __init__(
         self,
-        model_version: str = "gpt-4-vision-preview",
-        modality: str = "video",
-        max_frames_num: int = 10,
+        model_version: str = "grok-2-latest",
         timeout: int = 120,
+        max_retries: int = 5,
+        max_size_in_mb: int = 20,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
-        max_size_in_mb: int = 20,
         **kwargs,
     ) -> None:
         super().__init__()
-        # Manually set a image token for GPT4V so that we can search for it
-        # and split the text and image
-        # Here we just use the same token as llava for convenient
         self.model_version = model_version
-        self.modality = modality
-        self.max_frames_num = max_frames_num
-        self.image_token = "<image>"
         self.timeout = timeout
+        self.max_retries = max_retries
+        self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         self.continual_mode = continual_mode
         if self.continual_mode:
             if response_persistent_folder is None:
@@ -75,10 +61,7 @@ class GPT4V(lmms):
                 self.response_cache = {}
                 self.cache_mode = "start"
 
-        if API_TYPE == "openai":
-            self.client = OpenAI(api_key=API_KEY)
-        elif API_TYPE == "azure":
-            self.client = AzureOpenAI(api_key=API_KEY, azure_endpoint=API_URL, api_version=API_VERSION)
+        self.client = OpenAI(api_key=os.getenv("OPENAI_COMPATIBLE_API_KEY"), base_url=os.getenv("OPENAI_COMPATIBLE_API_URL"))
 
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
@@ -94,7 +77,6 @@ class GPT4V(lmms):
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
 
-        self.max_size_in_mb = max_size_in_mb
         self.device = self.accelerator.device
 
     # Function to encode the image
@@ -187,6 +169,7 @@ class GPT4V(lmms):
             payload = {"messages": []}
             payload["model"] = self.model_version
 
+            # When there is no image token in the context, append the image to the text
             payload["messages"].append({"role": "user", "content": []})
             payload["messages"][0]["content"].append({"type": "text", "text": contexts})
             for img in imgs:
@@ -206,8 +189,7 @@ class GPT4V(lmms):
             payload["max_tokens"] = gen_kwargs["max_new_tokens"]
             payload["temperature"] = gen_kwargs["temperature"]
 
-            MAX_RETRIES = 5
-            for attempt in range(MAX_RETRIES):
+            for attempt in range(self.max_retries):
                 try:
                     response = self.client.chat.completions.create(**payload)
                     response_text = response.choices[0].message.content
@@ -215,14 +197,14 @@ class GPT4V(lmms):
 
                 except Exception as e:
                     error_msg = str(e)
-                    eval_logger.info(f"Attempt {attempt + 1}/{MAX_RETRIES} failed with error: {error_msg}")
+                    eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
 
                     # On last attempt, log error and set empty response
-                    if attempt == MAX_RETRIES - 1:
-                        eval_logger.error(f"All {MAX_RETRIES} attempts failed. Last error: {error_msg}")
+                    if attempt == self.max_retries - 1:
+                        eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                         response_text = ""
                     else:
-                        time.sleep(NUM_SECONDS_TO_SLEEP)
+                        time.sleep(self.timeout)
 
             res.append(response_text)
             pbar.update(1)
@@ -237,8 +219,7 @@ class GPT4V(lmms):
         return res
 
     def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError("TODO: Implement multi-round generation for GPT4V")
+        raise NotImplementedError("TODO: Implement multi-round generation for OpenAI compatible models")
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        # TODO
-        assert False, "GPT4V not support"
+        raise NotImplementedError("TODO: Implement loglikelihood for OpenAI compatible models")
