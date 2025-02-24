@@ -40,7 +40,6 @@ AVAILABLE_MODELS = {
     "moviechat": "MovieChat",
     "mplug_owl_video": "mplug_Owl",
     "ola": "Ola",
-    "ola_image": "Ola_image",
     "openai_compatible": "OpenAICompatible",
     "oryx": "Oryx",
     "phi3v": "Phi3v",
