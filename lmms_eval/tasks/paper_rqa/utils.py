@@ -8,7 +8,7 @@ import requests
 import yaml
 import weave
 from loguru import logger as eval_logger
-from lmms_eval.tasks.genai_rqa.prompt import (
+from lmms_eval.tasks.paper_rqa.prompt import (
     EVALUATION_SYSTEM_PROMPT,
     EVALUATION_USER_PROMPT,
     EVALUATION_RESPONSE_SCHEMA
@@ -30,7 +30,7 @@ LABEL_TO_SCORE = {
 }
 
 # 載入配置文件
-with open(Path(__file__).parent / "genai_rqa.yaml", "r") as f:
+with open(Path(__file__).parent / "paper_rqa.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):
@@ -124,7 +124,7 @@ def parse_evaluation(review):
             'completeness_comments': "Error occurred while parsing completeness evaluation"
         }
     
-def genai_rqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def paper_rqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """將文檔轉換為文本格式"""
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
@@ -132,7 +132,7 @@ def genai_rqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
-def genai_rqa_process_results(doc, results):
+def paper_rqa_process_results(doc, results):
     """Process evaluation results using LLM-as-judge approach"""
     try:
         model_response = results[0].strip()
@@ -191,7 +191,7 @@ def genai_rqa_process_results(doc, results):
         }
         return {metric: error_dict for metric in RAG_METRICS}
 
-def genai_rqa_metric_aggregation(results, metric_key):
+def paper_rqa_metric_aggregation(results, metric_key):
     """Aggregate results for a specific metric"""
     try:
         scores = [result["score"] for result in results if "score" in result]
@@ -201,15 +201,15 @@ def genai_rqa_metric_aggregation(results, metric_key):
     except Exception as e:
         eval_logger.info(f"Error in {metric_key} aggregation: {e}")
         return None
-
-def genai_rqa_correctness_aggregation(results):
+    
+def paper_rqa_correctness_aggregation(results):
     """Aggregate correctness scores"""
-    return genai_rqa_metric_aggregation(results, "correctness")
+    return paper_rqa_metric_aggregation(results, "correctness")
 
-def genai_rqa_richness_aggregation(results):
+def paper_rqa_richness_aggregation(results):
     """Aggregate richness scores"""
-    return genai_rqa_metric_aggregation(results, "richness")
+    return paper_rqa_metric_aggregation(results, "richness")
 
-def genai_rqa_completeness_aggregation(results):
+def paper_rqa_completeness_aggregation(results):
     """Aggregate completeness scores"""
-    return genai_rqa_metric_aggregation(results, "completeness")
+    return paper_rqa_metric_aggregation(results, "completeness")
