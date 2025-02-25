@@ -39,8 +39,8 @@ def mmstar_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def exact_match(pred, gt):
     """Brought from MMStar"""
-    answer = gt.lower().strip().replace("\n", " ")
-    predict = pred.lower().strip().replace("\n", " ")
+    answer = gt.lower().replace("\n", " ").strip()
+    predict = pred.lower().replace("\n", " ").strip()
     try:
         if answer == predict[0]:
             return 1.0
