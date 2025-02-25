@@ -105,42 +105,6 @@ def mlvu_aggregate_results(results):
         category2score[task_type]["answered"] += 1
         category2score[task_type]["correct"] += result["pred_answer"] == result["answer"]
 
-    for task_cate in TASK_TYPES:
-        total_correct = 0
-        total_answered = 0
-        for k, v in category2score.items():
-            if task_cate in k:
-                total_correct += v["correct"]
-                total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Task Categories: {task_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
-
-    total_correct = 0
-    total_answered = 0
-    for k, v in category2score.items():
-        total_correct += v["correct"]
-        total_answered += v["answered"]
-    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
-
-    return 100 * total_correct / total_answered if total_answered > 0 else 0
-
-
-
-def mlvu_aggregate_results(results):
-    """
-    Args:
-        results: a list of values returned by process_results
-    Returns:
-        A score
-    """
-    category2score = {}
-    for task_type in TASK_TYPES:
-        category2score[task_type] = {"correct": 0, "answered": 0}
-
-    for result in results:
-        task_type = result["task_type"]
-        category2score[task_type]["answered"] += 1
-        category2score[task_type]["correct"] += result["pred_answer"] == result["answer"]
-
     task_category_scores = {}
 
     # Calculate and log accuracy for each task category
