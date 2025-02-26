@@ -71,7 +71,7 @@ try:
     AutoConfig.register("ola_qwen", OlaConfigQwen)
 except:
     eval_logger.debug("")
-import moviepy.editor as mp
+from moviepy.video.io.VideoFileClip import VideoFileClip
 
 if "USE_SPEECH" in os.environ:
     USE_SPEECH = os.environ["USE_SPEECH"]
@@ -354,7 +354,7 @@ class Ola(lmms):
         return new_list
 
     def extract_audio(self, videos_file_path):
-        my_clip = mp.VideoFileClip(videos_file_path)
+        my_clip = VideoFileClip(videos_file_path)
         return my_clip.audio
 
     def load_audio(self, audio_file_name):
