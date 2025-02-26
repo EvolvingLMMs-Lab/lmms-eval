@@ -1,4 +1,3 @@
-import math
 import os
 os.environ['LOWRES_RESIZE'] = '384x32'
 os.environ['HIGHRES_BASE'] = '0x32'
@@ -12,7 +11,7 @@ os.environ['LOAD_VISION_EARLY'] = '1'
 os.environ['PAD2STRIDE'] = '1'
 os.environ['USE_SPEECH'] = '1'
 import logging
-from typing import List, Optional, Union, Tuple, Sequence
+from typing import List, Optional, Union, Tuple
 from pathlib import Path
 
 import numpy as np
@@ -65,12 +64,7 @@ else:
 @register_model("ola")
 class Ola(lmms):
     '''
-    How to install Ola:
-    0. Navigate to the parent directory.
-    The folder structure should be as follows:
-    Project  
-    ├── lmms-eval  
-    ├── Ola  
+    How to run lmms-eval with Ola model:
 
     1. Install Ola: 
     https://github.com/Ola-Omni/Ola?tab=readme-ov-file#installation
@@ -83,14 +77,27 @@ class Ola(lmms):
     under llms-eval repository (ensure your current directory can see large-v3.pt and BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt)
 
     The path for the project should be like this:
-    Project  
-    ├── lmms-eval  
-    │   ├── lmms_eval
-    ├── Ola  
-    │   ├── ...   
+        Folder/contains/lmms-eval/and/Ola  
+            ├── lmms-eval (current directory)  
+            │   ├── lmms_eval/  
+            │   ├── ...  
+            │   ├── large-v3.pt  
+            │   ├── BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt  
+            ├── Ola  
+            │   ├── ...  
 
-
-
+    4. Run the the command to start evaluate the modeL. For example:
+    ```bash
+        python3 -m accelerate.commands.launch \
+        --num_processes=8 \
+        -m lmms_eval \
+        --model ola\
+        --tasks mme \
+        --batch_size 1 \
+        --log_samples \
+        --log_samples_suffix mme_ola \
+        --output_path ./logs/ 
+    ```
     '''
     def __init__(
         self,
@@ -680,456 +687,6 @@ class Ola(lmms):
 
         pbar.close()
         return res
-
-
-
-        # res = []
-
-        # def _collate(x):
-        #     # the negative sign on len(toks) sorts descending - this has a few advantages:
-        #     # - time estimates will always be over not underestimates, which is more useful for planning
-        #     # - to know the size of a batch when going through the list, you know the first one is always the batch
-        #     #   padded context length. this is useful to simplify the batching logic and more importantly to make
-        #     #   automatic adaptive batches much much easier to implement
-        #     # - any OOMs will happen right away rather than near the end
-        #     toks = self.tokenizer.encode(x[0])
-        #     return -len(toks), x[0]
-
-        
-        # pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
-        # # we group requests by their generation_kwargs,
-        # # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
-        # # in the same batch.
-        # folder_path = '/home/minhthan001/Projects/my_image'
-        # re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
-        # chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        # for chunk in chunks:
-        #     contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-        #     task = task[0]
-        #     split = split[0]
-        #     batched_images = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-        #     flattened_images = self.flatten(batched_images)
-
-
-        #     # Process Images
-        #     image = flattened_images
-        #     image[0].save(os.path.join(folder_path, 'image.jpg'))
-        #     image_sizes = [image[0].size]
-        #     self._image_processor.do_resize = False
-        #     self._image_processor.do_center_crop = False
-        #     image_tensor, image_highres_tensor = [], []
-        #     for visual in image:
-        #         image_tensor_, image_highres_tensor_ = process_anyres_highres_image(visual, self._image_processor)
-        #         image_tensor.append(image_tensor_)
-        #         image_highres_tensor.append(image_highres_tensor_)
-        #     if all(x.shape == image_tensor[0].shape for x in image_tensor):
-        #         image_tensor = torch.stack(image_tensor, dim=0)
-        #     if all(x.shape == image_highres_tensor[0].shape for x in image_highres_tensor):
-        #         image_highres_tensor = torch.stack(image_highres_tensor, dim=0)
-        #     if type(image_tensor) is list:
-        #         image_tensor = [_image.bfloat16().to("cuda") for _image in image_tensor]
-        #     else:
-        #         image_tensor = image_tensor.bfloat16().to("cuda")
-        #     if type(image_highres_tensor) is list:
-        #         image_highres_tensor = [_image.bfloat16().to("cuda") for _image in image_highres_tensor]
-        #     else:
-        #         image_highres_tensor = image_highres_tensor.bfloat16().to("cuda")
-
-
-        #     # we assume all gen kwargs in the batch are the same
-        #     # this is safe to assume because the `grouper` object ensures it.
-        #     gen_kwargs = all_gen_kwargs[0]  
-            
-
-        #     # Set default values for until and max_new_tokens
-        #     until = [self.tokenizer.decode(self.eot_token_id)]
-
-        #     # Update values from gen_kwargs if present
-        #     if "until" in gen_kwargs:
-        #         until = gen_kwargs.pop("until")
-        #         if isinstance(until, str):
-        #             until = [until]
-        #         elif not isinstance(until, list):
-        #             raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
-
-        #     # Dummy tensors, for putting in the model
-        #     speechs = [torch.zeros(1, 3000, 128).bfloat16().to('cuda')]
-        #     speech_lengths = [torch.LongTensor([3000]).to('cuda')]
-        #     speech_wavs = [torch.zeros([1, 480000]).to('cuda')]
-        #     speech_chunks = [torch.LongTensor([1]).to('cuda')]
-
-
-        #     qs = list(contexts)[0]
-        #     # For IMAGE
-        #     if self.model.config.mm_use_im_start_end:
-        #         qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
-        #     else:
-        #         qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
-
-        #     conv = conv_templates[self.conv_template].copy()
-        #     conv.append_message(conv.roles[0], qs)
-        #     conv.append_message(conv.roles[1], None)
-        #     prompt = conv.get_prompt()
-
-        #     input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0)
-
-        #     if self.device_map == "auto":
-        #         input_ids = input_ids.to("cuda")
-        #     else:
-        #         input_ids = input_ids.to(self.device)
-
-        #     pad_token_ids = 151643
-        #     attention_masks = input_ids.ne(pad_token_ids).long().to(self.device)
-            
-        #     stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
-        #     keywords = [stop_str]
-        #     stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
-
-        #     if "max_new_tokens" not in gen_kwargs:
-        #         gen_kwargs["max_new_tokens"] = 256
-        #     if "temperature" not in gen_kwargs:
-        #         gen_kwargs["temperature"] = 0
-        #     if "top_p" not in gen_kwargs:
-        #         gen_kwargs["top_p"] = None
-        #     if "num_beams" not in gen_kwargs:
-        #         gen_kwargs["num_beams"] = 1
-
-
-        #     with torch.inference_mode():
-        #         output_ids = self.model.generate(
-        #             inputs=input_ids,
-        #             images=image_tensor,
-        #             images_highres=image_highres_tensor,
-        #             image_sizes=image_sizes,
-        #             modalities=['image'],
-        #             speech=speechs,
-        #             speech_lengths=speech_lengths,
-        #             speech_chunks=speech_chunks,
-        #             speech_wav=speech_wavs,
-        #             attention_mask=attention_masks,
-        #             use_cache=True,
-        #             stopping_criteria=[stopping_criteria],
-        #             do_sample=True if gen_kwargs["temperature"] > 0 else False,
-        #             temperature=gen_kwargs["temperature"],
-        #             top_p=gen_kwargs["top_p"],
-        #             num_beams=gen_kwargs["num_beams"],
-        #             max_new_tokens=gen_kwargs["max_new_tokens"],
-        #         )
-
-        #     outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-        #     res.append(outputs)
-        #     pbar.update(1)
-        #     print(outputs)
-        #     return res
-        # return res
-
-
-  
-        # FOR AUDIO, THIS PART IS DONE
-
-        # res = []
-
-        # def _collate(x):
-        #     # the negative sign on len(toks) sorts descending - this has a few advantages:
-        #     # - time estimates will always be over not underestimates, which is more useful for planning
-        #     # - to know the size of a batch when going through the list, you know the first one is always the batch
-        #     #   padded context length. this is useful to simplify the batching logic and more importantly to make
-        #     #   automatic adaptive batches much much easier to implement
-        #     # - any OOMs will happen right away rather than near the end
-        #     toks = self.tokenizer.encode(x[0])
-        #     return -len(toks), x[0]
-        
-
-        # pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
-        # # we group requests by their generation_kwargs,
-        # # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
-        # # in the same batch.
-        # re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
-        # chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        # for chunk in chunks:
-        #     contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-        #     task = task[0]
-        #     split = split[0]
-        #     batched_audios = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-        #     flattened_audios = self.flatten(batched_audios)
-            
-        #     # we assume all gen kwargs in the batch are the same
-        #     # this is safe to assume because the `grouper` object ensures it.
-        #     gen_kwargs = all_gen_kwargs[0]  
-            
-
-        #     # Set default values for until and max_new_tokens
-        #     until = [self.tokenizer.decode(self.eot_token_id)]
-
-
-        # # #     '''
-        # # #     For AI2D task
-        # # #     '''
-        # # #     print()
-        # # #     print("------------------------------------")
-        # # #     print(contexts)
-        # # #     print(all_gen_kwargs)
-        # # #     print(doc_to_visual)
-        # # #     print(doc_id)
-        # # #     print(task)
-        # # #     print(split)
-        # # #     print(flattened_audios)
-        # # #     print(gen_kwargs)
-        # # #     print(until)
-
-        # # #     print("----------------------------------------")
-            
-
-            
-
-        #     # Update values from gen_kwargs if present
-        #     if "until" in gen_kwargs:
-        #         until = gen_kwargs.pop("until")
-        #         if isinstance(until, str):
-        #             until = [until]
-        #         elif not isinstance(until, list):
-        #             raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
-
-        #     # if isinstance(contexts, tuple):
-        #     #     contexts = list(contexts)
-
-        #     speechs = []
-        #     speech_lengths = []
-        #     speech_wavs = []
-        #     speech_chunks = []
-        #     for audio in flattened_audios:
-        #         mels, speech_length, speech_chunk, speech_wav = self.process_audio(audio['array'], audio['sampling_rate'])
-        #         speechs.append(mels.bfloat16().to('cuda'))
-        #         speech_lengths.append(speech_length.to('cuda'))
-        #         speech_chunks.append(speech_chunk.to('cuda'))
-        #         speech_wavs.append(speech_wav.to('cuda'))
-
-            
-
-        #     qs = list(contexts)[0]
-        #     if self.model.config.mm_use_im_start_end:
-        #         qs = DEFAULT_IM_START_TOKEN + DEFAULT_SPEECH_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
-        #     else: # For speech
-        #         qs = DEFAULT_SPEECH_TOKEN + "\n" + qs
-
-        #     conv = conv_templates[self.conv_template].copy()
-        #     conv.append_message(conv.roles[0], qs)
-        #     conv.append_message(conv.roles[1], None)
-        #     prompt = conv.get_prompt()
-
-        #     input_ids = tokenizer_speech_token(prompt, self.tokenizer, SPEECH_TOKEN_INDEX, return_tensors="pt").unsqueeze(0)
-
-        #     if self.device_map == "auto":
-        #         input_ids = input_ids.to("cuda")
-        #     else:
-        #         input_ids = input_ids.to(self.device)
-
-        #     pad_token_ids = 151643
-        #     attention_masks = input_ids.ne(pad_token_ids).long().to(self.device)
-            
-        #     stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
-        #     keywords = [stop_str]
-        #     stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
-
-        #     if "max_new_tokens" not in gen_kwargs:
-        #         gen_kwargs["max_new_tokens"] = 256
-        #     if "temperature" not in gen_kwargs:
-        #         gen_kwargs["temperature"] = 0
-        #     if "top_p" not in gen_kwargs:
-        #         gen_kwargs["top_p"] = None
-        #     if "num_beams" not in gen_kwargs:
-        #         gen_kwargs["num_beams"] = 1
-
-            
-
-        #     images = [torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True)]
-        #     images_highres = [torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True)]
-        #     image_sizes = [(224, 224)]
-        #     with torch.inference_mode():
-        #         output_ids = self.model.generate(
-        #             input_ids,
-        #             images=images,
-        #             images_highres=images_highres,
-        #             image_sizes=image_sizes,
-        #             modalities=['text'],
-        #             speech=speechs,
-        #             speech_lengths=speech_lengths,
-        #             speech_chunks=speech_chunks,
-        #             speech_wav=speech_wavs,
-        #             attention_mask=attention_masks,
-        #             use_cache=True,
-        #             stopping_criteria=[stopping_criteria],
-        #             do_sample=True if gen_kwargs["temperature"] > 0 else False,
-        #             temperature=gen_kwargs["temperature"],
-        #             top_p=gen_kwargs["top_p"],
-        #             num_beams=gen_kwargs["num_beams"],
-        #             max_new_tokens=gen_kwargs["max_new_tokens"],
-        #             )
-        #     outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-        #     # For librispeech
-        #     if "librispeech" in task:
-        #         outputs = outputs.upper()
-        #     res.append(outputs)
-        #     pbar.update(1)
-        # return res
-            
-
-
-        # ------------------------------------------
-        # pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
-        # for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-        #     visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-        #     visuals = self.flatten(visuals)
-        #     print(visuals)
-        #     videos = []
-        #     modalities = []
-        #     speechs = []
-        #     speech_lengths = []
-        #     speech_wavs = []
-        #     has_speech = False
-        #     try:
-        #         if task == "mvbench_episodic_reasoning":
-        #             sampled_frm = min(len(visuals), self.max_frames_num)
-        #             indices = np.linspace(0, len(visuals) - 1, sampled_frm, dtype=int)
-        #             frames = [visuals[i] for i in indices]
-        #             video = np.stack([np.array(x) for x in frames])
-        #             modality = 'video'
-        #             frames = []
-        #             for frame in video:
-        #                 self._image_processor.do_resize = False
-        #                 self._image_processor.do_center_crop = False
-        #                 frames.append(process_anyres_video(Image.fromarray(frame).convert('RGB'), self._image_processor))
-        #             video = torch.stack(frames, dim=0).bfloat16().to(self.device)
-        #             videos.append(video)
-        #             modalities.append(modality)
-        #             if USE_SPEECH:
-        #                 try:
-        #                     audio_path = visual.replace('.mp4', '.wav').replace('.mkv', '.wav')
-        #                     audio = extract_audio(visual)
-        #                     audio.write_audiofile(audio_path)
-        #                     speech, speech_length, speech_chunks, speech_wav = self.load_audio(audio_path)
-        #                     speechs.append(speech.bfloat16().to(self.device))
-        #                     speech_lengths.append(speech_length.to(self.device))
-        #                     speech_wavs.append(speech_wav.to(self.device))
-        #                     has_speech = True
-        #                 except:
-        #                     print(f"audio for {audio_path} not found")
-        #                     speechs = [torch.zeros(1, 3000, 128).bfloat16().to(self.device)]
-        #                     speech_lengths = [torch.LongTensor([3000]).to(self.device)]
-        #                     speech_wavs = [torch.zeros([1, 480000]).to(self.device)]
-        #                     has_speech = False
-        #             else:
-        #                 speechs = [torch.zeros(1, 3000, 128).bfloat16().to(self.device)]
-        #                 speech_lengths = [torch.LongTensor([3000]).to(self.device)]
-        #                 speech_wavs = [torch.zeros([1, 480000]).to(self.device)]
-        #         else:
-        #             for visual in visuals:
-        #                 if self.video_decode_backend == "decord":
-        #                     video, modality = self.load_video(visual, self.max_frames_num)
-        #                 elif self.video_decode_backend == "pyav":
-        #                     video, modality = read_video_pyav(visual, num_frm=self.max_frames_num)
-        #                 # video = self.load_video(visual, self.max_frames_num)
-        #                 frames = []
-        #                 for frame in video:
-        #                     self._image_processor.do_resize = False
-        #                     self._image_processor.do_center_crop = False
-        #                     frames.append(process_anyres_video(Image.fromarray(frame).convert('RGB'), self._image_processor))
-        #                 video = torch.stack(frames, dim=0).bfloat16().to(self.device)
-        #                 videos.append(video)
-        #                 modalities.append(modality)
-        #                 if USE_SPEECH:
-        #                     try:
-        #                         audio_path = visual.replace('.mp4', '.wav').replace('.mkv', '.wav')
-        #                         audio = extract_audio(visual)
-        #                         audio.write_audiofile(audio_path)
-        #                         speech, speech_length, speech_chunks, speech_wav = self.load_audio(audio_path)
-        #                         speechs.append(speech.bfloat16().to(self.device))
-        #                         speech_lengths.append(speech_length.to(self.device))
-        #                         speech_wavs.append(speech_wav.to(self.device))
-        #                         has_speech = True
-        #                     except:
-        #                         print(f"audio for {audio_path} not found")
-        #                         speechs = [torch.zeros(1, 3000, 128).bfloat16().to(self.device)]
-        #                         speech_lengths = [torch.LongTensor([3000]).to(self.device)]
-        #                         speech_wavs = [torch.zeros([1, 480000]).to(self.device)]
-        #                         has_speech = False
-        #                 else:
-        #                     speechs = [torch.zeros(1, 3000, 128).bfloat16().to(self.device)]
-        #                     speech_lengths = [torch.LongTensor([3000]).to(self.device)]
-        #                     speech_wavs = [torch.zeros([1, 480000]).to(self.device)]
-
-
-        #     except Exception as e:
-        #         eval_logger.info(f"{e}")
-        #         eval_logger.info(f"Video {visuals} can not load, check the source")
-        #         video_path = "\n".join(visuals)
-        #         res.append(f"Video {video_path} can not load, check the source")
-        #         pbar.update(1)
-        #         continue
-            
-        #     qs = contexts
-        #     if USE_SPEECH and has_speech:
-        #         qs = DEFAULT_SPEECH_TOKEN + DEFAULT_IMAGE_TOKEN + "\n" + qs
-        #     else:
-        #         qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
-        #     conv = conv_templates[self.conv_template].copy()
-
-        #     conv.append_message(conv.roles[0], qs)
-        #     conv.append_message(conv.roles[1], None)
-        #     prompt = conv.get_prompt()
-            
-        #     if USE_SPEECH and has_speech:
-        #         input_ids = tokenizer_speech_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
-        #     else:
-        #         input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
-        #     # pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
-            
-        #     # sources = [{'from': 'human', 'value': f'{qs}'}, {'from': 'gpt', 'value': None}]
-        #     # input_ids = preprocess_qwen([sources], tokenizer=self.tokenizer, has_image=True, has_speech=True)
-        #     pad_token_ids = 151643
-        #     attention_masks = input_ids.ne(pad_token_ids).long().to(self.device)
-        #     stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
-        #     keywords = [stop_str]
-        #     stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
-
-        #     if "max_new_tokens" not in gen_kwargs:
-        #         gen_kwargs["max_new_tokens"] = 1024
-        #     if "temperature" not in gen_kwargs:
-        #         gen_kwargs["temperature"] = 0.2
-        #     if "top_p" not in gen_kwargs:
-        #         gen_kwargs["top_p"] = None
-        #     if "num_beams" not in gen_kwargs:
-        #         gen_kwargs["num_beams"] = 1
-
-        #     with torch.inference_mode():
-        #         output_ids = self.model.generate(
-        #             inputs=input_ids,
-        #             images=videos,
-        #             images_highres=videos,
-        #             speech=speechs,
-        #             speech_lengths=speech_lengths,
-        #             speech_wav=speech_wavs,
-        #             attention_mask=attention_masks,
-        #             modalities=modalities,
-        #             use_cache=self.use_cache,
-        #             stopping_criteria=[stopping_criteria],
-        #             do_sample=True if gen_kwargs["temperature"] > 0 else False,
-        #             temperature=gen_kwargs["temperature"],
-        #             top_p=gen_kwargs["top_p"],
-        #             num_beams=gen_kwargs["num_beams"],
-        #             max_new_tokens=gen_kwargs["max_new_tokens"],
-        #         )
-        #     outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-        #     res.append(outputs)
-        #     pbar.update(1)
-        #     # except Exception as e:
-        #     #     eval_logger.info(f"{e}")
-        #     #     eval_logger.info(f"Video {visuals} generate failed, check the source")
-        #     #     video_path = "\n".join(visuals)
-        #     #     res.append(f"Video {video_path} generate failed, check the source")
-        #     #     pbar.update(1)
-        #     #     continue
-        # return res
     
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation")
