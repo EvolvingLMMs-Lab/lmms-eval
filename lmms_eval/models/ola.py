@@ -264,7 +264,7 @@ class Ola(lmms):
 
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         video = [PIL.Image.fromarray(frame) for frame in spare_frames]
-        return video
+        return video, frame_idx
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
@@ -460,7 +460,7 @@ class Ola(lmms):
                         MODALITY = "VIDEO"
                     # Process audio of video
                     try: 
-                        video = self.load_video(visual, self.max_frames_num)
+                        video, frame_idx = self.load_video(visual, self.max_frames_num)
                     except Exception as e:
                         eval_logger.info(f"{e}")
                         eval_logger.info(f"Video {visuals} can not load, check the source")
