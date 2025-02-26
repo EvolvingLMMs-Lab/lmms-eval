@@ -1,61 +1,80 @@
 import os
-os.environ['LOWRES_RESIZE'] = '384x32'
-os.environ['HIGHRES_BASE'] = '0x32'
-os.environ['VIDEO_RESIZE'] = "0x64"
-os.environ['VIDEO_MAXRES'] = "480"
-os.environ['VIDEO_MINRES'] = "288"
-os.environ['MAXRES'] = '1536'
-os.environ['MINRES'] = '0'
-os.environ['FORCE_NO_DOWNSAMPLE'] = '1'
-os.environ['LOAD_VISION_EARLY'] = '1'
-os.environ['PAD2STRIDE'] = '1'
-os.environ['USE_SPEECH'] = '1'
-import logging
-from typing import List, Optional, Union, Tuple
-from pathlib import Path
 
+os.environ["LOWRES_RESIZE"] = "384x32"
+os.environ["HIGHRES_BASE"] = "0x32"
+os.environ["VIDEO_RESIZE"] = "0x64"
+os.environ["VIDEO_MAXRES"] = "480"
+os.environ["VIDEO_MINRES"] = "288"
+os.environ["MAXRES"] = "1536"
+os.environ["MINRES"] = "0"
+os.environ["FORCE_NO_DOWNSAMPLE"] = "1"
+os.environ["LOAD_VISION_EARLY"] = "1"
+os.environ["PAD2STRIDE"] = "1"
+os.environ["USE_SPEECH"] = "1"
+import copy
+import logging
+from datetime import timedelta
+from pathlib import Path
+from typing import List, Optional, Tuple, Union
+
+import librosa
 import numpy as np
+import PIL
+import soundfile as sf
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from tqdm import tqdm
 from decord import VideoReader, cpu
-from datetime import timedelta
+from tqdm import tqdm
 from transformers import AutoConfig
-import copy
-import PIL
-import librosa
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
 from lmms_eval.models.model_utils.audio_processing import downsample_audio
+from lmms_eval.models.model_utils.load_video import read_video_pyav
 
-import soundfile as sf
 eval_logger = logging.getLogger("lmms-eval")
 
 import sys
+
 wd = Path(__file__).parent.parent.parent.parent.resolve()
 sys.path.append(os.path.join(str(wd), "Ola"))
 
 import whisper
+from ola.constants import (
+    DEFAULT_IM_END_TOKEN,
+    DEFAULT_IM_START_TOKEN,
+    DEFAULT_IMAGE_TOKEN,
+    DEFAULT_SPEECH_TOKEN,
+    IMAGE_TOKEN_INDEX,
+    SPEECH_TOKEN_INDEX,
+)
+from ola.conversation import SeparatorStyle, conv_templates
+from ola.datasets.preprocess import (
+    tokenizer_image_token,
+    tokenizer_speech_image_token,
+    tokenizer_speech_token,
+)
+from ola.mm_utils import (
+    KeywordsStoppingCriteria,
+    get_model_name_from_path,
+    process_anyres_highres_image,
+    process_anyres_video,
+)
 from ola.model.builder import load_pretrained_model
-from ola.mm_utils import get_model_name_from_path, KeywordsStoppingCriteria, process_anyres_video, process_anyres_highres_image
-from ola.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, DEFAULT_SPEECH_TOKEN, SPEECH_TOKEN_INDEX
-from ola.conversation import conv_templates, SeparatorStyle
-from ola.datasets.preprocess import tokenizer_image_token, tokenizer_speech_token, tokenizer_speech_image_token
 
 try:
     from ola.model.language_model.ola_qwen import OlaConfigQwen
+
     AutoConfig.register("ola_qwen", OlaConfigQwen)
 except:
     eval_logger.debug("")
 import moviepy.editor as mp
 
 if "USE_SPEECH" in os.environ:
-    USE_SPEECH = os.environ['USE_SPEECH']
+    USE_SPEECH = os.environ["USE_SPEECH"]
     print("USE_SPEECH is set")
 else:
     USE_SPEECH = None
@@ -63,7 +82,7 @@ else:
 
 @register_model("ola")
 class Ola(lmms):
-    '''
+    """
     How to run lmms-eval with Ola model:
 
     1. Install Ola: 
@@ -98,7 +117,8 @@ class Ola(lmms):
         --log_samples_suffix mme_ola \
         --output_path ./logs/ 
     ```
-    '''
+    """
+
     def __init__(
         self,
         pretrained: str = "THUdyh/Ola-7b",
@@ -156,7 +176,7 @@ class Ola(lmms):
             )
 
         self._config = self._model.config
-        self.model.to('cuda').eval().bfloat16()
+        self.model.to("cuda").eval().bfloat16()
         self.model.tie_weights()
         self.truncation = truncation
         self.batch_size_per_gpu = int(batch_size)
@@ -194,7 +214,7 @@ class Ola(lmms):
             self._rank = 0
             self._world_size = 1
         self.accelerator = accelerator
-        
+
     @property
     def config(self):
         # return the associated transformers.AutoConfig for the given pretrained model.
@@ -337,10 +357,10 @@ class Ola(lmms):
         my_clip = mp.VideoFileClip(videos_file_path)
         return my_clip.audio
 
-
     def load_audio(self, audio_file_name):
         CHUNK_LIM = 480000
         import librosa
+
         audio, samplerate = librosa.load(audio_file_name, sr=16000)
         audio = audio.astype(np.float32)
 
@@ -376,17 +396,17 @@ class Ola(lmms):
 
         return mels, speech_length, speech_chunks, speech_wavs
 
-
     def process_audio(self, audio_array, sampling_rate):
-        '''
+        """
         Process audio array to format of Ola model
-        '''
+        """
         audio = audio_array.astype(np.float32)
         if len(audio.shape) > 1:
             audio = audio[:, 0]
         target_sr = 16000
         CHUNK_LIM = 480000
         import librosa
+
         if sampling_rate != target_sr:
             speech_wav = librosa.resample(audio_array, orig_sr=sampling_rate, target_sr=target_sr).astype(np.float32)
         speechs = []
@@ -419,11 +439,10 @@ class Ola(lmms):
         speech_chunks = torch.LongTensor([mels.shape[0]])
         return mels, speech_length, speech_chunks, speech_wavs
 
-
     def generate_until(self, requests) -> List[str]:
         MODALITY = None
         res = []
-        
+
         def _collate(x):
             # the negative sign on len(toks) sorts descending - this has a few advantages:
             # - time estimates will always be over not underestimates, which is more useful for planning
@@ -447,19 +466,19 @@ class Ola(lmms):
             split = split[0]
             context = contexts[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            visuals = self.flatten(visuals) # Len = 1. just an audio tho
-            
+            visuals = self.flatten(visuals)  # Len = 1. just an audio tho
+
             speechs, speech_lengths, speech_wavs, speech_chunks = [], [], [], []
-            images, images_highres = [], [] # For dummy image passed in audio modality
+            images, images_highres = [], []  # For dummy image passed in audio modality
             image_sizes = []
-            image_tensor, image_highres_tensor = [], [] # For image
-            video_processed = [] # For video only
+            image_tensor, image_highres_tensor = [], []  # For image
+            video_processed = []  # For video only
             for visual in visuals:
-                if isinstance(visual, str): # For Video
+                if isinstance(visual, str):  # For Video
                     if MODALITY is None:
                         MODALITY = "VIDEO"
                     # Process audio of video
-                    try: 
+                    try:
                         video, frame_idx = self.load_video(visual, self.max_frames_num)
                     except Exception as e:
                         eval_logger.info(f"{e}")
@@ -467,12 +486,12 @@ class Ola(lmms):
                         continue
                     audio = self.extract_audio(visual)
                     audio.write_audiofile("./video_audio.wav")
-                    video_audio_path = './video_audio.wav'
+                    video_audio_path = "./video_audio.wav"
                     speech, speech_length, speech_chunk, speech_wav = self.load_audio(video_audio_path)
-                    speechs.append(speech.bfloat16().to('cuda'))
-                    speech_lengths.append(speech_length.to('cuda'))
-                    speech_chunks.append(speech_chunk.to('cuda'))
-                    speech_wavs.append(speech_wav.to('cuda'))
+                    speechs.append(speech.bfloat16().to("cuda"))
+                    speech_lengths.append(speech_length.to("cuda"))
+                    speech_chunks.append(speech_chunk.to("cuda"))
+                    speech_wavs.append(speech_wav.to("cuda"))
                     os.remove(video_audio_path)
 
                     # Process images of video
@@ -485,16 +504,16 @@ class Ola(lmms):
                             video_processed.append(frame.unsqueeze(0))
                         elif frame_idx is None:
                             video_processed.append(frame.unsqueeze(0))
-                    
+
                     if frame_idx is None:
                         frame_idx = np.arange(0, len(video_processed), dtype=int).tolist()
-                    
+
                     video_processed = torch.cat(video_processed, dim=0).bfloat16().to("cuda")
                     video_processed = (video_processed, video_processed)
 
                     video_data = (video_processed, (384, 384), "video")
 
-                elif isinstance(visual, PIL.Image.Image): # For Image
+                elif isinstance(visual, PIL.Image.Image):  # For Image
                     if MODALITY is None:
                         MODALITY = "IMAGE"
                     self._image_processor.do_resize = False
@@ -517,30 +536,30 @@ class Ola(lmms):
                         image_highres_tensor = image_highres_tensor.bfloat16().to("cuda")
 
                     # Processing dummy audio, as required by model
-                    speechs.append(torch.zeros(1, 3000, 128).bfloat16().to('cuda'))
-                    speech_lengths.append(torch.LongTensor([3000]).to('cuda'))
-                    speech_wavs.append(torch.zeros([1, 480000]).to('cuda'))
-                    speech_chunks.append(torch.LongTensor([1]).to('cuda'))
+                    speechs.append(torch.zeros(1, 3000, 128).bfloat16().to("cuda"))
+                    speech_lengths.append(torch.LongTensor([3000]).to("cuda"))
+                    speech_wavs.append(torch.zeros([1, 480000]).to("cuda"))
+                    speech_chunks.append(torch.LongTensor([1]).to("cuda"))
 
-                elif isinstance(visual, dict) and "array" in visual: # For Audio
+                elif isinstance(visual, dict) and "array" in visual:  # For Audio
                     if MODALITY is None:
                         MODALITY = "AUDIO"
-                    mels, speech_length, speech_chunk, speech_wav = self.process_audio(visual['array'], visual['sampling_rate'])
-                    speechs.append(mels.bfloat16().to('cuda'))
-                    speech_lengths.append(speech_length.to('cuda'))
-                    speech_chunks.append(speech_chunk.to('cuda'))
-                    speech_wavs.append(speech_wav.to('cuda'))
+                    mels, speech_length, speech_chunk, speech_wav = self.process_audio(visual["array"], visual["sampling_rate"])
+                    speechs.append(mels.bfloat16().to("cuda"))
+                    speech_lengths.append(speech_length.to("cuda"))
+                    speech_chunks.append(speech_chunk.to("cuda"))
+                    speech_wavs.append(speech_wav.to("cuda"))
 
                     # Processing dummy images, as required by model
-                    images.append(torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True))
-                    images_highres.append(torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device='cuda', non_blocking=True))
+                    images.append(torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device="cuda", non_blocking=True))
+                    images_highres.append(torch.zeros(1, 3, 224, 224).to(dtype=torch.bfloat16, device="cuda", non_blocking=True))
                     image_sizes.append((224, 224))
 
-            if not video_processed and MODALITY == 'VIDEO': 
+            if not video_processed and MODALITY == "VIDEO":
                 # If video is not processed, skip the iteration
                 pbar.update(1)
-                continue     
-                
+                continue
+
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
@@ -565,7 +584,7 @@ class Ola(lmms):
                     qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
                 elif MODALITY == "VIDEO":
                     qs = DEFAULT_IM_START_TOKEN + DEFAULT_SPEECH_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
-            else: 
+            else:
                 if MODALITY == "AUDIO":
                     qs = DEFAULT_SPEECH_TOKEN + "\n" + qs
                 elif MODALITY == "IMAGE":
@@ -573,26 +592,23 @@ class Ola(lmms):
                 elif MODALITY == "VIDEO":
                     qs = DEFAULT_SPEECH_TOKEN + DEFAULT_IMAGE_TOKEN + "\n" + qs
 
-
             conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], qs)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Prompt for doc ID {doc_id[0]}:\n\n{prompt}\n")
-
 
             if MODALITY == "AUDIO":
                 input_ids = tokenizer_speech_token(prompt, self.tokenizer, SPEECH_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
             elif MODALITY == "IMAGE":
                 input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
             elif MODALITY == "VIDEO":
-                input_ids = tokenizer_speech_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to('cuda')
+                input_ids = tokenizer_speech_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to("cuda")
             pad_token_ids = 151643
             attention_masks = input_ids.ne(pad_token_ids).long().to(self.device)
-            
+
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
             stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
@@ -606,7 +622,6 @@ class Ola(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-
             try:
                 with torch.inference_mode():
                     if MODALITY == "AUDIO":
@@ -615,7 +630,7 @@ class Ola(lmms):
                             images=images,
                             images_highres=images_highres,
                             image_sizes=image_sizes,
-                            modalities=['text'],
+                            modalities=["text"],
                             speech=speechs,
                             speech_lengths=speech_lengths,
                             speech_chunks=speech_chunks,
@@ -628,14 +643,14 @@ class Ola(lmms):
                             top_p=gen_kwargs["top_p"],
                             num_beams=gen_kwargs["num_beams"],
                             max_new_tokens=gen_kwargs["max_new_tokens"],
-                            )
+                        )
                     elif MODALITY == "IMAGE":
                         output_ids = self.model.generate(
                             inputs=input_ids,
                             images=image_tensor,
                             images_highres=image_highres_tensor,
                             image_sizes=image_sizes,
-                            modalities=['image'],
+                            modalities=["image"],
                             speech=speechs,
                             speech_lengths=speech_lengths,
                             speech_chunks=speech_chunks,
@@ -687,7 +702,6 @@ class Ola(lmms):
 
         pbar.close()
         return res
-    
+
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation")
-
