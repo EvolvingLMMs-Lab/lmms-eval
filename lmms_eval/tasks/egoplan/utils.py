@@ -1,19 +1,18 @@
-from collections import defaultdict
-import os
 import datetime
 import json
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-
-
-from pathlib import Path
-import yaml
-import sys
-from typing import List, Dict, Optional, Union
+import os
 import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
 import cv2
 import numpy as np
-
+import yaml
 from loguru import logger as eval_logger
+
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 # with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 #     raw_data = f.readlines()
@@ -137,31 +136,35 @@ def egoplan_doc_to_visual(doc):
 
 
 def egoplan_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    task_goal=doc["task_goal"]
+    task_goal = doc["task_goal"]
     if "goal" in task_goal:
         task_goal = task_goal.split("to", 1)[1].strip()
-    words=task_goal.split()
+    words = task_goal.split()
     if words[0].endswith("ing"):
-        question_pattern = "I am tasked with {}. " \
-                               "The task's progress is demonstrated in the provided video. " \
-                               "My current field of view is shown in the provided image. " \
-                               "What should be my next action? " \
-                               "Please output the most reasonable action you think, expressed in a short phrase."
+        question_pattern = (
+            "I am tasked with {}. "
+            "The task's progress is demonstrated in the provided video. "
+            "My current field of view is shown in the provided image. "
+            "What should be my next action? "
+            "Please output the most reasonable action you think, expressed in a short phrase."
+        )
     else:
-        question_pattern = "My current task is to {}. " \
-                               "The task's progress is demonstrated in the provided video. " \
-                               "My current field of view is shown in the provided image. " \
-                               "What should be my next action? " \
-                               "Please output the most reasonable action you think, expressed in a short phrase."
+        question_pattern = (
+            "My current task is to {}. "
+            "The task's progress is demonstrated in the provided video. "
+            "My current field of view is shown in the provided image. "
+            "What should be my next action? "
+            "Please output the most reasonable action you think, expressed in a short phrase."
+        )
     question = question_pattern.format(task_goal)
-                               
+
     candidates = []
     for choice_idx in ["A", "B", "C", "D"]:
-        question+="\n"+f"{choice_idx}. "+(doc[f"choice_{choice_idx.lower()}"])
+        question += "\n" + f"{choice_idx}. " + (doc[f"choice_{choice_idx.lower()}"])
     post_prompt = "\nAnswer with the option's letter from the given choices"
-    
 
     return f"{question}{post_prompt}"
+
 
 def extract_characters_regex(s):
     s = s.strip()
@@ -184,22 +187,21 @@ def extract_characters_regex(s):
         return ""
     return matches[0]
 
-def egoplan_process_results(doc, results):
 
+def egoplan_process_results(doc, results):
     pred = results[0]
     pred_ans = extract_characters_regex(pred)
     # gt_ans = doc["answer"].lower().strip().replace(".", "")
-    doc['pred_answer'] = pred_ans
-    data_dict=doc.copy()
+    doc["pred_answer"] = pred_ans
+    data_dict = doc.copy()
     return {f"egoplan_mcq_accuracy": data_dict}
 
 
 def egoplan_aggregate_results(results):
-
-    correct_num=0
+    correct_num = 0
     for result in results:
-        if result['pred_answer'] == result['golden_choice_idx']:
-            correct_num+=1
-    question_num=len(results)
-    accuracy=correct_num/question_num
+        if result["pred_answer"] == result["golden_choice_idx"]:
+            correct_num += 1
+    question_num = len(results)
+    accuracy = correct_num / question_num
     return accuracy
