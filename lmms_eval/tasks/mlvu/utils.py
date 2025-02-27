@@ -14,7 +14,7 @@ from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-TASK_TYPES = ["TR", "AR", "VS", "NQA", "ER", "PQA", "SSC", "AO", "AC"]
+TASK_TYPES = ["TR", "AR", "NQA", "ER", "PQA", "AO", "AC"]
 
 
 hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
@@ -105,6 +105,9 @@ def mlvu_aggregate_results(results):
         category2score[task_type]["answered"] += 1
         category2score[task_type]["correct"] += result["pred_answer"] == result["answer"]
 
+    task_category_scores = {}
+
+    # Calculate and log accuracy for each task category
     for task_cate in TASK_TYPES:
         total_correct = 0
         total_answered = 0
@@ -112,13 +115,16 @@ def mlvu_aggregate_results(results):
             if task_cate in k:
                 total_correct += v["correct"]
                 total_answered += v["answered"]
-        eval_logger.info(f"Evaluation on Task Categories: {task_cate}: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+        accuracy = 100 * total_correct / total_answered if total_answered > 0 else 0
+        task_category_scores[task_cate] = accuracy
+        eval_logger.info(f"Evaluation on Task Categories: {task_cate}: {accuracy:.1f}%")
 
-    total_correct = 0
-    total_answered = 0
-    for k, v in category2score.items():
-        total_correct += v["correct"]
-        total_answered += v["answered"]
-    eval_logger.info(f"Overall Performance: {100 * total_correct / total_answered if total_answered > 0 else 0 : .1f}%")
+    # Calculate and log average accuracy across all task categories
+    if TASK_TYPES:
+        average_accuracy = sum(task_category_scores.values()) / len(TASK_TYPES)
+    else:
+        average_accuracy = 0
 
-    return 100 * total_correct / total_answered if total_answered > 0 else 0
+    eval_logger.info(f"Average Performance Across All Task Categories: {average_accuracy:.1f}%")
+
+    return average_accuracy
