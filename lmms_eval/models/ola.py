@@ -72,6 +72,8 @@ try:
 except:
     eval_logger.debug("")
 import moviepy.editor as mp
+from moviepy.video.io.VideoFileClip import VideoFileClip
+
 
 if "USE_SPEECH" in os.environ:
     USE_SPEECH = os.environ["USE_SPEECH"]
@@ -406,6 +408,7 @@ class Ola(lmms):
         CHUNK_LIM = 480000
         import librosa
 
+
         speech_wav = audio_array
         if sampling_rate != target_sr:
             speech_wav = librosa.resample(audio_array, orig_sr=sampling_rate, target_sr=target_sr).astype(np.float32)
@@ -510,7 +513,6 @@ class Ola(lmms):
 
                     video_processed = torch.cat(video_processed, dim=0).bfloat16().to(self.device)
                     video_processed = (video_processed, video_processed)
-
                     video_data = (video_processed, (384, 384), "video")
 
                 elif isinstance(visual, PIL.Image.Image):  # For Image
@@ -541,10 +543,12 @@ class Ola(lmms):
                     speech_wavs.append(torch.zeros([1, 480000]).to(self.device))
                     speech_chunks.append(torch.LongTensor([1]).to(self.device))
 
+
                 elif isinstance(visual, dict) and "array" in visual:  # For Audio
                     if MODALITY is None:
                         MODALITY = "AUDIO"
                     mels, speech_length, speech_chunk, speech_wav = self.process_audio(visual["array"], visual["sampling_rate"])
+
                     speechs.append(mels.bfloat16().to(self.device))
                     speech_lengths.append(speech_length.to(self.device))
                     speech_chunks.append(speech_chunk.to(self.device))
@@ -606,6 +610,7 @@ class Ola(lmms):
                 input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
             elif MODALITY == "VIDEO":
                 input_ids = tokenizer_speech_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
+
             pad_token_ids = 151643
             attention_masks = input_ids.ne(pad_token_ids).long().to(self.device)
 
