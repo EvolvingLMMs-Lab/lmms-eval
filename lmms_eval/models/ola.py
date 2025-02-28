@@ -404,11 +404,11 @@ class Ola(lmms):
             audio = audio[:, 0]
         target_sr = 16000
         CHUNK_LIM = 480000
-        import librosa
 
-        speech_wav = audio_array
         if sampling_rate != target_sr:
             speech_wav = librosa.resample(audio_array, orig_sr=sampling_rate, target_sr=target_sr).astype(np.float32)
+        else:
+            speech_wav = audio_array.astype(np.float32)
         speechs = []
         speech_wavs = []
 
@@ -522,24 +522,6 @@ class Ola(lmms):
                     image_tensor_, image_highres_tensor_ = process_anyres_highres_image(visual, self._image_processor)
                     image_tensor.append(image_tensor_)
                     image_highres_tensor.append(image_highres_tensor_)
-                    if all(x.shape == image_tensor[0].shape for x in image_tensor):
-                        image_tensor = torch.stack(image_tensor, dim=0)
-                    if all(x.shape == image_highres_tensor[0].shape for x in image_highres_tensor):
-                        image_highres_tensor = torch.stack(image_highres_tensor, dim=0)
-                    if type(image_tensor) is list:
-                        image_tensor = [_image.bfloat16().to(self.device) for _image in image_tensor]
-                    else:
-                        image_tensor = image_tensor.bfloat16().to(self.device)
-                    if type(image_highres_tensor) is list:
-                        image_highres_tensor = [_image.bfloat16().to(self.device) for _image in image_highres_tensor]
-                    else:
-                        image_highres_tensor = image_highres_tensor.bfloat16().to(self.device)
-
-                    # Processing dummy audio, as required by model
-                    speechs.append(torch.zeros(1, 3000, 128).bfloat16().to(self.device))
-                    speech_lengths.append(torch.LongTensor([3000]).to(self.device))
-                    speech_wavs.append(torch.zeros([1, 480000]).to(self.device))
-                    speech_chunks.append(torch.LongTensor([1]).to(self.device))
 
                 elif isinstance(visual, dict) and "array" in visual:  # For Audio
                     if MODALITY is None:
@@ -559,6 +541,26 @@ class Ola(lmms):
                 # If video is not processed, skip the iteration
                 pbar.update(1)
                 continue
+
+            if MODALITY == "IMAGE":
+                if all(x.shape == image_tensor[0].shape for x in image_tensor):
+                    image_tensor = torch.stack(image_tensor, dim=0)
+                if all(x.shape == image_highres_tensor[0].shape for x in image_highres_tensor):
+                    image_highres_tensor = torch.stack(image_highres_tensor, dim=0)
+                if type(image_tensor) is list:
+                    image_tensor = [_image.bfloat16().to("cuda") for _image in image_tensor]
+                else:
+                    image_tensor = image_tensor.bfloat16().to("cuda")
+                if type(image_highres_tensor) is list:
+                    image_highres_tensor = [_image.bfloat16().to("cuda") for _image in image_highres_tensor]
+                else:
+                    image_highres_tensor = image_highres_tensor.bfloat16().to("cuda")
+
+                # Processing dummy audio, as required by model
+                speechs.append(torch.zeros(1, 3000, 128).bfloat16().to("cuda"))
+                speech_lengths.append(torch.LongTensor([3000]).to("cuda"))
+                speech_wavs.append(torch.zeros([1, 480000]).to("cuda"))
+                speech_chunks.append(torch.LongTensor([1]).to("cuda"))
 
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
