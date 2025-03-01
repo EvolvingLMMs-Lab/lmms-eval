@@ -14,6 +14,7 @@ from lmms_eval.api.registry import register_model
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
+import weave
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
@@ -29,7 +30,11 @@ elif API_TYPE == "azure":
         "api-key": API_KEY,
         "Content-Type": "application/json",
     }
-
+    
+@weave.op()
+def request_sever(API_URL, headers, payload, timeout):
+    response = url_requests.post(API_URL, headers=headers, json=payload, timeout=timeout)
+    return response.json()
 
 @register_model("gpt")
 class GPT(lmms):
@@ -107,14 +112,13 @@ class GPT(lmms):
 
             for attempt in range(5):
                 try:
-                    response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
-                    response_data = response.json()
+                    response_data = request_sever(API_URL, headers=headers, payload=payload, timeout=self.timeout)
                     response_text = response_data["choices"][0]["message"]["content"].strip()
                     break
 
                 except Exception as e:
                     try:
-                        error_msg = response.json()
+                        error_msg = response_data.json()
                     except:
                         error_msg = ""
 
