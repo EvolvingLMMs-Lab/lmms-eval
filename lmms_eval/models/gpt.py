@@ -126,7 +126,7 @@ class GPT(lmms):
                     if attempt <= 5:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:
-                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response_data.json()}")
                         response_text = ""
 
             res.append(response_text)
