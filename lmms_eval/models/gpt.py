@@ -16,6 +16,16 @@ NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
 import weave
 
+@weave.op()
+def request_server(self, payload):
+    response = url_requests.post(
+        self.api_url,
+        headers=self.headers,
+        json=payload,
+        timeout=self.timeout
+    )
+    return response.json()
+
 @register_model("gpt")
 class GPT(lmms):
     def __init__(
@@ -82,6 +92,7 @@ class GPT(lmms):
 
         self.device = self.accelerator.device
 
+    @weave.op()
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -113,13 +124,7 @@ class GPT(lmms):
 
             for attempt in range(5):
                 try:
-                    response = url_requests.post(
-                        self.api_url,
-                        headers=self.headers,
-                        json=payload,
-                        timeout=self.timeout
-                    )
-                    response_data = response.json()
+                    response_data = request_server(self, payload)
                     response_text = response_data["choices"][0]["message"]["content"].strip()
                     break
 
