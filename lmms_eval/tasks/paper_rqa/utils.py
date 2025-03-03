@@ -132,6 +132,7 @@ def paper_rqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
+@weave.op()
 def paper_rqa_process_results(doc, results):
     """Process evaluation results using LLM-as-judge approach"""
     try:

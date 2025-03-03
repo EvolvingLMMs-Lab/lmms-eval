@@ -14,7 +14,7 @@ from lmms_eval.api.registry import register_model
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
-
+import weave
 
 @register_model("gpt")
 class GPT(lmms):
@@ -125,7 +125,7 @@ class GPT(lmms):
 
                 except Exception as e:
                     try:
-                        error_msg = response.json()
+                        error_msg = response_data.json()
                     except:
                         error_msg = ""
 
