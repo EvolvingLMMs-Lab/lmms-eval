@@ -16,26 +16,6 @@ NUM_SECONDS_TO_SLEEP = 30
 from loguru import logger as eval_logger
 import weave
 
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-    
-@weave.op()
-def request_sever(API_URL, headers, payload, timeout):
-    response = url_requests.post(API_URL, headers=headers, json=payload, timeout=timeout)
-    return response.json()
-
 @register_model("gpt")
 class GPT(lmms):
     def __init__(
@@ -44,12 +24,33 @@ class GPT(lmms):
         timeout: int = 120,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
+        api_url: str = None,
+        api_key: str = None,
+        api_type: str = "openai",
         **kwargs,
     ) -> None:
         super().__init__()
         self.model_version = model_version
         self.timeout = timeout
         self.continual_mode = continual_mode
+
+        # 設置 API 相關配置
+        self.api_type = api_type.lower()
+        self.api_url = api_url or os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+
+        # 根據 API 類型設置 headers
+        if self.api_type == "azure":
+            self.headers = {
+                "api-key": self.api_key,
+                "Content-Type": "application/json",
+            }
+        else:  # 默認使用 openai 風格的 header
+            self.headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+
         if self.continual_mode:
             if response_persistent_folder is None:
                 raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
@@ -102,8 +103,8 @@ class GPT(lmms):
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
-            if gen_kwargs["max_new_tokens"] > 4096:
-                gen_kwargs["max_new_tokens"] = 4096
+            if gen_kwargs["max_new_tokens"] > 16384:
+                gen_kwargs["max_new_tokens"] = 16384
             if "temperature" not in gen_kwargs:
                 gen_kwargs["temperature"] = 0
 
@@ -112,7 +113,13 @@ class GPT(lmms):
 
             for attempt in range(5):
                 try:
-                    response_data = request_sever(API_URL, headers=headers, payload=payload, timeout=self.timeout)
+                    response = url_requests.post(
+                        self.api_url,
+                        headers=self.headers,
+                        json=payload,
+                        timeout=self.timeout
+                    )
+                    response_data = response.json()
                     response_text = response_data["choices"][0]["message"]["content"].strip()
                     break
 
