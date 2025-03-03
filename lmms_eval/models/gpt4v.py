@@ -4,11 +4,12 @@ import os
 import time
 from copy import deepcopy
 from io import BytesIO
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
 import requests as url_requests
 from accelerate import Accelerator, DistributedType
+from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
@@ -20,26 +21,19 @@ try:
 except ImportError:
     pass
 
+from loguru import logger as eval_logger
 from PIL import Image
 
 API_TYPE = os.getenv("API_TYPE", "openai")
-NUM_SECONDS_TO_SLEEP = 30
-from loguru import logger as eval_logger
-
+NUM_SECONDS_TO_SLEEP = 10
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
+
 elif API_TYPE == "azure":
     API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
+    API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
 
 
 @register_model("gpt4v")
@@ -52,6 +46,7 @@ class GPT4V(lmms):
         timeout: int = 120,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
+        max_size_in_mb: int = 20,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -80,6 +75,11 @@ class GPT4V(lmms):
                 self.response_cache = {}
                 self.cache_mode = "start"
 
+        if API_TYPE == "openai":
+            self.client = OpenAI(api_key=API_KEY)
+        elif API_TYPE == "azure":
+            self.client = AzureOpenAI(api_key=API_KEY, azure_endpoint=API_URL, api_version=API_VERSION)
+
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
@@ -94,13 +94,30 @@ class GPT4V(lmms):
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
 
+        self.max_size_in_mb = max_size_in_mb
         self.device = self.accelerator.device
 
     # Function to encode the image
-    def encode_image(self, image: Image):
+    def encode_image(self, image: Union[Image.Image, str]):
+        max_size = self.max_size_in_mb * 1024 * 1024  # 20MB in bytes
+        if isinstance(image, str):
+            img = Image.open(image).convert("RGB")
+        else:
+            img = image.copy()
+
         output_buffer = BytesIO()
-        image.save(output_buffer, format="PNG")
+        img.save(output_buffer, format="PNG")
         byte_data = output_buffer.getvalue()
+
+        # If image is too large, resize it while maintaining aspect ratio
+        while len(byte_data) > max_size and img.size[0] > 100 and img.size[1] > 100:
+            new_size = (int(img.size[0] * 0.75), int(img.size[1] * 0.75))
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+            output_buffer = BytesIO()
+            img.save(output_buffer, format="PNG")
+            byte_data = output_buffer.getvalue()
+
         base64_str = base64.b64encode(byte_data).decode("utf-8")
         return base64_str
 
@@ -150,39 +167,30 @@ class GPT4V(lmms):
                         continue
 
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            visuals = self.flatten(visuals)
-            imgs = []  # multiple images or frames for video
-            for visual in visuals:
-                if self.modality == "image":
-                    img = self.encode_image(visual)
-                    imgs.append(img)
-                elif self.modality == "video":
-                    frames = self.encode_video(visual, self.max_frames_num)
-                    imgs.extend(frames)
+            if None in visuals:
+                visuals = []
+                imgs = []
+            else:
+                visuals = self.flatten(visuals)
+                imgs = []  # multiple images or frames for video
+                for visual in visuals:
+                    if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
+                        frames = self.encode_video(visual, self.max_frames_num)
+                        imgs.extend(frames)
+                    elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
+                        img = self.encode_image(visual)
+                        imgs.append(img)
+                    elif isinstance(visual, Image.Image):
+                        img = self.encode_image(visual)
+                        imgs.append(img)
 
             payload = {"messages": []}
-            if API_TYPE == "openai":
-                payload["model"] = self.model_version
+            payload["model"] = self.model_version
 
-            response_json = {"role": "user", "content": []}
-            # When there is no image token in the context, append the image to the text
-            if self.image_token not in contexts:
-                payload["messages"].append(deepcopy(response_json))
-                payload["messages"][0]["content"].append({"type": "text", "text": contexts})
-                for img in imgs:
-                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
-            else:
-                contexts = contexts.split(self.image_token)
-                for idx, img in enumerate(imgs):
-                    payload["messages"].append(deepcopy(response_json))
-                    payload["messages"][idx]["content"].append({"type": "text", "text": contexts[idx]})
-                    payload["messages"][idx]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
-
-                # If n image tokens are in the contexts
-                # contexts will be splitted into n+1 chunks
-                # Manually add it into the payload
-                payload["messages"].append(deepcopy(response_json))
-                payload["messages"][-1]["content"].append({"type": "text", "text": contexts[-1]})
+            payload["messages"].append({"role": "user", "content": []})
+            payload["messages"][0]["content"].append({"type": "text", "text": contexts})
+            for img in imgs:
+                payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -198,26 +206,24 @@ class GPT4V(lmms):
             payload["max_tokens"] = gen_kwargs["max_new_tokens"]
             payload["temperature"] = gen_kwargs["temperature"]
 
-            for attempt in range(5):
+            MAX_RETRIES = 5
+            for attempt in range(MAX_RETRIES):
                 try:
-                    response = url_requests.post(API_URL, headers=headers, json=payload, timeout=self.timeout)
-                    response_data = response.json()
-
-                    response_text = response_data["choices"][0]["message"]["content"].strip()
+                    response = self.client.chat.completions.create(**payload)
+                    response_text = response.choices[0].message.content
                     break  # If successful, break out of the loop
 
                 except Exception as e:
-                    try:
-                        error_msg = response.json()
-                    except:
-                        error_msg = ""
+                    error_msg = str(e)
+                    eval_logger.info(f"Attempt {attempt + 1}/{MAX_RETRIES} failed with error: {error_msg}")
 
-                    eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}.\nReponse: {error_msg}")
-                    if attempt <= 5:
-                        time.sleep(NUM_SECONDS_TO_SLEEP)
-                    else:  # If this was the last attempt, log and return empty string
-                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}.\nResponse: {response.json()}")
+                    # On last attempt, log error and set empty response
+                    if attempt == MAX_RETRIES - 1:
+                        eval_logger.error(f"All {MAX_RETRIES} attempts failed. Last error: {error_msg}")
                         response_text = ""
+                    else:
+                        time.sleep(NUM_SECONDS_TO_SLEEP)
+
             res.append(response_text)
             pbar.update(1)
 
