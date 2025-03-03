@@ -1,23 +1,20 @@
 import logging
 import warnings
 from datetime import timedelta
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Tuple, Union
+
 import PIL
-
 import torch
-from tqdm import tqdm
-from packaging import version
-
-
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from transformers import AutoTokenizer, AutoModel
+from packaging import version
+from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -44,7 +41,7 @@ class VideoChat_Flash(lmms):
 
     def __init__(
         self,
-        pretrained: str = "xxx",
+        pretrained: str = "OpenGVLab/VideoChat-Flash-Qwen2-7B_res448",
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
         device_map: Optional[str] = "cuda:0",
@@ -69,7 +66,6 @@ class VideoChat_Flash(lmms):
         else:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
-
 
         self.max_num_frames = max_num_frames
 
@@ -150,8 +146,6 @@ class VideoChat_Flash(lmms):
     def max_length(self):
         return self._max_length
 
-
-
     @property
     def batch_size(self):
         return self.batch_size_per_gpu
@@ -185,7 +179,6 @@ class VideoChat_Flash(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         raise NotImplementedError
-  
 
     def flatten(self, input):
         new_list = []
@@ -204,7 +197,7 @@ class VideoChat_Flash(lmms):
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        metadata = requests[0].metadata 
+        metadata = requests[0].metadata
 
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
@@ -243,7 +236,7 @@ class VideoChat_Flash(lmms):
                     self._config.image_aspect_ratio = getattr(gen_kwargs, "image_aspect_ratio", "pad")
                     eval_logger.info(f"Setting image aspect ratio: {self._config.image_aspect_ratio}")
 
-                if type(visual[0]) == PIL.Image.Image: # and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
+                if type(visual[0]) == PIL.Image.Image:  # and "task_type" not in metadata and "sample_frames" not in metadata:  # For image task
                     raise NotImplementedError(f"I don't want image task now: {visual}, {task}, {metadata}")
 
                 elif type(visual[0]) == str:  # For video task
@@ -251,28 +244,29 @@ class VideoChat_Flash(lmms):
                         assert len(visual) == 2, visual
                         media_dict = visual[1]
                     else:
-                        media_dict = {'video_read_type': 'decord'}
+                        media_dict = {"video_read_type": "decord"}
 
                     video_path = visual[0]
                     question_input.append(context)
 
                     try:
                         response = self.model.chat(
-                                video_path,
-                                self.tokenizer,
-                                context,
-                                chat_history=None,
-                                return_history=False,
-                                max_num_frames=self.max_num_frames,
-                                media_dict=media_dict,
-                                generation_config={
-                                    "max_new_tokens":gen_kwargs["max_new_tokens"],
-                                    "temperature":gen_kwargs["temperature"],
-                                    "do_sample":gen_kwargs["do_sample"],
-                                    "top_p":gen_kwargs["top_p"],
-                                    "num_beams":gen_kwargs["num_beams"]}
-                                )
-                        
+                            video_path,
+                            self.tokenizer,
+                            context,
+                            chat_history=None,
+                            return_history=False,
+                            max_num_frames=self.max_num_frames,
+                            media_dict=media_dict,
+                            generation_config={
+                                "max_new_tokens": gen_kwargs["max_new_tokens"],
+                                "temperature": gen_kwargs["temperature"],
+                                "do_sample": gen_kwargs["do_sample"],
+                                "top_p": gen_kwargs["top_p"],
+                                "num_beams": gen_kwargs["num_beams"],
+                            },
+                        )
+
                         text_outputs.append(response)
                     except Exception as e:
                         raise e
