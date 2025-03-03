@@ -45,7 +45,8 @@ from lmms_eval.utils import (
     simple_parse_args_string,
 )
 
-
+import weave
+@weave.op()
 @positional_deprecated
 def simple_evaluate(
     model,
