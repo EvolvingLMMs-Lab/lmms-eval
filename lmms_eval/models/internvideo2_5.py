@@ -1,22 +1,23 @@
+import logging
 from typing import List, Tuple
-from lmms_eval.api.instance import Instance
-from decord import VideoReader, cpu
+
+import numpy as np
 import torch
 import torchvision.transforms as T
+from accelerate import Accelerator, DistributedType
+from decord import VideoReader, cpu
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
-import numpy as np
-from transformers import AutoModel, AutoTokenizer
-from lmms_eval.api.registry import register_model
-from accelerate import Accelerator, DistributedType
-from lmms_eval.api.model import lmms
 from tqdm import tqdm
-import logging
-import io
-from petrel_client.client import Client
-from llava.video_utils import VIDEO_READER_FUNCS
+from transformers import AutoModel, AutoTokenizer
 
-client = Client('~/petreloss.conf')
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
+from datetime import timedelta
+
+from accelerate.state import AcceleratorState
+from accelerate.utils import InitProcessGroupKwargs
 
 eval_logger = logging.getLogger("eval_logger")
 
@@ -99,32 +100,30 @@ def get_index(bound, fps, max_frame, first_idx=0, num_segments=32):
     start_idx = max(first_idx, round(start * fps))
     end_idx = min(round(end * fps), max_frame)
     seg_size = float(end_idx - start_idx) / num_segments
-    frame_indices = np.array([int(start_idx + (seg_size / 2) + np.round(seg_size * idx)) for idx in range(num_segments)])
+    frame_indices = [int(start_idx + (seg_size / 2) + np.round(seg_size * idx)) for idx in range(num_segments)]
     return frame_indices
 
 
-def load_video(video_path, max_frames_num, media_dict, input_size=448, max_num=1):
-    if type(video_path) != str:
-        assert len(video_path) == 1, video_path
-        video_path = video_path[0]
-
-    if 'start' in media_dict:
-        clip = [media_dict['start'], media_dict['end']]
+def load_video(video_path, bound=None, input_size=448, max_num=1, num_segments=32, media_dict=None):
+    if type(video_path) == str:
+        vr = VideoReader(video_path, ctx=cpu(0), num_threads=1)
     else:
-        clip = None
-    # print("-------------------------------------------------------------------")
-    # print(media_dict['video_read_type'], clip, video_path, max_frames_num)
-    frames, frame_indices, fps, duration = VIDEO_READER_FUNCS[media_dict['video_read_type']](video_path=video_path, num_frames=max_frames_num, sample='middle', fix_start=None, min_num_frames=1, max_num_frames=-1, client=client, clip=clip, local_num_frames=-1)
+        vr = VideoReader(video_path[0], ctx=cpu(0), num_threads=1)
 
-    sec = [str(round(f / fps, 1)) for f in frame_indices]
-
-    msg = f"\nThe video lasts for {duration:.2f} seconds, and {len(sec)} frames are uniformly sampled from it. "
+    max_frame = len(vr) - 1
+    fps = float(vr.get_avg_fps())
 
     pixel_values_list, num_patches_list = [], []
     transform = build_transform(input_size=input_size)
+    frame_indices = get_index(bound, fps, max_frame, first_idx=0, num_segments=num_segments)
+    if media_dict is not None and media_dict["video_read_type"] == "decord_last":
+        frame_indices = frame_indices + [max_frame for _ in range(4)]  # add last 4 frames
 
-    for frame in frames:
-        img = [Image.fromarray(frame, mode='RGB')]
+    frame_indices = np.array(frame_indices)
+
+    for frame_index in frame_indices:
+        img = Image.fromarray(vr[frame_index].asnumpy()).convert("RGB")
+        img = dynamic_preprocess(img, image_size=input_size, use_thumbnail=False, max_num=max_num)
         pixel_values = [transform(tile) for tile in img]
         pixel_values = torch.stack(pixel_values)
         num_patches_list.append(pixel_values.shape[0])
@@ -133,9 +132,7 @@ def load_video(video_path, max_frames_num, media_dict, input_size=448, max_num=1
     return pixel_values, num_patches_list
 
 
-from datetime import timedelta
-from accelerate.state import AcceleratorState
-from accelerate.utils import InitProcessGroupKwargs
+
 
 
 @register_model("internvideo2_5")
@@ -153,7 +150,7 @@ class InternVideo2_5(lmms):
         super().__init__()
         self.max_frames_num = max_frames_num
         self.path = pretrained
-        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, trust_remote_code=True).eval().cuda()
+        self._model = AutoModel.from_pretrained(self.path, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, use_flash_attn=True, trust_remote_code=True).eval().cuda()
         self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True)
 
         batch_size = int(batch_size)
@@ -284,13 +281,11 @@ class InternVideo2_5(lmms):
                 # assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos. {visuals}"
                 video_path = visuals[0]
                 if len(visuals) > 1:
-                        assert len(visuals) == 2, visuals
-                        media_dict = visuals[1]
+                    assert len(visuals) == 2, visuals
+                    media_dict = visuals[1]
                 else:
-                    media_dict = {'video_read_type': 'decord'}
-
-                pixel_values, num_patches_list = load_video(video_path, max_frames_num=self.max_frames_num, max_num=1, media_dict=media_dict)
-
+                    media_dict = {"video_read_type": "decord"}
+                pixel_values, num_patches_list = load_video(video_path, num_segments=self.max_frames_num, max_num=1, media_dict=media_dict)
                 pixel_values = pixel_values.to(torch.bfloat16).cuda()
                 video_prefix = "".join([f"Frame{i+1}: <image>\n" for i in range(len(num_patches_list))])
                 question = video_prefix + contexts
