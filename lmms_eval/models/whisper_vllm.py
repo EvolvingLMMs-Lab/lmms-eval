@@ -110,7 +110,7 @@ class WhisperVllm(lmms):
 
             outputs = self.model.generate(batched_prompts, sampling_params, use_tqdm=False)
             transcriptions = [output.outputs[0].text for output in outputs]
-            answers = [self.model.get_tokenizer().normalize(transcription) for transcription in transcriptions]
+            answers = [self.model.get_tokenizer().normalize(transcription) for transcription in transcriptions]  # whisper post processing
 
             assert len(answers) == len(batch_requests)
             res.extend(answers)

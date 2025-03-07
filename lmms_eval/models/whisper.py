@@ -173,8 +173,9 @@ class Whisper(lmms):
                 contexts = list(contexts)
 
             # process inputs
-            audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
-            inputs = self.processor(audio=audios, return_tensors="pt", sampling_rate=self.processor.feature_extractor.sampling_rate)
+            sampling_rate = self.processor.feature_extractor.sampling_rate
+            audios = [downsample_audio(audio["array"], audio["sampling_rate"], sampling_rate) for audio in flattened_audios]
+            inputs = self.processor(audio=audios, return_tensors="pt", sampling_rate=sampling_rate)
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
@@ -190,7 +191,7 @@ class Whisper(lmms):
                 gen_kwargs["num_beams"] = 1
 
             try:
-                cont = self.model.generate(
+                predicted_ids = self.model.generate(
                     **inputs,
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
                     temperature=gen_kwargs["temperature"],
@@ -201,8 +202,8 @@ class Whisper(lmms):
                     use_cache=self.use_cache,
                 )
 
-                transcriptions = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-                answers = [self.tokenizer.normalize(transcription) for transcription in transcriptions]
+                transcriptions = self.processor.batch_decode(predicted_ids)
+                answers = [self.tokenizer.normalize(transcription) for transcription in transcriptions]  # whisper post processing
                 for i, ans in enumerate(answers):
                     for term in until:
                         if len(term) > 0:
@@ -210,7 +211,7 @@ class Whisper(lmms):
                     answers[i] = ans
 
             except Exception as e:
-                eval_logger.debug(f"Error while generating: {e}. It is possibly due to blank audio in {contexts}")
+                eval_logger.debug(f"Error while generating: {e}")
                 answers = [""] * len(contexts)
 
             for ans, context in zip(answers, contexts):
