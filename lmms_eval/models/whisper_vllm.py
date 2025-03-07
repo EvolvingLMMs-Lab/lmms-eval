@@ -89,17 +89,17 @@ class WhisperVllm(lmms):
             for idx in range(len(batch_requests)):
                 contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
 
+                # generation parameters
                 sampling_params = SamplingParams(
                     temperature=gen_kwargs.get("temperature", 0),
                     top_p=gen_kwargs.get("top_p", 0),
                     max_tokens=gen_kwargs.get("max_new_tokens", 256),
                 )
 
+                # prepare multimodal inputs
                 audio = doc_to_visual(self.task_dict[task][split][doc_id])
                 assert len(audio) == 1
                 audio = audio[0]
-
-                # prepare multimodal inputs
                 prompt = {
                     "prompt": "<|startoftranscript|>",
                     "multi_modal_data": {

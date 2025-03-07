@@ -1,8 +1,5 @@
-import base64
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
-import decord
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -204,7 +201,8 @@ class Whisper(lmms):
                     use_cache=self.use_cache,
                 )
 
-                answers = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+                transcriptions = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+                answers = [self.tokenizer.normalize(transcription) for transcription in transcriptions]
                 for i, ans in enumerate(answers):
                     for term in until:
                         if len(term) > 0:
