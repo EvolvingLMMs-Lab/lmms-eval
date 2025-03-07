@@ -28,11 +28,12 @@ class Whisper(lmms):
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "cuda",
         batch_size: Optional[Union[int, str]] = 1,
-        use_cache=True,
+        use_cache: bool = True,
+        language: str = "en",
+        task: str = "transcribe",
         **kwargs,
     ) -> None:
         super().__init__()
-        # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         accelerator = Accelerator()
@@ -53,8 +54,7 @@ class Whisper(lmms):
         ).eval()
 
         self.processor = AutoProcessor.from_pretrained(pretrained)
-        #self.processor.tokenizer.padding_side = "left"
-        self.processor.tokenizer.set_prefix_tokens(language="en", task="transcribe")
+        self.processor.tokenizer.set_prefix_tokens(language=language, task=task)
         self._tokenizer = self.processor.tokenizer
 
         self._config = self.model.config
@@ -175,10 +175,9 @@ class Whisper(lmms):
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
 
+            # process inputs
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
-
             inputs = self.processor(audio=audios, return_tensors="pt", sampling_rate=self.processor.feature_extractor.sampling_rate)
-
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
@@ -193,32 +192,26 @@ class Whisper(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            #try:
-            #self.model.config.forced_decoder_ids = None
-            cont = self.model.generate(**inputs, temperature=gen_kwargs["temperature"], task="transcribe", language="en")
-            # cont = self.model.generate(
-            #     **inputs,
-            #     # do_sample=True if gen_kwargs["temperature"] > 0 else False,
-            #     # temperature=gen_kwargs["temperature"],
-            #     # top_p=gen_kwargs["top_p"],
-            #     # num_beams=gen_kwargs["num_beams"],
-            #     # max_new_tokens=gen_kwargs["max_new_tokens"],
-            #     # min_new_tokens=1,
-            #     # use_cache=self.use_cache,
-            #     task="transcribe",
-            #     language="en", # TODO: parameterize
-            #     # prompt_ids=self.processor.tokenizer.get_prompt_ids(prompt_template)
-            # )
-
-            answers = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-            for i, ans in enumerate(answers):
-                for term in until:
-                    if len(term) > 0:
-                        ans = ans.split(term)[0]
-                answers[i] = ans
-
             try:
-                pass
+                cont = self.model.generate(
+                    **inputs,
+                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
+                    temperature=gen_kwargs["temperature"],
+                    top_p=gen_kwargs["top_p"],
+                    num_beams=gen_kwargs["num_beams"],
+                    max_new_tokens=gen_kwargs["max_new_tokens"],
+                    min_new_tokens=1,
+                    use_cache=self.use_cache,
+                    #task="transcribe",
+                    #language="en"
+                )
+
+                answers = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+                for i, ans in enumerate(answers):
+                    for term in until:
+                        if len(term) > 0:
+                            ans = ans.split(term)[0]
+                    answers[i] = ans
 
             except Exception as e:
                 eval_logger.debug(f"Error while generating: {e}. It is possibly due to blank audio in {contexts}")
