@@ -202,8 +202,6 @@ class Whisper(lmms):
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                     min_new_tokens=1,
                     use_cache=self.use_cache,
-                    #task="transcribe",
-                    #language="en"
                 )
 
                 answers = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
