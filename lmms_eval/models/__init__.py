@@ -65,6 +65,8 @@ AVAILABLE_MODELS = {
     "egogpt": "EgoGPT",
     "internvideo2_5": "InternVideo2_5",
     "videochat_flash": "VideoChat_Flash",
+    "whisper": "Whisper",
+    "whisper_vllm": "WhisperVllm",
 }
 
 
