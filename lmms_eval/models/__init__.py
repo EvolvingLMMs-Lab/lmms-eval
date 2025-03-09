@@ -63,6 +63,8 @@ AVAILABLE_MODELS = {
     "xcomposer2_4KHD": "XComposer2_4KHD",
     "xcomposer2d5": "XComposer2D5",
     "egogpt": "EgoGPT",
+    "internvideo2_5": "InternVideo2_5",
+    "videochat_flash": "VideoChat_Flash",
     "whisper": "Whisper",
     "whisper_vllm": "WhisperVllm",
 }
