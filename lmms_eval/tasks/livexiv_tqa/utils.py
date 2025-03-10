@@ -3,7 +3,7 @@ import re
 
 
 def extract_answer(text):
-    match = re.findall(r'(?<!^)[A-Z]', text)
+    match = re.findall(r"(?<!^)[A-Z]", text)
     if match:
         return match[0]
     return None
@@ -14,7 +14,7 @@ def livexiv_doc_to_visual(doc):
 
 
 def livexiv_doc_to_text(doc, model_specific_kwargs=None):
-    question = doc["question"]    
+    question = doc["question"]
     question += "\n" + f"A. {doc['option_a']}\n"
     question += f"B. {doc['option_b']}\n"
     question += f"C. {doc['option_c']}\n"
