@@ -1,0 +1,3 @@
+task: "livexiv_tqa_v4"
+dataset_name: "v4-TQA"
+include: livexiv_tqa_template_yaml

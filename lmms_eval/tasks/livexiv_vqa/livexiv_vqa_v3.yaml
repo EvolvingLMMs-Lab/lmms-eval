@@ -1,0 +1,3 @@
+task: "livexiv_vqa_v3"
+dataset_name: "v3-VQA"
+include: livexiv_vqa_template_yaml

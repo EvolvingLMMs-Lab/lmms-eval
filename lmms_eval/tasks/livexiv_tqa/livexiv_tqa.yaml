@@ -1,0 +1,9 @@
+group: livexiv_tqa
+task:
+- livexiv_tqa_v1
+- livexiv_tqa_v2
+- livexiv_tqa_v3
+- livexiv_tqa_v4
+- livexiv_tqa_v5
+- livexiv_tqa_v6
+
