@@ -1,0 +1,10 @@
+task: "mmbench_ko_dev"
+test_split: dev
+include: _default_template_mmbench_ko_yaml
+metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function ko_utils.mmbench_aggregate_dev_results_eval
+    higher_is_better: true
+  - metric: submission
+    aggregation: !function ko_utils.mmbench_aggregate_dev_results_submission
+    higher_is_better: true
