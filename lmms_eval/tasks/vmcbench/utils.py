@@ -1,7 +1,7 @@
 import os
-import numpy as np
 import random
 
+import numpy as np
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
