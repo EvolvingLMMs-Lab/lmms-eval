@@ -1,4 +1,5 @@
 import os
+import re
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -10,6 +11,7 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
+from PIL import Image
 from qwen_vl_utils import process_vision_info
 from synvo_engine.models.qwen2_5_vl_audio import (
     KinoQwen2_5_VLForConditionalGeneration,
@@ -236,6 +238,95 @@ class KinoQwen2_5(lmms):
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         return spare_frames  # (frames, height, width, channels)
 
+    def process_av_odyssey_input(self, visuals, context):
+        messages = [{"role": "user", "content": []}]
+        audios = []
+        # Split the media tag
+        pattern = r"<media_(\d+)>"
+        matches = list(re.finditer(pattern, context))
+        result = []
+        if not matches:
+            result = [context]
+        else:
+            last_match = 0
+            for match in matches:
+                result.append(context[last_match : match.start()])
+                last_match = match.end()
+            # Append the last part of the context
+            result.append(context[matches[-1].end() :])
+        import filetype
+
+        for idx, visual in enumerate(visuals):
+            file_type = filetype.guess(visual)
+            # Append at the front
+            messages[0]["content"].append({"type": "text", "text": result[idx]})
+            if "audio" in file_type.mime:
+                audio = librosa.load(visual, sr=self._processor.audio_processor.sampling_rate)[0]
+                splited_audio = self.split_audio(audio)
+                audios.extend(splited_audio)
+                for _ in range(len(splited_audio)):
+                    messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+            elif "video" in file_type.mime:
+                messages[0]["content"].append({"type": "video", "video": visual, "max_pixels": self.video_max_pixels, "fps": self.fps})
+                if self.use_video_audio:
+                    video_audio = self.extract_audio(visual)
+                    temp_audio_path = f"temp_video_audio_{self._rank}.wav"
+                    video_audio.write_audiofile(temp_audio_path)
+                    video_audio = librosa.load(temp_audio_path, sr=self._processor.audio_processor.sampling_rate)[0]
+                    splited_video_audio = self.split_audio(video_audio)
+                    audios.extend(splited_video_audio)
+                    for _ in range(len(splited_video_audio)):
+                        messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+                    os.remove(temp_audio_path)
+            elif "image" in file_type.mime:
+                image = Image.open(visual)
+                height = image.size[0]
+                width = image.size[1]
+                if width < 28 and height < 28:
+                    visual = visual.resize((28, 28))
+                elif height < 28:
+                    visual = visual.resize((28, width))
+                elif width < 28:
+                    visual = visual.resize((height, 28))
+                # images.append(visual)
+                messages[0]["content"].append({"type": "image", "image": visual})
+        # Leave the last part of the context
+        result = result[-1:]
+        return messages, audios, result
+
+    def default_process(self, visuals):
+        messages = [{"role": "user", "content": []}]
+        audios = []
+        for visual in visuals:
+            if isinstance(visual, str):
+                messages[0]["content"].append({"type": "video", "video": visual, "max_pixels": self.video_max_pixels, "fps": self.fps})
+                if self.use_video_audio:
+                    video_audio = self.extract_audio(visual)
+                    temp_audio_path = f"temp_video_audio_{self._rank}.wav"
+                    video_audio.write_audiofile(temp_audio_path)
+                    video_audio = librosa.load(temp_audio_path, sr=self._processor.audio_processor.sampling_rate)[0]
+                    splited_video_audio = self.split_audio(video_audio)
+                    audios.extend(splited_video_audio)
+                    for _ in range(len(splited_video_audio)):
+                        messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+                    os.remove(temp_audio_path)
+            elif isinstance(visual, PIL.Image.Image):
+                height = visual.size[0]
+                width = visual.size[1]
+                if width < 28 and height < 28:
+                    visual = visual.resize((28, 28))
+                elif height < 28:
+                    visual = visual.resize((28, width))
+                elif width < 28:
+                    visual = visual.resize((height, 28))
+                # images.append(visual)
+                messages[0]["content"].append({"type": "image", "image": visual})
+            elif isinstance(visual, dict) and "array" in visual:
+                splited_video_audio = self.split_audio(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
+                audios.extend(splited_video_audio)
+                messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+        return messages, audios
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -262,36 +353,10 @@ class KinoQwen2_5(lmms):
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
-            messages = [{"role": "user", "content": []}]
-            audios = []
-            for visual in visuals:
-                if isinstance(visual, str):
-                    messages[0]["content"].append({"type": "video", "video": visual, "max_pixels": self.video_max_pixels, "fps": self.fps})
-                    if self.use_video_audio:
-                        video_audio = self.extract_audio(visual)
-                        temp_audio_path = f"temp_video_audio_{self._rank}.wav"
-                        video_audio.write_audiofile(temp_audio_path)
-                        video_audio = librosa.load(temp_audio_path, sr=self._processor.audio_processor.sampling_rate)[0]
-                        splited_video_audio = self.split_audio(video_audio)
-                        audios.extend(splited_video_audio)
-                        for _ in range(len(splited_video_audio)):
-                            messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
-                        os.remove(temp_audio_path)
-                elif isinstance(visual, PIL.Image.Image):
-                    height = visual.size[0]
-                    width = visual.size[1]
-                    if width < 28 and height < 28:
-                        visual = visual.resize((28, 28))
-                    elif height < 28:
-                        visual = visual.resize((28, width))
-                    elif width < 28:
-                        visual = visual.resize((height, 28))
-                    # images.append(visual)
-                    messages[0]["content"].append({"type": "image", "image": visual})
-                elif isinstance(visual, dict) and "array" in visual:
-                    splited_video_audio = self.split_audio(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
-                    audios.extend(splited_video_audio)
-                    messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+            if task == "av_odyssey":
+                messages, audios, contexts = self.process_av_odyssey_input(visuals, contexts[0])
+            else:
+                messages, audios = self.default_process(visuals)
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
