@@ -14,8 +14,13 @@ from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-TASK_TYPES = ["TR", "AR", "NQA", "ER", "PQA", "AO", "AC"]
-
+TASK_TYPES = ['anomaly_reco',
+ 'count',
+ 'ego',
+ 'needle',
+ 'order',
+ 'plotQA',
+ 'topic_reasoning']
 
 hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
