@@ -1,4 +1,4 @@
-dataset_path: sy1998/temp
+dataset_path: sy1998/MLVU_dev
 dataset_kwargs:
   token: True
   cache_dir: mlvu
