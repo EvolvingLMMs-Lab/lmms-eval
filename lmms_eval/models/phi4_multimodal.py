@@ -1,6 +1,8 @@
+import re
 import warnings
 from typing import List, Optional, Tuple, Union
 
+import librosa
 import numpy as np
 import PIL
 import torch
@@ -188,6 +190,87 @@ class Phi4(lmms):
         spare_frames = vr.get_batch(frame_idx).asnumpy()
         return spare_frames  # (frames, height, width, channels)
 
+    def default_process(self, visuals, contexts):
+        text = "<|user|>"
+        images = []
+        audios = []
+        vision_start = 1
+        audio_start = 1
+        for visual in visuals:
+            if isinstance(visual, str):
+                frames = self.load_video(visual, self.max_frames_num)
+                for image in frames:
+                    text += f"<|image_{vision_start}|>"
+                    images.append(Image.fromarray(np.uint8(image)))
+                    vision_start += 1
+            elif isinstance(visual, PIL.Image.Image):
+                images.append(visual)
+                text += f"<|image_{vision_start}|>"
+                vision_start += 1
+            elif isinstance(visual, dict) and "array" in visual:
+                audio = downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate)
+                audio = [audio, self._processor.audio_processor.sampling_rate]
+                audios.append(audio)
+                text += f"<|audio_{audio_start}|>"
+                audio_start += 1
+
+        text += f"{contexts[0]}<|end|><|assistant|>"
+        if len(images) == 0:
+            images = None
+        if len(audios) == 0:
+            audios = None
+        return text, images, audios
+
+    def process_av_odessy(self, visuals, context):
+        text = "<|user|>"
+        images = []
+        audios = []
+        vision_start = 1
+        audio_start = 1
+        # Split the media tag
+        pattern = r"<media_(\d+)>"
+        matches = list(re.finditer(pattern, context))
+        result = []
+        if not matches:
+            result = [context]
+        else:
+            last_match = 0
+            for match in matches:
+                result.append(context[last_match : match.start()])
+                last_match = match.end()
+            # Append the last part of the context
+            result.append(context[matches[-1].end() :])
+        import filetype
+
+        for idx, visual in enumerate(visuals):
+            file_type = filetype.guess(visual)
+            # Append at the front
+            text += result[idx]
+            if "audio" in file_type.mime:
+                audio = librosa.load(visual, sr=self._processor.audio_processor.sampling_rate)[0]
+                audio = [audio, self._processor.audio_processor.sampling_rate]
+                audios.append(audio)
+                text += f"<|audio_{audio_start}|>"
+                audio_start += 1
+            elif "video" in file_type.mime:
+                frames = self.load_video(visual, self.max_frames_num)
+                for image in frames:
+                    text += f"<|image_{vision_start}|>"
+                    images.append(Image.fromarray(np.uint8(image)))
+                    vision_start += 1
+            elif "image" in file_type.mime:
+                images.append(Image.open(visual))
+                text += f"<|image_{vision_start}|>"
+                vision_start += 1
+        # Leave the last part of the context
+        text += result[-1]
+        text += "<|end|><|assistant|>"
+        if len(images) == 0:
+            images = None
+        if len(audios) == 0:
+            audios = None
+        return text, images, audios
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -214,33 +297,10 @@ class Phi4(lmms):
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
-            text = "<|user|>"
-            images = []
-            audios = []
-            vision_start = 1
-            audio_start = 1
-            for visual in visuals:
-                if isinstance(visual, str):
-                    frames = self.load_video(visual, self.max_frames_num)
-                    for image in frames:
-                        text += f"<|image_{vision_start}|>"
-                        images.append(Image.fromarray(np.uint8(image)))
-                        vision_start += 1
-                elif isinstance(visual, PIL.Image.Image):
-                    images.append(visual)
-                    text += f"<|image_{vision_start}|>"
-                    vision_start += 1
-                elif isinstance(visual, dict) and "array" in visual:
-                    audio = downsample_audio(visual["array"], visual["sr"], self.processor.audio_processor.sampling_rate)
-                    audios.append(audio)
-                    text += f"<|audio_{audio_start}|>"
-                    audio_start += 1
-
-            text += f"{contexts[0]}<|end|><|assistant|>"
-            if len(images) == 0:
-                images = None
-            if len(audios) == 0:
-                audios = None
+            if task == "av_odyssey":
+                text, images, audios = self.process_av_odessy(visuals, contexts[0])
+            else:
+                text, images, audios = self.default_process(visuals, contexts)
             inputs = self._processor(text=text, images=images, audios=audios, return_tensors="pt").to(self.device)
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
