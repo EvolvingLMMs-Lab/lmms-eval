@@ -7,6 +7,7 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
+from PIL import Image
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor
 
@@ -51,7 +52,7 @@ class Phi4(lmms):
         device_map: str = "",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
-        max_frames_num: Optional[int] = 32,
+        max_frames_num: Optional[int] = 16,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -220,9 +221,10 @@ class Phi4(lmms):
             audio_start = 1
             for visual in visuals:
                 if isinstance(visual, str):
-                    images = self.load_video(visual, self.max_frames_num)
-                    for image in images:
+                    frames = self.load_video(visual, self.max_frames_num)
+                    for image in frames:
                         text += f"<|image_{vision_start}|>"
+                        images.append(Image.fromarray(np.uint8(image)))
                         vision_start += 1
                 elif isinstance(visual, PIL.Image.Image):
                     images.append(visual)
