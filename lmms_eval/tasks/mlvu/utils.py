@@ -14,26 +14,38 @@ from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-# TASK_TYPES = ["TR", "AR", "VS", "NQA", "ER", "PQA", "SSC", "AO", "AC"]
 
 
-# hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
-hf_home = "/share/junjie/shuyan/lmms-eval/~/.cache/huggingface"
+
+hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
 
 
+with open(Path(__file__).parent / "mlvu_dev.yaml", "r") as f:
+    raw_data_dev = f.readlines()
+    safe_data_dev = []
+    for i, line in enumerate(raw_data_dev):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data_dev.append(line)
+cache_name_dev = yaml.safe_load("".join(safe_data_dev))["dataset_kwargs"]["cache_dir"]
+cache_dir_dev = os.path.join(base_cache_dir, cache_name_dev)
+
+
+with open(Path(__file__).parent / "mlvu_test.yaml", "r") as f:
+    raw_data_test = f.readlines()
+    safe_data_test = []
+    for i, line in enumerate(raw_data_test):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data_test.append(line)
+cache_name_test = yaml.safe_load("".join(safe_data_test))["dataset_kwargs"]["cache_dir"]
+cache_dir_test = os.path.join(base_cache_dir, cache_name_test)
+
+
 def mlvu_doc_to_visual_dev(doc):
-    with open(Path(__file__).parent / "mlvu_dev.yaml", "r") as f:
-        raw_data = f.readlines()
-        safe_data = []
-        for i, line in enumerate(raw_data):
-            # remove function definition since yaml load cannot handle it
-            if "!function" not in line:
-                safe_data.append(line)
-    cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
-    cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["video_name"]
-    video_path = os.path.join(cache_dir, video_path)
+    video_path = os.path.join(cache_dir_dev, video_path)
     if os.path.exists(video_path):
         video_path = video_path
     else:
@@ -42,17 +54,8 @@ def mlvu_doc_to_visual_dev(doc):
 
 
 def mlvu_doc_to_visual_test(doc):
-    with open(Path(__file__).parent / "mlvu_test.yaml", "r") as f:
-        raw_data = f.readlines()
-        safe_data = []
-        for i, line in enumerate(raw_data):
-            # remove function definition since yaml load cannot handle it
-            if "!function" not in line:
-                safe_data.append(line)
-    cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
-    cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = doc["video_name"]
-    video_path = os.path.join(cache_dir, video_path)
+    video_path = os.path.join(cache_dir_test, video_path)
     if os.path.exists(video_path):
         video_path = video_path
     else:
@@ -96,14 +99,16 @@ def mlvu_process_results(doc, results):
     return {f"mlvu_percetion_score": data_dict}
 
 
+
 def mlvu_aggregate_results_dev(results):
+ 
     """
     Args:
         results: a list of values returned by process_results
     Returns:
         A score
     """
-    TASK_TYPES = {"anomaly_reco", "count", "ego", "needle", "order", "plotQA", "topic_reasoning"}
+    TASK_TYPES = {'anomaly_reco','count','ego','needle','order','plotQA','topic_reasoning'}
     category2score = {}
     for task_type in TASK_TYPES:
         category2score[task_type] = {"correct": 0, "answered": 0}
@@ -137,7 +142,6 @@ def mlvu_aggregate_results_dev(results):
 
     return average_accuracy
 
-
 def mlvu_aggregate_results_test(results):
     """
     Args:
@@ -145,7 +149,7 @@ def mlvu_aggregate_results_test(results):
     Returns:
         A score
     """
-    TASK_TYPES = {"anomaly_reco", "count", "ego", "needleQA", "order", "plotQA", "sportsQA", "topic_reasoning", "tutorialQA"}
+    TASK_TYPES = {'anomaly_reco','count','ego','needleQA','order','plotQA','sportsQA','topic_reasoning','tutorialQA'}
     category2score = {}
     for task_type in TASK_TYPES:
         category2score[task_type] = {"correct": 0, "answered": 0}
