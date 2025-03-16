@@ -14,9 +14,6 @@ from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-
-
-
 hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
 # hf_home="/share/junjie/shuyan/lmms-eval/~/.cache/huggingface"
 base_cache_dir = os.path.expanduser(hf_home)
@@ -100,16 +97,14 @@ def mlvu_process_results(doc, results):
     return {f"mlvu_percetion_score": data_dict}
 
 
-
 def mlvu_aggregate_results_dev(results):
- 
     """
     Args:
         results: a list of values returned by process_results
     Returns:
         A score
     """
-    TASK_TYPES = {'anomaly_reco','count','ego','needle','order','plotQA','topic_reasoning'}
+    TASK_TYPES = {"anomaly_reco", "count", "ego", "needle", "order", "plotQA", "topic_reasoning"}
     category2score = {}
     for task_type in TASK_TYPES:
         category2score[task_type] = {"correct": 0, "answered": 0}
@@ -143,6 +138,7 @@ def mlvu_aggregate_results_dev(results):
 
     return average_accuracy
 
+
 def mlvu_aggregate_results_test(results):
     """
     Args:
@@ -150,7 +146,7 @@ def mlvu_aggregate_results_test(results):
     Returns:
         A score
     """
-    TASK_TYPES = {'anomaly_reco','count','ego','needleQA','order','plotQA','sportsQA','topic_reasoning','tutorialQA'}
+    TASK_TYPES = {"anomaly_reco", "count", "ego", "needleQA", "order", "plotQA", "sportsQA", "topic_reasoning", "tutorialQA"}
     category2score = {}
     for task_type in TASK_TYPES:
         category2score[task_type] = {"correct": 0, "answered": 0}
