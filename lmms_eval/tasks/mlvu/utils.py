@@ -17,8 +17,8 @@ from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 # TASK_TYPES = ["TR", "AR", "VS", "NQA", "ER", "PQA", "SSC", "AO", "AC"]
 
 
-# hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
-hf_home = "/share/junjie/shuyan/lmms-eval/~/.cache/huggingface"
+hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
+
 base_cache_dir = os.path.expanduser(hf_home)
 
 
