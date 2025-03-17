@@ -3,6 +3,7 @@ dataset_kwargs:
   token: true
   video: true
 dataset_path: MixEval/MixEval-X
+local_dataset_path:
 lmms_eval_specific_kwargs:
   default:
     post_prompt: ""
@@ -10,6 +11,7 @@ lmms_eval_specific_kwargs:
   gpt4v:
     post_prompt: ""
     pre_prompt: These are frames from a video. Please answer the following questions about the video.
+  local_infer_dataset_path:
 metadata:
   gpt_eval_model_name: gpt-4o-mini
   version: 0

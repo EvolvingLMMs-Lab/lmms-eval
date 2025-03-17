@@ -10,6 +10,7 @@ metric_list:
     aggregation: !function utils.textvqa_aggregate_submissions
     higher_is_better: true
 dataset_path: lmms-lab/LMMs-Eval-Lite
+local_dataset_path:
 dataset_name: textvqa_val
 output_type: generate_until
 doc_to_visual: !function utils.textvqa_doc_to_visual
@@ -27,4 +28,5 @@ lmms_eval_specific_kwargs:
   qwen_vl:
     pre_prompt: ""
     post_prompt: " Answer:"
+  local_infer_dataset_path:
 

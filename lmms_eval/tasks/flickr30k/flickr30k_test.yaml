@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/flickr30k
+local_dataset_path:
 dataset_kwargs:
   token: True
 task : "flickr30k_test"

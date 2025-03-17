@@ -1,4 +1,5 @@
 dataset_path: WildVision/wildvision-arena-data
+local_dataset_path:
 dataset_kwargs:
   token: True
 output_type: generate_until

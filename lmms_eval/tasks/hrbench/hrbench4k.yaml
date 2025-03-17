@@ -1,4 +1,5 @@
 dataset_path: DreamMr/HR-Bench
+local_dataset_path:
 dataset_name: hrbench_version_split
 dataset_kwargs:
   token: True

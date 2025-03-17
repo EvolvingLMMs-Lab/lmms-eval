@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/LMMs-Eval-Lite
+local_dataset_path:
 dataset_name: seedbench
 dataset_kwargs:
   token: True

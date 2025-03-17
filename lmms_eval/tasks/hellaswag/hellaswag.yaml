@@ -2,6 +2,7 @@ tag:
   - multiple_choice
 task: hellaswag
 dataset_path: hellaswag
+local_dataset_path:
 dataset_name: null
 output_type: multiple_choice
 training_split: train

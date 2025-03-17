@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/VideoDetailDescription
+local_dataset_path:
 dataset_kwargs:
   token: True
   video: True
@@ -7,6 +8,7 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""
+  local_infer_dataset_path:
 
 metadata:
   version: 0.0

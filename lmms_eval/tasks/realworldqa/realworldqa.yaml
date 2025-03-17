@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/RealWorldQA
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "realworldqa"
@@ -42,5 +43,6 @@ lmms_eval_specific_kwargs:
   xcomposer2_4khd:
     pre_prompt: "[UNUSED_TOKEN_146]user\nQuestion: "
     post_prompt: "[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\nThe answer is"
+  local_infer_dataset_path:
 metadata:
   - version: 0.0

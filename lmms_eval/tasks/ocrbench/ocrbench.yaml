@@ -1,4 +1,5 @@
 dataset_path: echo840/OCRBench
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "ocrbench"

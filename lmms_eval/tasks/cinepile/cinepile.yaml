@@ -1,4 +1,5 @@
 dataset_path: tomg-group-umd/cinepile
+local_dataset_path:
 dataset_kwargs:
   cache_dir: cinepile_cache
   From_YouTube: True
@@ -21,6 +22,7 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: "You will be provided with subtitles from a specific scene of a movie and all the video frames from that scene. After going through the movie scene and seeing the frames, please answer the question that follows. The question will have five possible answers labeled A, B, C, D, and E, please try to provide the most probable answer in your opinion. Your output should be just one of A,B,C,D,E and nothing else.\n**Output Format:**\n\t**Answer:** <Option_key>"
     post_prompt: "Note: Follow the output format strictly. Only answer with the option key (A, B, C, D, E) and nothing else."
+  local_infer_dataset_path:
 metric_list: ##
   - metric: cinepile_accuracy
     aggregation: !function utils.cinepile_aggregate_results

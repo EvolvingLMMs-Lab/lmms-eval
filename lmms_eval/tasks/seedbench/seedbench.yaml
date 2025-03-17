@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/SEED-Bench
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "seedbench"

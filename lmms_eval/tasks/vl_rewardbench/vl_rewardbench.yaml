@@ -1,4 +1,5 @@
 dataset_path: MMInstruction/VL-RewardBench
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "vl_rewardbench"

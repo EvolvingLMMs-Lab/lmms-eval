@@ -14,6 +14,7 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  local_infer_dataset_path:
 filter_list:
   - name: "flexible-extract"
     filter:

@@ -1,4 +1,5 @@
 dataset_path: ling99/OCRBench_v2
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "ocrbench_v2"

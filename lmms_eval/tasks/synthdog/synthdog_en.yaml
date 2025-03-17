@@ -1,4 +1,5 @@
 dataset_path: naver-clova-ix/synthdog-en
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "synthdog_en"

@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/gigaspeech
+local_dataset_path:
 dataset_name: dev
 dataset_kwargs:
   token: True
@@ -28,3 +29,4 @@ lmms_eval_specific_kwargs:
   qwen2_audio:
     pre_prompt: ""
     post_prompt: " <|en|>"
+  local_infer_dataset_path:

@@ -19,6 +19,7 @@ lmms_eval_specific_kwargs:
     prompt_format: mcq
     pre_prompt: "You'll be given an image, an instruction and some options. You have to select the correct one. Do not explain your reasoning. Answer with only the letter which corresponds to the correct option. Do not repeat the entire answer."
     post_prompt: ""
+  local_infer_dataset_path:
 
 
 generation_kwargs:

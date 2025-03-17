@@ -23,3 +23,4 @@ lmms_eval_specific_kwargs:
   gpt4v:
     pre_prompt: "Please answer the following questions about the image."
     post_prompt: ""
+  local_infer_dataset_path:

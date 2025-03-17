@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/POPE
+local_dataset_path:
 dataset_name: Full
 dataset_kwargs:
   token: True

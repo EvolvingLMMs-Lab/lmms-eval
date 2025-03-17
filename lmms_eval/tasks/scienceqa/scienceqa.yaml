@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/ScienceQA
+local_dataset_path:
 dataset_name: ScienceQA-FULL
 task: "scienceqa"
 dataset_kwargs:
@@ -29,6 +30,7 @@ lmms_eval_specific_kwargs:
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
   qwen_vl:
     format: qwen_vl
+  local_infer_dataset_path:
   
 model_specific_generation_kwargs:
   llava:

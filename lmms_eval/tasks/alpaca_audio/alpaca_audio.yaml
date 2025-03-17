@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/alpaca_audio
+local_dataset_path:
 dataset_kwargs:
   token: True
 
@@ -18,6 +19,7 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nPlease give a detail answer to the question in the audio."
+  local_infer_dataset_path:
 metric_list:
   - metric: gpt_eval
     aggregation: !function utils.alpaca_audio_aggregate_results

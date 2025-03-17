@@ -7,4 +7,5 @@ lmms_eval_specific_kwargs:
   qwen2_audio:
     pre_prompt: ""
     post_prompt: " <|zh|>"
+  local_infer_dataset_path:
 include : _default_template_yaml

@@ -1,5 +1,6 @@
 "include": "_default_template_vcr_yaml"
 dataset_path: vcr-org/VCR-wiki-en-hard-test-100
+local_dataset_path:
 task: "vcr_wiki_en_hard_100"
 test_split: test
 process_results: !function utils.vcr_en_process_results
@@ -14,3 +15,4 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "What is the covered texts in the image? Please restore the covered texts without outputting the explanations."
+  local_infer_dataset_path:

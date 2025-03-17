@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/MMMU
+local_dataset_path:
 task: "mmmu_val_group_img"
 test_split: validation
 output_type: generate_until

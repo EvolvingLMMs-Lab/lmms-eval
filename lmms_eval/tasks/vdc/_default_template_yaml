@@ -1,4 +1,5 @@
 dataset_path: wchai/lmms_VDC_test
+local_dataset_path:
 dataset_kwargs:
   token: True
   video: True

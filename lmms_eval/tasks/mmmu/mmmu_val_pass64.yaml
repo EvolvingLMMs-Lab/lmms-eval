@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/MMMU
+local_dataset_path:
 task: "mmmu_val_pass64"
 test_split: validation
 output_type: generate_until
@@ -48,5 +49,6 @@ lmms_eval_specific_kwargs:
     prompt_type: "format"
     multiple_choice_prompt: "Answer with the option's letter from the given choices directly."
     open_ended_prompt: "Answer the question using a single word or phrase."
+  local_infer_dataset_path:
 
 include: _default_template_yaml

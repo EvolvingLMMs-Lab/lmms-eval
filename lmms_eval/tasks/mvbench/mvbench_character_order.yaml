@@ -6,3 +6,4 @@ lmms_eval_specific_kwargs:
   default:
     sub_task: character_order
     post_prompt: "Only give the best option.\n"
+  local_infer_dataset_path:

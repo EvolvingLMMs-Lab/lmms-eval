@@ -1,4 +1,5 @@
 dataset_path: MixEval/MixEval-X
+local_dataset_path:
 dataset_kwargs:
   video: true # a bit confusing, but this is because the official uses path to store image data, so we need to load it as a video dataset
   cache_dir: mix_evals_image2text
@@ -9,5 +10,6 @@ lmms_eval_specific_kwargs:
   gpt4v:
     post_prompt: ""
     pre_prompt: ""
+  local_infer_dataset_path:
 metadata:
   version: 0

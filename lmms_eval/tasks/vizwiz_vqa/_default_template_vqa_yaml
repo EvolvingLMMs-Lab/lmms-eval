@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/VizWiz-VQA
+local_dataset_path:
 output_type: generate_until
 doc_to_visual: !function utils.vizwiz_vqa_doc_to_visual
 doc_to_text: !function utils.vizwiz_vqa_doc_to_text
@@ -12,4 +13,5 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
+  local_infer_dataset_path:
 process_results: !function utils.vizwiz_vqa_process_results

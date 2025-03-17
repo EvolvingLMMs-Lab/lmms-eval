@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/RefCOCO
+local_dataset_path:
 output_type: generate_until
 process_docs: !function utils_rec.refcoco_bbox_rec_preprocess_dataset
 doc_to_visual: !function utils_rec.refcoco_bbox_rec_doc_to_visual

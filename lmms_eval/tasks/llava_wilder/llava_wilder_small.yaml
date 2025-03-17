@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/LLaVA-Bench-Wilder
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "llava_wilder_small"
@@ -10,4 +11,5 @@ lmms_eval_specific_kwargs:
   xcomposer2_4khd:
     pre_prompt: "[UNUSED_TOKEN_146]user\nQuestion: "
     post_prompt: "[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
+  local_infer_dataset_path:
 include: _default_template_wilder_yaml

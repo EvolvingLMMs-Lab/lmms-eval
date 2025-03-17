@@ -1,4 +1,5 @@
 dataset_path: BaiqiL/NaturalBench-lmms-eval # The name of the dataset as listed by HF in the datasets Hub.
+local_dataset_path:
 dataset_kwargs:
   token: True # Auxiliary arguments that `datasets.load_dataset` accepts. This can be used to specify arguments such as `data_files` or `data_dir` if you want to use local datafiles such as json or csv.
 task: "naturalbench" # The name of the task, this should be registered in the task manager. If successful, you can call lmms_eval with this task name by setting `--tasks mme`.

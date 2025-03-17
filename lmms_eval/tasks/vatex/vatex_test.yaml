@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/VATEX
+local_dataset_path:
 dataset_name: vatex_test
 task: vatex_test
 test_split: test
@@ -37,6 +38,7 @@ lmms_eval_specific_kwargs:
     prompt: Provide a brief single-sentence caption for the last video below. Do not give any reasoning, just the caption. You must follow the captioning style of the preceding videos. Do not start your response with "Output:", just provide the caption.
   gemini_api:
     prompt: Provide a brief single-sentence caption for the last video below. Do not give any reasoning, just the caption. You must follow the captioning style of the preceding videos. Do not start your response with "Output:", just provide the caption.
+  local_infer_dataset_path:
 
 generation_kwargs:
   max_new_tokens: 64

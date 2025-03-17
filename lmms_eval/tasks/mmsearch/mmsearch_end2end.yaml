@@ -1,6 +1,7 @@
 # the final score is computed using the script lmms_eval/tasks/mmsearch/get_final_scores.py
 # the score file in the submission folder of the three task (end2end, rerank, summarization) should be input as args
 dataset_path: CaraJ/MMSearch
+local_dataset_path:
 dataset_name: end2end
 dataset_kwargs:
   token: False
@@ -29,3 +30,4 @@ metric_list:
 lmms_eval_specific_kwargs: # whenever a sample is infered, save it
   middle_resules_dir: /data1/zrr/jdz/mmsearch/mmsearch_middile_results
   result_cache_dir: /data1/zrr/jdz/mmsearch/mmsearch_result_cache_dir
+  local_infer_dataset_path:

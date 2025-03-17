@@ -76,6 +76,7 @@ class TaskConfig(dict):
     # which dataset to use,
     # and what splits for what purpose
     dataset_path: str = None
+    local_dataset_path: str = None
     dataset_name: str = None
     dataset_kwargs: dict = None
     training_split: str = None
@@ -712,6 +713,9 @@ class ConfigurableTask(Task):
         if self.config.dataset_path is not None:
             self.DATASET_PATH = self.config.dataset_path
 
+        if self.config.local_dataset_path is not None:
+            self.LOCAL_DATASET_PATH = self.config.local_dataset_path
+
         if self.config.dataset_name is not None:
             self.DATASET_NAME = self.config.dataset_name
 
@@ -901,7 +905,10 @@ class ConfigurableTask(Task):
                         **dataset_kwargs if dataset_kwargs is not None else {},
                     )
                     dataset_kwargs["From_YouTube"] = True
-                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")  # download_parquet
+                    if self.LOCAL_DATASET_PATH is None:
+                        cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset") # download_parquet
+                    else:
+                        cache_path = os.path.join(self.LOCAL_DATASET_PATH, self.DATASET_PATH)
                     split = vars(self.config)["test_split"]
                     task = vars(self.config)["task"]
 
@@ -942,7 +949,10 @@ class ConfigurableTask(Task):
                     force_unzip = dataset_kwargs.get("force_unzip", False)
                     revision = dataset_kwargs.get("revision", "main")
                     create_link = dataset_kwargs.get("create_link", False)
-                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
+                    if self.LOCAL_DATASET_PATH is None:
+                        cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
+                    else:
+                        cache_path = os.path.join(self.LOCAL_DATASET_PATH, self.DATASET_PATH)
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
 
@@ -1042,13 +1052,22 @@ class ConfigurableTask(Task):
             # `ds = load_datasets("lmms-lab/MMMU")`
             self.dataset = datasets.load_from_disk(path=self.DATASET_PATH, name=self.DATASET_NAME)
         else:
-            self.dataset = datasets.load_dataset(
-                path=self.DATASET_PATH,
-                name=self.DATASET_NAME,
-                download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-                download_config=download_config,
-                **dataset_kwargs if dataset_kwargs is not None else {},
-            )
+            if self.LOCAL_DATASET_PATH is None:
+                self.dataset = datasets.load_dataset(
+                    path=self.DATASET_PATH,
+                    name=self.DATASET_NAME,
+                    download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+                    download_config=download_config,
+                    **dataset_kwargs if dataset_kwargs is not None else {},
+                )
+            else:
+                self.dataset = datasets.load_dataset(
+                    path=os.path.join(self.LOCAL_DATASET_PATH, self.DATASET_PATH),
+                    name=self.DATASET_NAME,
+                    download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
+                    download_config=download_config,
+                    **dataset_kwargs if dataset_kwargs is not None else {},
+                )
 
         if self.config.process_docs is not None:
             for split in self.dataset:

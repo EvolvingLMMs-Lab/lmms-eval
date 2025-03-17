@@ -10,4 +10,5 @@ lmms_eval_specific_kwargs:
   aria:
     pre_prompt: "Please provide a detailed answer on the following user instruction:\n"
     post_prompt: ""
+  local_infer_dataset_path:
   

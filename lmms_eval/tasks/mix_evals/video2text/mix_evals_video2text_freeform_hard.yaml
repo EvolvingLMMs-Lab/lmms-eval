@@ -23,3 +23,4 @@ lmms_eval_specific_kwargs:
   gpt4v:
     pre_prompt: "These are frames from a video. Please answer the following questions about the video with a short phrase."
     post_prompt: ""
+  local_infer_dataset_path:

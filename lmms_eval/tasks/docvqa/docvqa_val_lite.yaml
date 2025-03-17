@@ -5,6 +5,7 @@ metric_list:
     aggregation: mean
     higher_is_better: true
 dataset_path: lmms-lab/LMMs-Eval-Lite
+local_dataset_path:
 dataset_name: docvqa_val
 dataset_kwargs:
   token: True
@@ -23,4 +24,5 @@ lmms_eval_specific_kwargs:
   qwen_vl:
     pre_prompt: ""
     post_prompt: " Answer:"
+  local_infer_dataset_path:
 

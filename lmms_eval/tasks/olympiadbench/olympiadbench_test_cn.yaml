@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/OlympiadBench
+local_dataset_path:
 dataset_kwargs:
   token: True
 task : "olympiadbench_test_cn"
