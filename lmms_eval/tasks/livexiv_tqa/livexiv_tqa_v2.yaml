@@ -1,0 +1,3 @@
+task: "livexiv_tqa_v2"
+dataset_name: "TQA-2024-10-26"
+include: livexiv_tqa_template_yaml

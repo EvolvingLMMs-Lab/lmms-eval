@@ -13,4 +13,10 @@ metric_list:
     aggregation: !function utils.mmmu_aggregate_results
     higher_is_better: true
 
+lmms_eval_specific_kwargs:
+  default:
+    prompt_type: "format"
+    multiple_choice_prompt: "Answer with the option's letter from the given choices directly."
+    open_ended_prompt: "Answer the question using a single word or phrase."
+
 include: _default_template_yaml
