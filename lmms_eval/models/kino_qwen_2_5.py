@@ -45,14 +45,14 @@ class KinoQwen2_5(lmms):
 
     def __init__(
         self,
-        pretrained: str = "Evo-LMM/kino-7b-init",
+        pretrained: str = "Evo-LMM/kino_qwen2_5_vl_init",
         revision: str = "main",
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
         batch_size: int = 1,
         trust_remote_code: Optional[bool] = False,
         attn_implementation: Optional[str] = None,
-        device_map: str = "",
+        device_map: str = "cuda",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
         max_frames_num: Optional[int] = 32,
@@ -76,6 +76,9 @@ class KinoQwen2_5(lmms):
             dtype = getattr(torch, dtype)
 
         self.max_frames_num = max_frames_num
+        # print(f"=" * 50)
+        # print(device_map)
+        # print(f"=" * 50)
         self._model = KinoQwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
         if pretrained_mlp_projector:
             mm_projector_weights = torch.load(pretrained_mlp_projector, map_location="cpu")
