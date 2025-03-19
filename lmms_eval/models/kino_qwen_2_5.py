@@ -51,7 +51,7 @@ class KinoQwen2_5(lmms):
 
     def __init__(
         self,
-        pretrained: str = "Evo-LMM/kino-7b-init",
+        pretrained: str = "Evo-LMM/kino-7b-qwen2_5_caps_conv",
         revision: str = "main",
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
@@ -293,6 +293,30 @@ class KinoQwen2_5(lmms):
         # Leave the last part of the context
         result = result[-1:]
         return messages, audios, result
+    
+    def process_worldsense_input(self, visuals, context):
+        messages = [{"role": "user", "content": []}]
+        audios = []
+        result = [context]
+        import filetype
+
+        for idx, visual in enumerate(visuals):
+            file_type = filetype.guess(visual)
+            if "video" in file_type.mime:
+                messages[0]["content"].append({"type": "video", "video": visual, "max_pixels": self.video_max_pixels, "fps": self.fps})
+                assert self.use_video_audio, "Video audio is not enabled"
+                video_audio = self.extract_audio(visual)
+                temp_audio_path = f"temp_video_audio_{self._rank}.wav"
+                video_audio.write_audiofile(temp_audio_path)
+                video_audio = librosa.load(temp_audio_path, sr=self._processor.audio_processor.sampling_rate)[0]
+                splited_video_audio = self.split_audio(video_audio)
+                audios.extend(splited_video_audio)
+                for _ in range(len(splited_video_audio)):
+                    messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+                os.remove(temp_audio_path)
+        result = result[-1:]
+        return messages, audios, result
+
 
     def default_process(self, visuals):
         messages = [{"role": "user", "content": []}]
@@ -329,7 +353,6 @@ class KinoQwen2_5(lmms):
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
-
         def _collate(x):
             # the negative sign on len(toks) sorts descending - this has a few advantages:
             # - time estimates will always be over not underestimates, which is more useful for planning
@@ -355,6 +378,8 @@ class KinoQwen2_5(lmms):
             visuals = self.flatten(visuals)
             if task == "av_odyssey":
                 messages, audios, contexts = self.process_av_odyssey_input(visuals, contexts[0])
+            elif task == "worldsense":
+                messages, audios, contexts = self.process_worldsense_input(visuals, contexts[0])
             else:
                 messages, audios = self.default_process(visuals)
             # we assume all gen kwargs in the batch are the same
