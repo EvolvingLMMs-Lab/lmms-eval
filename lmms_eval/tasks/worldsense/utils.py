@@ -5,7 +5,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import numpy as np
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image

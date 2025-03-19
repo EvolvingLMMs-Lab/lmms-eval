@@ -13,10 +13,6 @@ from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from PIL import Image
 from qwen_vl_utils import process_vision_info
-from synvo_engine.models.qwen2_5_vl_audio import (
-    KinoQwen2_5_VLForConditionalGeneration,
-    KinoQwen2_5_VLProcessor,
-)
 from tqdm import tqdm
 from transformers import AutoConfig, AutoProcessor
 
@@ -25,6 +21,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.audio_processing import downsample_audio
+from synvo_engine.models.qwen2_5_vl_audio import (
+    KinoQwen2_5_VLForConditionalGeneration, KinoQwen2_5_VLProcessor)
 
 warnings.filterwarnings("ignore")
 
