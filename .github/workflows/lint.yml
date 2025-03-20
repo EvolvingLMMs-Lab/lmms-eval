@@ -19,4 +19,6 @@ jobs:
           python -m pip install pre-commit
           pre-commit install
       - name: Linting
-        run: pre-commit run --all-files
+        run: |
+          pre-commit run --all-files
+          git diff --exit-code || (git config --global user.name "github-actions" && git config --global user.email "github-actions@github.com" && git add . && git commit -m "Fix: isort fixes" && git push)
