@@ -11,8 +11,6 @@ from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from qwen_vl_utils import process_vision_info
-from synvo_engine.models.kino import KinoForConditionalGeneration
-from synvo_engine.models.kino.processing_kino import KinoProcessor
 from tqdm import tqdm
 from transformers import AutoConfig, AutoProcessor
 
@@ -21,6 +19,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.audio_processing import downsample_audio
+from synvo_engine.models.kino import KinoForConditionalGeneration
+from synvo_engine.models.kino.processing_kino import KinoProcessor
 
 warnings.filterwarnings("ignore")
 
