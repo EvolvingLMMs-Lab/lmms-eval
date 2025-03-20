@@ -22,9 +22,7 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.audio_processing import downsample_audio
 from synvo_engine.models.qwen2_5_vl_audio import (
-    KinoQwen2_5_VLForConditionalGeneration,
-    KinoQwen2_5_VLProcessor,
-)
+    KinoQwen2_5_VLForConditionalGeneration, KinoQwen2_5_VLProcessor)
 
 warnings.filterwarnings("ignore")
 
