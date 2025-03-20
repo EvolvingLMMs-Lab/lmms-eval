@@ -22,7 +22,9 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.audio_processing import downsample_audio
 from synvo_engine.models.qwen2_5_vl_audio import (
-    KinoQwen2_5_VLForConditionalGeneration, KinoQwen2_5_VLProcessor)
+    KinoQwen2_5_VLForConditionalGeneration,
+    KinoQwen2_5_VLProcessor,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -291,7 +293,7 @@ class KinoQwen2_5(lmms):
         # Leave the last part of the context
         result = result[-1:]
         return messages, audios, result
-    
+
     def process_worldsense_input(self, visuals, context):
         messages = [{"role": "user", "content": []}]
         audios = []
@@ -314,7 +316,6 @@ class KinoQwen2_5(lmms):
                 os.remove(temp_audio_path)
         result = result[-1:]
         return messages, audios, result
-
 
     def default_process(self, visuals):
         messages = [{"role": "user", "content": []}]
@@ -351,6 +352,7 @@ class KinoQwen2_5(lmms):
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
+
         def _collate(x):
             # the negative sign on len(toks) sorts descending - this has a few advantages:
             # - time estimates will always be over not underestimates, which is more useful for planning
