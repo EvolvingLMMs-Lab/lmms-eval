@@ -1,0 +1,19 @@
+dataset_path: lmms-lab/mmau
+dataset_kwargs:
+  token: True
+doc_to_target: "answer"
+doc_to_visual: !function utils.doc_to_audio
+doc_to_text: !function utils.doc_to_text
+doc_to_choice: !function utils.doc_to_choice
+generation_kwargs:
+  max_new_tokens: 128
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+
+process_results: !function utils.mmau_process_results
+
+metadata:
+  version: 0.0
