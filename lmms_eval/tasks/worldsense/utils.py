@@ -257,8 +257,13 @@ def worldsense_process_results(doc, results):
     """
     pred = results[0]
     options = doc["candidates"]
-    option_list = {"A": options[0][3:], "B": options[1][3:], "C": options[2][3:], "D": options[3][3:]}
-    answer = parse_multi_choice_response(pred, ["A", "B", "C", "D"], option_list)
+    # For only 3 answers:
+    if len(options) == 3:
+        option_list = {"A": options[0][3:], "B": options[1][3:], "C": options[2][3:]}
+        answer = parse_multi_choice_response(pred, ["A", "B", "C"], option_list)
+    else:
+        option_list = {"A": options[0][3:], "B": options[1][3:], "C": options[2][3:], "D": options[3][3:]}
+        answer = parse_multi_choice_response(pred, ["A", "B", "C", "D"], option_list)
     gt_answer = doc["answer"]
     assert answer in ["A", "B", "C", "D"]
     assert gt_answer in ["A", "B", "C", "D"]

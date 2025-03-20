@@ -1,4 +1,4 @@
-dataset_path: winvswon78/worldsensesub
+dataset_path: lmms-lab/worldsense
 dataset_kwargs:
   token: True
   cache_dir: WorldSense
