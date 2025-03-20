@@ -59,7 +59,7 @@ class VideoLLaMA3(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_flash_attention_2: Optional[bool] = True,
         max_num_frames: int = 180,
-        use_custom_video_loader=True,  # True for video-mmmu
+        use_custom_video_loader=False,  # True for video-mmmu
         **kwargs,
     ) -> None:
         super().__init__()
