@@ -39,22 +39,22 @@ TASK_CATEGORIES = [
     "Audio Source Localization",
     "Audio Recognition",
     "Object Existence Recognition",
-    "Audio Change"
+    "Audio Change",
 ]
 
 DOMAINS = [
-    'Tech & Science',
-    'Culture & Politics',
-    'Daily Life',
-    'Film & TV',
-    'Performance',
-    'Games',
-    'Sports',
-    'Music',
+    "Tech & Science",
+    "Culture & Politics",
+    "Daily Life",
+    "Film & TV",
+    "Performance",
+    "Games",
+    "Sports",
+    "Music",
 ]
 
-BASE_SYS = 'Carefully watch this video and pay attention to every detail. '
-SYS = BASE_SYS + 'Based on your observations, select the best option that accurately addresses the question.'
+BASE_SYS = "Carefully watch this video and pay attention to every detail. "
+SYS = BASE_SYS + "Based on your observations, select the best option that accurately addresses the question."
 
 FRAMES_TMPL_NOSUB = """
 These are the frames of a video. \
@@ -88,6 +88,7 @@ with open(Path(__file__).parent / "worldsense.yaml", "r") as f:
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 cache_dir = os.path.join(hf_home, config["dataset_kwargs"]["cache_dir"])
 
+
 def extract_subtitles(video_path, subtitle_path):
     video = cv2.VideoCapture(video_path)
     fps = video.get(cv2.CAP_PROP_FPS)
@@ -101,6 +102,7 @@ def extract_subtitles(video_path, subtitle_path):
         subtitle_frames.append((start_frame, end_frame, text))
 
     return subtitle_frames, total_frame
+
 
 def load_subtitles(subtitle_path):
     subtitles = {}
@@ -117,13 +119,16 @@ def load_subtitles(subtitle_path):
                     subtitles[(start_time, end_time)] = text
     return subtitles
 
+
 def parse_subtitle_time(time_str):
     h, m, s_ms = time_str.split(":")
     s, ms = s_ms.split(",")
     return int(h) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000
 
+
 def convert_time_to_frame(time_in_seconds, fps):
     return int(time_in_seconds * fps)
+
 
 def worldsense_doc_to_visual(doc):
     """
@@ -138,6 +143,7 @@ def worldsense_doc_to_visual(doc):
     else:
         print(f"Video path does not exist: {abs_video_path}")
     return video_paths
+
 
 def worldsense_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
     """
@@ -176,19 +182,20 @@ def worldsense_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
     subtitle = subtitle_text
     subtitle_option_prompt = FRAMES_TMPL_SUB.format(subtitle)
     fullprompt = [SYS, subtitle_option_prompt]
-    fullprompt.append(doc["question"] + '\n')
+    fullprompt.append(doc["question"] + "\n")
     for op in doc["candidates"]:
-        fullprompt.append(op + '\n')
+        fullprompt.append(op + "\n")
     return "".join(fullprompt)
+
 
 def worldsense_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """
     Process the document to a prompt for video + audio inputs
     """
     fullprompt = [SYS, FRAMES_TMPL_AUDIO]
-    fullprompt.append(doc["question"] + '\n')
+    fullprompt.append(doc["question"] + "\n")
     for op in doc["candidates"]:
-        fullprompt.append(op + '\n')
+        fullprompt.append(op + "\n")
     return "".join(fullprompt)
 
 
@@ -247,6 +254,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
 
     return pred_index
 
+
 def worldsense_process_results(doc, results):
     """
     Args:
@@ -271,7 +279,7 @@ def worldsense_process_results(doc, results):
     category = doc["task_type"]
     domain = doc["task_domain"]
     duration = doc["duration"]
-    audio_class = doc["audio_class"] # a list of audios
+    audio_class = doc["audio_class"]  # a list of audios
     key_name = "worldsense_score"
     # Note: the key name here is very important. It decides which aggregation function will receive the results
     # We note down the question id/category to help us aggregate the results later
@@ -319,10 +327,10 @@ def worldsense_aggregate_results(results):
     for category, questions in category2score.items():
         category_total = 0  # Category total score
         for question_id, score in questions.items():
-            category_total += score[0]  
-        category_avg_scores[category] = category_total / len(questions) * 100.0 
-        total_score += category_total  
-        total_questions += len(questions)  
+            category_total += score[0]
+        category_avg_scores[category] = category_total / len(questions) * 100.0
+        total_score += category_total
+        total_questions += len(questions)
     for category, avg_score in category_avg_scores.items():
         eval_logger.info(f"Evaluation on Task Categories: {category}: {avg_score:.2f}")
 
