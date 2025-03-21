@@ -56,6 +56,7 @@ AVAILABLE_MODELS = {
     "tinyllava": "TinyLlava",
     "videoChatGPT": "VideoChatGPT",
     "videochat2": "VideoChat2",
+    "videollama3": "VideoLLaMA3",
     "video_llava": "VideoLLaVA",
     "vila": "VILA",
     "vita": "VITA",
