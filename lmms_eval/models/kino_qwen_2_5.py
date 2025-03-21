@@ -13,7 +13,7 @@ from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from PIL import Image
 from qwen_vl_utils import process_vision_info
-from synvo_engine.models.qwen2_5_vl_audio import (
+from lmms_engine.models.qwen2_5_vl_audio import (
     KinoQwen2_5_VLForConditionalGeneration,
     KinoQwen2_5_VLProcessor,
 )
