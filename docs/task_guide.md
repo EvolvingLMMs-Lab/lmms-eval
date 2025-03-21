@@ -29,7 +29,8 @@ Dataset configuration options:
 - **process_docs** (`Callable`, *optional*) — Optionally define a function to apply to each HF dataset split, to preprocess all documents before being fed into prompt template rendering or other evaluation steps. Can be used to rename dataset columns, or to process documents into a format closer to the expected format expected by a prompt template.
 
 Prompting / in-context formatting options:
-- **doc_to_text** (`Union[Callable, str]`, *optional*) — Column name or function to process a sample into the appropriate input for the model. 
+- **doc_to_visual** (Union[Callable, str], *optional*) — Column name or function to process a sample into the appropriate visual input for the model.
+- **doc_to_text** (`Union[Callable, str]`, *optional*) — Column name or function to process a sample into the appropriate text input for the model. 
 
   For multi-round generation, (e.g., MMSearch), the function accepts additional parameters about the round index, previous round information and previous model output. It should return the input image for the next round, input text for the next round, a boolean indicating if round inference should terminate, model outputs from all rounds, and extra information from previous rounds.
 - **doc_to_target** (`Union[Callable, str]`, *optional*) — Column name or or function to process a sample into the appropriate target output for the model. For multiple choice tasks, this should return an index into
