@@ -10,9 +10,9 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
+from lmms_engine.models.kino import KinoForConditionalGeneration
+from lmms_engine.models.kino.processing_kino import KinoProcessor
 from qwen_vl_utils import process_vision_info
-from synvo_engine.models.kino import KinoForConditionalGeneration
-from synvo_engine.models.kino.processing_kino import KinoProcessor
 from tqdm import tqdm
 from transformers import AutoConfig, AutoProcessor
 
