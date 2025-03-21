@@ -1,0 +1,25 @@
+dataset_path: syhuggingface/multimodal_rewardbench # temporary hf dataset path (the original dataset is available at github only. https://github.com/facebookresearch/multimodal_rewardbench)
+description: ""
+dataset_kwargs:
+  token: True
+task: "multimodal_rewardbench"
+tag: "rewardbench"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.multimodal_rewardbench_doc_to_visual
+doc_to_text: !function utils.multimodal_rewardbench_doc_to_text
+doc_to_target: "Better" 
+generation_kwargs:
+  max_new_tokens: 1024 
+  temperature: 0.0
+  top_p: 1.0 
+  num_beams: 1
+  do_sample: false 
+# The return value of process_results will be used by metrics
+process_results: !function utils.multimodal_rewardbench_process_results
+metric_list:
+  - metric: multimodal_rewardbench_accuracy
+    aggregation: !function utils.multimodal_rewardbench_aggregate_results
+    higher_is_better: true
+metadata:
+  - version: 0.0
