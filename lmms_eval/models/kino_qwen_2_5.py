@@ -11,12 +11,12 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
-from PIL import Image
-from qwen_vl_utils import process_vision_info
 from lmms_engine.models.qwen2_5_vl_audio import (
     KinoQwen2_5_VLForConditionalGeneration,
     KinoQwen2_5_VLProcessor,
 )
+from PIL import Image
+from qwen_vl_utils import process_vision_info
 from tqdm import tqdm
 from transformers import AutoConfig, AutoProcessor
 
@@ -352,7 +352,7 @@ class KinoQwen2_5(lmms):
             task = task[0]
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            visuals = self.flatten(visuals)
+            visuals = self.flatten(visuals) if visuals[0] is not None else []
             if task == "av_odyssey":
                 messages, audios, contexts = self.process_av_odyssey_input(visuals, contexts[0])
             else:
