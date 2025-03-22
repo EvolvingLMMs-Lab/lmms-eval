@@ -1,4 +1,5 @@
 dataset_path: longvideobench/LongVideoBench
+local_dataset_path:
 dataset_kwargs:
   token: True
   cache_dir: longvideobench
@@ -26,4 +27,5 @@ lmms_eval_specific_kwargs:
     pre_prompt: ""
     post_prompt: "Answer with the option's letter from the given choices directly.\n"
     insert_interleave_subtitles: True
+  local_infer_dataset_path:
     

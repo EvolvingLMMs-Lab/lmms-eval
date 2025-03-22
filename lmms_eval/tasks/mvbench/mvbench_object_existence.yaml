@@ -6,3 +6,4 @@ lmms_eval_specific_kwargs:
   default:
     sub_task: object_existence
     post_prompt: "Only give the best option.\n"
+  local_infer_dataset_path:

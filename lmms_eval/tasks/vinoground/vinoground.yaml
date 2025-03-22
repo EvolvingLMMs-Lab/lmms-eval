@@ -1,4 +1,5 @@
 dataset_path: HanSolo9682/Vinoground
+local_dataset_path:
 dataset_kwargs:
   token: True
   cache_dir: vinoground

@@ -1,4 +1,5 @@
 dataset_path: rootsautomation/websrc
+local_dataset_path:
 task: "websrc_val"
 test_split: dev
 output_type: generate_until

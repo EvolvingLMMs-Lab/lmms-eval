@@ -1,4 +1,5 @@
 dataset_path: Efficient-Large-Model/ai2d-no-mask
+local_dataset_path:
 task: "ai2d_no_mask"
 dataset_kwargs:
   token: True
@@ -25,6 +26,7 @@ lmms_eval_specific_kwargs:
     prompt_format: mcq_xcomposer
     pre_prompt: "[UNUSED_TOKEN_146]user\nQuestion: "
     post_prompt: "[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\nThe answer is"
+  local_infer_dataset_path:
 
 model_specific_target_kwargs:
   default: "mcq"

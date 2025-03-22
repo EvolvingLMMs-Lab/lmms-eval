@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/COCO-Caption
+local_dataset_path:
 dataset_kwargs:
   token: True
 task : "coco2014_cap_test"

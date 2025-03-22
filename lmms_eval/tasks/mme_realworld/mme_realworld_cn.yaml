@@ -1,4 +1,5 @@
 dataset_path: yifanzhang114/MME-RealWorld-CN-Lmms-eval
+local_dataset_path:
 dataset_kwargs:
   token: True
   # From_YouTube: True
@@ -31,5 +32,6 @@ lmms_eval_specific_kwargs:
   xcomposer2_4khd:
     pre_prompt: "[UNUSED_TOKEN_146]user\n"
     post_prompt: " 根据图像选择上述多项选择题的最佳答案。只需回答正确选项的字母（A, B, C, D 或 E）。[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
+  local_infer_dataset_path:
 metadata:
   - version: 0.0

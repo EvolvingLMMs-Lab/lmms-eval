@@ -9,6 +9,7 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer the question using a single word only. "
+  local_infer_dataset_path:
 metric_list:
   - metric: exact_match
     aggregation: mean

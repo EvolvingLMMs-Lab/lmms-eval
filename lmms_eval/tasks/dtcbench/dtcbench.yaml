@@ -1,4 +1,5 @@
 dataset_path: NCSOFT/K-DTCBench
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "dtcbench"

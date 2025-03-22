@@ -1,5 +1,6 @@
 task: "vqav2_val_lite"
 dataset_path: lmms-lab/LMMs-Eval-Lite
+local_dataset_path:
 dataset_name: vqav2_val
 dataset_kwargs:
   token: True
@@ -15,6 +16,7 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer the question using a single word or phrase."
+  local_infer_dataset_path:
 test_split: lite
 metric_list:
   - metric: exact_match

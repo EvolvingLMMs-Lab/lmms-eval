@@ -1,5 +1,6 @@
 task: "mmmu_pro_composite_cot"
 dataset_path: MMMU/MMMU_Pro
+local_dataset_path:
 dataset_name: composite
 test_split: test
 output_type: generate_until

@@ -1,4 +1,5 @@
 dataset_path: TIGER-Lab/MEGA-Bench
+local_dataset_path:
 test_split: test
 dataset_kwargs:
   token: True
@@ -26,6 +27,7 @@ metric_list:
 lmms_eval_specific_kwargs:
   default:
     max_video_subsample_frame: 64
+  local_infer_dataset_path:
   
 metadata:
   - version: 0.0

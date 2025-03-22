@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/MMMU
+local_dataset_path:
 task: "mmmu_test"
 test_split: test
 output_type: generate_until

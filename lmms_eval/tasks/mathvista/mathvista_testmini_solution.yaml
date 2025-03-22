@@ -1,4 +1,5 @@
 dataset_path: AI4Math/MathVista
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "mathvista_testmini_solution"
@@ -27,3 +28,4 @@ lmms_eval_specific_kwargs:
     use_ocr: False
   phi3v:
     shot_type: "solution"
+  local_infer_dataset_path:

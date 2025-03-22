@@ -2,6 +2,7 @@ tag:
   - ai2_arc
 task: arc_easy
 dataset_path: allenai/ai2_arc
+local_dataset_path:
 dataset_name: ARC-Easy
 output_type: multiple_choice
 training_split: train

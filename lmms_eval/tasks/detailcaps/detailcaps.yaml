@@ -1,4 +1,5 @@
 dataset_path: foundation-multimodal-models/DetailCaps-4870
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "detailcaps"

@@ -1,4 +1,5 @@
 dataset_path: q-future/Q-Bench2-HF
+local_dataset_path:
 task: "qbench2_dev"
 test_split: dev
 output_type: generate_until
@@ -19,4 +20,5 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "Answer with the option's letter from the given choices directly.\n"
+  local_infer_dataset_path:
   

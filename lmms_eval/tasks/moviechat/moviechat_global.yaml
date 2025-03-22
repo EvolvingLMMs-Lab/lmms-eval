@@ -1,5 +1,6 @@
 task: "moviechat_global"
 dataset_path: Enxin/lmms_MovieChat_test
+local_dataset_path:
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.moviechat_doc_to_visual

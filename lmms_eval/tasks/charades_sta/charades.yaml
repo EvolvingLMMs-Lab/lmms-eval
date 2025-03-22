@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/charades_sta
+local_dataset_path:
 dataset_kwargs:
   token: True
   cache_dir: charades_sta
@@ -28,3 +29,4 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: "Please find the visual event described by a sentence in the video, determining its starting and ending times. The format should be: 'The event happens in the start time - end time'. For example, The event 'person turn a light on' happens in the 24.3 - 30.4 seonds. Now I will give you the textual sentence: "
     post_prompt: "Please return its start time and end time."
+  local_infer_dataset_path:

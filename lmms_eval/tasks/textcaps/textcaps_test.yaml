@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/TextCaps
+local_dataset_path:
 dataset_kwargs:
   token: True
 task : "textcaps_test"

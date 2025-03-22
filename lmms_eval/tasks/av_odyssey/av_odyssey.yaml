@@ -1,4 +1,5 @@
 dataset_path: AV-Odyssey/AV_Odyssey_Bench_LMMs_Eval
+local_dataset_path:
 dataset_kwargs:
   token: True
   cache_dir: AV_Odyssey

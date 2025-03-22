@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/textvqa
+local_dataset_path:
 output_type: generate_until
 doc_to_visual: !function utils.textvqa_doc_to_visual
 doc_to_text: !function utils.textvqa_doc_to_text
@@ -15,3 +16,4 @@ lmms_eval_specific_kwargs:
   qwen_vl:
     pre_prompt: ""
     post_prompt: " Answer:"
+  local_infer_dataset_path:

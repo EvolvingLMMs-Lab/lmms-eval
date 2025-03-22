@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/ChartQA
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "chartqa"
@@ -31,4 +32,5 @@ lmms_eval_specific_kwargs:
   qwen_vl:
     pre_prompt: ""
     post_prompt: " Answer:"
+  local_infer_dataset_path:
 

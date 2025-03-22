@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/RefCOCOplus
+local_dataset_path:
 output_type: generate_until
 doc_to_visual: !function utils.refcoco_seg_doc_to_visual
 doc_to_text: !function utils.refcoco_doc_to_text

@@ -2,6 +2,7 @@ tag:
   - math_word_problems
 task: gsm8k
 dataset_path: gsm8k
+local_dataset_path:
 dataset_name: main
 output_type: generate_until
 training_split: train

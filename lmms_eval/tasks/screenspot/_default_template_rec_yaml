@@ -1,4 +1,5 @@
 dataset_path: rootsautomation/ScreenSpot
+local_dataset_path:
 output_type: generate_until
 doc_to_visual: !function utils_rec.screenspot_rec_doc_to_visual
 doc_to_text: !function utils_rec.screenspot_rec_doc_to_text

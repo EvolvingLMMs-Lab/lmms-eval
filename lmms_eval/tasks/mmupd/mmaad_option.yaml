@@ -5,6 +5,7 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  local_infer_dataset_path:
 include: _default_template_mmupd_yaml
 metric_list:
   - metric: gpt_eval_score

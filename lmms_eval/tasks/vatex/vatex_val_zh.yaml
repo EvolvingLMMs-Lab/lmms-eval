@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/VATEX_ZH
+local_dataset_path:
 dataset_name: vatex_val_zh
 task: vatex_val_zh
 test_split: validation
@@ -18,6 +19,7 @@ lmms_eval_specific_kwargs:
 
   gemini_api:
     prompt: 请为提供的视频提供简短的描述。不要给出任何理由，只提供描述。您必须沿用前面视频的描述样式。不需要以 "输出"开头，只需提供描述即可.
+  local_infer_dataset_path:
 
 process_results: !function utils.vatex_process_CN_result
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results

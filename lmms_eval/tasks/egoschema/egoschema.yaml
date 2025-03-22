@@ -18,3 +18,4 @@ lmms_eval_specific_kwargs:
   aria:
     pre_prompt: "Please answer the question about the video:\n"
     post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  local_infer_dataset_path:

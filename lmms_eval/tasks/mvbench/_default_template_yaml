@@ -1,4 +1,5 @@
 dataset_path: OpenGVLab/MVBench
+local_dataset_path:
 dataset_kwargs:
   token: True
   cache_dir: mvbench_video

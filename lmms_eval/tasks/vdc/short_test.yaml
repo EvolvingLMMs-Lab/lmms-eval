@@ -1,5 +1,6 @@
 task: "short_test"
 dataset_path: wchai/lmms_VDC_test
+local_dataset_path:
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.vdc_doc_to_visual

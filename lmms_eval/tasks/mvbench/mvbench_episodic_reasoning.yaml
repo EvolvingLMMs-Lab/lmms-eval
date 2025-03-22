@@ -14,6 +14,7 @@ lmms_eval_specific_kwargs:
   default:
     sub_task: episodic_reasoning
     post_prompt: "Only give the best option.\n"
+  local_infer_dataset_path:
 
 # metadata:
 #   task_type: video

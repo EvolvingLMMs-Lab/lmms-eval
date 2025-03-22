@@ -1,6 +1,7 @@
 task: ok_vqa_val2014_lite
 test_split: lite 
 dataset_path: lmms-lab/LMMs-Eval-Lite
+local_dataset_path:
 dataset_name: ok_vqa_val2014
 output_type: generate_until
 doc_to_visual: !function utils.ok_vqa_doc_to_visual
@@ -23,5 +24,6 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
+  local_infer_dataset_path:
 metadata:
   - version: 0.0

@@ -1,4 +1,5 @@
 dataset_path: ConBench/ConBench_D
+local_dataset_path:
 dataset_kwargs:
   token: True
 task: "ConBench"

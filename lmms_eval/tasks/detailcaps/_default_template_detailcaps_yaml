@@ -1,3 +1,4 @@
 lmms_eval_specific_kwargs:
   default:
     prompt: "Describe this image in detail."
+  local_infer_dataset_path:

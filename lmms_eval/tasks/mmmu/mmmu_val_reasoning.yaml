@@ -1,4 +1,5 @@
 dataset_path: lmms-lab/MMMU
+local_dataset_path:
 task: "mmmu_val_reasoning"
 test_split: validation
 output_type: generate_until
@@ -28,6 +29,7 @@ lmms_eval_specific_kwargs:
     prompt_type: "reasoning"
     multiple_choice_prompt: "Please reason step by step, and answer the question with option letter from given choices in the format of Answer: <option letter>."
     open_ended_prompt: "Please reason step by step, and answer the question using a single word or phrase in the format of Answer: <answer>."
+  local_infer_dataset_path:
 
 generation_kwargs:
   max_new_tokens: 16384
