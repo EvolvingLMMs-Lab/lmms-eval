@@ -297,7 +297,8 @@ class Kino(lmms):
                 elif isinstance(visual, dict) and "array" in visual:
                     splited_video_audio = self.split_audio(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
                     audios.extend(splited_video_audio)
-                    messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
+                    for _ in range(len(splited_video_audio)):
+                        messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
             # we assume all gen kwargs in the batch are the same
             # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
