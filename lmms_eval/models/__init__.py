@@ -40,6 +40,7 @@ AVAILABLE_MODELS = {
     "mantis": "Mantis",
     "minicpm_v": "MiniCPM_V",
     "minimonkey": "MiniMonkey",
+    "mistral3_audio": "Mistral3Audio",
     "moviechat": "MovieChat",
     "mplug_owl_video": "mplug_Owl",
     "ola": "Ola",
