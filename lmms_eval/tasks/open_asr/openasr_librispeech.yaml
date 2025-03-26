@@ -1,0 +1,4 @@
+group: openasr_librispeech 
+task:
+- open_asr_librispeech_test_other
+- open_asr_librispeech_test_clean
