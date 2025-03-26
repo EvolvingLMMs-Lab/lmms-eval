@@ -107,7 +107,7 @@ class Kino(lmms):
                 self._processor.image_processor.min_pixels = min_pixels
                 self._processor.video_processor.min_pixels = min_pixels
         else:
-            self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-7b-init", revision=revision, trust_remote_code=trust_remote_code)
+            self._processor = KinoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._processor.tokenizer.padding_side = "left"
         self._tokenizer = self._processor.tokenizer
