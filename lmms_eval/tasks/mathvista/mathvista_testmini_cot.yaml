@@ -3,6 +3,7 @@ dataset_kwargs:
   token: True
 task: "mathvista_testmini_cot"
 test_split: testmini
+tag: visual_reasoning_collection
 output_type: generate_until
 doc_to_visual: !function utils.mathvista_doc_to_visual
 doc_to_text: !function utils.mathvista_doc_to_text

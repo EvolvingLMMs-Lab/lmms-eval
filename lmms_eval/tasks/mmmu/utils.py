@@ -25,20 +25,6 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-
-with open(Path(__file__).parent / "mmmu_val_reasoning.yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    reasoning_config = yaml.safe_load("".join(safe_data))
-    MC_PROMPT = reasoning_config["lmms_eval_specific_kwargs"]["default"]["multiple_choice_prompt"]
-    OPEN_ENDED_PROMPT = reasoning_config["lmms_eval_specific_kwargs"]["default"]["open_ended_prompt"]
-
-
 NUM_SECONDS_TO_SLEEP = 5
 API_TYPE = os.getenv("API_TYPE", "openai")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
@@ -144,7 +130,10 @@ def construct_prompt(doc, mc_prompt="", open_ended_prompt=""):
 
 
 def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
+    if lmms_eval_specific_kwargs is None:
+        question = construct_prompt(doc)
+    else:
+        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
     if config["metadata"]["interleaved_format"]:
         question = replace_images_tokens(question)
     return question
