@@ -19,7 +19,7 @@ if API_TYPE == "openai":
         "Content-Type": "application/json",
     }
     client = OpenAI(api_key=API_KEY)
-    gpt_model = config["metadata"]["gpt_eval_model_name"]
+    gpt_model = os.getenv("MODEL_VERSION", "gpt-4o")
 
 elif API_TYPE == "azure":
     API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
