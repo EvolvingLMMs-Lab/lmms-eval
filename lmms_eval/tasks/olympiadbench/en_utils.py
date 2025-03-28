@@ -11,8 +11,8 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 
 try:
     olympiadbench_evaluator = OlympiadBenchEvaluator()
-except:
-    pass
+except Exception as e:
+    eval_logger.warning(f"OlympiadBenchEvaluator not found: {e}")
 
 
 def olympiadbench_doc_to_visual(doc):

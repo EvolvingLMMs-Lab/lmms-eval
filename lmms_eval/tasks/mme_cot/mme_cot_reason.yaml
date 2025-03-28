@@ -3,6 +3,7 @@ dataset_kwargs:
   token: True
 task: "mme_cot_reason"
 test_split: test
+tag: visual_reasoning_collection
 output_type: generate_until
 doc_to_visual: !function utils.mmecot_doc_to_visual
 doc_to_text: !function utils.mmecot_doc_to_text
