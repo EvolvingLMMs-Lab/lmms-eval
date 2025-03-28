@@ -1,8 +1,10 @@
 import json
 import os
+import time
 from pathlib import Path
 
 import pandas as pd
+import requests
 import yaml
 from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
@@ -11,7 +13,7 @@ from lmms_eval.tasks.mathvision.eval_utils import find_math_answer, is_equal, is
 
 NUM_SECONDS_TO_SLEEP = 5
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
 JUDGE_RULES = """You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
 # Input
@@ -39,7 +41,7 @@ Model Prediction:
 - For questions requiring units, both value and unit must be correct
 
 # Strict Output format
-[0/1]"""
+0/1"""
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
@@ -90,7 +92,7 @@ def mathvision_doc_to_visual(doc):
     return [doc["decoded_image"].convert("RGB")]
 
 
-def mathvision_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def mathvision_doc_to_text(doc):
     question, choices = doc["question"], doc["options"]
     len_choices = len(choices)
     options = [chr(ord("A") + i) for i in range(len_choices)]
@@ -99,11 +101,6 @@ def mathvision_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         query_prompt = f"{question}\nChoices: {choices_str}"
     else:
         query_prompt = question
-    if lmms_eval_specific_kwargs:
-        if len_choices > 0:  # mcq
-            query_prompt = f"{query_prompt}\n{lmms_eval_specific_kwargs['mc_prompt']}"
-        elif len_choices == 0:  # short answer
-            query_prompt = f"{query_prompt}\n{lmms_eval_specific_kwargs['short_answer_prompt']}"
     return query_prompt
 
 
@@ -113,9 +110,13 @@ def mathvision_gpt_eval_process_results(doc, results):
         model_answer = pred.strip()
         gt_answer = str(doc["answer"])
         gpt_response = get_chat_response(JUDGE_RULES.format(question=doc["question"], answer=gt_answer, pred=model_answer), 1024)
-        if int(gpt_response) == 1:
-            correct_list.append(True)
-        else:
+        try:
+            if int(gpt_response) == 1:
+                correct_list.append(True)
+            else:
+                correct_list.append(False)
+        except Exception as e:
+            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
             correct_list.append(False)
 
     return {
