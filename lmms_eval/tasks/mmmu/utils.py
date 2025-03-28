@@ -57,6 +57,7 @@ Model Prediction:
 # Strict Output format
 0 or 1"""
 
+
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
@@ -117,7 +118,7 @@ def parse_options(options):
     return choices_str
 
 
-def construct_prompt(doc, mc_prompt="", open_ended_prompt=""):
+def construct_prompt(doc, mc_prompt="", open_ended_prompt="", prompt_type="reasoning"):
     question = doc["question"]
     if doc["question_type"] == "multiple-choice":
         # Weirdly, data["options"] is a string in MMMU Huggingface dataset
@@ -126,6 +127,7 @@ def construct_prompt(doc, mc_prompt="", open_ended_prompt=""):
         question = f"{question}\n{parsed_options}\n\n{mc_prompt}"
     else:
         question = f"{question}\n\n{open_ended_prompt}"
+
     return question
 
 
@@ -133,9 +135,10 @@ def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         question = construct_prompt(doc)
     else:
-        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"])
+        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"], lmms_eval_specific_kwargs["prompt_type"])
     if config["metadata"]["interleaved_format"]:
         question = replace_images_tokens(question)
+
     return question
 
 
@@ -167,8 +170,15 @@ def mmmu_reasoning_process_results(doc, results):
     parsed_preds = []
     scores = []
     for pred in results:
-        formatted_question = construct_prompt(doc, MC_PROMPT, OPEN_ENDED_PROMPT)
-        llm_judge_prompt = JUDGE_RULES.format(question=formatted_question, answer=doc["answer"], pred=pred)
+        formatted_question = construct_prompt(doc)
+        # Extract content from <answer> tags if present, handling potential spaces
+        answer = doc["answer"]
+        if isinstance(pred, str):
+            match = re.search(r"<answer>\s*([\s\S]*?)\s*</answer>", pred)
+            if match:
+                pred = match.group(1).strip()
+
+        llm_judge_prompt = JUDGE_RULES.format(question=formatted_question, answer=answer, pred=pred)
         llm_judge_score = get_chat_response(llm_judge_prompt, max_tokens=20, retries=3)
         scores.append(llm_judge_score)
         parsed_preds.append(pred)
