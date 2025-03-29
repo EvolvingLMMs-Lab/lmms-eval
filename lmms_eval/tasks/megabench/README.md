@@ -4,7 +4,51 @@
 
 MEGA-Bench contains 505 multimodal tasks with diverse data sources, input/output formats, and skill requirements. The taxonomy tree is derived from the application dimension, which guides and calibrates the annotation process. The benchmark is equiped with a suite of 45 evaluation metrics to handle various output formats beyond multiple-choice questions.
 
-Following this doc, the evaluation result contains the final scores and multi-dimensional breakdown, which has a consistent format as [MEGA-Bench Leaderboard](https://huggingface.co/spaces/TIGER-Lab/MEGA-Bench).
+Following this doc, the evaluation result contains the final scores and multi-dimensional breakdown, which has a consistent format as [MEGA-Bench Leaderboard](https://huggingface.co/spaces/TIGER-Lab/MEGA-Bench). Below is an example from evaluating `llava-ov-7b` on the core set.
+
+```json
+{
+    "model_summary": {
+        "core": {
+            "num_eval_tasks": 440,
+            "num_eval_samples": 6531,
+            "macro_mean_score": 0.21890499112354772
+        },
+        "open": ...,
+        "overall_score": 0.21890499112354772
+    },
+    "keyword_stats": {
+        "skills": {
+            "Object Recognition and Classification": {
+                "count": 272,
+                "num_samples": 4193,
+                "tasks": [],
+                "average_score": 0.237467941941504
+            },
+            "Domain-Specific Knowledge and Skills": {
+                "count": 66,
+                "num_samples": 1153,
+                "tasks": [],
+                "average_score": 0.2134904060117354
+            },
+            "Mathematical and Logical Reasoning": {
+                "count": 103,
+                "num_samples": 1762,
+                "tasks": [],
+                "average_score": 0.19061988965845886
+            },
+            "Spatial and Temporal Reasoning": {
+                "count": 144,
+                "num_samples": 2278,
+                "tasks": [],
+                "average_score": 0.1953679420247293
+            },
+            ...
+        }
+    }
+}
+```
+
 
 
 ## Step-1: Get the model response files with lmms-eval
