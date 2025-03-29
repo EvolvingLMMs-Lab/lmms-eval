@@ -1,10 +1,10 @@
-# MEGA-Bench: Scaling Multimodal Evaluation to over 500 Real-World Tasks
+# MEGA-Bench: Scaling Multimodal Evaluation to over 500 Real-World Tasks [ICLR 2025]
 
 ![image](https://github.com/user-attachments/assets/5fd44fa9-0ec2-4298-ad0c-e883cb1edf7f)
 
 MEGA-Bench contains 505 multimodal tasks with diverse data sources, input/output formats, and skill requirements. The taxonomy tree is derived from the application dimension, which guides and calibrates the annotation process. The benchmark is equiped with a suite of 45 evaluation metrics to handle various output formats beyond multiple-choice questions.
 
-Following this doc, the final evaluation file has a consistent format with [MEGA-Bench Leaderboard](https://huggingface.co/spaces/TIGER-Lab/MEGA-Bench).
+Following this doc, the evaluation result contains the final scores and multi-dimensional breakdown, which has a consistent format as [MEGA-Bench Leaderboard](https://huggingface.co/spaces/TIGER-Lab/MEGA-Bench).
 
 
 ## Step-1: Get the model response files with lmms-eval
@@ -51,6 +51,8 @@ Evaluate the submission file with stand-alone evaluator adapted from [MEGA-Bench
 # Run the metrics for the core set
 python lmms_eval/tasks/megabench/evaluator.py --subset_name core --submission_file logs/llava-ov-7b/submissions/megabench_core_all_query_responses.json  --output_file logs/llava-ov-7b/megabench_scores/megabench_core_data_with_scores.json
 ```
+
+Note: please set up the OpenAI API key in the environment variable `OPENAI_API_KEY` to evaluate the open set.
 
 ```bash
 # Run the metrics for the open-ended set
