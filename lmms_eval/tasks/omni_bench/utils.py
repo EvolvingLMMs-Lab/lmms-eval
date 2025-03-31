@@ -1,8 +1,10 @@
-import random
-import numpy as np
-from collections import defaultdict
 import logging
+import random
+from collections import defaultdict
+
+import numpy as np
 from loguru import logger as eval_logger
+
 
 def omni_bench_original_doc_to_visual(doc):
     return [doc["audio"], doc["image"]]
@@ -15,13 +17,9 @@ def omni_bench_original_doc_to_text(doc, lmms_eval_specific_kwargs):
     options = doc["options"]
     letters = ["A", "B", "C", "D"]
     enumerated_opts = [f"{letters[i]}. {opt}" for i, opt in enumerate(options)]
-    prompt_text = (
-        f"{pre_prompt}"
-        f"Question:\n{question}\n\n"
-        f"Options:\n" + "\n".join(enumerated_opts) +
-        f"\n\n{post_prompt}"
-    )
+    prompt_text = f"{pre_prompt}" f"Question:\n{question}\n\n" f"Options:\n" + "\n".join(enumerated_opts) + f"\n\n{post_prompt}"
     return prompt_text
+
 
 def omni_bench_image_caption_doc_to_visual(doc):
     return [doc["audio"]]
@@ -35,14 +33,9 @@ def omni_bench_image_caption_doc_to_text(doc, lmms_eval_specific_kwargs):
     options = doc["options"]
     letters = ["A", "B", "C", "D"]
     enumerated_opts = [f"{letters[i]}. {opt}" for i, opt in enumerate(options)]
-    prompt_text = (
-        f"{pre_prompt}"
-        f"Visual Context for the audio:\n{image_caption}\n\n"
-        f"Question:\n{question}\n\n"
-        f"Options:\n" + "\n".join(enumerated_opts) + "\n\n"
-        f"{post_prompt}"
-    )
+    prompt_text = f"{pre_prompt}" f"Visual Context for the audio:\n{image_caption}\n\n" f"Question:\n{question}\n\n" f"Options:\n" + "\n".join(enumerated_opts) + "\n\n" f"{post_prompt}"
     return prompt_text
+
 
 def omni_bench_audio_transcript_doc_to_visual(doc):
     return [doc["image"]]
@@ -56,14 +49,9 @@ def omni_bench_audio_transcript_doc_to_text(doc, lmms_eval_specific_kwargs):
     options = doc["options"]
     letters = ["A", "B", "C", "D"]
     enumerated_opts = [f"{letters[i]}. {opt}" for i, opt in enumerate(options)]
-    prompt_text = (
-        f"{pre_prompt}"
-        f"Audio context for the images:\n{audio_transcript}\n\n"
-        f"Question:\n{question}\n\n"
-        f"Options:\n" + "\n".join(enumerated_opts) + "\n\n"
-        f"{post_prompt}"
-    )
+    prompt_text = f"{pre_prompt}" f"Audio context for the images:\n{audio_transcript}\n\n" f"Question:\n{question}\n\n" f"Options:\n" + "\n".join(enumerated_opts) + "\n\n" f"{post_prompt}"
     return prompt_text
+
 
 def omni_bench_doc_to_choice(doc):
     return doc["options"]
@@ -77,18 +65,13 @@ def omni_bench_doc_to_target(doc):
 def omni_bench_process_results(doc, results):
     response_text = results[0].strip()
     all_choices = ["A", "B", "C", "D"]
-    eval_logger.debug(results)
-    eval_logger.debug(f"Raw model output: {results[0]}")
     pred = parse_multi_choice_response(response_text, all_choices)
     letter_map = {0: "A", 1: "B", 2: "C", 3: "D"}
     gold_index = omni_bench_doc_to_target(doc)
     gold_letter = letter_map.get(gold_index, "X")
     overall_correct = 1 if pred == gold_letter else 0
     category = doc.get("task type", "unknown")
-    accuracy_dict = {
-        "overall": overall_correct, 
-        category: overall_correct
-    }
+    accuracy_dict = {"overall": overall_correct, category: overall_correct}
     return {"accuracy": accuracy_dict}
 
 
@@ -106,14 +89,10 @@ def omni_bench_aggregate_results(results):
                 category_correct[category] += score
                 category_total[category] += 1
     overall_accuracy = (total_correct / total_examples) * 100 if total_examples > 0 else 0.0
-    category_accuracy = {
-        category: (category_correct[category] / category_total[category]) * 100 
-        if category_total[category] > 0 else 0.0 
-        for category in category_correct
-    }
+    category_accuracy = {category: (category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0 for category in category_correct}
     eval_logger.info("=" * 50)
     eval_logger.info(f"Overall Accuracy: {overall_accuracy:.2f}%")
-    
+
     if category_accuracy:
         eval_logger.info("Category-wise Accuracy:")
         for category, acc in category_accuracy.items():
@@ -121,13 +100,9 @@ def omni_bench_aggregate_results(results):
     eval_logger.info("=" * 50)
     return round(overall_accuracy, 5)
 
-def parse_multi_choice_response(response, all_choices):
-    """
-    Parse the prediction from the generated response.
-    Return the predicted letter (e.g., "A", "B", "C", "D") or None if not found.
-    """
-    response = " " + response.strip() + " " 
 
+def parse_multi_choice_response(response, all_choices):
+    response = " " + response.strip() + " "
     index_ans = True
     ans_with_brack = False
     candidates = []

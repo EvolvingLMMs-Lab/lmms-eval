@@ -1,4 +1,4 @@
-dataset_path: ngqtrung/OmniBench
+dataset_path: lmms-lab/Omni_Bench_fix
 test_split: train
 output_type: generate_until
 
