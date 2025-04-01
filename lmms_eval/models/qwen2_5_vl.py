@@ -300,7 +300,7 @@ class Qwen2_5_VL(lmms):
                 temperature=gen_kwargs["temperature"],
                 top_p=gen_kwargs["top_p"],
                 num_beams=gen_kwargs["num_beams"],
-                max_new_tokens=4096,
+                max_new_tokens=gen_kwargs["max_new_tokens"],
                 use_cache=self.use_cache,
             )
 
