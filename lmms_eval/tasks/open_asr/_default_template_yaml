@@ -6,7 +6,7 @@ doc_to_visual: !function utils.openasr_doc_to_audio
 doc_to_text: !function utils.openasr_doc_to_text
 doc_to_target: "gt"
 generation_kwargs:
-  max_new_tokens: 512 
+  max_new_tokens: 4096
   temperature: 0
   top_p: 1.0
   num_beams: 1
