@@ -262,24 +262,6 @@ class Qwen2_5_Omni(lmms):
                 elif not isinstance(until, list):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
-            # if isinstance(contexts, tuple):
-            #     contexts = list(contexts)
-
-            # for i in range(len(contexts)):
-            #     for j in range(32):
-            #         if f"<image {j}>" in contexts[i]:
-            #             contexts[i] = contexts[i].replace(f"<image {j}>", "<image>")
-            #         if f"\\<image {j}\\>" in contexts[i]:
-            #             contexts[i] = contexts[i].replace(f"\\<image {j}\\>", "<image>")
-            # if "<image>" in contexts[i]:
-            #     contexts[i] = contexts[i].replace("<image>", "")
-            # print(contexts[i])
-
-            # for i in range(len(contexts)):
-            #     if "<image>" in contexts[i]:
-            #         contexts[i] = contexts[i].replace("<image>", "")
-            # print(contexts)
-            # print(visuals)
             audio_paths = []  # This will be deprecated in future when Qwen2.5 Omni supports loading numpy array audio directly
             message = [{"role": "system", "content": "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."}]
             for i, context in enumerate(contexts):
@@ -300,22 +282,6 @@ class Qwen2_5_Omni(lmms):
                     elif isinstance(visual, (list, tuple)) and all(isinstance(v, Image.Image) for v in visual):  # Multiple images
                         for v in visual:
                             message.append({"role": "user", "content": [{"type": "image", "image": v}, {"type": "text", "text": context}]})
-
-                    # elif isinstance(visual, dict):  # Single audio
-                    #     audio = self.resample_audio(visual["array"], visual["sampling_rate"])
-                    #     # Writing temp audio - this will be deprecated in future when Qwen2.5 Omni supports numpy array
-                    #     sf.write(f"./audio_{self.rank}.wav", audio, 16000)
-                    #     audio_path = f"./audio_{self.rank}.wav"
-                    #     audio_paths.append(audio_path)
-                    #     message.append({"role": "user", "content": [{"type": "audio", "audio": audio_path}, {"type": "text", "text": context}]})
-                    # elif isinstance(visual, (list, tuple)) and all(isinstance(v, np.ndarray) for v in visual):  # Multiple audios
-                    #     for i, v in enumerate(visual):
-                    #         audio = self.resample_audio(v["array"], v["sampling_rate"])
-                    #         # Writing temp audio - this will be deprecated in future when Qwen2.5 Omni supports numpy array
-                    #         sf.write(f"./audio_{self.rank}_{i}.wav", audio, 16000)
-                    #         audio_path = f"./audio_{self.rank}_{i}.wav"
-                    #         audio_paths.append(audio_path)
-                    #         message.append({"role": "user", "content": [{"type": "audio", "audio": audio_path}, {"type": "text", "text": context}]})
 
                     # Fixed code for audio messages
                     elif isinstance(visual, dict):  # Single audio
@@ -384,19 +350,7 @@ class Qwen2_5_Omni(lmms):
                 content.append(ans)
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
-            # answer = self.processor.batch_decode(cont, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-            # if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
-            #     eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{answer}\n")
-            # parts = answer[0].split("\nassistant")
-            # if len(parts) > 1:
-            #     # This will give the answer after the first occurrence of "\nassistant"
-            #     text_after = parts[1].strip()
-            #     print("Model answer: ", text_after)
 
-            # res.append(text_after)
-            # self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_after)
-            # pbar.update(1)
-            # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
         pbar.close()
         return res
