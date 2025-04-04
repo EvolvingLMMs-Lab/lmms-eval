@@ -69,6 +69,7 @@ AVAILABLE_MODELS = {
     "videochat_flash": "VideoChat_Flash",
     "whisper": "Whisper",
     "whisper_vllm": "WhisperVllm",
+    "vora": "VoRA"
 }
 
 
