@@ -1,0 +1,9 @@
+task: "omni_bench"
+
+doc_to_visual: !function utils.omni_bench_original_doc_to_visual
+doc_to_text: !function utils.omni_bench_original_doc_to_text
+doc_to_choice: !function utils.omni_bench_doc_to_choice
+doc_to_target: !function utils.omni_bench_doc_to_target
+process_results: !function utils.omni_bench_process_results
+
+include: _default_template_yaml
