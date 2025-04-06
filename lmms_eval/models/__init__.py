@@ -44,6 +44,7 @@ AVAILABLE_MODELS = {
     "oryx": "Oryx",
     "phi3v": "Phi3v",
     "phi4_multimodal": "Phi4",
+    "qwen2_5_omni": "Qwen2_5_Omni",
     "qwen2_5_vl": "Qwen2_5_VL",
     "qwen2_5_vl_interleave": "Qwen2_5_VL_Interleave",
     "qwen2_audio": "Qwen2_Audio",
