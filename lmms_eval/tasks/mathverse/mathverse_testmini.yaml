@@ -10,16 +10,13 @@ doc_to_visual: !function utils.mathverse_doc_to_visual
 doc_to_text: !function utils.mathverse_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
-  max_new_tokens: 16384
-  temperature: 0.0
-  do_sample: true
-  top_p: 0.95
-  top_k: 50
-  repetition_penalty: 1.2
   until:
-    - "</s>"
-    - "Q:"
-    - "<|im_end|>"
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
 process_results: !function utils.mathverse_process_results
 metric_list:
   - metric: gpt_eval_score

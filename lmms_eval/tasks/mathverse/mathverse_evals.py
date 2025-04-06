@@ -2,7 +2,6 @@ import os
 import time
 
 import pandas as pd
-import requests
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
@@ -73,68 +72,31 @@ Judgement: """
 
 
 class MathVerseEvaluator:
-    API_TYPE = os.getenv("API_TYPE", "openai")
-
-    if API_TYPE == "openai":
-        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-        }
-    elif API_TYPE == "azure":
-        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "api-key": API_KEY,
-            "Content-Type": "application/json",
-        }
-
-    def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
-        self.api_key = api_key
+    def __init__(self, client, gpt_model="gpt-3.5-turbo", quick_extract=False):
+        self.client = client
         self.gpt_model = gpt_model
         self.quick_extract = quick_extract
 
-    def _post_request(self, payload):
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        response = requests.post(self.API_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-        return response.json()
-
-    def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=10000000, sleep_time=0):
+    def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=5, sleep_time=0):
         messages = [
             {"role": "user", "content": prompt},
         ]
-        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "n": n}
+        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
 
         while patience > 0:
             patience -= 1
             try:
-                response = self._post_request(payload)
+                response = self.client.chat.completions.create(**payload)
                 if n == 1:
-                    prediction = response["choices"][0]["message"]["content"].strip()
+                    prediction = response.choices[0].message.content.strip()
                     if prediction and prediction != "":
                         return prediction
                 else:
-                    prediction = [choice["message"]["content"].strip() for choice in response["choices"]]
+                    prediction = [choice.message.content.strip() for choice in response.choices]
                     if prediction and prediction[0] != "":
                         return prediction
 
             except Exception as e:
-                # some model may output repetitive answer, which ChatGPT will throw an error.
-                if "repetitive patterns" in str(e):
-                    print(str(e))
-                    print("Continue with empty answer")
-                    return ""
-                # some answer may contain some sensitive words, like 'test'
-                if "sensitive" in str(e) or "400" in str(e):
-                    print(str(e))
-                    print("Continue with empty answer")
-                    return "0"
-
                 if "Rate limit" not in str(e):
                     eval_logger.error(e)
 

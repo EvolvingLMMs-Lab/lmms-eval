@@ -5,8 +5,10 @@ from pathlib import Path
 import pandas as pd
 import yaml
 from loguru import logger as eval_logger
+from openai import AzureOpenAI, OpenAI
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.gpt_eval_utils import parse_reasoning_model_answer
 from lmms_eval.tasks.mathverse.mathverse_evals import MathVerseEvaluator
 
 with open(Path(__file__).parent / "mathverse.yaml", "r") as f:
@@ -19,7 +21,26 @@ with open(Path(__file__).parent / "mathverse.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-mathverse_evaluator = MathVerseEvaluator(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=config["metadata"]["gpt_eval_model_name"])
+
+API_TYPE = os.getenv("API_TYPE", "openai")
+if API_TYPE == "openai":
+    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+    client = OpenAI(api_key=API_KEY)
+    gpt_model = config["metadata"]["gpt_eval_model_name"]
+
+elif API_TYPE == "azure":
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+    API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
+    client = AzureOpenAI(azure_endpoint=API_URL, api_version=API_VERSION, api_key=API_KEY)
+    gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+
+mathverse_evaluator = MathVerseEvaluator(client=client, gpt_model=gpt_model)
 
 
 def mathverse_doc_to_visual(doc):
@@ -45,6 +66,7 @@ def mathverse_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def mathverse_process_results(doc, results):
     prediction = results[0].strip()
+    prediction = parse_reasoning_model_answer(prediction)
 
     result = {
         "sample_index": doc["sample_index"],

@@ -4,19 +4,6 @@ import re
 import sympy as sp
 from loguru import logger as eval_logger
 
-try:
-    from sympy import Eq, Pow, simplify, sympify
-    from sympy.parsing.latex import parse_latex
-except ImportError as e:
-    eval_logger.debug("Please install sympy package by running 'pip install sympy' if you want to use OlympiadBenchEvaluator.")
-
-# how to use
-# scorer = OlympiadBenchEvaluator()
-# exp1 = "10^{10^{10^{10}}}"
-# exp2 = "10^{10}"
-# precision = 1e-4
-# res = scorer.judge(exp1, exp2, precision)
-
 
 class OlympiadBenchEvaluator:
     def __init__(self):

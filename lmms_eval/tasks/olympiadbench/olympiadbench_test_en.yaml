@@ -10,9 +10,9 @@ doc_to_target: "answer"
 generation_kwargs:
   until:
     - "ASSISTANT:"
-  max_new_tokens: 1024
+  max_new_tokens: 16384
   temperature: 0
-  top_p: 1.0
+  top_p: 0.95
   num_beams: 1
   do_sample: false
 process_results: !function en_utils.olympiadbench_process_results
