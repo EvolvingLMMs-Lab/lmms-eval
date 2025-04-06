@@ -13,7 +13,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.audio_processing import downsample_audio
+from lmms_eval.models.model_utils.audio_processing import downsample_audio, split_audio
 
 
 @register_model("qwen2_audio")
@@ -25,7 +25,7 @@ class Qwen2_Audio(lmms):
 
     def __init__(
         self,
-        pretrained: str = "Qwen/Qwen2-Audio-7B",  # Qwen/Qwen2-Audio-7B-Instruct
+        pretrained: str = "Qwen/Qwen2-Audio-7B-Instruct",  # Qwen/Qwen2-Audio-7B-Instruct
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "cuda",
         batch_size: Optional[Union[int, str]] = 1,
@@ -188,6 +188,16 @@ class Qwen2_Audio(lmms):
             task = task[0]
             split = split[0]
             batched_audios = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
+            sampling_rate = self.processor.feature_extractor.sampling_rate
+            chunk_lim = self.processor.feature_extractor.n_samples
+            new_batched_audios = []
+            for audios in batched_audios:
+                new_audios = []
+                for audio in audios:
+                    splitted_audio = split_audio(downsample_audio(audio["array"], audio["sampling_rate"], sampling_rate), chunk_lim=chunk_lim)
+                    new_audios.extend(splitted_audio)
+                new_batched_audios.append(new_audios)
+            batched_audios = new_batched_audios
             flattened_audios = self.flatten(batched_audios)
 
             # we assume all gen kwargs in the batch are the same
@@ -209,6 +219,7 @@ class Qwen2_Audio(lmms):
 
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
+            audios = [audio for audio in flattened_audios]
 
             if not self.simple_prompt:
                 conversations = []
@@ -224,7 +235,6 @@ class Qwen2_Audio(lmms):
                 text = [self.processor.apply_chat_template(conversation, add_generation_prompt=self.add_generation_prompt, tokenize=False) for conversation in conversations]
             else:
                 text = ["<|audio_bos|><|AUDIO|><|audio_eos|>" + context for context in contexts]
-            audios = [downsample_audio(audio["array"], audio["sampling_rate"], self.processor.feature_extractor.sampling_rate) for audio in flattened_audios]
 
             inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.processor.feature_extractor.sampling_rate)
 
