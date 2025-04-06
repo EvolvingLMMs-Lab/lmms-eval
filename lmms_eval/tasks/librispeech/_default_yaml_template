@@ -1,0 +1,25 @@
+dataset_kwargs:
+  token: True
+output_type: generate_until
+doc_to_visual: !function utils.librispeech_doc_to_audio
+doc_to_text: !function utils.librispeech_doc_to_text
+doc_to_target: "gt"
+generation_kwargs:
+  max_new_tokens: 8192 
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+metric_list:
+  - metric: wer 
+    aggregation : !function utils.librispeech_wer
+    higher_is_better : false
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+  qwen2_audio:
+    pre_prompt: ""
+    post_prompt: " <|en|>"

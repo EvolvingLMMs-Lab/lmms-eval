@@ -1,0 +1,4 @@
+group: librispeech_long
+task:
+  - librispeech_test_clean_long
+  - librispeech_test_other_long
