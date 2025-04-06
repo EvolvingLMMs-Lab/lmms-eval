@@ -1,19 +1,19 @@
 import base64
-from io import BytesIO
 import os
-from typing import List, Optional, Tuple, Union
 import uuid
 import warnings
+from io import BytesIO
+from typing import List, Optional, Tuple, Union
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
+import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
-import torch
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoProcessor
+from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -208,16 +208,10 @@ class VoRA(lmms):
                         message.append({"role": "user", "content": [{"type": "text", "text": context}]})
                 else:
                     message.append({"role": "user", "content": [{"type": "text", "text": context}]})
-                
+
                 messages.append(message)
 
-            input_data = self.processor.apply_chat_template(
-                messages,
-                add_generation_prompt=True,
-                tokenize=True,
-                return_tensors='pt',
-                return_dict=True
-            ).to(self.device).to(self.dtype)
+            input_data = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_tensors="pt", return_dict=True).to(self.device).to(self.dtype)
 
             # preconfigure gen_kwargs with defaults
             if "max_new_tokens" not in gen_kwargs:
@@ -228,21 +222,18 @@ class VoRA(lmms):
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
-            if 'do_sample' not in gen_kwargs:
-                gen_kwargs['do_sample'] = False
-            if 'repetition_penalty' not in gen_kwargs:
-                gen_kwargs['repetition_penalty'] = 1.0
-            if 'length_penalty' not in gen_kwargs:
-                gen_kwargs['length_penalty'] = 0.9
-            if 'min_length' not in gen_kwargs:
-                gen_kwargs['min_length'] = 4
-            if 'eos_token_id' not in gen_kwargs:
-                gen_kwargs['eos_token_id'] = self.tokenizer.eos_token_id
+            if "do_sample" not in gen_kwargs:
+                gen_kwargs["do_sample"] = False
+            if "repetition_penalty" not in gen_kwargs:
+                gen_kwargs["repetition_penalty"] = 1.0
+            if "length_penalty" not in gen_kwargs:
+                gen_kwargs["length_penalty"] = 0.9
+            if "min_length" not in gen_kwargs:
+                gen_kwargs["min_length"] = 4
+            if "eos_token_id" not in gen_kwargs:
+                gen_kwargs["eos_token_id"] = self.tokenizer.eos_token_id
 
-            prompt = self.processor.apply_chat_template(
-                messages,
-                add_generation_prompt=True
-            )
+            prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
             cont = self.model.generate(
                 input_data,
                 **gen_kwargs,
