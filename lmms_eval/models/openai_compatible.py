@@ -186,9 +186,15 @@ class OpenAICompatible(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            payload["max_tokens"] = gen_kwargs["max_new_tokens"]
+            payload["max_output_tokens"] = gen_kwargs["max_new_tokens"]
             payload["temperature"] = gen_kwargs["temperature"]
 
+            if 'o1' in self.model_version or 'o3' in self.model_version:
+                del payload['max_output_tokens']
+                del payload['temperature']
+                payload['reasoning_effort'] = 'medium'
+                payload['response_format'] = {'type': 'text'}
+            
             for attempt in range(self.max_retries):
                 try:
                     response = self.client.chat.completions.create(**payload)
