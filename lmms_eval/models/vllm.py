@@ -54,6 +54,15 @@ class VLLM(lmms):
         self.max_frame_num = max_frame_num
         self.threads = threads
 
+        init_params = [
+            'model_version', 'tensor_parallel_size', 'gpu_memory_utilization', 
+            'batch_size', 'timeout', 'max_images', 'max_videos', 'max_audios',
+            'max_frame_num', 'threads', 'trust_remote_code'
+        ]
+        
+        # filter out the parameters already defined in __init__ to pass options to VLLM
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in init_params}
+
         accelerator = Accelerator()
         self.client = LLM(
             model=self.model_version,
@@ -61,6 +70,7 @@ class VLLM(lmms):
             gpu_memory_utilization=gpu_memory_utilization,
             limit_mm_per_prompt={"image": max_images, "video": max_videos, "audio": max_audios},
             trust_remote_code=trust_remote_code,
+            **filtered_kwargs
         )
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
