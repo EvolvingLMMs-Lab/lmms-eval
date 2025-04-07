@@ -85,9 +85,7 @@ class Qwen2_5_VL(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
-        self.processor = AutoProcessor.from_pretrained(
-            pretrained, max_pixels=max_pixels, min_pixels=min_pixels, padding_side="left"
-        )
+        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels, padding_side="left")
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, padding_side="left")
 
         self._config = self.model.config
