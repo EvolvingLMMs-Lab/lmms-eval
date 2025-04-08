@@ -10,6 +10,7 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
+from lmms_engine.models.kernels.monkey_patch import apply_liger_kernel_to_qwen2_audio
 from lmms_engine.models.kino import KinoForConditionalGeneration
 from lmms_engine.models.kino.processing_kino import KinoProcessor
 from qwen_vl_utils import process_vision_info
@@ -85,6 +86,8 @@ class Kino(lmms):
             dtype = getattr(torch, dtype)
 
         self.max_frames_num = max_frames_num
+        if attn_implementation == "flash_attention_2":
+            apply_liger_kernel_to_qwen2_audio(use_rmpad=True)
         self._model = KinoForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
         if pretrained_mlp_projector:
             mm_projector_weights = torch.load(pretrained_mlp_projector, map_location="cpu")
