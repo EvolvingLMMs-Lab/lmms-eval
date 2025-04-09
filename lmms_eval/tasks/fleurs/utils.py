@@ -264,7 +264,7 @@ def compute_wer(refs, hyps, language):
             pred = basic_normalizer(pred)
         ref_items = tokenizer.tokenize(ref).split()
         pred_items = tokenizer.tokenize(pred).split()
-        if language in ["zh", "yue"]:
+        if language in ["cmn_hans", "yue_hant"]:
             ref_items = [x for x in "".join(ref_items)]
             pred_items = [x for x in "".join(pred_items)]
         if i == 0:
