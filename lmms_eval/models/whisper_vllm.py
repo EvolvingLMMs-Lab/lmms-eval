@@ -108,13 +108,15 @@ class WhisperVllm(lmms):
                 task_name = str(task).strip()
                 if task_name.startswith("fleurs"):
                     language = self.task_dict[task][split][doc_id]["language"]
+                    language_to_token = {
+                        "Mandarin Chinese": "zh",
+                        "Cantonese Chinese": "zh",
+                        "English": "en"
+                    }
 
-                    if language in ["Mandarin Chinese", "Cantonese Chinese"]:
-                        whisper_prompt = f"<|startoftranscript|><|zh|><|transcribe|><|notimestamps|>"
-                        prompt_text = f"{pre_prompt}{whisper_prompt}{post_prompt}"
-                    elif language == "en":
-                        whisper_prompt = f"<|startoftranscript|><|en|><|transcribe|><|notimestamps|>"
-                        prompt_text = f"{pre_prompt}{whisper_prompt}{post_prompt}"
+                    if language in language_to_token:
+                        token = language_to_token[language]
+                        prompt_text = f"{pre_prompt}<|startoftranscript|><|{token}|><|transcribe|><|notimestamps|>{post_prompt}"
                     else:
                         prompt_text = f"{pre_prompt}Please recognize the speech and only output the recognized content:{post_prompt}"
                 else:
