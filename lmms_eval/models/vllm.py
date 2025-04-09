@@ -37,10 +37,10 @@ class VLLM(lmms):
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
         timeout: int = 60,
-        max_images: int = 32,
+        max_images: int = 8,
         max_videos: int = 8,
         max_audios: int = 8,
-        max_frame_num: int = 32,
+        max_frame_num: int = 8,
         threads: int = 16,  # Threads to use for decoding visuals
         trust_remote_code: Optional[bool] = True,
         **kwargs,
