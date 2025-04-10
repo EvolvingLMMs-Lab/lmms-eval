@@ -1,6 +1,10 @@
 import base64
+import os
 from io import BytesIO
 from typing import List, Optional, Tuple, Union
+
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["TORCH_USE_CUDA_DSA"] = "1"
 
 import audioread
 import av
@@ -41,7 +45,7 @@ class Qwen2_5_Omni(lmms):
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
-        use_flash_attention_2: Optional[bool] = False,
+        use_flash_attention_2: Optional[bool] = True,
         max_num_frames: int = 768,
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
@@ -79,7 +83,7 @@ class Qwen2_5_Omni(lmms):
                 attn_implementation="flash_attention_2",
             ).eval()
         else:
-            self._model = Qwen2_5OmniModel.from_pretrained(pretrained, torch_dtype="auto", device_map="auto").eval()
+            self._model = Qwen2_5OmniModel.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
         self.processor = Qwen2_5OmniProcessor.from_pretrained("Qwen/Qwen2.5-Omni-7B")
         self.max_num_frames = max_num_frames
         self._tokenizer = self.processor.tokenizer
@@ -262,8 +266,10 @@ class Qwen2_5_Omni(lmms):
                 elif not isinstance(until, list):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
-            audio_paths = []  # This will be deprecated in future when Qwen2.5 Omni supports loading numpy array audio directly
-            message = [{"role": "system", "content": "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."}]
+            # message = [{"role": "system", "content": "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."}]
+            # For transcription part
+            message = [{"role": "system", "content": "You are a speech recognition model."}]
+            # print(self.model.config.vocab_size)
             for i, context in enumerate(contexts):
                 if len(visuals) > 0:
                     visual = visuals[i] if i < len(visuals) else None
@@ -306,6 +312,44 @@ class Qwen2_5_Omni(lmms):
                 inputs = inputs.to("cuda").to(self.model.dtype)
             else:
                 inputs = inputs.to(self.model.device).to(self.model.dtype)
+            #### Comment code here:
+            # try:
+            #     # Try to move inputs to the correct device and dtype
+            #     inputs = inputs.to(self.model.device).to(self.model.dtype)
+            # except RuntimeError as e:
+            #     if "CUDA error" in str(e):
+            #         # Save the problematic inputs in the 'error_log' folder
+            #         output_dir = './error_log/'
+            #         os.makedirs(output_dir, exist_ok=True)
+
+            #         with open('./error_log/doc_errors.jsonl', 'a') as f:
+            #             data = {
+            #                 "doc_id": doc_id[0],
+            #                 "error": str(e),
+            #                 "visuals": visuals,
+            #                 "message": message,
+            #                 "audio": visuals[0]["array"],
+            #                 "sampling_rate": visuals[0]["sampling_rate"],
+            #             }
+            #             f.write(f"{data}\n")
+
+            #         # save the audio file:
+            #         import soundfile as sf
+            #         audio = visuals[0]["array"]
+            #         sr = visuals[0]["sampling_rate"]
+            #         if isinstance(audio, torch.Tensor):
+            #             audio = audio.cpu().numpy()
+            #         if audio.ndim > 1:
+            #             audio = audio[0]
+            #         sf.write(os.path.join(output_dir, f'problematic_audio_{doc_id[0]}.wav'), audio, sr)
+            #         sf.write(os.path.join(output_dir, f'problematic_audio_{doc_id[0]}.flac'), audio, sr)
+
+            #         print("GOT BUGGGG HEREEEEEEE")
+            #         # Re-raise the error to allow further handling up the stack or terminate execution
+            #         raise e  # Re-raise to stop execution if needed
+
+            #     # If the error isn't CUDA-specific, re-raise it
+            #     raise e
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 4096
