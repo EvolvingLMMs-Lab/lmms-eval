@@ -14,6 +14,7 @@ from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.tasks._task_utils.gpt_eval_utils import parse_reasoning_model_answer
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -143,12 +144,16 @@ def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def mmmu_doc_to_visual(doc):
-    prompt = construct_prompt(doc)
-    image_tokens = re.findall(r"<image \d+>", prompt)
-    # Remove <> and  swap space as _
-    image_tokens = sorted(list(set([image_token.strip("<>").replace(" ", "_") for image_token in image_tokens])))
-    visual = [doc[image_token].convert("RGB") for image_token in image_tokens]
-    return visual
+    # prompt = construct_prompt(doc)
+    # image_tokens = re.findall(r"<image \d+>", prompt)
+    # # Remove <> and  swap space as _
+    visuals = []
+    # image_tokens = sorted(list(set([image_token.strip("<>").replace(" ", "_") for image_token in image_tokens])))
+    for i in range(1, 8):
+        if f"image_{i}" in doc and doc[f"image_{i}"] is not None:
+            visual = doc[f"image_{i}"].convert("RGB")
+            visuals.append(visual)
+    return visuals
 
 
 def mmmu_process_results(doc, results):
@@ -174,9 +179,7 @@ def mmmu_reasoning_process_results(doc, results):
         # Extract content from <answer> tags if present, handling potential spaces
         answer = doc["answer"]
         if isinstance(pred, str):
-            match = re.search(r"<answer>\s*([\s\S]*?)\s*</answer>", pred)
-            if match:
-                pred = match.group(1).strip()
+            pred = parse_reasoning_model_answer(pred)
 
         llm_judge_prompt = JUDGE_RULES.format(question=formatted_question, answer=answer, pred=pred)
         llm_judge_score = get_chat_response(llm_judge_prompt, max_tokens=20, retries=3)

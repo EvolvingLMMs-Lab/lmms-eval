@@ -1,4 +1,5 @@
 import base64
+import re
 from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
@@ -43,6 +44,7 @@ class Qwen2_VL(lmms):
         max_num_frames: int = 32,
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
+        reasoning_prompt: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -73,6 +75,11 @@ class Qwen2_VL(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
+        if reasoning_prompt:
+            self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
+        else:
+            self.reasoning_prompt = None
+
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
 

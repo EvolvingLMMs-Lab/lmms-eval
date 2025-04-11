@@ -1,5 +1,9 @@
 generation_kwargs:
   max_new_tokens: 16
+  until:
+    - "</s>"
+    - "Q:"
+    - "<|im_end|>"
 
 metadata:
   version: 0.0

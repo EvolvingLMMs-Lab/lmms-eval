@@ -24,6 +24,12 @@ metric_list:
     aggregation: !function utils.mmmu_aggregate_judge_results
     higher_is_better: true
 
+lmms_eval_specific_kwargs:
+  default:
+    prompt_type: "normal"
+    multiple_choice_prompt: "Please answer the question with option letter from given choices in the format of Answer: <option letter>."
+    open_ended_prompt: "Please answer the question using a single word or phrase in the format of Answer: <answer>."
+
 generation_kwargs:
   max_new_tokens: 16384
   temperature: 0.0
