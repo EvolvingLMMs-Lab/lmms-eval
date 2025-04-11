@@ -41,6 +41,8 @@ class Qwen2_VL(lmms):
         max_pixels: int = 12845056,
         min_pixels: int = 3136,
         max_num_frames: int = 32,
+        system_prompt: Optional[str] = "You are a helpful assistant.",
+        interleave_visuals: Optional[bool] = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -71,6 +73,9 @@ class Qwen2_VL(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
+        self.system_prompt = system_prompt
+        self.interleave_visuals = interleave_visuals
+
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
 
         self._config = self.model.config
@@ -169,11 +174,11 @@ class Qwen2_VL(lmms):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            if None in visuals:
-                visuals = []
+            visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
+            if None in visual_list:
+                visual_list = []
             else:
-                visuals = self.flatten(visuals)
+                visual_list = self.flatten(visual_list)
 
             gen_kwargs = all_gen_kwargs[0]
 
@@ -195,48 +200,65 @@ class Qwen2_VL(lmms):
                 if "<image>" in contexts[i]:
                     contexts[i] = contexts[i].replace("<image>", "")
 
-            messages = []
-            processed_visuals = []
+            batched_messages = []
             for i, context in enumerate(contexts):
                 if "<image>" in context:
                     context = context.replace("<image>", "")
 
-                message = [{"role": "system", "content": "You are a helpful assistant."}]
+                message = [{"role": "system", "content": self.system_prompt}]
+                if self.reasoning_prompt:
+                    context = context.strip() + self.reasoning_prompt
+                    contexts[i] = context
 
-                if len(visuals) > 0:
-                    visual = visuals[i] if i < len(visuals) else None
+                processed_visuals = []
+                for visual in visual_list:
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                         vr = decord.VideoReader(visual)
                         first_frame = vr[0].asnumpy()
                         height, width = first_frame.shape[:2]
                         # max_pixels = height * width
-                        message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": self.max_pixels}, {"type": "text", "text": context}]})
-                    elif isinstance(visual, Image.Image):  # Single image
+                        processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                    elif isinstance(visual, Image.Image):  # Handle both single and multiple images
                         base64_image = visual.convert("RGB")
                         buffer = BytesIO()
                         base64_image.save(buffer, format="JPEG")
                         base64_bytes = base64.b64encode(buffer.getvalue())
                         base64_string = base64_bytes.decode("utf-8")
-                        message.append({"role": "user", "content": [{"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"}, {"type": "text", "text": context}]})
-                    elif isinstance(visual, (list, tuple)) and all(isinstance(v, Image.Image) for v in visual):  # Multiple images
-                        image_content = []
-                        for v in visual:
-                            base64_image = v.convert("RGB")
-                            buffer = BytesIO()
-                            base64_image.save(buffer, format="JPEG")
-                            base64_bytes = base64.b64encode(buffer.getvalue())
-                            base64_string = base64_bytes.decode("utf-8")
-                            image_content.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"})
-                        message.append({"role": "user", "content": image_content + [{"type": "text", "text": context}]})
-                    else:
-                        message.append({"role": "user", "content": [{"type": "text", "text": context}]})
-                else:
-                    message.append({"role": "user", "content": [{"type": "text", "text": context}]})
+                        processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
 
-                messages.append(message)
+                if self.interleave_visuals is False:
+                    message.append(
+                        {
+                            "role": "user",
+                            "content": processed_visuals + [{"type": "text", "text": context}],
+                        }
+                    )
+                else:  # currently support find <image x> in the context
+                    image_placeholders = re.findall(r"<image \d+>", context)
+                    content_parts = []
+                    text_parts = re.split(r"<image \d+>", context)
+                    if text_parts[0]:
+                        content_parts.append({"type": "text", "text": text_parts[0]})
 
-            texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
-            image_inputs, video_inputs = process_vision_info(messages)
+                    for i, placeholder in enumerate(image_placeholders):
+                        img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
+                        image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
+                        if processed_visuals and image_idx < len(processed_visuals):
+                            content_parts.append(processed_visuals[image_idx])
+                        if i + 1 < len(text_parts) and text_parts[i + 1]:
+                            content_parts.append({"type": "text", "text": text_parts[i + 1]})
+
+                    message.append(
+                        {
+                            "role": "user",
+                            "content": content_parts,
+                        }
+                    )
+
+                batched_messages.append(message)
+
+            texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
+            image_inputs, video_inputs = process_vision_info(batched_messages)
             if video_inputs is not None:
                 total_frames = video_inputs[0].shape[0]
                 indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
