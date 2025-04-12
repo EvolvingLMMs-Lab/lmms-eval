@@ -7,8 +7,6 @@ import dill
 from lmms_eval.loggers.utils import _handle_non_serializable, is_serializable
 from lmms_eval.utils import eval_logger
 
-# dill.settings['recurse'] = True
-
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 OVERRIDE_PATH = os.getenv("LM_HARNESS_CACHE_PATH")
