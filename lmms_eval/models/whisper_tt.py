@@ -12,6 +12,62 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.audio_processing import downsample_audio
 
+import os
+from scipy.io import wavfile
+import ttnn
+from models.experimental.functional_whisper.demo.demo import (
+    create_functional_whisper_for_conditional_generation_inference_pipeline,
+)
+from models.experimental.functional_whisper.tt import (
+    ttnn_optimized_functional_whisper as ttnn_model,
+)
+from models.experimental.functional_whisper.tt.ttnn_optimized_functional_whisper import (
+    WHISPER_L1_SMALL_SIZE,
+)
+
+
+# Model sampling rate
+SAMPLING_RATE = 16_000
+
+
+# Warmup the model on app startup
+def warmup_model():
+    # create device, these constants are specific to n150 & n300
+    device_id = 0
+    device_params = {"l1_small_size": WHISPER_L1_SMALL_SIZE}
+
+    # use WORKER for n150, ETH for n300
+    dispatch_core_type = ttnn.device.DispatchCoreType.WORKER
+    if ("WH_ARCH_YAML" in os.environ) and os.environ["WH_ARCH_YAML"] == "wormhole_b0_80_arch_eth_dispatch.yaml":
+        dispatch_core_type = ttnn.device.DispatchCoreType.ETH
+
+    dispatch_core_axis = ttnn.DispatchCoreAxis.ROW
+    dispatch_core_config = ttnn.DispatchCoreConfig(
+        dispatch_core_type, dispatch_core_axis
+    )
+    device_params["dispatch_core_config"] = dispatch_core_config
+    device = ttnn.CreateDevice(device_id=device_id, **device_params)
+    device.enable_program_cache()
+    device.enable_async(True)
+
+    # create model pipeline
+    model_pipeline = (
+        create_functional_whisper_for_conditional_generation_inference_pipeline(
+            ttnn_model,
+            device,
+        )
+    )
+
+    # warmup model pipeline
+    dir_path = "/home/container_app_user/app/server"
+    input_file_path = dir_path + "/17646385371758249908.wav"
+    sampling_rate, data = wavfile.read(input_file_path)
+    _ttnn_output = model_pipeline(data, sampling_rate, stream=False)
+
+    eval_logger.info("Loading Stable Diffusion model...")
+    eval_logger.info("Model loaded and ready!")
+    return model_pipeline
+
 
 @register_model("whisper_tt")
 class WhisperTT(lmms):
@@ -32,7 +88,7 @@ class WhisperTT(lmms):
     ) -> None:
         super().__init__()
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
-        breakpoint()
+        self._model = warmup_model()
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -45,38 +101,14 @@ class WhisperTT(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
-        self._model = WhisperForConditionalGeneration.from_pretrained(
-            pretrained,
-            torch_dtype="auto",
-            device_map=self.device_map,
-        ).eval()
-
+        # self._config = self.model.config
         self.processor = AutoProcessor.from_pretrained(pretrained)
         self.processor.tokenizer.set_prefix_tokens(language=language, task=task)
         self._tokenizer = self.processor.tokenizer
-
-        self._config = self.model.config
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
-
-        if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [
-                DistributedType.FSDP,
-                DistributedType.MULTI_GPU,
-            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
-            if accelerator.distributed_type == DistributedType.FSDP:
-                self._model = accelerator.prepare(self.model)
-            else:
-                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
-            self.accelerator = accelerator
-            if self.accelerator.is_local_main_process:
-                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
-            self._rank = self.accelerator.local_process_index
-            self._world_size = self.accelerator.num_processes
-        else:
-            self.model.to(self._device)
-            self._rank = 0
-            self._word_size = 1
+        self._rank = 0
+        self._word_size = 1
 
     @property
     def config(self):
@@ -175,12 +207,8 @@ class WhisperTT(lmms):
 
             # process inputs
             sampling_rate = self.processor.feature_extractor.sampling_rate
+            assert sampling_rate == SAMPLING_RATE, f"Expected sampling rate {SAMPLING_RATE}, but got {sampling_rate}"
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], sampling_rate) for audio in flattened_audios]
-            inputs = self.processor(audio=audios, return_tensors="pt", sampling_rate=sampling_rate)
-            if self.device_map == "auto":
-                inputs = inputs.to("cuda")
-            else:
-                inputs = inputs.to(self.device)
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 256
@@ -192,19 +220,8 @@ class WhisperTT(lmms):
                 gen_kwargs["num_beams"] = 1
 
             try:
-                predicted_ids = self.model.generate(
-                    **inputs,
-                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                    temperature=gen_kwargs["temperature"],
-                    top_p=gen_kwargs["top_p"],
-                    num_beams=gen_kwargs["num_beams"],
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                    min_new_tokens=1,
-                    use_cache=self.use_cache,
-                )
-
-                transcriptions = self.processor.batch_decode(predicted_ids)
-                answers = [self.tokenizer.normalize(transcription) for transcription in transcriptions]  # whisper post processing
+                answer = self.model(audios[0], sampling_rate)
+                answers = [answer]
                 for i, ans in enumerate(answers):
                     for term in until:
                         if len(term) > 0:
