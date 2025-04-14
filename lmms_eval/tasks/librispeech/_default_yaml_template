@@ -23,3 +23,6 @@ lmms_eval_specific_kwargs:
   qwen2_audio:
     pre_prompt: ""
     post_prompt: " <|en|>"
+  qwen2_5_omni:
+    pre_prompt: "Transcribe the English audio into text without any punctuation marks."
+    post_prompt: ""
