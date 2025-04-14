@@ -108,11 +108,7 @@ class WhisperVllm(lmms):
                 task_name = str(task).strip()
                 if task_name.startswith("fleurs"):
                     language = self.task_dict[task][split][doc_id]["language"]
-                    language_to_token = {
-                        "Mandarin Chinese": "zh",
-                        "Cantonese Chinese": "zh",
-                        "English": "en"
-                    }
+                    language_to_token = {"Mandarin Chinese": "zh", "Cantonese Chinese": "zh", "English": "en"}
 
                     if language in language_to_token:
                         token = language_to_token[language]
