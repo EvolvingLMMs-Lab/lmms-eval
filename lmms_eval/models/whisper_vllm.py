@@ -100,8 +100,27 @@ class WhisperVllm(lmms):
                 audio = doc_to_visual(self.task_dict[task][split][doc_id])
                 assert len(audio) == 1
                 audio = audio[0]
+
+                pre_prompt = gen_kwargs.get("pre_prompt", "")
+                post_prompt = gen_kwargs.get("post_prompt", "")
+
+                # prepare prompt for task "fleurs"
+                task_name = str(task).strip()
+                if task_name.startswith("fleurs"):
+                    language = self.task_dict[task][split][doc_id]["language"]
+                    language_to_token = {"Mandarin Chinese": "zh", "Cantonese Chinese": "zh", "English": "en"}
+
+                    if language in language_to_token:
+                        token = language_to_token[language]
+                        prompt_text = f"{pre_prompt}<|startoftranscript|><|{token}|><|transcribe|><|notimestamps|>{post_prompt}"
+                    else:
+                        prompt_text = f"{pre_prompt}Please recognize the speech and only output the recognized content:{post_prompt}"
+                else:
+                    prompt_text = "<|startoftranscript|>"
+
+                # prepare input
                 prompt = {
-                    "prompt": "<|startoftranscript|>",
+                    "prompt": prompt_text,
                     "multi_modal_data": {
                         "audio": (audio["array"], audio["sampling_rate"]),
                     },
