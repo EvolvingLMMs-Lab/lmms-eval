@@ -3,19 +3,14 @@ import warnings
 from typing import List, Optional, Tuple, Union
 
 import librosa
-import moviepy as mp
 import numpy as np
 import PIL
 import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
+from lmms_engine.models.aero import AeroForConditionalGeneration, AeroProcessor
 from lmms_engine.models.kernels.monkey_patch import apply_liger_kernel_to_qwen2_audio
-from lmms_engine.models.kino import KinoForConditionalGeneration
-from lmms_engine.models.kino.processing_kino import KinoProcessor
-from qwen_vl_utils import process_vision_info
 from tqdm import tqdm
-from transformers import AutoConfig, AutoProcessor
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -32,8 +27,8 @@ DEFAULT_VIDEO_TOKEN = "<video>"
 DEFAULT_AUDIO_TOKEN = "<|AUDIO|>"
 
 
-@register_model("kino")
-class Kino(lmms):
+@register_model("aero")
+class Aero(lmms):
     """
     Llava Model for Hugging Face Transformers: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava
 
@@ -52,7 +47,7 @@ class Kino(lmms):
 
     def __init__(
         self,
-        pretrained: str = "Evo-LMM/kino-7b-init",
+        pretrained: str = "xxx",
         revision: str = "main",
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",
@@ -62,13 +57,6 @@ class Kino(lmms):
         device_map: str = "",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
-        max_frames_num: Optional[int] = 32,
-        pretrained_mlp_projector: Optional[str] = None,
-        max_pixels: Optional[int] = None,
-        min_pixels: Optional[int] = None,
-        video_max_pixels: Optional[int] = 360 * 420,
-        fps: Optional[int] = 1,
-        use_video_audio: Optional[bool] = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -85,32 +73,11 @@ class Kino(lmms):
         if isinstance(dtype, str) and dtype != "auto":
             dtype = getattr(torch, dtype)
 
-        self.max_frames_num = max_frames_num
         if attn_implementation == "flash_attention_2":
             apply_liger_kernel_to_qwen2_audio(use_rmpad=True)
-        self._model = KinoForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
-        if pretrained_mlp_projector:
-            mm_projector_weights = torch.load(pretrained_mlp_projector, map_location="cpu")
-
-            def get_w(weights, keyword):
-                return {k.split(keyword + ".")[1]: v for k, v in weights.items() if keyword in k}
-
-            incompatible_keys = self._model.multi_modal_projector.load_state_dict(get_w(mm_projector_weights, "multi_modal_projector"), strict=False)
-            eval_logger.info(f"Loaded multi_modal_projector weights from {pretrained_mlp_projector}. Incompatible keys: {incompatible_keys}")
-            incompatible_keys = self._model.audio_modal_projector.load_state_dict(get_w(mm_projector_weights, "audio_modal_projector"), strict=False)
-            eval_logger.info(f"Loaded audio_modal_projector weights from {pretrained_mlp_projector}. Incompatible keys: {incompatible_keys}")
-
+        self._model = AeroForConditionalGeneration.from_pretrained(pretrained, revision=revision, torch_dtype=dtype, device_map=self.device_map, trust_remote_code=trust_remote_code, attn_implementation=attn_implementation)
         self.pretrained = pretrained
-        if self.model.config.vision_aspect_ratio == "navit":
-            self._processor = KinoProcessor.from_pretrained("Evo-LMM/kino-maas-7B_v12_18000_init", revision=revision, trust_remote_code=trust_remote_code)
-            if max_pixels:
-                self._processor.image_processor.max_pixels = max_pixels
-                self._processor.video_processor.max_pixels = max_pixels
-            if min_pixels:
-                self._processor.image_processor.min_pixels = min_pixels
-                self._processor.video_processor.min_pixels = min_pixels
-        else:
-            self._processor = KinoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
+        self._processor = AeroProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=trust_remote_code)
         # Pad from left for batched generation: https://huggingface.co/docs/transformers/v4.39.3/en/model_doc/llava#usage-tips
         self._processor.tokenizer.padding_side = "left"
         self._tokenizer = self._processor.tokenizer
@@ -118,9 +85,6 @@ class Kino(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.chat_template = chat_template
         self.use_cache = use_cache
-        self.use_video_audio = use_video_audio
-        self.fps = fps
-        self.video_max_pixels = video_max_pixels
         if accelerator.num_processes > 1 and device_map == "":
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
@@ -174,10 +138,6 @@ class Kino(lmms):
     def eot_token_id(self):
         # we use EOT because end of *text* is more accurate for what we're doing than end of *sentence*
         return self.tokenizer.eos_token_id
-
-    def extract_audio(self, videos_file_path):
-        my_clip = mp.VideoFileClip(videos_file_path)
-        return my_clip.audio
 
     def split_audio(self, audio_arrays):
         CHUNK_LIM = 480000
@@ -234,17 +194,6 @@ class Kino(lmms):
                 new_list.append(j)
         return new_list
 
-    def load_video(self, video_path, max_frames_num):
-        if type(video_path) == str:
-            vr = VideoReader(video_path, ctx=cpu(0))
-        else:
-            vr = VideoReader(video_path[0], ctx=cpu(0))
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
-        frame_idx = uniform_sampled_frames.tolist()
-        spare_frames = vr.get_batch(frame_idx).asnumpy()
-        return spare_frames  # (frames, height, width, channels)
-
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -274,30 +223,7 @@ class Kino(lmms):
             messages = [{"role": "user", "content": []}]
             audios = []
             for visual in visuals:
-                if isinstance(visual, str):
-                    messages[0]["content"].append({"type": "video", "video": visual, "max_pixels": self.video_max_pixels, "fps": self.fps})
-                    if self.use_video_audio:
-                        video_audio = self.extract_audio(visual)
-                        temp_audio_path = f"temp_video_audio_{self._rank}.wav"
-                        video_audio.write_audiofile(temp_audio_path)
-                        video_audio = librosa.load(temp_audio_path, sr=self._processor.audio_processor.sampling_rate)[0]
-                        splited_video_audio = self.split_audio(video_audio)
-                        audios.extend(splited_video_audio)
-                        for _ in range(len(splited_video_audio)):
-                            messages[0]["content"].append({"type": "audio", "audio_url": "<placeholder>"})
-                        os.remove(temp_audio_path)
-                elif isinstance(visual, PIL.Image.Image):
-                    height = visual.size[0]
-                    width = visual.size[1]
-                    if width < 28 and height < 28:
-                        visual = visual.resize((28, 28))
-                    elif height < 28:
-                        visual = visual.resize((28, width))
-                    elif width < 28:
-                        visual = visual.resize((height, 28))
-                    # images.append(visual)
-                    messages[0]["content"].append({"type": "image", "image": visual})
-                elif isinstance(visual, dict) and "array" in visual:
+                if isinstance(visual, dict) and "array" in visual:
                     splited_video_audio = self.split_audio(downsample_audio(visual["array"], visual["sampling_rate"], self._processor.audio_processor.sampling_rate))
                     audios.extend(splited_video_audio)
                     for _ in range(len(splited_video_audio)):
@@ -320,7 +246,6 @@ class Kino(lmms):
             # Okay be I am assuming bs always == 1
             context = contexts[0]
             messages[0]["content"].append({"type": "text", "text": context})
-            image_inputs, video_inputs, video_kwargs = process_vision_info(messages, return_video_kwargs=True)
 
             text = self._processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
@@ -330,7 +255,7 @@ class Kino(lmms):
             if len(audios) == 0:
                 audios = None
 
-            inputs = self._processor(images=image_inputs, videos=video_inputs, audios=audios, text=text, sampling_rate=self._processor.audio_processor.sampling_rate, return_tensors="pt", **video_kwargs).to(self._device, self.model.dtype)
+            inputs = self._processor(audios=audios, text=text, sampling_rate=self._processor.audio_processor.sampling_rate, return_tensors="pt").to(self._device, self.model.dtype)
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:

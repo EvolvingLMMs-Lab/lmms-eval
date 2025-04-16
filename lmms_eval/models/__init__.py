@@ -11,6 +11,7 @@ logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
+    "aero": "Aero",
     "aria": "Aria",
     "auroracap": "AuroraCap",
     "batch_gpt4": "BatchGPT4",
@@ -25,7 +26,6 @@ AVAILABLE_MODELS = {
     "internvideo2": "InternVideo2",
     "internvl": "InternVLChat",
     "internvl2": "InternVL2",
-    "kino": "Kino",
     "kino_qwen_2_5": "KinoQwen2_5",
     "llama_vid": "LLaMAVid",
     "llama_vision": "LlamaVision",
