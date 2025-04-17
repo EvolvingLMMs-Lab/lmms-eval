@@ -39,7 +39,7 @@ The RCap, RTLoc and RDCap are registered as `rcap_test`, `rtloc_test` and `rdcap
 
 ```
 ├── video_base_dir
-│   ├── ssav_001*.mp4
+│   ├── sav_001*.mp4
 │   ├── sav_001*.mp4
 │   ├── ...
 

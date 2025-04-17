@@ -30,7 +30,7 @@ class PerceptionLM(lmms):
 
     def __init__(
         self,
-        pretrained: str = "Replace/with/huggingface/model/link",
+        pretrained: str = "facebook/Perception-LM-8B",
         device: Optional[str] = "cuda",
         batch_size: Optional[Union[int, str]] = 1,
         compile_prefilling=False,
