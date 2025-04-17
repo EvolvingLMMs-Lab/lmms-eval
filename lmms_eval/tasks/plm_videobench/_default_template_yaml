@@ -10,7 +10,7 @@ plm_stc:
   #   > sav_001*.mp4
   #   > sav_002*.mp4
   #   > ...
-  video_base_dir: /checkpoint/vision_encoder/plm_release/plm_videobench/dfai_videos/videos_fps_6
+  video_base_dir: <path/to/the/downloaded 6fps videos.>
   num_video_frames: 32
 
 plm_fgqa:
@@ -21,7 +21,7 @@ plm_fgqa:
   # Expected directory structure is
   # > video_base_dir
   #     > *.mp4
-  video_base_dir: /checkpoint/vision_encoder/vlm_benchmark/video/KataBench/segment_clips
+  video_base_dir: <path/to/the/downloaded FGQA videos.>
   num_video_frames: 32
 
 plm_sgqa:
@@ -32,7 +32,7 @@ plm_sgqa:
   # Expected directory structure is
   # > video_base_dir
   #     > *.mp4
-  video_base_dir: /checkpoint/vision_encoder/vlm_benchmark/video/MMAI-RBM/roleplay_v2/videos_release/masked/
+  video_base_dir: <path/to/the/downloaded SGQA videos.>
   num_video_frames: 32
 
 # We implement llm-judge using the OpenAI Python api.
@@ -41,6 +41,6 @@ plm_sgqa:
 # Please update the base_url, api_key, and model below to use the best cloud provider suitable for you.
 # However, we recommend using LLaMA-API (https://llama.developer.meta.com) as all of our code has been tested with it.
 llm_judge:
-  base_url: https://api.llama.com/compat/v1
-  api_key: LLM|661676803266539|rJW9fHHVKJ8v1c1GOrKKVHe-ZQY
+  base_url: <API base url>
+  api_key: <API Key>
   model: Llama-3.3-70B-Instruct

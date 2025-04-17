@@ -15,6 +15,7 @@ generation_kwargs:
 process_results: !function rcap_utils.plm_rcap_process_results
 
 metric_list:
+  -
   - metric: plm_rcap_llm_judge_score
     aggregation: !function rcap_utils.plm_rcap_aggregate_results
     higher_is_better: true
