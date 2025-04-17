@@ -1,0 +1,46 @@
+plm_stc:
+  repo_id: facebook/PLM-VideoBench
+  repo_type: dataset
+  metadata_path: metadata/metadata_test.jsonl
+  
+  # The path to the SA-V (SAM-2) videos. Please download the dataset from https://ai.meta.com/datasets/segment-anything-video-downloads
+  # Please ONLY DOWNLOAD THE TAR FILE NAMED "videos_fps_6.tar", which contains all the required videos.
+  # Expected directory structure is
+  # > video_base_dir
+  #   > sav_001*.mp4
+  #   > sav_002*.mp4
+  #   > ...
+  video_base_dir: /checkpoint/vision_encoder/plm_release/plm_videobench/dfai_videos/videos_fps_6
+  num_video_frames: 32
+
+plm_fgqa:
+  repo_id: facebook/PLM-VideoBench
+  repo_type: dataset
+  
+  # The path to the PLM-FGQA videos.
+  # Expected directory structure is
+  # > video_base_dir
+  #     > *.mp4
+  video_base_dir: /checkpoint/vision_encoder/vlm_benchmark/video/KataBench/segment_clips
+  num_video_frames: 32
+
+plm_sgqa:
+  repo_id: facebook/PLM-VideoBench
+  repo_type: dataset
+  
+  # The path to the PLM-SGQA videos.
+  # Expected directory structure is
+  # > video_base_dir
+  #     > *.mp4
+  video_base_dir: /checkpoint/vision_encoder/vlm_benchmark/video/MMAI-RBM/roleplay_v2/videos_release/masked/
+  num_video_frames: 32
+
+# We implement llm-judge using the OpenAI Python api.
+# We use LLaMA-3.3-70B-Instruct as LLM judge.
+# Many cloud providers, including LLaMA-API, Together.ai, and Groqcloud support the OpenAI api format.
+# Please update the base_url, api_key, and model below to use the best cloud provider suitable for you.
+# However, we recommend using LLaMA-API (https://llama.developer.meta.com) as all of our code has been tested with it.
+llm_judge:
+  base_url: https://api.llama.com/compat/v1
+  api_key: LLM|661676803266539|rJW9fHHVKJ8v1c1GOrKKVHe-ZQY
+  model: Llama-3.3-70B-Instruct

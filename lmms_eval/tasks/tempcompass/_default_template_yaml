@@ -12,3 +12,11 @@ lmms_eval_specific_kwargs:
     "caption_matching": "\nPlease directly give the best option:",
     "captioning": ""
 }
+  plm:
+    pre_prompt: ""
+    post_prompt: {
+    "multi-choice": "\nOnly give the best option.",
+    "yes_no": "\nOnly answer yes or no.",
+    "caption_matching": "\nOnly give the best option.",
+    "captioning": ""
+}

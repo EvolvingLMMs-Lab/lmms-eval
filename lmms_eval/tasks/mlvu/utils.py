@@ -62,10 +62,10 @@ def mlvu_doc_to_visual_test(doc):
 
 
 def mlvu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    # option_prompt="Carefully watch this video and pay attention to every detail. Based on your observations, select the best option that accurately addresses the question."
-    option_prompt = ""
-    question = doc["question"] + "\nOnly give the best option.\n"
-    full_prompt = option_prompt + "\n" + question + "\n" + "Best option: ("
+    question = doc["question"]
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
+    full_prompt = pre_prompt + question + post_prompt
     return full_prompt
 
 

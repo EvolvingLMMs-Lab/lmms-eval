@@ -1,0 +1,27 @@
+dataset_path: facebook/PLM-VideoBench
+dataset_name: rdcap
+task: rdcap_test
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function rdcap_utils.plm_rdcap_doc_to_visual
+doc_to_text: !function rdcap_utils.plm_rdcap_doc_to_text
+doc_to_target: "dense_captions"
+
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+
+process_results: !function rdcap_utils.plm_rdcap_process_results
+
+metric_list:
+  - metric: plm_rdcap_score
+    aggregation: !function rdcap_utils.plm_rdcap_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "Create a dense caption of the subject's actions within the red rectangles, including action frames ids and brief descriptions. For each item use the format [start, end]: [description] separated by a newline, where start and end are frame numbers between {start_frame} and {end_frame} in this {total_frames} frame video."
+
+metadata:
+  - version: 0.0
