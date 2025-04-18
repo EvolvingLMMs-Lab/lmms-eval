@@ -27,7 +27,7 @@ DEFAULT_IMAGE_TOKEN = "<|image|>"
 class LlamaVision(lmms):
     def __init__(
         self,
-        pretrained: str = "meta-llama/Llama-3.2-11B-Vision",
+        pretrained: str = "meta-llama/Llama-3.2-11B-Vision-Instruct",
         revision: str = "main",
         device: str = "cuda",
         dtype: Optional[Union[str, torch.dtype]] = "auto",

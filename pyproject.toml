@@ -73,6 +73,7 @@ dependencies = [
     "zss",
     "protobuf==3.20",
     "sentence_transformers",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
