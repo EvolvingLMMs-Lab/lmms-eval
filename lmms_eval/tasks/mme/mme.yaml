@@ -39,5 +39,8 @@ lmms_eval_specific_kwargs:
   xcomposer2_4khd:
     pre_prompt: "[UNUSED_TOKEN_146]user\n"
     post_prompt: " Answer this question briefly[UNUSED_TOKEN_145]\n[UNUSED_TOKEN_146]assistant\n"
+  plm:
+    pre_prompt: ""
+    post_prompt: ""
 metadata:
   - version: 0.0
