@@ -30,5 +30,12 @@ metric_list:
   - metric: pope_yes_ratio
     aggregation: !function utils.pope_aggregate_yes_ratio
     higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
+  plm:
+    pre_prompt: ""
+    post_prompt: "\nYour response must be concise."
 metadata:
   - version: 0.0

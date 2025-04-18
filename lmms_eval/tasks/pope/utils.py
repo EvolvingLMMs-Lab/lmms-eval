@@ -6,10 +6,12 @@ def pope_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def pope_doc_to_text(doc):
+def pope_doc_to_text(doc, lmms_eval_specific_kwargs):
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
     # Assuming the 'doc' dictionary has a key 'question' with the question text
     question = doc["question"].strip()
-    return f"{question}\nAnswer the question using a single word or phrase."
+    return f"{pre_prompt}{question}{post_prompt}"
 
 
 def pope_process_results(doc, results):
