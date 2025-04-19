@@ -10,7 +10,7 @@ from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoProcessor
+from transformers import AriaForConditionalGeneration, AriaProcessor
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -18,6 +18,8 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
 warnings.filterwarnings("ignore")
+
+import re
 
 from loguru import logger as eval_logger
 
@@ -72,10 +74,10 @@ class Aria(lmms):
             dtype = getattr(torch, dtype)
 
         self.max_frames_num = max_frames_num
-        self._model = AutoModelForCausalLM.from_pretrained(pretrained, revision=revision, device_map=self.device_map, torch_dtype=torch.bfloat16, trust_remote_code=True, attn_implementation=attn_implementation)
+        self._model = AriaForConditionalGeneration.from_pretrained(pretrained, revision=revision, device_map=self.device_map, torch_dtype=torch.bfloat16, trust_remote_code=True, attn_implementation=attn_implementation)
 
         self.pretrained = pretrained
-        self._image_processor = AutoProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=True)
+        self._image_processor = AriaProcessor.from_pretrained(pretrained, revision=revision, trust_remote_code=True)
         self._tokenizer = self._image_processor.tokenizer
 
         self._config = self._model.config
