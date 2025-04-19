@@ -21,7 +21,7 @@ except ImportError:
 
 from dotenv import find_dotenv, load_dotenv
 from loguru import logger as eval_logger
-from openai import OpenAI
+from openai import AzureOpenAI, OpenAI
 from PIL import Image
 
 load_dotenv(verbose=True)
@@ -32,11 +32,12 @@ class OpenAICompatible(lmms):
     def __init__(
         self,
         model_version: str = "grok-2-latest",
-        timeout: int = 120,
+        timeout: int = 10,
         max_retries: int = 5,
         max_size_in_mb: int = 20,
         continual_mode: bool = False,
         response_persistent_folder: str = None,
+        azure_openai: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -61,7 +62,11 @@ class OpenAICompatible(lmms):
                 self.response_cache = {}
                 self.cache_mode = "start"
 
-        self.client = OpenAI(api_key=os.getenv("OPENAI_COMPATIBLE_API_KEY"), base_url=os.getenv("OPENAI_COMPATIBLE_API_URL"))
+        self.client = (
+            OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"))
+            if not azure_openai
+            else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"))
+        )
 
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
@@ -186,7 +191,8 @@ class OpenAICompatible(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
-            payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
+            # payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
+            payload["max_tokens"] = gen_kwargs["max_new_tokens"]
             payload["temperature"] = gen_kwargs["temperature"]
 
             if "o1" in self.model_version or "o3" in self.model_version:
@@ -194,6 +200,8 @@ class OpenAICompatible(lmms):
                 del payload["temperature"]
                 payload["reasoning_effort"] = "medium"
                 payload["response_format"] = {"type": "text"}
+                payload.pop("max_tokens")
+                payload["max_completion_tokens"] = gen_kwargs["max_tokens"]
 
             for attempt in range(self.max_retries):
                 try:
