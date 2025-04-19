@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+
 from lmms_eval.tasks.plm_videobench.eval_utils import *
 
 # Load default config parameters
@@ -16,7 +17,6 @@ assert num_video_frames is not None, f"num_video_frames must not be None."
 
 
 def qa_template(entry):
-
     question = f"Question: {entry['question']}\n"
     question += "Options:\n"
     answer = entry["answer"]
