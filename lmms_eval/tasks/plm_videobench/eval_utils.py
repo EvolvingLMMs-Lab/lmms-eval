@@ -17,7 +17,6 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def calculate_iou(range_1, range_2):
-
     start_1, end_1 = float(min(*range_1)), float(max(*range_1))
     start_2, end_2 = float(min(*range_2)), float(max(*range_2))
 
@@ -29,7 +28,6 @@ def calculate_iou(range_1, range_2):
 
 
 def evaluate_detections(predicted_segments, gt_segments, iou_thresholds=(0.3, 0.5, 0.7, 0.9)):
-
     metrics = {}
     for threshold in iou_thresholds:
         metrics[str(threshold)] = {
@@ -240,7 +238,6 @@ def decode_video(video_path: str) -> List[np.ndarray]:
 
 
 def load_video(video_path, max_frames, annot_sample_rate=1):
-
     def uniform_sample(m, n):
         assert n <= m
         stride = (m - 1) / (n - 1) if n > 1 else 0  # Calculate the stride

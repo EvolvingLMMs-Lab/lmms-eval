@@ -1,14 +1,13 @@
 import json
 import os
+from io import BytesIO
 
+import requests
 from loguru import logger as eval_logger
+from PIL import Image
 from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
-
-from PIL import Image
-import requests
-from io import BytesIO
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -20,11 +19,13 @@ COCO_METRICS = ["Bleu_4", "Bleu_3", "Bleu_2", "Bleu_1", "METEOR", "ROUGE_L", "CI
 def coco_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
+
 def coco_doc_to_visual_karpathy(doc):
     image_url = doc["url"]
     response = requests.get(image_url)
     image = Image.open(BytesIO(response.content))
     return [image.convert("RGB")]
+
 
 def coco_doc_to_text(doc):
     return f"Provide a one-sentence caption for the provided image."

@@ -1,9 +1,10 @@
 import os
 
 import pandas as pd
-from lmms_eval.tasks.plm_videobench.eval_utils import *
 from openai import OpenAI
 from PIL import Image
+
+from lmms_eval.tasks.plm_videobench.eval_utils import *
 
 # Load default config parameters
 config = load_defualt_config()
@@ -40,7 +41,6 @@ def plm_sgqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def plm_sgqa_process_results(doc, results):
-
     pred = results[0]
 
     results_dict = {kk: vv for kk, vv in doc.items() if not kk == "metadata"}
@@ -68,7 +68,6 @@ def plm_sgqa_process_results(doc, results):
 
 
 def plm_sgqa_aggregate_results(results):
-
     df_res = pd.DataFrame(results)
 
     # -- add the onevsall accuracy for all q_kinds
