@@ -115,36 +115,38 @@ Our Development will be continuing on the main branch, and we encourage you to g
 
 ## Usages
 
+> More examples can be found in [examples/models](examples/models)
+
 **Evaluation of OpenAI-Compatible Model**
 
 ```bash
-bash miscs/model_dryruns/openai_compatible.sh
-bash miscs/model_dryruns/xai_grok.sh
+bash examples/models/openai_compatible.sh
+bash examples/models/xai_grok.sh
 ```
 
 **Evaluation of vLLM**
 
 ```bash
-bash miscs/model_dryruns/vllm_qwen2vl.sh
+bash examples/models/vllm_qwen2vl.sh
 ```
 
 **Evaluation of LLaVA-OneVision**
 
 ```bash
-bash miscs/model_dryruns/llava_onevision.sh
+bash examples/models/llava_onevision.sh
 ```
 
 **Evaluation of LLaMA-3.2-Vision**
 
 ```bash
-bash miscs/model_dryruns/llama_vision.sh
+bash examples/models/llama_vision.sh
 ```
 
 **Evaluation of Qwen2-VL**
 
 ```bash
-bash miscs/model_dryruns/qwen2_vl.sh
-bash miscs/model_dryruns/qwen2_5_vl.sh
+bash examples/models/qwen2_vl.sh
+bash examples/models/qwen2_5_vl.sh
 ```
 
 **Evaluation of LLaVA on MME**
@@ -165,21 +167,6 @@ python3 -m accelerate.commands.launch \
     --batch_size 1 \
     --log_samples \
     --log_samples_suffix llava_v1.5_mme \
-    --output_path ./logs/
-```
-
-**Evaluation of LLaVA on multiple datasets**
-
-```bash
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
     --output_path ./logs/
 ```
 
