@@ -2,21 +2,23 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 from accelerate import Accelerator, DistributedType
-from lmms_eval import utils
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
+from apps.plm.generate import (
+    PackedCausalTransformerGenerator,
+    PackedCausalTransformerGeneratorArgs,
+    load_consolidated_model_and_tokenizer,
+)
+from core.args import dataclass_from_dict
+from core.transforms.image_transform import get_image_transform
+from core.transforms.video_transform import get_video_transform
 from loguru import logger as eval_logger
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm
 
-from apps.plm.generate import (PackedCausalTransformerGenerator,
-                               PackedCausalTransformerGeneratorArgs,
-                               load_consolidated_model_and_tokenizer)
-from core.args import dataclass_from_dict
-from core.transforms.image_transform import get_image_transform
-from core.transforms.video_transform import get_video_transform
+from lmms_eval import utils
+from lmms_eval.api.instance import Instance
+from lmms_eval.api.model import lmms
+from lmms_eval.api.registry import register_model
 
 
 @register_model("plm")
