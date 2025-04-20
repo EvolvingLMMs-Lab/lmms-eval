@@ -154,82 +154,25 @@ bash examples/models/qwen2_5_vl.sh
 If you want to test LLaVA 1.5, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
 
 ```bash
-git clone https://github.com/LLaVA-VL/LLaVA-NeXT
-cd LLaVA-NeXT
-uv pip install -e .
-
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
-    --tasks mme \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme \
-    --output_path ./logs/
-```
-
-For other variants llava 1.5/1.6, please change the `conv_template` in the `model_args`
-
-> `conv_template` is an arg of the init function of llava in `lmms_eval/models/llava.py`, you could find the corresponding value at LLaVA's code, probably in a dict variable `conv_templates` in `llava/conversations.py`
-
-```bash
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.6-mistral-7b,conv_template=mistral_instruct" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
-
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.6-34b,conv_template=mistral_direct" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
+bash examples/models/llava_next.sh
 ```
 
 **Evaluation with tensor parallel for bigger model (llava-next-72b)**
 
 ```bash
-python3 -m lmms_eval \
-    --model=llava \
-    --model_args=pretrained=lmms-lab/llava-next-72b,conv_template=qwen_1_5,device_map=auto,model_name=llava_qwen \
-    --tasks=pope,vizwiz_vqa_val,scienceqa_img \
-    --batch_size=1 \
-    --log_samples \
-    --log_samples_suffix=llava_qwen \
-    --output_path="./logs/" \
-    --wandb_args=project=lmms-eval,job_type=eval,entity=llava-vl
+bash examples/models/tensor_parallel.sh
 ```
 
 **Evaluation with SGLang for bigger model (llava-next-72b)**
 
 ```bash
-python3 -m lmms_eval \
-	--model=llava_sglang \
-	--model_args=pretrained=lmms-lab/llava-next-72b,tokenizer=lmms-lab/llavanext-qwen-tokenizer,conv_template=chatml-llava,tp_size=8,parallel=8 \
-	--tasks=mme \
-	--batch_size=1 \
-	--log_samples \
-	--log_samples_suffix=llava_qwen \
-	--output_path=./logs/ \
-	--verbosity=INFO
+bash examples/models/sglang.sh
 ```
 
-**Evaluation with a set of configurations, supporting evaluation of multiple models and datasets**
+**Evaluation with vLLM for bigger model (llava-next-72b)**
 
 ```bash
-python3 -m accelerate.commands.launch --num_processes=8 -m lmms_eval --config ./miscs/example_eval.yaml
+bash examples/models/vllm_qwen2vl.sh
 ```
 
 **More Parameters**
