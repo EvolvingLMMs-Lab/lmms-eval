@@ -3,6 +3,7 @@ import os
 import re
 
 import numpy as np
+
 from lmms_eval.tasks.plm_videobench.eval_utils import *
 
 # Load default config parameters

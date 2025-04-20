@@ -2,8 +2,9 @@ import json
 import os
 
 import numpy as np
-from lmms_eval.tasks.plm_videobench.eval_utils import *
 from openai import OpenAI
+
+from lmms_eval.tasks.plm_videobench.eval_utils import *
 
 # Load default config parameters
 config = load_defualt_config()
