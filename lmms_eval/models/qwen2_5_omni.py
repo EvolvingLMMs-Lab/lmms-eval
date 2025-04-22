@@ -45,11 +45,12 @@ class Qwen2_5_Omni(lmms):
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
-        use_flash_attention_2: Optional[bool] = True,
+        attn_implementation: Optional[bool] = "eager",
         max_num_frames: int = 768,
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
         max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
+        system_prompt: str = "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech.",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -75,15 +76,8 @@ class Qwen2_5_Omni(lmms):
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
-        if use_flash_attention_2:
-            self._model = Qwen2_5OmniForConditionalGeneration.from_pretrained(
-                pretrained,
-                torch_dtype=torch.bfloat16,
-                device_map="auto",
-                attn_implementation="flash_attention_2",
-            ).eval()
-        else:
-            self._model = Qwen2_5OmniForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
+        Qwen2_5OmniForConditionalGeneration._tp_plan = [] if Qwen2_5OmniForConditionalGeneration._tp_plan is None else Qwen2_5OmniForConditionalGeneration._tp_plan
+        self._model = Qwen2_5OmniForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map, attn_implementation=attn_implementation).eval()
         self.processor = Qwen2_5OmniProcessor.from_pretrained("Qwen/Qwen2.5-Omni-7B")
         self.max_num_frames = max_num_frames
         self._tokenizer = self.processor.tokenizer
@@ -92,6 +86,7 @@ class Qwen2_5_Omni(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
         self._model.disable_talker()
+        self.system_prompt = system_prompt
 
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
@@ -218,10 +213,9 @@ class Qwen2_5_Omni(lmms):
                 elif not isinstance(until, list):
                     raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
 
-            # message = [{"role": "system", "content": "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech."}]
             # For better performance, please visit the Qwen-Omni repo to get the latest system prompt based on tasks.
             # https://github.com/QwenLM/Qwen2.5-Omni/tree/main/cookbooks
-            message = [{"role": "system", "content": "You are a speech recognition model."}]
+            message = [{"role": "system", "content": [{"type": "text", "text": self.system_prompt}]}]
             for i, context in enumerate(contexts):
                 if len(visuals) > 0:
                     visual = visuals[i] if i < len(visuals) else None
