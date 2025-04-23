@@ -194,11 +194,6 @@ class Qwen2_5_VL(lmms):
             task = task[0]
             split = split[0]
             visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            if None in visual_list:
-                visual_list = []
-            else:
-                visual_list = self.flatten(visual_list)
-
             gen_kwargs = all_gen_kwargs[0]
 
             # Set default values for until and max_new_tokens
@@ -230,7 +225,7 @@ class Qwen2_5_VL(lmms):
                     contexts[i] = context
 
                 processed_visuals = []
-                for visual in visual_list:
+                for visual in visual_list[i]:
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                         vr = decord.VideoReader(visual)
                         first_frame = vr[0].asnumpy()
