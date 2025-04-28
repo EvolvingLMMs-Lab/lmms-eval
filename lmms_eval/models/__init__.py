@@ -11,6 +11,7 @@ logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
+    "aero": "Aero",
     "plm": "PerceptionLM",
     "aria": "Aria",
     "auroracap": "AuroraCap",
