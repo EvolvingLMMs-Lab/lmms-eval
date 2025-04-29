@@ -92,11 +92,16 @@ def mathvision_doc_to_visual(doc):
     return [doc["decoded_image"].convert("RGB")]
 
 
-def mathvision_doc_to_text(doc):
+def mathvision_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question, choices = doc["question"], doc["options"]
     len_choices = len(choices)
     options = [chr(ord("A") + i) for i in range(len_choices)]
     choices_str = "\n".join([f"{option}. {choice}" for option, choice in zip(options, choices)])
+    
+    mc_prompt = ""
+    if lmms_eval_specific_kwargs is not None:
+        mc_prompt = "\n" + lmms_eval_specific_kwargs["mc_prompt"]
+        
     if choices_str:
         query_prompt = f"{question}\nChoices: {choices_str}"
     else:
