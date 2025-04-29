@@ -145,14 +145,14 @@ class OpenAICompatible(lmms):
         res = [None] * len(requests)  # Pre-allocate result list
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         batch_size = self.batch_size_per_gpu
-        
+
         # Filter out requests that can be served from cache
         uncached_requests = []
         uncached_indices = []
-        
+
         for i, req in enumerate(requests):
             contexts, gen_kwargs, doc_to_visual, doc_id, task, split = req.args
-            
+
             # Check cache first
             if self.continual_mode is True and self.cache_mode == "resume":
                 doc_uuid = f"{task}___{split}___{doc_id}"
@@ -162,29 +162,29 @@ class OpenAICompatible(lmms):
                         res[i] = response_text
                         pbar.update(1)
                         continue
-            
+
             # If not in cache, add to uncached requests
             uncached_requests.append(req)
             uncached_indices.append(i)
-        
+
         if uncached_requests:
             # Process uncached requests in batches
-            batched_requests = [uncached_requests[i:i + batch_size] for i in range(0, len(uncached_requests), batch_size)]
-            batched_indices = [uncached_indices[i:i + batch_size] for i in range(0, len(uncached_indices), batch_size)]
-            
+            batched_requests = [uncached_requests[i : i + batch_size] for i in range(0, len(uncached_requests), batch_size)]
+            batched_indices = [uncached_indices[i : i + batch_size] for i in range(0, len(uncached_indices), batch_size)]
+
             for batch_idx, (batch_requests, batch_orig_indices) in enumerate(zip(batched_requests, batched_indices)):
                 # Prepare batch payloads
                 batch_payloads = []
                 request_uuid_map = {}  # Map custom_id to original request info
-                
+
                 for i, req in enumerate(batch_requests):
                     contexts, gen_kwargs, doc_to_visual, doc_id, task, split = req.args
-                    
+
                     # Generate a unique ID for this request
                     doc_uuid = f"{task}___{split}___{doc_id}"
                     custom_id = f"batch_{batch_idx}_req_{i}_{doc_uuid}"
                     request_uuid_map[custom_id] = (batch_orig_indices[i], doc_uuid)
-                    
+
                     # Process visuals
                     visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
                     if None in visuals:
@@ -203,18 +203,15 @@ class OpenAICompatible(lmms):
                             elif isinstance(visual, Image.Image):
                                 img = self.encode_image(visual)
                                 imgs.append(img)
-                    
+
                     # Create message content with text and images
                     message_content = [{"type": "text", "text": contexts}]
                     for img in imgs:
                         message_content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
-                    
+
                     # Create the body part of the request
-                    body = {
-                        "model": self.model_version,
-                        "messages": [{"role": "user", "content": message_content}]
-                    }
-                    
+                    body = {"model": self.model_version, "messages": [{"role": "user", "content": message_content}]}
+
                     # Set generation parameters
                     if "max_new_tokens" not in gen_kwargs:
                         gen_kwargs["max_new_tokens"] = 1024
@@ -222,79 +219,74 @@ class OpenAICompatible(lmms):
                         gen_kwargs["max_new_tokens"] = 4096
                     if "temperature" not in gen_kwargs:
                         gen_kwargs["temperature"] = 0
-                    
+
                     body["max_tokens"] = gen_kwargs["max_new_tokens"]
                     body["temperature"] = gen_kwargs["temperature"]
-                    
+
                     if "o1" in self.model_version or "o3" in self.model_version:
                         body.pop("temperature", None)
                         body["reasoning_effort"] = "medium"
                         body["response_format"] = {"type": "text"}
                         body.pop("max_tokens", None)
                         body["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
-                    
+
                     # Create the complete batch request object with correct format
-                    batch_request = {
-                        "custom_id": custom_id,
-                        "method": "POST",
-                        "url": "/chat/completions",
-                        "body": body
-                    }
-                    
+                    batch_request = {"custom_id": custom_id, "method": "POST", "url": "/chat/completions", "body": body}
+
                     batch_payloads.append(batch_request)
-                
+
                 # Create batch file
                 batch_file_path = f"batch_requests_{batch_idx}.jsonl"
                 with open(batch_file_path, "w") as f:
                     for payload in batch_payloads:
                         f.write(json.dumps(payload) + "\n")
-                
+
                 # Submit batch
                 try:
                     with open(batch_file_path, "rb") as f:
                         file_response = self.client.files.create(file=f, purpose="batch")
-                    
+
                     batch_response = self.client.batches.create(
                         input_file_id=file_response.id,
                         endpoint="/v1/chat/completions",
                         completion_window="24h",
                     )
-                    
+
                     eval_logger.info(f"Batch job {batch_idx+1}/{len(batched_requests)} created with ID: {batch_response.id}")
-                    
+
                     # Poll for completion
                     retry_count = 0
                     max_retries = self.max_retries
                     while batch_response.status not in ["completed", "failed", "cancelled"]:
                         # Sleep for a while before checking the status again
                         base_sleep_time = min(1 + (len(batch_requests) / 10), 5)  # 1-5 seconds based on batch size
-                        sleep_time = min(base_sleep_time * (2 ** retry_count), 60)  # Still cap at 60 seconds max
+                        sleep_time = min(base_sleep_time * (2**retry_count), 60)  # Still cap at 60 seconds max
                         time.sleep(sleep_time)
 
                         eval_logger.info(f"Batch job status: {batch_response.status}...checking again in a moment")
                         batch_response = self.client.batches.retrieve(batch_response.id)
                         retry_count += 1
-                        
+
                         if retry_count > max_retries:
                             eval_logger.error(f"Exceeded maximum retries for batch {batch_idx}")
                             break
-                    
+
                     if batch_response.status == "completed":
                         eval_logger.info(f"Batch job {batch_idx+1}/{len(batched_requests)} completed successfully")
-                        
+
                         # Get results
                         result_file_id = batch_response.output_file_id
                         file_response = self.client.files.content(result_file_id)
                         result_content = file_response.read().decode("utf-8")
-                        
+
                         results = [json.loads(line) for line in result_content.split("\n") if line.strip() != ""]
-                        
+
                         # Process results
                         for result in results:
                             custom_id = result.get("custom_id")
                             if custom_id in request_uuid_map:
                                 orig_idx, doc_uuid = request_uuid_map[custom_id]
-                                
+
                                 # Extract response text properly from the result based on the correct format
                                 response_text = ""
                                 if "response" in result and "choices" in result["response"]:
@@ -303,17 +295,17 @@ class OpenAICompatible(lmms):
                                         message = choices[0]["message"]
                                         if "content" in message:
                                             response_text = message["content"]
-                                
+
                                 # Store result in original position
                                 res[orig_idx] = response_text
-                                
+
                                 # Update cache if needed
                                 if self.continual_mode is True:
                                     self.response_cache[doc_uuid] = response_text
-                                
+
                                 # Update progress bar
                                 pbar.update(1)
-                        
+
                         # Clean up
                         try:
                             self.client.files.delete(result_file_id)
@@ -321,29 +313,29 @@ class OpenAICompatible(lmms):
                                 os.remove(batch_file_path)
                         except Exception as e:
                             eval_logger.warning(f"Error cleaning up batch files: {str(e)}")
-                    
+
                     else:
                         eval_logger.error(f"Batch job {batch_idx+1}/{len(batched_requests)} failed with status: {batch_response.status}")
                         if hasattr(batch_response, "errors"):
                             eval_logger.error(f"Errors: {batch_response.errors}")
-                        
+
                         # Handle failure by setting empty responses
                         for i in batch_orig_indices:
                             res[i] = ""
                             pbar.update(1)
-                
+
                 except Exception as e:
                     eval_logger.error(f"Error processing batch {batch_idx+1}/{len(batched_requests)}: {str(e)}")
                     # Handle exception by setting empty responses
                     for i in batch_orig_indices:
                         res[i] = ""
                         pbar.update(1)
-        
+
         # Persist cache if needed
         if self.continual_mode is True and self.response_cache:
             with open(self.response_persistent_file, "w") as f:
                 json.dump(self.response_cache, f)
-        
+
         pbar.close()
         return res
 
