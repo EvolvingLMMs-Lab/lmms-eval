@@ -36,13 +36,10 @@ class VLLM(lmms):
         tensor_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
-        timeout: int = 60,
-        max_images: int = 32,
-        max_videos: int = 8,
-        max_audios: int = 8,
         max_frame_num: int = 32,
         threads: int = 16,  # Threads to use for decoding visuals
         trust_remote_code: Optional[bool] = True,
+        chat_template: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -50,26 +47,28 @@ class VLLM(lmms):
         # and split the text and image
         # Here we just use the same token as llava for convenient
         self.model_version = model_version
-        self.max_images = max_images
         self.max_frame_num = max_frame_num
         self.threads = threads
+        self.chat_template = chat_template
 
-        init_params = ["model_version", "tensor_parallel_size", "gpu_memory_utilization", "batch_size", "timeout", "max_images", "max_videos", "max_audios", "max_frame_num", "threads", "trust_remote_code"]
+        # Convert any string arguments that start with { and end with } to dictionaries
+        for key, value in kwargs.items():
+            if isinstance(value, str) and value.strip().startswith('{') and value.strip().endswith('}'):
+                try:
+                    kwargs[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
-        # filter out the parameters already defined in __init__ to pass options to VLLM
-        # this enables support for all VLLM Engine args:
-        # https://github.com/vllm-project/vllm/blob/3147586ebdb36ceae653e9dceec8cf9922fe2c28/vllm/engine/arg_utils.py#L93
-        filtered_kwargs = {k: v for k, v in kwargs.items() if k not in init_params}
-
-        accelerator = Accelerator()
+        # Set up vllm client
         self.client = LLM(
             model=self.model_version,
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
-            limit_mm_per_prompt={"image": max_images, "video": max_videos, "audio": max_audios},
             trust_remote_code=trust_remote_code,
-            **filtered_kwargs,
+            **kwargs,
         )
+
+        accelerator = Accelerator()
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
@@ -184,7 +183,14 @@ class VLLM(lmms):
 
                 batched_messages.append(messages)
 
-            response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
+            sampling_params = SamplingParams(**params)
+            
+            if self.chat_template is not None:
+                with open(self.chat_template, "r") as f:
+                    chat_template = f.read()
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
+            else:
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             response_text = [o.outputs[0].text for o in response]
 
             assert len(response_text) == len(batch_requests)
