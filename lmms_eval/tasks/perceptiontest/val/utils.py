@@ -23,7 +23,7 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 # We will unzip all the zip files
 # To HF HOME cache dir
 # And load it here
-HF_HOME = os.environ["HF_HOME"]
+HF_HOME = os.getenv("HF_HOME", "~/.cache/huggingface")
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
