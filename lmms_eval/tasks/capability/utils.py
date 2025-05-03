@@ -114,6 +114,7 @@ def capability_aggregate_inference_result(results, args):
     # to ensure re-run evaluation if re-run inference
     eval_save_path = os.path.join(os.path.dirname(save_path), f"../evaluation/{task}.jsonl")
     if os.path.exists(eval_save_path):
+        eval_logger.warning(f"Found EXISTING evaluation records: {eval_save_path}, REMOVING it!")
         os.remove(eval_save_path)
     
     with open(save_path, 'w') as f:
