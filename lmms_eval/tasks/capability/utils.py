@@ -2,6 +2,7 @@ import os
 import ast
 import yaml
 import json
+import requests
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
@@ -22,8 +23,29 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
             safe_data.append(line)
 config = yaml.safe_load("".join(safe_data))
 
-OPENAI_API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+API_TYPE = os.getenv("API_TYPE", "openai")
+
+if API_TYPE == "openai":
+    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+elif API_TYPE == "azure":
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+    headers = {
+        "api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+else:
+    API_URL = "YOUR_API_URL"
+    API_KEY = "YOUR_API_KEY"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
 
 HF_HOME = os.getenv("HF_HOME", "~/.cache/huggingface")
 HF_HOME = os.path.expanduser(HF_HOME)
@@ -126,7 +148,7 @@ def capability_aggregate_results(results, args):
     strict_match = config['metadata']['eval_strict_match']
     evaluator = Evaluator(
         task, results, save_path,
-        eval_model, num_process,
+        eval_model, headers, num_process,
         max_allow_missing, max_retry_times,
         auto_resume, strict_match
     )
@@ -162,7 +184,7 @@ def capability_aggregate_f1score(results, args):
 class Evaluator:
     def __init__(
             self, task, results, save_path,
-            eval_model, num_process=0,
+            eval_model, headers, num_process=0,
             max_allow_missing=5, max_retry_times=10,
             auto_resume=True, strict_match=True,
     ):
@@ -170,6 +192,7 @@ class Evaluator:
         self.results = results
         self.save_path = save_path
         self.eval_model = eval_model
+        self.headers = headers
         self.num_process = num_process
         self.max_allow_missing = max_allow_missing
         self.max_retry_times = max_retry_times
@@ -421,21 +444,19 @@ class Evaluator:
             {"role": "user", "content": user_prompt},
         ]
         try:
-            client = OpenAI(
-                api_key=OPENAI_API_KEY,
-                base_url=OPENAI_API_URL,
-                timeout=120
-            )
-            response = client.chat.completions.create(
-                model=self.eval_model,
-                messages=messages,
-            )
+            payload = {
+                "model": self.eval_model,
+                "messages": messages,
+            }
+            response = requests.post(API_URL, headers=self.headers, json=payload, timeout=60)
+            response.raise_for_status()
+            response = response.json()
         except Exception as e:
             eval_logger.info(f"Error calling {self.eval_model}: {e}")
             return None
         
         try:
-            response_message = response.choices[0].message.content
+            response_message = response["choices"][0]["message"]["content"].strip()
             return response_message
         except Exception as e:
             eval_logger.info(f"Error parsing {self.eval_model} response: {e}\nResponse: {response}")
@@ -549,6 +570,7 @@ class Evaluator:
             if len(buffer) > 0:
                 with open(self.save_path, 'a') as f:
                     f.writelines(buffer)
+                buffer.clear()
 
         
         for response in tqdm(saved_responses, desc=f"Calculating {self.task} scores"):
@@ -604,7 +626,7 @@ if __name__ == "__main__":
         strict_match = config['metadata']['eval_strict_match']
         evaluator = Evaluator(
             task, result, save_path,
-            eval_model, num_process,
+            eval_model, headers, num_process,
             max_allow_missing, max_retry_times,
             auto_resume, strict_match
         )
