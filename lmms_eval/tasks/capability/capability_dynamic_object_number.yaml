@@ -1,0 +1,4 @@
+include: _default_template_yaml
+
+task: capability_dynamic_object_number
+dataset_name: dynamic_object_number

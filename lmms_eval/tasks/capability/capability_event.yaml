@@ -1,0 +1,4 @@
+include: _default_template_yaml
+
+task: capability_event
+dataset_name: event
