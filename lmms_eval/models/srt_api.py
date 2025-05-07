@@ -14,7 +14,7 @@ from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from openai import AsyncOpenAI, OpenAI
 from PIL import Image
-from sglang.srt.utils import kill_child_process
+from sglang.srt.utils import kill_process_tree
 from sglang.test.test_utils import (
     DEFAULT_TIMEOUT_FOR_SERVER_LAUNCH,
     popen_launch_server,
@@ -313,7 +313,7 @@ class SRT_API(lmms):
                 pbar.update(1)
         else:
             asyncio.run(run(requests))
-        kill_child_process(self.process.pid)
+        kill_process_tree(self.process.pid)
 
         return res
 
