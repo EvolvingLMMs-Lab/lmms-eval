@@ -195,18 +195,18 @@ class Qwen2_5_VL(lmms):
             split = split[0]
             visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             gen_kwargs = all_gen_kwargs[0]
-
-            # Set default values for until and max_new_tokens
-            until = [self.tokenizer.decode(self.eot_token_id)]
-
-            # Update values from gen_kwargs if present
-            if "until" in gen_kwargs:
-                until = gen_kwargs.pop("until")
-                if isinstance(until, str):
-                    until = [until]
-                elif not isinstance(until, list):
-                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
-
+            
+            # Set default until or update values from gen_kwargs if present
+            until = gen_kwargs.get("until", [self.tokenizer.decode(self.eot_token_id)])
+            
+            if isinstance(until, str):
+                until = [until]
+            elif not isinstance(until, list):
+                raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
+            
+            # Avoid using '\n\n' as a stopper for Qwen2.5VL to prevent truncation, which can lead to incorrect results
+            until = [item for item in until if item != "\n\n"]
+            
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
 
