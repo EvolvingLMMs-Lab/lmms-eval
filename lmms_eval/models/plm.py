@@ -65,11 +65,11 @@ class PerceptionLM(lmms):
 
         # Create preprocessors (transforms)
         processor = {}
-        vision_input_type = config.get("model").get("vision_input_type", "thumb+tile")
-        max_num_tiles = config.get("model").get("max_num_tiles", 36)
+        vision_input_type = config.get("data").get("vision_input_type", "thumb+tile")
+        max_num_tiles = config.get("data").get("max_num_tiles", 36)
         processor["image"] = get_image_transform(vision_input_type=vision_input_type, image_res=model.vision_model.image_size, max_num_tiles=max_num_tiles)
         processor["video"] = get_video_transform(image_res=model.vision_model.image_size)
-        self._video_max_frames = config.get("model").get("video_max_frames", 32)
+        self._max_video_frames = config.get("data").get("max_video_frames", 32)
 
         # Create PLM generator
         eval_logger.info(f"Creating packed generator with gen_cfg: {gen_cfg}")
@@ -130,8 +130,8 @@ class PerceptionLM(lmms):
         return self.batch_size_per_gpu
 
     @property
-    def video_max_frames(self):
-        return self._video_max_frames
+    def max_video_frames(self):
+        return self._max_video_frames
 
     @property
     def device(self):
@@ -186,7 +186,7 @@ class PerceptionLM(lmms):
                 if len(visuals) > 0:
                     visual = visuals[i] if i < len(visuals) else None
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                        video_info = (visual, self.video_max_frames, None, None, None)
+                        video_info = (visual, self.max_video_frames, None, None, None)
                         visual, _ = self.processor["video"](video_info)
                         message = (context, visual)
                     elif isinstance(visual, Image.Image):  # Single image
