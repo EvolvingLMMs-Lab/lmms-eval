@@ -73,7 +73,8 @@ def vqav2_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if "pre_prompt" in lmms_eval_specific_kwargs:
         pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     if "post_prompt" in lmms_eval_specific_kwargs:
-        post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+        # post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+        post_prompt = lmms_eval_specific_kwargs["plm"]["post_prompt"]
     return f"{pre_prompt}{doc['question']}{post_prompt}"
 
 
