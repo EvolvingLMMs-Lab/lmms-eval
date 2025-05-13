@@ -130,7 +130,7 @@ def vitatecs_process_results(doc, result):
     elif any(pred.startswith(prefix) for prefix in ["A)", "B)"]):
         rating = 1 if pred.split(")")[0] == answer[1] else 0
     elif any(pred.startswith(prefix) for prefix in ["(A)", "(B)"]):
-        rating = 1 if pred.split(")")[1] == answer[1] else 0
+        rating = 1 if pred.split(")")[0][1] == answer[1] else 0
     else:
         # Fail to match answer in the video-llm response. Use ChatGPT to evaluate.
         match_success = False
