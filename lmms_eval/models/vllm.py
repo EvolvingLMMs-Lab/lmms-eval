@@ -53,7 +53,7 @@ class VLLM(lmms):
 
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
-            if isinstance(value, str) and value.strip().startswith('{') and value.strip().endswith('}'):
+            if isinstance(value, str) and value.strip().startswith("{") and value.strip().endswith("}"):
                 try:
                     kwargs[key] = json.loads(value)
                 except json.JSONDecodeError:
@@ -184,7 +184,7 @@ class VLLM(lmms):
                 batched_messages.append(messages)
 
             sampling_params = SamplingParams(**params)
-            
+
             if self.chat_template is not None:
                 with open(self.chat_template, "r") as f:
                     chat_template = f.read()
