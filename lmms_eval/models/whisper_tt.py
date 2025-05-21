@@ -15,13 +15,13 @@ from lmms_eval.models.model_utils.audio_processing import downsample_audio
 import os
 from scipy.io import wavfile
 import ttnn
-from models.experimental.functional_whisper.demo.demo import (
+from models.demos.whisper.demo.demo import (
     create_functional_whisper_for_conditional_generation_inference_pipeline,
 )
-from models.experimental.functional_whisper.tt import (
+from models.demos.whisper.tt import (
     ttnn_optimized_functional_whisper as ttnn_model,
 )
-from models.experimental.functional_whisper.tt.ttnn_optimized_functional_whisper import (
+from models.demos.whisper.tt.ttnn_optimized_functional_whisper import (
     WHISPER_L1_SMALL_SIZE,
 )
 
