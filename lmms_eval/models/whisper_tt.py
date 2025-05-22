@@ -59,8 +59,11 @@ def warmup_model():
     )
 
     # warmup model pipeline
-    dir_path = "/home/container_app_user/app/server"
-    input_file_path = dir_path + "/17646385371758249908.wav"
+    try:
+        dir_path = Path(os.environ["TT_METAL_HOME"])
+    except KeyError:
+        raise RuntimeError("Must set TT_METAL_HOME environment variable")
+    input_file_path = dir_path / "/tt-metal/models/demos/whisper/demo/dataset/conditional_generation/17646385371758249908.wav"
     sampling_rate, data = wavfile.read(input_file_path)
     _ttnn_output = model_pipeline(data, sampling_rate, stream=False)
 
