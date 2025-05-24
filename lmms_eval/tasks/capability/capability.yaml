@@ -1,0 +1,15 @@
+group: capability
+task:
+  - capability_object_category
+  - capability_object_number
+  - capability_object_color
+  - capability_spatial_relation
+  - capability_scene
+  - capability_camera_angle
+  - capability_OCR
+  - capability_style
+  - capability_character_identification
+  - capability_dynamic_object_number
+  - capability_action
+  - capability_camera_movement
+  - capability_event

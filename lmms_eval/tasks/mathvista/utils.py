@@ -20,23 +20,7 @@ with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 
-API_TYPE = os.getenv("API_TYPE", "openai")
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-mathvista_evaluator = MathVistaEvaluator(api_key=API_KEY, gpt_model=config["metadata"]["gpt_eval_model_name"])
+mathvista_evaluator = MathVistaEvaluator()
 
 
 def mathvista_doc_to_visual(doc):

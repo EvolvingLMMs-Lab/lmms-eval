@@ -1,7 +1,10 @@
 import json
 import os
+from io import BytesIO
 
+import requests
 from loguru import logger as eval_logger
+from PIL import Image
 from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
@@ -17,8 +20,34 @@ def coco_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
+def coco_doc_to_visual_karpathy(doc):
+    image_url = doc["url"]
+    response = requests.get(image_url)
+    image = Image.open(BytesIO(response.content))
+    return [image.convert("RGB")]
+
+
 def coco_doc_to_text(doc):
     return f"Provide a one-sentence caption for the provided image."
+
+
+def coco_process_result_karpathy(doc, result):
+    """
+    Args:
+        doc: a instance of the eval dataset
+        results: [pred]
+    Returns:
+        a dictionary with key: metric name, value: metric value
+    """
+    pred = result[0] if len(result) > 0 else ""
+    question_id = doc["filename"]
+    # The question id in our dataset is the image file itself
+    image_id = int(question_id.split("_")[-1].split(".")[0])
+    id = doc["imgid"]
+
+    data_dict = {"answer": doc["sentences"], "pred": pred, "image_id": image_id, "id": id}
+
+    return {f"coco_{metric}": data_dict for metric in COCO_METRICS}
 
 
 def coco_process_result(doc, result):

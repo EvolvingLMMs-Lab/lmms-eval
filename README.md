@@ -12,13 +12,15 @@
 
 > Accelerating the development of large multimodal models (LMMs) with `lmms-eval`
 
-🏠 [LMMs-Lab Homepage](https://lmms-lab.framer.ai) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
+🏠 [LMMs-Lab Homepage](https://www.lmms-lab.com/) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
 📖 [Supported Tasks (90+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Supported Models (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentation](docs/README.md)
 
 ---
 
 ## Annoucement
+
+- [2025-04] 🚀🚀 Introducing Aero-1-Audio — a compact yet mighty audio model. We have officially supports evaluation for Aero-1-Audio and it supports batched evaluations! Feel free to try out.
 
 - [2025-02] 🚀🚀 We have integrated [`vllm`](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/544) into our models, enabling accelerated evaluation for both multimodal and language models. Additionally, we have incorporated [`openai_compatible`](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/546) to support the evaluation of any API-based model that follows the OpenAI API format. Check the usages [here](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/miscs/model_dryruns).
 
@@ -56,29 +58,22 @@ We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness]
 
 ## Installation
 
-For formal usage, you can install the package from PyPI by running the following command:
+For direct usage, you can install the package from Git by running the following command:
 ```bash
-pip install lmms-eval
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv eval
+uv venv --python 3.12
+source eval/bin/activate
+uv pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 ```
 
 For development, you can install the package by cloning the repository and running the following command:
 ```bash
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
-pip install -e .
-```
-
-If you want to test LLaVA, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
-```bash
-# for llava 1.5
-# git clone https://github.com/haotian-liu/LLaVA
-# cd LLaVA
-# pip install -e .
-
-# for llava-next (1.6)
-git clone https://github.com/LLaVA-VL/LLaVA-NeXT
-cd LLaVA-NeXT
-pip install -e .
+uv venv dev
+source dev/bin/activate
+uv pip install -e .
 ```
 
 <details>
@@ -120,114 +115,98 @@ pip install s2wrapper@git+https://github.com/bfshi/scaling_on_scales
 
 Our Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
 
-## Multiple Usages
+## Usages
+
+> More examples can be found in [examples/models](examples/models)
+
+**Evaluation of OpenAI-Compatible Model**
+
+```bash
+bash examples/models/openai_compatible.sh
+bash examples/models/xai_grok.sh
+```
+
+**Evaluation of vLLM**
+
+```bash
+bash examples/models/vllm_qwen2vl.sh
+```
+
+**Evaluation of LLaVA-OneVision**
+
+```bash
+bash examples/models/llava_onevision.sh
+```
+
+**Evaluation of LLaMA-3.2-Vision**
+
+```bash
+bash examples/models/llama_vision.sh
+```
+
+**Evaluation of Qwen2-VL**
+
+```bash
+bash examples/models/qwen2_vl.sh
+bash examples/models/qwen2_5_vl.sh
+```
 
 **Evaluation of LLaVA on MME**
 
+If you want to test LLaVA 1.5, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
+
 ```bash
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
-    --tasks mme \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme \
-    --output_path ./logs/
+bash examples/models/llava_next.sh
 ```
 
-**Evaluation of LLaVA on multiple datasets**
+**Evaluation with tensor parallel for bigger model (llava-next-72b)**
 
 ```bash
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.5-7b" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
-```
-
-**For other variants llava. Please change the `conv_template` in the `model_args`**
-
-> `conv_template` is an arg of the init function of llava in `lmms_eval/models/llava.py`, you could find the corresponding value at LLaVA's code, probably in a dict variable `conv_templates` in `llava/conversations.py`
-
-```bash
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.6-mistral-7b,conv_template=mistral_instruct" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
-```
-
-**Evaluation of larger lmms (llava-v1.6-34b)**
-
-```bash
-python3 -m accelerate.commands.launch \
-    --num_processes=8 \
-    -m lmms_eval \
-    --model llava \
-    --model_args pretrained="liuhaotian/llava-v1.6-34b,conv_template=mistral_direct" \
-    --tasks mme,mmbench_en \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_v1.5_mme_mmbenchen \
-    --output_path ./logs/
-```
-
-**Evaluation with a set of configurations, supporting evaluation of multiple models and datasets**
-
-```bash
-python3 -m accelerate.commands.launch --num_processes=8 -m lmms_eval --config ./miscs/example_eval.yaml
-```
-
-**Evaluation of video model (llava-next-video-32B)**
-```bash
-accelerate launch --num_processes 8 --main_process_port 12345 -m lmms_eval \
-    --model llava_vid \
-    --model_args pretrained=lmms-lab/LLaVA-NeXT-Video-32B-Qwen,conv_template=qwen_1_5,video_decode_backend=decord,max_frames_num=32,mm_spatial_pool_mode=average,mm_newline_position=grid,mm_resampler_location=after \
-    --tasks videomme \
-    --batch_size 1 \
-    --log_samples \
-    --log_samples_suffix llava_vid_32B \
-    --output_path ./logs/
-```
-
-**Evaluation with naive model sharding for bigger model (llava-next-72b)**
-
-```bash
-python3 -m lmms_eval \
-    --model=llava \
-    --model_args=pretrained=lmms-lab/llava-next-72b,conv_template=qwen_1_5,device_map=auto,model_name=llava_qwen \
-    --tasks=pope,vizwiz_vqa_val,scienceqa_img \
-    --batch_size=1 \
-    --log_samples \
-    --log_samples_suffix=llava_qwen \
-    --output_path="./logs/" \
-    --wandb_args=project=lmms-eval,job_type=eval,entity=llava-vl
+bash examples/models/tensor_parallel.sh
 ```
 
 **Evaluation with SGLang for bigger model (llava-next-72b)**
 
 ```bash
-python3 -m lmms_eval \
-	--model=llava_sglang \
-	--model_args=pretrained=lmms-lab/llava-next-72b,tokenizer=lmms-lab/llavanext-qwen-tokenizer,conv_template=chatml-llava,tp_size=8,parallel=8 \
-	--tasks=mme \
-	--batch_size=1 \
-	--log_samples \
-	--log_samples_suffix=llava_qwen \
-	--output_path=./logs/ \
-	--verbosity=INFO
+bash examples/models/sglang.sh
+```
+
+**Evaluation with vLLM for bigger model (llava-next-72b)**
+
+```bash
+bash examples/models/vllm_qwen2vl.sh
+```
+
+**More Parameters**
+
+```bash
+python3 -m lmms_eval --help
+```
+
+**Environmental Variables**
+Before running experiments and evaluations, we recommend you to export following environment variables to your environment. Some are necessary for certain tasks to run.
+
+```bash
+export OPENAI_API_KEY="<YOUR_API_KEY>"
+export HF_HOME="<Path to HF cache>" 
+export HF_TOKEN="<YOUR_API_KEY>"
+export HF_HUB_ENABLE_HF_TRANSFER="1"
+export REKA_API_KEY="<YOUR_API_KEY>"
+# Other possible environment variables include 
+# ANTHROPIC_API_KEY,DASHSCOPE_API_KEY etc.
+```
+
+**Common Environment Issues**
+
+Sometimes you might encounter some common issues for example error related to httpx or protobuf. To solve these issues, you can first try
+
+```bash
+python3 -m pip install httpx==0.23.3;
+python3 -m pip install protobuf==3.20;
+# If you are using numpy==2.x, sometimes may causing errors
+python3 -m pip install numpy==1.26;
+# Someties sentencepiece are required for tokenizer to work
+python3 -m pip install sentencepiece;
 ```
 
 ## Add Customized Model and Dataset
@@ -244,12 +223,6 @@ Below are the changes we made to the original API:
 - Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness other wise the cpu memory would explode.
 - Instance.args (lmms_eval/api/instance.py) now contains a list of images to be inputted to lmms.
 - lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
-
----
-
-During the initial stage of our project, we thank:
-- [Xiang Yue](https://xiangyue9607.github.io/), [Jingkang Yang](https://jingkang50.github.io/), [Dong Guo](https://www.linkedin.com/in/dongguoset/) and [Sheng Shen](https://sincerass.github.io/) for early discussion and testing.
-
 ---
 
 ## Citations

@@ -1,0 +1,4 @@
+dataset_name: librispeech
+test_split: test.clean
+include: _default_template_yaml
+task: open_asr_librispeech_test_clean

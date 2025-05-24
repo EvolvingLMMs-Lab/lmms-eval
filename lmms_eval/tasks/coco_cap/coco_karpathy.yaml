@@ -1,0 +1,4 @@
+group : coco_karpathy
+task:
+  - coco_karpathy_val
+  - coco_karpathy_test

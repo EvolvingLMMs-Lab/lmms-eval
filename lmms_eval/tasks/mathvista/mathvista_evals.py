@@ -1,10 +1,13 @@
 import os
 import re
 import time
+from pathlib import Path
 
 import requests
+import yaml
 from Levenshtein import distance
 from loguru import logger as eval_logger
+from openai import AzureOpenAI, OpenAI
 
 # pids: 799, 681, 615
 shot_examples = [
@@ -144,10 +147,19 @@ Model response: The correct answer is (B) 8/11.
 Extracted answer: B
 """
 
+with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+
+    config = yaml.safe_load("".join(safe_data))
+
 
 class MathVistaEvaluator:
     API_TYPE = os.getenv("API_TYPE", "openai")
-
     if API_TYPE == "openai":
         API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
         API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
@@ -155,47 +167,35 @@ class MathVistaEvaluator:
             "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "application/json",
         }
+        client = OpenAI(api_key=API_KEY)
+        gpt_model = config["metadata"]["gpt_eval_model_name"]
+
     elif API_TYPE == "azure":
         API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
         API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "api-key": API_KEY,
-            "Content-Type": "application/json",
-        }
+        API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
+        client = AzureOpenAI(azure_endpoint=API_URL, api_version=API_VERSION, api_key=API_KEY)
+        gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
-    def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
-        self.api_key = api_key
-        self.gpt_model = gpt_model
+    def __init__(self, quick_extract=False):
         self.quick_extract = quick_extract
-
-    def _post_request(self, payload):
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        response = requests.post(self.API_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-        return response.json()
 
     def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=5, sleep_time=0):
         messages = [
             {"role": "user", "content": prompt},
         ]
-        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "n": n}
-
-        if self.API_TYPE == "azure":
-            payload.pop("model")
+        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
 
         while patience > 0:
             patience -= 1
             try:
-                response = self._post_request(payload)
+                response = self.client.chat.completions.create(**payload)
                 if n == 1:
-                    prediction = response["choices"][0]["message"]["content"].strip()
+                    prediction = response.choices[0].message.content.strip()
                     if prediction and prediction != "":
                         return prediction
                 else:
-                    prediction = [choice["message"]["content"].strip() for choice in response["choices"]]
+                    prediction = [choice.message.content.strip() for choice in response.choices]
                     if prediction and prediction[0] != "":
                         return prediction
 

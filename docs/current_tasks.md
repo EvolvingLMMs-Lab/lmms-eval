@@ -200,6 +200,11 @@
   - Q-Bench2-HF (qbench2_dev)
   - Q-Bench-HF (qbench_dev)
   - A-Bench-HF (abench_dev)
+- [MEGA-Bench](https://tiger-ai-lab.github.io/MEGA-Bench/) (megabench)
+  - MEGA-Bench Core (megabench_core)
+  - MEGA-Bench Open (megabench_open)
+  - MEGA-Bench Core single-image subset (megabench_core_si)
+  - MEGA-Bench Open single-image subset (megabench_open_si)
 
 ## 3. Videos tasks:
 

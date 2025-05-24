@@ -15,3 +15,6 @@ lmms_eval_specific_kwargs:
   qwen_vl:
     pre_prompt: ""
     post_prompt: " Answer:"
+  plm:
+    pre_prompt: ""
+    post_prompt: "\nProvide a short and direct response."

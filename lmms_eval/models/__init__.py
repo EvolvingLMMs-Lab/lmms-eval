@@ -11,6 +11,8 @@ logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
 AVAILABLE_MODELS = {
+    "aero": "Aero",
+    "plm": "PerceptionLM",
     "aria": "Aria",
     "auroracap": "AuroraCap",
     "batch_gpt4": "BatchGPT4",
@@ -43,6 +45,8 @@ AVAILABLE_MODELS = {
     "openai_compatible": "OpenAICompatible",
     "oryx": "Oryx",
     "phi3v": "Phi3v",
+    "phi4_multimodal": "Phi4",
+    "qwen2_5_omni": "Qwen2_5_Omni",
     "qwen2_5_vl": "Qwen2_5_VL",
     "qwen2_5_vl_interleave": "Qwen2_5_VL_Interleave",
     "qwen2_audio": "Qwen2_Audio",
@@ -56,6 +60,7 @@ AVAILABLE_MODELS = {
     "tinyllava": "TinyLlava",
     "videoChatGPT": "VideoChatGPT",
     "videochat2": "VideoChat2",
+    "videollama3": "VideoLLaMA3",
     "video_llava": "VideoLLaVA",
     "vila": "VILA",
     "vita": "VITA",
@@ -67,6 +72,7 @@ AVAILABLE_MODELS = {
     "videochat_flash": "VideoChat_Flash",
     "whisper": "Whisper",
     "whisper_vllm": "WhisperVllm",
+    "vora": "VoRA",
 }
 
 

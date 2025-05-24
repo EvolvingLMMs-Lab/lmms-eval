@@ -18,5 +18,12 @@ metric_list:
   - metric: ocrbench_accuracy
     aggregation: !function utils.ocrbench_aggregate_accuracy
     higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+  plm:
+    pre_prompt: ""
+    post_prompt: "\nProvide a short and direct response."
 metadata:
   - version: 0.0

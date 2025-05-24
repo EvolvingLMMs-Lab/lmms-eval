@@ -1,0 +1,9 @@
+task: "mmau_test_mini"
+test_split: test_mini
+
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.mmau_aggregate_results
+    higher_is_better: true
+
+include: _default_template_yaml
