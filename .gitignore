@@ -46,3 +46,4 @@ scripts/
 .env
 outputs/
 span.log
+uv.lock
