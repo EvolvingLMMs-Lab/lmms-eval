@@ -3,7 +3,7 @@
 export HF_HOME="~/.cache/huggingface"
 # pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 # pip3 install qwen_vl_utils
-# use `interleave_visuals=True` to control the visual token position, currently only for mmmu_val and mmmu_pro
+# use `interleave_visuals=True` to control the visual token position, currently only for mmmu_val and mmmu_pro (and potentially for other interleaved image-text tasks), please do not use it unless you are sure about the operation details.
 
 # accelerate launch --num_processes=8 --main_process_port=12346 -m lmms_eval \
 #     --model qwen2_vl \
