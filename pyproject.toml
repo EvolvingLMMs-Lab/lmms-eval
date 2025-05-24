@@ -18,7 +18,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
     "accelerate>=0.29.1",
@@ -71,7 +71,7 @@ dependencies = [
     "decord; platform_system != 'Darwin'",
     "eva-decord; platform_system == 'Darwin'",
     "zss",
-    "protobuf==3.20",
+    "protobuf",
     "sentence_transformers",
     "python-dotenv",
 ]
@@ -113,13 +113,6 @@ mmsearch = [
     "beautifulsoup4",
     "FlagEmbedding",
     "rouge",
-]
-all = [
-    "gemini",
-    "reka",
-    "metrics",
-    "qwen",
-    "mmsearch"
 ]
 
 [tool.setuptools.packages.find]
