@@ -170,19 +170,14 @@ def simple_evaluate(
 
     task_dict = get_task_dict(tasks, task_manager)
 
-    if isinstance(model, str):
-        if model_args is None:
-            model_args = ""
-        lm = lmms_eval.models.get_model(model).create_from_arg_string(
-            model_args,
-            {
-                "batch_size": batch_size,
-                "max_batch_size": max_batch_size,
-                "device": device,
-            },
-        )
-    elif isinstance(model, lmms_eval.api.model.lmms):
-        lm = model
+    ModelClass = get_model(model)
+    lm = ModelClass.create_from_arg_string(
+        model_args,
+        {
+            "batch_size": batch_size,
+            "device": device,
+        },
+    )
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -260,6 +255,10 @@ def simple_evaluate(
         verbosity=verbosity,
         cli_args=cli_args,
     )
+
+    if hasattr(lm, "_model"):
+        del lm._model
+        torch.cuda.empty_cache()
 
     if lm.rank == 0:
         if isinstance(model, str):
@@ -484,10 +483,7 @@ def evaluate(
             instances.sort(key=lambda x: x.idx)
         # iterate over different filters used
         for filter_key in task.instances[0].filtered_resps.keys():
-            if not cli_args.process_with_media:
-                doc_iterator = create_iterator(enumerate(task.eval_docs_no_media), rank=RANK, limit=int(limit) if limit else None, world_size=WORLD_SIZE)
-            else:
-                doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
+            doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
             doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), RANK, limit, WORLD_SIZE) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), RANK, limit, WORLD_SIZE)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
             pbar = tqdm(total=total_docs, desc=f"Postprocessing", disable=(RANK != 0))
@@ -521,16 +517,16 @@ def evaluate(
                         "arguments": filtered_arguments,
                         "resps": [req.resps for req in requests],
                         "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
-                        "doc_hash": hash_string(
-                            json.dumps(
-                                requests[0].doc,
-                                indent=2,
-                                default=handle_non_serializable,
-                                ensure_ascii=False,
-                            )
-                        ),
-                        "prompt_hash": hash_string(requests[0].arguments[0]),
-                        "target_hash": hash_string(str(target)),
+                        # "doc_hash": hash_string(
+                        #     json.dumps(
+                        #         requests[0].doc,
+                        #         indent=2,
+                        #         default=handle_non_serializable,
+                        #         ensure_ascii=False,
+                        #     )
+                        # ),
+                        # "prompt_hash": hash_string(requests[0].arguments[0]),
+                        # "target_hash": hash_string(str(target)),
                     }
                     example.update(metrics)
                     task_output.logged_samples.append(example)
@@ -539,10 +535,6 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
-
-    if hasattr(lm, "_model"):
-        del lm._model
-        torch.cuda.empty_cache()
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0

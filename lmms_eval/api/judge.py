@@ -5,8 +5,8 @@ This module provides a unified interface for using different LLM providers as ju
 
 import abc
 import os
-from typing import Dict, List, Optional, Union, Any
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Union, Any, Tuple
+from dataclasses import dataclass, field
 import time
 import requests
 import json
@@ -31,6 +31,12 @@ class JudgeConfig:
     # Additional config for specific judge tasks
     system_prompt: Optional[str] = None
     response_format: Optional[str] = None  # 'json' or 'text'
+    
+    # Judge-specific parameters
+    judge_type: str = "general"  # 'general', 'binary', 'score', 'comparative'
+    output_format: Optional[str] = None  # For binary: '0/1' or 'yes/no'
+    score_range: Optional[Tuple[float, float]] = None  # For scoring judges
+    evaluation_criteria: Optional[Dict[str, Any]] = None  # Custom evaluation criteria
 
 
 @dataclass 
@@ -39,6 +45,21 @@ class JudgeRequest:
     messages: List[Dict[str, Any]]
     images: Optional[List[Union[str, bytes]]] = None  # Image paths or base64 encoded
     config: Optional[JudgeConfig] = None
+    
+    # Structured input for specific judge types
+    question: Optional[str] = None
+    answer: Optional[str] = None  # Ground truth
+    prediction: Optional[str] = None  # Model prediction
+    context: Optional[str] = None  # Additional context
+    options: Optional[List[str]] = None  # For multiple choice
+    
+    # For comparative evaluation
+    response1: Optional[str] = None
+    response2: Optional[str] = None
+    
+    # Custom evaluation prompt
+    custom_prompt: Optional[str] = None
+    prompt_kwargs: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -48,6 +69,11 @@ class JudgeResponse:
     model_used: str
     usage: Optional[Dict[str, int]] = None
     raw_response: Optional[Any] = None
+    
+    # Parsed results for specific judge types
+    parsed_result: Optional[Union[int, float, bool, Tuple[float, float], Dict[str, Any]]] = None
+    success: bool = True
+    error_message: Optional[str] = None
 
 
 class JudgeInterface(abc.ABC):
@@ -229,7 +255,7 @@ class AzureOpenAIJudge(JudgeInterface):
         super().__init__(config)
         self.api_key = os.getenv("AZURE_API_KEY", "")
         self.api_endpoint = os.getenv("AZURE_ENDPOINT", "")
-        self.api_version = os.getenv("AZURE_API_VERSION", "2024-02-15-preview")
+        self.api_version = os.getenv("API_VERSION", "2024-02-15-preview")
         
         # Initialize Azure OpenAI client
         try:

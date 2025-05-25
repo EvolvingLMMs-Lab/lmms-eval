@@ -296,14 +296,19 @@ class Qwen2_5_VL(lmms):
             }
             # Update with provided kwargs
             current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
-
             pad_token_id = self.tokenizer.pad_token_id
+
+            if current_gen_kwargs["temperature"] > 0:
+                current_gen_kwargs["do_sample"] = True
+            else:
+                current_gen_kwargs["do_sample"] = False
+                current_gen_kwargs["temperature"] = None
 
             cont = self.model.generate(
                 **inputs,
                 eos_token_id=self.tokenizer.eos_token_id,
                 pad_token_id=pad_token_id,
-                do_sample=True if current_gen_kwargs["temperature"] > 0 else False,
+                do_sample=current_gen_kwargs["do_sample"],
                 temperature=current_gen_kwargs["temperature"],
                 top_p=current_gen_kwargs["top_p"],
                 num_beams=current_gen_kwargs["num_beams"],

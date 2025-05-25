@@ -12,10 +12,10 @@ generation_kwargs:
     - "ASSISTANT:"
   image_aspect_ratio: original
   max_new_tokens: 4096
-  temperature: 0
+  temperature: 0.7
   top_p: 1.0
   num_beams: 1
-  do_sample: false
+  do_sample: true
 process_results: !function utils.llava_process_results
 metric_list:
   - metric: gpt_eval_llava_all
@@ -32,7 +32,8 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4-0613"
+  # Model name will be read from environment variables in utils.py
+  # gpt_eval_model_name: "gpt-4-0613"
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

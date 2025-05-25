@@ -13,8 +13,8 @@ import yaml
 # Set up a logger
 from loguru import logger as eval_logger
 
-NUM_SECONDS_TO_SLEEP = 5
-dir_path = os.path.dirname(os.path.realpath(__file__))
+from lmms_eval.api.judge_utils import ResponseParser
+from lmms_eval.api.judge_config_helper import create_judge
 
 judge_rules = "We would like to request your feedback on the performance of two AI assistants in response to the user question displayed above. The user asks the question on observing an image shown to you. \nPlease rate the helpfulness, relevance, accuracy, level of details of their responses. Each assistant receives an overall score on a scale of 1 to 10, where a higher score indicates better overall performance. Assume assistant 1 always receive a score of 10 and is the correct answer.\nPlease first output a single line containing only two values indicating the scores for Assistant 1 and 2, respectively. The two scores are separated by a space.\nIn the subsequent line, please provide a comprehensive explanation of your evaluation, avoiding any potential bias and ensuring that the order in which the responses were presented does not affect your judgment."
 
@@ -28,65 +28,8 @@ with open(Path(__file__).parent / "_default_template_wilder_yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
-API_TYPE = config["metadata"]["api_type"]
-
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-
-def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}",
-                    },
-                ],
-            }
-        ],
-        "max_tokens": 1024,
-        "temperature": 0.0,
-    }
-
-    for attempt in range(max_retries):
-        try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            response_data = response.json()
-            return response_data["choices"][0]["message"]["content"], GPT_EVAL_MODEL_NAME
-        except requests.exceptions.RequestException as e:
-            eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
-            time.sleep(wait_time)
-            if attempt == max_retries - 1:
-                eval_logger.error(f"Failed to get response after {max_retries} attempts")
-                return "", GPT_EVAL_MODEL_NAME
-        except Exception as e:
-            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
-            return "", GPT_EVAL_MODEL_NAME
+# Initialize judge for LLaVA Wilder evaluations using environment-based configuration
+wilder_judge = create_judge(yaml_config=config)
 
 
 def image_to_base64(pil_image):
@@ -96,18 +39,9 @@ def image_to_base64(pil_image):
 
 
 def parse_score(review):
-    try:
-        score_pair = review.split("\n")[0]
-        score_pair = score_pair.replace(",", " ")
-        sp = score_pair.split(" ")
-        if len(sp) == 2:
-            return [float(sp[0]), float(sp[1])]
-        else:
-            eval_logger.debug(f"Can not split: {review}. Returning [-1, -1]")
-            return [-1, -1]
-    except Exception as e:
-        eval_logger.debug(f"Error: {e}. Returning [-1, -1]")
-        return [-1, -1]
+    """Use unified response parser"""
+    scores = ResponseParser.parse_comparative_response(review)
+    return list(scores)
 
 
 def llava_process_results(doc, result):
@@ -123,13 +57,24 @@ def llava_process_results(doc, result):
         ans1 = doc.get("Answer", "")
         ans2 = result[0] if result else ""
         content = f"[Question]\n{question}\n\n" + f"[Assistant 1]\n{ans1}\n\n[End of Assistant 1]\n\n" + f"[Assistant 2]\n{ans2}\n\n[End of Assistant 2]\n\n" f"[System]\n{judge_rules}\n\n"
-        visuals = llava_doc_to_visual(doc)
-        image_path = doc["image"]
-        base64_image = image_to_base64(image_path)
-        review, model_name = get_chat_response(base64_image, content)
-        scores = parse_score(review)
+        visuals = llava_doc_to_visual(doc)[0]
+        base64_image = image_to_base64(visuals)
+        # Use unified judge API with image support
+        result = wilder_judge.evaluate_comparative(
+            question=question,
+            response1=ans1,
+            response2=ans2,
+            custom_prompt=content,
+            images=[base64_image.encode()],  # Convert to bytes
+            score_range=(1, 10)
+        )
+        
+        review = result["raw_response"]
+        model_name = result["model"]
+        scores = list(result["scores"])
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
+        eval_logger.error(f"Try to set up --process_with_media=True to process the dataset with media to avoid image missing error.")
         review = "Failed to Get a Proper Review."
         model_name = "Failed Request"
         scores = [-1, -1]

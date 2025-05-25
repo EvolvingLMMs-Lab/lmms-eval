@@ -11,9 +11,10 @@ import numpy as np
 import requests
 import yaml
 from loguru import logger as eval_logger
-from openai import AzureOpenAI, OpenAI
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
+from lmms_eval.api.judge_utils import JudgePromptBuilder
+from lmms_eval.api.judge_config_helper import create_judge
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -25,82 +26,8 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-NUM_SECONDS_TO_SLEEP = 5
-API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
-
-JUDGE_RULES = """You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
-# Input
-Question:
-```
-{question}
-```
-Ground Truth Answer:
-```
-{answer}
-```
-Model Prediction:
-```
-{pred}
-```
-
-# Evaluation Rules
-- The model prediction may contain the reasoning process, you should spot the final answer from it.
-- For multiple-choice questions: Score 1 if the predicted answer matches the ground truth answer, it can be directly in option letters or the content of the options.
-- For open-ended questions:
-  * Score 1 if the prediction matches the answer semantically, it can be in different format.
-  * Score 0 for partially correct answers or answers with extra incorrect information, even if the reasoning process is correct.
-- Ignore minor differences in formatting, capitalization, or spacing since the model may explain in a different way.
-- Treat numerical answers as correct if they match within reasonable precision
-- For questions requiring units, both value and unit must be correct
-
-# Strict Output format
-0 or 1"""
-
-
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    client = OpenAI(api_key=API_KEY)
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    client = AzureOpenAI(azure_endpoint=API_URL, api_version="2023-07-01-preview", api_key=API_KEY)
-
-
-def get_chat_response(content: str, max_tokens: int, retries: int = 5):
-    global MODEL_VERSION
-    global client
-
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a helpful and precise assistant for checking the correctness of the answer.",
-        },
-        {"role": "user", "content": content},
-    ]
-
-    payload = {
-        "model": MODEL_VERSION,
-        "messages": messages,
-        "temperature": 0.0,
-        "max_tokens": max_tokens,
-    }
-
-    for attempt in range(retries):
-        try:
-            response = client.chat.completions.create(**payload)
-            content = response.choices[0].message.content.strip()
-            return content
-        except requests.exceptions.RequestException as e:
-            eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
-            time.sleep(NUM_SECONDS_TO_SLEEP)
-            if attempt == retries - 1:
-                eval_logger.error(f"Failed to get response after {retries} attempts")
-                return ""
-        except Exception as e:
-            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
-            return ""
+# Initialize judge for MMMU evaluations using environment-based configuration
+mmmu_judge = create_judge(yaml_config=config)
 
 
 def replace_images_tokens(input_string):
@@ -178,9 +105,15 @@ def mmmu_reasoning_process_results(doc, results):
             if match:
                 pred = match.group(1).strip()
 
-        llm_judge_prompt = JUDGE_RULES.format(question=formatted_question, answer=answer, pred=pred)
-        llm_judge_score = get_chat_response(llm_judge_prompt, max_tokens=20, retries=3)
-        scores.append(llm_judge_score)
+        # Use unified judge API
+        result = mmmu_judge.evaluate_binary(
+            question=formatted_question,
+            answer=answer,
+            prediction=pred,
+            output_format="0/1"
+        )
+        
+        scores.append(result["raw_response"])
         parsed_preds.append(pred)
 
     mmmu_judge_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "pred": parsed_preds, "score": scores}

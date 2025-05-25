@@ -9,9 +9,9 @@ import openai
 import requests
 import yaml
 from loguru import logger as eval_logger
-from openai import OpenAI
 
-NUM_SECONDS_TO_SLEEP = 5
+from lmms_eval.api.judge_utils import parse_score
+from lmms_eval.api.judge_config_helper import create_judge
 
 LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_complex"]
 
@@ -27,81 +27,8 @@ with open(Path(__file__).parent / "llava-in-the-wild.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
-
-API_TYPE = os.getenv("API_TYPE", "openai")
-
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
-
-
-def get_eval(content: str, max_tokens: int, retries: int = 5):
-    global headers
-
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a helpful and precise assistant for checking the quality of the answer.",
-        },
-        {"role": "user", "content": content},
-    ]
-
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": messages,
-        "temperature": 0.2,
-        "max_tokens": max_tokens,
-    }
-
-    if API_TYPE == "azure":
-        payload.pop("model")
-
-    for attempt in range(retries):
-        try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            response_data = response.json()
-
-            content = response_data["choices"][0]["message"]["content"].strip()
-            if content != "":
-                return content, response_data["model"]
-            break  # If successful, break out of the loop
-
-        except Exception as e:
-            eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
-            if attempt < retries:  # If we have retries left, sleep and then continue to next attempt
-                time.sleep(NUM_SECONDS_TO_SLEEP)
-            else:  # If this was the last attempt, log and return empty
-                eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
-                return "", ""
-    return "", ""
-
-
-def parse_score(review):
-    try:
-        score_pair = review.split("\n")[0]
-        score_pair = score_pair.replace(",", " ")
-        sp = score_pair.split(" ")
-        if len(sp) == 2:
-            return [float(sp[0]), float(sp[1])]
-        else:
-            eval_logger.debug(f"Can not split: {review}. Returning [-1, -1]")
-            return [-1, -1]
-    except Exception as e:
-        eval_logger.debug(f"Error: {e}. Returning [-1, -1]")
-        return [-1, -1]
+# Initialize judge for LLaVA evaluations using environment-based configuration
+llava_judge = create_judge(yaml_config=config, temperature=0.2)
 
 
 def llava_doc_to_visual(doc):
@@ -136,8 +63,19 @@ def llava_process_results(doc, result):
         role = rule.get("role", "user")
         content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
 
-        review, model_name = get_eval(content, 1024)
-        scores = parse_score(review)
+        # Use unified judge API with custom prompt
+        result = llava_judge.evaluate_comparative(
+            question=question,
+            response1=ans1,
+            response2=ans2,
+            context=context,
+            custom_prompt=content,
+            score_range=(1, 10)
+        )
+        
+        review = result["raw_response"]
+        model_name = result["model"]
+        scores = list(result["scores"])
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
