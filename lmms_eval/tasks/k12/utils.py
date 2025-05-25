@@ -4,8 +4,8 @@ import os
 
 from loguru import logger as eval_logger
 
-from lmms_eval.api.judge_utils import JudgePromptBuilder
 from lmms_eval.api.judge_config_helper import create_judge
+from lmms_eval.api.judge_utils import JudgePromptBuilder
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,14 +18,9 @@ def build_zh_exam_k12_gpt4_prompt(question_data):
     question = question_data["question"]
     answer = question_data["answer"]
     response = str(question_data["response"])
-    
+
     # Use unified prompt builder for correctness evaluation
-    return JudgePromptBuilder.build_correctness_prompt(
-        question=question,
-        answer=answer,
-        prediction=response,
-        output_format="yes/no"
-    )
+    return JudgePromptBuilder.build_correctness_prompt(question=question, answer=answer, prediction=response, output_format="yes/no")
 
 
 def k12_doc_to_visual(doc):
@@ -47,13 +42,8 @@ def k12_process_results(doc, results):
 
     # Use unified judge API for evaluation
     try:
-        result = k12_judge.evaluate_binary(
-            question=doc["question"],
-            answer=doc["answer"],
-            prediction=prediction,
-            output_format="yes/no"
-        )
-        
+        result = k12_judge.evaluate_binary(question=doc["question"], answer=doc["answer"], prediction=prediction, output_format="yes/no")
+
         judge_result = 1 if result["result"] else 0
     except Exception as e:
         eval_logger.error(f"Error getting judge response: {e}")

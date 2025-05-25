@@ -13,8 +13,8 @@ import yaml
 from loguru import logger as eval_logger
 
 # Import the unified judge interface
-from lmms_eval.api.judge import get_judge, JudgeConfig, JudgeRequest
-from lmms_eval.api.judge_utils import parse_score, evaluate_with_judge
+from lmms_eval.api.judge import JudgeConfig, JudgeRequest, get_judge
+from lmms_eval.api.judge_utils import evaluate_with_judge, parse_score
 
 NUM_SECONDS_TO_SLEEP = 0.5
 
@@ -48,7 +48,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 3):
         max_tokens=max_tokens,
         num_retries=retries,
     )
-    
+
     return response_content, model_used
 
 
@@ -67,7 +67,7 @@ def llava_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 def llava_process_results(doc, result):
     """
     Process results using the unified judge interface
-    
+
     Args:
         doc: a instance of the eval dataset
         results: [pred]
@@ -84,22 +84,16 @@ def llava_process_results(doc, result):
         rule = rule_dict.get(category, {})
         prompt = rule.get("prompt", "")
         role = rule.get("role", "user")
-        
+
         # Format the evaluation prompt
-        content = (
-            f"[Context]\n{context}\n\n"
-            f"[Question]\n{question}\n\n"
-            f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n"
-            f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n"
-            f"[System]\n{prompt}\n\n"
-        )
+        content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
 
         # Get evaluation using unified interface
         review, model_name = get_eval(content, 1024)
-        
+
         # Parse scores using utility function
         scores = parse_score(review)
-        
+
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
@@ -107,17 +101,7 @@ def llava_process_results(doc, result):
         scores = [-1, -1]
 
     metric = f"gpt_eval_llava_{doc.get('category', 'unknown')}"
-    category_review_dict = {
-        "question": question,
-        "ans1": ans1,
-        "ans2": ans2,
-        "context": context,
-        "category": category,
-        "review": review,
-        "scores": scores,
-        "eval_model": model_name,
-        "content": content
-    }
+    category_review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name, "content": content}
 
     non_category_review_dict = deepcopy(category_review_dict)
     non_category_review_dict["scores"] = [-999, -999]
@@ -171,22 +155,16 @@ class LlavaJudgeEvaluator:
     """
     Example of using Judge instance directly for more complex evaluation scenarios
     """
-    
+
     def __init__(self, model_name: str = None):
         self.model_name = model_name or GPT_EVAL_MODEL_NAME
-        
+
         # Create judge configuration
-        self.judge_config = JudgeConfig(
-            model_name=self.model_name,
-            temperature=0.2,
-            max_tokens=1024,
-            num_retries=3,
-            system_prompt="You are a helpful and precise assistant for checking the quality of the answer."
-        )
-        
+        self.judge_config = JudgeConfig(model_name=self.model_name, temperature=0.2, max_tokens=1024, num_retries=3, system_prompt="You are a helpful and precise assistant for checking the quality of the answer.")
+
         # Initialize judge
         self.judge = get_judge(config=self.judge_config)
-    
+
     def evaluate_response(self, doc, result):
         """Evaluate a single response using the judge"""
         question = doc.get("question", "")
@@ -198,42 +176,24 @@ class LlavaJudgeEvaluator:
         rule = rule_dict.get(category, {})
         prompt = rule.get("prompt", "")
         role = rule.get("role", "user")
-        
+
         # Format the evaluation prompt
-        content = (
-            f"[Context]\n{context}\n\n"
-            f"[Question]\n{question}\n\n"
-            f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n"
-            f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n"
-            f"[System]\n{prompt}\n\n"
-        )
-        
+        content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
+
         # Create judge request
-        request = JudgeRequest(
-            messages=[{"role": "user", "content": content}]
-        )
-        
+        request = JudgeRequest(messages=[{"role": "user", "content": content}])
+
         try:
             # Get evaluation
             response = self.judge.evaluate(request)
             review = response.content
             model_name = response.model_used
             scores = parse_score(review)
-            
+
         except Exception as e:
             eval_logger.error(f"Error evaluating Question ID {doc.get('question_id', 'Unknown')}: {e}")
             review = "Failed to Get a Proper Review."
             model_name = "Failed Request"
             scores = [-1, -1]
-        
-        return {
-            "question": question,
-            "ans1": ans1,
-            "ans2": ans2,
-            "context": context,
-            "category": category,
-            "review": review,
-            "scores": scores,
-            "eval_model": model_name,
-            "content": content
-        }
+
+        return {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name, "content": content}

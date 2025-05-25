@@ -10,8 +10,8 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.api.judge_utils import parse_score
 from lmms_eval.api.judge_config_helper import create_judge
+from lmms_eval.api.judge_utils import parse_score
 
 LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_complex"]
 
@@ -64,15 +64,8 @@ def llava_process_results(doc, result):
         content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
 
         # Use unified judge API with custom prompt
-        result = llava_judge.evaluate_comparative(
-            question=question,
-            response1=ans1,
-            response2=ans2,
-            context=context,
-            custom_prompt=content,
-            score_range=(1, 10)
-        )
-        
+        result = llava_judge.evaluate_comparative(question=question, response1=ans1, response2=ans2, context=context, custom_prompt=content, score_range=(1, 10))
+
         review = result["raw_response"]
         model_name = result["model"]
         scores = list(result["scores"])

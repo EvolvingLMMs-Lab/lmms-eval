@@ -12,9 +12,9 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
-from lmms_eval.api.judge_utils import JudgePromptBuilder
 from lmms_eval.api.judge_config_helper import create_judge
+from lmms_eval.api.judge_utils import JudgePromptBuilder
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -106,13 +106,8 @@ def mmmu_reasoning_process_results(doc, results):
                 pred = match.group(1).strip()
 
         # Use unified judge API
-        result = mmmu_judge.evaluate_binary(
-            question=formatted_question,
-            answer=answer,
-            prediction=pred,
-            output_format="0/1"
-        )
-        
+        result = mmmu_judge.evaluate_binary(question=formatted_question, answer=answer, prediction=pred, output_format="0/1")
+
         scores.append(result["raw_response"])
         parsed_preds.append(pred)
 

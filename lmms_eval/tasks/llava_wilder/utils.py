@@ -13,8 +13,8 @@ import yaml
 # Set up a logger
 from loguru import logger as eval_logger
 
-from lmms_eval.api.judge_utils import ResponseParser
 from lmms_eval.api.judge_config_helper import create_judge
+from lmms_eval.api.judge_utils import ResponseParser
 
 judge_rules = "We would like to request your feedback on the performance of two AI assistants in response to the user question displayed above. The user asks the question on observing an image shown to you. \nPlease rate the helpfulness, relevance, accuracy, level of details of their responses. Each assistant receives an overall score on a scale of 1 to 10, where a higher score indicates better overall performance. Assume assistant 1 always receive a score of 10 and is the correct answer.\nPlease first output a single line containing only two values indicating the scores for Assistant 1 and 2, respectively. The two scores are separated by a space.\nIn the subsequent line, please provide a comprehensive explanation of your evaluation, avoiding any potential bias and ensuring that the order in which the responses were presented does not affect your judgment."
 
@@ -60,15 +60,8 @@ def llava_process_results(doc, result):
         visuals = llava_doc_to_visual(doc)[0]
         base64_image = image_to_base64(visuals)
         # Use unified judge API with image support
-        result = wilder_judge.evaluate_comparative(
-            question=question,
-            response1=ans1,
-            response2=ans2,
-            custom_prompt=content,
-            images=[base64_image.encode()],  # Convert to bytes
-            score_range=(1, 10)
-        )
-        
+        result = wilder_judge.evaluate_comparative(question=question, response1=ans1, response2=ans2, custom_prompt=content, images=[base64_image.encode()], score_range=(1, 10))  # Convert to bytes
+
         review = result["raw_response"]
         model_name = result["model"]
         scores = list(result["scores"])
