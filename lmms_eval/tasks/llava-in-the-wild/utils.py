@@ -74,6 +74,7 @@ def llava_process_results(doc, result):
         review = "Failed to Get a Proper Review."
         model_name = "Failed Request"
         scores = [-1, -1]
+        raise e
 
     metric = f"gpt_eval_llava_{doc.get('category', 'all')}"
     category_review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name, "content": content}
