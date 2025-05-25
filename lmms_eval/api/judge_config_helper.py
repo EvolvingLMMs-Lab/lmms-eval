@@ -3,6 +3,7 @@ Helper module for standardized judge configuration across all tasks.
 This module provides utilities to create judge instances with environment-based configuration.
 """
 
+import functools
 import os
 from typing import Any, Dict, Optional
 
@@ -10,39 +11,41 @@ from loguru import logger as eval_logger
 
 from .judge_utils import SimplifiedJudge
 
+# Flag to track if we've already logged the model selection
+_model_selection_logged = False
+
 
 def get_judge_model_name(yaml_config: Optional[Dict[str, Any]] = None, default: str = "gpt-4-0613") -> str:
     """
     Get the judge model name from environment or config.
-
-    Priority order:
-    1. MODEL_VERSION environment variable
-    2. yaml_config["metadata"]["gpt_eval_model_name"] (if provided)
-    3. default parameter
-
-    Args:
-        yaml_config: Optional YAML configuration dict
-        default: Default model name if not found elsewhere
-
-    Returns:
-        Model name to use for evaluation
+    Logs the selection only once per unique configuration.
     """
-    # First check environment variable
-    model_name = os.getenv("MODEL_VERSION")
-    if model_name:
-        eval_logger.info(f"Using model from environment: {model_name}")
-        return model_name
+    # Convert yaml_config to string for caching
+    yaml_config_str = str(yaml_config) if yaml_config else "None"
 
-    # Then check YAML config
-    if yaml_config:
-        model_name = yaml_config.get("metadata", {}).get("gpt_eval_model_name")
+    @functools.lru_cache(maxsize=1)
+    def _cached_get_model_name(config_str: str, default_model: str) -> str:
+        # Parse yaml_config_str back to dict if needed
+        yaml_config = eval(config_str) if config_str != "None" else None
+
+        # First check environment variable
+        model_name = os.getenv("MODEL_VERSION")
         if model_name:
-            eval_logger.info(f"Using model from config: {model_name}")
+            eval_logger.info(f"Using model from environment: {model_name}")
             return model_name
 
-    # Finally use default
-    eval_logger.info(f"Using default model: {default}")
-    return default
+        # Then check YAML config
+        if yaml_config:
+            model_name = yaml_config.get("metadata", {}).get("gpt_eval_model_name")
+            if model_name:
+                eval_logger.info(f"Using model from config: {model_name}")
+                return model_name
+
+        # Finally use default
+        eval_logger.info(f"Using default model: {default_model}")
+        return default_model
+
+    return _cached_get_model_name(yaml_config_str, default)
 
 
 def create_judge(yaml_config: Optional[Dict[str, Any]] = None, default_model: str = "gpt-4-0613", temperature: float = 0.0, **kwargs) -> SimplifiedJudge:
