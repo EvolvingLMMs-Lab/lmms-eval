@@ -303,6 +303,7 @@ class Qwen2_5_VL(lmms):
             else:
                 current_gen_kwargs["do_sample"] = False
                 current_gen_kwargs["temperature"] = None
+                current_gen_kwargs["top_p"] = None
 
             cont = self.model.generate(
                 **inputs,
