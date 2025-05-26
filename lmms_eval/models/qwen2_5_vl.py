@@ -42,7 +42,7 @@ class Qwen2_5_VL(lmms):
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
-        use_flash_attention_2: Optional[bool] = False,
+        attn_implementation: Optional[str] = None,
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
@@ -57,6 +57,11 @@ class Qwen2_5_VL(lmms):
         super().__init__()
         # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
+
+        # Validate attention implementation
+        valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
+        if attn_implementation not in valid_attn_implementations:
+            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
 
         self.use_custom_video_loader = use_custom_video_loader
         self.fps = fps
@@ -74,15 +79,17 @@ class Qwen2_5_VL(lmms):
             self._device = torch.device(device)
             self.device_map = device_map if device_map else device
 
-        if use_flash_attention_2:
-            self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-                pretrained,
-                torch_dtype=torch.bfloat16,
-                device_map=self.device_map,
-                attn_implementation="flash_attention_2",
-            ).eval()
-        else:
-            self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
+        # Prepare model loading arguments
+        model_kwargs = {
+            "torch_dtype": "auto",
+            "device_map": self.device_map,
+        }
+
+        # Add attention implementation if specified
+        if attn_implementation is not None:
+            model_kwargs["attn_implementation"] = attn_implementation
+
+        self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
@@ -296,14 +303,20 @@ class Qwen2_5_VL(lmms):
             }
             # Update with provided kwargs
             current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
-
             pad_token_id = self.tokenizer.pad_token_id
+
+            if current_gen_kwargs["temperature"] > 0:
+                current_gen_kwargs["do_sample"] = True
+            else:
+                current_gen_kwargs["do_sample"] = False
+                current_gen_kwargs["temperature"] = None
+                current_gen_kwargs["top_p"] = None
 
             cont = self.model.generate(
                 **inputs,
                 eos_token_id=self.tokenizer.eos_token_id,
                 pad_token_id=pad_token_id,
-                do_sample=True if current_gen_kwargs["temperature"] > 0 else False,
+                do_sample=current_gen_kwargs["do_sample"],
                 temperature=current_gen_kwargs["temperature"],
                 top_p=current_gen_kwargs["top_p"],
                 num_beams=current_gen_kwargs["num_beams"],
