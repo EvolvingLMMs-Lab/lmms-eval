@@ -1,13 +1,11 @@
-import os
 import re
-import time
 from pathlib import Path
 
-import requests
 import yaml
 from Levenshtein import distance
 from loguru import logger as eval_logger
-from openai import AzureOpenAI, OpenAI
+
+from lmms_eval.api.judge_utils import get_chat_response as judge_get_chat_response
 
 # pids: 799, 681, 615
 shot_examples = [
@@ -159,63 +157,17 @@ with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
 
 
 class MathVistaEvaluator:
-    API_TYPE = os.getenv("API_TYPE", "openai")
-    if API_TYPE == "openai":
-        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-        }
-        client = OpenAI(api_key=API_KEY)
-        gpt_model = config["metadata"]["gpt_eval_model_name"]
-
-    elif API_TYPE == "azure":
-        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-        API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
-        client = AzureOpenAI(azure_endpoint=API_URL, api_version=API_VERSION, api_key=API_KEY)
-        gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
-
     def __init__(self, quick_extract=False):
         self.quick_extract = quick_extract
 
-    def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=5, sleep_time=0):
-        messages = [
-            {"role": "user", "content": prompt},
-        ]
-        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
-
-        while patience > 0:
-            patience -= 1
-            try:
-                response = self.client.chat.completions.create(**payload)
-                if n == 1:
-                    prediction = response.choices[0].message.content.strip()
-                    if prediction and prediction != "":
-                        return prediction
-                else:
-                    prediction = [choice.message.content.strip() for choice in response.choices]
-                    if prediction and prediction[0] != "":
-                        return prediction
-
-            except Exception as e:
-                if "Rate limit" not in str(e):
-                    eval_logger.error(e)
-
-                if "Please reduce the length of the messages" in str(e):
-                    eval_logger.error("!!Reduce prompt size")
-                    # reduce input prompt and keep the tail
-                    new_size = int(len(prompt) * 0.9)
-                    new_start = len(prompt) - new_size
-                    prompt = prompt[new_start:]
-                    payload["messages"] = [
-                        {"role": "user", "content": prompt},
-                    ]
-
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
-        return ""
+    def get_extraction_response(self, prompt, max_tokens=256):
+        """Use unified judge to extract answer from model response"""
+        try:
+            # Use the unified judge's chat response function
+            return judge_get_chat_response(prompt, max_tokens=max_tokens)
+        except Exception as e:
+            eval_logger.error(f"Error in extraction: {e}")
+            return ""
 
     def verify_extraction(self, extraction):
         extraction = extraction.strip()
@@ -270,7 +222,7 @@ class MathVistaEvaluator:
         # general extraction
         try:
             full_prompt = self.create_test_prompt(DEMO_PROMPT, query, response)
-            extraction = self.get_chat_response(full_prompt, temperature=0, max_tokens=256, n=1)
+            extraction = self.get_extraction_response(full_prompt)
             return extraction
         except Exception as e:
             eval_logger.error(e)
