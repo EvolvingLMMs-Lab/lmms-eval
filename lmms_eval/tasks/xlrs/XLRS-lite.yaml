@@ -1,0 +1,26 @@
+dataset_path: initiacms/XLRS-Bench-lite
+task: xlrs-lite
+test_split: train
+output_type: generate_until
+doc_to_visual: !function mcq_utils.xlrs_doc_to_visual
+doc_to_text: !function mcq_utils.xlrs_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function mcq_utils.xlrs_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: xlrs_micro_score
+    aggregation: !function mcq_utils.xlrs_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0
