@@ -347,6 +347,33 @@ class JudgeFactory:
     }
 
     @classmethod
+    def register_additional_providers(cls):
+        """Register additional providers if available"""
+        try:
+            # Try to import and register Anthropic
+            from .judge_providers import AnthropicJudge
+
+            cls.register_judge("anthropic", AnthropicJudge)
+        except ImportError:
+            pass
+
+        try:
+            # Try to import and register Cohere
+            from .judge_providers import CohereJudge
+
+            cls.register_judge("cohere", CohereJudge)
+        except ImportError:
+            pass
+
+        try:
+            # Try to import and register Together AI
+            from .judge_providers import TogetherAIJudge
+
+            cls.register_judge("together", TogetherAIJudge)
+        except ImportError:
+            pass
+
+    @classmethod
     def create_judge(cls, api_type: Optional[str] = None, config: Optional[JudgeConfig] = None) -> JudgeInterface:
         """
         Create a judge instance based on API type
