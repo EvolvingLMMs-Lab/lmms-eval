@@ -1,6 +1,10 @@
+"""
+Example refactored version of llava-bench-coco utils using unified judge interface
+This demonstrates how to migrate existing code to use the new unified interface
+"""
+
 import json
 import os
-import time
 from copy import deepcopy
 from pathlib import Path
 
@@ -8,8 +12,11 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.api.judge_config_helper import create_judge
-from lmms_eval.api.judge_utils import parse_score
+# Import the unified judge interface
+from lmms_eval.api.judge import JudgeConfig, JudgeRequest, get_judge
+from lmms_eval.api.judge_utils import evaluate_with_judge, parse_score
+
+NUM_SECONDS_TO_SLEEP = 0.5
 
 LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_llava_complex"]
 
@@ -25,8 +32,24 @@ with open(Path(__file__).parent / "llava-bench-coco.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-# Initialize judge for LLaVA evaluations using environment-based configuration
-llava_judge = create_judge(yaml_config=config, temperature=0.2)
+GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
+
+
+def get_eval(content: str, max_tokens: int, retries: int = 3):
+    """
+    Refactored get_eval using unified judge interface
+    """
+    # Use the unified evaluation function
+    response_content, model_used = evaluate_with_judge(
+        prompt=content,
+        model_name=GPT_EVAL_MODEL_NAME,
+        system_prompt="You are a helpful and precise assistant for checking the quality of the answer.",
+        temperature=0.2,
+        max_tokens=max_tokens,
+        num_retries=retries,
+    )
+
+    return response_content, model_used
 
 
 def llava_doc_to_visual(doc):
@@ -43,6 +66,8 @@ def llava_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def llava_process_results(doc, result):
     """
+    Process results using the unified judge interface
+
     Args:
         doc: a instance of the eval dataset
         results: [pred]
@@ -59,20 +84,21 @@ def llava_process_results(doc, result):
         rule = rule_dict.get(category, {})
         prompt = rule.get("prompt", "")
         role = rule.get("role", "user")
+
+        # Format the evaluation prompt
         content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
 
-        # Use unified judge API with custom prompt
-        result = llava_judge.evaluate_comparative(question=question, response1=ans1, response2=ans2, context=context, custom_prompt=content, score_range=(1, 10))
+        # Get evaluation using unified interface
+        review, model_name = get_eval(content, 1024)
 
-        review = result["raw_response"]
-        model_name = result["model"]
-        scores = list(result["scores"])
+        # Parse scores using utility function
+        scores = parse_score(review)
+
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
         review = "Failed to Get a Proper Review."
         model_name = "Failed Request"
         scores = [-1, -1]
-        raise e
 
     metric = f"gpt_eval_llava_{doc.get('category', 'unknown')}"
     category_review_dict = {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name, "content": content}
@@ -88,10 +114,10 @@ def llava_process_results(doc, result):
             data_dict[m] = non_category_review_dict
     data_dict["gpt_eval_llava_all"] = category_review_dict
 
-    # return {"gpt_eval_llava_all": review_dict}
     return data_dict
 
 
+# Aggregation functions remain the same
 def llava_conv_aggregation(results):
     return llava_aggregation(results, "conv")
 
@@ -118,13 +144,56 @@ def llava_aggregation(results, category):
 
         stats = np.asarray(scores).mean(0).tolist()
         stats = [round(x, 3) for x in stats]
-        # gpt4_score_percentage = stats[0] * 10
-        # model_score_percentage = stats[1] * 10
-        # eval_logger.info(f"Category: {category}")
-        # eval_logger.info(f"GPT4 Score: {gpt4_score_percentage:.1f}%")
-        # eval_logger.info(f"Model Score: {model_score_percentage:.1f}%")
-        # eval_logger.info("=========================")
         return round(stats[1] / stats[0] * 100, 1)
     except Exception as e:
-        eval_logger.info(f"Error in llava_aggregation: {e}, and in category: {category}")
+        eval_logger.error(f"Error in llava_aggregation: {e}")
         return None
+
+
+# Alternative implementation using a Judge instance directly
+class LlavaJudgeEvaluator:
+    """
+    Example of using Judge instance directly for more complex evaluation scenarios
+    """
+
+    def __init__(self, model_name: str = None):
+        self.model_name = model_name or GPT_EVAL_MODEL_NAME
+
+        # Create judge configuration
+        self.judge_config = JudgeConfig(model_name=self.model_name, temperature=0.2, max_tokens=1024, num_retries=3, system_prompt="You are a helpful and precise assistant for checking the quality of the answer.")
+
+        # Initialize judge
+        self.judge = get_judge(config=self.judge_config)
+
+    def evaluate_response(self, doc, result):
+        """Evaluate a single response using the judge"""
+        question = doc.get("question", "")
+        ans1 = doc.get("answer", "")
+        ans2 = result[0] if result else ""
+        captions = doc.get("caption", [])
+        context = "\n".join(captions) if isinstance(captions, list) else captions
+        category = "llava_bench_" + doc.get("category", "")
+        rule = rule_dict.get(category, {})
+        prompt = rule.get("prompt", "")
+        role = rule.get("role", "user")
+
+        # Format the evaluation prompt
+        content = f"[Context]\n{context}\n\n" f"[Question]\n{question}\n\n" f"[{role} 1]\n{ans1}\n\n[End of {role} 1]\n\n" f"[{role} 2]\n{ans2}\n\n[End of {role} 2]\n\n" f"[System]\n{prompt}\n\n"
+
+        # Create judge request
+        request = JudgeRequest(messages=[{"role": "user", "content": content}])
+
+        try:
+            # Get evaluation
+            response = self.judge.evaluate(request)
+            review = response.content
+            model_name = response.model_used
+            scores = parse_score(review)
+
+        except Exception as e:
+            eval_logger.error(f"Error evaluating Question ID {doc.get('question_id', 'Unknown')}: {e}")
+            review = "Failed to Get a Proper Review."
+            model_name = "Failed Request"
+            scores = [-1, -1]
+
+        return {"question": question, "ans1": ans1, "ans2": ans2, "context": context, "category": category, "review": review, "scores": scores, "eval_model": model_name, "content": content}
