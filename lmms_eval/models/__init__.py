@@ -1,6 +1,7 @@
 import importlib
 import os
 import sys
+from typing import Literal
 
 import hf_transfer
 from loguru import logger
@@ -10,7 +11,8 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 logger.remove()
 logger.add(sys.stdout, level="WARNING")
 
-AVAILABLE_MODELS = {
+
+AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
     "plm": "PerceptionLM",
     "aria": "Aria",
@@ -75,14 +77,23 @@ AVAILABLE_MODELS = {
     "vora": "VoRA",
 }
 
+AVAILABLE_CHAT_TEMPLATE_MODELS = {"llava_hf": "LlavaHf"}
+
 
 def get_model(model_name):
-    if model_name not in AVAILABLE_MODELS:
+    if model_name not in AVAILABLE_SIMPLE_MODELS and model_name not in AVAILABLE_CHAT_TEMPLATE_MODELS:
         raise ValueError(f"Model {model_name} not found in available models.")
+
+    if model_name in AVAILABLE_CHAT_TEMPLATE_MODELS:
+        model_type = "chat"
+        AVAILABLE_MODELS = AVAILABLE_CHAT_TEMPLATE_MODELS
+    else:
+        model_type = "simple"
+        AVAILABLE_MODELS = AVAILABLE_SIMPLE_MODELS
 
     model_class = AVAILABLE_MODELS[model_name]
     if "." not in model_class:
-        model_class = f"lmms_eval.models.{model_name}.{model_class}"
+        model_class = f"lmms_eval.models.{model_type}.{model_name}.{model_class}"
 
     try:
         model_module, model_class = model_class.rsplit(".", 1)
@@ -97,5 +108,6 @@ if os.environ.get("LMMS_EVAL_PLUGINS", None):
     # Allow specifying other packages to import models from
     for plugin in os.environ["LMMS_EVAL_PLUGINS"].split(","):
         m = importlib.import_module(f"{plugin}.models")
+        # For plugin users, this will be replaced by chat template model later
         for model_name, model_class in getattr(m, "AVAILABLE_MODELS").items():
-            AVAILABLE_MODELS[model_name] = f"{plugin}.models.{model_name}.{model_class}"
+            AVAILABLE_SIMPLE_MODELS[model_name] = f"{plugin}.models.{model_name}.{model_class}"

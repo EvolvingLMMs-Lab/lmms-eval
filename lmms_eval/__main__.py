@@ -420,23 +420,6 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     elif args.tasks == "list_subtasks":
         eval_logger.info(task_manager.list_all_tasks(list_groups=False, list_tags=False))
         sys.exit()
-    elif args.tasks == "list_with_num":
-        log_message = (
-            "\n" + "=" * 70 + "\n" + "\n\tYou are trying to check all the numbers in each task." + "\n\tThis action will download the complete dataset." + "\n\tIf the results are not clear initially, call this again." + "\n\n" + "=" * 70
-        )
-        eval_logger.info(log_message)
-        for task_name in sorted(task_manager.list_all_tasks()):
-            try:
-                task_dict = get_task_dict([task_name], model_name="llava")
-                task_obj = task_dict[task_name]
-                if type(task_obj) == tuple:
-                    group, task_obj = task_obj
-                    if task_obj is None:
-                        continue
-                eval_logger.info(f"\nTask : {task_obj.config.task}\n - #num : {len(task_obj.test_docs()) if task_obj.has_test_docs() else len(task_obj.validation_docs())}")
-            except Exception as e:
-                eval_logger.debug(f"\nTask : {task_name} fail to load \n Exception : \n {e}")
-        sys.exit()
     else:
         if os.path.isdir(args.tasks):
             import glob

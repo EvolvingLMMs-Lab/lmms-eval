@@ -15,6 +15,8 @@ T = TypeVar("T", bound="lmms")
 
 
 class lmms(abc.ABC):
+    is_simple: bool = True
+
     def __init__(self) -> None:
         """Defines the interface that should be implemented by all lmms subclasses.
         lmmss are assumed to take image-text as input and yield strings as output

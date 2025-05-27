@@ -172,8 +172,6 @@ def simple_evaluate(
     if task_manager is None:
         task_manager = TaskManager(verbosity, model_name=model)
 
-    task_dict = get_task_dict(tasks, task_manager)
-
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
@@ -187,6 +185,8 @@ def simple_evaluate(
         )
     elif isinstance(model, lmms_eval.api.model.lmms):
         lm = model
+    task_type = "simple" if lm.is_simple else "chat"
+    task_dict = get_task_dict(tasks, task_manager, task_type)
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -551,8 +551,7 @@ def evaluate(
                                 ensure_ascii=False,
                             )
                         ),
-                        "prompt_hash": hash_string(requests[0].arguments[0]),
-                        "target_hash": hash_string(str(target)),
+                        # Removing prompt hash and target hash here
                     }
                     example.update(metrics)
                     task_output.logged_samples.append(example)
