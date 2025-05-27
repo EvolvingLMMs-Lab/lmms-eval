@@ -49,7 +49,6 @@ def warmup_model():
     device_params["dispatch_core_config"] = dispatch_core_config
     device = ttnn.CreateDevice(device_id=device_id, **device_params)
     device.enable_program_cache()
-    device.enable_async(True)
 
     # create model pipeline
     model_pipeline = (
