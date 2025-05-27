@@ -21,7 +21,7 @@ Task naming + registration:
 Dataset configuration options:
 - **dataset_path** (`str`) — The name of the dataset as listed by HF in the datasets Hub.
 - **dataset_name**  (`str`, *optional*, defaults to None) — The name of what HF calls a `config` or `subset` of the benchmark. If your task does not contain any data instances, just leave this to default to None. (If you're familiar with the HF `datasets.load_dataset` function, these are just the first 2 arguments to it.)
-- **dataset_kwargs** (`dict`, *optional*) — Auxiliary arguments that `datasets.load_dataset` accepts. This can be used to specify arguments such as `data_files` or `data_dir` if you want to use local datafiles such as json or csv.
+- **dataset_kwargs** (`dict`, *optional*) — Auxiliary arguments that `datasets.load_dataset` accepts. This can be used to specify arguments such as `data_files` or `data_dir` if you want to use local datafiles such as json or csv. If you wish to use a locally cached dataset, set the cache_dir parameter to the parent directory of the Hugging Face dataset cache. Specifically, this should be the directory containing the datasets--<organization>--<dataset_name> folder (i.e., one level above the actual cached dataset directory).
 - **test_split** (`str`, *optional*) — Split in the dataset to use as the test split. This is required for denoting the `split` of the HF dataset.
 - **training_split** (`str`, *optional*) — Split in the dataset to use as the training split.
 - **validation_split** (`str`, *optional*) — Split in the dataset to use as the validation split.
