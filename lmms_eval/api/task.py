@@ -954,7 +954,7 @@ class ConfigurableTask(Task):
                     )
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
-                    
+
                     def unzip_video_data(zip_file):
                         import os
                         import zipfile
