@@ -35,6 +35,7 @@ from loguru import logger as eval_logger
 from PIL import ImageFile
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
+import pdb
 
 from lmms_eval import utils
 from lmms_eval.api import samplers
@@ -995,6 +996,7 @@ class ConfigurableTask(Task):
                         # Group tar parts together
                         for tar_file in tar_files:
                             base_name = tar_file.split(".tar")[0]
+                            base_name = re.sub(r'_\d+$', '', base_name)
                             if base_name not in tar_parts_dict:
                                 tar_parts_dict[base_name] = []
                             tar_parts_dict[base_name].append(tar_file)
