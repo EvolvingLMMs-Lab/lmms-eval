@@ -323,6 +323,8 @@
   - VDC Background Caption (background_test)
   - VDC Main Object Caption (main_object_test)
 
+- [VideoEval-Pro](https://tiger-ai-lab.github.io/VideoEval-Pro/) (videoevalpro)
+
 
 ## 4. Text Tasks
 

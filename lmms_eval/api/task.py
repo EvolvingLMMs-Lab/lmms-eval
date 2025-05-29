@@ -995,6 +995,7 @@ class ConfigurableTask(Task):
                         # Group tar parts together
                         for tar_file in tar_files:
                             base_name = tar_file.split(".tar")[0]
+                            base_name = re.sub(r'_\d+$', '', base_name)
                             if base_name not in tar_parts_dict:
                                 tar_parts_dict[base_name] = []
                             tar_parts_dict[base_name].append(tar_file)
