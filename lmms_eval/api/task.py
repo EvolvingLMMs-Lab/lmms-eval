@@ -952,7 +952,7 @@ class ConfigurableTask(Task):
                     )
                     zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                     tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
-                    
+
                     def unzip_video_data(zip_file):
                         import os
                         import zipfile
@@ -995,7 +995,7 @@ class ConfigurableTask(Task):
                         # Group tar parts together
                         for tar_file in tar_files:
                             base_name = tar_file.split(".tar")[0]
-                            base_name = re.sub(r'_\d+$', '', base_name)
+                            base_name = re.sub(r"_\d+$", "", base_name)
                             if base_name not in tar_parts_dict:
                                 tar_parts_dict[base_name] = []
                             tar_parts_dict[base_name].append(tar_file)
