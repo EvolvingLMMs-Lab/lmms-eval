@@ -1658,6 +1658,10 @@ class ConfigurableMessagesTask(ConfigurableTask):
                 for visual in visuals:
                     if isinstance(visual, PIL_Image.Image):
                         content.append({"type": "image", "url": visual})
+                    elif isinstance(visual, dict):
+                        content.append({"type": "audio", "url": visual})
+                    elif isinstance(visual, str):
+                        content.append({"type": "video", "url": visual})
                 content.append({"type": "text", "text": text})
                 messages[0]["content"] = content
                 return messages
