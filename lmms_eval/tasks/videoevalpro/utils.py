@@ -3,16 +3,16 @@ import json
 import os
 import re
 import sys
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import cv2
 import numpy as np
+import openai
 import yaml
 from loguru import logger as eval_logger
-import openai
-import time
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
@@ -71,19 +71,12 @@ Predictedanswer:{predicted_answer}
 Grade the predicted answer ofthe question as one of: A: CORRECT B: INCORRECT C: NOT_ATTEMPTED Just return the letter "A", "B", or "C", with no text around it.
 """.strip()
 
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0,
-            max_tokens=5
-        )
+        response = self.client.chat.completions.create(model=self.model_name, messages=[{"role": "user", "content": prompt}], temperature=0, max_tokens=5)
 
         answer = response.choices[0].message.content.strip()
         # print(f"---------------------->>>>gpt answer: {answer}")
         return answer[0].upper() == "A"
-    
+
 
 def safe_judge_with_retry(model, question, gt, pred, max_retries=10, delay=2):
     for attempt in range(max_retries):
@@ -95,8 +88,10 @@ def safe_judge_with_retry(model, question, gt, pred, max_retries=10, delay=2):
     print(f"All {max_retries} attempts failed.")
     return {"correct": False, "reason": "Failed after multiple retries"}
 
+
 def safe_strip(x):
     return x.strip() if isinstance(x, str) else ""
+
 
 def videoevalpro_process_results(doc, results):
     """
@@ -141,14 +136,14 @@ def videoevalpro_aggregate_results(results):
         # overall score
         category2score["overall"]["answered"] += 1
         category2score["overall"]["correct"] += result["judge_result"] == True
-    
+
     final_scores = {}
     for task_type, score in category2score.items():
         if score["answered"] > 0:
             final_scores[task_type] = score["correct"] / score["answered"]
         else:
             final_scores[task_type] = 0.0
-    
+
     eval_logger.info(f"Final scores: {final_scores}")
-  
+
     return final_scores
