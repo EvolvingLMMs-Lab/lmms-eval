@@ -265,6 +265,7 @@ def parse_eval_args() -> argparse.Namespace:
         help="Sets trust_remote_code to True to execute code to create HF Datasets from the Hub",
     )
     parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
+    parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
     args = parser.parse_args()
     return args
 
@@ -478,6 +479,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         fewshot_random_seed=args.seed[3],
         cli_args=args,
         datetime_str=datetime_str,
+        force_simple=args.force_simple,
         **request_caching_args,
     )
 

@@ -80,7 +80,7 @@ AVAILABLE_SIMPLE_MODELS = {
 AVAILABLE_CHAT_TEMPLATE_MODELS = {"llava_hf": "LlavaHf"}
 
 
-def get_model(model_name):
+def get_model(model_name, force_simple: bool = False):
     if model_name not in AVAILABLE_SIMPLE_MODELS and model_name not in AVAILABLE_CHAT_TEMPLATE_MODELS:
         raise ValueError(f"Model {model_name} not found in available models.")
 
@@ -88,6 +88,11 @@ def get_model(model_name):
         model_type = "chat"
         AVAILABLE_MODELS = AVAILABLE_CHAT_TEMPLATE_MODELS
     else:
+        model_type = "simple"
+        AVAILABLE_MODELS = AVAILABLE_SIMPLE_MODELS
+
+    # Override with force_simple if needed
+    if force_simple:
         model_type = "simple"
         AVAILABLE_MODELS = AVAILABLE_SIMPLE_MODELS
 

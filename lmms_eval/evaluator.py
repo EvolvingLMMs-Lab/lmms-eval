@@ -79,6 +79,7 @@ def simple_evaluate(
     datetime_str: str = get_datetime_str(),
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
+    force_simple: bool = False,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -175,7 +176,7 @@ def simple_evaluate(
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lmms_eval.models.get_model(model).create_from_arg_string(
+        lm = lmms_eval.models.get_model(model, force_simple).create_from_arg_string(
             model_args,
             {
                 "batch_size": batch_size,
