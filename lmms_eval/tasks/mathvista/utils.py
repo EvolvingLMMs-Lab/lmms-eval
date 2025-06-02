@@ -1,11 +1,11 @@
 import json
-import os
 from pathlib import Path
 
 import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.api.judge_config_helper import create_judge
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.mathvista.mathvista_evals import MathVistaEvaluator
 
@@ -21,6 +21,16 @@ with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
 
 
 mathvista_evaluator = MathVistaEvaluator()
+
+# Initialize unified judge for evaluation
+judge = None
+
+
+def get_judge():
+    global judge
+    if judge is None:
+        judge = create_judge(yaml_config=config, temperature=0.0)
+    return judge
 
 
 def mathvista_doc_to_visual(doc):
@@ -62,8 +72,27 @@ def mathvista_process_results(doc, results):
     extraction = mathvista_evaluator.extract_answer(prediction, problem, config["metadata"]["quick_extract"])
 
     prediction = mathvista_evaluator.normalize_extracted_answer(extraction, problem["choices"], problem["question_type"], problem["answer_type"], problem["precision"])
-    # set test set answer to None
-    true_false = mathvista_evaluator.safe_equal(prediction, problem["answer"]) if problem["answer"] is not None else False
+
+    # Use unified judge for evaluation
+    if problem["answer"] is not None:
+        try:
+            # Create a formatted question string
+            question_str = doc["question"]
+            if problem["choices"]:
+                choices_str = "\n".join([f"({chr(ord('A')+i)}) {choice}" for i, choice in enumerate(problem["choices"])])
+                question_str = f"{question_str}\nChoices:\n{choices_str}"
+
+            # Use the unified judge for correctness evaluation
+            judge_instance = get_judge()
+            result = judge_instance.evaluate_binary(question=question_str, answer=str(problem["answer"]), prediction=str(prediction), output_format="0/1")
+            true_false = result["result"] == 1
+        except Exception as e:
+            eval_logger.warning(f"Failed to use unified judge, falling back to exact match: {e}")
+            # Fallback to exact match comparison
+            true_false = mathvista_evaluator.safe_equal(prediction, problem["answer"])
+    else:
+        # For test set where answer is None
+        true_false = False
 
     result = {
         "question_id": doc["pid"],
