@@ -142,6 +142,26 @@ def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return question
 
 
+def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    if lmms_eval_specific_kwargs is None:
+        question = construct_prompt(doc)
+    else:
+        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"], lmms_eval_specific_kwargs["prompt_type"])
+    # Doc to messages is always interleaved format
+    visuals = mmmu_doc_to_visual(doc)
+    messages = [{"role": "user", "content": []}]
+    question = replace_images_tokens(question)
+    interleaved_content = question.split("<image>")
+    for i, (image, text) in enumerate(zip(visuals, interleaved_content)):
+        if text.strip() != "":
+            messages[0]["content"].append({"type": "text", "text": text.strip()})
+        messages[0]["content"].append({"type": "image", "url": image})
+    # There will be one more text part after the last image
+    messages[0]["content"].append({"type": "text", "text": interleaved_content[-1].strip()})
+
+    return messages
+
+
 def mmmu_doc_to_visual(doc):
     prompt = construct_prompt(doc)
     image_tokens = re.findall(r"<image \d+>", prompt)
