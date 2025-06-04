@@ -32,6 +32,7 @@ from accelerate import Accelerator
 from datasets import Audio, DownloadConfig, Image, Sequence
 from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
+from PIL import Image as PIL_Image
 from PIL import ImageFile
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
@@ -91,6 +92,7 @@ class TaskConfig(dict):
     doc_to_text: Union[Callable, str] = None
     doc_to_target: Union[Callable, str] = None
     doc_to_choice: Union[Callable, str, dict, list] = None
+    doc_to_messages: Callable = None
     process_results: Union[Callable, str] = None
     use_prompt: str = None
     description: str = ""
@@ -1635,3 +1637,45 @@ class ConfigurableTask(Task):
 
     def __repr__(self):
         return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"num_samples={len(self.eval_docs)})"
+
+
+class ConfigurableMessagesTask(ConfigurableTask):
+    def doc_to_messages(self, doc: dict) -> Union[int, str, list]:
+        if callable(self.config.doc_to_messages):
+            return (
+                self.config.doc_to_messages(doc, self.lmms_eval_specific_kwargs)
+                if self.lmms_eval_specific_kwargs is not None and len(inspect.signature(self.config.doc_to_messages).parameters) == 2
+                else self.config.doc_to_messages(
+                    doc,
+                )
+            )
+        elif self.config.doc_to_messages is None and self.config.doc_to_visual is not None and self.config.doc_to_text is not None:
+            # An auto doc to messages function
+            def auto_doc_to_messages(doc):
+                visuals = self.doc_to_visual(doc)
+                text = self.doc_to_text(doc)
+                messages = [{"role": "user", "content": []}]
+                content = []
+                for visual in visuals:
+                    if isinstance(visual, PIL_Image.Image):
+                        content.append({"type": "image", "url": visual})
+                    elif isinstance(visual, dict):
+                        content.append({"type": "audio", "url": visual})
+                    elif isinstance(visual, str):
+                        content.append({"type": "video", "url": visual})
+                content.append({"type": "text", "text": text})
+                messages[0]["content"] = content
+                return messages
+
+            return auto_doc_to_messages(doc)
+        else:
+            # eval_logger.warning("Note that doc_to_visual was called but not set in config. Please check if this is a text-only task.")
+            return self.config.doc_to_messages
+
+    def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
+        split = kwargs.get("metadata").get("split")
+        # kwargs.pop("split")
+        assert self.OUTPUT_TYPE == "generate_until", "Currently messages is used for generation only"
+
+        arguments = (self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
+        return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
