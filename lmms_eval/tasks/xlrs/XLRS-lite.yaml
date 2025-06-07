@@ -18,6 +18,9 @@ metric_list:
   - metric: xlrs_micro_score
     aggregation: !function mcq_utils.xlrs_aggregate_results
     higher_is_better: true
+  - metric: xlrs_macro_score
+    aggregation: !function mcq_utils.xlrs_aggregate_results_macro_score
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
