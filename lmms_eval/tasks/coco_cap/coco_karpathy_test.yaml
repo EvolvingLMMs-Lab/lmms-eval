@@ -2,7 +2,6 @@ dataset_path: yerevann/coco-karpathy
 dataset_kwargs:
   token: True
 task: "coco_karpathy_test"
-group : "coco_karpathy"
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.coco_doc_to_visual
