@@ -167,7 +167,7 @@ class MathVistaEvaluator:
             "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "application/json",
         }
-        client = OpenAI(api_key=API_KEY)
+        client = OpenAI(api_key=API_KEY, base_url=API_URL.rstrip("chat/completions"))
         gpt_model = config["metadata"]["gpt_eval_model_name"]
 
     elif API_TYPE == "azure":
