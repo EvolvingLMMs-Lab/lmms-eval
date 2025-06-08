@@ -307,7 +307,6 @@ def tomato_process_results(doc, results):
     _, all_choices, index2ans = construct_prompt(question=doc["question"], options=doc["options"], num_frames=NUM_FRAMES)
     optionized_list = [f"{chr(65 + i)}. {option}" for i, option in enumerate(doc["options"])]
     gt = optionized_list[doc["answer"]]
-    #### still thinking here
     if USE_GPT_PARSER:
         parsed_response = pre_parser(response=respone, all_choices=all_choices, index2ans=index2ans)
         if parsed_response not in all_choices:
