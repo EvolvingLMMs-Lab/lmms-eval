@@ -1,14 +1,14 @@
-dataset_path: lmms-lab/worldsense
+dataset_path: lmms-lab/TOMATO
 dataset_kwargs:
   token: True
-  cache_dir: WorldSense
+  cache_dir: TOMATO
   video: True
-task: "worldsense"
+task: "tomato"
 test_split: test
 output_type: generate_until
-doc_to_visual: !function utils.worldsense_doc_to_visual
-doc_to_text: !function utils.worldsense_doc_to_text
-doc_to_target: utils.worldsense_doc_to_target
+doc_to_visual: !function utils.tomato_doc_to_visual
+doc_to_text: !function utils.tomato_doc_to_text
+doc_to_target: utils.tomato_doc_to_target
 generation_kwargs:
   max_new_tokens: 1024
   temperature: 0
@@ -16,9 +16,10 @@ generation_kwargs:
   num_beams: 1
   do_sample: false
 # The return value of process_results will be used by metrics
-process_results: !function utils.worldsense_process_results
+process_results: !function utils.tomato_process_results
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
-  - metric: worldsense_score
-    aggregation: !function utils.worldsense_aggregate_results
+  - metric: tomato_score
+    aggregation: !function utils.tomato_aggregate_results
     higher_is_better: true
+
