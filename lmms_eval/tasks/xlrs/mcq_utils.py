@@ -1,4 +1,5 @@
 import re
+from contextlib import contextmanager
 
 from loguru import logger as eval_logger
 from PIL import Image
@@ -101,10 +102,10 @@ def xlrs_process_results(doc, results):
         "answer": doc["answer"],
     }
 
-    return {"xlrs_micro_score": data_dict}
+    return {"xlrs_micro_score": data_dict, "xlrs_macro_score": data_dict}
 
 
-def xlrs_aggregate_results(results):
+def xlrs_aggregate_results(results, macro=False):
     """
     Args:
         results: a list of values returned by process_results
@@ -141,7 +142,7 @@ def xlrs_aggregate_results(results):
         else:
             metrics[Task][Subtask][f"{Category}"]["true"] += cnt
             metrics[Task][Subtask][f"{Category}"]["false"] += 1 - cnt
-
+    macros = []
     sum_all, succ_all = 0, 0
     for task, tasks_values in metrics.items():
         eval_logger.info("*" * 32 + f"{task} (Task Start)")
@@ -160,6 +161,7 @@ def xlrs_aggregate_results(results):
             else:
                 acc_subtasks = cnt_subtask / sum_subtask
             eval_logger.info("+" * 16 + "\t Acc " + "{:.4f}".format(acc_subtasks) + f"\t{substask} ({sum_subtask} items)")
+            macros.append(acc_subtasks)
             cnt_task += cnt_subtask
             sum_task += sum_subtask
 
@@ -171,4 +173,21 @@ def xlrs_aggregate_results(results):
         sum_all += sum_task
         eval_logger.info("*" * 32 + "Acc " + "{:.4f}".format(acc_task) + f"\t{task} ({sum_task} items)\n")
     eval_logger.info("*" * 32 + "Overall Acc " + "{:.4f}".format(succ_all / sum_all))
-    return succ_all / sum_all
+    if macro is True:
+        return sum(macros) / len(macros)
+    else:
+        return succ_all / sum_all
+
+
+@contextmanager
+def mute_eval_logger():
+    eval_logger.disable(__name__)
+    try:
+        yield
+    finally:
+        eval_logger.enable(__name__)
+
+
+def xlrs_aggregate_results_macro_score(results):
+    with mute_eval_logger():
+        return xlrs_aggregate_results(results, macro=True)

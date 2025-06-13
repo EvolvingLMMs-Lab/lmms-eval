@@ -13,6 +13,7 @@ from typing import List, Optional, Union
 import numpy as np
 import torch
 import torch.distributed as dist
+from accelerate import Accelerator
 from datasets import Image, Sequence
 from loguru import logger as eval_logger
 from tqdm import tqdm
@@ -660,8 +661,9 @@ def evaluate(
     else:
         results_dict = None
 
-    if hasattr(lm, "accelerator") and distributed_executor_backend == "accelerate":
-        lm.accelerator.wait_for_everyone()
+    if distributed_executor_backend == "accelerate":
+        # this should work for torchrun as well since it internally calls torch.distributed.barrier()
+        Accelerator().wait_for_everyone()
     elif distributed_executor_backend == "torchrun":
         dist.barrier()
     else:

@@ -250,11 +250,12 @@ class Aero(lmms):
                 gen_kwargs["top_p"] = None
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
+            do_sample = True if gen_kwargs["temperature"] > 0 else False
             try:
                 cont = self.model.generate(
                     **inputs,
-                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                    temperature=gen_kwargs["temperature"],
+                    do_sample=do_sample,
+                    temperature=gen_kwargs["temperature"] if do_sample else None,
                     top_p=gen_kwargs["top_p"],
                     num_beams=gen_kwargs["num_beams"],
                     max_new_tokens=gen_kwargs["max_new_tokens"],
