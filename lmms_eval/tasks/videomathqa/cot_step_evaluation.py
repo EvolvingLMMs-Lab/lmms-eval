@@ -1,11 +1,12 @@
-import os
+import argparse
 import ast
 import json
-import argparse
+import os
+
 import pandas as pd
 from tqdm import tqdm
-from vllm import LLM, SamplingParams
 from transformers import AutoTokenizer
+from vllm import LLM, SamplingParams
 
 system_prompt = """
 You are a intelligent assistant for grading math question solutions. You will be given:
@@ -110,7 +111,6 @@ def compute_score(gt_data, res_data, res_file, tokenizer, llm, sampling_params, 
     batch = []
     scored_samples = []
     for sample in tqdm(gt_data, desc="Assigning scores with Qwen3"):
-
         qid = sample["question_id"]
         matched = [res for res in res_data if res["doc"]["question_id"] == qid]
         if not matched:
