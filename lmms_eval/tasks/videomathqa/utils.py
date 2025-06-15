@@ -1,13 +1,13 @@
 import os
 import re
-import cv2
 import sys
-import yaml
-import numpy as np
-
+from collections import defaultdict
 from pathlib import Path
 from typing import List
-from collections import defaultdict
+
+import cv2
+import numpy as np
+import yaml
 from loguru import logger as eval_logger
 
 VIDEO_LENGTH = ["short", "medium", "long"]
@@ -28,7 +28,6 @@ def decode_video(video_path: str) -> List[np.ndarray]:
 
 
 def load_video(video_path, max_frames, annot_sample_rate=1):
-
     def uniform_sample(m, n):
         assert n <= m
         stride = (m - 1) / (n - 1) if n > 1 else 0  # Calculate the stride
@@ -298,7 +297,6 @@ def videomathqa_mcq_aggregate_results(results):
 
 
 def videomathqa_multi_binary_aggregate_results(results):
-
     grouped = defaultdict(list)
     for result in results:
         grouped[result["question_id"]].append(result)
