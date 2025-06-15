@@ -661,13 +661,15 @@ def evaluate(
     else:
         results_dict = None
 
-    if distributed_executor_backend == "accelerate":
-        # this should work for torchrun as well since it internally calls torch.distributed.barrier()
-        Accelerator().wait_for_everyone()
-    elif distributed_executor_backend == "torchrun":
-        dist.barrier()
-    else:
-        raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
+    if WORLD_SIZE > 1:
+        # if muti-gpu, wait for all processes to finish
+        if distributed_executor_backend == "accelerate":
+            # this should work for torchrun as well since it internally calls torch.distributed.barrier()
+            Accelerator().wait_for_everyone()
+        elif distributed_executor_backend == "torchrun":
+            dist.barrier()
+        else:
+            raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
     return results_dict
 
