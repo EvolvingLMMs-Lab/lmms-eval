@@ -9,6 +9,7 @@ import warnings
 from functools import partial
 
 import numpy as np
+import torch
 import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
@@ -314,13 +315,17 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     else:
         args_list.append(args)
 
-    # initialize Accelerator
-    kwargs_handler = InitProcessGroupKwargs(timeout=datetime.timedelta(seconds=60000))
-    accelerator = Accelerator(kwargs_handlers=[kwargs_handler])
-    if accelerator.is_main_process:
-        is_main_process = True
+    # initialize Accelerator only if not already in a distributed context
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        accelerator = None
+        is_main_process = torch.distributed.get_rank() == 0
     else:
-        is_main_process = False
+        kwargs_handler = InitProcessGroupKwargs(timeout=datetime.timedelta(seconds=60000))
+        accelerator = Accelerator(kwargs_handlers=[kwargs_handler])
+        if accelerator.is_main_process:
+            is_main_process = True
+        else:
+            is_main_process = False
 
     for args in args_list:
         try:
@@ -330,7 +335,10 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             results, samples = cli_evaluate_single(args)
             results_list.append(results)
 
-            accelerator.wait_for_everyone()
+            if accelerator:
+                accelerator.wait_for_everyone()
+            elif torch.distributed.is_available() and torch.distributed.is_initialized():
+                torch.distributed.barrier()
             if is_main_process and args.wandb_args:
                 try:
                     wandb_logger.post_init(results)
@@ -495,6 +503,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         fewshot_random_seed=args.seed[3],
         cli_args=args,
         datetime_str=datetime_str,
+        distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
         **request_caching_args,
     )
 
