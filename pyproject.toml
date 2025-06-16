@@ -46,7 +46,7 @@ dependencies = [
     "av",
     "hf_transfer",
     "nltk",
-    "sentencepiece==0.1.99",
+    "sentencepiece",
     "yt-dlp",
     "pycocoevalcap",
     "tqdm-multiprocess",
