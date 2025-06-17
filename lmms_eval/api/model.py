@@ -1,9 +1,12 @@
 import abc
+import gc
 import hashlib
 import json
 import os
 from typing import List, Optional, Tuple, Type, TypeVar, Union
 
+import torch
+import torch.nn as nn
 from loguru import logger as eval_logger
 from sqlitedict import SqliteDict
 from tqdm import tqdm
@@ -127,6 +130,14 @@ class lmms(abc.ABC):
 
     def set_cache_hook(self, cache_hook) -> None:
         self.cache_hook = cache_hook
+
+    def clean(self):
+        for attr_name in list(vars(self)):
+            attr_value = getattr(self, attr_name)
+            if isinstance(attr_value, nn.Module):
+                delattr(self, attr_name)
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
 ### SQLite-based caching of LMM responses
