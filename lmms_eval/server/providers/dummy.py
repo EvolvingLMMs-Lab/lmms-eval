@@ -22,4 +22,5 @@ class DummyProvider(ServerInterface):
         return True
 
     def evaluate(self, request: Request) -> Response:
-        return "dummy"
+        dummy_response = Response(content="dummy", model_used="dummy", usage="dummy", raw_response="dummy")
+        return dummy_response

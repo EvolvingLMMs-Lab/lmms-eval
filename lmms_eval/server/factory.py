@@ -3,13 +3,18 @@ from typing import Optional
 
 from .base import ServerInterface
 from .protocol import ServerConfig
-from .providers import AsyncOpenAIProvider, AzureOpenAIProvider, OpenAIProvider
+from .providers import (
+    AsyncOpenAIProvider,
+    AzureOpenAIProvider,
+    DummyProvider,
+    OpenAIProvider,
+)
 
 
 class ProviderFactory:
     """Factory for creating judge instances based on configuration"""
 
-    _provider_classes = {"openai": OpenAIProvider, "azure": AzureOpenAIProvider, "async_openai": AsyncOpenAIProvider}
+    _provider_classes = {"openai": OpenAIProvider, "azure_openai": AzureOpenAIProvider, "async_openai": AsyncOpenAIProvider, "dummy": DummyProvider}
 
     # TODO
     # This should actually be a decorator that registers the class
