@@ -34,10 +34,10 @@ class ProviderFactory:
         if api_type is None:
             api_type = os.getenv("API_TYPE", "openai").lower()
 
-        if api_type not in cls._judge_classes:
-            raise ValueError(f"Unknown API type: {api_type}. Supported types: {list(cls._judge_classes.keys())}")
+        if api_type not in cls._provider_classes:
+            raise ValueError(f"Unknown API type: {api_type}. Supported types: {list(cls._provider_classes.keys())}")
 
-        judge_class = cls._judge_classes[api_type]
+        judge_class = cls._provider_classes[api_type]
         return judge_class(config=config)
 
     @classmethod

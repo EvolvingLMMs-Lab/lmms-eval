@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .protocol import Request, Response, ServerConfig
+from .utils import JudgePromptBuilder, ResponseParser
 
 
 class ServerInterface(abc.ABC):
@@ -42,6 +43,66 @@ class ServerInterface(abc.ABC):
             messages.insert(0, {"role": "system", "content": self.config.system_prompt})
 
         return messages
+
+    def evaluate_binary(self, question: str, answer: str, prediction: str, output_format: str = "0/1", custom_prompt: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """Evaluate binary correctness"""
+        # Build prompt
+        prompt = JudgePromptBuilder.build_binary_prompt(question=question, answer=answer, prediction=prediction, output_format=output_format, custom_prompt=custom_prompt, **kwargs)
+
+        # Create request
+        request = Request(messages=[{"role": "user", "content": prompt}], question=question, answer=answer, prediction=prediction, config=self.config)
+
+        # Evaluate
+        response = self.evaluate(request)
+
+        # Parse result
+        parsed_result = ResponseParser.parse_binary_response(response.content, output_format)
+
+        return {"result": parsed_result, "raw_response": response.content, "model": response.model_used, "prompt": prompt, "success": response.success}
+
+    def evaluate_comparative(
+        self, question: str, response1: str, response2: str, context: Optional[str] = None, score_range: Tuple[int, int] = (1, 10), custom_prompt: Optional[str] = None, images: Optional[List[Union[str, bytes]]] = None, **kwargs
+    ) -> Dict[str, Any]:
+        """Evaluate comparative responses"""
+        # Build prompt
+        prompt = JudgePromptBuilder.build_comparative_prompt(question=question, response1=response1, response2=response2, context=context, score_range=score_range, custom_prompt=custom_prompt, **kwargs)
+
+        # Create request
+        request = Request(messages=[{"role": "user", "content": prompt}], question=question, response1=response1, response2=response2, context=context, images=images, config=self.config)
+
+        # Evaluate
+        response = self.evaluate(request)
+
+        # Parse result
+        scores = ResponseParser.parse_comparative_response(response.content)
+
+        return {"scores": scores, "raw_response": response.content, "model": response.model_used, "prompt": prompt, "success": response.success}
+
+    def evaluate_with_rubric(self, question: str, prediction: str, rubric: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """Evaluate with a custom rubric"""
+        # Build rubric prompt
+        rubric_text = "\n".join([f"- {k}: {v}" for k, v in rubric.items()])
+
+        prompt = f"""Evaluate the following response according to the given rubric.
+
+Question: {question}
+
+Response: {prediction}
+
+Rubric:
+{rubric_text}
+
+Provide a JSON response with scores for each rubric item."""
+
+        request = Request(messages=[{"role": "user", "content": prompt}], config=self.config)
+
+        # Evaluate
+        response = self.evaluate(request)
+
+        # Parse JSON result
+        parsed_result = ResponseParser.parse_json_response(response.content)
+
+        return {"scores": parsed_result, "raw_response": response.content, "model": response.model_used, "prompt": prompt, "success": response.success}
 
 
 class AsyncServerInterface(ServerInterface):

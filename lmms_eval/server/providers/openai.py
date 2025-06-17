@@ -1,9 +1,12 @@
+import base64
 import os
 import time
+from io import BytesIO
 from typing import Dict, List, Optional, Union
 
 import requests
 from loguru import logger as eval_logger
+from PIL import Image
 
 from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig
@@ -95,11 +98,6 @@ class OpenAIProvider(ServerInterface):
 
     def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes]]) -> List[Dict]:
         """Add images to the last user message"""
-        import base64
-        from io import BytesIO
-
-        from PIL import Image
-
         # Find the last user message
         for i in range(len(messages) - 1, -1, -1):
             if messages[i]["role"] == "user":
@@ -122,11 +120,6 @@ class OpenAIProvider(ServerInterface):
 
     def _encode_image(self, image_path: str) -> str:
         """Encode image to base64"""
-        import base64
-        from io import BytesIO
-
-        from PIL import Image
-
         img = Image.open(image_path).convert("RGB")
         buffered = BytesIO()
         img.save(buffered, format="JPEG")

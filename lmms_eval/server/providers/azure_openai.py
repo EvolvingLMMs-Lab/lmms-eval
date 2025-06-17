@@ -5,12 +5,11 @@ from typing import Dict, List, Optional, Union
 import requests
 from loguru import logger as eval_logger
 
-from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig
 from .openai import OpenAIProvider  # Import OpenAIJudge for shared methods
 
 
-class AzureOpenAIProvider(ServerInterface):
+class AzureOpenAIProvider(OpenAIProvider):
     """Azure OpenAI implementation of the Judge interface"""
 
     def __init__(self, config: Optional[ServerConfig] = None):
@@ -98,12 +97,3 @@ class AzureOpenAIProvider(ServerInterface):
         response = requests.post(url, headers=headers, json=payload, timeout=timeout)
         response.raise_for_status()
         return response.json()
-
-    def _add_images_to_messages(self, messages: List[Dict], images: List[Union[str, bytes]]) -> List[Dict]:
-        """Add images to messages - same as OpenAI implementation"""
-        # Azure OpenAI uses the same format as OpenAI
-        return OpenAIProvider._add_images_to_messages(self, messages, images)
-
-    def _encode_image(self, image_path: str) -> str:
-        """Encode image to base64 - same as OpenAI implementation"""
-        return OpenAIProvider._encode_image(self, image_path)
