@@ -11,7 +11,7 @@ def seed_doc_to_text(doc):
     question += f"B. {doc['choice_b']}\n"
     question += f"C. {doc['choice_c']}\n"
     question += f"D. {doc['choice_d']}"
-    return f"{question}\n주어진 선택지 중 해당 옵션의 문자로 직접 답하세요."
+    return f"{question}\n한 단어 또는 구를 사용하여 질문에 답하세요."
 
 
 def seed_process_result(doc, result):
