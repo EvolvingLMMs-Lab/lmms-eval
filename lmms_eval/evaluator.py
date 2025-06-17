@@ -8,7 +8,7 @@ import sys
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -327,6 +327,7 @@ def evaluate(
     fewshot_as_multiturn: bool = False,
     verbosity: str = "INFO",
     distributed_executor_backend: str = "accelerate",
+    eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -488,6 +489,11 @@ def evaluate(
             else:
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
+    # Cleaning lm's cuda memory if you are launching llm as judge in local
+    lm.clean()
+    # TODO: This is currently a placeholder, make launcher for vllm, sglang etc.
+    if eval_server_launcher is not None:
+        eval_server_launcher.launch()
     RANK = lm.rank
     WORLD_SIZE = lm.world_size
     ### Postprocess outputs ###
@@ -562,10 +568,6 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
-
-    if hasattr(lm, "_model"):
-        del lm._model
-        torch.cuda.empty_cache()
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
