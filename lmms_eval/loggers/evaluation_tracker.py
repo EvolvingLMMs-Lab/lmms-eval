@@ -191,7 +191,7 @@ class EvaluationTracker:
                 task_hashes = {}
                 if samples:
                     for task_name, task_samples in samples.items():
-                        sample_hashes = [s["doc_hash"] + s["prompt_hash"] + s["target_hash"] for s in task_samples]
+                        sample_hashes = [f"sample_{index}" + s["doc_hash"] for index, s in enumerate(task_samples)]
                         task_hashes[task_name] = hash_string("".join(sample_hashes))
 
                 # update initial results dict
@@ -264,14 +264,14 @@ class EvaluationTracker:
                     # we first need to sanitize arguments and resps
                     # otherwise we won't be able to load the dataset
                     # using the datasets library
-                    arguments = {}
-                    for key, value in enumerate(sample["arguments"][1]):  # update metadata into args
-                        arguments[key] = value
+                    # arguments = {}
+                    # for key, value in enumerate(sample["arguments"][1]):  # update metadata into args
+                    # arguments[key] = value
 
                     sample["input"] = sample["arguments"][0]
                     sample["resps"] = sanitize_list(sample["resps"])
                     sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
-                    sample["arguments"] = arguments
+                    # sample["arguments"] = arguments
                     sample["target"] = str(sample["target"])
 
                     sample_dump = (
