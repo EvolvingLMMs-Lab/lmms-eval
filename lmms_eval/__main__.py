@@ -292,10 +292,11 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     # reset logger
     eval_logger.remove()
-    eval_logger.add(sys.stdout, colorize=True, level=args.verbosity)
+    # Configure logger with detailed format including file path, function name, and line number
+    log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
+    eval_logger.add(sys.stdout, colorize=True, level=args.verbosity, format=log_format)
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["VERBOSITY"] = args.verbosity
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     args_list = []
     results_list = []
