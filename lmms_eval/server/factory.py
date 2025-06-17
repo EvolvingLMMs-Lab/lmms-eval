@@ -46,23 +46,3 @@ class ProviderFactory:
         if not issubclass(judge_class, ServerInterface):
             raise ValueError(f"{judge_class} must be a subclass of ServerInterface")
         cls._provider_classes[api_type] = judge_class
-
-
-# Convenience function for backward compatibility
-def get_provider(api_type: Optional[str] = None, model_name: Optional[str] = None, **kwargs) -> ServerInterface:
-    """
-    Get a provider instance with optional configuration
-
-    Args:
-        api_type: API type ('openai' or 'azure')
-        model_name: Model to use for evaluation
-        **kwargs: Additional configuration parameters
-
-    Returns:
-        ServerInterface instance
-    """
-    config = None
-    if model_name or kwargs:
-        config = ServerConfig(model_name=model_name or "gpt-4", **kwargs)
-
-    return ProviderFactory.create_provider(api_type=api_type, config=config)
