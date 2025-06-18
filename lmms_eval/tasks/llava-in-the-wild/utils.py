@@ -11,7 +11,7 @@ import yaml
 from loguru import logger as eval_logger
 from openai import OpenAI
 
-from lmms_eval.server import ServerConfig, get_server
+from lmms_eval.llm_judge import ServerConfig, get_server
 
 NUM_SECONDS_TO_SLEEP = 5
 
