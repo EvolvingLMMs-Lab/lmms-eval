@@ -52,7 +52,7 @@ Other:
 
 ## Using Yaml Configurations to Define Tasks
 
-We recomment to browse existing tasks in the `lmms_eval/tasks` folder to get a sense of the different options available. 
+We recommend to browse existing tasks in the `lmms_eval/tasks` folder to get a sense of the different options available. 
 
 Here we will provide some explainations on the existing tasks and how to define new tasks. Here we use MME as an example.
 
