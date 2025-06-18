@@ -11,6 +11,7 @@ import soundfile as sf
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
+from moviepy import VideoFileClip
 from PIL import Image
 from tqdm import tqdm
 from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcessor
@@ -167,11 +168,8 @@ class Qwen2_5_Omni(lmms):
         return audio
 
     def _check_if_video_has_audio(self, video_path):
-        container = av.open(video_path)
-        audio_streams = [stream for stream in container.streams if stream.type == "audio"]
-        if not audio_streams:
-            return False
-        return True
+        clip = VideoFileClip(video_path)
+        return clip.audio is not None
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
@@ -220,7 +218,7 @@ class Qwen2_5_Omni(lmms):
                 if len(visuals) > 0:
                     visual = visuals[i] if i < len(visuals) else None
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                        current_use_audio = True
+                        current_use_audio = self._check_if_video_has_audio(visual)
                         if self.use_custom_video_loader:
                             visual = read_video_pyav_base64(visual, num_frm=self.max_num_frames, fps=self.fps, img_format="JPEG", max_image_size=self.max_image_size)
                             image_contents = list(map(lambda x: f"data:image/jpeg;base64,{x}", visual))
