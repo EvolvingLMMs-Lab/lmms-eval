@@ -41,7 +41,7 @@ class Qwen2_VL(lmms):
         use_cache=True,
         use_flash_attention_2: Optional[bool] = False,
         max_length: Optional[int] = 2048,  # Added max_length parameter
-        max_pixels: int = 12845056,
+        max_pixels: int = 602112,
         min_pixels: int = 3136,
         max_num_frames: int = 32,
         system_prompt: Optional[str] = "You are a helpful assistant.",
