@@ -49,7 +49,6 @@ Can you explain this meme? | This meme is poking fun at the fact that the names 
 
 
 def get_chat_response(prompt, model=GPT_EVAL_MODEL_NAME, temperature=0.0, max_tokens=128, patience=3, sleep_time=5):
-
     messages = [
         {"role": "user", "content": prompt},
     ]

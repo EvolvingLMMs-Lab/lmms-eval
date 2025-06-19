@@ -6,7 +6,6 @@ import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import ServerConfig, get_server
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.mathverse.mathverse_evals import MathVerseEvaluator
 
@@ -20,16 +19,8 @@ with open(Path(__file__).parent / "mathverse.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-# Initialize the judge server
-API_TYPE = os.getenv("API_TYPE", "openai")
-GPT_MODEL = os.getenv("MODEL_VERSION", config["metadata"]["gpt_eval_model_name"])
-
-server_config = ServerConfig(
-    model_name=GPT_MODEL,
-)
-server = get_server(server_name=API_TYPE, config=server_config)
-
-mathverse_evaluator = MathVerseEvaluator(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=config["metadata"]["gpt_eval_model_name"])
+# Initialize MathVerseEvaluator which will handle all judge interactions
+mathverse_evaluator = MathVerseEvaluator(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20"))
 
 
 def mathverse_doc_to_visual(doc):
@@ -58,30 +49,10 @@ def mathverse_process_results(doc, results):
     question = doc["question_for_eval"]
     answer = doc["answer"] if "answer" in doc else None
 
-    # Define custom prompt for MathVerse evaluation
-    custom_prompt = """Below are two answers to a math question. Determine whether these two answers are consistent.
-Please note that only when the Model Answer completely matches the Standard Answer means they are consistent. For non-multiple-choice questions, if the meaning is expressed in the same way, it is also considered consistent, for example, 0.5m and 50cm.
-
-Return only "Yes" if they are consistent or "No" if they are different.
-Only return "Yes" or "No" with no additional text or formatting."""
-
     judge_result = 0
     if answer is not None:
-        try:
-            # Use the llm_judge API for binary evaluation
-            result = server.evaluate_binary(question=question, answer=str(answer), prediction=prediction, output_format="yes/no", custom_prompt=custom_prompt)
-
-            # Parse the result
-            if result["success"]:
-                judge_response = result["result"]
-                judge_result = 1 if judge_response and judge_response.lower() == "yes" else 0
-            else:
-                eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
-                judge_result = 0
-
-        except Exception as e:
-            eval_logger.error(f"Error getting judge response: {e}")
-            judge_result = 0
+        # Use the MathVerseEvaluator's score_answer method which handles judge interaction
+        judge_result = 1 if mathverse_evaluator.score_answer(question, answer, prediction, quick_match=False) else 0
 
     result = {
         "sample_index": doc["sample_index"],
@@ -100,7 +71,6 @@ Only return "Yes" or "No" with no additional text or formatting."""
 
     return {
         "llm_as_judge_eval": judge_result,
-        "gpt_eval_score": result,
         "submission": result,
     }
 
