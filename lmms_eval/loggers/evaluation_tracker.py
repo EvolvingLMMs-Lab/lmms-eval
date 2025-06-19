@@ -259,21 +259,22 @@ class EvaluationTracker:
                 file_results_samples = path.joinpath(f"{self.date_id}_samples_{task_name}.jsonl")
 
                 for sample in samples:
-                    clean_sample = {}
                     # we first need to sanitize arguments and resps
                     # otherwise we won't be able to load the dataset
                     # using the datasets library
                     # arguments = {}
-                    clean_sample["input"] = sample["arguments"][0]
-                    clean_sample["resps"] = sanitize_list(sample["resps"])
-                    clean_sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
-                    if clean_sample["filtered_resps"] == clean_sample["resps"][0]:
-                        clean_sample.pop("resps")
-                    clean_sample["target"] = str(sample["target"])
+                    sample["input"] = sample["arguments"][0]
+                    sample["resps"] = sanitize_list(sample["resps"])
+                    sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
+                    if sample["filtered_resps"] == sample["resps"][0]:
+                        sample.pop("resps")
+                    sample["target"] = str(sample["target"])
+                    sample.pop("arguments")
+                    sample.pop("doc")
 
                     sample_dump = (
                         json.dumps(
-                            clean_sample,
+                            sample,
                             default=handle_non_serializable,
                             ensure_ascii=False,
                         )
