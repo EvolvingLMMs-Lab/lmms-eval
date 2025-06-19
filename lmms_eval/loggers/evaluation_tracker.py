@@ -191,7 +191,7 @@ class EvaluationTracker:
                 task_hashes = {}
                 if samples:
                     for task_name, task_samples in samples.items():
-                        sample_hashes = [s["doc_hash"] + s["prompt_hash"] + s["target_hash"] for s in task_samples]
+                        sample_hashes = [f"sample_{index}" + s["doc_hash"] for index, s in enumerate(task_samples)]
                         task_hashes[task_name] = hash_string("".join(sample_hashes))
 
                 # update initial results dict
@@ -252,8 +252,6 @@ class EvaluationTracker:
         """
         if self.output_path:
             try:
-                eval_logger.info(f"Saving per-sample results for: {task_name}")
-
                 path = Path(self.output_path if self.output_path else Path.cwd())
                 path = path.joinpath(self.general_config_tracker.model_name_sanitized)
                 path.mkdir(parents=True, exist_ok=True)
@@ -264,15 +262,15 @@ class EvaluationTracker:
                     # we first need to sanitize arguments and resps
                     # otherwise we won't be able to load the dataset
                     # using the datasets library
-                    arguments = {}
-                    for key, value in enumerate(sample["arguments"][1]):  # update metadata into args
-                        arguments[key] = value
-
+                    # arguments = {}
                     sample["input"] = sample["arguments"][0]
                     sample["resps"] = sanitize_list(sample["resps"])
                     sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
-                    sample["arguments"] = arguments
+                    if sample["filtered_resps"] == sample["resps"][0]:
+                        sample.pop("resps")
                     sample["target"] = str(sample["target"])
+                    sample.pop("arguments")
+                    sample.pop("doc")
 
                     sample_dump = (
                         json.dumps(
@@ -285,6 +283,8 @@ class EvaluationTracker:
 
                     with open(file_results_samples, "a", encoding="utf-8") as f:
                         f.write(sample_dump)
+
+                eval_logger.info(f"Saving samples to {file_results_samples}")
 
                 if self.api and self.push_samples_to_hub:
                     repo_id = self.details_repo if self.public_repo else self.details_repo_private
