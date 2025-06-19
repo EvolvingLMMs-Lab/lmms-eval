@@ -2,9 +2,10 @@ import os
 import time
 
 import pandas as pd
-import requests
 from loguru import logger as eval_logger
 from tqdm import tqdm
+
+from lmms_eval.llm_judge import ServerConfig, get_server
 
 DEMO_PROMPT_EXTRACT = """
 I am providing you a response from a model to a math problem, termed 'Model Response'. You should extract the answer from the response as 'Extracted Answer'. Directly output the extracted answer with no explanation.
@@ -73,56 +74,46 @@ Judgement: """
 
 
 class MathVerseEvaluator:
-    API_TYPE = os.getenv("API_TYPE", "openai")
-
-    if API_TYPE == "openai":
-        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json",
-        }
-    elif API_TYPE == "azure":
-        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-        headers = {
-            "api-key": API_KEY,
-            "Content-Type": "application/json",
-        }
-
     def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
         self.api_key = api_key
         self.gpt_model = gpt_model
         self.quick_extract = quick_extract
+        
+        # Initialize the judge server
+        API_TYPE = os.getenv("API_TYPE", "openai")
+        server_config = ServerConfig(
+            model_name=gpt_model,
+        )
+        self.server = get_server(server_name=API_TYPE, config=server_config)
 
-    def _post_request(self, payload):
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        response = requests.post(self.API_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-        return response.json()
 
     def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=10000000, sleep_time=0):
-        messages = [
-            {"role": "user", "content": prompt},
-        ]
-        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens, "n": n}
-
         while patience > 0:
             patience -= 1
             try:
-                response = self._post_request(payload)
-                if n == 1:
-                    prediction = response["choices"][0]["message"]["content"].strip()
-                    if prediction and prediction != "":
-                        return prediction
+                # Use the judge server for general text generation
+                result = self.server.generate(
+                    prompt=prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    n=n
+                )
+                
+                if result["success"]:
+                    if n == 1:
+                        prediction = result["result"].strip()
+                        if prediction and prediction != "":
+                            return prediction
+                    else:
+                        # For multiple completions, we need to handle differently
+                        # Since the judge server doesn't support n > 1 directly,
+                        # we'll just return the single result
+                        prediction = result["result"].strip()
+                        if prediction and prediction != "":
+                            return prediction
                 else:
-                    prediction = [choice["message"]["content"].strip() for choice in response["choices"]]
-                    if prediction and prediction[0] != "":
-                        return prediction
-
+                    eval_logger.error(f"Generation failed: {result.get('raw_response', 'Unknown error')}")
+                    
             except Exception as e:
                 # some model may output repetitive answer, which ChatGPT will throw an error.
                 if "repetitive patterns" in str(e):
@@ -144,9 +135,6 @@ class MathVerseEvaluator:
                     new_size = int(len(prompt) * 0.9)
                     new_start = len(prompt) - new_size
                     prompt = prompt[new_start:]
-                    payload["messages"] = [
-                        {"role": "user", "content": prompt},
-                    ]
 
                 if sleep_time > 0:
                     time.sleep(sleep_time)
@@ -189,13 +177,28 @@ class MathVerseEvaluator:
             return extraction == answer
 
         try:
-            full_prompt = self.create_match_prompt(DEMO_PROMPT_SCORE, question, answer, extraction)
-            while True:
-                extraction = self.get_chat_response(full_prompt, temperature=0, max_tokens=8, n=1)
-                judgement = extraction.replace("Judgement:", "").strip()
-                if judgement.strip() in ["0", "1"]:
-                    return int(judgement) == 1
+            # Use the judge server for binary evaluation
+            custom_prompt = """Below are two answers to a math question. Determine whether these two answers are consistent.
+Please note that only when the Model Answer completely matches the Standard Answer means they are consistent. For non-multiple-choice questions, if the meaning is expressed in the same way, it is also considered consistent, for example, 0.5m and 50cm.
 
+Return only "Yes" if they are consistent or "No" if they are different.
+Only return "Yes" or "No" with no additional text or formatting."""
+            
+            result = self.server.evaluate_binary(
+                question=question,
+                answer=str(answer),
+                prediction=extraction,
+                output_format="yes/no",
+                custom_prompt=custom_prompt
+            )
+            
+            if result["success"]:
+                judge_response = result["result"]
+                return judge_response and judge_response.lower() == "yes"
+            else:
+                eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
+                return False
+                
         except Exception as e:
             print(e)
             print(f"Error in matching answer")
