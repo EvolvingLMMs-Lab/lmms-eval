@@ -163,7 +163,8 @@ def mmmu_process_results(doc, results):
         parsed_preds.append(parsed_pred)
     mmmu_submission = {doc["id"]: parsed_preds[0]}
     mmmu_exact_acc = {"id": doc["id"], "subdomain": extract_subset_name(doc["id"]), "question_type": doc["question_type"], "answer": doc["answer"], "parsed_pred": parsed_preds}
-    return {"mmmu_acc": mmmu_exact_acc, "mmmu_acc_pass_at_k": mmmu_exact_acc, "submission":mmmu_submission}
+    return {"mmmu_acc": mmmu_exact_acc, "mmmu_acc_pass_at_k": mmmu_exact_acc, "submission": mmmu_submission}
+
 
 def mmmu_reasoning_process_results(doc, results):
     parsed_preds = []
