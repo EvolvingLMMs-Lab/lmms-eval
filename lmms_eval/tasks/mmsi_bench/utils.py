@@ -1,13 +1,14 @@
+import io
 import logging
 import re
-from PIL import Image
-import numpy as np
-import io
-import pandas as pd
 from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+from PIL import Image
+
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
-import re
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -31,30 +32,28 @@ def msr_doc_to_visual(doc):
     return image_list
 
 
-
-
 def extract_single_choice_with_word_boundary(pred, gt):
-    pattern_1 = r'``([^`]*)``'
+    pattern_1 = r"``([^`]*)``"
     match = re.search(pattern_1, pred)
     if match:
-        pred = match.group(1)  
+        pred = match.group(1)
 
-    pattern_2 = r'`([^`]*)`'
+    pattern_2 = r"`([^`]*)`"
     match = re.search(pattern_2, pred)
     if match:
-        pred = match.group(1)  
+        pred = match.group(1)
 
-    pattern_add = r'\{([^}]*)\}'
+    pattern_add = r"\{([^}]*)\}"
     match = re.search(pattern_add, pred)
     if match:
-        pred = match.group(1)  
+        pred = match.group(1)
 
-    pattern_3 = r'\b[A-D]\b(?!\s[a-zA-Z])'
+    pattern_3 = r"\b[A-D]\b(?!\s[a-zA-Z])"
     match = re.search(pattern_3, pred)
     if match:
-        pred = match.group()  
+        pred = match.group()
     else:
-        return None 
+        return None
 
     answer = gt.lower().replace("\n", " ").strip()
     predict = pred.lower().replace("\n", " ").strip()
@@ -70,7 +69,6 @@ def extract_single_choice_with_word_boundary(pred, gt):
     except Exception as e:
         return 0.0
     return 0.0
-
 
 
 def msr_process_results(doc, results):
@@ -114,4 +112,3 @@ def msr_aggregate_results(results):
     all_scores = [score for scores in l2_category_scores.values() for score in scores]
     avg_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
     return avg_score
-

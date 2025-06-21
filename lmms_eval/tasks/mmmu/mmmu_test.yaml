@@ -8,6 +8,11 @@ doc_to_target: "answer"
 # The return value of process_results will be used by metrics
 process_results: !function utils.mmmu_process_results
 
+generation_kwargs: 
+# Set max_new_tokens to a higher value (e.g., 512) for models like Qwen2.5-VL series
+# that tend to generate longer, more detailed responses and require larger token limits
+  max_new_tokens: 512
+
 metric_list:
   - metric: submission
     aggregation: !function utils.mmmu_test_aggregate_results_for_submission
