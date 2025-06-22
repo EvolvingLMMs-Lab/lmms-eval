@@ -7,7 +7,7 @@ test_split: train
 output_type: generate_until
 doc_to_visual: !function testmini_utils.olympiadbench_doc_to_visual
 doc_to_text: !function testmini_utils.olympiadbench_doc_to_text
-doc_to_target: "answer"
+doc_to_target: "final_answer"
 generation_kwargs:
   until:
     - "ASSISTANT:"
