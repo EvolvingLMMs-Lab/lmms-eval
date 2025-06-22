@@ -20,7 +20,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
+from lmms_eval.models.model_utils.reasoning_model_utils import parse_reasoning_model_answer
 
 try:
     from qwen_vl_utils import process_vision_info
@@ -81,7 +81,7 @@ class Qwen2_5_VL(lmms):
 
         # Prepare model loading arguments
         model_kwargs = {
-            "torch_dtype": "auto",
+            "torch_dtype": "bfloat16",
             "device_map": self.device_map,
         }
 
@@ -333,9 +333,14 @@ class Qwen2_5_VL(lmms):
                 answers[i] = ans
 
             for ans, context in zip(answers, contexts):
-                res.append(ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
+                clean_ans = parse_reasoning_model_answer(ans)
+                res.append(clean_ans)
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
                 pbar.update(1)
+
+                eval_logger.debug(f"Question: {context}")
+                eval_logger.debug(f"Model Raw Response: {ans}")
+                eval_logger.debug(f"Model Clean Response: {clean_ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
