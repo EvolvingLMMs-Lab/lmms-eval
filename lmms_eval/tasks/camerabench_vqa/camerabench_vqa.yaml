@@ -1,0 +1,32 @@
+dataset_path: chancharikm/camerabench_vqa_lmms_eval # The name of the dataset as listed by HF in the datasets Hub.
+dataset_kwargs:
+  token: True
+  cache_dir: camerabench_vqa
+  video: True
+task: "camerabench_vqa" # The name of the task, this should be registered in the task manager. If successful, you can call lmms_eval with this task name by setting `--tasks mme`.
+test_split: test # The split of the dataset to use as the test split.
+output_type: generate_until # The type of model output for the given task. Options are `generate_until`, `loglikelihood`, and `multiple_choice`.
+doc_to_visual: !function utils.cambench_doc_to_visual # The function to process a sample into the appropriate input for the model. 
+doc_to_text: !function utils.cambench_doc_to_text # The function to process a sample into the appropriate target output for the model.
+doc_to_target: "answer" # The function to process a sample into a list of possible string choices for `multiple_choice` tasks.
+generation_kwargs: # Auxiliary arguments for the `generate` function from HF transformers library. This would be used in different models files.
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.cambench_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+# e.g. Following metrics `mme_perception_score` is custom defined. 
+# So `mme_process_results` function should return the dict `{"mme_perception_score": {sub_k:sub_v, ..., } }`
+# And the `mme_aggregate_results` function could get the dict `{sub_k:sub_v, ..., }`, and use the information to gather the final accuracy.
+metric_list:
+
+  - metric: cambench_Q_ACC # The name of the metric to use for evaluation. The process_results function should return the metric name and the metric value, in format of `{metric_name: results}`. And the aggregation function will use the results to get the final score.
+    aggregation: !function utils.cambench_aggregate_results_Q_ACC # The name of the aggregation function to use for evaluation.
+    higher_is_better: true # Whether the metric is better when the value is higher.
+
+  - metric: cambench_ACC # The name of the metric to use for evaluation. The process_results function should return the metric name and the metric value, in format of `{metric_name: results}`. And the aggregation function will use the results to get the final score.
+    aggregation: !function utils.cambench_aggregate_results_ACC # The name of the aggregation function to use for evaluation.
+    higher_is_better: true # Whether the metric is better when the value is higher.
