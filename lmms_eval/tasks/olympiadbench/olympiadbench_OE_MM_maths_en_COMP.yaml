@@ -2,8 +2,7 @@ dataset_path: Hothan/OlympiadBench
 dataset_name: OE_MM_maths_en_COMP
 dataset_kwargs:
   token: True
-task: "olympiadbench_testmini"
-tag: visual_reasoning_collection
+task: "olympiadbench_OE_MM_maths_en_COMP"
 test_split: train
 output_type: generate_until
 doc_to_visual: !function testmini_utils.olympiadbench_doc_to_visual
@@ -13,10 +12,10 @@ generation_kwargs:
   until:
     - "ASSISTANT:"
   max_new_tokens: 16384
-  temperature: 0
+  temperature: 1
   top_p: 0.95
   num_beams: 1
-  do_sample: false
+  do_sample: true
   repetition_penalty: 1.2
 process_results: !function testmini_utils.olympiadbench_process_results
 metric_list:
