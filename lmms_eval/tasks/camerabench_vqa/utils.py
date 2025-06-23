@@ -198,7 +198,7 @@ def cambench_process_results(doc, results):
         "cambench_G_ACC": {"id": doc["Index"], "score": gt_ans},
         "cambench_Q_ACC": {"id": doc["Index"], "score": gt_ans},
         "cambench_I_ACC": {"id": doc["Index"], "score": gt_ans},
-        "cambench_Acc": {"id": doc["Index"], "score": gt_ans},
+        "cambench_ACC": {"id": doc["Index"], "score": gt_ans},
     }
 
 
