@@ -1,12 +1,5 @@
-import datetime
-import json
 import os
 import re
-from collections import defaultdict
-
-from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
@@ -154,15 +147,30 @@ def extract_answer(output_string, task_type="yes_no"):
 
 
 def cambench_doc_to_visual(doc):
-    # Unlike images - try and get the video path only as different models
-    default_path = os.path.join(os.getenv('HOME'), '.cache/huggingface')
-    # print(f'Default {default_path}')
-    load_path = os.path.expanduser(os.path.join(os.getenv("HF_HOME", default_path), 'camerabench_vqa/datasets--chancharikm--camerabench_vqa_lmms_eval/snapshots'))
-    # print(load_path)
-    load_path = os.path.join(load_path, os.listdir(load_path)[0])
-    # print(load_path)
-    # exit()
-    return [os.path.join(load_path, doc["Video"])] #.convert("RGB")]
+    try:
+        default_path = os.path.join(os.getenv('HOME'), '.cache/huggingface')
+        load_path = os.path.expanduser(os.path.join(
+            os.getenv("HF_HOME", default_path),
+            'camerabench_vqa/datasets--chancharikm--camerabench_vqa_lmms_eval/snapshots'
+        ))
+
+        if not os.path.exists(load_path):
+            raise FileNotFoundError(f"Dataset path not found: {load_path}")
+
+        snapshots = os.listdir(load_path)
+        if not snapshots:
+            raise FileNotFoundError(f"No snapshots found in: {load_path}")
+
+        snapshot_path = os.path.join(load_path, snapshots[0])
+        video_path = os.path.join(snapshot_path, doc["Video"])
+
+        if not os.path.exists(video_path):
+            raise FileNotFoundError(f"Video file not found: {video_path}")
+
+        return [video_path]
+    except Exception as e:
+        eval_logger.error(f"Error constructing video path: {e}")
+        raise
 
 
 def cambench_doc_to_text(doc):
