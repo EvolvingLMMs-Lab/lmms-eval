@@ -96,6 +96,11 @@ def parse_eval_args() -> argparse.Namespace:
         help="String arguments for model, e.g. `pretrained=EleutherAI/pythia-160m,dtype=float32`",
     )
     parser.add_argument(
+        "--launcher_args",
+        default=None,
+        help="String arguments for launcher for local llm as judge, e.g. `tp=8`, if None then no launcher will be used.",
+    )
+    parser.add_argument(
         "--num_fewshot",
         type=int,
         default=None,
@@ -490,6 +495,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         datetime_str=datetime_str,
         distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
         force_simple=args.force_simple,
+        launcher_args=args.launcher_args,
         **request_caching_args,
     )
 
