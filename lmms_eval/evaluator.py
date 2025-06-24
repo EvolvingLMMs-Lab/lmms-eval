@@ -8,7 +8,7 @@ import sys
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -80,6 +80,7 @@ def simple_evaluate(
     datetime_str: str = get_datetime_str(),
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
+    force_simple: bool = False,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -173,12 +174,10 @@ def simple_evaluate(
     if task_manager is None:
         task_manager = TaskManager(verbosity, model_name=model)
 
-    task_dict = get_task_dict(tasks, task_manager)
-
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lmms_eval.models.get_model(model).create_from_arg_string(
+        lm = lmms_eval.models.get_model(model, force_simple).create_from_arg_string(
             model_args,
             {
                 "batch_size": batch_size,
@@ -188,6 +187,8 @@ def simple_evaluate(
         )
     elif isinstance(model, lmms_eval.api.model.lmms):
         lm = model
+    task_type = "simple" if lm.is_simple else "chat"
+    task_dict = get_task_dict(tasks, task_manager, task_type)
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -326,6 +327,7 @@ def evaluate(
     fewshot_as_multiturn: bool = False,
     verbosity: str = "INFO",
     distributed_executor_backend: str = "accelerate",
+    eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -487,6 +489,11 @@ def evaluate(
             else:
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
+    # Cleaning lm's cuda memory if you are launching llm as judge in local
+    lm.clean()
+    # TODO: This is currently a placeholder, make launcher for vllm, sglang etc.
+    if eval_server_launcher is not None:
+        eval_server_launcher.launch()
     RANK = lm.rank
     WORLD_SIZE = lm.world_size
     ### Postprocess outputs ###
@@ -552,8 +559,7 @@ def evaluate(
                                 ensure_ascii=False,
                             )
                         ),
-                        "prompt_hash": hash_string(requests[0].arguments[0]),
-                        "target_hash": hash_string(str(target)),
+                        # Removing prompt hash and target hash here
                     }
                     example.update(metrics)
                     task_output.logged_samples.append(example)
@@ -562,10 +568,6 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
-
-    if hasattr(lm, "_model"):
-        del lm._model
-        torch.cuda.empty_cache()
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
@@ -661,13 +663,15 @@ def evaluate(
     else:
         results_dict = None
 
-    if distributed_executor_backend == "accelerate":
-        # this should work for torchrun as well since it internally calls torch.distributed.barrier()
-        Accelerator().wait_for_everyone()
-    elif distributed_executor_backend == "torchrun":
-        dist.barrier()
-    else:
-        raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
+    if WORLD_SIZE > 1:
+        # if muti-gpu, wait for all processes to finish
+        if distributed_executor_backend == "accelerate":
+            # this should work for torchrun as well since it internally calls torch.distributed.barrier()
+            Accelerator().wait_for_everyone()
+        elif distributed_executor_backend == "torchrun":
+            dist.barrier()
+        else:
+            raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
     return results_dict
 

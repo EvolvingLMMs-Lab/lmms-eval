@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.3.4"
+version = "0.4.0.dev0"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
@@ -46,7 +46,7 @@ dependencies = [
     "av",
     "hf_transfer",
     "nltk",
-    "sentencepiece==0.1.99",
+    "sentencepiece",
     "yt-dlp",
     "pycocoevalcap",
     "tqdm-multiprocess",

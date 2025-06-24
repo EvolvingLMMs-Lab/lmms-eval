@@ -1,0 +1,59 @@
+dataset_path: Idavidrein/gpqa
+tag: gpqa
+dataset_name: gpqa_diamond
+task: gpqa_diamond_openai_maj64_cov64_train
+output_type: generate_until
+process_docs: !function utils.process_docs
+process_results: !function utils.process_results
+training_split: train
+# Because huggingface dataset only has train split
+validation_split: train
+test_split: null
+# https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/common.py#L12
+doc_to_text: "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering but always provide a final answer within the word limit.\n\n{{Question}}\n\nA) {{choice1}}\nB) {{choice2}}\nC) {{choice3}}\nD) {{choice4}}"
+doc_to_target: answer
+num_fewshot: 0
+generation_kwargs:
+  until: []
+  do_sample: false
+  temperature: 0.5 # Do 0.5? https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L26
+  max_gen_toks: 1024 # https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+repeats: 64
+filter_list:
+  - name: "score-first" # pick only the first response, and report metrics on that
+    filter:
+      - function: "take_first"
+  - name: "maj@64"
+    filter:
+      - function: "majority_vote"
+      - function: "take_first"
+  - name: "maj@16" # get Maj@16, via selecting the first 8 responses. Using a better estimator would be optimal.
+    filter:
+      - function: "take_first_k"
+        k: 16
+      - function: "majority_vote"
+      - function: "take_first"
+  - name: "maj@8" # get Maj@8 , via selecting the first 8 responses. Using a better estimator would be optimal.
+    filter:
+      - function: "take_first_k"
+        k: 8
+      - function: "majority_vote"
+      - function: "take_first"
+  - name: "cov@64" # get coverage@64 , via allowing all 64 samples and then picking only the correct one in the evaluator.
+    filter:
+      - function: "take_first_k"
+        k: 64
+  - name: "cov@16"
+    filter:
+      - function: "take_first_k"
+        k: 16
+  - name: "cov@8"
+    filter:
+      - function: "take_first_k"
+        k: 8
+metadata:
+  version: 1.0

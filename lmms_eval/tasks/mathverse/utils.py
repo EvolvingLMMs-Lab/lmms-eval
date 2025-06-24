@@ -19,7 +19,8 @@ with open(Path(__file__).parent / "mathverse.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-mathverse_evaluator = MathVerseEvaluator(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=config["metadata"]["gpt_eval_model_name"])
+# Initialize MathVerseEvaluator which will handle all judge interactions
+mathverse_evaluator = MathVerseEvaluator(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20"))
 
 
 def mathverse_doc_to_visual(doc):
@@ -45,6 +46,13 @@ def mathverse_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def mathverse_process_results(doc, results):
     prediction = results[0].strip()
+    question = doc["question_for_eval"]
+    answer = doc["answer"] if "answer" in doc else None
+
+    judge_result = 0
+    if answer is not None:
+        # Use the MathVerseEvaluator's score_answer method which handles judge interaction
+        judge_result = 1 if mathverse_evaluator.score_answer(question, answer, prediction, quick_match=False) else 0
 
     result = {
         "sample_index": doc["sample_index"],
@@ -58,10 +66,11 @@ def mathverse_process_results(doc, results):
         "query_wo": doc["query_wo"],
         "query_cot": doc["query_cot"],
         "question_for_eval": doc["question_for_eval"],
+        "true_false": judge_result == 1,
     }
 
     return {
-        "gpt_eval_score": result,
+        "llm_as_judge_eval": judge_result,
         "submission": result,
     }
 

@@ -8,7 +8,7 @@ test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.worldsense_doc_to_visual
 doc_to_text: !function utils.worldsense_doc_to_text
-doc_to_target: utils.worddsense_doc_to_target
+doc_to_target: utils.worldsense_doc_to_target
 generation_kwargs:
   max_new_tokens: 1024
   temperature: 0

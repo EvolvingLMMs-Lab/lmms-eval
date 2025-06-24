@@ -80,7 +80,7 @@ def mathvista_process_results(doc, results):
     }
 
     return {
-        "gpt_eval_score": result,
+        "llm_as_judge_eval": result,
         "submission": result,
     }
 
