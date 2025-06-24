@@ -87,7 +87,7 @@ def simple_evaluate(
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model or LM object, see lm_eval.models.get_model
+        Name of model or LM object, see lmms_eval.models.get_model
     :param model_args: Optional[str, dict]
         String or dict arguments for each model class, see LM.create_from_arg_string and LM.create_from_arg_object.
         Ignored if `model` argument is a LM object.
@@ -292,7 +292,7 @@ def simple_evaluate(
             "model_args": model_args,
         }
         # add more detailed model info if available TODO: add model info
-        # if isinstance(lm, lm_eval.models.huggingface.HFLM):
+        # if isinstance(lm, lmms_eval.models.huggingface.HFLM):
         #     results["config"].update(lm.get_model_info())
         # add info about execution
         results["config"].update(

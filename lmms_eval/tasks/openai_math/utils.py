@@ -5,7 +5,7 @@ from collections import Counter
 from typing import Dict, List, Optional
 
 import datasets
-from lm_eval.utils import eval_logger
+from lmms_eval.utils import eval_logger
 
 if os.getenv("PROMPTSTEP") is not None:
     QUERY_TEMPLATE = "{Question}\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
@@ -18,7 +18,7 @@ elif os.getenv("PROMPTSHORT") is not None:
 else:
     QUERY_TEMPLATE = "{Question}"
 
-print("QUERY_TEMPLATE: ", QUERY_TEMPLATE)
+# print("QUERY_TEMPLATE: ", QUERY_TEMPLATE)
 
 # Adapted from https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/common.py#L23
 # (?i): Enables case-insensitive matching. This means "Answer", "answer", "ANSWER", etc., will all be matched.

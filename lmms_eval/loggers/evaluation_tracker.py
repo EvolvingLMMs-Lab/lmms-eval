@@ -1,4 +1,4 @@
-# code is adapted from https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/loggers/evaluation_tracker.py
+# code is adapted from https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lmms_eval/loggers/evaluation_tracker.py
 import json
 import os
 import re
