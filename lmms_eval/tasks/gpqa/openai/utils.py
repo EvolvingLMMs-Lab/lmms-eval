@@ -1,9 +1,9 @@
-from collections import Counter
 import os
-import time
-from typing import Any, Dict, List, Optional
 import random
 import re
+import time
+from collections import Counter
+from typing import Any, Dict, List, Optional
 
 import datasets
 import openai
@@ -13,13 +13,13 @@ QUERY_TEMPLATE = "{Question}\n\nA) {choice1}\nB) {choice2}\nC) {choice3}\nD) {ch
 QUERY_TEMPLATE_API = "{Question}\nAnswer Choices:\n(A) {choice1}\n(B) {choice2}\n(C) {choice3}\n(D) {choice4}"
 
 if os.getenv("PROMPTLONG") is not None:
-    QUERY_TEMPLATE += '\n\nAnswer after a long amount of thinking. If you feel like you are finished early, spend the extra time trying to double-check your work until you are absolutely sure that you have the correct answer.'
+    QUERY_TEMPLATE += "\n\nAnswer after a long amount of thinking. If you feel like you are finished early, spend the extra time trying to double-check your work until you are absolutely sure that you have the correct answer."
 elif os.getenv("PROMPTSHORT") is not None:
-    QUERY_TEMPLATE += '\n\nAnswer after a short amount of thinking. Do not spend excessive time double-checking your work.'
+    QUERY_TEMPLATE += "\n\nAnswer after a short amount of thinking. Do not spend excessive time double-checking your work."
 elif os.getenv("PROMPTTOKEN") is not None:
-    QUERY_TEMPLATE += f'\n\nThink for up to ' + os.getenv("PROMPTTOKEN") + ' tokens.'
+    QUERY_TEMPLATE += f"\n\nThink for up to " + os.getenv("PROMPTTOKEN") + " tokens."
 elif os.getenv("PROMPTSTEP") is not None:
-    QUERY_TEMPLATE += f'\n\nThink for up to ' + os.getenv("PROMPTSTEP") + ' steps.'
+    QUERY_TEMPLATE += f"\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
 
 print("QUERY_TEMPLATE: ", QUERY_TEMPLATE)
 
@@ -83,10 +83,12 @@ Respond only with the capitalized alphabetic letter (without quotes) or -1. Do n
     Attempt: %(expression2)s
 """.strip()
 
+
 def extract_answer(sampler, question: str, attempt: str):
-   prompt = EXTRACTION_TEMPLATE % {"expression1": question, "expression2": attempt}
-   response = sampler([dict(content=prompt, role="user")])
-   return response
+    prompt = EXTRACTION_TEMPLATE % {"expression1": question, "expression2": attempt}
+    response = sampler([dict(content=prompt, role="user")])
+    return response
+
 
 class ChatCompletionSampler:
     """
@@ -109,9 +111,7 @@ class ChatCompletionSampler:
         self.max_tokens = max_tokens
         self.image_format = "url"
 
-    def _handle_image(
-        self, image: str, encoding: str = "base64", format: str = "png", fovea: int = 768
-    ):
+    def _handle_image(self, image: str, encoding: str = "base64", format: str = "png", fovea: int = 768):
         new_image = {
             "type": "image_url",
             "image_url": {
@@ -153,13 +153,14 @@ class ChatCompletionSampler:
                 trial += 1
             # unknown error shall throw exception
 
+
 def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
     metrics = {"exact_match": None, "extracted_answers": []}
     # Multiple results -> we are measuring cov/maj etc
     if isinstance(results[0], list):
         results = results[0]
-        n_res = len(results) # e.g. 64
-        n_res_list = [2**i for i in range(1, int(n_res.bit_length()))] # e.g. [2, 4, 8, 16, 32, 64]
+        n_res = len(results)  # e.g. 64
+        n_res_list = [2**i for i in range(1, int(n_res.bit_length()))]  # e.g. [2, 4, 8, 16, 32, 64]
         metrics = {
             **metrics,
             "exact_matches": [],
@@ -196,7 +197,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
             if sampler is not None:
                 a = extract_answer(sampler, question, a)
             else:
-                pass # TODO: Maybe add back legacy processing
+                pass  # TODO: Maybe add back legacy processing
 
         if a not in ["A", "B", "C", "D"]:
             print(f"Warning: Default to A as given {results[i-1]} extracted {a}")
@@ -204,7 +205,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
 
         metrics["extracted_answers"].append(a)
         a = int(a == doc["answer"])
-        if not(a): # Optional logging
+        if not (a):  # Optional logging
             print("Marked incorrect\na " + metrics["extracted_answers"][-1] + "\ndoc['answer'] " + doc["answer"])
         if i == 1:
             metrics["exact_match"] = a
@@ -217,6 +218,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
                 metrics[f"maj@{i}"] = int(doc["answer"] == Counter(metrics["extracted_answers"]).most_common(1)[0][0])
 
     return metrics
+
 
 def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
     def _process_doc(doc):
@@ -240,6 +242,7 @@ def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
         return out_doc
 
     return dataset.map(_process_doc)
+
 
 def last_boxed_only_string(string: str) -> Optional[str]:
     idx = string.rfind("\\boxed")
@@ -270,6 +273,7 @@ def last_boxed_only_string(string: str) -> Optional[str]:
 
     return retval
 
+
 def remove_boxed(s: str) -> str:
     if "\\boxed " in s:
         left = "\\boxed "
@@ -282,6 +286,7 @@ def remove_boxed(s: str) -> str:
     assert s[-1] == "}"
 
     return s[len(left) : -1]
+
 
 def doc_to_text_gpqa(doc: dict) -> str:
     return QUERY_TEMPLATE.format(Question=doc["Question"], choice1=doc["choice1"], choice2=doc["choice2"], choice3=doc["choice3"], choice4=doc["choice4"])
