@@ -21,7 +21,7 @@ elif os.getenv("PROMPTTOKEN") is not None:
 elif os.getenv("PROMPTSTEP") is not None:
     QUERY_TEMPLATE += f"\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
 
-print("QUERY_TEMPLATE: ", QUERY_TEMPLATE)
+# print("QUERY_TEMPLATE: ", QUERY_TEMPLATE)
 
 # Adapted from https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/common.py#L23
 # (?i): Enables case-insensitive matching. This means "Answer", "answer", "ANSWER", etc., will all be matched.

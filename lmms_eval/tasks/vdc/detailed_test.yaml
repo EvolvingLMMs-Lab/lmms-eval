@@ -7,10 +7,10 @@ doc_to_text: !function utils.vdc_doc_to_text_detailed
 doc_to_target: !function utils.vdc_doc_to_answer
 process_results: !function utils.vdc_process_results_generic
 metric_list:
-  - metric: llm_eval_score
+  - metric: llmms_eval_score
     aggregation: !function utils.vdc_aggregate_score
     higher_is_better: true
-  - metric: llm_eval_acc
+  - metric: llmms_eval_acc
     aggregation: !function utils.vdc_aggregate_acc
     higher_is_better: true
 include: _default_template_yaml

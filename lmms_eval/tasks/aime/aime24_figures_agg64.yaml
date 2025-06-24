@@ -13,7 +13,7 @@ generation_kwargs:
   until: []
   do_sample: false
   temperature: 1
-  max_gen_toks: 32768
+  max_new_tokens: 32768
 repeats: 64
 filter_list:
   - name: "all" # Will do coverage, majority, and take_first_k

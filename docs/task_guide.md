@@ -168,7 +168,7 @@ Adding a multiple choice metric has a few steps. To get it working you need to:
 2. register an aggregation function
 3. update the `Task` definition to make sure the correct arguments are passed
 
-The default metric and aggregation functions are in `lm_eval/api/metrics.py`, and you can add a function there if it's for general use. The metrics are towards the bottom of the file and look like this:
+The default metric and aggregation functions are in `lmms_eval/api/metrics.py`, and you can add a function there if it's for general use. The metrics are towards the bottom of the file and look like this:
 
 ```python
     @register_metric(
@@ -191,7 +191,7 @@ Aggregation functions are defined towards the top of the file, here's an example
         preds = unzipped_list[1]
         return sklearn.metrics.matthews_corrcoef(golds, preds)
 
-This function returns a single numeric value. The input is defined in `Task.process_results` in `lm_eval/api/task.py`. There's a section that looks like this:
+This function returns a single numeric value. The input is defined in `Task.process_results` in `lmms_eval/api/task.py`. There's a section that looks like this:
 
 ```python
     result_dict = {
