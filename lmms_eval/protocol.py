@@ -13,33 +13,15 @@ class ChatImageContent(BaseModel):
     type: Literal["image"] = "image"
     url: Any
 
-    def model_dump(self, **kwargs):
-        content = super().model_dump(**kwargs)
-        # Some model may need this placeholder for hf_chat_template
-        content["image_url"] = "placeholder"
-        return content
-
 
 class ChatVideoContent(BaseModel):
     type: Literal["video"] = "video"
     url: Any
 
-    def model_dump(self, **kwargs):
-        content = super().model_dump(**kwargs)
-        # Some model may need this placeholder for hf_chat_template
-        content["video_url"] = "placeholder"
-        return content
-
 
 class ChatAudioContent(BaseModel):
     type: Literal["audio"] = "audio"
     url: Any
-
-    def model_dump(self, **kwargs):
-        content = super().model_dump(**kwargs)
-        # Some model may need this placeholder for hf_chat_template
-        content["audio_url"] = "placeholder"
-        return content
 
 
 ChatContent = Union[ChatTextContent, ChatImageContent, ChatVideoContent, ChatAudioContent]
@@ -68,3 +50,19 @@ class ChatMessages(BaseModel):
                     audios.append(content.url)
 
         return images, videos, audios
+
+    def to_hf_messages(self):
+        hf_messages = []
+        for message in self.messages:
+            hf_message = {"role": message.role, "content": []}
+            for content in message.content:
+                if content.type == "text":
+                    hf_message["content"].append({"type": "text", "text": content.text})
+                elif content.type == "image":
+                    hf_message["content"].append({"type": "image", "image": content.url})
+                elif content.type == "video":
+                    hf_message["content"].append({"type": "video", "video": content.url})
+                elif content.type == "audio":
+                    hf_message["content"].append({"type": "audio", "audio": content.url})
+            hf_messages.append(hf_message)
+        return hf_messages
