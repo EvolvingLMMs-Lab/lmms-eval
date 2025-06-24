@@ -7,7 +7,8 @@ import requests
 import yaml
 from Levenshtein import distance
 from loguru import logger as eval_logger
-from lmms_eval.llm_judge import ServerConfig, get_server, Request
+
+from lmms_eval.llm_judge import Request, ServerConfig, get_server
 
 # pids: 799, 681, 615
 shot_examples = [
@@ -161,16 +162,9 @@ with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
 class MathVistaEvaluator:
     API_TYPE = os.getenv("API_TYPE", "openai")
     gpt_model = os.getenv("MODEL_VERSION", config["metadata"]["gpt_eval_model_name"])
-    
+
     # Initialize llm_judge server
-    server_config = ServerConfig(
-        model_name=gpt_model,
-        temperature=0.0,
-        max_tokens=256,
-        timeout=60,
-        num_retries=5,
-        retry_delay=10
-    )
+    server_config = ServerConfig(model_name=gpt_model, temperature=0.0, max_tokens=256, timeout=60, num_retries=5, retry_delay=10)
     server = get_server(server_name=API_TYPE, config=server_config)
 
     def __init__(self, quick_extract=False):
@@ -178,26 +172,16 @@ class MathVistaEvaluator:
 
     def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=5, sleep_time=0):
         # Create a custom server config for this specific request with different parameters
-        request_config = ServerConfig(
-            model_name=self.gpt_model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            timeout=60,
-            num_retries=patience,
-            retry_delay=sleep_time
-        )
-        
+        request_config = ServerConfig(model_name=self.gpt_model, temperature=temperature, max_tokens=max_tokens, timeout=60, num_retries=patience, retry_delay=sleep_time)
+
         while patience > 0:
             patience -= 1
             try:
                 # Use the core evaluate method with a Request object for direct text generation
-                request = Request(
-                    messages=[{"role": "user", "content": prompt}],
-                    config=request_config
-                )
-                
+                request = Request(messages=[{"role": "user", "content": prompt}], config=request_config)
+
                 response = self.server.evaluate(request)
-                
+
                 if response.success:
                     prediction = response.content.strip()
                     if prediction and prediction != "":

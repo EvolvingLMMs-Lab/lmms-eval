@@ -1,23 +1,22 @@
-from collections import Counter
 import os
 import re
 import signal
+from collections import Counter
 from typing import Dict, List, Optional
 
 import datasets
-
 from lm_eval.utils import eval_logger
 
 if os.getenv("PROMPTSTEP") is not None:
-    QUERY_TEMPLATE = '{Question}\n\nThink for up to ' + os.getenv("PROMPTSTEP") + ' steps.'
+    QUERY_TEMPLATE = "{Question}\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
 elif os.getenv("PROMPTTOKEN") is not None:
-    QUERY_TEMPLATE = '{Question}\n\nThink for up to ' + os.getenv("PROMPTTOKEN") + ' tokens.'
+    QUERY_TEMPLATE = "{Question}\n\nThink for up to " + os.getenv("PROMPTTOKEN") + " tokens."
 elif os.getenv("PROMPTLONG") is not None:
-    QUERY_TEMPLATE = '{Question}\n\nAnswer after a long amount of thinking. If you feel like you are finished early, spend the extra time trying to double-check your work until you are absolutely sure that you have the correct answer.'
+    QUERY_TEMPLATE = "{Question}\n\nAnswer after a long amount of thinking. If you feel like you are finished early, spend the extra time trying to double-check your work until you are absolutely sure that you have the correct answer."
 elif os.getenv("PROMPTSHORT") is not None:
-    QUERY_TEMPLATE = '{Question}\n\nAnswer after a short amount of thinking. Do not spend excessive time double-checking your work.'
+    QUERY_TEMPLATE = "{Question}\n\nAnswer after a short amount of thinking. Do not spend excessive time double-checking your work."
 else:
-    QUERY_TEMPLATE = '{Question}'
+    QUERY_TEMPLATE = "{Question}"
 
 print("QUERY_TEMPLATE: ", QUERY_TEMPLATE)
 
@@ -125,11 +124,13 @@ def extract_answer_idx(sampler, options: List[str], attempt: str):
     response = sampler([dict(content=prompt, role="user")])
     return response
 
+
 import time
 from typing import Any
 
 import openai
 from openai import OpenAI
+
 
 class ChatCompletionSampler:
     """
@@ -152,9 +153,7 @@ class ChatCompletionSampler:
         self.max_tokens = max_tokens
         self.image_format = "url"
 
-    def _handle_image(
-        self, image: str, encoding: str = "base64", format: str = "png", fovea: int = 768
-    ):
+    def _handle_image(self, image: str, encoding: str = "base64", format: str = "png", fovea: int = 768):
         new_image = {
             "type": "image_url",
             "image_url": {
@@ -196,8 +195,10 @@ class ChatCompletionSampler:
                 trial += 1
             # unknown error shall throw exception
 
+
 def doc_to_text(doc: dict) -> str:
     return QUERY_TEMPLATE.format(Question=doc["problem"])
+
 
 def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
     def _process_doc(doc: dict) -> dict:
@@ -214,7 +215,9 @@ def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
         if getattr(doc, "few_shot", None) is not None:
             out_doc["few_shot"] = True
         return out_doc
+
     return dataset.map(_process_doc)
+
 
 def process_docs_openai_math_cot_quality_check(dataset: datasets.Dataset) -> datasets.Dataset:
     def _process_doc(doc: dict) -> dict:
@@ -233,18 +236,20 @@ def process_docs_openai_math_cot_quality_check(dataset: datasets.Dataset) -> dat
                 out_doc["few_shot"] = True
             return out_doc
         except:
-            return {'problem': 'Drop', 'solution': 'Drop', 'answer': 'Drop', 'thinking_trajectory': ['Drop']}
+            return {"problem": "Drop", "solution": "Drop", "answer": "Drop", "thinking_trajectory": ["Drop"]}
+
     processed_dataset = dataset.map(_process_doc)
-    processed_dataset = processed_dataset.filter(lambda x: x['problem'] != 'Drop')
+    processed_dataset = processed_dataset.filter(lambda x: x["problem"] != "Drop")
     return processed_dataset
+
 
 def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
     metrics = {"exact_match": None, "extracted_answers": []}
     # Multiple results -> we are measuring cov/maj etc
     if isinstance(results[0], list):
         results = results[0]
-        n_res = len(results) # e.g. 64
-        n_res_list = [2**i for i in range(1, int(n_res.bit_length()))] # e.g. [2, 4, 8, 16, 32, 64]
+        n_res = len(results)  # e.g. 64
+        n_res_list = [2**i for i in range(1, int(n_res.bit_length()))]  # e.g. [2, 4, 8, 16, 32, 64]
         metrics = {
             **metrics,
             "exact_matches": [],
@@ -260,7 +265,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
         sampler = None
 
     if isinstance(doc["answer"], str) and doc["answer"].isdigit():
-        gt = str(int(doc["answer"])) # 023 -> 23
+        gt = str(int(doc["answer"]))  # 023 -> 23
     else:
         gt = str(doc["answer"])
     split_tokens = ["<|im_start|>answer\n", "<|im_start|>"]
@@ -280,7 +285,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
             a = matches[-1]  # Get the last match
 
         if (a.isdigit()) and (gt.isdigit()):
-            a = str(int(a)) # 023 -> 23
+            a = str(int(a))  # 023 -> 23
         elif sampler is not None:
             options = [gt] + list(set(metrics["extracted_answers"]) - {gt})
             if len(options) > 7:
@@ -300,11 +305,11 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
                 else:
                     print("Warning: Processing did not produce integer index\na", a, "\noptions", options_str, "\ndoc['answer']", gt)
         else:
-            pass # TODO: Maybe add back legacy processing
+            pass  # TODO: Maybe add back legacy processing
 
         metrics["extracted_answers"].append(a)
         a = int(a == gt)
-        if not(a): # Optional logging
+        if not (a):  # Optional logging
             print("Marked incorrect\na " + metrics["extracted_answers"][-1] + "\ndoc['answer'] " + gt)
         if i == 1:
             metrics["exact_match"] = a
@@ -317,6 +322,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
                 metrics[f"maj@{i}"] = int(gt == Counter(metrics["extracted_answers"]).most_common(1)[0][0])
 
     return metrics
+
 
 def last_boxed_only_string(string: str) -> Optional[str]:
     idx = string.rfind("\\boxed")
@@ -346,6 +352,7 @@ def last_boxed_only_string(string: str) -> Optional[str]:
         retval = string[idx : right_brace_idx + 1]
 
     return retval
+
 
 def remove_boxed(s: str) -> str:
     if "\\boxed " in s:
