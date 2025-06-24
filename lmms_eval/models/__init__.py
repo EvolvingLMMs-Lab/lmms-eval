@@ -3,10 +3,9 @@ import os
 import sys
 from typing import Literal
 
-import hf_transfer
 from loguru import logger
 
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+# os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 logger.remove()
 # Configure logger with detailed format including file path, function name, and line number

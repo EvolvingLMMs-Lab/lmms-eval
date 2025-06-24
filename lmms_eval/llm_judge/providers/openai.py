@@ -24,7 +24,7 @@ class OpenAIProvider(ServerInterface):
         try:
             from openai import OpenAI
 
-            self.client = OpenAI(api_key=self.api_key)
+            self.client = OpenAI(api_key=self.api_key, base_url=self.api_url)
             self.use_client = True
         except ImportError:
             eval_logger.warning("OpenAI client not available, falling back to requests")
