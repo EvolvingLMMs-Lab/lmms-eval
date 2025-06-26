@@ -13,7 +13,7 @@ generation_kwargs:
   until: []
   do_sample: false
   temperature: 0
-  max_gen_toks: 4096 # https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
+  max_new_tokens: 4096 # https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
 metric_list:
   - metric: exact_match
     aggregation: mean
