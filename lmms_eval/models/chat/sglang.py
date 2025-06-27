@@ -54,7 +54,7 @@ class Sglang(lmms):
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
         # Set up vllm client
-        self.client = Engine(model_path=model_version, tensor_parallel_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, **kwargs)
+        self.client = Engine(model_path=model_version, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, **kwargs)
         self.processor = AutoProcessor.from_pretrained(model_version)
 
         accelerator = Accelerator()
@@ -138,7 +138,7 @@ class Sglang(lmms):
 
                 params = {
                     "temperature": gen_kwargs["temperature"],
-                    "max_tokens": gen_kwargs["max_new_tokens"],
+                    "max_new_tokens": gen_kwargs["max_new_tokens"],
                     "top_p": gen_kwargs["top_p"],
                 }
                 video_kwargs = {"enforce_image": True, "num_frames": self.max_frame_num}
@@ -148,13 +148,15 @@ class Sglang(lmms):
                 video_data = []
                 for video in videos:
                     video_data.extend(load_video_decord(video, max_frames_num=self.max_frame_num))
-                image_data.append(images)
-                image_data.append(video_data)
+                if len(images) > 0:
+                    image_data.append(images)
+                if len(video_data) > 0:
+                    image_data.append(video_data)
 
                 batched_messages.append(messages)
 
             texts = self.processor.apply_chat_template(batched_messages)
-            outputs = self.client.generate(texts, params)
+            outputs = self.client.generate(texts, params, image_data=image_data)
 
             response_text = [o["text"] for o in outputs]
 
