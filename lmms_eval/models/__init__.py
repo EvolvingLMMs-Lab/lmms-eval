@@ -81,6 +81,7 @@ AVAILABLE_SIMPLE_MODELS = {
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "llava_hf": "LlavaHf",
     "qwen2_5_vl": "Qwen2_5_VL",
+    "openai_compatible": "OpenAICompatible",
     "vllm": "VLLM",
 }
 
