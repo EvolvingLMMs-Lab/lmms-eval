@@ -82,8 +82,8 @@ from lmms_eval.api.registry import register_model
 
 @register_model("<name1>", "<name2>")
 class MyCustomLM(LM):
-    # is_simple = True for chat model
-    # is_simple = False for simple model (default to False)
+    # is_simple = False for chat model
+    # is_simple = True for simple model (default to True)
 ```
 
 The final step is to import your model in `lmms_eval/models/__init__.py`:
