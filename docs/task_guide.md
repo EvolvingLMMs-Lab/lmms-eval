@@ -29,6 +29,7 @@ Dataset configuration options:
 - **process_docs** (`Callable`, *optional*) — Optionally define a function to apply to each HF dataset split, to preprocess all documents before being fed into prompt template rendering or other evaluation steps. Can be used to rename dataset columns, or to process documents into a format closer to the expected format expected by a prompt template.
 
 Prompting / in-context formatting options:
+- **doc_to_messages** (Callable, *optional*) - A function that transform the data into messages with a dict. The protocol of the type of the dictionary can be found in `lmms_eval/protocol.py`. If the value is `None`, there will be an auto predefined `doc_to_messages` to be used for every dataset. However, the auto function only prepend visuals ahead of text and you are recommended to implement your own. Examples can refer to `mmmu_val`
 - **doc_to_visual** (Union[Callable, str], *optional*) — Column name or function to process a sample into the appropriate visual input for the model.
 - **doc_to_text** (`Union[Callable, str]`, *optional*) — Column name or function to process a sample into the appropriate text input for the model. 
 
@@ -66,6 +67,7 @@ output_type: generate_until # The type of model output for the given task. Optio
 doc_to_visual: !function utils.mme_doc_to_visual # The function to process a sample into the appropriate input for the model. 
 doc_to_text: !function utils.mme_doc_to_text # The function to process a sample into the appropriate target output for the model.
 doc_to_target: "answer" # The function to process a sample into a list of possible string choices for `multiple_choice` tasks.
+doc_to_messages: !function utils.mme_doc_to_messages
 generation_kwargs: # Auxiliary arguments for the `generate` function from HF transformers library. This would be used in different models files.
   max_new_tokens: 16
   temperature: 0

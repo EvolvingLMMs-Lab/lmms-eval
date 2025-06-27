@@ -1,6 +1,12 @@
 # New Model Guide
 In order to properly evaluate a given LM, we require implementation of a wrapper class subclassing the `lmms_eval.api.model.lmms` class, that defines how the lmms_eval should interface with your model. This guide walks through how to write this `lmms` subclass via adding it to the library!
 
+
+## Model Type (New Features)
+- Chat (recommended) - The new recommended model type to be used for the future. Better support for interleaved text, image, video, and audio for multi-modal domain. Should be the type of the model to be implemented for new integrated models
+- Simple (Legacy) - The original and legacy models that use `doc_to_visual` and `doc_to_text` to control the input of the model. You can still add in new models that belongs to this category.
+
+
 ## Setup
 
 To get started contributing, go ahead and fork the main repo, clone it, create a branch with the name of your task, and install the project requirements in your environment:
@@ -16,10 +22,14 @@ pip install -e .
 Now, we'll create a new file where we'll be adding our model:
 
 ```sh
-touch lmms_eval/models/<my_model_filename>.py
+# (recommended) For chat models
+touch lmms_eval/models/chat/<my_model_filename>.py
+
+# For legacy simple models
+touch lmms_eval/models/simple/<my_model_filename>.py
 ```
 
-**As a rule of thumb, we recommend you to use `lmms_eval/models/qwen_vl.py` and `lmms_eval/models/instructblip.py` as reference implementations for your model. You can copy and paste the contents of one of these files into your new file to get started.**
+**As a rule of thumb, we recommend you to use `lmms_eval/models/chat/qwen_vl.py` and `lmms_eval/models/simple/instructblip.py` as reference implementations for your model. You can copy and paste the contents of one of these files into your new file to get started.**
 
 ## Interface
 
@@ -45,7 +55,9 @@ All three request types take as input `requests` of type `list[Instance]` that h
 
 - `generate_until`
   - Each request contains `Instance.args : Tuple[str, dict]` containing 1. an input string to the LM and 2. a dictionary of keyword arguments used to control generation parameters.
-  - In each `Instance.args` there will be 6 elements which are `contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split`. `contexts` refers to the formatted question and is the text input for the LMM. Sometimes it might contains image token and need to address differently for different models. `all_gen_kwargs` refers to the dict that contains all the generation configuration for the model. We use `doc_id`, `task`, and `split` to access the dataset and then you can use `doc_to_visual` which is a function reference to process the image. When you implement your own model, you should use these to write your own generate_util function.
+  - In each `Instance.args`,
+    - Chat Model : there will be 5 elements which are `doc_to_messages, all_gen_kwargs, doc_id, task, split`. `doc_to_messages` refers to the messages input for the LMM. Sometimes it might contains image token and need to address differently for different models. `all_gen_kwargs` refers to the dict that contains all the generation configuration for the model. We use `doc_id`, `task`, and `split` to access the dataset and then you can use `doc_to_messages` which is a function reference to process the input into interleaved format. When you implement your own model, you should use these to write your own generate_util function.
+    - Simple Model (Legacy) : there will be 6 elements which are `contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split`. `contexts` refers to the formatted question and is the text input for the LMM. Sometimes it might contains image token and need to address differently for different models. `all_gen_kwargs` refers to the dict that contains all the generation configuration for the model. We use `doc_id`, `task`, and `split` to access the dataset and then you can use `doc_to_visual` which is a function reference to process the image. When you implement your own model, you should use these to write your own generate_util function.
   - Using this input and these generation parameters, text will be sampled from the language model (typically until a maximum output length or specific stopping string sequences--for example, `{"until": ["\n\n", "."], "max_new_tokens": 128}`).
   - The generated input+output text from the model will then be returned.
 
@@ -70,6 +82,8 @@ from lmms_eval.api.registry import register_model
 
 @register_model("<name1>", "<name2>")
 class MyCustomLM(LM):
+    # is_simple = True for chat model
+    # is_simple = False for simple model (default to False)
 ```
 
 The final step is to import your model in `lmms_eval/models/__init__.py`:
