@@ -1649,10 +1649,12 @@ class ConfigurableMessagesTask(ConfigurableTask):
                     doc,
                 )
             )
-        elif self.config.doc_to_messages is None and self.config.doc_to_visual is not None and self.config.doc_to_text is not None:
+        elif self.config.doc_to_messages is None and (self.config.doc_to_visual is not None or self.config.doc_to_text is not None):
             # An auto doc to messages function
             def auto_doc_to_messages(doc):
                 visuals = self.doc_to_visual(doc)
+                if visuals is None:
+                    visuals = []
                 text = self.doc_to_text(doc)
                 messages = [{"role": "user", "content": []}]
                 content = []

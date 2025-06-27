@@ -398,6 +398,9 @@ def evaluate(
         if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
 
+    if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
+        lm.accelerator = Accelerator()
+
     for task_output in eval_tasks:
         task: Task = task_output.task
         task_name = task_output.task_name
