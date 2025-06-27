@@ -506,10 +506,12 @@ def evaluate(
     if eval_server_launcher is not None and RANK == 0:
         eval_server_launcher.launch()
 
-    if distributed_executor_backend == "accelerate":
-        lm.accelerator.wait_for_everyone()
-    elif distributed_executor_backend == "torchrun":
-        dist.barrier()
+    if lm.world_size > 1:
+        if distributed_executor_backend == "accelerate":
+            lm.accelerator.wait_for_everyone()
+        elif distributed_executor_backend == "torchrun":
+            dist.barrier()
+
     ### Postprocess outputs ###
     # TODO: del model here, maybe (idea: allow user to specify device of e.g. reward model separately)
     for task_output in eval_tasks:
