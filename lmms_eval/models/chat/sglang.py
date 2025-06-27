@@ -155,7 +155,11 @@ class Sglang(lmms):
 
                 batched_messages.append(messages)
 
-            texts = self.processor.apply_chat_template(batched_messages)
+            texts = self.processor.apply_chat_template(
+                batched_messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
             outputs = self.client.generate(texts, params, image_data=image_data)
 
             response_text = [o["text"] for o in outputs]
