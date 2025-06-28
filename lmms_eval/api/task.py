@@ -1679,5 +1679,5 @@ class ConfigurableMessagesTask(ConfigurableTask):
         # kwargs.pop("split")
         assert self.OUTPUT_TYPE == "generate_until", "Currently messages is used for generation only"
 
-        arguments = (self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
+        arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)

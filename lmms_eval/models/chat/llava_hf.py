@@ -54,7 +54,7 @@ class LlavaHf(LlavaHfSimple):
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         for chunk in chunks:
-            doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
+            ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
             chat_messages = [doc_to_messages[0](self.task_dict[task][split][ids]) for ids in doc_id]
