@@ -32,7 +32,7 @@ except ImportError:
 class VLLM(lmms):
     def __init__(
         self,
-        model_version: str = "Qwen/Qwen2.5-VL-3B-Instruct",
+        model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
         tensor_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
@@ -46,7 +46,7 @@ class VLLM(lmms):
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
-        self.model_version = model_version
+        self.model = model
         self.max_frame_num = max_frame_num
         self.threads = threads
         self.chat_template = chat_template
@@ -60,8 +60,9 @@ class VLLM(lmms):
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
         # Set up vllm client
+        breakpoint()
         self.client = LLM(
-            model=self.model_version,
+            model=self.model,
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
             trust_remote_code=trust_remote_code,

@@ -47,8 +47,6 @@ class VLLM(VLLMSimple):
                 chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
                 chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
                 if "max_new_tokens" not in gen_kwargs:
-                    gen_kwargs["max_new_tokens"] = 1024
-                if gen_kwargs["max_new_tokens"] > 4096:
                     gen_kwargs["max_new_tokens"] = 4096
                 if "temperature" not in gen_kwargs:
                     gen_kwargs["temperature"] = 0

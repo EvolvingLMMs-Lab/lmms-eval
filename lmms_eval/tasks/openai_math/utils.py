@@ -247,8 +247,7 @@ def process_docs_openai_math_cot_quality_check(dataset: datasets.Dataset) -> dat
 def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
     metrics = {"exact_match": None, "extracted_answers": []}
     # Multiple results -> we are measuring cov/maj etc
-    if isinstance(results[0], list):
-        results = results[0]
+    if len(results) > 1:
         n_res = len(results)  # e.g. 64
         n_res_list = [2**i for i in range(1, int(n_res.bit_length()))]  # e.g. [2, 4, 8, 16, 32, 64]
         metrics = {
@@ -257,6 +256,9 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
             **{f"cov@{n}": -1 for n in n_res_list},
             **{f"maj@{n}": -1 for n in n_res_list},
         }
+    else:
+        n_res_list = []
+        metrics["exact_matches"] = []
 
     if os.getenv("PROCESSOR", "") == "gpt-4o-mini":
         sampler = ChatCompletionSampler(model="gpt-4o-mini")

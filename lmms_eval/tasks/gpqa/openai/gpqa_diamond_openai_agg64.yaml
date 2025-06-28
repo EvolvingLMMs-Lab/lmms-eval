@@ -31,9 +31,9 @@ doc_to_target: answer
 num_fewshot: 0
 generation_kwargs:
   until: []
-  do_sample: false
+  do_sample: true
   temperature: 1 # Do 0.5? https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L26
-  max_new_tokens: 1024 # https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
+  max_new_tokens: 32768 # https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
 repeats: 64
 filter_list:
   - name: "all" # Will do coverage, majority, and take_first_k
