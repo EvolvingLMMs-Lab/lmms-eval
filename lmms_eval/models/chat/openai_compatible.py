@@ -40,7 +40,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for doc_to_messages, gen_kwargs, doc_id, task, split in [reg.args for reg in requests]:
+        for ctx, doc_to_messages, gen_kwargs, doc_id, task, split in [reg.args for reg in requests]:
             if self.continual_mode is True and self.cache_mode == "resume":
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 if doc_uuid in self.response_cache:

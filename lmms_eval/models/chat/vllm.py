@@ -43,7 +43,7 @@ class VLLM(VLLMSimple):
         for batch_requests in batched_requests:
             batched_messages = []
             for idx in range(len(batch_requests)):
-                doc_to_messages, gen_kwargs, doc_id, task, split = batch_requests[idx].arguments
+                ctx, doc_to_messages, gen_kwargs, doc_id, task, split = batch_requests[idx].arguments
                 chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
                 chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
                 if "max_new_tokens" not in gen_kwargs:

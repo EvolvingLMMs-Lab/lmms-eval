@@ -73,14 +73,11 @@ def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    if lmms_eval_specific_kwargs is None:
-        question = construct_prompt(doc)
-    else:
-        question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"], lmms_eval_specific_kwargs["prompt_type"])
-    # Doc to messages is always interleaved format
+    # If you use doc to messages, the interleaved format is always used
+    config["metadata"]["interleaved_format"] = True
+    question = mmmu_doc_to_text(doc)
     visuals = mmmu_doc_to_visual(doc)
     messages = [{"role": "user", "content": []}]
-    question = replace_images_tokens(question)
     interleaved_content = question.split("<image>")
     for i, (image, text) in enumerate(zip(visuals, interleaved_content)):
         if text.strip() != "":
