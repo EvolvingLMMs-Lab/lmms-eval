@@ -8,7 +8,7 @@ import sys
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -31,6 +31,7 @@ from lmms_eval.evaluator_utils import (
     print_writeout,
     run_task_tests,
 )
+from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
 from lmms_eval.models import get_model
 from lmms_eval.tasks import TaskManager, get_task_dict
@@ -51,6 +52,7 @@ from lmms_eval.utils import (
 def simple_evaluate(
     model,
     model_args: Optional[Union[str, dict]] = None,
+    launcher_args: Optional[Union[str, dict]] = None,
     tasks: Optional[List[Union[str, dict, object]]] = None,
     num_fewshot: Optional[int] = None,
     batch_size: Optional[Union[int, str]] = None,
@@ -80,11 +82,12 @@ def simple_evaluate(
     datetime_str: str = get_datetime_str(),
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
+    force_simple: bool = False,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model or LM object, see lm_eval.models.get_model
+        Name of model or LM object, see lmms_eval.models.get_model
     :param model_args: Optional[str, dict]
         String or dict arguments for each model class, see LM.create_from_arg_string and LM.create_from_arg_object.
         Ignored if `model` argument is a LM object.
@@ -170,15 +173,20 @@ def simple_evaluate(
     if model_args is None:
         model_args = ""
 
+    if launcher_args is not None:
+        launcher_args = simple_parse_args_string(launcher_args)
+        launcher_name = launcher_args.pop("name")
+        eval_launcher = get_launcher(launcher_name)(**launcher_args)
+    else:
+        eval_launcher = None
+
     if task_manager is None:
         task_manager = TaskManager(verbosity, model_name=model)
-
-    task_dict = get_task_dict(tasks, task_manager)
 
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lmms_eval.models.get_model(model).create_from_arg_string(
+        lm = lmms_eval.models.get_model(model, force_simple).create_from_arg_string(
             model_args,
             {
                 "batch_size": batch_size,
@@ -188,6 +196,8 @@ def simple_evaluate(
         )
     elif isinstance(model, lmms_eval.api.model.lmms):
         lm = model
+    task_type = "simple" if lm.is_simple else "chat"
+    task_dict = get_task_dict(tasks, task_manager, task_type)
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -265,6 +275,7 @@ def simple_evaluate(
         verbosity=verbosity,
         distributed_executor_backend=distributed_executor_backend,
         cli_args=cli_args,
+        eval_server_launcher=eval_launcher,
     )
 
     if lm.rank == 0:
@@ -281,7 +292,7 @@ def simple_evaluate(
             "model_args": model_args,
         }
         # add more detailed model info if available TODO: add model info
-        # if isinstance(lm, lm_eval.models.huggingface.HFLM):
+        # if isinstance(lm, lmms_eval.models.huggingface.HFLM):
         #     results["config"].update(lm.get_model_info())
         # add info about execution
         results["config"].update(
@@ -326,6 +337,7 @@ def evaluate(
     fewshot_as_multiturn: bool = False,
     verbosity: str = "INFO",
     distributed_executor_backend: str = "accelerate",
+    eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -385,6 +397,9 @@ def evaluate(
     if not log_samples:
         if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
+
+    if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
+        lm.accelerator = Accelerator()
 
     for task_output in eval_tasks:
         task: Task = task_output.task
@@ -487,8 +502,19 @@ def evaluate(
             else:
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
+    # Cleaning lm's cuda memory if you are launching llm as judge in local
+    lm.clean()
     RANK = lm.rank
     WORLD_SIZE = lm.world_size
+    if eval_server_launcher is not None and RANK == 0:
+        eval_server_launcher.launch()
+
+    if lm.world_size > 1:
+        if distributed_executor_backend == "accelerate":
+            lm.accelerator.wait_for_everyone()
+        elif distributed_executor_backend == "torchrun":
+            dist.barrier()
+
     ### Postprocess outputs ###
     # TODO: del model here, maybe (idea: allow user to specify device of e.g. reward model separately)
     for task_output in eval_tasks:
@@ -552,8 +578,7 @@ def evaluate(
                                 ensure_ascii=False,
                             )
                         ),
-                        "prompt_hash": hash_string(requests[0].arguments[0]),
-                        "target_hash": hash_string(str(target)),
+                        # Removing prompt hash and target hash here
                     }
                     example.update(metrics)
                     task_output.logged_samples.append(example)
@@ -562,10 +587,6 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
-
-    if hasattr(lm, "_model"):
-        del lm._model
-        torch.cuda.empty_cache()
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
@@ -601,6 +622,8 @@ def evaluate(
         dist.barrier()  # Ensure all processes are synced before proceeding
 
     if RANK == 0:
+        if eval_server_launcher is not None:
+            eval_server_launcher.clean()
         ### Aggregate results over all datapoints ###
         # aggregate results ; run bootstrap CIs
         for task_output in eval_tasks:

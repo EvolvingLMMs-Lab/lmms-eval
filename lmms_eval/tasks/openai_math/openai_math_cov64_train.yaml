@@ -1,0 +1,28 @@
+group:
+  - math_word_problems
+task: openai_math_cov64_train
+dataset_path: simplescaling/openaimath
+process_docs: !function utils.process_docs
+output_type: generate_until
+test_split: train
+doc_to_text: !function utils.doc_to_text
+doc_to_target: answer
+process_results: !function utils.process_results
+generation_kwargs:
+  until:
+    - "Problem:"
+  do_sample: true
+  temperature: 0.5
+  max_new_tokens: 2048 # 2x of https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+repeats: 64
+filter_list:
+  - name: "cov@64" # get coverage@64 , via allowing all 64 samples and then picking only the correct one in the evaluator.
+    filter:
+      - function: "take_first_k"
+        k: 64
+metadata:
+  version: 1.0

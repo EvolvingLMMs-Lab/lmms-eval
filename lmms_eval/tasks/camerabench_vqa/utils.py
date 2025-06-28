@@ -6,7 +6,6 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 SUFFIX_FOR_VQA = {"yes_no": "Please answer Yes or No.", "multiple_choice": "Please output the letter corresponding to the correct option."}
 
 
-
 def get_scores(scores):
     """
     Calculate various scores based on the given results.
@@ -148,11 +147,8 @@ def extract_answer(output_string, task_type="yes_no"):
 
 def cambench_doc_to_visual(doc):
     try:
-        default_path = os.path.join(os.getenv('HOME'), '.cache/huggingface')
-        load_path = os.path.expanduser(os.path.join(
-            os.getenv("HF_HOME", default_path),
-            'camerabench_vqa/datasets--chancharikm--camerabench_vqa_lmms_eval/snapshots'
-        ))
+        default_path = os.path.join(os.getenv("HOME"), ".cache/huggingface")
+        load_path = os.path.expanduser(os.path.join(os.getenv("HF_HOME", default_path), "camerabench_vqa/datasets--chancharikm--camerabench_vqa_lmms_eval/snapshots"))
 
         if not os.path.exists(load_path):
             raise FileNotFoundError(f"Dataset path not found: {load_path}")
