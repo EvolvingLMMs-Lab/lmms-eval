@@ -226,7 +226,7 @@ class Huggingface(lmms):
 
             # Set default generation kwargs
             default_gen_kwargs = {
-                "max_new_tokens": 128,
+                "max_new_tokens": 4096,
                 "temperature": 0.0,  # Set to 0 for greedy default
                 "top_p": None,
                 "num_beams": 1,

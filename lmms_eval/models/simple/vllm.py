@@ -60,7 +60,6 @@ class VLLM(lmms):
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
         # Set up vllm client
-        breakpoint()
         self.client = LLM(
             model=self.model,
             tensor_parallel_size=tensor_parallel_size,

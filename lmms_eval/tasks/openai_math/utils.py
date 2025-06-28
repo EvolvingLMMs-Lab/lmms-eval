@@ -316,10 +316,12 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
             print("Marked incorrect\na " + metrics["extracted_answers"][-1] + "\ndoc['answer'] " + gt)
         if i == 1:
             metrics["exact_match"] = a
+            if "exact_matches" in metrics:
+                metrics["exact_matches"].append(a)
         elif i > 1:
-            metrics["exact_match"] = int(a)
+            metrics["exact_matches"].append(a)
             if i in n_res_list:
-                metrics[f"cov@{i}"] = int(1 in metrics["exact_match"])
+                metrics[f"cov@{i}"] = int(1 in metrics["exact_matches"])
                 metrics[f"maj@{i}"] = int(gt == Counter(metrics["extracted_answers"]).most_common(1)[0][0])
 
     return metrics
