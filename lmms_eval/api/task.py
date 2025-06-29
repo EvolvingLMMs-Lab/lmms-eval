@@ -1640,6 +1640,9 @@ class ConfigurableTask(Task):
 
 
 class ConfigurableMessagesTask(ConfigurableTask):
+    def __init__(self, data_dir=None, cache_dir=None, download_mode=None, config=None, model_name=None):
+        super().__init__(data_dir, cache_dir, download_mode, config, model_name)
+
     def doc_to_messages(self, doc: dict) -> Union[int, str, list]:
         if callable(self.config.doc_to_messages):
             return (
@@ -1681,3 +1684,6 @@ class ConfigurableMessagesTask(ConfigurableTask):
 
         arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
+
+    def __repr__(self):
+        return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"num_samples={len(self.eval_docs)})"

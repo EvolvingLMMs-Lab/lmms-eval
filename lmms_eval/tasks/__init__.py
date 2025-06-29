@@ -306,6 +306,7 @@ class TaskManager:
                         fn = partial(
                             self._load_individual_task_or_group,
                             update_config=name_or_config if isinstance(name_or_config, dict) else None,
+                            task_type=task_type,
                         )
                         return dict(collections.ChainMap(*map(fn, reversed(subtask_list))))
                     else:
