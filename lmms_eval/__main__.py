@@ -272,7 +272,7 @@ def parse_eval_args() -> argparse.Namespace:
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     default_args = parse_eval_args()
-    
+
     if args is None and len(sys.argv) == 1:
         print("┌───────────────────────────────────────────────────────────────────────────────┐")
         print("│ Please provide arguments to evaluate the model. e.g.                          │")
@@ -285,7 +285,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     if args:
         for key, value in vars(args).items():
             setattr(default_args, key, value)
-    
+
     args = default_args
 
     if args.wandb_args:
