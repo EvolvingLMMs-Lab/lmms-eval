@@ -210,7 +210,7 @@ def worldq_gen_gpt_eval(results, args):
         eval_score = eval_answer.split("\n")[-1].strip()
         try:
             eval_score = float(eval_score)
-        except:
+        except (ValueError, TypeError, AttributeError):
             eval_score = 0.0
         score += eval_score
 

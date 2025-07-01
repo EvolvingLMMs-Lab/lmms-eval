@@ -580,7 +580,7 @@ def get_git_commit_hash():
     try:
         git_hash = subprocess.check_output(["git", "describe", "--always"]).strip()
         git_hash = git_hash.decode()
-    except subprocess.CalledProcessError or FileNotFoundError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         # FileNotFoundError occurs when git not installed on system
         git_hash = None
     return git_hash
@@ -594,7 +594,6 @@ def get_datetime_str(timezone="Asia/Singapore"):
     tz = pytz.timezone(timezone)
     utc_now = datetime.datetime.now(datetime.timezone.utc)
     local_time = utc_now.astimezone(tz)
-    return local_time.strftime("%Y%m%d_%H%M%S")
     return local_time.strftime("%Y%m%d_%H%M%S")
 
 
