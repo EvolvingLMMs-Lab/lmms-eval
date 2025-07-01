@@ -80,7 +80,7 @@ class VLLM(VLLMSimple):
             e2e_latency = end_time - start_time
             total_tokens = 0
 
-            for idx, output in enumerate(response):
+            for output_idx, output in enumerate(response):
                 if hasattr(output, "metrics") and hasattr(output.metrics, "time_to_first_token"):
                     ttft = output.metrics.time_to_first_token
                 else:
@@ -97,7 +97,7 @@ class VLLM(VLLMSimple):
                     tpot = e2e_latency / len(response)
                     inference_speed = 0
 
-                eval_logger.info(f"Batch {idx} - E2E: {e2e_latency/len(response):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
+                eval_logger.info(f"Output {output_idx} - E2E: {e2e_latency/len(response):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
 
             if len(response) > 1:
                 avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0

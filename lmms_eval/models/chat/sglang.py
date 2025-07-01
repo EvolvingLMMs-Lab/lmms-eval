@@ -172,7 +172,7 @@ class Sglang(lmms):
             e2e_latency = end_time - start_time
             total_tokens = 0
 
-            for idx, output in enumerate(outputs):
+            for output_idx, output in enumerate(outputs):
                 # Get token count from output
                 if "meta_info" in output and "completion_tokens" in output["meta_info"]:
                     output_tokens = output["meta_info"]["completion_tokens"]
@@ -195,7 +195,7 @@ class Sglang(lmms):
                     tpot = e2e_latency / len(outputs)
                     inference_speed = 0
 
-                eval_logger.info(f"Batch {idx} - E2E: {e2e_latency/len(outputs):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
+                eval_logger.info(f"Output {output_idx} - E2E: {e2e_latency/len(outputs):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
 
             if len(outputs) > 1:
                 avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
