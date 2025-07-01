@@ -1,0 +1,14 @@
+# Testing dependencies for lmms-eval
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.0.0
+pytest-xdist>=3.0.0  # For parallel test execution
+black>=24.1.0
+isort>=5.13.2
+loguru
+coverage>=6.0.0
+
+# Optional dependencies for specific test scenarios
+torch>=2.0.0  # For model testing
+transformers>=4.20.0  # For model testing
+openai>=1.0.0  # For API testing
