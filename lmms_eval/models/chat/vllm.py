@@ -65,13 +65,43 @@ class VLLM(VLLMSimple):
 
             sampling_params = SamplingParams(**params)
 
+            start_time = time.time()
             if self.chat_template is not None:
                 with open(self.chat_template, "r") as f:
                     chat_template = f.read()
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
             else:
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
+            end_time = time.time()
+
             response_text = [o.outputs[0].text for o in response]
+
+            # Calculate timing metrics for batch
+            e2e_latency = end_time - start_time
+            total_tokens = 0
+
+            for idx, output in enumerate(response):
+                if hasattr(output, "metrics") and hasattr(output.metrics, "time_to_first_token"):
+                    ttft = output.metrics.time_to_first_token
+                else:
+                    # Estimate TTFT as a fraction of total time
+                    ttft = e2e_latency * 0.1 / len(response)
+
+                output_tokens = len(output.outputs[0].token_ids) if hasattr(output.outputs[0], "token_ids") else len(output.outputs[0].text.split())
+                total_tokens += output_tokens
+
+                if output_tokens > 1:
+                    tpot = (e2e_latency / len(response) - ttft) / (output_tokens - 1)
+                    inference_speed = 1 / tpot if tpot > 0 else 0
+                else:
+                    tpot = e2e_latency / len(response)
+                    inference_speed = 0
+
+                eval_logger.info(f"Batch {idx} - E2E: {e2e_latency/len(response):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
+
+            if len(response) > 1:
+                avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+                eval_logger.info(f"Batch summary - Total time: {e2e_latency:.3f}s, Total tokens: {total_tokens}, Avg speed: {avg_speed:.1f} tokens/s")
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)

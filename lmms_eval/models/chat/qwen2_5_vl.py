@@ -1,3 +1,4 @@
+import time
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -88,6 +89,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 current_gen_kwargs["temperature"] = None
                 current_gen_kwargs["top_p"] = None
 
+            start_time = time.time()
             cont = self.model.generate(
                 **inputs,
                 eos_token_id=self.tokenizer.eos_token_id,
@@ -99,9 +101,31 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 max_new_tokens=current_gen_kwargs["max_new_tokens"],
                 use_cache=self.use_cache,
             )
+            end_time = time.time()
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+
+            # Calculate timing metrics for batch
+            e2e_latency = end_time - start_time
+            total_tokens = sum(len(ids) for ids in generated_ids_trimmed)
+
+            # Log batch-level metrics
+            if len(generated_ids_trimmed) > 0:
+                avg_tokens_per_response = total_tokens / len(generated_ids_trimmed)
+                avg_latency_per_response = e2e_latency / len(generated_ids_trimmed)
+
+                # Estimate TTFT as 10% of total time for batch processing
+                ttft_estimate = avg_latency_per_response * 0.1
+
+                if avg_tokens_per_response > 1:
+                    tpot = (avg_latency_per_response - ttft_estimate) / (avg_tokens_per_response - 1)
+                    inference_speed = 1 / tpot if tpot > 0 else 0
+                else:
+                    tpot = avg_latency_per_response
+                    inference_speed = 0
+
+                eval_logger.info(f"Batch inference metrics - Size: {len(generated_ids_trimmed)}, Total time: {e2e_latency:.3f}s, Avg TPOT: {tpot:.3f}s, Avg speed: {inference_speed:.1f} tokens/s, Total tokens: {total_tokens}")
 
             for ans, context in zip(answers, texts):
                 clean_ans = parse_reasoning_model_answer(ans)

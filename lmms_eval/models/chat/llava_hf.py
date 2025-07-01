@@ -1,3 +1,4 @@
+import time
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -94,6 +95,7 @@ class LlavaHf(LlavaHfSimple):
                 gen_kwargs["num_beams"] = 1
             do_sample = True if gen_kwargs["temperature"] > 0 else False
             try:
+                start_time = time.time()
                 cont = self.model.generate(
                     **inputs,
                     do_sample=do_sample,
@@ -105,11 +107,33 @@ class LlavaHf(LlavaHfSimple):
                     pad_token_id=self.eot_token_id,
                     eos_token_id=self.eot_token_id,
                 )
+                end_time = time.time()
                 cont = cont[:, inputs["input_ids"].shape[-1] :]
+
+                # Calculate timing metrics
+                e2e_latency = end_time - start_time
+                output_tokens = cont.shape[-1] if len(cont.shape) > 1 else len(cont)
+
+                # Estimate TTFT as 10% of total time
+                ttft = e2e_latency * 0.1
+
+                if output_tokens > 1:
+                    tpot = (e2e_latency - ttft) / (output_tokens - 1)
+                    inference_speed = 1 / tpot if tpot > 0 else 0
+                else:
+                    tpot = e2e_latency
+                    inference_speed = 0
+
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
-            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0]
+                e2e_latency = ttft = tpot = inference_speed = output_tokens = 0
+
+            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0] if cont != "" else ""
+
+            # Log timing metrics if generation was successful
+            if cont != "":
+                eval_logger.info(f"Inference metrics - E2E: {e2e_latency:.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
 

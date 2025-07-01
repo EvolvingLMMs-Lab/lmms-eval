@@ -1,4 +1,5 @@
 import json
+import time
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -26,7 +27,7 @@ class Sglang(lmms):
 
     def __init__(
         self,
-        model_version: str = "Qwen/Qwen2.5-VL-3B-Instruct",
+        model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
         tensor_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
@@ -40,7 +41,7 @@ class Sglang(lmms):
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
-        self.model_version = model_version
+        self.model = model
         self.max_frame_num = max_frame_num
         self.threads = threads
         self.chat_template = chat_template
@@ -53,9 +54,9 @@ class Sglang(lmms):
                 except json.JSONDecodeError:
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
-        # Set up vllm client
-        self.client = Engine(model_path=model_version, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, **kwargs)
-        self.processor = AutoProcessor.from_pretrained(model_version)
+        # Set up sglang client
+        self.client = Engine(model_path=model, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, **kwargs)
+        self.processor = AutoProcessor.from_pretrained(model)
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -160,9 +161,45 @@ class Sglang(lmms):
                 tokenize=False,
                 add_generation_prompt=True,
             )
+
+            start_time = time.time()
             outputs = self.client.generate(texts, params, image_data=image_data)
+            end_time = time.time()
 
             response_text = [o["text"] for o in outputs]
+
+            # Calculate timing metrics for batch
+            e2e_latency = end_time - start_time
+            total_tokens = 0
+
+            for idx, output in enumerate(outputs):
+                # Get token count from output
+                if "meta_info" in output and "completion_tokens" in output["meta_info"]:
+                    output_tokens = output["meta_info"]["completion_tokens"]
+                else:
+                    output_tokens = len(output["text"].split())
+
+                total_tokens += output_tokens
+
+                # Get TTFT if available
+                if "meta_info" in output and "ttft" in output["meta_info"]:
+                    ttft = output["meta_info"]["ttft"]
+                else:
+                    # Estimate TTFT as a fraction of total time
+                    ttft = e2e_latency * 0.1 / len(outputs)
+
+                if output_tokens > 1:
+                    tpot = (e2e_latency / len(outputs) - ttft) / (output_tokens - 1)
+                    inference_speed = 1 / tpot if tpot > 0 else 0
+                else:
+                    tpot = e2e_latency / len(outputs)
+                    inference_speed = 0
+
+                eval_logger.info(f"Batch {idx} - E2E: {e2e_latency/len(outputs):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
+
+            if len(outputs) > 1:
+                avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+                eval_logger.info(f"Batch summary - Total time: {e2e_latency:.3f}s, Total tokens: {total_tokens}, Avg speed: {avg_speed:.1f} tokens/s")
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)

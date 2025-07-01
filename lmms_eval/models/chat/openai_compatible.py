@@ -81,8 +81,37 @@ class OpenAICompatible(OpenAICompatibleSimple):
 
             for attempt in range(self.max_retries):
                 try:
+                    start_time = time.time()
                     response = self.client.chat.completions.create(**payload)
+                    end_time = time.time()
+
                     response_text = response.choices[0].message.content
+
+                    # Calculate timing metrics
+                    e2e_latency = end_time - start_time
+
+                    # Get token counts from response if available
+                    if hasattr(response, "usage"):
+                        completion_tokens = response.usage.completion_tokens
+                        prompt_tokens = response.usage.prompt_tokens
+                    else:
+                        # Approximate token count if not provided
+                        completion_tokens = len(response_text.split())
+                        prompt_tokens = len(str(payload["messages"]).split())
+
+                    # Calculate TPOT and inference speed
+                    if completion_tokens > 1:
+                        # Assuming TTFT is negligible for API calls, estimate it as a small fraction
+                        ttft = e2e_latency * 0.1  # Rough estimate
+                        tpot = (e2e_latency - ttft) / (completion_tokens - 1)
+                        inference_speed = 1 / tpot if tpot > 0 else 0
+                    else:
+                        tpot = e2e_latency
+                        inference_speed = 0
+
+                    # Log throughput metrics
+                    eval_logger.info(f"Inference metrics - E2E: {e2e_latency:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {completion_tokens}")
+
                     break  # If successful, break out of the loop
 
                 except Exception as e:
