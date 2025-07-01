@@ -271,17 +271,22 @@ def parse_eval_args() -> argparse.Namespace:
 
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
-    if not args:
-        args = parse_eval_args()
-
-    # Check if no arguments were passed after parsing
-    if len(sys.argv) == 1:
+    default_args = parse_eval_args()
+    
+    if args is None and len(sys.argv) == 1:
         print("┌───────────────────────────────────────────────────────────────────────────────┐")
         print("│ Please provide arguments to evaluate the model. e.g.                          │")
         print("│ `lmms-eval --model llava --model_path liuhaotian/llava-v1.6-7b --tasks okvqa` │")
         print("│ Use `lmms-eval --help` for more information.                                  │")
         print("└───────────────────────────────────────────────────────────────────────────────┘")
         sys.exit(1)
+
+    # If args were provided, override the defaults
+    if args:
+        for key, value in vars(args).items():
+            setattr(default_args, key, value)
+    
+    args = default_args
 
     if args.wandb_args:
         if "name" not in args.wandb_args:
