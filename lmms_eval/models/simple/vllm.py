@@ -60,6 +60,7 @@ class VLLM(lmms):
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
         # Set up vllm client
+        os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
         self.client = LLM(
             model=self.model,
             tensor_parallel_size=tensor_parallel_size,
