@@ -75,7 +75,7 @@ def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     # If you use doc to messages, the interleaved format is always used
     config["metadata"]["interleaved_format"] = True
-    question = mmmu_doc_to_text(doc)
+    question = mmmu_doc_to_text(doc, lmms_eval_specific_kwargs)
     visuals = mmmu_doc_to_visual(doc)
     messages = [{"role": "user", "content": []}]
     interleaved_content = question.split("<image>")

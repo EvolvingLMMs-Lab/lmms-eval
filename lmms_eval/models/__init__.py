@@ -78,7 +78,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "vora": "VoRA",
 }
 
-AVAILABLE_CHAT_TEMPLATE_MODELS = {"llava_hf": "LlavaHf", "qwen2_5_vl": "Qwen2_5_VL", "openai_compatible": "OpenAICompatible", "vllm": "VLLM", "sglang": "Sglang", "huggingface": "Huggingface"}
+AVAILABLE_CHAT_TEMPLATE_MODELS = {"llava_hf": "LlavaHf", "qwen2_5_vl": "Qwen2_5_VL", "openai_compatible": "OpenAICompatible", "vllm": "VLLM", "sglang": "Sglang", "huggingface": "Huggingface", "async_openai": "AsyncOpenAIChat"}
 
 
 def get_model(model_name, force_simple: bool = False):
