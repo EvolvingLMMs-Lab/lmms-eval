@@ -48,3 +48,4 @@ scripts/
 outputs/
 span.log
 uv.lock
+workspace/*
