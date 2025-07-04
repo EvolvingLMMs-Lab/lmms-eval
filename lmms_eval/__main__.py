@@ -96,6 +96,11 @@ def parse_eval_args() -> argparse.Namespace:
         help="String arguments for model, e.g. `pretrained=EleutherAI/pythia-160m,dtype=float32`",
     )
     parser.add_argument(
+        "--launcher_args",
+        default=None,
+        help="String arguments for launcher for local llm as judge, e.g. `tp=8`, if None then no launcher will be used.",
+    )
+    parser.add_argument(
         "--num_fewshot",
         type=int,
         default=None,
@@ -266,6 +271,7 @@ def parse_eval_args() -> argparse.Namespace:
         help="Sets trust_remote_code to True to execute code to create HF Datasets from the Hub",
     )
     parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
+    parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
     args = parser.parse_args()
     return args
 
@@ -297,10 +303,11 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
     # reset logger
     eval_logger.remove()
-    eval_logger.add(sys.stdout, colorize=True, level=args.verbosity)
+    # Configure logger with detailed format including file path, function name, and line number
+    log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
+    eval_logger.add(sys.stdout, colorize=True, level=args.verbosity, format=log_format)
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["VERBOSITY"] = args.verbosity
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     args_list = []
     results_list = []
@@ -433,23 +440,6 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     elif args.tasks == "list_subtasks":
         eval_logger.info(task_manager.list_all_tasks(list_groups=False, list_tags=False))
         sys.exit()
-    elif args.tasks == "list_with_num":
-        log_message = (
-            "\n" + "=" * 70 + "\n" + "\n\tYou are trying to check all the numbers in each task." + "\n\tThis action will download the complete dataset." + "\n\tIf the results are not clear initially, call this again." + "\n\n" + "=" * 70
-        )
-        eval_logger.info(log_message)
-        for task_name in sorted(task_manager.list_all_tasks()):
-            try:
-                task_dict = get_task_dict([task_name], model_name="llava")
-                task_obj = task_dict[task_name]
-                if type(task_obj) == tuple:
-                    group, task_obj = task_obj
-                    if task_obj is None:
-                        continue
-                eval_logger.info(f"\nTask : {task_obj.config.task}\n - #num : {len(task_obj.test_docs()) if task_obj.has_test_docs() else len(task_obj.validation_docs())}")
-            except Exception as e:
-                eval_logger.debug(f"\nTask : {task_name} fail to load \n Exception : \n {e}")
-        sys.exit()
     else:
         if os.path.isdir(args.tasks):
             import glob
@@ -509,6 +499,8 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         cli_args=args,
         datetime_str=datetime_str,
         distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
+        force_simple=args.force_simple,
+        launcher_args=args.launcher_args,
         **request_caching_args,
     )
 

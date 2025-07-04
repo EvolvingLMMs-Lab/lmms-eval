@@ -1,4 +1,5 @@
 import math
+import os
 import os.path as osp
 import random as rd
 import string
@@ -18,6 +19,7 @@ class MMBench_Evaluator:
         self.model_version = model_version
         self.API_KEY = API_KEY
         self.API_URL = API_URL
+        self.API_TYPE = os.getenv("API_TYPE", "openai")
 
     def create_options_prompt(self, row_data, option_candidate):
         available_keys = set(row_data.keys()) & set(option_candidate)
@@ -129,10 +131,16 @@ class MMBench_Evaluator:
         return self.can_infer(item["prediction"], choices)
 
     def _post_request(self, payload):
-        headers = {
-            "Authorization": f"Bearer {self.API_KEY}",
-            "Content-Type": "application/json",
-        }
+        if self.API_TYPE == "azure":
+            headers = {
+                "api-key": self.API_KEY,
+                "Content-Type": "application/json",
+            }
+        else:
+            headers = {
+                "Authorization": f"Bearer {self.API_KEY}",
+                "Content-Type": "application/json",
+            }
         response = requests.post(self.API_URL, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         return response.json()

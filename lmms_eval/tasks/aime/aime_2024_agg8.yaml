@@ -1,0 +1,52 @@
+tag:
+  - math_word_problems
+task: aime_2024_agg8
+dataset_path: Maxwell-Jia/AIME_2024
+dataset_name: default
+process_docs: !function utils.process_docs_aime_2024
+output_type: generate_until
+test_split: train
+doc_to_text: !function utils.doc_to_text_aime_2024
+doc_to_target: answer
+process_results: !function utils.process_results
+generation_kwargs:
+  until: []
+  do_sample: false
+  temperature: 0
+  max_new_tokens: 4096 # https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
+repeats: 8
+filter_list:
+  - name: "all" # Will do coverage, majority, and take_first_k
+    filter:
+      - function: "take_first_k"
+        k: 8
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@8
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@4
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@2
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@8
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@4
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@2
+    aggregation: mean
+    higher_is_better: true
+  - metric: extracted_answers
+    aggregation: bypass
+    higher_is_better: true
+  - metric: exact_matches
+    aggregation: bypass
+    higher_is_better: true
+metadata:
+  version: 1.0
