@@ -53,7 +53,7 @@ class VLLM(lmms):
         self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
         # Qwen 2/2.5-VL models enforce minimum image dimensions
-        self._enforce_image_resize = all(k in model_version.lower() for k in ["qwen", "vl"])
+        self._enforce_image_resize = self._is_qwen_vl_model(model_version)
 
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
@@ -88,6 +88,10 @@ class VLLM(lmms):
 
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
+
+    def _is_qwen_vl_model(self, model_version: str) -> bool:
+        qwen_vl_patterns = ["qwen2-vl", "qwen2.5-vl"]
+        return any(pattern in model_version.lower() for pattern in qwen_vl_patterns)
 
     def _maybe_resize_image(self, img: Image.Image) -> Image.Image:
         if not self._enforce_image_resize or min(img.size) >= self.min_image_pixels:
