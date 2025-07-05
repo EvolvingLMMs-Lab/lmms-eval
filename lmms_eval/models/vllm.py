@@ -40,6 +40,7 @@ class VLLM(lmms):
         threads: int = 16,  # Threads to use for decoding visuals
         trust_remote_code: Optional[bool] = True,
         chat_template: Optional[str] = None,
+        min_image_pixels: int = 28,  # minimum image dimension, required for Qwen 2/2.5-VL models
         **kwargs,
     ) -> None:
         super().__init__()
@@ -50,6 +51,9 @@ class VLLM(lmms):
         self.max_frame_num = max_frame_num
         self.threads = threads
         self.chat_template = chat_template
+        self.min_image_pixels = min_image_pixels
+        # Qwen 2/2.5-VL models enforce minimum image dimensions
+        self._enforce_image_resize = all(k in model_version.lower() for k in ["qwen", "vl"])
 
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
@@ -85,6 +89,14 @@ class VLLM(lmms):
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
 
+    def _maybe_resize_image(self, img: Image.Image) -> Image.Image:
+        if not self._enforce_image_resize or min(img.size) >= self.min_image_pixels:
+            return img
+
+        scale = self.min_image_pixels / min(img.size)  # maintain original aspect ratio
+        new_size = tuple(int(dim * scale) for dim in img.size)
+        return img.resize(new_size, Image.BICUBIC)
+
     # Function to encode the image
     def encode_image(self, image: Union[Image.Image, str]):
         if isinstance(image, str):
@@ -92,6 +104,7 @@ class VLLM(lmms):
         else:
             img = image.copy()
 
+        img = self._maybe_resize_image(img)
         output_buffer = BytesIO()
         img.save(output_buffer, format="PNG")
         byte_data = output_buffer.getvalue()
@@ -115,6 +128,7 @@ class VLLM(lmms):
         base64_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
+            img = self._maybe_resize_image(img)
             output_buffer = BytesIO()
             img.save(output_buffer, format="PNG")
             byte_data = output_buffer.getvalue()
