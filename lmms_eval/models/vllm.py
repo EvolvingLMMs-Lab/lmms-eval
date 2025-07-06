@@ -94,6 +94,12 @@ class VLLM(lmms):
         return any(pattern in model_version.lower() for pattern in qwen_vl_patterns)
 
     def _maybe_resize_image(self, img: Image.Image) -> Image.Image:
+        # edge‐case validation
+        if self.min_image_pixels <= 0:
+            return img
+        if min(img.size) <= 0:
+            raise ValueError(f"Invalid image dimensions: {img.size}")
+
         if not self._enforce_image_resize or min(img.size) >= self.min_image_pixels:
             return img
 
