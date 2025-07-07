@@ -38,6 +38,7 @@ class OpenAICompatible(lmms):
         continual_mode: bool = False,
         response_persistent_folder: str = None,
         azure_openai: bool = False,
+        max_frames_num: int = 10,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -46,6 +47,7 @@ class OpenAICompatible(lmms):
         self.max_retries = max_retries
         self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         self.continual_mode = continual_mode
+        self.max_frames_num = max_frames_num
         if self.continual_mode:
             if response_persistent_folder is None:
                 raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
