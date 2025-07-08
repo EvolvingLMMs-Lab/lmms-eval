@@ -260,6 +260,11 @@ def simple_evaluate(
             fewshot_as_multiturn=fewshot_as_multiturn,
         )
 
+    # Getting the rank settings
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    global_rank = int(os.environ.get("RANK", 0))
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
+
     results = evaluate(
         lm=lm,
         task_dict=task_dict,
@@ -278,7 +283,7 @@ def simple_evaluate(
         eval_server_launcher=eval_launcher,
     )
 
-    if lm.rank == 0:
+    if global_rank == 0:
         if isinstance(model, str):
             model_name = model
         elif hasattr(model, "config") and hasattr(model.config, "_name_or_path"):
@@ -390,6 +395,11 @@ def evaluate(
     task_group_alias = collections.defaultdict(dict)
     # store num-fewshot value per task
     num_fewshot = collections.defaultdict(int)
+    # Getting the rank settings
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    global_rank = int(os.environ.get("RANK", 0))
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
+    eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
     # get lists of group hierarchy and each type of request
     eval_tasks = get_task_list(task_dict)
@@ -437,8 +447,8 @@ def evaluate(
         limit = get_sample_size(task, limit)
         task.build_all_requests(
             limit=limit,
-            rank=lm.rank,
-            world_size=lm.world_size,
+            rank=global_rank,
+            world_size=world_size,
             cache_requests=cache_requests,  # later we will add them
             rewrite_requests_cache=rewrite_requests_cache,
             system_instruction=system_instruction,
@@ -455,13 +465,13 @@ def evaluate(
             reqtype = instance.request_type
             requests[reqtype].append(instance)
 
-        if lm.world_size > 1:
+        if world_size > 1:
             if distributed_executor_backend == "accelerate":
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
                 gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
             elif distributed_executor_backend == "torchrun":
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-                gathered_item = torch.zeros(lm.world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
+                gathered_item = torch.zeros(world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
                 dist.all_gather_into_tensor(gathered_item, instances_rnk)
                 gathered_item = gathered_item.cpu().detach().numpy().tolist()
             else:
@@ -483,7 +493,7 @@ def evaluate(
         for req in reqs:
             cloned_reqs.extend([req] * req.repeats)
 
-        if (lm.world_size > 1) and (padding_requests[reqtype] > 0):
+        if (world_size > 1) and (padding_requests[reqtype] > 0):
             for _ in range(padding_requests[reqtype]):
                 cloned_reqs.extend([req] * req.repeats)
 
@@ -494,7 +504,7 @@ def evaluate(
         for x, req in zip(resps, cloned_reqs):
             req.resps.append(x)
 
-        if lm.world_size > 1:
+        if world_size > 1:
             if distributed_executor_backend == "accelerate":
                 lm.accelerator.wait_for_everyone()
             elif distributed_executor_backend == "torchrun":
@@ -504,12 +514,12 @@ def evaluate(
 
     # Cleaning lm's cuda memory if you are launching llm as judge in local
     lm.clean()
-    RANK = lm.rank
-    WORLD_SIZE = lm.world_size
+    RANK = global_rank
+    WORLD_SIZE = world_size
     if eval_server_launcher is not None and RANK == 0:
         eval_server_launcher.launch()
 
-    if lm.world_size > 1:
+    if world_size > 1:
         if distributed_executor_backend == "accelerate":
             lm.accelerator.wait_for_everyone()
         elif distributed_executor_backend == "torchrun":
