@@ -1,21 +1,17 @@
 import ast
-from decord import VideoReader, cpu
-import numpy as np
-import os
-import sys
 import datetime
 import json
-
-import yaml
-
-import requests
-import openai
-from openai import OpenAI
+import os
+import sys
 import time
-import ast
 
+import numpy as np
+import openai
+import requests
+import yaml
+from decord import VideoReader, cpu
 from loguru import logger as eval_logger
-
+from openai import OpenAI
 
 NUM_SECONDS_TO_SLEEP = 1
 
@@ -26,16 +22,19 @@ API_TYPE = os.getenv("API_TYPE", "openai")
 NEXSTONE_HTTP_CHAT_URL = "https://maas.byteintl.net/service/api/v1/chat/completions"
 
 import ipaddress
+
+
 def ip_port_to_url(ip, port):
     addr = ipaddress.ip_address(ip)
     if isinstance(addr, ipaddress.IPv4Address):
-        url = f'http://{ip}:{port}'
+        url = f"http://{ip}:{port}"
     else:
-        url = f'http://[{ip}]:{port}'
+        url = f"http://[{ip}]:{port}"
     return url
 
+
 if API_TYPE == "openai":
-    if 'qwen' in GPT_EVAL_MODEL_NAME.lower():
+    if "qwen" in GPT_EVAL_MODEL_NAME.lower():
         GPT_EVAL_MODEL_NAME = GPT_EVAL_MODEL_NAME.replace("Qwen/", "")
         API_URL = NEXSTONE_HTTP_CHAT_URL
     else:
@@ -48,25 +47,26 @@ if API_TYPE == "openai":
     }
 
 
-
 def get_eval(question, answer, pred, max_tokens: int, retries: int = 1):
     global headers
 
-    default_prompt = ("You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
-    "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
-    "------"
-    "##INSTRUCTIONS: "
-    "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
-    "- Consider synonyms or paraphrases as valid matches.\n"
-    "- Evaluate the correctness of the prediction compared to the answer."
-    f"Please evaluate the following video-based question-answer pair:\n\n"
-    f"Question: {question}\n"
-    f"Correct Answer: {answer}\n"
-    f"Predicted Answer: {pred}\n\n"
-    "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
-    "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
-    "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
-    "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}.")
+    default_prompt = (
+        "You are an intelligent chatbot designed for evaluating the correctness of generative outputs for question-answer pairs. "
+        "Your task is to compare the predicted answer with the correct answer and determine if they match meaningfully. Here's how you can accomplish the task:"
+        "------"
+        "##INSTRUCTIONS: "
+        "- Focus on the meaningful match between the predicted answer and the correct answer.\n"
+        "- Consider synonyms or paraphrases as valid matches.\n"
+        "- Evaluate the correctness of the prediction compared to the answer."
+        f"Please evaluate the following video-based question-answer pair:\n\n"
+        f"Question: {question}\n"
+        f"Correct Answer: {answer}\n"
+        f"Predicted Answer: {pred}\n\n"
+        "Provide your evaluation only as a yes/no and score where the score is an integer value between 0 and 5, with 5 indicating the highest meaningful match. "
+        "Please generate the response in the form of a Python dictionary string with keys 'pred' and 'score', where value of 'pred' is  a string of 'yes' or 'no' and value of 'score' is in INTEGER, not STRING."
+        "DO NOT PROVIDE ANY OTHER OUTPUT TEXT OR EXPLANATION. Only provide the Python dictionary string. "
+        "For example, your response should look like this: {'pred': 'yes', 'score': 4.8}."
+    )
 
     if os.getenv("GPT_EVAL_PROMPT"):
         default_prompt = os.getenv("GPT_EVAL_PROMPT")
@@ -158,7 +158,7 @@ def gpt_score_proccess(doc, result):
     scores = ["no", 0]
     # data_dict = {"video_id": doc["video_id"], "capability": capability, "pred_answer": pred_ans, "answer": doc["answer"]}
 
-    data_dict = {"video_id": doc["video_id"], "capability": doc["capability"], "scores": scores, "correctness": scores[1] ,"answer": answer}
+    data_dict = {"video_id": doc["video_id"], "capability": doc["capability"], "scores": scores, "correctness": scores[1], "answer": answer}
 
     return {f"videott_open_ended_score": data_dict}
 
@@ -258,7 +258,7 @@ def accuracy_process_results(doc, results):
         pred = pred[0]
 
     # return {f"videomme_percetion_score": data_dict for metric in matrices}
-    return {f"accuracy": pred == doc["answer"] }
+    return {f"accuracy": pred == doc["answer"]}
 
 
 def doc_to_text_with_options(doc, lmms_eval_specific_kwargs=None):

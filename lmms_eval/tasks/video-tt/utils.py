@@ -14,28 +14,26 @@ from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-
-
-
-CATEGORIES = ['Objective Causality', 
-              'Objective Causality (Videography Phenomenon & Illusion)', 
-              'Element Attributes (Optical Illusion)', 
-              'Displacement Attribute', 
-              'Plot Attribute (Montage)', 
-              'Plot Attribute', 
-              'Element Attributes', 
-              'Element Counting', 
-              'Professional Knowledge', 
-              'Character Motivation Causality', 
-              'Element Localization', 
-              'Character Reaction Causality', 
-              'Event Counting', 
-              'Local Event Attribute', 
-              'Event Localization', 
-              'Positional Relationship', 
-              'Event Duration & Speed Attribute', 
-              'Character Emotion Attribute'
-              ]
+CATEGORIES = [
+    "Objective Causality",
+    "Objective Causality (Videography Phenomenon & Illusion)",
+    "Element Attributes (Optical Illusion)",
+    "Displacement Attribute",
+    "Plot Attribute (Montage)",
+    "Plot Attribute",
+    "Element Attributes",
+    "Element Counting",
+    "Professional Knowledge",
+    "Character Motivation Causality",
+    "Element Localization",
+    "Character Reaction Causality",
+    "Event Counting",
+    "Local Event Attribute",
+    "Event Localization",
+    "Positional Relationship",
+    "Event Duration & Speed Attribute",
+    "Character Emotion Attribute",
+]
 
 
 # with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -62,12 +60,8 @@ with open(Path(__file__).parent / "_default_template.yaml", "r") as f:
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
 
-
-
 def convert_time_to_frame(time_in_seconds, fps):
     return int(time_in_seconds * fps)
-
-
 
 
 def videott_doc_to_visual(doc):
@@ -85,6 +79,7 @@ def videott_doc_to_visual(doc):
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
+
 def videott_doc_to_visual_tos(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
     # import pdb;pdb.set_trace()
@@ -101,12 +96,14 @@ def videott_doc_to_visual_tos(doc):
     return [video_path]
 
 
-
-
 def videott_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    question = doc["question"] +'\n'+ doc["question_prompt"]
+    question = doc["question"] + "\n" + doc["question_prompt"]
     post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
-    pre_promt = lmms_eval_specific_kwargs["pre_prompt"] if "pre_prompt" in lmms_eval_specific_kwargs else "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, or D) of the correct option."
+    pre_promt = (
+        lmms_eval_specific_kwargs["pre_prompt"]
+        if "pre_prompt" in lmms_eval_specific_kwargs
+        else "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, or D) of the correct option."
+    )
     full_prompt = pre_promt + "\n" + question + "\n" + post_prompt
     return full_prompt
 
@@ -119,11 +116,16 @@ def videott_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
             subtitle = f.read()
     except:
         subtitle = ""
-    question = doc["question"] +'\n'+ doc["question_prompt"]
+    question = doc["question"] + "\n" + doc["question_prompt"]
     post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
-    pre_promt = lmms_eval_specific_kwargs["pre_prompt"] if "pre_prompt" in lmms_eval_specific_kwargs else "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, or D) of the correct option."
+    pre_promt = (
+        lmms_eval_specific_kwargs["pre_prompt"]
+        if "pre_prompt" in lmms_eval_specific_kwargs
+        else "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, or D) of the correct option."
+    )
     full_prompt = subtitles_prompt + subtitle + "\n" + pre_promt + "\n" + question + "\n" + post_prompt
     return full_prompt
+
 
 # Frames + Subs
 # This video's subtitles are listed below:
@@ -136,7 +138,6 @@ def videott_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
 # Select the best answer to the following multiple-choice question based on the video. Respond with only the letter (A, B, C, or D) of the correct option.
 # 【question】
 # The best answer is:
-
 
 
 def extract_characters_regex(s):
@@ -188,6 +189,7 @@ def videott_process_results(doc, results):
     # return {f"videott_perception_score": data_dict for metric in matrices}
     return {f"videott_perception_score": data_dict}
 
+
 def videott_process_results_oe(doc, results):
     """
     Args:
@@ -218,7 +220,6 @@ def videott_aggregate_results(results):
     for category in CATEGORIES:
         category2score[category] = {"correct": 0, "answered": 0}
 
-
     for result in results:
         capability = result["capability"]
         category2score[capability]["answered"] += 1
@@ -242,7 +243,6 @@ def videott_aggregate_results(results):
     return 100 * total_correct / total_answered if total_answered > 0 else 0
 
 
-
 def videott_aggregate_oe_results(results):
     """
     Args:
@@ -254,7 +254,6 @@ def videott_aggregate_oe_results(results):
 
     for category in CATEGORIES:
         category2score[category] = {"correct": 0, "answered": 0}
-
 
     for result in results:
         capability = result["capability"]
