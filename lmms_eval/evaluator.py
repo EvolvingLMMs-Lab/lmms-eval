@@ -647,6 +647,9 @@ def evaluate(
                 processed_docs += 1
                 if dashboard:
                     dashboard.update_task_progress(task_output.task_name, processed_docs)
+                    # Add metrics to dashboard if available
+                    if metrics:
+                        dashboard.add_task_metrics(task_output.task_name, metrics)
 
                 pbar.update(1)
 
