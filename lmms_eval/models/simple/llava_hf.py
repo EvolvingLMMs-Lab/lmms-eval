@@ -70,7 +70,7 @@ class LlavaHf(lmms):
         batch_size: int = 1,
         trust_remote_code: Optional[bool] = False,
         attn_implementation: Optional[str] = None,
-        device_map: str = "",
+        device_map: str = "auto",
         chat_template: Optional[str] = None,
         use_cache: bool = True,
         max_frames_num: Optional[int] = 32,
@@ -81,7 +81,7 @@ class LlavaHf(lmms):
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         accelerator = Accelerator()
-        if accelerator.num_processes > 1 and device_map == "":
+        if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
         else:

@@ -7,6 +7,7 @@ import random
 import sys
 import time
 from collections import defaultdict
+from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Union
 
@@ -35,6 +36,7 @@ from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
 from lmms_eval.models import get_model
 from lmms_eval.tasks import TaskManager, get_task_dict
+from lmms_eval.ui import create_dashboard
 from lmms_eval.utils import (
     create_iterator,
     get_datetime_str,
@@ -83,6 +85,7 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
+    enable_ui: bool = True,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -172,6 +175,9 @@ def simple_evaluate(
 
     if model_args is None:
         model_args = ""
+
+    # Store original model_args for dashboard display
+    original_model_args = model_args
 
     if launcher_args is not None:
         launcher_args = simple_parse_args_string(launcher_args)
@@ -281,6 +287,8 @@ def simple_evaluate(
         distributed_executor_backend=distributed_executor_backend,
         cli_args=cli_args,
         eval_server_launcher=eval_launcher,
+        enable_ui=enable_ui,
+        model_args=model_args,
     )
 
     if global_rank == 0:
@@ -344,6 +352,8 @@ def evaluate(
     distributed_executor_backend: str = "accelerate",
     eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
+    enable_ui: bool = True,
+    model_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -401,15 +411,43 @@ def evaluate(
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
+    # Create dashboard (only on main process)
+    dashboard = None
+    if enable_ui and global_rank == 0:
+        dashboard = create_dashboard()
+
     # get lists of group hierarchy and each type of request
     eval_tasks = get_task_list(task_dict)
     name_to_task = {}
+
+    # Initialize dashboard with model info and task list (only on main process)
+    if dashboard and hasattr(dashboard, "live"):
+        # Get model name
+        model_name = getattr(lm, "model_name", type(lm).__name__)
+        # Use the stored original model_args
+        model_args_str = model_args if isinstance(model_args, str) else str(model_args) if model_args else ""
+
+        # Get task names
+        task_names = [task_output.task_name for task_output in eval_tasks if task_output.task is not None]
+
+        # Start dashboard context
+        dashboard.start_evaluation(model_name, model_args_str, task_names)
     if not log_samples:
         if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
 
     if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
         lm.accelerator = Accelerator()
+
+    # Start dashboard live context if available
+    if dashboard and hasattr(dashboard, "live"):
+        dashboard_live = dashboard.live
+        dashboard_live.__enter__()
+    else:
+        dashboard_live = None
+
+    # Store dashboard for cleanup after evaluation completes
+    dashboard_context = dashboard_live
 
     for task_output in eval_tasks:
         task: Task = task_output.task
@@ -458,6 +496,11 @@ def evaluate(
             tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
         )
         eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
+
+        # Start task in dashboard
+        if dashboard and len(task._instances) > 0:
+            dashboard.start_task(task_name, len(task._instances))
+
         if write_out:
             print_writeout(task)
         # aggregate Instances by LM method requested to get output.
@@ -488,6 +531,10 @@ def evaluate(
     # execute each type of request
     for reqtype, reqs in requests.items():
         eval_logger.info("Running {} requests".format(reqtype))
+
+        # Update dashboard with request processing
+        if dashboard:
+            dashboard.update_request_processing(reqtype, 0, len(reqs))
         # create `K` copies of each request `req` based off `K = req.repeats`
         cloned_reqs = []
         for req in reqs:
@@ -549,7 +596,8 @@ def evaluate(
                 doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
             doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), RANK, limit, WORLD_SIZE) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), RANK, limit, WORLD_SIZE)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
-            pbar = tqdm(total=total_docs, desc=f"Postprocessing", disable=(RANK != 0))
+            pbar = tqdm(total=total_docs, desc=f"Postprocessing", disable=(RANK != 0 or dashboard is not None))
+            processed_docs = 0
             for doc_id, doc in doc_iterator:
                 requests = instances_by_doc_id[doc_id]
                 metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
@@ -594,9 +642,19 @@ def evaluate(
                     task_output.logged_samples.append(example)
                 for metric, value in metrics.items():
                     task_output.sample_metrics[(metric, filter_key)].append(value)
+
+                # Update dashboard progress
+                processed_docs += 1
+                if dashboard:
+                    dashboard.update_task_progress(task_output.task_name, processed_docs)
+
                 pbar.update(1)
 
             pbar.close()
+
+            # Mark task as completed in dashboard
+            if dashboard:
+                dashboard.end_task(task_output.task_name)
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
@@ -693,6 +751,7 @@ def evaluate(
             results_dict["samples"] = dict(samples)
     else:
         results_dict = None
+        dashboard_context = None
 
     if WORLD_SIZE > 1:
         # if muti-gpu, wait for all processes to finish
@@ -704,7 +763,12 @@ def evaluate(
         else:
             raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
-    return results_dict
+    # Show final results in dashboard
+    if dashboard and results_dict:
+        dashboard.show_final_results(results_dict)
+
+    # Return results_dict along with dashboard_context for proper cleanup
+    return results_dict, dashboard_context
 
 
 def request_caching_arg_to_dict(cache_requests: str) -> dict:

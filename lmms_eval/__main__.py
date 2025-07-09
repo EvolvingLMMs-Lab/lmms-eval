@@ -272,6 +272,7 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
     parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
+    parser.add_argument("--enable_ui", action="store_true", default=False, help="Enable terminal UI dashboard during evaluation. Set ENABLE_UI=false environment variable to disable.")
     args = parser.parse_args()
     return args
 
@@ -501,6 +502,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
         force_simple=args.force_simple,
         launcher_args=args.launcher_args,
+        enable_ui=args.enable_ui,
         **request_caching_args,
     )
 
