@@ -124,7 +124,7 @@ def parse_score(review):
         return ["no", 0]
 
 
-def gpt_score_proccess(doc, result):
+def gpt_score_process(doc, result):
     """
     Args:
         doc: a instance of the eval dataset

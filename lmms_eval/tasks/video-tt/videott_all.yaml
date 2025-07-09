@@ -13,7 +13,7 @@ generation_kwargs:
   num_beams: 1
   do_sample: false
 # The return value of process_results will be used by metrics
-process_results: !function gpt_utils.gpt_score_proccess
+process_results: !function gpt_utils.gpt_score_process
 # Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
   - metric: videott_open_ended_score
