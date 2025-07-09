@@ -1,6 +1,7 @@
 """
 Unit tests for inference throughput metrics implementation
 """
+
 import time
 import unittest
 from unittest.mock import Mock, patch

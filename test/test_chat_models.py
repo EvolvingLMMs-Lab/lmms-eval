@@ -1,6 +1,7 @@
 """
 Integration tests for chat models with throughput metrics
 """
+
 import time
 import unittest
 from unittest.mock import MagicMock, Mock, patch

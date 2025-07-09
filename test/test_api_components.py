@@ -1,6 +1,7 @@
 """
 Unit tests for core API components
 """
+
 import unittest
 from unittest.mock import Mock, patch
 
