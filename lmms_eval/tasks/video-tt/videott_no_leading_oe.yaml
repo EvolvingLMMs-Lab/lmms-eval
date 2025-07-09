@@ -29,7 +29,7 @@ lmms_eval_specific_kwargs:
   llava_vid:
     pre_prompt: ""
     post_prompt: ""
-  # qwen_vl:  
+  # qwen_vl:
   #   pre_prompt: ""
   #   post_prompt: " Answer:"
   # otterhd:
