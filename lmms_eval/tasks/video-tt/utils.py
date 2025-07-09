@@ -59,6 +59,8 @@ with open(Path(__file__).parent / "_default_template.yaml", "r") as f:
             safe_data.append(line)
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
+AUDIO_PATH = hf_home = os.getenv("AUDIO_PATH", None)
+
 
 def convert_time_to_frame(time_in_seconds, fps):
     return int(time_in_seconds * fps)
@@ -66,7 +68,6 @@ def convert_time_to_frame(time_in_seconds, fps):
 
 def videott_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
-    # import pdb;pdb.set_trace()
     video_path = doc["video_id"] + ".mp4"
     video_path = os.path.join(cache_dir, "Benchmark-AllVideos-LQ", video_path)
     if os.path.exists(video_path):
@@ -77,22 +78,6 @@ def videott_doc_to_visual(doc):
         video_path = video_path.replace("mp4", "mkv")
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
-    return [video_path]
-
-
-def videott_doc_to_visual_tos(doc):
-    cache_dir = os.path.join(base_cache_dir, cache_name)
-    # import pdb;pdb.set_trace()
-    video_path = doc["video_id"] + ".mp4"
-    video_path = os.path.join("https://tosv.byted.org/obj/tiktok-maas-us/robustness-benchmark/", video_path)
-    # if os.path.exists(video_path):
-    #     video_path = video_path
-    # elif os.path.exists(video_path.replace("mp4", "MP4")):
-    #     video_path = video_path.replace("mp4", "MP4")
-    # elif os.path.exists(video_path.replace("mp4", "mkv")):
-    #     video_path = video_path.replace("mp4", "mkv")
-    # else:
-    #     sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
 
@@ -110,7 +95,7 @@ def videott_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def videott_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
     subtitles_prompt = "This video's subtitles are listed below: \n"
-    audio_path = os.path.join("/opt/tiger/audio_human", f'{doc["video_id"]}.txt')
+    audio_path = os.path.join(AUDIO_PATH, f'{doc["video_id"]}.txt')
     try:
         with open(audio_path) as f:
             subtitle = f.read()
@@ -147,8 +132,10 @@ def extract_characters_regex(s):
         "The correct answer is",
         "The answer is",
         "The answer",
-        "The best option is" "The correct option is",
-        "Best answer:" "Best option:",
+        "The best option is",
+        "The correct option is",
+        "Best answer:",
+        "Best option:",
     ]
     for answer_prefix in answer_prefixes:
         s = s.replace(answer_prefix, "")

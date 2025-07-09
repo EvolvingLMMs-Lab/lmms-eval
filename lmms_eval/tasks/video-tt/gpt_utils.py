@@ -19,7 +19,7 @@ GPT_EVAL_MODEL_NAME = os.getenv("GPT_EVAL_MODEL_NAME", "Qwen2.5-72B-Instruct")
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 
-NEXSTONE_HTTP_CHAT_URL = "https://maas.byteintl.net/service/api/v1/chat/completions"
+QWEN_HTTP_CHAT_URL = os.getenv("QWEN_API_URL", None)
 
 import ipaddress
 
@@ -36,7 +36,7 @@ def ip_port_to_url(ip, port):
 if API_TYPE == "openai":
     if "qwen" in GPT_EVAL_MODEL_NAME.lower():
         GPT_EVAL_MODEL_NAME = GPT_EVAL_MODEL_NAME.replace("Qwen/", "")
-        API_URL = NEXSTONE_HTTP_CHAT_URL
+        API_URL = QWEN_HTTP_CHAT_URL
     else:
         API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
 
@@ -140,66 +140,27 @@ def gpt_score_proccess(doc, result):
     Returns:
         a dictionary
     """
-    # try:
-    #     question = doc["question"]
-    #     answer = doc["answer"]
-    #     pred = result[0]
+    try:
+        question = doc["question"]
+        answer = doc["answer"]
+        pred = result[0]
 
-    #     # Assume get_eval returns a review and the model name, and parse_score parses this review
-    #     review, model_name = get_eval(question, answer, pred, 1)
-    #     scores = parse_score(review)
-    # except Exception as e:
-    # eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
-    question = doc["question"]
-    answer = doc["answer"]
-    pred = result[0]
-    review = "Failed to Get a Proper Review."
-    model_name = "Failed Request"
-    scores = ["no", 0]
-    # data_dict = {"video_id": doc["video_id"], "capability": capability, "pred_answer": pred_ans, "answer": doc["answer"]}
+        # Assume get_eval returns a review and the model name, and parse_score parses this review
+        review, model_name = get_eval(question, answer, pred, 1)
+        scores = parse_score(review)
+    except Exception as e:
+        eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
+        question = doc["question"]
+        answer = doc["answer"]
+        pred = result[0]
+        review = "Failed to Get a Proper Review."
+        model_name = "Failed Request"
+        scores = ["no", 0]
+        # data_dict = {"video_id": doc["video_id"], "capability": capability, "pred_answer": pred_ans, "answer": doc["answer"]}
 
     data_dict = {"video_id": doc["video_id"], "capability": doc["capability"], "scores": scores, "correctness": scores[1], "answer": answer}
 
     return {f"videott_open_ended_score": data_dict}
-
-
-def activitynetqa_gpt_eval(results, args):
-    """
-    Process the result file containing predictions, score them using GPT,
-    and save the results with added scores and correctness fields to a new file.
-
-    Args:
-        result_file_path: path to the JSON file with results to be evaluated
-        eval_file_path: path to save the JSON file with evaluated results
-    """
-
-    evaluated_results = []
-
-    # Process each result to generate scores
-    for data_dict in results:
-        # try:
-        #     question = data_dict.get("Q", "")
-        #     answer = data_dict.get("A", "")
-        #     pred = data_dict.get("pred", "")
-
-        #     # Assume get_eval returns a review and the model name, and parse_score parses this review
-        #     review, model_name = get_eval(question, answer, pred, 1)
-        #     scores = parse_score(review)
-        # except Exception as e:
-        # eval_logger.error(f"Error for Question ID: {data_dict.get('question_id', 'Unknown')}: {e}")
-        question = data_dict.get("Q", "")
-        answer = data_dict.get("A", "")
-        pred = data_dict.get("pred", "")
-        review = "Failed to Get a Proper Review."
-        model_name = "Failed Request"
-        scores = ["no", 0]
-
-        # Update the dictionary with the new entries
-        updated_dict = {"video_name": data_dict["video_name"], "Correctness": scores[0], "score": scores[1], "Q": question, "A": answer, "pred": pred, "question_id": data_dict.get("question_id"), "type": data_dict.get("type")}
-        evaluated_results.append(updated_dict)
-
-    return evaluated_results
-
 
 # Factory into different aggregate
 def aggregate_score(results, args):
