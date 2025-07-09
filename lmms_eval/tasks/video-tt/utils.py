@@ -95,7 +95,11 @@ def videott_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def videott_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
     subtitles_prompt = "This video's subtitles are listed below: \n"
-    audio_path = os.path.join(AUDIO_PATH, f'{doc["video_id"]}.txt')
+    if not AUDIO_PATH:
+        eval_logger.warning("AUDIO_PATH environment variable not set, skipping audio subtitles")
+        subtitle = ""
+    else:
+        audio_path = os.path.join(AUDIO_PATH, f'{doc["video_id"]}.txt')
     try:
         with open(audio_path) as f:
             subtitle = f.read()
