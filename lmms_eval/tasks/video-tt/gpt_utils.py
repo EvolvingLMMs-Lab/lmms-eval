@@ -162,6 +162,7 @@ def gpt_score_proccess(doc, result):
 
     return {f"videott_open_ended_score": data_dict}
 
+
 # Factory into different aggregate
 def aggregate_score(results, args):
     yes_count = 0
