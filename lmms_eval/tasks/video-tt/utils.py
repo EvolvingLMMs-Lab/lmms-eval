@@ -59,7 +59,7 @@ with open(Path(__file__).parent / "_default_template.yaml", "r") as f:
             safe_data.append(line)
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 
-AUDIO_PATH = hf_home = os.getenv("AUDIO_PATH", None)
+AUDIO_PATH = os.getenv("AUDIO_PATH", None)
 
 
 def convert_time_to_frame(time_in_seconds, fps):

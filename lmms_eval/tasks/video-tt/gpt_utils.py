@@ -1,17 +1,9 @@
 import ast
-import datetime
-import json
 import os
-import sys
 import time
 
-import numpy as np
-import openai
 import requests
-import yaml
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
-from openai import OpenAI
 
 NUM_SECONDS_TO_SLEEP = 1
 
@@ -108,7 +100,7 @@ def get_eval(question, answer, pred, max_tokens: int, retries: int = 1):
         if attempt < retries - 1:
             time.sleep(NUM_SECONDS_TO_SLEEP)
         else:  # If this was the last attempt, log and return empty
-            eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")
+            eval_logger.error(f"All {retries} attempts failed.")
             return "", ""
 
     return "", ""
@@ -146,21 +138,17 @@ def gpt_score_proccess(doc, result):
         pred = result[0]
 
         # Assume get_eval returns a review and the model name, and parse_score parses this review
-        review, model_name = get_eval(question, answer, pred, 1)
+        review, model_name = get_eval(question, answer, pred, 100)
         scores = parse_score(review)
     except Exception as e:
         eval_logger.error(f"Error for Question ID: {doc.get('question_id', 'Unknown')}: {e}")
-        question = doc["question"]
         answer = doc["answer"]
-        pred = result[0]
-        review = "Failed to Get a Proper Review."
-        model_name = "Failed Request"
         scores = ["no", 0]
         # data_dict = {"video_id": doc["video_id"], "capability": capability, "pred_answer": pred_ans, "answer": doc["answer"]}
 
     data_dict = {"video_id": doc["video_id"], "capability": doc["capability"], "scores": scores, "correctness": scores[1], "answer": answer}
 
-    return {f"videott_open_ended_score": data_dict}
+    return {"videott_open_ended_score": data_dict}
 
 
 # Factory into different aggregate
