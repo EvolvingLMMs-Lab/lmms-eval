@@ -1,28 +1,11 @@
-import asyncio
-import base64
-import json
-import os
-import time
-from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
-from io import BytesIO
-from multiprocessing import cpu_count
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple
 
-import numpy as np
-from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
-from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
-
-NUM_SECONDS_TO_SLEEP = 5
 
 try:
     from vllm import LLM, SamplingParams

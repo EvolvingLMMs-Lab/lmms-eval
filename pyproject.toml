@@ -68,6 +68,7 @@ dependencies = [
     "pre-commit",
     "pydantic",
     "packaging",
+    "rich>=10.0.0",
     "decord; platform_system != 'Darwin'",
     "eva-decord; platform_system == 'Darwin'",
     "zss",
