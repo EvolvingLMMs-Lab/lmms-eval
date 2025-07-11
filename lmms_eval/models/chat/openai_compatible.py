@@ -24,6 +24,7 @@ from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
 from PIL import Image
 
+from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.openai_compatible import (
     OpenAICompatible as OpenAICompatibleSimple,
 )
@@ -40,6 +41,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
+        e2e_latency = 0
+        total_tokens = 0
         for ctx, doc_to_messages, gen_kwargs, doc_id, task, split in [reg.args for reg in requests]:
             if self.continual_mode is True and self.cache_mode == "resume":
                 doc_uuid = f"{task}___{split}___{doc_id}"
@@ -88,29 +91,14 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     response_text = response.choices[0].message.content
 
                     # Calculate timing metrics
-                    e2e_latency = end_time - start_time
+                    e2e_latency += end_time - start_time
 
                     # Get token counts from response if available
                     if hasattr(response, "usage"):
-                        completion_tokens = response.usage.completion_tokens
-                        prompt_tokens = response.usage.prompt_tokens
+                        total_tokens += response.usage.completion_tokens
                     else:
                         # Approximate token count if not provided
-                        completion_tokens = len(response_text.split())
-                        prompt_tokens = len(str(payload["messages"]).split())
-
-                    # Calculate TPOT and inference speed
-                    if completion_tokens > 1:
-                        # Assuming TTFT is negligible for API calls, estimate it as a small fraction
-                        ttft = e2e_latency * 0.1  # Rough estimate
-                        tpot = (e2e_latency - ttft) / (completion_tokens - 1)
-                        inference_speed = 1 / tpot if tpot > 0 else 0
-                    else:
-                        tpot = e2e_latency
-                        inference_speed = 0
-
-                    # Log throughput metrics
-                    eval_logger.info(f"Inference metrics - E2E: {e2e_latency:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {completion_tokens}")
+                        total_tokens += len(response_text.split())
 
                     break  # If successful, break out of the loop
 
@@ -133,6 +121,16 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 self.response_cache[doc_uuid] = response_text
                 with open(self.response_persistent_file, "w") as f:
                     json.dump(self.response_cache, f)
+
+        # Calculate average speed
+        avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+        # Log metrics
+        metric_dict = {
+            "total_tokens": total_tokens,
+            "e2e_latency": e2e_latency,
+            "avg_speed": avg_speed,
+        }
+        log_metrics(**metric_dict)
 
         pbar.close()
         return res
