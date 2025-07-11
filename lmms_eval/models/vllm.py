@@ -150,7 +150,9 @@ class VLLM(lmms):
     def flatten(self, input):
         new_list = []
         for i in input:
-            for j in i:
+            if isinstance(i, (list, tuple)):
+                new_list.extend(i)
+            else:
                 new_list.append(j)
         return new_list
 
