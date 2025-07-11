@@ -153,7 +153,7 @@ class VLLM(lmms):
             if isinstance(i, (list, tuple)):
                 new_list.extend(i)
             else:
-                new_list.append(j)
+                new_list.append(i)
         return new_list
 
     def generate_until(self, requests) -> List[str]:
