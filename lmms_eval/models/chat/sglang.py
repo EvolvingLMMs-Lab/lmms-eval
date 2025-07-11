@@ -3,16 +3,15 @@ import time
 import warnings
 from typing import List, Optional, Tuple, Union
 
-import PIL
 from accelerate import Accelerator, DistributedType
 from sglang import Engine
 from tqdm import tqdm
 from transformers import AutoProcessor
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.load_video import load_video_decord
 from lmms_eval.protocol import ChatMessages
 
@@ -41,7 +40,7 @@ class Sglang(lmms):
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
-        self.model = model
+        self._model = model
         self.max_frame_num = max_frame_num
         self.threads = threads
         self.chat_template = chat_template
@@ -121,6 +120,8 @@ class Sglang(lmms):
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
+        total_tokens = 0
+        e2e_latency = 0
         for batch_requests in batched_requests:
             batched_messages = []
             image_data = []
@@ -169,8 +170,7 @@ class Sglang(lmms):
             response_text = [o["text"] for o in outputs]
 
             # Calculate timing metrics for batch
-            e2e_latency = end_time - start_time
-            total_tokens = 0
+            e2e_latency += end_time - start_time
 
             for output_idx, output in enumerate(outputs):
                 # Get token count from output
@@ -181,29 +181,18 @@ class Sglang(lmms):
 
                 total_tokens += output_tokens
 
-                # Get TTFT if available
-                if "meta_info" in output and "ttft" in output["meta_info"]:
-                    ttft = output["meta_info"]["ttft"]
-                else:
-                    # Estimate TTFT as a fraction of total time
-                    ttft = e2e_latency * 0.1 / len(outputs)
-
-                if output_tokens > 1:
-                    tpot = (e2e_latency / len(outputs) - ttft) / (output_tokens - 1)
-                    inference_speed = 1 / tpot if tpot > 0 else 0
-                else:
-                    tpot = e2e_latency / len(outputs)
-                    inference_speed = 0
-
-                eval_logger.info(f"Output {output_idx} - E2E: {e2e_latency/len(outputs):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
-
             if len(outputs) > 1:
                 avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
-                eval_logger.info(f"Batch summary - Total time: {e2e_latency:.3f}s, Total tokens: {total_tokens}, Avg speed: {avg_speed:.1f} tokens/s")
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)
             pbar.update(len(batch_requests))
+        metric_dict = {
+            "total_tokens": total_tokens,
+            "e2e_latency": e2e_latency,
+            "avg_speed": avg_speed,
+        }
+        log_metrics(**metric_dict)
 
         pbar.close()
         return res
