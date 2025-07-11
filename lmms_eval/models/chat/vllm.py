@@ -1,24 +1,11 @@
-import asyncio
-import base64
-import json
-import os
 import time
-from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
-from io import BytesIO
-from multiprocessing import cpu_count
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
-from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
-from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
@@ -40,6 +27,7 @@ class VLLM(VLLMSimple):
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
+        e2e_latency = 0
         for batch_requests in batched_requests:
             batched_messages = []
             for idx in range(len(batch_requests)):
@@ -77,35 +65,26 @@ class VLLM(VLLMSimple):
             response_text = [o.outputs[0].text for o in response]
 
             # Calculate timing metrics for batch
-            e2e_latency = end_time - start_time
-            total_tokens = 0
-
-            for output_idx, output in enumerate(response):
-                if hasattr(output, "metrics") and hasattr(output.metrics, "time_to_first_token"):
-                    ttft = output.metrics.time_to_first_token
-                else:
-                    # Estimate TTFT as a fraction of total time
-                    ttft = e2e_latency * 0.1 / len(response)
-
-                output_tokens = len(output.outputs[0].token_ids) if hasattr(output.outputs[0], "token_ids") else len(output.outputs[0].text.split())
-                total_tokens += output_tokens
-
-                if output_tokens > 1:
-                    tpot = (e2e_latency / len(response) - ttft) / (output_tokens - 1)
-                    inference_speed = 1 / tpot if tpot > 0 else 0
-                else:
-                    tpot = e2e_latency / len(response)
-                    inference_speed = 0
-
-                eval_logger.info(f"Output {output_idx} - E2E: {e2e_latency/len(response):.3f}s, TTFT: {ttft:.3f}s, TPOT: {tpot:.3f}s, Speed: {inference_speed:.1f} tokens/s, Output tokens: {output_tokens}")
-
-            if len(response) > 1:
-                avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
-                eval_logger.info(f"Batch summary - Total time: {e2e_latency:.3f}s, Total tokens: {total_tokens}, Avg speed: {avg_speed:.1f} tokens/s")
+            e2e_latency += end_time - start_time
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)
             pbar.update(len(batch_requests))
+
+        metrics = self.get_format_metrics()
+        total_tokens = metrics["generation_tokens"]
+        avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+        metric_dict = {
+            "total_tokens": total_tokens,
+            "e2e_latency": e2e_latency,
+            "avg_speed": avg_speed,
+            "additional_metrics": {
+                "ttft": metrics["ttft"],
+                "tpot": metrics["tpot"],
+                "rank": self.rank,
+            },
+        }
+        log_metrics(**metric_dict)
 
         pbar.close()
         return res
@@ -116,3 +95,25 @@ class VLLM(VLLMSimple):
 
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation")
+
+    def get_format_metrics(self):
+        metrics = self.client.get_metrics()
+        ttft = 0
+        tpot = 0
+        generation_tokens = 0
+        for metric in metrics:
+            name = metric.name
+            if "time_to_first_token" in name:
+                ttft = metric.sum / metric.count
+            if "time_per_output_token_seconds" in name:
+                tpot = metric.sum / metric.count
+            if name == "vllm:generation_tokens":
+                generation_tokens = metric.value
+
+        metrics = {
+            "ttft": ttft,
+            "tpot": tpot,
+            "generation_tokens": generation_tokens,
+        }
+
+        return metrics
