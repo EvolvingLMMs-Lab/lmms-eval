@@ -150,8 +150,10 @@ class VLLM(lmms):
     def flatten(self, input):
         new_list = []
         for i in input:
-            for j in i:
-                new_list.append(j)
+            if isinstance(i, (list, tuple)):
+                new_list.extend(i)
+            else:
+                new_list.append(i)
         return new_list
 
     def generate_until(self, requests) -> List[str]:
@@ -203,7 +205,7 @@ class VLLM(lmms):
                 messages = [{"role": "user", "content": []}]
                 # When there is no image token in the context, append the image to the text
                 messages[0]["content"].append({"type": "text", "text": contexts})
-                for img in imgs:
+                for img in self.flatten(imgs):
                     messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
 
                 batched_messages.append(messages)
