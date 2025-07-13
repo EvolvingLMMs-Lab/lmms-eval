@@ -53,6 +53,7 @@ class VLLM(VLLMSimple):
                     chat_template = f.read()
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
             else:
+                breakpoint()
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             response_text = [o.outputs[0].text for o in response]
 
