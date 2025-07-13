@@ -53,7 +53,7 @@ class VLLM(lmms):
         self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
         # Qwen 2/2.5-VL models enforce minimum image dimensions
-        self._enforce_image_resize = self._is_qwen_vl_model(model_version)
+        self._enforce_image_resize = self._is_qwen_vl_model(model)
 
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
@@ -70,6 +70,7 @@ class VLLM(lmms):
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
             trust_remote_code=trust_remote_code,
+            disable_log_stats=False,
             **kwargs,
         )
 
