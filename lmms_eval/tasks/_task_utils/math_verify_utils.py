@@ -2,8 +2,9 @@
 
 
 import importlib
-
-from wrapt_timeout_decorator import timeout
+import functools
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+import threading
 
 
 def patch_target_module(
@@ -20,8 +21,38 @@ def patch_target_module(
 
 
 def timeout_adapter(func=None, **kwargs):
-    timeout_val = kwargs.pop("timeout_seconds", None)
-    return timeout(dec_timeout=timeout_val, use_signals=False, **kwargs)
+    """Custom timeout decorator using concurrent.futures instead of wrapt_timeout_decorator"""
+    timeout_val = kwargs.pop("timeout_seconds", None) or kwargs.pop("dec_timeout", None)
+    
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            if timeout_val is None:
+                return f(*args, **kwargs)
+            
+            executor = ThreadPoolExecutor(max_workers=1)
+            future = executor.submit(f, *args, **kwargs)
+            
+            try:
+                result = future.result(timeout=timeout_val)
+                return result
+            except FutureTimeoutError:
+                # Cancel the future and shutdown executor
+                future.cancel()
+                executor.shutdown(wait=False)
+                raise TimeoutError(f"Function {f.__name__} timed out after {timeout_val} seconds")
+            except Exception as e:
+                executor.shutdown(wait=False)
+                raise e
+            finally:
+                executor.shutdown(wait=False)
+        
+        return wrapper
+    
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
 
 
 # replace the signal-based timeout with a non-signal-based timeout to allow multithreading
