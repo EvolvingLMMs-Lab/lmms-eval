@@ -14,12 +14,7 @@ from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
-TASK_CATEGORIES = ["QA","OCR",'temporal']
-
-
-
-
-
+TASK_CATEGORIES = ["QA", "OCR", "temporal"]
 
 
 # with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -50,11 +45,10 @@ def convert_time_to_frame(time_in_seconds, fps):
     return int(time_in_seconds * fps)
 
 
-
 def timescope_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
-    eval_logger.info(f"base_cache_dir",base_cache_dir,'cache_name',cache_name)
-    video_path = doc["video"] 
+    eval_logger.info(f"base_cache_dir", base_cache_dir, "cache_name", cache_name)
+    video_path = doc["video"]
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
         video_path = video_path
@@ -65,8 +59,6 @@ def timescope_doc_to_visual(doc):
     else:
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
-
-
 
 
 def extract_characters_regex(s):
@@ -91,7 +83,6 @@ def extract_characters_regex(s):
     return matches[0]
 
 
-
 def timescope_process_results(doc, results):
     """
     Args:
@@ -102,10 +93,10 @@ def timescope_process_results(doc, results):
     """
     pred = results[0]
     task_type = doc["type"]
-    pred_ans = extract_characters_regex(pred)   
-    length=doc['length']
-    video=doc['video']
-    data_dict = {"id": doc["id"] ,"length":length,"video":video, "task_type": task_type, "pred_answer": pred_ans, 'pred':pred,"answer": doc["answer"]}
+    pred_ans = extract_characters_regex(pred)
+    length = doc["length"]
+    video = doc["video"]
+    data_dict = {"id": doc["id"], "length": length, "video": video, "task_type": task_type, "pred_answer": pred_ans, "pred": pred, "answer": doc["answer"]}
 
     return {f"timescope_perception_score": data_dict}
 
@@ -119,20 +110,20 @@ def timescope_aggregate_results(results):
     """
     category2score = {}
 
-    lengths=[]
+    lengths = []
     for result in results:
         task_type = result["task_type"]
-        length=result['length']
+        length = result["length"]
         if length not in lengths:
             lengths.append(length)
         key = f"{length}_{task_type}"
         if key not in category2score:
-            category2score[key]={"correct": 0, "answered": 0}
+            category2score[key] = {"correct": 0, "answered": 0}
         category2score[key]["answered"] += 1
         category2score[key]["correct"] += result["pred_answer"].lower() == result["answer"].lower()
 
-    for  cur_key in category2score:
-        length,task_type=cur_key.split("_")
+    for cur_key in category2score:
+        length, task_type = cur_key.split("_")
         eval_logger.info(f"Evaluation on Video Length: {str(length)} and Task: {task_type}: {100 * category2score[cur_key]['correct'] / category2score[cur_key]['answered'] if category2score[cur_key]['answered'] > 0 else 0 : .1f}%")
     for cur_length in lengths:
         total_correct = 0
