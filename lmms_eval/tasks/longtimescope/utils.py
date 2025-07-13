@@ -36,7 +36,7 @@ hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 # cache_dir = os.path.join(hf_home, cache_dir)
 # base_cache_dir = config["dataset_kwargs"]["cache_dir"]
 base_cache_dir = os.path.expanduser(hf_home)
-with open(Path(__file__).parent / "longtimescope.yaml", "r") as f:
+with open(Path(__file__).parent / "timescope.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):
@@ -52,7 +52,6 @@ def convert_time_to_frame(time_in_seconds, fps):
 
 
 def timescope_doc_to_visual(doc):
-
     cache_dir = os.path.join(base_cache_dir, cache_name)
     eval_logger.info(f"base_cache_dir",base_cache_dir,'cache_name',cache_name)
     video_path = doc["video"] 
@@ -103,13 +102,7 @@ def timescope_process_results(doc, results):
     """
     pred = results[0]
     task_type = doc["type"]
-    # if task_type=="QA" or task_type=="temporal":
-    pred_ans = extract_characters_regex(pred)
-    # elif task_type=="OCR":
-    #     pred_ans = re.sub(r'^\.+|\.+$', '', pred.replace("The answer is ","").split(" ")[0].split(":")[0].strip()) if pred else pred
-    # gt_ans = doc["answer"].lower().strip().replace(".", "")
-
-    
+    pred_ans = extract_characters_regex(pred)   
     length=doc['length']
     video=doc['video']
     data_dict = {"id": doc["id"] ,"length":length,"video":video, "task_type": task_type, "pred_answer": pred_ans, 'pred':pred,"answer": doc["answer"]}
@@ -130,16 +123,14 @@ def timescope_aggregate_results(results):
     for result in results:
         task_type = result["task_type"]
         length=result['length']
-        lengths.append(length)
-        # print(result)
+        if length not in lengths:
+            lengths.append(length)
         key = f"{length}_{task_type}"
         if key not in category2score:
             category2score[key]={"correct": 0, "answered": 0}
-        # print(key)
         category2score[key]["answered"] += 1
-        # print(result["pred_answer"],result["answer"])
         category2score[key]["correct"] += result["pred_answer"].lower() == result["answer"].lower()
-    print(category2score)
+
     for  cur_key in category2score:
         length,task_type=cur_key.split("_")
         eval_logger.info(f"Evaluation on Video Length: {str(length)} and Task: {task_type}: {100 * category2score[cur_key]['correct'] / category2score[cur_key]['answered'] if category2score[cur_key]['answered'] > 0 else 0 : .1f}%")
