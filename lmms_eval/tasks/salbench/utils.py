@@ -1,19 +1,28 @@
 # Utils for processing p3o3 dataset
+P3_CATEGORIES = ["orientation", "color", "size"]
+O3_CATEGORIES = ["orientation", "color", "focus", "shape", "size", "location", "pattern"]
 
 
 def p3o3_doc_to_visual(doc):
     # Assuming the 'doc' dictionary has a key 'image' with image data
-    if not doc.get("image", None):
+    if not doc.get("image"):
         return None
-    if isinstance(doc["image"], list):
-        return [img.convert("RGB") for img in doc["image"]]
-    return [doc["image"].convert("RGB")]
+    try:
+        if isinstance(doc["image"], list):
+            return [img.convert("RGB") for img in doc["image"]]
+        return [doc["image"].convert("RGB")]
+    except Exception as e:
+        print(f"Warning: Failed to convert image to RGB: {e}")
+        return None
 
 
 def p3o3_doc_to_text(doc, prompt_kwargs=None):
-    # Assuming the 'doc' dictionary has a key 'question' with the question text
+    if "question" not in doc:
+        raise ValueError("Document must contain 'question' key")
     question = doc["question"].strip()
     if prompt_kwargs:
+        if not all(key in prompt_kwargs for key in ["pre_prompt", "post_prompt"]):
+            raise ValueError("prompt_kwargs must contain 'pre_prompt' and 'post_prompt' keys")
         pre, post = prompt_kwargs["pre_prompt"], prompt_kwargs["post_prompt"]
         return f"{pre}\n{question}\n{post}"
     return f"{question}\nAnswer the question using a single word or phrase."
@@ -130,12 +139,14 @@ def o3_process_results(doc, results):
 
 
 def process_results_multiple_choices(doc, results):
-    # Choices are 1/2/3/4 etc
     assert len(results) == 1, "Not support batch size > 1"
-    pred = results[0].lower().strip(",").strip(")").strip(",")
-    # HACK: Get first character only, because some model just like talking
-    pred = pred[0]
-    # pred = {x.strip() for x in result.lower().strip(".").strip(")").strip(",")}
+    pred = results[0].lower().strip().strip(",").strip(")")
+    # Extract first character if available
+    if not pred:
+        pred = ""
+    else:
+        pred = pred[0]
+
     gt_ans = doc["answer"].lower()
 
     acc = int(pred == gt_ans)
@@ -205,72 +216,30 @@ def _aggregate_all_category(results, categories):
 
 
 def p3_aggregate_all_category_precision(results):
-    categories = [
-        "orientation",
-        "color",
-        "size",
-    ]
-    precision, recall, f1 = _aggregate_all_category(results, categories)
+    precision, recall, f1 = _aggregate_all_category(results, P3_CATEGORIES)
     return precision
 
 
 def p3_aggregate_all_category_recall(results):
-    categories = [
-        "orientation",
-        "color",
-        "size",
-    ]
-    precision, recall, f1 = _aggregate_all_category(results, categories)
+    precision, recall, f1 = _aggregate_all_category(results, P3_CATEGORIES)
     return recall
 
 
 def p3_aggregate_all_category_f1(results):
-    categories = [
-        "orientation",
-        "color",
-        "size",
-    ]
-    precision, recall, f1 = _aggregate_all_category(results, categories)
+    precision, recall, f1 = _aggregate_all_category(results, P3_CATEGORIES)
     return f1
 
 
 def o3_aggregate_all_category_precision(results):
-    categories = [
-        "orientation",
-        "color",
-        "focus",
-        "shape",
-        "size",
-        "location",
-        "pattern",
-    ]
-    precision, recall, f1 = _aggregate_all_category(results, categories)
+    precision, recall, f1 = _aggregate_all_category(results, O3_CATEGORIES)
     return precision
 
 
 def o3_aggregate_all_category_recall(results):
-    categories = [
-        "orientation",
-        "color",
-        "focus",
-        "shape",
-        "size",
-        "location",
-        "pattern",
-    ]
-    precision, recall, f1 = _aggregate_all_category(results, categories)
+    precision, recall, f1 = _aggregate_all_category(results, O3_CATEGORIES)
     return recall
 
 
 def o3_aggregate_all_category_f1(results):
-    categories = [
-        "orientation",
-        "color",
-        "focus",
-        "shape",
-        "size",
-        "location",
-        "pattern",
-    ]
-    precision, recall, f1 = _aggregate_all_category(results, categories)
+    precision, recall, f1 = _aggregate_all_category(results, O3_CATEGORIES)
     return f1
