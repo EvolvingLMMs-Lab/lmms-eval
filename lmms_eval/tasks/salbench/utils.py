@@ -140,7 +140,7 @@ def process_results_multiple_choices(doc, results):
 
     acc = int(pred == gt_ans)
     return {
-            "acc": {"score": acc},
+        "acc": {"score": acc},
     }
 
 
@@ -196,10 +196,7 @@ def _aggregate_all_category(results, categories):
 
         precisions[cat] = true_pos / (true_pos + false_pos + 1e-8)
         recalls[cat] = true_pos / (true_pos + false_neg + 1e-8)
-        f1s[cat] = (
-            (2 * precisions[cat] * recalls[cat])
-            / (precisions[cat] + recalls[cat] + 1e-8)
-        )
+        f1s[cat] = (2 * precisions[cat] * recalls[cat]) / (precisions[cat] + recalls[cat] + 1e-8)
 
     agg_precision = sum(list(precisions.values())) / len(categories)
     agg_recall = sum(list(recalls.values())) / len(categories)
