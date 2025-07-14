@@ -1,5 +1,5 @@
-<p align="center" width="80%">
-<img src="https://i.postimg.cc/KvkLzbF9/WX20241212-014400-2x.png"  width="100%" height="70%">
+<p align="center" width="70%">
+<img src="https://i.postimg.cc/KvkLzbF9/WX20241212-014400-2x.png">
 </p>
 
 # The Evaluation Suite of Large Multimodal Models 
