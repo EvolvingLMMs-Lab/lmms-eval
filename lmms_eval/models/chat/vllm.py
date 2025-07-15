@@ -9,8 +9,6 @@ from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
-NUM_SECONDS_TO_SLEEP = 5
-
 try:
     from vllm import LLM, SamplingParams
 except ImportError:
@@ -59,6 +57,7 @@ class VLLM(VLLMSimple):
                     chat_template = f.read()
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
             else:
+                breakpoint()
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             end_time = time.time()
 

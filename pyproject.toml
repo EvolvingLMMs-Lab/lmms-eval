@@ -68,6 +68,7 @@ dependencies = [
     "pre-commit",
     "pydantic",
     "packaging",
+    "rich>=10.0.0",
     "decord; platform_system != 'Darwin'",
     "eva-decord; platform_system == 'Darwin'",
     "zss",
@@ -77,6 +78,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+reasoning = [
+    "math_verify==0.8.0",
+    "antlr4-python3-runtime==4.11",
+]
 audio = [
     "more-itertools",
     "editdistance",

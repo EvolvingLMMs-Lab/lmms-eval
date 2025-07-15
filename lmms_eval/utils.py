@@ -963,14 +963,20 @@ class Collator:
         res = collections.defaultdict(list)
         for ob in arr:
             try:
-                hashable_dict = tuple(
-                    (
-                        key,
-                        tuple(value) if isinstance(value, collections.abc.Iterable) else value,
+                result = fn(ob)
+                if hasattr(result, "items"):
+                    # If result is a dictionary, convert to hashable tuple
+                    hashable_dict = tuple(
+                        (
+                            key,
+                            tuple(value) if isinstance(value, collections.abc.Iterable) else value,
+                        )
+                        for key, value in sorted(result.items())
                     )
-                    for key, value in sorted(fn(ob).items())
-                )
-                res[hashable_dict].append(ob)
+                    res[hashable_dict].append(ob)
+                else:
+                    # If result is not a dictionary, use it directly as key
+                    res[result].append(ob)
             except TypeError:
                 res[fn(ob)].append(ob)
         if not values:
