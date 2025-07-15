@@ -28,34 +28,26 @@ def p3o3_doc_to_text(doc, prompt_kwargs=None):
     return f"{question}\nAnswer the question using a single word or phrase."
 
 
-def p3_process_results(doc, results):
+def process_results(doc, results, categories):
     pred = {x.strip() for x in results[0].lower().strip("[").strip("]").split(",")}
     gt_ans = {x.strip() for x in doc["answer"].lower().split(",")}
 
     exact_match = int(pred == gt_ans)
-
-    # Per sample
     matches = pred.intersection(gt_ans)
-    # how many retrieved categories are relevant
     precision = len(matches) / (len(pred) + 1e-8)
-    # how many applicable categories are retrieved
     recall = len(matches) / len(gt_ans)
     f1 = 2 * (precision * recall) / (precision + recall + 1e-8)
 
-    categories = [
-        "orientation",
-        "color",
-        "size",
-    ]
     cat_preds = {}
     for cat in categories:
-        cat_preds[cat] = {}
-        cat_preds[cat]["true_pos"] = int(cat in pred and cat in gt_ans)
-        cat_preds[cat]["false_pos"] = int(cat in pred and cat not in gt_ans)
-        cat_preds[cat]["true_neg"] = int(cat not in pred and cat not in gt_ans)
-        cat_preds[cat]["false_neg"] = int(cat not in pred and cat in gt_ans)
+        cat_preds[cat] = {
+            "true_pos": int(cat in pred and cat in gt_ans),
+            "false_pos": int(cat in pred and cat not in gt_ans),
+            "true_neg": int(cat not in pred and cat not in gt_ans),
+            "false_neg": int(cat not in pred and cat in gt_ans),
+        }
 
-    return {
+    output = {
         "exact_match": {"score": exact_match},
         "sample_precision": {"score": precision},
         "sample_recall": {"score": recall},
@@ -63,79 +55,23 @@ def p3_process_results(doc, results):
         "all_cat_precision": {"id": doc["image_id"], "pred": cat_preds},
         "all_cat_recall": {"id": doc["image_id"], "pred": cat_preds},
         "all_cat_f1": {"id": doc["image_id"], "pred": cat_preds},
-        "orientation_precision": {"pred": cat_preds["orientation"]},
-        "orientation_recall": {"pred": cat_preds["orientation"]},
-        "orientation_f1": {"pred": cat_preds["orientation"]},
-        "color_precision": {"pred": cat_preds["color"]},
-        "color_recall": {"pred": cat_preds["color"]},
-        "color_f1": {"pred": cat_preds["color"]},
-        "size_precision": {"pred": cat_preds["size"]},
-        "size_recall": {"pred": cat_preds["size"]},
-        "size_f1": {"pred": cat_preds["size"]},
     }
+
+    # Add per-category metrics
+    for cat in categories:
+        output[f"{cat}_precision"] = {"pred": cat_preds[cat]}
+        output[f"{cat}_recall"] = {"pred": cat_preds[cat]}
+        output[f"{cat}_f1"] = {"pred": cat_preds[cat]}
+
+    return output
+
+
+def p3_process_results(doc, results):
+    return process_results(doc, results, P3_CATEGORIES)
 
 
 def o3_process_results(doc, results):
-    pred = {x.strip() for x in results[0].lower().strip("[").strip("]").split(",")}
-    gt_ans = {x.strip() for x in doc["answer"].lower().split(",")}
-
-    exact_match = int(pred == gt_ans)
-
-    # Per sample
-    matches = pred.intersection(gt_ans)
-    # how many retrieved categories are relevant
-    precision = len(matches) / (len(pred) + 1e-8)
-    # how many applicable categories are retrieved
-    recall = len(matches) / len(gt_ans)
-    f1 = 2 * (precision * recall) / (precision + recall + 1e-8)
-
-    categories = [
-        "orientation",
-        "color",
-        "focus",
-        "shape",
-        "size",
-        "location",
-        "pattern",
-    ]
-    cat_preds = {}
-    for cat in categories:
-        cat_preds[cat] = {}
-        cat_preds[cat]["true_pos"] = int(cat in pred and cat in gt_ans)
-        cat_preds[cat]["false_pos"] = int(cat in pred and cat not in gt_ans)
-        cat_preds[cat]["true_neg"] = int(cat not in pred and cat not in gt_ans)
-        cat_preds[cat]["false_neg"] = int(cat not in pred and cat in gt_ans)
-
-    return {
-        "exact_match": {"score": exact_match},
-        "sample_precision": {"score": precision},
-        "sample_recall": {"score": recall},
-        "sample_f1": {"score": f1},
-        "all_cat_precision": {"id": doc["image_id"], "pred": cat_preds},
-        "all_cat_recall": {"id": doc["image_id"], "pred": cat_preds},
-        "all_cat_f1": {"id": doc["image_id"], "pred": cat_preds},
-        "orientation_precision": {"pred": cat_preds["orientation"]},
-        "orientation_recall": {"pred": cat_preds["orientation"]},
-        "orientation_f1": {"pred": cat_preds["orientation"]},
-        "color_precision": {"pred": cat_preds["color"]},
-        "color_recall": {"pred": cat_preds["color"]},
-        "color_f1": {"pred": cat_preds["color"]},
-        "focus_precision": {"pred": cat_preds["focus"]},
-        "focus_recall": {"pred": cat_preds["focus"]},
-        "focus_f1": {"pred": cat_preds["focus"]},
-        "shape_precision": {"pred": cat_preds["shape"]},
-        "shape_recall": {"pred": cat_preds["shape"]},
-        "shape_f1": {"pred": cat_preds["shape"]},
-        "size_precision": {"pred": cat_preds["size"]},
-        "size_recall": {"pred": cat_preds["size"]},
-        "size_f1": {"pred": cat_preds["size"]},
-        "location_precision": {"pred": cat_preds["location"]},
-        "location_recall": {"pred": cat_preds["location"]},
-        "location_f1": {"pred": cat_preds["location"]},
-        "pattern_precision": {"pred": cat_preds["pattern"]},
-        "pattern_recall": {"pred": cat_preds["pattern"]},
-        "pattern_f1": {"pred": cat_preds["pattern"]},
-    }
+    return process_results(doc, results, O3_CATEGORIES)
 
 
 def process_results_multiple_choices(doc, results):
