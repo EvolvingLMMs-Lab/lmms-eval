@@ -5,7 +5,7 @@ doc_to_target: "answer"
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "\n한 단어 또는 구를 사용하여 질문에 답하세요."
+    post_prompt: "\n주어진 선택지 중 해당 옵션의 문자로 바로 답하세요."
 doc_to_visual: !function ko_utils.mmbench_doc_to_visual
 doc_to_text: !function ko_utils.mmbench_doc_to_text
 doc_to_target: "answer"
