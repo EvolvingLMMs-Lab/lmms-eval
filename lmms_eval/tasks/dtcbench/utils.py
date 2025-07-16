@@ -5,7 +5,7 @@ def dtcbench_doc_to_visual(doc):
 def dtcbench_doc_to_text(doc):
     question = doc["question"]
     question += f"\nOptions: A: {doc['choice_a']}, B: {doc['choice_b']}, C: {doc['choice_c']}, D: {doc['choice_d']}"
-    return f"{question}\n한 단어 또는 구를 사용하여 질문에 답하세요."
+    return f"{question}\n주어진 선택지 중 해당 옵션의 문자로 바로 답하세요."
 
 
 def dtcbench_process_result(doc, result):
