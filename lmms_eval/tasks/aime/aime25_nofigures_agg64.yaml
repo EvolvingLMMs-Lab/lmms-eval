@@ -1,7 +1,7 @@
 tag:
   - math_word_problems
-task: aime24_figures_agg64
-dataset_path: simplescaling/aime24_figures
+task: aime25_nofigures_agg64
+dataset_path: simplescaling/aime25_nofigures
 dataset_name: default
 process_docs: !function utils.process_docs
 output_type: generate_until

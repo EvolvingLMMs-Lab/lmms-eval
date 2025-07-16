@@ -1,0 +1,38 @@
+# Copyright 2025 Xiaomi Corporation.
+
+dataset_path: lscpku/OlympiadBench-official
+dataset_kwargs:
+  token: True
+dataset_name: all_no_proof
+task : "olympiadbench_all_boxed"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.olympiadbench_doc_to_visual
+doc_to_text: !function utils.olympiadbench_doc_to_text
+doc_to_target: "final_answer"
+generation_kwargs:
+  max_new_tokens: 32768
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.olympiadbench_process_results
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+  - metric: math_verify
+    aggregation: !function utils.olympiadbench_math_verify_aggregate_results
+    higher_is_better: true
+  - metric: Math_English
+    aggregation: !function utils.olympiadbench_aggregate_results
+    higher_is_better: true
+  - metric: Math_Chinese
+    aggregation: !function utils.olympiadbench_aggregate_results
+    higher_is_better: true
+  - metric: Physics_English
+    aggregation: !function utils.olympiadbench_aggregate_results
+    higher_is_better: true
+  - metric: Physics_Chinese
+    aggregation: !function utils.olympiadbench_aggregate_results
+    higher_is_better: true

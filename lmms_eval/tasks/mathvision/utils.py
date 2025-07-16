@@ -9,7 +9,16 @@ import yaml
 from loguru import logger as eval_logger
 
 from lmms_eval.llm_judge import ServerConfig, get_server
-from lmms_eval.tasks.mathvision.eval_utils import find_math_answer, is_equal, is_number
+
+try:
+    from lmms_eval.tasks.mathvision.eval_utils import (
+        find_math_answer,
+        is_equal,
+        is_number,
+    )
+except ImportError as e:
+    eval_logger.warning(f"Error importing eval_utils from lmms_eval.tasks.mathvision.eval_utils: {e}")
+    pass
 
 NUM_SECONDS_TO_SLEEP = 5
 
