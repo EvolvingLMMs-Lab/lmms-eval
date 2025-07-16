@@ -8,6 +8,7 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.llm_judge import ServerConfig, get_server
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 with open(Path(__file__).parent / "d170_cn.yaml", "r") as f:
@@ -20,9 +21,14 @@ with open(Path(__file__).parent / "d170_cn.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
+API_TYPE = os.getenv("API_TYPE", "openai")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+
+# Initialize the judge server
+server_config = ServerConfig(
+    model_name=MODEL_VERSION,
+)
+server = get_server(server_name=API_TYPE, config=server_config)
 
 # The EVALUATION_PROMPT_TEMPLATE_SIMPLE_V2 constant should be defined here
 EVALUATION_PROMPT_TEMPLATE_SIMPLE_V2 = """You are an expert in judging the quality of a model response compared with given ground truth. The model response is in English while the ground truth can be in English or Chinese, or both. You should only judge the relevance of the model response to the ground truth based on meanings, not the language.
@@ -89,30 +95,44 @@ def process_results(doc, results):
     pred = results[0]
     question = doc["question"]
     answer = doc["annotation"]
-    gpt_query_prompt = EVALUATION_PROMPT_TEMPLATE_SIMPLE_V2.format(prompt=pred, ground_truth=answer)
-    grade_sample_run_complete = False
-    while not grade_sample_run_complete:
-        try:
-            response, model_name = get_chat_response(gpt_query_prompt)
-            grade_sample_run_complete = True
-        except Exception as e:
-            eval_logger.info(f"Error in response: {e}")
-            eval_logger.info(f"Retrying...")
+    
+    # Define custom prompt for D170 CN evaluation
+    custom_prompt = """You are an expert in judging the quality of a model response compared with given ground truth. The model response is in English while the ground truth can be in English or Chinese, or both. You should only judge the relevance of the model response to the ground truth based on meanings, not the language.
 
+If the model response and ground truth are about grounding object coordinates, you may pay attention that the model responses are in format of [x_min, y_min, x_max, y_max]. You could judge the grounding quality by the IoU of the model response and the ground truth, or the distance between the center of the model response and the ground truth:
+- If IoU is above 0.5 or the distance is below 0.3, score 1 (correct)
+- If IoU is below 0.2 or the distance is above 0.5, score 0 (incorrect)
+- For other cases, score 0
+
+For non-grounding questions:
+- Score 1 if the prediction matches the answer semantically, it can be in different format
+- Score 0 for incorrect, partially correct, or answers with extra incorrect information
+
+Return only "1" or "0" with no additional text or formatting."""
+    
     try:
-        score = int(re.findall(r"Score:\s*(\d)", response)[0])
-    except IndexError:
-        score = 0  # Assign score 0 if the score wasn't parsed correctly
-
-    return {
-        "gpt_eval_info": {"question_id": doc["question_id"], "prediction": pred, "ground_truth": answer, "eval_model": model_name, "prompt": gpt_query_prompt, "response": response},
-        "gpt_eval_avg_score": {
-            "score": score,
-        },
-        "gpt_eval_score2_rate": {
-            "score": score,
-        },
-    }
+        # Use the llm_judge API for binary evaluation
+        result = server.evaluate_binary(
+            question=question,
+            answer=str(answer),
+            prediction=pred,
+            output_format="1/0",
+            custom_prompt=custom_prompt
+        )
+        
+        # Parse the result
+        if result["success"]:
+            judge_response = result["result"]
+            judge_score = judge_response.strip()
+            score = 1 if judge_score == "1" else 0
+        else:
+            eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
+            score = 0
+    except Exception as e:
+        eval_logger.error(f"Error getting judge response: {e}")
+        score = 0
+    
+    return {"llm_as_judge_eval": score}
 
 
 def d170_cn_aggregate_info(results, args):

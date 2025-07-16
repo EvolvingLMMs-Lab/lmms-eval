@@ -1,17 +1,17 @@
 import json
+import time
 import warnings
 from typing import List, Optional, Tuple, Union
 
-import PIL
 from accelerate import Accelerator, DistributedType
 from sglang import Engine
 from tqdm import tqdm
 from transformers import AutoProcessor
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.load_video import load_video_decord
 from lmms_eval.protocol import ChatMessages
 
@@ -26,7 +26,7 @@ class Sglang(lmms):
 
     def __init__(
         self,
-        model_version: str = "Qwen/Qwen2.5-VL-3B-Instruct",
+        model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
         tensor_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
@@ -40,7 +40,7 @@ class Sglang(lmms):
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
-        self.model_version = model_version
+        self._model = model
         self.max_frame_num = max_frame_num
         self.threads = threads
         self.chat_template = chat_template
@@ -53,9 +53,9 @@ class Sglang(lmms):
                 except json.JSONDecodeError:
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
-        # Set up vllm client
-        self.client = Engine(model_path=model_version, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, **kwargs)
-        self.processor = AutoProcessor.from_pretrained(model_version)
+        # Set up sglang client
+        self.client = Engine(model_path=model, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, **kwargs)
+        self.processor = AutoProcessor.from_pretrained(model)
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -120,6 +120,8 @@ class Sglang(lmms):
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
+        total_tokens = 0
+        e2e_latency = 0
         for batch_requests in batched_requests:
             batched_messages = []
             image_data = []
@@ -160,13 +162,37 @@ class Sglang(lmms):
                 tokenize=False,
                 add_generation_prompt=True,
             )
+
+            start_time = time.time()
             outputs = self.client.generate(texts, params, image_data=image_data)
+            end_time = time.time()
 
             response_text = [o["text"] for o in outputs]
+
+            # Calculate timing metrics for batch
+            e2e_latency += end_time - start_time
+
+            for output_idx, output in enumerate(outputs):
+                # Get token count from output
+                if "meta_info" in output and "completion_tokens" in output["meta_info"]:
+                    output_tokens = output["meta_info"]["completion_tokens"]
+                else:
+                    output_tokens = len(output["text"].split())
+
+                total_tokens += output_tokens
+
+            if len(outputs) > 1:
+                avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)
             pbar.update(len(batch_requests))
+        metric_dict = {
+            "total_tokens": total_tokens,
+            "e2e_latency": e2e_latency,
+            "avg_speed": avg_speed,
+        }
+        log_metrics(**metric_dict)
 
         pbar.close()
         return res

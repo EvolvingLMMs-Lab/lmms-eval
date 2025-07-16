@@ -1,3 +1,4 @@
+import time
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -8,6 +9,7 @@ from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.reasoning_model_utils import (
     parse_reasoning_model_answer,
 )
@@ -34,10 +36,12 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=False)
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, group_fn=lambda x: x[2], grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+        e2e_latency = 0
+        total_tokens = 0
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
             chat_messages = [doc_to_messages[0](self.task_dict[task][split][ids]) for ids, task, split in zip(doc_id, task, split)]
@@ -88,6 +92,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 current_gen_kwargs["temperature"] = None
                 current_gen_kwargs["top_p"] = None
 
+            start_time = time.time()
             cont = self.model.generate(
                 **inputs,
                 eos_token_id=self.tokenizer.eos_token_id,
@@ -99,9 +104,14 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 max_new_tokens=current_gen_kwargs["max_new_tokens"],
                 use_cache=self.use_cache,
             )
+            end_time = time.time()
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+
+            # Calculate timing metrics for batch
+            e2e_latency += end_time - start_time
+            total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
 
             for ans, context in zip(answers, texts):
                 clean_ans = parse_reasoning_model_answer(ans)
@@ -114,6 +124,19 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 eval_logger.debug(f"Model Clean Response: {clean_ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
+
+        # Calculate average speed
+        avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+        # Log metrics
+        metric_dict = {
+            "total_tokens": total_tokens,
+            "e2e_latency": e2e_latency,
+            "avg_speed": avg_speed,
+            "additional_metrics": {
+                "rank": self.rank,
+            },
+        }
+        log_metrics(**metric_dict)
 
         pbar.close()
         return res

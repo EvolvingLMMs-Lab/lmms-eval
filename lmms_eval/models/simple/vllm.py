@@ -69,6 +69,7 @@ class VLLM(lmms):
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
             trust_remote_code=trust_remote_code,
+            disable_log_stats=False,
             **kwargs,
         )
 

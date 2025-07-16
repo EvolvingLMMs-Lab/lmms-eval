@@ -9,6 +9,7 @@ from pathlib import Path
 import requests
 import yaml
 
+from lmms_eval.llm_judge import ServerConfig, get_server
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 
@@ -29,9 +30,14 @@ with open(Path(__file__).parent / "dc100_en.yaml", "r") as f:
             safe_data.append(line)
     config = yaml.safe_load("".join(safe_data))
 
-API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
+API_TYPE = os.getenv("API_TYPE", "openai")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+
+# Initialize the judge server
+server_config = ServerConfig(
+    model_name=MODEL_VERSION,
+)
+server = get_server(server_name=API_TYPE, config=server_config)
 
 EVALUATION_PROMPT_TEMPLATE_SIMPLE_V1 = """Text Caption: {caption}
 From 0 to 100, how much do you rate for this Text Caption in terms of the correct and comprehensive description of the image?
@@ -89,25 +95,49 @@ def image_to_base64(pil_image):
 
 def process_results(doc, results):
     prediction = results[0]
-    question_id = doc["question_id"]
-    image_path = doc["image"]
-    base64_image = image_to_base64(image_path)
-    prompt = EVALUATION_PROMPT_TEMPLATE_SIMPLE_V1.format(caption=prediction)
-    try:
-        response = get_chat_response(base64_image, prompt)
-        score_value = re.search(r"Final Score: (\d+)", response)
-        score = int(score_value.group(1)) if score_value else 0
-    except Exception as e:
-        eval_logger.error(f"Error for Question ID: {question_id}: {e}")
-        response = ""
-        score = 0
+    question = doc["question"]
+    answer = doc["answer"]  # Ground truth answer
+    
+    # Define custom prompt for DC100 EN evaluation
+    custom_prompt = """You are evaluating whether a model's response correctly describes an image.
 
-    return {
-        "gpt_eval_info": {"question_id": question_id, "question": doc["question"], "model_caption": prediction, "explanation": response, "eval_model": GPT_EVAL_MODEL_NAME, "score": score, "prompt": prompt},
-        "gpt_eval_avg_score": {
-            "score": score,
-        },
-    }
+The model should provide a correct and comprehensive description of the image including:
+- Object/scene appearance, position, pose, action, shape
+- Contents in the background
+- Overall accuracy of the description
+
+Do not penalize for:
+- Appropriateness or sensitive descriptors (e.g., "middle-aged western man")
+- Minor formatting differences
+
+Score 1 if the prediction correctly and comprehensively describes the key elements in the image.
+Score 0 if the prediction is incorrect, incomplete, or misses important elements.
+
+Return only "1" or "0" with no additional text or formatting."""
+    
+    try:
+        # Use the llm_judge API for binary evaluation
+        result = server.evaluate_binary(
+            question=question,
+            answer=str(answer),
+            prediction=prediction,
+            output_format="1/0",
+            custom_prompt=custom_prompt
+        )
+        
+        # Parse the result
+        if result["success"]:
+            judge_response = result["result"]
+            judge_score = judge_response.strip()
+            score = 1 if judge_score == "1" else 0
+        else:
+            eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
+            score = 0
+    except Exception as e:
+        eval_logger.error(f"Error getting judge response: {e}")
+        score = 0
+    
+    return {"llm_as_judge_eval": score}
 
 
 def dc100_en_aggregate_info(results, args):
