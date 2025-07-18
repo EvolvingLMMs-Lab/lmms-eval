@@ -31,7 +31,10 @@ class PhyXEvaluator:
         if not config["metadata"]["quick_extract"]:
             self.juder_model = config["metadata"]["eval_model_name"]
             API_URL = "https://api.deepseek.com/v1/chat/completions"
-            API_KEY = os.getenv("Deepseek_API", "YOUR_API_KEY")
+            API_KEY = os.getenv("Deepseek_API", "")
+            if API_KEY == "":
+                import warnings
+                warnings.warn("To judge via Deepseek, please set api env following `export Deepseek_API=$Your_KEY`")
             self.headers = {
                         "Authorization": f"Bearer {API_KEY}",
                         "Content-Type": "application/json",
@@ -44,7 +47,7 @@ class PhyXEvaluator:
 
 
     def judger_generate(self, prompt, temperature=0, max_tokens=128, n=1, patience=5, sleep_time=0):
-        assert config["metadata"]["quick_extract"]==False, "TO employ LLM to extract answer, please set `quick_extract=False`"
+        assert config["metadata"]["quick_extract"]==False, "To employ LLM to extract answer, please set `quick_extract=False`"
         messages = [
             {"role": "user", "content": prompt},
         ]
@@ -364,7 +367,6 @@ class PhyXEvaluator:
                 ret["extracted"] = extracted_answer
             else:
                 ret["extracted"] = "SAME as predict"
-
 
         if ret['gt'].strip().lower() == ret["extracted"].strip().lower() or ret['gt'].strip().lower() == ret["pred"].strip().lower() or ret['gt'] in ret['pred']:
             ret['match'] = 1
