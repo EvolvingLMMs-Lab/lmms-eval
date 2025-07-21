@@ -13,25 +13,17 @@ import yaml
 from loguru import logger as eval_logger
 from openai import OpenAI
 from tqdm import tqdm
+from utils import load_phyx_config
 
 FAIL_MSG = "Failed to obtain answer via API."
-
-with open(Path(__file__).parent / "phyx.yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    config = yaml.safe_load("".join(safe_data))
+config = load_phyx_config()
 
 
 class PhyXEvaluator:
     def __init__(self):
         if not config["metadata"]["quick_extract"]:
             self.juder_model = config["metadata"]["eval_model_name"]
-            API_URL = "https://api.deepseek.com/v1/chat/completions"
+            API_URL = "https://api.deepseek.com"
             API_KEY = os.getenv("Deepseek_API", "")
             if API_KEY == "":
                 eval_logger.error("To judge via Deepseek, please set api env following `export Deepseek_API=$Your_KEY`")
@@ -39,7 +31,7 @@ class PhyXEvaluator:
                 "Authorization": f"Bearer {API_KEY}",
                 "Content-Type": "application/json",
             }
-            self.client = OpenAI(api_key=API_KEY, base_url=API_URL.rstrip("chat/completions"))
+            self.client = OpenAI(api_key=API_KEY, base_url=API_URL)
         else:
             self.juder_model = None
             self.headers = None
@@ -198,17 +190,14 @@ class PhyXEvaluator:
         d = {"\dfrac": "\\frac", "\pi": "3.14"}
         output = input
         for k, v in d.items():
-            try:
-                output = output.replace(k, v)
-            except:
-                pass
+            output = output.replace(k, v)
         return output
 
     def safe_literal_eval(self, s):
         s = s.strip()
         try:
             return ast.literal_eval(s)
-        except:
+        except (ValueError, SyntaxError):
             pass
         if not s.startswith("{"):
             s = "{" + s
@@ -217,7 +206,7 @@ class PhyXEvaluator:
         s = re.sub(r'([{,]\s*)([^"\{\}\:\,\s]+)\s*:', r'\1"\2":', s)
         try:
             return ast.literal_eval(s)
-        except Exception as e:
+        except (ValueError, SyntaxError):
             return None
 
     def extract_boxed_content(self, s):
