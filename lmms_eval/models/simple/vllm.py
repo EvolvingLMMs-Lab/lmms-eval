@@ -20,7 +20,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-NUM_SECONDS_TO_SLEEP = 5
+NUM_SECONDS_TO_SLEEP = os.getenv("NUM_SECONDS_TO_SLEEP", 5)
+WORKERS = os.getenv("WORKERS", 32)
 
 try:
     from vllm import LLM, SamplingParams
@@ -37,7 +38,6 @@ class VLLM(lmms):
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
         max_frame_num: int = 32,
-        threads: int = 16,  # Threads to use for decoding visuals
         trust_remote_code: Optional[bool] = True,
         chat_template: Optional[str] = None,
         min_image_pixels: int = 28,  # minimum image dimension, required for Qwen 2/2.5-VL models
@@ -49,7 +49,6 @@ class VLLM(lmms):
         # Here we just use the same token as llava for convenient
         self.model = model
         self.max_frame_num = max_frame_num
-        self.threads = threads
         self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
         # Qwen 2/2.5-VL models enforce minimum image dimensions
@@ -189,7 +188,7 @@ class VLLM(lmms):
                     visuals = self.flatten(visuals)
                     imgs = []  # multiple images or frames for video
                     all_tasks = []
-                    with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                    with ThreadPoolExecutor(max_workers=WORKERS) as executor:
                         for visual in visuals:
                             if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
                                 all_tasks.append(executor.submit(self.encode_video, visual))

@@ -97,7 +97,7 @@ def process_results(doc, results):
     prediction = results[0]
     question = doc["question"]
     answer = doc["answer"]  # Ground truth answer
-    
+
     # Define custom prompt for DC100 EN evaluation
     custom_prompt = """You are evaluating whether a model's response correctly describes an image.
 
@@ -114,17 +114,11 @@ Score 1 if the prediction correctly and comprehensively describes the key elemen
 Score 0 if the prediction is incorrect, incomplete, or misses important elements.
 
 Return only "1" or "0" with no additional text or formatting."""
-    
+
     try:
         # Use the llm_judge API for binary evaluation
-        result = server.evaluate_binary(
-            question=question,
-            answer=str(answer),
-            prediction=prediction,
-            output_format="1/0",
-            custom_prompt=custom_prompt
-        )
-        
+        result = server.evaluate_binary(question=question, answer=str(answer), prediction=prediction, output_format="1/0", custom_prompt=custom_prompt)
+
         # Parse the result
         if result["success"]:
             judge_response = result["result"]
@@ -136,7 +130,7 @@ Return only "1" or "0" with no additional text or formatting."""
     except Exception as e:
         eval_logger.error(f"Error getting judge response: {e}")
         score = 0
-    
+
     return {"llm_as_judge_eval": score}
 
 
