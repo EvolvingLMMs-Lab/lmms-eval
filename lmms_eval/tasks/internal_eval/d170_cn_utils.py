@@ -95,7 +95,7 @@ def process_results(doc, results):
     pred = results[0]
     question = doc["question"]
     answer = doc["annotation"]
-    
+
     # Define custom prompt for D170 CN evaluation
     custom_prompt = """You are an expert in judging the quality of a model response compared with given ground truth. The model response is in English while the ground truth can be in English or Chinese, or both. You should only judge the relevance of the model response to the ground truth based on meanings, not the language.
 
@@ -109,17 +109,11 @@ For non-grounding questions:
 - Score 0 for incorrect, partially correct, or answers with extra incorrect information
 
 Return only "1" or "0" with no additional text or formatting."""
-    
+
     try:
         # Use the llm_judge API for binary evaluation
-        result = server.evaluate_binary(
-            question=question,
-            answer=str(answer),
-            prediction=pred,
-            output_format="1/0",
-            custom_prompt=custom_prompt
-        )
-        
+        result = server.evaluate_binary(question=question, answer=str(answer), prediction=pred, output_format="1/0", custom_prompt=custom_prompt)
+
         # Parse the result
         if result["success"]:
             judge_response = result["result"]
@@ -131,7 +125,7 @@ Return only "1" or "0" with no additional text or formatting."""
     except Exception as e:
         eval_logger.error(f"Error getting judge response: {e}")
         score = 0
-    
+
     return {"llm_as_judge_eval": score}
 
 
