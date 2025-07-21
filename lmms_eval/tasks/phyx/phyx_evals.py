@@ -1,18 +1,10 @@
-import argparse
 import ast
-import copy
-import json
 import os
 import re
 import time
-from collections import defaultdict
-from pathlib import Path
 
-import pandas as pd
-import yaml
 from loguru import logger as eval_logger
 from openai import OpenAI
-from tqdm import tqdm
 from utils import load_phyx_config
 
 FAIL_MSG = "Failed to obtain answer via API."
@@ -38,7 +30,7 @@ class PhyXEvaluator:
             self.client = None
 
     def judger_generate(self, prompt, temperature=0, max_tokens=128, n=1, patience=5, sleep_time=0):
-        assert config["metadata"]["quick_extract"] == False, "To employ LLM to extract answer, please set `quick_extract=False`"
+        assert not config["metadata"]["quick_extract"], "To employ LLM to extract answer, please set `quick_extract=False`"
         messages = [
             {"role": "user", "content": prompt},
         ]
@@ -256,10 +248,10 @@ class PhyXEvaluator:
             else:
                 log += "Compared at semantic level. "
                 # print(res)
-                if "1" in res or 1 == res:
+                if "1" in res or res == 1:
                     log += "Semantic equal via LLM."
                     return dict(log=log, res=1, extracted=prediction)
-                elif "0" in res or 0 == res:
+                elif "0" in res or res == 0:
                     log += "LLM judgement {}".format(res)
                     return dict(log=log, res=0, extracted=prediction)
         log += "All 5 retries failed.\n"
@@ -297,10 +289,10 @@ class PhyXEvaluator:
                 log += f"Try {i}: answer and prediction are {gt_answer} and {prediction}, failed to compare.\n"
             else:
                 log += "Compared at semantic level. "
-                if "1" in res or 1 == res:
+                if "1" in res or res == 1:
                     log += "Semantic equal via LLM."
                     return dict(log=log, res=1, extracted=prediction)
-                elif "0" in res or 0 == res:
+                elif "0" in res or res == 0:
                     log += "LLM judgement {}".format(res)
                     return dict(log=log, res=0, extracted=prediction)
         log += "All 5 retries failed.\n"
@@ -322,7 +314,7 @@ class PhyXEvaluator:
             if isinstance(pred_dict, dict) and "content" in pred_dict and pred_dict["content"] != "":
                 ret["pred"] = pred_dict["content"].strip()
                 with_reasoning = True
-        except:
+        except (ValueError, SyntaxError, TypeError):
             pass
 
         if not with_reasoning:
@@ -334,7 +326,7 @@ class PhyXEvaluator:
             return ret
 
         boxed_answer = self.extract_boxed_content(ret["pred"])
-        if boxed_answer != None:
+        if boxed_answer is not None:
             boxed_answer = self.mapping_str(boxed_answer)
             ret["extracted"] = boxed_answer
         else:

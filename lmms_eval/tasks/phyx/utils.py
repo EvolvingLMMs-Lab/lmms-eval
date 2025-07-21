@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.tasks.phyx.phyx_evals import PhyXEvaluator
