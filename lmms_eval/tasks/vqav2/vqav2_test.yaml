@@ -9,7 +9,7 @@ process_results: !function utils.vqav2_process_results_test
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."
   plm:
     pre_prompt: ""
-    post_prompt: "\nGive a very brief answer."
+    post_prompt: ""
