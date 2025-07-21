@@ -1,0 +1,10 @@
+group: phyx
+task:
+  - phyx_mc
+  - phyx_oe
+  - phyx_mini_mc
+  - phyx_mini_oe
+metadata:
+  version: 0.0
+  eval_model_name: "deepseek-chat"
+  quick_extract: false
