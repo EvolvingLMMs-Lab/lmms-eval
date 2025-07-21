@@ -33,6 +33,7 @@
 <details>
 <summary>We warmly welcome contributions from the open-source community! Below is a chronological list of recent tasks, models, and features added by our amazing contributors. </summary>
 
+- [2025-07] 🎉🎉 We welcome the new task [PhyX](https://phyx-bench.github.io/), the first large-scale benchmark designed to assess models capacity for physics-grounded reasoning in visual scenarios.
 - [2025-06] 🎉🎉 We welcome the new task [VideoMathQA](https://mbzuai-oryx.github.io/VideoMathQA), designed to evaluate mathematical reasoning in real-world educational videos.
 - [2024-10] 🎉🎉 We welcome the new task [NaturalBench](https://huggingface.co/datasets/BaiqiL/NaturalBench), a vision-centric VQA benchmark (NeurIPS'24) that challenges vision-language models with simple questions about natural imagery.
 - [2024-10] 🎉🎉 We welcome the new task [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench) for fine-grained temporal understanding and reasoning for videos, which reveals a huge (>30%) human-AI gap.

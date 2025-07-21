@@ -1,19 +1,20 @@
-import re
+import argparse
+import ast
+import copy
 import json
 import os
-import copy
-import argparse
-from tqdm import tqdm
-from collections import defaultdict
-import ast
-from pathlib import Path
-import yaml
-from openai import OpenAI
-from loguru import logger as eval_logger
+import re
 import time
-import pandas as pd
+from collections import defaultdict
+from pathlib import Path
 
-FAIL_MSG = 'Failed to obtain answer via API.'
+import pandas as pd
+import yaml
+from loguru import logger as eval_logger
+from openai import OpenAI
+from tqdm import tqdm
+
+FAIL_MSG = "Failed to obtain answer via API."
 
 with open(Path(__file__).parent / "phyx.yaml", "r") as f:
     raw_data = f.readlines()
@@ -33,21 +34,19 @@ class PhyXEvaluator:
             API_URL = "https://api.deepseek.com/v1/chat/completions"
             API_KEY = os.getenv("Deepseek_API", "")
             if API_KEY == "":
-                import warnings
-                warnings.warn("To judge via Deepseek, please set api env following `export Deepseek_API=$Your_KEY`")
+                eval_logger.error("To judge via Deepseek, please set api env following `export Deepseek_API=$Your_KEY`")
             self.headers = {
-                        "Authorization": f"Bearer {API_KEY}",
-                        "Content-Type": "application/json",
-                    }
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json",
+            }
             self.client = OpenAI(api_key=API_KEY, base_url=API_URL.rstrip("chat/completions"))
         else:
             self.juder_model = None
             self.headers = None
             self.client = None
 
-
     def judger_generate(self, prompt, temperature=0, max_tokens=128, n=1, patience=5, sleep_time=0):
-        assert config["metadata"]["quick_extract"]==False, "To employ LLM to extract answer, please set `quick_extract=False`"
+        assert config["metadata"]["quick_extract"] == False, "To employ LLM to extract answer, please set `quick_extract=False`"
         messages = [
             {"role": "user", "content": prompt},
         ]
@@ -129,7 +128,6 @@ class PhyXEvaluator:
 
         return [example_1, example_2, example_3, example_4, example_5]
 
-
     def get_ICE_MC(self):
         example_1 = """
     Ground truth answer: A \n
@@ -162,7 +160,6 @@ class PhyXEvaluator:
 
         return [example_1, example_2, example_3, example_4]
 
-
     def build_phyx_gpt4_prompt(self, line, pred):
         task_description = """
     Please read the following example. Given predicted answer and ground truth answer,
@@ -171,16 +168,15 @@ class PhyXEvaluator:
     If the given predicted mentions "approximately", then allow the Approximation Error, \
     such as 0.49 and approximately 0.5, 0.81 and approximately 0.8. \n
     """
-        gt_answer = line['answer']
+        gt_answer = line["answer"]
         prompt = task_description
         examples = self.get_ICE()
         for example in examples:
-            prompt += example + '\n'
-        prompt += 'Ground truth answer: {} \n'.format(gt_answer)
-        prompt += 'Predicted answer: {} \n'.format(pred)
-        prompt += 'Judegement:'
+            prompt += example + "\n"
+        prompt += "Ground truth answer: {} \n".format(gt_answer)
+        prompt += "Predicted answer: {} \n".format(pred)
+        prompt += "Judegement:"
         return prompt
-
 
     def build_phyx_gpt4_prompt_MC(self, line, pred):
         task_description = """
@@ -188,21 +184,20 @@ class PhyXEvaluator:
     The ground truth answer would be A/B/C/D. The predicted answer would be some words containing A/B/C/D.
     Please compare the these two answers, then ONLY output judegement 1/0 for matched/unmatched at the end of the prompt. \n
     """
-        gt_answer = line['answer']
+        gt_answer = line["answer"]
         prompt = task_description
         examples = self.get_ICE_MC()
         for example in examples:
-            prompt += example + '\n'
-        prompt += 'Ground truth answer: {} \n'.format(gt_answer)
-        prompt += 'Predicted answer: {} \n'.format(pred)
-        prompt += 'Judegement:'
+            prompt += example + "\n"
+        prompt += "Ground truth answer: {} \n".format(gt_answer)
+        prompt += "Predicted answer: {} \n".format(pred)
+        prompt += "Judegement:"
         return prompt
-
 
     def mapping_str(self, input):
         d = {"\dfrac": "\\frac", "\pi": "3.14"}
         output = input
-        for k,v in d.items():
+        for k, v in d.items():
             try:
                 output = output.replace(k, v)
             except:
@@ -214,7 +209,7 @@ class PhyXEvaluator:
         try:
             return ast.literal_eval(s)
         except:
-            pass  
+            pass
         if not s.startswith("{"):
             s = "{" + s
         if not s.endswith("}"):
@@ -225,31 +220,29 @@ class PhyXEvaluator:
         except Exception as e:
             return None
 
-
     def extract_boxed_content(self, s):
-        start = s.find(r'\boxed{')
+        start = s.find(r"\boxed{")
         if start == -1:
-            return None 
-        content_start = start + len(r'\boxed{')
+            return None
+        content_start = start + len(r"\boxed{")
         rest = s[content_start:]
         depth = 0
         for i, ch in enumerate(rest):
-            if ch == '{':
+            if ch == "{":
                 depth += 1
-            elif ch == '}':
+            elif ch == "}":
                 if depth == 0:
                     return rest[:i]
                 else:
                     depth -= 1
         return None
 
-
     def PhyX_auxeval(self, line):
-        log = ''
+        log = ""
         retry = 5
 
-        gt_answer = str(line['answer'])
-        prediction = line['prediction']
+        gt_answer = str(line["answer"])
+        prediction = line["prediction"]
 
         # try extract final answer using re rules
         tmp = self.PhyX_process_line(line)
@@ -270,9 +263,9 @@ class PhyXEvaluator:
         for i in range(retry):
             res = self.judger_generate(prompt, temperature=i * 0.5)
             if FAIL_MSG in res:
-                log += f'Try {i}: answer and prediction are {gt_answer} and {prediction}, failed to compare.\n'
+                log += f"Try {i}: answer and prediction are {gt_answer} and {prediction}, failed to compare.\n"
             else:
-                log += 'Compared at semantic level. '
+                log += "Compared at semantic level. "
                 # print(res)
                 if "1" in res or 1 == res:
                     log += "Semantic equal via LLM."
@@ -280,16 +273,15 @@ class PhyXEvaluator:
                 elif "0" in res or 0 == res:
                     log += "LLM judgement {}".format(res)
                     return dict(log=log, res=0, extracted=prediction)
-        log += 'All 5 retries failed.\n'
+        log += "All 5 retries failed.\n"
         return dict(log=log, res=0, extracted=prediction)
 
-
     def PhyX_auxeval_MC(self, line):
-        log = ''
+        log = ""
         retry = 5
 
-        gt_answer = str(line['answer'])
-        prediction = line['prediction']
+        gt_answer = str(line["answer"])
+        prediction = line["prediction"]
 
         tmp = self.PhyX_process_line_MC(line)
 
@@ -297,7 +289,7 @@ class PhyXEvaluator:
             log += "Fail to Call API"
             prediction = "Fail to Call API"
             return dict(log=log, res=0, extracted=prediction)
-            
+
         if tmp["extracted"] != "SAME as predict":
             prediction = tmp["extracted"]
 
@@ -313,54 +305,53 @@ class PhyXEvaluator:
         for i in range(retry):
             res = self.judger_generate(prompt, temperature=i * 0.5)
             if FAIL_MSG in res:
-                log += f'Try {i}: answer and prediction are {gt_answer} and {prediction}, failed to compare.\n'
+                log += f"Try {i}: answer and prediction are {gt_answer} and {prediction}, failed to compare.\n"
             else:
-                log += 'Compared at semantic level. '
+                log += "Compared at semantic level. "
                 if "1" in res or 1 == res:
                     log += "Semantic equal via LLM."
                     return dict(log=log, res=1, extracted=prediction)
                 elif "0" in res or 0 == res:
                     log += "LLM judgement {}".format(res)
                     return dict(log=log, res=0, extracted=prediction)
-        log += 'All 5 retries failed.\n'
+        log += "All 5 retries failed.\n"
         return dict(log=log, res=0, extracted=prediction)
-
 
     def PhyX_process_line(self, line):
         ret = {}
 
-        answers = str(line['answer'])
+        answers = str(line["answer"])
 
         ret["index"] = line["index"]
-        ret['gt'] = answers
-        
+        ret["gt"] = answers
+
         # with reasoning, extract content part
-        prediction_str = line['prediction']
+        prediction_str = line["prediction"]
         with_reasoning = False
         try:
             pred_dict = self.safe_literal_eval(prediction_str)
-            if isinstance(pred_dict, dict) and 'content' in pred_dict and pred_dict['content']!="":
-                ret['pred'] = pred_dict['content'].strip()
+            if isinstance(pred_dict, dict) and "content" in pred_dict and pred_dict["content"] != "":
+                ret["pred"] = pred_dict["content"].strip()
                 with_reasoning = True
         except:
             pass
 
         if not with_reasoning:
-            ret['pred'] = prediction_str.strip()
-        
-        if ret['pred'] == FAIL_MSG:
-            ret['match'] = 0
+            ret["pred"] = prediction_str.strip()
+
+        if ret["pred"] == FAIL_MSG:
+            ret["match"] = 0
             ret["extracted"] = "Fail to Call API"
             return ret
-        
-        boxed_answer = self.extract_boxed_content(ret['pred'])
+
+        boxed_answer = self.extract_boxed_content(ret["pred"])
         if boxed_answer != None:
             boxed_answer = self.mapping_str(boxed_answer)
             ret["extracted"] = boxed_answer
         else:
-            pattern = r'\b(?:final\s+answer|correct\s+answer)\b[^:：]*[:：]\s*(.*?)(?=\n\n\n|\Z)'
+            pattern = r"\b(?:final\s+answer|correct\s+answer)\b[^:：]*[:：]\s*(.*?)(?=\n\n\n|\Z)"
             flags = re.IGNORECASE | re.DOTALL
-            match = re.search(pattern, ret['pred'], flags=flags)
+            match = re.search(pattern, ret["pred"], flags=flags)
             if match:
                 extracted_answer = match.group(1)
                 extracted_answer = self.mapping_str(extracted_answer)
@@ -368,29 +359,28 @@ class PhyXEvaluator:
             else:
                 ret["extracted"] = "SAME as predict"
 
-        if ret['gt'].strip().lower() == ret["extracted"].strip().lower() or ret['gt'].strip().lower() == ret["pred"].strip().lower() or ret['gt'] in ret['pred']:
-            ret['match'] = 1
+        if ret["gt"].strip().lower() == ret["extracted"].strip().lower() or ret["gt"].strip().lower() == ret["pred"].strip().lower() or ret["gt"] in ret["pred"]:
+            ret["match"] = 1
             return ret
 
         # unmatch at string level
-        ret['match'] = 0
+        ret["match"] = 0
         return ret
-
 
     def PhyX_process_line_MC(self, line):
         ret = {}
 
-        answers = str(line['answer'])
+        answers = str(line["answer"])
 
         ret["index"] = line["index"]
-        ret['gt'] = answers
-        ret['pred'] = line['prediction'].strip()
+        ret["gt"] = answers
+        ret["pred"] = line["prediction"].strip()
 
-        pattern = r'\b(?:correct|answer|option|Answer|Option|Correct)\b[\s\S]*?([A-D])'
-        match = re.search(pattern, ret['pred'])
+        pattern = r"\b(?:correct|answer|option|Answer|Option|Correct)\b[\s\S]*?([A-D])"
+        match = re.search(pattern, ret["pred"])
 
-        if ret['pred'] == FAIL_MSG:
-            ret['match'] = 0
+        if ret["pred"] == FAIL_MSG:
+            ret["match"] = 0
             ret["extracted"] = "Fail to Call API"
             return ret
 
@@ -398,24 +388,24 @@ class PhyXEvaluator:
             extracted_answer = match.group(1)
             # compare string
             ret["extracted"] = extracted_answer
-            if ret['gt'].strip().lower() == extracted_answer.strip().lower():
-                ret['match'] = 1
+            if ret["gt"].strip().lower() == extracted_answer.strip().lower():
+                ret["match"] = 1
                 return ret
         else:
             # try another match strategy
-            matches = re.findall(r'([ABCD]):', ret['pred'])
+            matches = re.findall(r"([ABCD]):", ret["pred"])
             if matches:
                 extracted_answer = matches[-1]
                 ret["extracted"] = extracted_answer
-                if ret['gt'].strip().lower() == extracted_answer.strip().lower():
-                    ret['match'] = 1
+                if ret["gt"].strip().lower() == extracted_answer.strip().lower():
+                    ret["match"] = 1
                     return ret
             else:
                 ret["extracted"] = "SAME as predict"
 
-        if ret['gt'] + ":" in ret['pred'] or ret['gt'] + "**" in ret['pred'] or "**" + ret['gt'] in ret['pred']:
-            ret['match'] = 1
+        if ret["gt"] + ":" in ret["pred"] or ret["gt"] + "**" in ret["pred"] or "**" + ret["gt"] in ret["pred"]:
+            ret["match"] = 1
         else:
-            ret['match'] = 0
+            ret["match"] = 0
 
         return ret
