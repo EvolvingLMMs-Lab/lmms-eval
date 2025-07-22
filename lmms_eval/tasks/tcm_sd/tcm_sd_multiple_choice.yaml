@@ -1,0 +1,27 @@
+dataset_path: json
+dataset_kwargs:
+  data_files: /root/projects/auo/rag-eval-harness/dataset/TMC_SD_clean/tcm_sd_test_multiple_choice.json
+task: tcm_sd_multiple_choice
+test_split: train
+output_type: generate_until
+doc_to_text: !function utils.tcm_sd_doc_to_text_multiple_choice
+doc_to_target: "expected_answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 10
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.tcm_sd_process_results_multiple_choice
+metric_list:
+  - metric: tcm_sd_acc
+    aggregation: !function utils.tcm_sd_aggregate_results_multiple_choice
+    higher_is_better: true
+metadata:
+  version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "" 
