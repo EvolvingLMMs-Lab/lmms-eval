@@ -163,10 +163,23 @@ class VLLM(lmms):
         self.model_version = model_version
         self.max_frame_num = max_frame_num
         self.threads = threads
-        self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model_version)
+        
+        # Load chat template during initialization
+        self.chat_template = None
+        if chat_template is not None:
+            # Check if it looks like a file path (contains path separators or has common template extensions)
+            if os.path.sep in chat_template or chat_template.endswith(('.jinja', '.jinja2', '.j2')):
+                # It appears to be a file path, so it must exist
+                if not os.path.isfile(chat_template):
+                    raise FileNotFoundError(f"Chat template file not found: {chat_template}")
+                with open(chat_template, "r") as f:
+                    self.chat_template = f.read()
+            else:
+                # Treat as a template string
+                self.chat_template = chat_template
 
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
@@ -331,12 +344,7 @@ class VLLM(lmms):
             # The logic here is similar to the vllm implementation as shown here (https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat)
             # - vllm implementation: https://github.com/vllm-project/vllm/blob/d97841078b6e0dde8da36d5a2b8e8857a2c37944/vllm/entrypoints/chat_utils.py#L829
             if self.chat_template is not None:
-                if os.path.isfile(self.chat_template):
-                    with open(self.chat_template, "r") as f:
-                        chat_template = f.read()
-                else:
-                    chat_template = self.chat_template
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=self.chat_template)
             else:
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             response_text = [o.outputs[0].text for o in response]
