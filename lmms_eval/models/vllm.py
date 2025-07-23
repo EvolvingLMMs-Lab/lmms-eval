@@ -166,12 +166,12 @@ class VLLM(lmms):
         self.min_image_pixels = min_image_pixels
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model_version)
-        
+
         # Load chat template during initialization
         self.chat_template = None
         if chat_template is not None:
             # Check if it looks like a file path (contains path separators or has common template extensions)
-            if os.path.sep in chat_template or chat_template.endswith(('.jinja', '.jinja2', '.j2')):
+            if os.path.sep in chat_template or chat_template.endswith((".jinja", ".jinja2", ".j2")):
                 # It appears to be a file path, so it must exist
                 if not os.path.isfile(chat_template):
                     raise FileNotFoundError(f"Chat template file not found: {chat_template}")
