@@ -69,7 +69,7 @@ class VLLM(lmms):
         **kwargs: Additional arguments passed to the VLLM LLM constructor.
             - NOTE: model specific arguments can be passed here without the need to add more arguments to this class (see example below)
             - String arguments that look like JSON dictionaries will be automatically parsed.
-        
+
 
     Python Example 1: (example of passing model specific arguments)
     # ---------------------
@@ -140,8 +140,9 @@ class VLLM(lmms):
     # NOTE: No need to pass the chat template file if it is already defined in the model tokenizer.
     # The chat method automatically applies the model's chat template to format the prompt
     # - vllm chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
-    
+
     """
+
     def __init__(
         self,
         model_version: str = "Qwen/Qwen2.5-VL-3B-Instruct",
@@ -324,7 +325,7 @@ class VLLM(lmms):
 
             sampling_params = SamplingParams(**params)
 
-            # NOTE: 
+            # NOTE:
             # The chat method automatically applies the model's chat template to format the prompt
             # - vllm chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
             # The logic here is similar to the vllm implementation as shown here (https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat)
