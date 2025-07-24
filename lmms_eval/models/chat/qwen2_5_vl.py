@@ -91,6 +91,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 current_gen_kwargs["do_sample"] = False
                 current_gen_kwargs["temperature"] = None
                 current_gen_kwargs["top_p"] = None
+                current_gen_kwargs["top_k"] = None
 
             start_time = time.time()
             cont = self.model.generate(
@@ -102,6 +103,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 top_p=current_gen_kwargs["top_p"],
                 num_beams=current_gen_kwargs["num_beams"],
                 max_new_tokens=current_gen_kwargs["max_new_tokens"],
+                top_k=current_gen_kwargs.get("top_k", None),
                 use_cache=self.use_cache,
             )
             end_time = time.time()
