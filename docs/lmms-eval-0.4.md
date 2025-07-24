@@ -34,15 +34,6 @@ LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation
 
 ## Installation and Requirements
 
-### System Requirements
-
-- **Python**: 3.8 or higher
-- **CUDA**: 11.8 or higher (for GPU acceleration)
-- **Memory**: Minimum 16GB RAM, 32GB+ recommended for large models
-- **Storage**: 50GB+ free space for model weights and datasets
-
-### Installation
-
 ```bash
 # Clone the repository
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval.git
