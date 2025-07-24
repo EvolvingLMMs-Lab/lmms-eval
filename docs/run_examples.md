@@ -272,6 +272,57 @@ accelerate launch --num_processes 8 --main_process_port 30000 -m lmms_eval \
 
 ```
 
+# Audio Models
+
+### Qwen2-Audio
+
+```bash
+cd /path/to/lmms-eval
+python3 -m pip install -e .
+
+# Install audio dependencies
+python3 -m pip install librosa soundfile
+
+TASK=$1
+MODEL_PATH=$2
+echo $TASK
+TASK_SUFFIX="${TASK//,/_}"
+echo $TASK_SUFFIX
+
+python -m lmms_eval \
+    --model qwen2_audio \
+    --model_args pretrained=$MODEL_PATH \
+    --tasks $TASK \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix $TASK_SUFFIX \
+    --output_path ./logs/
+```
+
+### Gemini Audio
+
+```bash
+cd /path/to/lmms-eval
+python3 -m pip install -e .
+
+export GOOGLE_API_KEY="<YOUR_API_KEY>"
+
+TASK=$1
+MODEL_VERSION=$2
+echo $TASK
+TASK_SUFFIX="${TASK//,/_}"
+echo $TASK_SUFFIX
+
+python -m lmms_eval \
+    --model gemini_audio \
+    --model_args model_version=$MODEL_VERSION \
+    --tasks $TASK \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix $TASK_SUFFIX \
+    --output_path ./logs/
+```
+
 
 ### Claude
 

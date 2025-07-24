@@ -90,3 +90,174 @@ The final step is to import your model in `lmms_eval/models/__init__.py`:
 ```python
 from .my_model_filename import MyCustomLM
 ```
+
+## Complete Model Examples
+
+### Image Model Example (Primary Use Case)
+
+Here's a complete example of implementing an image model using the chat interface:
+
+```python
+from lmms_eval.api.registry import register_model
+from lmms_eval.api.model import lmms
+from typing import List, Tuple
+import torch
+from PIL import Image
+
+@register_model("my_image_model")
+class MyImageModel(lmms):
+    is_simple = False  # Use chat model type (recommended)
+    
+    def __init__(self, pretrained: str, device: str = "cuda", **kwargs):
+        super().__init__()
+        self.device = device
+        # Initialize your vision-language model here
+        self.model = load_your_model(pretrained)
+        self.processor = load_your_processor(pretrained)
+        
+    def generate_until(self, requests: list[Instance]) -> list[str]:
+        results = []
+        for request in requests:
+            # Extract components from the request
+            doc_to_messages, gen_kwargs, doc_id, task, split = request.args
+            
+            # Get the document and process messages
+            doc = self.task_dict[task][split][doc_id]
+            messages = doc_to_messages(doc)
+            
+            # Process images and text from messages
+            images = []
+            text_prompt = ""
+            for message in messages:
+                if message["type"] == "image":
+                    images.append(message["content"])
+                elif message["type"] == "text":
+                    text_prompt += message["content"]
+            
+            # Prepare inputs for your model
+            inputs = self.processor(
+                text=text_prompt, 
+                images=images, 
+                return_tensors="pt"
+            ).to(self.device)
+            
+            # Generate response
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=gen_kwargs.get("max_new_tokens", 128),
+                    temperature=gen_kwargs.get("temperature", 0.0),
+                    do_sample=gen_kwargs.get("do_sample", False)
+                )
+            
+            # Decode and return response
+            response = self.processor.decode(outputs[0], skip_special_tokens=True)
+            results.append(response)
+            
+        return results
+    
+    def loglikelihood(self, requests: list[Instance]) -> list[tuple[float, bool]]:
+        # Implement loglikelihood computation for multiple choice tasks
+        results = []
+        for request in requests:
+            contexts, doc_to_target, doc_to_visual, doc_id, task, split = request.args
+            # Implementation for computing log probabilities
+            # ...
+        return results
+```
+
+### Video Model Extension
+
+For video models, extend the image model pattern to handle temporal data:
+
+```python
+@register_model("my_video_model")
+class MyVideoModel(lmms):
+    is_simple = False
+    
+    def __init__(self, pretrained: str, max_frames: int = 8, **kwargs):
+        super().__init__()
+        self.max_frames = max_frames
+        # Initialize video model
+        
+    def generate_until(self, requests: list[Instance]) -> list[str]:
+        results = []
+        for request in requests:
+            doc_to_messages, gen_kwargs, doc_id, task, split = request.args
+            doc = self.task_dict[task][split][doc_id]
+            messages = doc_to_messages(doc)
+            
+            # Extract video frames
+            video_frames = []
+            text_prompt = ""
+            for message in messages:
+                if message["type"] == "video":
+                    # Process video into frames
+                    frames = self.extract_frames(message["content"], self.max_frames)
+                    video_frames.extend(frames)
+                elif message["type"] == "text":
+                    text_prompt += message["content"]
+            
+            # Process video frames and generate response
+            # ...
+        return results
+    
+    def extract_frames(self, video_path, max_frames):
+        # Extract frames from video file
+        # Return list of PIL Images or tensors
+        pass
+```
+
+### Audio Model Extension
+
+For audio models, adapt the pattern to handle audio inputs:
+
+```python
+@register_model("my_audio_model")
+class MyAudioModel(lmms):
+    is_simple = False
+    
+    def __init__(self, pretrained: str, sample_rate: int = 16000, **kwargs):
+        super().__init__()
+        self.sample_rate = sample_rate
+        # Initialize audio model
+        
+    def generate_until(self, requests: list[Instance]) -> list[str]:
+        results = []
+        for request in requests:
+            doc_to_messages, gen_kwargs, doc_id, task, split = request.args
+            doc = self.task_dict[task][split][doc_id]
+            messages = doc_to_messages(doc)
+            
+            # Process audio data
+            audio_data = []
+            text_prompt = ""
+            for message in messages:
+                if message["type"] == "audio":
+                    # Load and process audio
+                    audio = self.load_audio(message["content"], self.sample_rate)
+                    audio_data.append(audio)
+                elif message["type"] == "text":
+                    text_prompt += message["content"]
+            
+            # Process audio and generate response
+            # ...
+        return results
+    
+    def load_audio(self, audio_path, sample_rate):
+        # Load audio file and resample if needed
+        # Return audio tensor or array
+        pass
+```
+
+## Key Implementation Notes
+
+1. **Image Models**: Handle visual inputs through PIL Images or tensors, typically support single or multiple images
+2. **Video Models**: Extract frames from videos, handle temporal relationships
+3. **Audio Models**: Process audio waveforms, handle different sample rates and formats
+
+Remember to:
+- Handle different input modalities in the `doc_to_messages` function
+- Process model-specific tokens (e.g., `<image>`, `<video>`, `<audio>`)
+- Implement both `generate_until` and `loglikelihood` methods if your model supports both generation and multiple-choice tasks
+- Follow the existing model implementations in `lmms_eval/models/chat/` for reference
