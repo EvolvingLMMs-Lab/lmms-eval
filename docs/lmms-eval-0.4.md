@@ -4,6 +4,77 @@
 
 LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation, introducing groundbreaking features for distributed evaluation, reasoning-oriented benchmarks, and a unified interface for modern multimodal models. This release focuses on scalability, extensibility, and comprehensive evaluation capabilities across diverse multimodal tasks.
 
+## Table of Contents
+
+1. [Installation and Requirements](#installation-and-requirements)
+2. [Major Features](#major-features)
+   - [Unified Message Interface](#1-unified-message-interface)
+   - [Multi-Node Distributed Evaluation](#2-multi-node-distributed-evaluation)
+   - [Unified LLM/LMM Judge Interface](#3-unified-llmlmm-judge-interface)
+   - [Automatic Tensor Parallelism](#4-automatic-tensor-parallelism)
+   - [Tool Call Integration](#5-tool-call-integration)
+   - [NanoVLM Integration](#6-nanovlm-integration)
+
+3. [Programmatic API Usage](#programmatic-api-usage)
+   - [Basic Evaluation API](#basic-evaluation-api)
+   - [Advanced API](#advanced-api-with-custom-configuration)
+   - [Task Management](#task-management-api)
+   - [Distributed Evaluation](#distributed-evaluation-api)
+
+4. [New Benchmarks](#new-benchmarks)
+   - [Vision Understanding](#vision-understanding)
+   - [Reasoning-Oriented Benchmarks](#reasoning-oriented-benchmarks)
+
+5. [Technical Details](#technical-details)
+6. [Migration Guide](#migration-guide)
+7. [Performance Improvements](#performance-improvements)
+8. [Future Roadmap](#future-roadmap)
+9. [Contributing](#contributing)
+10. [Troubleshooting](#troubleshooting)
+
+## Installation and Requirements
+
+### System Requirements
+
+- **Python**: 3.8 or higher
+- **CUDA**: 11.8 or higher (for GPU acceleration)
+- **Memory**: Minimum 16GB RAM, 32GB+ recommended for large models
+- **Storage**: 50GB+ free space for model weights and datasets
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/EvolvingLMMs-Lab/lmms-eval.git
+cd lmms-eval
+
+# Install in development mode
+pip install -e .
+
+# Install additional dependencies for specific features
+pip install flash-attn --no-build-isolation  # For accelerated attention
+pip install librosa soundfile  # For audio tasks
+pip install av  # For video tasks
+```
+
+### Quick Start
+
+```bash
+# Basic evaluation example
+python -m lmms_eval \
+    --model qwen2_5_vl \
+    --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+    --tasks mmstar \
+    --batch_size 1 \
+    --output_path ./results
+
+# List available tasks
+python -m lmms_eval --tasks list
+
+# List available models
+python -m lmms_eval --model list
+```
+
 ## Major Features
 
 ### 1. Unified Message Interface
@@ -171,17 +242,43 @@ process_results: !function utils.process_results_with_judge
 
 Seamless model parallelism for large models:
 
-```python
+```bash
 # Automatically splits model across available GPUs
---model_args pretrained=large_model,auto_tp=True
+python -m lmms_eval \
+    --model qwen2_5_vl \
+    --model_args pretrained=Qwen/Qwen2.5-VL-72B-Instruct,auto_tp=True \
+    --tasks mmmu_val \
+    --batch_size 1 \
+    --output_path ./results
 ```
+
+This feature automatically distributes large models across multiple GPUs to handle models that don't fit in single GPU memory.
 
 ### 5. Tool Call Integration
 
 Support for models that can make tool/function calls during evaluation:
-- Evaluate tool-use capabilities
-- Support for multi-step reasoning with external tools
-- Integration with function calling APIs
+
+```python
+# Example tool call evaluation setup
+from lmms_eval.evaluator import simple_evaluate
+
+# Evaluate models with tool-use capabilities
+results = simple_evaluate(
+    model=tool_capable_model,
+    tasks=["tool_use_bench", "function_calling_eval"],
+    batch_size=1,
+    tool_config={
+        "enable_tools": True,
+        "tool_timeout": 30,
+        "max_tool_calls": 5
+    }
+)
+```
+
+Features:
+- **Tool-use Evaluation**: Assess models' ability to call external functions
+- **Multi-step Reasoning**: Support for complex reasoning with tool assistance
+- **Function Call Integration**: Seamless integration with various API endpoints
 
 ### 6. NanoVLM Integration
 
@@ -263,29 +360,6 @@ results = evaluate(
 )
 ```
 
-### NanoVLM Integration
-
-LMMS-Eval v0.4 is integrated as the default evaluation engine in [NanoVLM](https://github.com/huggingface/nanoVLM):
-
-```python
-from nanovlm import VLMTrainer
-from lmms_eval.evaluator import simple_evaluate
-
-# After training with NanoVLM
-trainer = VLMTrainer(...)
-model = trainer.train()
-
-# Evaluate with LMMS-Eval
-evaluation_results = simple_evaluate(
-    model=model,
-    tasks=["vqav2", "gqa", "textvqa"],
-    batch_size=8,
-    device="cuda"
-)
-
-# Integrated workflow
-trainer.log_evaluation_results(evaluation_results)
-```
 
 ### Task Management API
 
@@ -476,8 +550,11 @@ The distributed evaluation system introduces significant architectural changes:
 Enhanced API calling with asynchronous support:
 
 ```python
+import asyncio
+import aiohttp
+
 # Concurrent API calls for faster evaluation
-async def evaluate_with_api(samples, model="gpt-4-vision-preview"):
+async def evaluate_with_api(samples, model="gpt-4o-2024-11-20"):
     async with aiohttp.ClientSession() as session:
         tasks = [evaluate_single(session, sample, model) for sample in samples]
         results = await asyncio.gather(*tasks)
@@ -598,6 +675,42 @@ The v0.4 release was made possible by contributions from the LMMS-Eval community
 - VideoEval-Pro integration from the research community
 - Bug reports and feature requests from active users
 - Documentation improvements and examples
+
+## Troubleshooting
+
+### Common Issues
+
+**Import Errors**:
+```bash
+# If you encounter import errors, ensure all dependencies are installed
+pip install -e .
+pip install flash-attn --no-build-isolation
+```
+
+**CUDA Out of Memory**:
+```bash
+# Reduce batch size or use gradient checkpointing
+python -m lmms_eval --model qwen2_5_vl --batch_size 1 --tasks mmstar
+```
+
+**Slow Evaluation**:
+```bash
+# Enable caching and use multi-node evaluation
+python -m lmms_eval --cache_requests true --tasks mmstar
+```
+
+**Model Loading Issues**:
+```bash
+# For large models, use automatic tensor parallelism
+python -m lmms_eval --model_args auto_tp=True,device_map=auto
+```
+
+### Performance Tips
+
+1. **Use Caching**: Enable `--cache_requests true` for repeated evaluations
+2. **Batch Processing**: Increase batch size if memory permits
+3. **Multi-Node**: Use distributed evaluation for large workloads
+4. **Model Parallelism**: Use `auto_tp=True` for large models
 
 ## Getting Help
 
