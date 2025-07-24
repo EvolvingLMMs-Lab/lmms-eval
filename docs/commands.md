@@ -3,12 +3,11 @@ This document details the interface exposed by `lmms_eval` and provides details 
 
 ## Command-line Interface
 
+Running the library can be done via the `lmms_eval` entrypoint at the command line.
 
-Equivalently, running the library can be done via the `lmms_eval` entrypoint at the command line.
+This mode supports a number of command-line arguments, the details of which can also be seen via running with `-h` or `--help`:
 
-This mode supports a number of command-line arguments, the details of which can be also be seen via running with `-h` or `--help`:
-
-- `--model` : Selects which model type or provider is evaluated. Must be a string corresponding to the name of the model type/provider being used. See [the main README](https://github.com/EleutherAI/lm-evaluation-harness/tree/main#model-apis-and-inference-servers) for a full list of enabled model names and supported libraries or APIs.
+- `--model` : Selects which model type or provider is evaluated. Must be a string corresponding to the name of the model type/provider being used. See [the main README](https://github.com/EvolvingLMMs-Lab/lmms-eval#supported-models) for a full list of enabled model names and supported libraries or APIs.
 
 * `--model_args` : Controls parameters passed to the model constructor. Accepts a string containing comma-separated keyword arguments to the model class of the format `"arg1=val1,arg2=val2,..."`, such as, for example `--model_args pretrained=liuhaotian/llava-v1.5-7b,batch_size=1`. For a full list of what keyword arguments, see the initialization of the corresponding model class in `lmms_eval/models/`.
 
@@ -57,6 +56,35 @@ This mode supports a number of command-line arguments, the details of which can 
 * `--seed`: Set seed for python's random, numpy and torch.  Accepts a comma-separated list of 3 values for python's random, numpy, and torch seeds, respectively, or a single integer to set the same seed for all three.  The values are either an integer or 'None' to not set the seed. Default is `0,1234,1234` (for backward compatibility).  E.g. `--seed 0,None,8` sets `random.seed(0)` and `torch.manual_seed(8)`. Here numpy's seed is not set since the second value is `None`.  E.g, `--seed 42` sets all three seeds to 42.
 
 * `--wandb_args`:  Tracks logging to Weights and Biases for evaluation runs and includes args passed to `wandb.init`, such as `project` and `job_type`. Full list [here](https://docs.wandb.ai/ref/python/init). e.g., ```--wandb_args project=test-project,name=test-run```
+
+## Command Examples
+
+### Basic Evaluation
+```bash
+# Evaluate LLaVA on MME benchmark
+python -m lmms_eval --model llava --model_args pretrained=liuhaotian/llava-v1.5-7b --tasks mme --batch_size 1 --output_path ./results
+
+# Evaluate on multiple tasks
+python -m lmms_eval --model llava --model_args pretrained=liuhaotian/llava-v1.5-7b --tasks mme,mmbench_en --batch_size 1 --output_path ./results
+```
+
+### Using API Models
+```bash
+# GPT-4V evaluation
+python -m lmms_eval --model gpt4v --model_args model_version=gpt-4-vision-preview --tasks mathvista --output_path ./results
+
+# Claude evaluation
+python -m lmms_eval --model claude --model_args model_version=claude-3-opus-20240229 --tasks llava_in_the_wild --output_path ./results
+```
+
+### Advanced Options
+```bash
+# Enable logging and caching
+python -m lmms_eval --model llava --model_args pretrained=liuhaotian/llava-v1.5-7b --tasks mme --log_samples --use_cache ./cache/sqlite_cache.db --output_path ./results
+
+# Few-shot evaluation with chat template
+python -m lmms_eval --model qwen_vl --model_args pretrained=Qwen/Qwen-VL-Chat --tasks vqav2 --num_fewshot 5 --apply_chat_template --output_path ./results
+```
 
 * `--hf_hub_log_args` : Logs evaluation results to Hugging Face Hub. Accepts a string with the arguments separated by commas. Available arguments:
     * `hub_results_org` - organization name on Hugging Face Hub, e.g., `EleutherAI`. If not provided, the results will be pushed to the owner of the Hugging Face token,

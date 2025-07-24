@@ -255,6 +255,39 @@ metadata:
   - version: 0.0
 ```
 
+### Audio Task Example
+
+Here's an example of configuring an audio task (using AIR-Bench as reference):
+
+```yaml
+dataset_path: lmms-lab/AIR-Bench
+dataset_kwargs:
+  token: True
+task: "air_bench_chat"
+test_split: test
+output_type: generate_until
+doc_to_audio: !function utils.air_bench_doc_to_audio  # Process audio input
+doc_to_text: !function utils.air_bench_doc_to_text
+doc_to_messages: !function utils.air_bench_doc_to_messages
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+process_results: !function utils.air_bench_process_results
+metric_list:
+  - metric: gpt_eval  # GPT-4 evaluation for open-ended audio tasks
+    aggregation: !function utils.air_bench_aggregate_gpt_eval
+    higher_is_better: true
+metadata:
+  - version: 0.0
+```
+
+Key differences for audio tasks:
+- Use `doc_to_audio` to process audio files from the dataset
+- Often use GPT-4 evaluation for open-ended audio understanding tasks
+- Audio-specific preprocessing may be needed in the utility functions
+
 And other tasks can be:
 - MMBench (`lmms_eval/tasks/mmbench/mmbench.yaml`) (Group: `mmbench`)
 
