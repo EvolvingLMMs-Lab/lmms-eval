@@ -92,8 +92,8 @@ def get_model(model_name, force_simple: bool = False):
         model_type = "simple"
         AVAILABLE_MODELS = AVAILABLE_SIMPLE_MODELS
 
-    # Override with force_simple if needed
-    if force_simple:
+    # Override with force_simple if needed, but only if the model exists in AVAILABLE_SIMPLE_MODELS
+    if force_simple and model_name in AVAILABLE_SIMPLE_MODELS:
         model_type = "simple"
         AVAILABLE_MODELS = AVAILABLE_SIMPLE_MODELS
 
