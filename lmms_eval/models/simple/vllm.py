@@ -31,6 +31,119 @@ except ImportError:
 
 @register_model("vllm")
 class VLLM(lmms):
+    """
+    VLLM model wrapper for large multimodal models evaluation.
+
+    This class provides a wrapper around the VLLM library to run inference on
+    vision-language models. It supports both image and video inputs with automatic
+    encoding and batched processing.
+
+    Supported models: https://docs.vllm.ai/en/latest/models/supported_models.html
+
+    Supported media formats:
+        - Images: .jpg, .jpeg, .png, .gif, .bmp, .tiff, .webp
+        - Videos: .mp4, .avi, .mov, .flv, .wmv
+
+    Chat template:
+        The chat template is used to format the conversation for the model. It can be
+        provided as a file path or as a template string directly.
+        - Chat template intro: https://huggingface.co/docs/transformers/en/chat_templating
+        - VLLM chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
+
+    Args:
+        model_version (str): HuggingFace model identifier or path to the model.
+            Default: "Qwen/Qwen2.5-VL-3B-Instruct"
+        tensor_parallel_size (int): Number of GPUs to use for tensor parallelism.
+            Default: 1
+        gpu_memory_utilization (float): Fraction of GPU memory to use for model weights.
+            Should be between 0.0 and 1.0. Default: 0.8
+        batch_size (int): Number of requests to process in parallel per GPU.
+            Default: 1
+        max_frame_num (int): Maximum number of frames to extract from videos.
+            Frames are sampled uniformly across the video duration. Default: 32
+        threads (int): Number of threads to use for parallel visual encoding.
+            Default: 16
+        trust_remote_code (bool, optional): Whether to trust remote code when loading
+            the model. Default: True
+        chat_template (str, optional): Path to chat template file or template string.
+            If None, uses the model's default template. Default: None
+        **kwargs: Additional arguments passed to the VLLM LLM constructor.
+            - NOTE: model specific arguments can be passed here without the need to add more arguments to this class (see example below)
+            - String arguments that look like JSON dictionaries will be automatically parsed.
+
+
+    Python Example 1: (example of passing model specific arguments)
+    # ---------------------
+    import subprocess
+    cmd = [
+            "python3",
+            "-m",
+            "lmms_eval",
+            "--model",
+            "vllm",
+            "--model_args",
+            "model_version=meta-llama/Llama-4-Scout-17B-16E-Instruct,"
+            "tensor_parallel_size=4,"
+            "dtype=bfloat16,"
+            "max_model_len=10240,"
+            "gpu_memory_utilization=0.9,"
+            'override_generation_config={"attn_temperature_tuning": true},' # example of passing model specific arguments, JSON string will be parsed automatically
+            "enforce_eager=True,"
+            "kv_cache_dtype=fp8",
+            "--tasks",
+            task, # change this to your task
+            "--batch_size",
+            "1",
+            "--limit",
+            "10",
+            "--log_samples",
+            "--output_path",
+            "logs",
+        ]
+    cmd_result = subprocess.run(cmd, check=False)
+    # ---------------------
+
+
+    Python Example 2: (example of using chat template file)
+    # ---------------------
+    chat_template_file = "template_deepseek_vl2.jinja"
+    subprocess.run(
+        f"wget https://raw.githubusercontent.com/vllm-project/vllm/main/examples/template_deepseek_vl2.jinja -O {chat_template_file}",
+        check=True,
+        shell=True,
+    )
+    cmd = [
+        "python3",
+        "-m",
+        "lmms_eval",
+        "--model",
+        "vllm",
+        "--model_args",
+        "model_version=deepseek-ai/deepseek-vl2,"
+        'hf_overrides={"architectures": ["DeepseekVLV2ForCausalLM"]},' # example of passing model specific arguments, JSON string will be parsed automatically
+        f"chat_template={chat_template_file}," # chat template file path
+        "tensor_parallel_size=2,"
+        "dtype=bfloat16",
+        "--tasks",
+        task,
+        "--batch_size",
+        "1",
+        "--limit",
+        "1000",
+        "--log_samples",
+        "--output_path",
+        "logs",
+    ]
+    cmd_result = subprocess.run(cmd, check=False)
+    # ---------------------
+
+
+    # NOTE: No need to pass the chat template file if it is already defined in the model tokenizer.
+    # The chat method automatically applies the model's chat template to format the prompt
+    # - vllm chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
+
+    """
+
     def __init__(
         self,
         model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
@@ -55,6 +168,20 @@ class VLLM(lmms):
         self.data_parallel_size = data_parallel_size
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model)
+
+        # Load chat template during initialization
+        self.chat_template = None
+        if chat_template is not None:
+            # Check if it looks like a file path (contains path separators or has common template extensions)
+            if os.path.sep in chat_template or chat_template.endswith((".jinja", ".jinja2", ".j2")):
+                # It appears to be a file path, so it must exist
+                if not os.path.isfile(chat_template):
+                    raise FileNotFoundError(f"Chat template file not found: {chat_template}")
+                with open(chat_template, "r") as f:
+                    self.chat_template = f.read()
+            else:
+                # Treat as a template string
+                self.chat_template = chat_template
 
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
@@ -157,8 +284,10 @@ class VLLM(lmms):
     def flatten(self, input):
         new_list = []
         for i in input:
-            for j in i:
-                new_list.append(j)
+            if isinstance(i, (list, tuple)):
+                new_list.extend(i)
+            else:
+                new_list.append(i)
         return new_list
 
     def generate_until(self, requests) -> List[str]:
@@ -210,17 +339,20 @@ class VLLM(lmms):
                 messages = [{"role": "user", "content": []}]
                 # When there is no image token in the context, append the image to the text
                 messages[0]["content"].append({"type": "text", "text": contexts})
-                for img in imgs:
+                for img in self.flatten(imgs):
                     messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
 
                 batched_messages.append(messages)
 
             sampling_params = SamplingParams(**params)
 
+            # NOTE:
+            # The chat method automatically applies the model's chat template to format the prompt
+            # - vllm chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
+            # The logic here is similar to the vllm implementation as shown here (https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat)
+            # - vllm implementation: https://github.com/vllm-project/vllm/blob/d97841078b6e0dde8da36d5a2b8e8857a2c37944/vllm/entrypoints/chat_utils.py#L829
             if self.chat_template is not None:
-                with open(self.chat_template, "r") as f:
-                    chat_template = f.read()
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=self.chat_template)
             else:
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             response_text = [o.outputs[0].text for o in response]

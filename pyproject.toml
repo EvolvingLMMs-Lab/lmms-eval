@@ -24,7 +24,7 @@ dependencies = [
     "accelerate>=0.29.1",
     "black>=24.1.0",
     "isort>=5.13.2",
-    "datasets>=2.16.1",
+    "datasets>=2.19.0",
     "evaluate>=0.4.0",
     "httpx==0.23.3",
     "jsonlines",

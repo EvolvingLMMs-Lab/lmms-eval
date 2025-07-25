@@ -169,6 +169,13 @@ python -m lmms_eval --tasks list_with_num
   - WildVision 0617(wildvision_0617)
   - WildVision 0630 (wildvision_0630)
 - [SeedBench 2 Plus](https://huggingface.co/datasets/AILab-CVC/SEED-Bench-2-plus) (seedbench_2_plus)
+- [SalBench](https://salbench.github.io/)
+  - p3
+  - p3_box
+  - p3_box_img
+  - o3
+  - o3_box
+  - o3_box_img
 
 ## 2. Multi-image tasks:
 
