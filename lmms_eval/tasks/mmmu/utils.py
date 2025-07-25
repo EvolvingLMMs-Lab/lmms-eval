@@ -125,29 +125,14 @@ def mmmu_reasoning_process_results(doc, results):
             if match:
                 pred = match.group(1).strip()
 
-        # Define custom prompt for MMMU evaluation
-        custom_prompt = """You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
-
-# Evaluation Rules
-- The model prediction may contain the reasoning process, you should spot the final answer from it.
-- For multiple-choice questions: Score 1 if the predicted answer matches the ground truth answer, it can be directly in option letters or the content of the options.
-- For open-ended questions:
-  * Score 1 if the prediction matches the answer semantically, it can be in different format.
-  * Score 0 for partially correct answers or answers with extra incorrect information, even if the reasoning process is correct.
-- Ignore minor differences in formatting, capitalization, or spacing since the model may explain in a different way.
-- Treat numerical answers as correct if they match within reasonable precision
-- For questions requiring units, both value and unit must be correct
-
-Return only "1" or "0" with no additional text or formatting."""
-
         try:
             # Use the llm_judge API for binary evaluation
-            result = server.evaluate_binary(question=formatted_question, answer=str(answer), prediction=pred, output_format="0/1", custom_prompt=custom_prompt)
+            result = server.evaluate_binary(question=formatted_question, answer=str(answer), prediction=pred, output_format="0/1")
 
             # Parse the result
             if result["success"]:
                 judge_response = result["result"]
-                judge_score = judge_response.strip()
+                judge_score = int(judge_response) if type(judge_response) == str else judge_response
             else:
                 eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
                 judge_score = "0"
