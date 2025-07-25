@@ -1,0 +1,5 @@
+include: _default_template_yaml
+dataset_path: lmms-lab/EMMA-mini
+dataset_kwargs:
+  token: True
+  name: "Math"
