@@ -20,8 +20,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-NUM_SECONDS_TO_SLEEP = os.getenv("NUM_SECONDS_TO_SLEEP", 5)
-WORKERS = os.getenv("WORKERS", 32)
+NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
+WORKERS = int(os.getenv("WORKERS", "32"))
 
 try:
     from vllm import LLM, SamplingParams
