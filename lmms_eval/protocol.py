@@ -71,7 +71,7 @@ class ChatMessages(BaseModel):
                 elif content.type == "video":
                     # Note this is a hacky way if you want to do video in multi-images way
                     if enforce_images:
-                        for f in num_frames:
+                        for f in range(num_frames):
                             hf_message["content"].append({"type": "image"})
                     else:
                         hf_message["content"].append({"type": "video", "video": content.url})
