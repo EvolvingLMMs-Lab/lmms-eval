@@ -235,6 +235,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
             "exact_matches": [],
             **{f"cov@{n}": -1 for n in n_res_list},
             **{f"maj@{n}": -1 for n in n_res_list},
+            **{f"avg@{n}": -1 for n in n_res_list},
         }
     else:
         n_res_list = []
@@ -303,6 +304,7 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
             metrics["exact_matches"].append(a)
             if i in n_res_list:
                 metrics[f"cov@{i}"] = int(1 in metrics["exact_matches"])
+                metrics[f"avg@{i}"] = sum(metrics["exact_matches"]) / i
                 metrics[f"maj@{i}"] = int(gt == Counter(metrics["extracted_answers"]).most_common(1)[0][0])
 
     return metrics

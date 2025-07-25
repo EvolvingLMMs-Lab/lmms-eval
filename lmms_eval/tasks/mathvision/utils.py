@@ -78,7 +78,7 @@ Return only "1" or "0" with no additional text or formatting."""
 
         try:
             # Use the llm_judge API for binary evaluation
-            result = server.evaluate_binary(question=question, answer=gt_answer, prediction=model_answer, output_format="1/0", custom_prompt=custom_prompt)
+            result = server.evaluate_binary(question=question, answer=gt_answer, prediction=model_answer, output_format="0/1", custom_prompt=custom_prompt)
 
             # Parse the result
             if result["success"]:
