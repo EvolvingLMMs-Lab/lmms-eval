@@ -71,7 +71,7 @@ def olympiadbench_process_results(doc, results):
 
 
 def olympiadbench_aggregate_results(results, args):
-    now_date_time = datetime.datetime.now().strftime("%Y-%m%d-%H%M-%S")
+    now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H%M-%S")
     submission_file_name = f"olympiadbench-test-cn-submission-{now_date_time}.json"
     path = generate_submission_file(submission_file_name, args)
     with open(path, "w") as f:
