@@ -35,6 +35,7 @@ class VLLM(lmms):
         self,
         model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
         tensor_parallel_size: int = 1,
+        data_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
         max_frame_num: int = 32,
@@ -51,6 +52,7 @@ class VLLM(lmms):
         self.max_frame_num = max_frame_num
         self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
+        self.data_parallel_size = data_parallel_size
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model)
 
@@ -64,14 +66,6 @@ class VLLM(lmms):
 
         # Set up vllm client
         os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
-        self.client = LLM(
-            model=self.model,
-            tensor_parallel_size=tensor_parallel_size,
-            gpu_memory_utilization=gpu_memory_utilization,
-            trust_remote_code=trust_remote_code,
-            disable_log_stats=False,
-            **kwargs,
-        )
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -85,6 +79,19 @@ class VLLM(lmms):
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
+        # TODO: Support tensor parallelism in the future for flexible vllm parallel
+        if data_parallel_size > 1:
+            assert tensor_parallel_size == 1, "Data parallelism is not supported with tensor parallelism. For current vllm version"
+        self.client = LLM(
+            model=self.model,
+            tensor_parallel_size=tensor_parallel_size,
+            gpu_memory_utilization=gpu_memory_utilization,
+            trust_remote_code=trust_remote_code,
+            disable_log_stats=False,
+            distributed_executor_backend="external_launcher",
+            seed=1,
+            **kwargs,
+        )
 
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
