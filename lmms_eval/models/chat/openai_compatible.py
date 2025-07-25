@@ -80,7 +80,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 payload["reasoning_effort"] = "medium"
                 payload["response_format"] = {"type": "text"}
                 payload.pop("max_tokens")
-                payload["max_completion_tokens"] = gen_kwargs["max_tokens"]
+                payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
 
             for attempt in range(self.max_retries):
                 try:
