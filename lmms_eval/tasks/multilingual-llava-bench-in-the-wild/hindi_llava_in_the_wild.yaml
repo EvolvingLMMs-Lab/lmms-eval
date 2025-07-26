@@ -1,6 +1,6 @@
 dataset_path: "gagan3012/multilingual-llava-bench"
+dataset_name: "hindi"
 dataset_kwargs:
-    config: hindi
     token: True
 task: "llava_in_the_wild_hindi"
 include: _default_template_yaml

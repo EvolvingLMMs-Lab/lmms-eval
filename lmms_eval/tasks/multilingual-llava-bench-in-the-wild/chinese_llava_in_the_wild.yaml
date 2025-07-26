@@ -1,6 +1,6 @@
 dataset_path: "gagan3012/multilingual-llava-bench"
+dataset_name: "chinese"
 dataset_kwargs:
-    config: chinese
     token: True
 task: "llava_in_the_wild_chinese"
 include: _default_template_yaml
