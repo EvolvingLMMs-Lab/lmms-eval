@@ -20,7 +20,6 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4-0613"
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: "First please perform reasoning, and think step by step to provide best answer to the following question: \n\n"
