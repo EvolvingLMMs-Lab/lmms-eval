@@ -101,8 +101,6 @@ python -m lmms_eval --model qwen2_5_vl --model_args pretrained=Qwen/Qwen2.5-VL-3
   the problem it tries to solve, and how it is solved. Don't go into the specifics of the
   code unless it adds clarity.
 
-- Always add `ArthurClune` as reviewer.
-
 - NEVER ever mention a `co-authored-by` or similar aspects. In particular, never
   mention the tool used to create the commit message or PR.
 
