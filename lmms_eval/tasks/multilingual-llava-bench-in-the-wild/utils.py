@@ -16,15 +16,7 @@ LLAVA_W_METRICS = ["gpt_eval_llava_conv", "gpt_eval_llava_detail", "gpt_eval_lla
 
 rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "rule.json"), "r"))
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    config = yaml.safe_load("".join(safe_data))
+# Config loading removed - now using environment variables directly
 
 GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "openai")

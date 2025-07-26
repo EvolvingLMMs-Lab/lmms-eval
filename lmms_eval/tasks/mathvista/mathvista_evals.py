@@ -161,7 +161,7 @@ with open(Path(__file__).parent / "mathvista.yaml", "r") as f:
 
 class MathVistaEvaluator:
     API_TYPE = os.getenv("API_TYPE", "openai")
-    gpt_model = os.getenv("MODEL_VERSION", config["metadata"]["gpt_eval_model_name"])
+    gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
     # Initialize llm_judge server
     server_config = ServerConfig(model_name=gpt_model, temperature=0.0, max_tokens=256, timeout=60, num_retries=5, retry_delay=10)
