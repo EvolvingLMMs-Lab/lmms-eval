@@ -5,11 +5,8 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
-import openai
-import requests
 import yaml
 from loguru import logger as eval_logger
-from openai import OpenAI
 
 from lmms_eval.llm_judge import ServerConfig, get_server
 
@@ -30,7 +27,7 @@ with open(Path(__file__).parent / "llava-in-the-wild.yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
 server_config = ServerConfig(
     model_name=MODEL_VERSION,

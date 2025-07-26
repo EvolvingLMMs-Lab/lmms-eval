@@ -7,11 +7,11 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
-import requests
 import yaml
 
 # Set up a logger
 from loguru import logger as eval_logger
+from lmms_eval.llm_judge import Request, ServerConfig, get_server
 
 NUM_SECONDS_TO_SLEEP = 5
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -28,65 +28,59 @@ with open(Path(__file__).parent / "_default_template_wilder_yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = config["metadata"]["api_type"]
 
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
+# Initialize the judge server
+server_config = ServerConfig(
+    model_name=GPT_EVAL_MODEL_NAME,
+    temperature=0.0,
+    max_tokens=1024
+)
+server = get_server(server_name=API_TYPE, config=server_config)
 
 
 def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": f"data:image/jpeg;base64,{base64_image}",
+                },
+            ],
+        }
+    ]
 
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}",
-                    },
-                ],
-            }
-        ],
-        "max_tokens": 1024,
-        "temperature": 0.0,
-    }
+    # Update server config with specific parameters for this request
+    custom_config = ServerConfig(
+        model_name=GPT_EVAL_MODEL_NAME,
+        temperature=0.0,
+        max_tokens=1024
+    )
 
     for attempt in range(max_retries):
         try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            response_data = response.json()
-            return response_data["choices"][0]["message"]["content"], GPT_EVAL_MODEL_NAME
-        except requests.exceptions.RequestException as e:
+            # Create a Request object for the unified judge API
+            request = Request(
+                messages=messages,
+                images=[base64_image],  # Pass the base64 image
+                config=custom_config
+            )
+            
+            # Use the unified judge API
+            response = server.evaluate(request)
+            
+            content = response.content if response.content else ""
+            return content, response.model_used
+        except Exception as e:
             eval_logger.warning(f"Request failed on attempt {attempt+1}: {e}")
             time.sleep(wait_time)
             if attempt == max_retries - 1:
                 eval_logger.error(f"Failed to get response after {max_retries} attempts")
                 return "", GPT_EVAL_MODEL_NAME
-        except Exception as e:
-            eval_logger.error(f"Error on attempt {attempt+1}: {e}")
-            return "", GPT_EVAL_MODEL_NAME
 
 
 def image_to_base64(pil_image):

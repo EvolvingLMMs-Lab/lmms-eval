@@ -22,7 +22,7 @@ with open(Path(__file__).parent / "d170_en.yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
 # Initialize the judge server
 server_config = ServerConfig(

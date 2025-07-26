@@ -33,7 +33,7 @@ with open(Path(__file__).parent / "wavcaps.yaml", "r") as f:
 
 
 NUM_SECONDS_TO_SLEEP = 5
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "azure")
 
 if API_TYPE == "openai":

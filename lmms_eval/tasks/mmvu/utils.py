@@ -29,7 +29,7 @@ cache_dir_val = os.path.join(base_cache_dir, cache_name_val)
 
 # Initialize the LLM judge server
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-08-06")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
 server_config = ServerConfig(
     model_name=MODEL_VERSION,
