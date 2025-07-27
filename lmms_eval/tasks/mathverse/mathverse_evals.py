@@ -90,14 +90,13 @@ class MathVerseEvaluator:
             "Content-Type": "application/json",
         }
 
-    def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
-        self.api_key = api_key
+    def __init__(self, gpt_model="gpt-3.5-turbo", quick_extract=False):
         self.gpt_model = gpt_model
         self.quick_extract = quick_extract
 
     def _post_request(self, payload):
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {self.API_KEY}",
             "Content-Type": "application/json",
         }
         response = requests.post(self.API_URL, headers=headers, json=payload, timeout=30)
