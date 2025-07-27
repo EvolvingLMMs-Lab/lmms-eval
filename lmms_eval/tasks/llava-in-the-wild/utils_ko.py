@@ -82,7 +82,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
 
 def parse_score(review):
     try:
-        score_pair = review.split("\n")[0]
+        score_pair = review.split("\n")[0].strip()
         score_pair = score_pair.replace(",", " ")
         sp = score_pair.split(" ")
         if len(sp) == 2:

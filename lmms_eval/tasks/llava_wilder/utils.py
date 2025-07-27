@@ -91,7 +91,7 @@ def image_to_base64(pil_image):
 
 def parse_score(review):
     try:
-        score_pair = review.split("\n")[0]
+        score_pair = review.split("\n")[0].strip()
         score_pair = score_pair.replace(",", " ")
         sp = score_pair.split(" ")
         if len(sp) == 2:
