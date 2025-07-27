@@ -8,7 +8,7 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import Request, ServerConfig, get_server
+from lmms_eval.llm_judge import ServerConfig, get_server
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -47,32 +47,21 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
         {"role": "user", "content": content},
     ]
 
-    # Update server config with specific parameters for this request
-    custom_config = ServerConfig(
-        model_name=GPT_EVAL_MODEL_NAME,
-        temperature=0.2,
-        max_tokens=max_tokens
-    )
-
     for attempt in range(retries):
         try:
-            # Create a Request object for the unified judge API
-            request = Request(
-                messages=messages,
-                config=custom_config
-            )
+            # Use the generate_text_from_messages method for chat-based generation
+            result = server.generate_text_from_messages(messages, temperature=0.2, max_tokens=max_tokens)
             
-            # Use the unified judge API
-            response = server.evaluate(request)
-            
-            content = response.content.strip() if response.content else ""
-            if content != "":
-                return content, response.model_used
-            break  # If successful, break out of the loop
+            if result["success"]:
+                content = result["result"].strip()
+                if content != "":
+                    return content, GPT_EVAL_MODEL_NAME
+            else:
+                eval_logger.error(f"Generation failed: {result.get('raw_response', 'Unknown error')}")
 
         except Exception as e:
             eval_logger.info(f"Attempt {attempt + 1} failed with error: {e}")
-            if attempt < retries:  # If we have retries left, sleep and then continue to next attempt
+            if attempt < retries - 1:  # If we have retries left, sleep and then continue to next attempt
                 time.sleep(NUM_SECONDS_TO_SLEEP)
             else:  # If this was the last attempt, log and return empty
                 eval_logger.error(f"All {retries} attempts failed. Last error message: {e}")

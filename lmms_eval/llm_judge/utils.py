@@ -17,7 +17,7 @@ class JudgePromptBuilder:
         if custom_prompt:
             return custom_prompt.format(question=question, answer=answer, pred=prediction, prediction=prediction, **kwargs)
 
-        positive, negative = ("1", "0") if output_format == "0/1" else ("Yes", "No")
+        positive, negative = ("1", "0") if output_format == "0/1" or output_format == "1/0" else ("Yes", "No")
 
         return BINARY_JUDGE_PROMPT.format(question=question, answer=answer, prediction=prediction, positive=positive, negative=negative)
 
@@ -52,7 +52,7 @@ class ResponseParser:
         """Parse binary response (0/1 or yes/no)"""
         response = response.strip().lower()
 
-        if output_format == "0/1":
+        if output_format == "0/1" or output_format == "1/0":
             # Check for various formats of 1
             if any(pattern in response for pattern in ["1", "[1]", "score: 1", "answer: 1"]):
                 return 1

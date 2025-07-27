@@ -44,21 +44,14 @@ def k12_process_results(doc, results):
     question = doc["question"]
     answer = doc["answer"]
 
-    # Define custom prompt for k12 evaluation
-    custom_prompt = """You are given a question, the solution and the correct answer. Please determine if the solution matches the correct answer.
-Focus only on the mathematical or semantic correctness of the content. Ignore any differences in formatting, such as LaTeX syntax, symbols, styles, or additional wrappers (e.g., \boxed, $...$, or similar). Compare only the core mathematical or textual meaning of the solution and the correct answer.
-The process or reasoning leading to the Solution is irrelevant, ONLY the correctness of the result matters.
-Return only "Yes" if the solution is correct or "No" if it is incorrect.
-Only return "Yes" or "No" with no additional text or formatting."""
-
     try:
         # Use the llm_judge API for binary evaluation
-        result = server.evaluate_binary(question=question, answer=answer, prediction=prediction, output_format="yes/no", custom_prompt=custom_prompt)
+        result = server.evaluate_binary(question=question, answer=answer, prediction=prediction, output_format="0/1")
 
         # Parse the result
         if result["success"]:
             judge_response = result["result"]
-            judge_result = 1 if judge_response and judge_response.lower() == "yes" else 0
+            judge_result = 1 if judge_response else 0
         else:
             eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
             judge_result = 0

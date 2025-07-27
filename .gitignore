@@ -49,3 +49,4 @@ outputs/
 span.log
 uv.lock
 workspace/*
+.claude/*

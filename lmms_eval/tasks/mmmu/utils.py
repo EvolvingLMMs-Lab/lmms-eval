@@ -135,17 +135,17 @@ def mmmu_reasoning_process_results(doc, results):
                 judge_score = int(judge_response) if type(judge_response) == str else judge_response
             else:
                 eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
-                judge_score = "0"
+                judge_score = 0
 
         except Exception as e:
             eval_logger.error(f"Error getting judge response: {e}")
-            judge_score = "0"
+            judge_score = 0
 
         scores.append(judge_score)
         parsed_preds.append(pred)
 
     # Calculate the average score for this document
-    avg_score = sum(1 if score == "1" else 0 for score in scores) / len(scores) if scores else 0
+    avg_score = sum(1 if score == 1 else 0 for score in scores) / len(scores) if scores else 0
     return {"llm_as_judge_eval": avg_score}
 
 
