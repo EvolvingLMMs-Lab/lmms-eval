@@ -8,7 +8,7 @@ import yaml
 from Levenshtein import distance
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import ServerConfig, get_server
+from lmms_eval.llm_judge import Request, ServerConfig, get_server
 
 # pids: 799, 681, 615
 shot_examples = [
@@ -171,18 +171,23 @@ class MathVistaEvaluator:
         self.quick_extract = quick_extract
 
     def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=5, sleep_time=0):
+        # Create a custom server config for this specific request with different parameters
+        request_config = ServerConfig(model_name=self.gpt_model, temperature=temperature, max_tokens=max_tokens, timeout=60, num_retries=patience, retry_delay=sleep_time)
+
         while patience > 0:
             patience -= 1
             try:
-                # Use the generate_text method for simple text generation
-                result = self.server.generate_text(prompt, temperature=temperature, max_tokens=max_tokens)
+                # Use the core evaluate method with a Request object for direct text generation
+                request = Request(messages=[{"role": "user", "content": prompt}], config=request_config)
 
-                if result["success"]:
-                    prediction = result["result"].strip()
+                response = self.server.evaluate(request)
+
+                if response.success:
+                    prediction = response.content.strip()
                     if prediction and prediction != "":
                         return prediction
                 else:
-                    eval_logger.error(f"Generation failed: {result.get('raw_response', 'Unknown error')}")
+                    eval_logger.error(f"Server evaluation failed: {response.error}")
 
             except Exception as e:
                 if "Rate limit" not in str(e):

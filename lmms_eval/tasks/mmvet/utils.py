@@ -6,7 +6,7 @@ import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 
-from lmms_eval.llm_judge import ServerConfig, get_server
+from lmms_eval.llm_judge import Request, ServerConfig, get_server
 
 with open(Path(__file__).parent / "mmvet.yaml", "r") as f:
     raw_data = f.readlines()
@@ -42,18 +42,28 @@ Can you explain this meme? | This meme is poking fun at the fact that the names 
 
 
 def get_chat_response(prompt, model=MODEL_VERSION, temperature=0.0, max_tokens=128, patience=3, sleep_time=5):
+    # Update server config with specific parameters for this request
+    custom_config = ServerConfig(
+        model_name=model,
+        temperature=temperature,
+        max_tokens=max_tokens
+    )
+    
     while patience > 0:
         patience -= 1
         try:
-            # Use the generate_text method for simple text generation
-            result = server.generate_text(prompt, temperature=temperature, max_tokens=max_tokens)
+            # Create a Request object for the unified judge API
+            request = Request(
+                messages=[{"role": "user", "content": prompt}],
+                config=custom_config
+            )
             
-            if result["success"]:
-                content = result["result"].strip()
-                if content != "":
-                    return content, model
-            else:
-                eval_logger.error(f"Generation failed: {result.get('raw_response', 'Unknown error')}")
+            # Use the unified judge API
+            response = server.evaluate(request)
+            
+            content = response.content.strip() if response.content else ""
+            if content != "":
+                return content, response.model_used
 
         except Exception as e:
             eval_logger.error(f"Error: {e}")

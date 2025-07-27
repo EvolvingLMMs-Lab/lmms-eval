@@ -30,33 +30,20 @@ class MathVerseEvaluator:
             return model_response == answer
 
         try:
-            # Use the judge server for binary evaluation
-            custom_prompt = """Below is a math question with a standard answer and a model's full response. 
-Your task is to determine if the model's response contains the correct answer.
-
-Please note:
-1. Extract the final answer from the model's response
-2. Compare it with the standard answer
-3. For non-multiple-choice questions, if the meaning is expressed in the same way, it is also considered correct (e.g., 0.5m and 50cm)
-4. Only when the extracted answer from the model response completely matches the standard answer should you return "Yes"
-
-Return only "Yes" if the model's answer is correct or "No" if it is incorrect.
-Only return "Yes" or "No" with no additional text or formatting."""
-
-            result = self.server.evaluate_binary(question=question, answer=str(answer), prediction=model_response, output_format="yes/no", custom_prompt=custom_prompt)
+            result = self.server.evaluate_binary(question=question, answer=str(answer), prediction=model_response, output_format="0/1")
 
             if result["success"]:
                 judge_response = result["result"]
-                return judge_response and judge_response.lower() == "yes"
+                return judge_response
             else:
                 eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
-                return False
+                return 0
 
         except Exception as e:
             print(e)
             print(f"Error in matching answer")
 
-        return False
+        return 0
 
     def get_acc_with_contion(self, res_pd, key, value):
         """
