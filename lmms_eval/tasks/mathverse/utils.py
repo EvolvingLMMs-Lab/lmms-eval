@@ -19,7 +19,7 @@ with open(Path(__file__).parent / "mathverse.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-mathverse_evaluator = MathVerseEvaluator(gpt_model=os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20"))
+mathverse_evaluator = MathVerseEvaluator()
 
 
 def mathverse_doc_to_visual(doc):
