@@ -207,6 +207,7 @@ class VLLM(lmms):
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         # TODO: Support tensor parallelism in the future for flexible vllm parallel
+        distributed_executor_backend = None if self.world_size == 1 else "external_launcher"
         if data_parallel_size > 1:
             assert tensor_parallel_size == 1, "Data parallelism is not supported with tensor parallelism. For current vllm version"
         if accelerator.num_processes > 1 or tensor_parallel_size > 1:
@@ -217,6 +218,7 @@ class VLLM(lmms):
             gpu_memory_utilization=gpu_memory_utilization,
             trust_remote_code=trust_remote_code,
             disable_log_stats=False,
+            distributed_executor_backend=distributed_executor_backend,
             seed=1,
             **kwargs,
         )
