@@ -210,7 +210,7 @@ class VLLM(lmms):
         distributed_executor_backend = None if self.world_size == 1 else "external_launcher"
         if data_parallel_size > 1:
             assert tensor_parallel_size == 1, "Data parallelism is not supported with tensor parallelism. For current vllm version"
-        if accelerator.num_processes > 1 or tensor_parallel_size > 1:
+        if accelerator.num_processes > 1:
             kwargs["distributed_executor_backend"] = "external_launcher"
         self.client = LLM(
             model=self.model,
@@ -305,17 +305,9 @@ class VLLM(lmms):
                 contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
                 if "max_new_tokens" not in gen_kwargs:
                     gen_kwargs["max_new_tokens"] = 1024
-                if gen_kwargs["max_new_tokens"] > 4096:
-                    gen_kwargs["max_new_tokens"] = 4096
-                if "temperature" not in gen_kwargs:
-                    gen_kwargs["temperature"] = 0
-                if "top_p" not in gen_kwargs:
-                    gen_kwargs["top_p"] = 0.95
 
                 params = {
-                    "temperature": gen_kwargs["temperature"],
                     "max_tokens": gen_kwargs["max_new_tokens"],
-                    "top_p": gen_kwargs["top_p"],
                 }
                 sampling_params = SamplingParams(**params)
 
