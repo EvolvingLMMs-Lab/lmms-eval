@@ -4,8 +4,8 @@ import time
 import pandas as pd
 import requests
 from loguru import logger as eval_logger
-from tqdm import tqdm
 from openai import AzureOpenAI, OpenAI
+from tqdm import tqdm
 
 DEMO_PROMPT_EXTRACT = """
 I am providing you a response from a model to a math problem, termed 'Model Response'. You should extract the answer from the response as 'Extracted Answer'. Directly output the extracted answer with no explanation.

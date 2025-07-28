@@ -152,16 +152,17 @@ def generate_prompt(d, response):
 
 def process_rawscore(component_type, raw_score):
     import re
+
     from loguru import logger as eval_logger
-    
+
     score_dict = {}
-    
+
     try:
         # Validate inputs
         if not component_type or not isinstance(component_type, list):
             eval_logger.error(f"Invalid component_type: {component_type}")
             return {"total_score": 0}
-        
+
         if not raw_score or not isinstance(raw_score, str):
             eval_logger.error(f"Invalid raw_score: {raw_score}")
             # Initialize with zeros for all components
@@ -169,18 +170,18 @@ def process_rawscore(component_type, raw_score):
                 score_dict[component] = 0
             score_dict["total_score"] = 0
             return score_dict
-        
+
         # More robust regex patterns to extract scores
         # Pattern 1: "score of component X: Y/Z" or "component X: Y/Z"
-        component_pattern = r'(?:score\s+of\s+)?component\s+(\d+)\s*:\s*(\d+)\s*/\s*(\d+)'
-        
+        component_pattern = r"(?:score\s+of\s+)?component\s+(\d+)\s*:\s*(\d+)\s*/\s*(\d+)"
+
         # Pattern 2: "total score: Y/Z"
-        total_pattern = r'total\s+score\s*:\s*(\d+)\s*/\s*(\d+)'
-        
+        total_pattern = r"total\s+score\s*:\s*(\d+)\s*/\s*(\d+)"
+
         # Find all component scores
         try:
             component_matches = re.findall(component_pattern, raw_score, re.IGNORECASE)
-            
+
             for match in component_matches:
                 try:
                     component_num = int(match[0]) - 1  # Convert to 0-based index
@@ -196,10 +197,10 @@ def process_rawscore(component_type, raw_score):
                 except (ValueError, IndexError) as e:
                     eval_logger.warning(f"Error parsing component match {match}: {e}")
                     continue
-                    
+
         except Exception as e:
             eval_logger.error(f"Error in component pattern matching: {e}")
-        
+
         # Find total score
         try:
             total_match = re.search(total_pattern, raw_score, re.IGNORECASE)
@@ -220,20 +221,20 @@ def process_rawscore(component_type, raw_score):
         except Exception as e:
             eval_logger.error(f"Error parsing total score: {e}")
             score_dict["total_score"] = 0
-        
+
         # Ensure all components have scores
         for i, component in enumerate(component_type):
             if component not in score_dict:
                 eval_logger.warning(f"Missing score for component: {component}")
                 score_dict[component] = 0
-        
+
         # Ensure total_score exists
         if "total_score" not in score_dict:
             if score_dict:
                 score_dict["total_score"] = sum(v for k, v in score_dict.items() if k != "total_score") / len([k for k in score_dict.keys() if k != "total_score"])
             else:
                 score_dict["total_score"] = 0
-    
+
     except Exception as e:
         eval_logger.error(f"Unexpected error in process_rawscore: {e}")
         eval_logger.error(f"Raw score content: {raw_score[:500] if raw_score else 'None'}...")
@@ -242,7 +243,7 @@ def process_rawscore(component_type, raw_score):
         for component in component_type if component_type else []:
             score_dict[component] = 0
         score_dict["total_score"] = 0
-    
+
     # Final validation
     try:
         # Ensure all values are numeric and within valid range
@@ -252,23 +253,23 @@ def process_rawscore(component_type, raw_score):
                 score_dict[key] = 0
     except Exception as e:
         eval_logger.error(f"Error in final validation: {e}")
-    
+
     return score_dict
 
 
 def mia_bench_process_results(doc, results):
     from loguru import logger as eval_logger
-    
+
     try:
         # Validate inputs
         if not results or len(results) == 0:
             eval_logger.error("No results provided")
             return {"gpt_eval_score": {"total_score": 0}}
-        
+
         if not doc or not isinstance(doc, dict):
             eval_logger.error(f"Invalid doc: {doc}")
             return {"gpt_eval_score": {"total_score": 0}}
-        
+
         # Extract response safely
         try:
             response = results[0].strip() if results[0] else ""
@@ -278,7 +279,7 @@ def mia_bench_process_results(doc, results):
         except (IndexError, AttributeError) as e:
             eval_logger.error(f"Error extracting response: {e}")
             response = ""
-        
+
         # Extract components safely
         try:
             components = doc.get("components", [])
@@ -288,7 +289,7 @@ def mia_bench_process_results(doc, results):
         except Exception as e:
             eval_logger.error(f"Error extracting components: {e}")
             return {"gpt_eval_score": {"total_score": 0}}
-        
+
         # Generate evaluation prompt
         try:
             eval_prompt = generate_prompt(doc, response)
@@ -306,7 +307,7 @@ def mia_bench_process_results(doc, results):
             for component in components:
                 score_dict[component] = 0
             return {"gpt_eval_score": score_dict}
-        
+
         # Get evaluation from LLM
         try:
             eval_score, _ = get_eval(eval_prompt, 1024)
@@ -316,7 +317,7 @@ def mia_bench_process_results(doc, results):
         except Exception as e:
             eval_logger.error(f"Error getting evaluation from LLM: {e}")
             eval_score = ""
-        
+
         # Process the raw score
         try:
             score_dict = process_rawscore(components, eval_score)
@@ -332,9 +333,9 @@ def mia_bench_process_results(doc, results):
             score_dict = {"total_score": 0}
             for component in components:
                 score_dict[component] = 0
-        
+
         return {"gpt_eval_score": score_dict}
-        
+
     except Exception as e:
         eval_logger.error(f"Unexpected error in mia_bench_process_results: {e}")
         # Emergency fallback
