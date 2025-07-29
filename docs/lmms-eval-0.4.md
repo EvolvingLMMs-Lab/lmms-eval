@@ -8,7 +8,7 @@ LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation
 
 ## Table of Contents
 
-1. [Installation and Requirements](#installation-and-requirements)
+1. [Backward Compatibility Check](#backward-compatibility)
 2. [Major Features](#major-features)
    - [Unified Message Interface](#1-unified-message-interface)
    - [Multi-Node Distributed Evaluation](#2-multi-node-distributed-evaluation)
@@ -29,45 +29,20 @@ LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation
 
 5. [Technical Details](#technical-details)
 6. [Migration Guide](#migration-guide)
-7. [Performance Improvements](#performance-improvements)
-8. [Future Roadmap](#future-roadmap)
-9. [Contributing](#contributing)
-10. [Troubleshooting](#troubleshooting)
+7. [Future Roadmap](#future-roadmap)
+8. [Contributing](#contributing)
 
-## Installation and Requirements
+## Backward Compatibility Check
 
-```bash
-# Clone the repository
-git clone https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-cd lmms-eval
+To ensure backward compatibility, we've conducted comprehensive performance comparisons between v0.3 and v0.4 across multiple models and benchmarks. The following table shows performance metrics for the same models evaluated with both versions:
 
-uv venv --python 3.12
-# Install in development mode
-uv pip install -e .
+| Models (v0.3/v0.4) | AI2D | ChartQA | DocVQA-Val | MME | RealWorldQA | OCRBench | MiaBench | MMMU-Val | MMMU-Val Reasoning | MathVerse Testmini | MathVision Testmini | MathVista Testmini | K12 Reasoning |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **LLaVA-OneVision-7B** | 81.35/81.35 | 80.0/80.0 | 87.1/87.1 | 1578.64 + 418.21 / 1578.64 + 418.21 | 66.27/66.27 | 621/621 | 76.25/77.63 | 42.44/41.67 | 30.53/29.52 | 18.09/17.76 | 60.50/60.60 | 20.80/20.20 | - |
+| **Qwen-2.5-VL-3B** (qwen2_5_vl) | 78.66/78.89 | 83.52/83.44 | 92.42/92.54 | 1520.52 + 630 / 1534.44 + 614.28 | 59.08/59.08 | 786/791 | 77.98/80.85 | 44.00/42.22 | 36.22/33.43 | 15.46/15.46 | 61.9/61.00 | 27.8/16.40 | - |
+| **Qwen-2.5-VL-3B** (vllm) | 79.05/78.95 | 83.76/83.68 | 92.88/92.81 | 1521.87 + 613.57 / 1515.25 + 619.64 | 60.00/59.22 | 778/781 | 53.83/55.15 | 43.33/43.22 | 30.28/31.78 | 16.78/13.82 | 42.60/64.40 | 26.00/27.60 | - |
 
-# Install additional dependencies for specific features
-uv pip install flash-attn --no-build-isolation  # For accelerated attention
-uv pip install librosa soundfile  # For audio tasks
-uv pip install av  # For video tasks
-```
-
-### Quick Start
-
-```bash
-# Basic evaluation example
-python -m lmms_eval \
-    --model qwen2_5_vl \
-    --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
-    --tasks mmstar \
-    --batch_size 1 \
-    --output_path ./results
-
-# List available tasks
-python -m lmms_eval --tasks list
-
-# List available models
-python -m lmms_eval --model list
-```
+We could see that most benchmarks show minimal performance differences between v0.3 and v0.4. Both native PyTorch and VLLM implementations maintain consistent performance, and performance remains stable across different model architectures (Qwen2.5-VL vs LLaVA-OneVision).
 
 ## Major Features
 
@@ -614,20 +589,6 @@ The following models are deprecated in v0.4:
 - `doc_to_visual` and `doc_to_text` are deprecated
 - Simple model interface is discouraged for new implementations
 
-## Performance Improvements
-
-### Benchmark Results
-
-Comparing v0.3 to v0.4 on common benchmarks:
-
-| Benchmark | v0.3 Time | v0.4 Time | Speedup |
-|-----------|-----------|-----------|---------|
-| MMMU      | 4h 30m    | 1h 15m    | 3.6x    |
-| MMBench   | 2h 45m    | 45m       | 3.7x    |
-| VideoMME  | 8h 00m    | 2h 10m    | 3.7x    |
-
-*Results on 8x A100 GPUs with multi-node evaluation*
-
 ## Future Roadmap
 
 ### Upcoming in v0.4.x
@@ -637,8 +598,7 @@ Comparing v0.3 to v0.4 on common benchmarks:
 
 ### Long-term Vision
 - **Unified Evaluation Platform**: Single framework for all modality combinations
-- **Real-time Evaluation**: Streaming evaluation results
-- **Community Benchmark Hub**: Easy integration of community benchmarks
+- **Community Benchmark Hub**: Easier integration of community benchmarks
 
 ## Contributing
 
@@ -666,51 +626,10 @@ For specific implementation guidelines, refer to:
 The v0.4 release was made possible by contributions from the LMMS-Eval community:
 
 ### Core Development Team
-- **Kaichen Zhang** - Unified message interface and architecture improvements
 - **Bo Li** - Unified judge interface and mathematical reasoning benchmarks
+- **Kaichen Zhang** - Unified message interface and architecture improvements
 - **Cong Pham Ba** - VisualWebBench and MMVU benchmark implementations
 - **Thang Luu** - TOMATO benchmark and temporal understanding tasks
-
-### Community Contributors
-- VideoEval-Pro integration from the research community
-- Bug reports and feature requests from active users
-- Documentation improvements and examples
-
-## Troubleshooting
-
-### Common Issues
-
-**Import Errors**:
-```bash
-# If you encounter import errors, ensure all dependencies are installed
-pip install -e .
-pip install flash-attn --no-build-isolation
-```
-
-**CUDA Out of Memory**:
-```bash
-# Reduce batch size or use gradient checkpointing
-python -m lmms_eval --model qwen2_5_vl --batch_size 1 --tasks mmstar
-```
-
-**Slow Evaluation**:
-```bash
-# Enable caching and use multi-node evaluation
-python -m lmms_eval --cache_requests true --tasks mmstar
-```
-
-**Model Loading Issues**:
-```bash
-# For large models, use automatic tensor parallelism
-python -m lmms_eval --model_args auto_tp=True,device_map=auto
-```
-
-### Performance Tips
-
-1. **Use Caching**: Enable `--cache_requests true` for repeated evaluations
-2. **Batch Processing**: Increase batch size if memory permits
-3. **Multi-Node**: Use distributed evaluation for large workloads
-4. **Model Parallelism**: Use `auto_tp=True` for large models
 
 ## Getting Help
 
