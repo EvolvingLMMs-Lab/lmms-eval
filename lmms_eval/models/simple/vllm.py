@@ -302,10 +302,16 @@ class VLLM(lmms):
             for idx in range(len(batch_requests)):
                 contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
                 if "max_new_tokens" not in gen_kwargs:
-                    gen_kwargs["max_new_tokens"] = 1024
+                    gen_kwargs["max_new_tokens"] = 4096
+                if "temperature" not in gen_kwargs:
+                    gen_kwargs["temperature"] = 0
+                if "top_p" not in gen_kwargs:
+                    gen_kwargs["top_p"] = 0.95
 
                 params = {
+                    "temperature": gen_kwargs["temperature"],
                     "max_tokens": gen_kwargs["max_new_tokens"],
+                    "top_p": gen_kwargs["top_p"],
                 }
                 sampling_params = SamplingParams(**params)
 
