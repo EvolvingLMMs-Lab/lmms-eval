@@ -546,7 +546,7 @@ class Llava_OneVision(lmms):
             # These might be in gen_kwargs or in the model's generation_config
             if not gen_kwargs.get("do_sample", False):
                 gen_kwargs.pop("temperature", None)
-                gen_kwargs.pop("top_p", None) 
+                gen_kwargs.pop("top_p", None)
                 gen_kwargs.pop("top_k", None)
             try:
                 with torch.inference_mode():

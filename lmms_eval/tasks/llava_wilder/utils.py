@@ -11,6 +11,7 @@ import yaml
 
 # Set up a logger
 from loguru import logger as eval_logger
+
 from lmms_eval.llm_judge import Request, ServerConfig, get_server
 
 NUM_SECONDS_TO_SLEEP = 5
@@ -32,11 +33,7 @@ GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = config["metadata"]["api_type"]
 
 # Initialize the judge server
-server_config = ServerConfig(
-    model_name=GPT_EVAL_MODEL_NAME,
-    temperature=0.0,
-    max_tokens=1024
-)
+server_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.0, max_tokens=1024)
 server = get_server(server_name=API_TYPE, config=server_config)
 
 
@@ -55,24 +52,16 @@ def get_chat_response(base64_image, prompt, max_retries=5, wait_time=10):
     ]
 
     # Update server config with specific parameters for this request
-    custom_config = ServerConfig(
-        model_name=GPT_EVAL_MODEL_NAME,
-        temperature=0.0,
-        max_tokens=1024
-    )
+    custom_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.0, max_tokens=1024)
 
     for attempt in range(max_retries):
         try:
             # Create a Request object for the unified judge API
-            request = Request(
-                messages=messages,
-                images=[base64_image],  # Pass the base64 image
-                config=custom_config
-            )
-            
+            request = Request(messages=messages, images=[base64_image], config=custom_config)  # Pass the base64 image
+
             # Use the unified judge API
             response = server.evaluate(request)
-            
+
             content = response.content if response.content else ""
             return content, response.model_used
         except Exception as e:

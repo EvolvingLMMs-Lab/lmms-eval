@@ -22,11 +22,7 @@ API_TYPE = os.getenv("API_TYPE", "openai")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
 # Initialize the judge server
-server_config = ServerConfig(
-    model_name=MODEL_VERSION,
-    temperature=0.0,
-    max_tokens=128
-)
+server_config = ServerConfig(model_name=MODEL_VERSION, temperature=0.0, max_tokens=128)
 server = get_server(server_name=API_TYPE, config=server_config)
 MM_VET_PROMPT = """Compare the ground truth and prediction from AI models, to give a correctness score for the prediction. <AND> in the ground truth means it is totally right only when all elements in the ground truth are present in the prediction, and <OR> means it is totally right when any one element in the ground truth is present in the prediction. The correctness score is 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Just complete the last space of the correctness score.
 gpt_query_prompt | Ground truth | Prediction | Correctness
@@ -43,24 +39,17 @@ Can you explain this meme? | This meme is poking fun at the fact that the names 
 
 def get_chat_response(prompt, model=MODEL_VERSION, temperature=0.0, max_tokens=128, patience=3, sleep_time=5):
     # Update server config with specific parameters for this request
-    custom_config = ServerConfig(
-        model_name=model,
-        temperature=temperature,
-        max_tokens=max_tokens
-    )
-    
+    custom_config = ServerConfig(model_name=model, temperature=temperature, max_tokens=max_tokens)
+
     while patience > 0:
         patience -= 1
         try:
             # Create a Request object for the unified judge API
-            request = Request(
-                messages=[{"role": "user", "content": prompt}],
-                config=custom_config
-            )
-            
+            request = Request(messages=[{"role": "user", "content": prompt}], config=custom_config)
+
             # Use the unified judge API
             response = server.evaluate(request)
-            
+
             content = response.content.strip() if response.content else ""
             if content != "":
                 return content, response.model_used

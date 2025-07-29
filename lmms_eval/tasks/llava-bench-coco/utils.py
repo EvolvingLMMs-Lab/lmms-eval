@@ -30,11 +30,7 @@ GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 # Initialize the judge server
-server_config = ServerConfig(
-    model_name=GPT_EVAL_MODEL_NAME,
-    temperature=0.2,
-    max_tokens=1024
-)
+server_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=1024)
 server = get_server(server_name=API_TYPE, config=server_config)
 
 
@@ -48,23 +44,16 @@ def get_eval(content: str, max_tokens: int, retries: int = 3):
     ]
 
     # Update server config with specific parameters for this request
-    custom_config = ServerConfig(
-        model_name=GPT_EVAL_MODEL_NAME,
-        temperature=0.2,
-        max_tokens=max_tokens
-    )
+    custom_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=max_tokens)
 
     for attempt in range(retries):
         try:
             # Create a Request object for the unified judge API
-            request = Request(
-                messages=messages,
-                config=custom_config
-            )
-            
+            request = Request(messages=messages, config=custom_config)
+
             # Use the unified judge API
             response = server.evaluate(request)
-            
+
             content = response.content.strip() if response.content else ""
             if content != "":
                 return content, response.model_used
