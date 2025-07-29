@@ -2,6 +2,8 @@
 
 ## Introduction
 
+![lmms-eval-0.4-overview](https://i.postimg.cc/vHZTcBfV/Pix-Pin-2025-07-29-23-27-05.png)
+
 LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation, introducing groundbreaking features for distributed evaluation, reasoning-oriented benchmarks, and a unified interface for modern multimodal models. This release focuses on scalability, extensibility, and comprehensive evaluation capabilities across diverse multimodal tasks.
 
 ## Table of Contents
@@ -39,13 +41,14 @@ LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 cd lmms-eval
 
+uv venv --python 3.12
 # Install in development mode
-pip install -e .
+uv pip install -e .
 
 # Install additional dependencies for specific features
-pip install flash-attn --no-build-isolation  # For accelerated attention
-pip install librosa soundfile  # For audio tasks
-pip install av  # For video tasks
+uv pip install flash-attn --no-build-isolation  # For accelerated attention
+uv pip install librosa soundfile  # For audio tasks
+uv pip install av  # For video tasks
 ```
 
 ### Quick Start
@@ -69,6 +72,8 @@ python -m lmms_eval --model list
 ## Major Features
 
 ### 1. Unified Message Interface
+
+![Pix-Pin-2025-07-29-23-25-27](https://i.postimg.cc/2SPSc7JQ/Pix-Pin-2025-07-29-23-25-27.png)
 
 **Replacing Legacy `doc_to_visual` and `doc_to_text` with `doc_to_messages`**
 
@@ -113,6 +118,8 @@ This change provides:
 
 ### 2. Multi-Node Distributed Evaluation
 
+![Pix-Pin-2025-07-29-23-25-16](https://i.postimg.cc/ZKsR3SxD/Pix-Pin-2025-07-29-23-25-16.png)
+
 Support for large-scale evaluations across multiple machines using PyTorch's distributed capabilities:
 
 ```bash
@@ -136,6 +143,8 @@ torchrun --nproc_per_node="${MLP_WORKER_GPU}" \
 - **Flexibility**: Works with existing PyTorch distributed infrastructure
 
 ### 3. Unified LLM/LMM Judge Interface
+
+![Pix-Pin-2025-07-29-23-25-34](https://i.postimg.cc/htJG15C4/Pix-Pin-2025-07-29-23-25-34.png)
 
 A standardized protocol for using language models as judges to evaluate other model outputs:
 
