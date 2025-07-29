@@ -5,7 +5,8 @@
 **Key Resources**:  
 - **Arxiv Paper**: [📖 Does Your Vision-Language Model Get Lost in the Long Video Sampling Dilemma?](https://arxiv.org/abs/2503.12496)  
 - **Huggingface Dataset**: [🤗 LSDBench](https://huggingface.co/datasets/TainU/LSDBench)
-
+- **Github Repo**: [LSDBench](https://github.com/dvlab-research/LSDBench/tree/main)
+---
 
 ## Core Features
 
