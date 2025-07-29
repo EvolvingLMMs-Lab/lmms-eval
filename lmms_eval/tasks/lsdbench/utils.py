@@ -1,9 +1,10 @@
 import os
 import re
+import sys
 from pathlib import Path
+
 import yaml
 from loguru import logger as eval_logger
-import sys
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(hf_home)
@@ -31,7 +32,7 @@ def lsdbench_doc_to_visual(doc):
         video_path = video_path.replace("mp4", "mkv")
     else:
         # TODO: download video
-        sys.exit(f"video path:{video_path} does not exist, please check")  
+        sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
 
@@ -45,17 +46,15 @@ def lsdbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return context
 
 
-
-
 def extract_characters_regex(s):
     s = s.strip()
-    
-    pattern = r'(?<![a-zA-Z])[ABCD](?![a-zA-Z])'
+
+    pattern = r"(?<![a-zA-Z])[ABCD](?![a-zA-Z])"
     matches = re.findall(pattern, s)
-    
+
     if matches:
         return matches[-1]  # return the last matched answer
-    
+
     return ""
 
 
