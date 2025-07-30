@@ -56,10 +56,10 @@ LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation
 To ensure backward compatibility, we've conducted comprehensive performance comparisons between v0.3 and v0.4 across multiple models and benchmarks. The following table shows performance metrics for the same models evaluated with both versions:
 
 | Models (v0.3/v0.4) | AI2D | ChartQA | DocVQA-Val | MME | RealWorldQA | OCRBench | MiaBench | MMMU-Val Reasoning | MathVerse Testmini | MathVision Testmini | MathVista Testmini | K12 Reasoning |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **LLaVA-OneVision-7B** | 81.35/81.35 | 80.0/80.0 | 87.1/87.1 | 1578.64 + 418.21 / 1578.64 + 418.21 | 66.27/66.27 | 621/621 | 76.25/77.63 | 42.44/41.67 | 30.53/29.52 | 18.09/17.76 | 60.50/60.60 | 20.80/20.20 | - |
-| **Qwen-2.5-VL-3B** (qwen2_5_vl) | 78.66/78.89 | 83.52/83.44 | 92.42/92.54 | 1520.52 + 630 / 1534.44 + 614.28 | 59.08/59.08 | 786/791 | 77.98/80.85 | 44.00/42.22 | 36.22/33.43 | 15.46/15.46 | 61.9/61.00 | 27.8/26.40 | - |
-| **Qwen-2.5-VL-3B** (vllm) | 79.05/78.95 | 83.76/83.68 | 92.88/92.81 | 1521.87 + 613.57 / 1515.25 + 619.64 | 60.00/59.22 | 778/781 | 53.83/55.15 | 43.33/43.22 | 30.28/31.78 | 16.78/15.82 | 42.60/64.40 | 26.00/27.60 | - |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **LLaVA-OneVision-7B** | 81.35/81.35 | 80.0/80.0 | 87.1/87.1 | 1578.64 + 418.21 / 1578.64 + 418.21 | 66.27/66.27 | 621/621 | 76.25/77.63 | 42.44/41.67 | 30.53/29.52 | 18.09/17.76 | 60.50/60.60 | 20.80/20.20 |
+| **Qwen-2.5-VL-3B** (qwen2_5_vl) | 78.66/78.89 | 83.52/83.44 | 92.42/92.54 | 1520.52 + 630 / 1534.44 + 614.28 | 59.08/59.08 | 786/791 | 77.98/80.85 | 44.00/42.22 | 36.22/33.43 | 15.46/15.46 | 61.9/61.00 | 27.8/26.40 |
+| **Qwen-2.5-VL-3B** (vllm) | 79.05/78.95 | 83.76/83.68 | 92.88/92.81 | 1521.87 + 613.57 / 1515.25 + 619.64 | 60.00/59.22 | 778/781 | 53.83/55.15 | 43.33/43.22 | 30.28/31.78 | 16.78/15.82 | 63.40/64.40 | 26.00/27.60 |
 
 We could see that most benchmarks show minimal performance differences between v0.3 and v0.4. Both native PyTorch and VLLM implementations maintain consistent performance, and performance remains stable across different model architectures (Qwen2.5-VL vs LLaVA-OneVision).
 
