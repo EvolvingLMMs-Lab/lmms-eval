@@ -51,7 +51,7 @@ class VLLM(lmms):
         - VLLM chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
 
     Args:
-        model_version (str): HuggingFace model identifier or path to the model.
+        model (str): HuggingFace model identifier or path to the model.
             Default: "Qwen/Qwen2.5-VL-3B-Instruct"
         tensor_parallel_size (int): Number of GPUs to use for tensor parallelism.
             Default: 1
@@ -82,7 +82,7 @@ class VLLM(lmms):
             "--model",
             "vllm",
             "--model_args",
-            "model_version=meta-llama/Llama-4-Scout-17B-16E-Instruct,"
+            "model=meta-llama/Llama-4-Scout-17B-16E-Instruct,"
             "tensor_parallel_size=4,"
             "dtype=bfloat16,"
             "max_model_len=10240,"
@@ -119,7 +119,7 @@ class VLLM(lmms):
         "--model",
         "vllm",
         "--model_args",
-        "model_version=deepseek-ai/deepseek-vl2,"
+        "model=deepseek-ai/deepseek-vl2,"
         'hf_overrides={"architectures": ["DeepseekVLV2ForCausalLM"]},' # example of passing model specific arguments, JSON string will be parsed automatically
         f"chat_template={chat_template_file}," # chat template file path
         "tensor_parallel_size=2,"
@@ -224,9 +224,9 @@ class VLLM(lmms):
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
 
-    def _is_qwen_vl_model(self, model_version: str) -> bool:
+    def _is_qwen_vl_model(self, model: str) -> bool:
         qwen_vl_patterns = ["qwen2-vl", "qwen2.5-vl"]
-        return any(pattern in model_version.lower() for pattern in qwen_vl_patterns)
+        return any(pattern in model.lower() for pattern in qwen_vl_patterns)
 
     def _maybe_resize_image(self, img: Image.Image) -> Image.Image:
         # edge‐case validation
@@ -302,15 +302,15 @@ class VLLM(lmms):
             for idx in range(len(batch_requests)):
                 contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
                 if "max_new_tokens" not in gen_kwargs:
-                    gen_kwargs["max_new_tokens"] = 4096
+                    gen_kwargs["max_new_tokens"] = 1024
                 if "temperature" not in gen_kwargs:
                     gen_kwargs["temperature"] = 0
                 if "top_p" not in gen_kwargs:
                     gen_kwargs["top_p"] = 0.95
 
                 params = {
-                    "temperature": gen_kwargs["temperature"],
                     "max_tokens": gen_kwargs["max_new_tokens"],
+                    "temperature": gen_kwargs["temperature"],
                     "top_p": gen_kwargs["top_p"],
                 }
                 sampling_params = SamplingParams(**params)

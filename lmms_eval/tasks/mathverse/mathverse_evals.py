@@ -2,23 +2,81 @@ import os
 
 import pandas as pd
 from loguru import logger as eval_logger
+from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
 from lmms_eval.llm_judge import ServerConfig, get_server
 
 
 class MathVerseEvaluator:
-    def __init__(self, api_key, gpt_model="gpt-3.5-turbo", quick_extract=False):
-        self.api_key = api_key
-        self.gpt_model = gpt_model
+    API_TYPE = os.getenv("API_TYPE", "openai")
+    if API_TYPE == "openai":
+        API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+        API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json",
+        }
+        client = OpenAI(api_key=API_KEY, base_url=API_URL.rstrip("chat/completions"))
+
+    elif API_TYPE == "azure":
+        API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+        API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
+        API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
+        client = AzureOpenAI(azure_endpoint=API_URL, api_version=API_VERSION, api_key=API_KEY)
+        gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+
+    def __init__(self, quick_extract=False):
         self.quick_extract = quick_extract
 
-        # Initialize the judge server using environment variables
-        API_TYPE = os.getenv("API_TYPE", "openai")
-        server_config = ServerConfig(
-            model_name=gpt_model,
-        )
-        self.server = get_server(server_name=API_TYPE, config=server_config)
+    def get_chat_response(self, prompt, temperature=0, max_tokens=256, n=1, patience=5, sleep_time=0):
+        messages = [
+            {"role": "user", "content": prompt},
+        ]
+        payload = {"model": self.gpt_model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+
+        while patience > 0:
+            patience -= 1
+            try:
+                response = self.client.chat.completions.create(**payload)
+                if n == 1:
+                    prediction = response.choices[0].message.content.strip()
+                    if prediction and prediction != "":
+                        return prediction
+                else:
+                    prediction = [choice.message.content.strip() for choice in response.choices]
+                    if prediction and prediction[0] != "":
+                        return prediction
+
+            except Exception as e:
+                if "Rate limit" not in str(e):
+                    eval_logger.error(e)
+
+                if "Please reduce the length of the messages" in str(e):
+                    eval_logger.error("!!Reduce prompt size")
+                    # reduce input prompt and keep the tail
+                    new_size = int(len(prompt) * 0.9)
+                    new_start = len(prompt) - new_size
+                    prompt = prompt[new_start:]
+                    payload["messages"] = [
+                        {"role": "user", "content": prompt},
+                    ]
+
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+        return ""
+
+    def verify_extraction(self, extraction):
+        extraction = extraction.strip()
+        if not extraction:
+            return False
+        return True
+
+    def create_extract_prompt(self, demo_prompt, response):
+        demo_prompt = demo_prompt.strip()
+        test_prompt = f"Model response: '{response}'\nExtracted Answer: "
+        full_prompt = f"{demo_prompt}\n\n{test_prompt}"
+        return full_prompt
 
     def create_match_prompt(self, demo_prompt, question, answer, extraction):
         demo_prompt = demo_prompt.strip()

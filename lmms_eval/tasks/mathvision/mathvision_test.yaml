@@ -9,7 +9,6 @@ doc_to_text: !function utils.mathvision_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
   max_new_tokens: 16384
-  # temperature: 0
 process_results: !function utils.mathvision_process_results
 metric_list:
   - metric: mathvision_standard_eval
