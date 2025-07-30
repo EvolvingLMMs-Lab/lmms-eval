@@ -19,7 +19,7 @@ with open(Path(__file__).parent / "mathverse.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-mathverse_evaluator = MathVerseEvaluator(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=config["metadata"]["gpt_eval_model_name"])
+mathverse_evaluator = MathVerseEvaluator()
 
 
 def mathverse_doc_to_visual(doc):
@@ -82,21 +82,7 @@ def mathverse_aggregate_results_submission(results, args, *, calculate_gain=Fals
 def mathverse_aggregate_results_eval(results, args, *, calculate_gain=False, random_scores=None):
     split_flag = results[0]["metadata"]["split"]
     problem_version = results[0]["problem_version"].lower().replace(" ", "_")
-    # save the result first, in case the gpt evaluation fails
-    path = generate_submission_file(f"mathverse_{split_flag}_{problem_version}_results.json", args)
-    with open(path, "w") as f:
-        json.dump(results, f, indent=4)
-    # gpt evaluation
     results_dict, scores = mathverse_evaluator.eval_results(results, config)
-    # save results
-    path = generate_submission_file(f"mathverse_{split_flag}_{problem_version}_results.json", args)
-    with open(path, "w") as f:
-        json.dump(results_dict, f, indent=4)
-    # save scores
-    path = generate_submission_file(f"mathverse_{split_flag}_{problem_version}_scores.json", args)
-    with open(path, "w") as f:
-        json.dump(scores, f, indent=4)
-    eval_logger.info(f"Saved scores to {path}")
     if scores["average"]["accuracy"] == 0:
         return None
     return scores["average"]["accuracy"]
