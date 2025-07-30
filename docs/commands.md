@@ -3,12 +3,11 @@ This document details the interface exposed by `lmms_eval` and provides details 
 
 ## Command-line Interface
 
+Running the library can be done via the `lmms_eval` entrypoint at the command line.
 
-Equivalently, running the library can be done via the `lmms_eval` entrypoint at the command line.
+This mode supports a number of command-line arguments, the details of which can also be seen via running with `-h` or `--help`:
 
-This mode supports a number of command-line arguments, the details of which can be also be seen via running with `-h` or `--help`:
-
-- `--model` : Selects which model type or provider is evaluated. Must be a string corresponding to the name of the model type/provider being used. See [the main README](https://github.com/EleutherAI/lm-evaluation-harness/tree/main#model-apis-and-inference-servers) for a full list of enabled model names and supported libraries or APIs.
+- `--model` : Selects which model type or provider is evaluated. Must be a string corresponding to the name of the model type/provider being used. See [the main README](https://github.com/EvolvingLMMs-Lab/lmms-eval#supported-models) for a full list of enabled model names and supported libraries or APIs.
 
 * `--model_args` : Controls parameters passed to the model constructor. Accepts a string containing comma-separated keyword arguments to the model class of the format `"arg1=val1,arg2=val2,..."`, such as, for example `--model_args pretrained=liuhaotian/llava-v1.5-7b,batch_size=1`. For a full list of what keyword arguments, see the initialization of the corresponding model class in `lmms_eval/models/`.
 
@@ -32,15 +31,15 @@ This mode supports a number of command-line arguments, the details of which can 
 
 - `--use_cache` : Should be a path where a sqlite db file can be written to. Takes a string of format `/path/to/sqlite_cache_` in order to create a cache db at `/path/to/sqlite_cache_rank{i}.db` for each process (0-NUM_GPUS). This allows results of prior runs to be cached, so that there is no need to re-run results in order to re-score or re-run a given (model, task) pair again.
 
-- `--cache_requests` : Can be "true", "refresh", or "delete". "true" means that the cache should be used. "refresh" means that you wish to regenerate the cache, which you should run if you change your dataset configuration for a given task. "delete" will delete the cache. Cached files are stored under lm_eval/cache/.cache unless you specify a different path via the environment variable: `LM_HARNESS_CACHE_PATH`. e.g. `LM_HARNESS_CACHE_PATH=~/Documents/cache_for_lm_harness`.
+- `--cache_requests` : Can be "true", "refresh", or "delete". "true" means that the cache should be used. "refresh" means that you wish to regenerate the cache, which you should run if you change your dataset configuration for a given task. "delete" will delete the cache. Cached files are stored under lmms_eval/cache/.cache unless you specify a different path via the environment variable: `LM_HARNESS_CACHE_PATH`. e.g. `LM_HARNESS_CACHE_PATH=~/Documents/cache_for_lm_harness`.
 
 - `--check_integrity` : If this flag is used, the library tests for each task selected are run to confirm task integrity.
 
 - `--write_out` : Used for diagnostic purposes to observe the format of task documents passed to a model. If this flag is used, then prints the prompt and gold target string for the first document of each task.
 
-- `--show_config` : If used, prints the full `lm_eval.api.task.TaskConfig` contents (non-default settings the task YAML file) for each task which was run, at the completion of an evaluation. Useful for when one is modifying a task's configuration YAML locally to transmit the exact configurations used for debugging or for reproducibility purposes.
+- `--show_config` : If used, prints the full `lmms_eval.api.task.TaskConfig` contents (non-default settings the task YAML file) for each task which was run, at the completion of an evaluation. Useful for when one is modifying a task's configuration YAML locally to transmit the exact configurations used for debugging or for reproducibility purposes.
 
-- `--include_path` : Accepts a path to a folder. If passed, then all YAML files containing `lm-eval` compatible task configurations will be added to the task registry as available tasks. Used for when one is writing config files for their own task in a folder other than `lm_eval/tasks/`.
+- `--include_path` : Accepts a path to a folder. If passed, then all YAML files containing `lm-eval` compatible task configurations will be added to the task registry as available tasks. Used for when one is writing config files for their own task in a folder other than `lmms_eval/tasks/`.
 
 - `--system_instruction`: Specifies a system instruction string to prepend to the prompt.
 
@@ -57,6 +56,35 @@ This mode supports a number of command-line arguments, the details of which can 
 * `--seed`: Set seed for python's random, numpy and torch.  Accepts a comma-separated list of 3 values for python's random, numpy, and torch seeds, respectively, or a single integer to set the same seed for all three.  The values are either an integer or 'None' to not set the seed. Default is `0,1234,1234` (for backward compatibility).  E.g. `--seed 0,None,8` sets `random.seed(0)` and `torch.manual_seed(8)`. Here numpy's seed is not set since the second value is `None`.  E.g, `--seed 42` sets all three seeds to 42.
 
 * `--wandb_args`:  Tracks logging to Weights and Biases for evaluation runs and includes args passed to `wandb.init`, such as `project` and `job_type`. Full list [here](https://docs.wandb.ai/ref/python/init). e.g., ```--wandb_args project=test-project,name=test-run```
+
+## Command Examples
+
+### Basic Evaluation
+```bash
+# Evaluate LLaVA on MME benchmark
+python -m lmms_eval --model llava --model_args pretrained=liuhaotian/llava-v1.5-7b --tasks mme --batch_size 1 --output_path ./results
+
+# Evaluate on multiple tasks
+python -m lmms_eval --model llava --model_args pretrained=liuhaotian/llava-v1.5-7b --tasks mme,mmbench_en --batch_size 1 --output_path ./results
+```
+
+### Using API Models
+```bash
+# GPT-4V evaluation
+python -m lmms_eval --model gpt4v --model_args model_version=gpt-4-vision-preview --tasks mathvista --output_path ./results
+
+# Claude evaluation
+python -m lmms_eval --model claude --model_args model_version=claude-3-opus-20240229 --tasks llava_in_the_wild --output_path ./results
+```
+
+### Advanced Options
+```bash
+# Enable logging and caching
+python -m lmms_eval --model llava --model_args pretrained=liuhaotian/llava-v1.5-7b --tasks mme --log_samples --use_cache ./cache/sqlite_cache.db --output_path ./results
+
+# Few-shot evaluation with chat template
+python -m lmms_eval --model qwen_vl --model_args pretrained=Qwen/Qwen-VL-Chat --tasks vqav2 --num_fewshot 5 --apply_chat_template --output_path ./results
+```
 
 * `--hf_hub_log_args` : Logs evaluation results to Hugging Face Hub. Accepts a string with the arguments separated by commas. Available arguments:
     * `hub_results_org` - organization name on Hugging Face Hub, e.g., `EleutherAI`. If not provided, the results will be pushed to the owner of the Hugging Face token,
@@ -115,7 +143,7 @@ As a brief example usage of `evaluate()`:
 ```python
 import lmms_eval
 
-# suppose you've defined a custom lm_eval.api.Task subclass in your own external codebase
+# suppose you've defined a custom lmms_eval.api.Task subclass in your own external codebase
 from my_tasks import MyTask1
 ...
 
@@ -144,9 +172,9 @@ task_dict = lmms_eval.tasks.get_task_dict(
             "task": ..., # A dict that configures a task
             "doc_to_text": ...,
             },
-        MyTask1 # A task object from `lm_eval.task.Task`
+        MyTask1 # A task object from `lmms_eval.task.Task`
         ],
-    task_manager # A task manager that allows lm_eval to
+    task_manager # A task manager that allows lmms_eval to
                  # load the task during evaluation.
                  # If none is provided, `get_task_dict`
                  # will instantiate one itself, but this

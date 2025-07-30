@@ -1,6 +1,6 @@
 dataset_path: "gagan3012/multilingual-llava-bench"
+dataset_name: "urdu"
 dataset_kwargs:
-    config: urdu
     token: True
 task: "llava_in_the_wild_urdu"
 include: _default_template_yaml

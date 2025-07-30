@@ -1,0 +1,70 @@
+tag:
+  - math_word_problems
+task: aime24_nofigures_agg64
+dataset_path: simplescaling/aime24_nofigures
+dataset_name: default
+process_docs: !function utils.process_docs
+output_type: generate_until
+test_split: train
+doc_to_text: !function utils.doc_to_text
+doc_to_target: answer
+process_results: !function utils.process_results
+generation_kwargs:
+  until: []
+  do_sample: true
+  temperature: 1
+  max_new_tokens: 32768
+repeats: 64
+filter_list:
+  - name: "all" # Will do coverage, majority, and take_first_k
+    filter:
+      - function: "take_first_k"
+        k: 64
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@64
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@32
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@16
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@8
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@4
+    aggregation: mean
+    higher_is_better: true
+  - metric: cov@2
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@64
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@32
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@16
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@8
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@4
+    aggregation: mean
+    higher_is_better: true
+  - metric: maj@2
+    aggregation: mean
+    higher_is_better: true
+  - metric: extracted_answers
+    aggregation: bypass
+    higher_is_better: true
+  - metric: exact_matches
+    aggregation: bypass
+    higher_is_better: true
+metadata:
+  version: 1.0

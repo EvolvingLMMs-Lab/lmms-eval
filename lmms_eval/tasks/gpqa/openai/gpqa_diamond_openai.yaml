@@ -1,0 +1,46 @@
+dataset_path: Idavidrein/gpqa
+tag: gpqa
+dataset_name: gpqa_diamond
+task: gpqa_diamond_openai
+output_type: generate_until
+process_docs: !function utils.process_docs
+process_results: !function utils.process_results
+training_split: train
+# Because huggingface dataset only has train split
+validation_split: train
+test_split: null
+# https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/common.py#L12
+# doc_to_text: "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD.  Think step by step before answering Think step by step before answering always provide a final answer within the word limit. \n\n{{Question}}\n\nA) {{choice1}}\nB) {{choice2}}\nC) {{choice3}}\nD) {{choice4}}"
+# doc_to_text: "Answer the following multiple-choice question. Your response must adhere to these rules:
+#   1. Think step by step to arrive at the correct answer.
+#   2. Avoid repeating reasoning or steps already stated.
+#   3. Ensure your response is within the word limit.
+#   4. Conclude with the final answer in the format: 'Answer: $LETTER' (without quotes), where LETTER is one of ABCD.
+  
+#   {{Question}}
+  
+#   A) {{choice1}}
+#   B) {{choice2}}
+#   C) {{choice3}}
+#   D) {{choice4}}"
+# doc_to_text: "{{Question}}\nAnswer Choices: (A) {{choice1}}\n(B) {{choice2}}\n(C) {{choice3}}\n(D) {{choice4}}\nOutput your final answer in boxes, such as \\boxed{A}"
+# Original prompt from Qwq team:
+# doc_to_text: "{{Question}}\nAnswer Choices: (A) {{choice1}} (B) {{choice2}} (C) {{choice3}} (D) {{choice4}}\nOutput your final answer in boxes, such as \\boxed{A}."
+# doc_to_text: "{{Question}}\n\nA) {{choice1}}\nB) {{choice2}}\nC) {{choice3}}\nD) {{choice4}}"
+doc_to_text: !function utils.doc_to_text_gpqa
+doc_to_target: answer
+num_fewshot: 0
+generation_kwargs:
+  until: []
+  do_sample: false
+  temperature: 0 # Do 0.5? https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L26
+  max_new_tokens: 1024 # https://github.com/openai/simple-evals/blob/c0dba4c7bfbc17f786aec7bd7c3585a36ad81f23/sampler/chat_completion_sampler.py#L27
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+  - metric: extracted_answers
+    aggregation: bypass
+    higher_is_better: true
+metadata:
+  version: 1.0

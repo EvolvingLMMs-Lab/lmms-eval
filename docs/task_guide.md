@@ -29,6 +29,7 @@ Dataset configuration options:
 - **process_docs** (`Callable`, *optional*) — Optionally define a function to apply to each HF dataset split, to preprocess all documents before being fed into prompt template rendering or other evaluation steps. Can be used to rename dataset columns, or to process documents into a format closer to the expected format expected by a prompt template.
 
 Prompting / in-context formatting options:
+- **doc_to_messages** (Callable, *optional*) - A function that transform the data into messages with a dict. The protocol of the type of the dictionary can be found in `lmms_eval/protocol.py`. If the value is `None`, there will be an auto predefined `doc_to_messages` to be used for every dataset. However, the auto function only prepend visuals ahead of text and you are recommended to implement your own. Examples can refer to `mmmu_val`
 - **doc_to_visual** (Union[Callable, str], *optional*) — Column name or function to process a sample into the appropriate visual input for the model.
 - **doc_to_text** (`Union[Callable, str]`, *optional*) — Column name or function to process a sample into the appropriate text input for the model. 
 
@@ -66,6 +67,7 @@ output_type: generate_until # The type of model output for the given task. Optio
 doc_to_visual: !function utils.mme_doc_to_visual # The function to process a sample into the appropriate input for the model. 
 doc_to_text: !function utils.mme_doc_to_text # The function to process a sample into the appropriate target output for the model.
 doc_to_target: "answer" # The function to process a sample into a list of possible string choices for `multiple_choice` tasks.
+doc_to_messages: !function utils.mme_doc_to_messages
 generation_kwargs: # Auxiliary arguments for the `generate` function from HF transformers library. This would be used in different models files.
   max_new_tokens: 16
   temperature: 0
@@ -168,7 +170,7 @@ Adding a multiple choice metric has a few steps. To get it working you need to:
 2. register an aggregation function
 3. update the `Task` definition to make sure the correct arguments are passed
 
-The default metric and aggregation functions are in `lm_eval/api/metrics.py`, and you can add a function there if it's for general use. The metrics are towards the bottom of the file and look like this:
+The default metric and aggregation functions are in `lmms_eval/api/metrics.py`, and you can add a function there if it's for general use. The metrics are towards the bottom of the file and look like this:
 
 ```python
     @register_metric(
@@ -191,7 +193,7 @@ Aggregation functions are defined towards the top of the file, here's an example
         preds = unzipped_list[1]
         return sklearn.metrics.matthews_corrcoef(golds, preds)
 
-This function returns a single numeric value. The input is defined in `Task.process_results` in `lm_eval/api/task.py`. There's a section that looks like this:
+This function returns a single numeric value. The input is defined in `Task.process_results` in `lmms_eval/api/task.py`. There's a section that looks like this:
 
 ```python
     result_dict = {
@@ -252,6 +254,39 @@ lmms_eval_specific_kwargs:
 metadata:
   - version: 0.0
 ```
+
+### Audio Task Example
+
+Here's an example of configuring an audio task (using AIR-Bench as reference):
+
+```yaml
+dataset_path: lmms-lab/AIR-Bench
+dataset_kwargs:
+  token: True
+task: "air_bench_chat"
+test_split: test
+output_type: generate_until
+doc_to_audio: !function utils.air_bench_doc_to_audio  # Process audio input
+doc_to_text: !function utils.air_bench_doc_to_text
+doc_to_messages: !function utils.air_bench_doc_to_messages
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+process_results: !function utils.air_bench_process_results
+metric_list:
+  - metric: gpt_eval  # GPT-4 evaluation for open-ended audio tasks
+    aggregation: !function utils.air_bench_aggregate_gpt_eval
+    higher_is_better: true
+metadata:
+  - version: 0.0
+```
+
+Key differences for audio tasks:
+- Use `doc_to_audio` to process audio files from the dataset
+- Often use GPT-4 evaluation for open-ended audio understanding tasks
+- Audio-specific preprocessing may be needed in the utility functions
 
 And other tasks can be:
 - MMBench (`lmms_eval/tasks/mmbench/mmbench.yaml`) (Group: `mmbench`)

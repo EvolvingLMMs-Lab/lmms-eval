@@ -22,7 +22,6 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4-0613"
   interleaved_format: false
 lmms_eval_specific_kwargs:
   default:

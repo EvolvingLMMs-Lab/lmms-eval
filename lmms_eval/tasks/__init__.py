@@ -4,13 +4,13 @@ import inspect
 import logging
 import os
 from functools import partial
-from typing import Dict, List, Mapping, Optional, Union
+from typing import Dict, List, Literal, Mapping, Optional, Union
 
 from loguru import logger as eval_logger
 
 from lmms_eval import utils
 from lmms_eval.api.group import ConfigurableGroup, GroupConfig
-from lmms_eval.api.task import ConfigurableTask, Task
+from lmms_eval.api.task import ConfigurableMessagesTask, ConfigurableTask, Task
 from lmms_eval.evaluator_utils import get_subtask_list
 
 GROUP_ONLY_KEYS = list(GroupConfig().to_dict().keys())
@@ -234,9 +234,15 @@ class TaskManager:
     def _load_individual_task_or_group(
         self,
         name_or_config: Optional[Union[str, dict]] = None,
+        task_type: Literal["simple", "chat"] = "simple",
         parent_name: Optional[str] = None,
         update_config: Optional[dict] = None,
     ) -> Mapping:
+        if task_type == "simple":
+            TaskObj = ConfigurableTask
+        elif task_type == "chat":
+            TaskObj = ConfigurableMessagesTask
+
         def _load_task(config, task):
             if "include" in config:
                 config = {
@@ -255,8 +261,10 @@ class TaskManager:
                 if isinstance(task_object, ConfigurableTask):
                     # very scuffed: set task name here. TODO: fixme?
                     task_object.config.task = config["task"]
+                elif isinstance(task_object, ConfigurableMessagesTask):
+                    task_object.config.task = config["task"]
             else:
-                task_object = ConfigurableTask(config=config, model_name=self.model_name)
+                task_object = TaskObj(config=config, model_name=self.model_name)
 
             return {task: task_object}
 
@@ -298,6 +306,7 @@ class TaskManager:
                         fn = partial(
                             self._load_individual_task_or_group,
                             update_config=name_or_config if isinstance(name_or_config, dict) else None,
+                            task_type=task_type,
                         )
                         return dict(collections.ChainMap(*map(fn, reversed(subtask_list))))
                     else:
@@ -350,14 +359,10 @@ class TaskManager:
                 group_config, update_config = _process_group_config(name_or_config)
                 group_name, subtask_list = _get_group_and_subtask_from_config(group_config)
 
-        fn = partial(
-            self._load_individual_task_or_group,
-            parent_name=group_name,
-            update_config=update_config,
-        )
+        fn = partial(self._load_individual_task_or_group, parent_name=group_name, update_config=update_config, task_type=task_type)
         return {group_name: dict(collections.ChainMap(*map(fn, reversed(subtask_list))))}
 
-    def load_task_or_group(self, task_list: Optional[Union[str, list]] = None) -> dict:
+    def load_task_or_group(self, task_list: Optional[Union[str, list]] = None, task_type: Literal["simple", "chat"] = "simple") -> dict:
         """Loads a dictionary of task objects from a list
 
         :param task_list: Union[str, list] = None
@@ -368,8 +373,9 @@ class TaskManager:
         """
         if isinstance(task_list, str):
             task_list = [task_list]
+        load_fn = partial(self._load_individual_task_or_group, task_type=task_type)
 
-        all_loaded_tasks = dict(collections.ChainMap(*map(self._load_individual_task_or_group, task_list)))
+        all_loaded_tasks = dict(collections.ChainMap(*map(load_fn, task_list)))
         return all_loaded_tasks
 
     def load_config(self, config: Dict):
@@ -522,6 +528,7 @@ def _check_duplicates(task_dict: dict) -> List[str]:
 def get_task_dict(
     task_name_list: Union[str, List[Union[str, Dict, Task]]],
     task_manager: Optional[TaskManager] = None,
+    task_type: Literal["simple", "chat"] = "simple",
 ):
     """Creates a dictionary of task objects from either a name of task, config, or prepared Task object.
 
@@ -557,6 +564,7 @@ def get_task_dict(
 
         task_name_from_string_dict = task_manager.load_task_or_group(
             string_task_name_list,
+            task_type,
         )
 
     for task_element in others_task_name_list:

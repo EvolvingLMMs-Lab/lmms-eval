@@ -1,0 +1,125 @@
+{# Track number of images and videos #}
+{% set image_count = namespace(value=0) %}
+{% set video_count = namespace(value=0) %}
+
+{# If tools are present, add system tool declaration block #}
+{% if tools %}
+<|im_start|>system
+{% if messages[0]['role'] == 'system' %}
+    {% if messages['content'] is string %}
+{{ messages[0]['content'] }}
+    {% else %}
+        {% for content in messages['content'] %}
+            {% if 'text' in content %}
+{{ content['text'] }}
+            {% endif %}
+        {% endfor %}
+    {% endif %} 
+{% else %}
+You are a helpful assistant.
+{% endif %}
+
+# Tools
+
+You may call one or more functions to assist with the user query.
+
+You are provided with function signatures within <tools></tools> XML tags:
+<tools>
+{% for tool in tools %}
+{{ tool | tojson }}
+{% endfor %}
+</tools>
+
+For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+<tool_call>
+{"name": <function-name>, "arguments": <args-json-object>}
+</tool_call>
+<|im_end|>
+{% endif %}
+
+{# Process message list #}
+{% for message in messages %}
+  {% set is_tool_call = message.role == "assistant" and message.tool_calls %}
+  {% set is_media_message = message['content'] is not string %}
+
+  {# SYSTEM fallback if no tools and first message isn't system #}
+  {% if loop.first and message['role'] != 'system' and not tools %}
+<|im_start|>system
+You are a helpful assistant.
+<|im_end|>
+  {% elif loop.first and message['role'] == 'system' and not tools %}
+  {{- '<|im_start|>system\\n' -}}
+{{ message['content'] if message['content'] is string else (message['content'] | selectattr('type', 'equalto', 'text') | map(attribute='text') | join('')) }}
+<|im_end|>
+  {% endif %}
+
+  {# USER, SYSTEM (non-initial), ASSISTANT (no tool call) #}
+  {% if message.role in ['user', 'system'] and (message.role != 'system' or not loop.first) or (message.role == 'assistant' and not is_tool_call) %}
+<|im_start|>{{ message['role'] }}
+    {% if message['content'] is string %}
+{{ message['content'] }}<|im_end|>
+    {% else %}
+      {% for content in message['content'] %}
+        {% if content['type'] == 'image' or 'image' in content or 'image_url' in content %}
+          {% set image_count.value = image_count.value + 1 %}
+          {% if add_vision_id %}Picture {{ image_count.value }}: {% endif %}
+<|vision_start|><|image_pad|><|vision_end|>
+        {% elif content['type'] == 'video' or 'video' in content %}
+          {% set video_count.value = video_count.value + 1 %}
+          {% if add_vision_id %}Video {{ video_count.value }}: {% endif %}
+<|vision_start|><|video_pad|><|vision_end|>
+        {% elif 'text' in content %}
+{{ content['text'] }}
+        {% endif %}
+      {% endfor %}
+<|im_end|>
+    {% endif %}
+
+  {# ASSISTANT tool calls #}
+  {% elif message.role == 'assistant' and is_tool_call %}
+<|im_start|>assistant
+    {% if message.content %}
+{{ message.content }}
+    {% endif %}
+    {% for tool_call in message.tool_calls %}
+      {% set tool_call = tool_call.function if tool_call.function is defined else tool_call %}
+<tool_call>
+{"name": "{{ tool_call.name }}", "arguments": {{ tool_call.arguments | tojson }}}
+</tool_call>
+    {% endfor %}
+<|im_end|>
+
+  {# TOOL response #}
+  {% elif message.role == 'tool' %}
+    {% if loop.index0 == 0 or messages[loop.index0 - 1].role != 'tool' %}
+<|im_start|>user
+    {% endif %}
+<tool_response>
+    {% if message['content'] is string %}
+{{ message.content }}
+    {% else %}
+      {% for content in message['content'] %}
+        {% if content['type'] == 'image' or 'image' in content or 'image_url' in content %}
+          {% set image_count.value = image_count.value + 1 %}
+          {% if add_vision_id %}Picture {{ image_count.value }}: {% endif %}
+<|vision_start|><|image_pad|><|vision_end|>
+        {% elif content['type'] == 'video' or 'video' in content %}
+          {% set video_count.value = video_count.value + 1 %}
+          {% if add_vision_id %}Video {{ video_count.value }}: {% endif %}
+<|vision_start|><|video_pad|><|vision_end|>
+        {% elif content['type'] == 'text' or 'text' in content %}
+{{ content['text'] }}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+</tool_response>
+    {% if loop.last or messages[loop.index0 + 1].role != 'tool' %}
+<|im_end|>
+    {% endif %}
+  {% endif %}
+{% endfor %}
+
+{# Add trailing assistant prompt if required #}
+{% if add_generation_prompt %}
+<|im_start|>assistant
+{% endif %}

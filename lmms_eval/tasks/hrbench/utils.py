@@ -25,7 +25,7 @@ with open(Path(__file__).parent / "hrbench.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-hrbench_evaluator = HRBenchEval(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=config["metadata"]["gpt_eval_model_name"], max_workers=config["metadata"]["max_workers"])
+hrbench_evaluator = HRBenchEval(api_key=os.getenv("OPENAI_API_KEY", "YOUR_API_KEY"), gpt_model=os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20"), max_workers=config["metadata"]["max_workers"])
 
 
 def decode_base64_to_image(base64_string, target_size=-1):
