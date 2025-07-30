@@ -8,29 +8,48 @@ LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation
 
 ## Table of Contents
 
-1. [Backward Compatibility Check](#backward-compatibility)
-2. [Major Features](#major-features)
-   - [Unified Message Interface](#1-unified-message-interface)
-   - [Multi-Node Distributed Evaluation](#2-multi-node-distributed-evaluation)
-   - [Unified LLM/LMM Judge Interface](#3-unified-llmlmm-judge-interface)
-   - [Automatic Tensor Parallelism](#4-automatic-tensor-parallelism)
-   - [Tool Call Integration](#5-tool-call-integration)
-   - [NanoVLM Integration](#6-nanovlm-integration)
-
-3. [Programmatic API Usage](#programmatic-api-usage)
-   - [Basic Evaluation API](#basic-evaluation-api)
-   - [Advanced API](#advanced-api-with-custom-configuration)
-   - [Task Management](#task-management-api)
-   - [Distributed Evaluation](#distributed-evaluation-api)
-
-4. [New Benchmarks](#new-benchmarks)
-   - [Vision Understanding](#vision-understanding)
-   - [Reasoning-Oriented Benchmarks](#reasoning-oriented-benchmarks)
-
-5. [Technical Details](#technical-details)
-6. [Migration Guide](#migration-guide)
-7. [Future Roadmap](#future-roadmap)
-8. [Contributing](#contributing)
+- [LMMS-Eval v0.4: Major Update Release](#lmms-eval-v04-major-update-release)
+  - [Introduction](#introduction)
+  - [Table of Contents](#table-of-contents)
+  - [Backward Compatibility Check](#backward-compatibility-check)
+  - [Major Features](#major-features)
+    - [1. Unified Message Interface](#1-unified-message-interface)
+    - [2. Multi-Node Distributed Evaluation](#2-multi-node-distributed-evaluation)
+    - [3. Unified LLM/LMM Judge Interface](#3-unified-llmlmm-judge-interface)
+    - [4. Tool Call Integration](#4-tool-call-integration)
+    - [6. NanoVLM Integration](#6-nanovlm-integration)
+  - [Programmatic API Usage](#programmatic-api-usage)
+    - [Basic Evaluation API](#basic-evaluation-api)
+    - [Advanced API with Custom Configuration](#advanced-api-with-custom-configuration)
+    - [Task Management API](#task-management-api)
+    - [Distributed Evaluation API](#distributed-evaluation-api)
+    - [Judge API Integration](#judge-api-integration)
+    - [Batch Processing and Efficiency](#batch-processing-and-efficiency)
+    - [API Benefits](#api-benefits)
+  - [New Benchmarks](#new-benchmarks)
+    - [Vision Understanding](#vision-understanding)
+    - [Reasoning-Oriented Benchmarks](#reasoning-oriented-benchmarks)
+      - [Mathematical Reasoning](#mathematical-reasoning)
+      - [Olympic-Level Challenges](#olympic-level-challenges)
+    - [Upcoming Benchmarks](#upcoming-benchmarks)
+  - [Technical Details](#technical-details)
+    - [Multi-Node Evaluation Architecture](#multi-node-evaluation-architecture)
+    - [Async OpenAI API Integration](#async-openai-api-integration)
+  - [Migration Guide](#migration-guide)
+    - [Updating Task Configurations](#updating-task-configurations)
+    - [Model Implementation Changes](#model-implementation-changes)
+  - [Deprecated Features](#deprecated-features)
+    - [Deprecated Models](#deprecated-models)
+    - [Legacy Interfaces](#legacy-interfaces)
+  - [Future Roadmap](#future-roadmap)
+    - [Upcoming in v0.4.x](#upcoming-in-v04x)
+    - [Long-term Vision](#long-term-vision)
+  - [Contributing](#contributing)
+    - [High-Priority Areas](#high-priority-areas)
+    - [How to Contribute](#how-to-contribute)
+  - [Acknowledgments](#acknowledgments)
+    - [Core Development Team](#core-development-team)
+  - [Getting Help](#getting-help)
 
 ## Backward Compatibility Check
 
@@ -63,20 +82,22 @@ def doc_to_messages(doc):
     messages = []
     
     # Add system message if needed
-    messages.append({
-        "role": "system",
-        "content": "You are a helpful multimodal assistant."
-    })
+    # messages.append({
+    #     "role": "system",
+    #     "content": [
+    #         {"type": "text", "text" : "You are a helpful AI assistant."}
+    #     ]
+    # })
     
     # Add user message with multimodal content
     user_content = []
     if "image" in doc:
-        user_content.append({"type": "image", "content": doc["image"]})
+        user_content.append({"type": "image", "url": doc["image"]})
     if "video" in doc:
-        user_content.append({"type": "video", "content": doc["video"]})
+        user_content.append({"type": "video", "url": doc["video"]})
     if "audio" in doc:
-        user_content.append({"type": "audio", "content": doc["audio"]})
-    user_content.append({"type": "text", "content": doc["question"]})
+        user_content.append({"type": "audio", "url": doc["audio"]})
+    user_content.append({"type": "text", "text": doc["question"]})
     
     messages.append({
         "role": "user",
@@ -90,6 +111,27 @@ This change provides:
 - **Consistency**: Single interface for all multimodal inputs
 - **Flexibility**: Easy support for interleaved modalities
 - **Compatibility**: Aligns with modern chat-based model APIs
+
+We provide two examples to guide the implementation of a custom `doc_to_messages` function:
+
+1. In `api/task.py`, within the `ConfigurableMessagesTask` class, you can find a `doc_to_messages` function used for tasks that do not implement `doc_to_messages` directly but instead define `doc_to_text` and `doc_to_visual`. This allows the new chat model to be compatible with legacy tasks lacking explicit `doc_to_messages` implementations.
+
+2. For a more customized approach, refer to the `mmmu_doc_to_messages` function in `tasks/mmmu/utils.py`. This implementation demonstrates how to format text and image inputs into a well-structured, interleaved message format, replacing older image token representations.
+
+To utilize `doc_to_messages`, we provide a protocol class that allows you to convert the output into either Hugging Face chat template format or OpenAI messages format. Here's a basic example:
+
+```python
+chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
+chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
+
+# To openai messages
+messages = chat_messages.to_openai_messages()
+
+# To hf messages
+hf_messages = chat_messages.to_hf_messages()
+```
+
+You can then use these messages with a chat template or the chat completion API. If you wish to implement your own message processing logic, please refer to the protocol definition in `lmms_eval/protocol.py` for more details.
 
 ### 2. Multi-Node Distributed Evaluation
 
@@ -213,47 +255,26 @@ metric_list:
 process_results: !function utils.process_results_with_judge
 ```
 
-### 4. Automatic Tensor Parallelism
-
-Seamless model parallelism for large models:
-
-```bash
-# Automatically splits model across available GPUs
-python -m lmms_eval \
-    --model qwen2_5_vl \
-    --model_args pretrained=Qwen/Qwen2.5-VL-72B-Instruct,auto_tp=True \
-    --tasks mmmu_val \
-    --batch_size 1 \
-    --output_path ./results
-```
-
-This feature automatically distributes large models across multiple GPUs to handle models that don't fit in single GPU memory.
-
-### 5. Tool Call Integration
+### 4. Tool Call Integration
 
 Support for models that can make tool/function calls during evaluation:
 
-```python
-# Example tool call evaluation setup
-from lmms_eval.evaluator import simple_evaluate
-
-# Evaluate models with tool-use capabilities
-results = simple_evaluate(
-    model=tool_capable_model,
-    tasks=["tool_use_bench", "function_calling_eval"],
-    batch_size=1,
-    tool_config={
-        "enable_tools": True,
-        "tool_timeout": 30,
-        "max_tool_calls": 5
-    }
-)
+```bash
+accelerate launch --num_processes=1 --main_process_port 12345 -m lmms_eval \
+    --model async_openai \
+    --model_args model_version=Qwen/Qwen2.5-VL-7B-Instruct,mcp_server_path=path/to/mcp_server.py\
+    --tasks mmmu_val \
+    --batch_size 1 \
+    --output_path ./logs/ \
+    --log_samples
 ```
 
 Features:
 - **Tool-use Evaluation**: Assess models' ability to call external functions
 - **Multi-step Reasoning**: Support for complex reasoning with tool assistance
 - **Function Call Integration**: Seamless integration with various API endpoints
+  
+To use this feature, you must first setup a vllm/sglang or any openai compatible server that support tool parsing. If the default model template does not support tool parsing, you might need to create your own for it, examples can be found in `examples/chat_templates/tool_call_qwen2_5_vl.jinja`
 
 ### 6. NanoVLM Integration
 
@@ -374,7 +395,7 @@ torch.cuda.set_device(local_rank)
 # Model with distributed support
 model = Qwen2_5_VL(
     pretrained="Qwen/Qwen2.5-VL-72B-Instruct",
-    device=f"cuda:{local_rank}"
+    device_map=f"cuda:{local_rank}"
 )
 
 # Distributed evaluation
