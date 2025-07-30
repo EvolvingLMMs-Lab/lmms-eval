@@ -486,16 +486,6 @@ benchmark_results = batch_evaluate_models(
 )
 ```
 
-### API Benefits
-
-The programmatic API provides several advantages:
-
-- **Integration**: Easy integration into training pipelines and research workflows
-- **Automation**: Batch evaluation of multiple models and tasks
-- **Customization**: Full control over evaluation parameters and configurations  
-- **Efficiency**: Optimized for large-scale evaluation scenarios
-- **Consistency**: Same evaluation logic as CLI with additional flexibility
-
 ## New Benchmarks
 
 ### Vision Understanding
@@ -524,12 +514,6 @@ A new suite of benchmarks focusing on mathematical and logical reasoning:
 #### Olympic-Level Challenges
 - **OlympiadBench**: International olympiad problems
 - **OlympiadBench MIMO**: Multi-input multi-output format
-
-### Upcoming Benchmarks
-- Agent benchmarks (OSWorld, Windows Agent Arena, WebVoyager)
-- Visual grounding (LVIS-MG, FSC-147)
-- Temporal understanding (TemporalBench, StreamBench)
-- Screen understanding (ScreenSpot-V2, ScreenSpot-Pro)
 
 ## Technical Details
 
