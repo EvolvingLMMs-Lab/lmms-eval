@@ -69,7 +69,7 @@ def mathverse_process_results(doc, results):
     }
 
     return {
-        "llm_as_judge_eval": judge_result,
+        "gpt_eval_score": judge_result,
         "submission": result,
     }
 
@@ -88,9 +88,5 @@ def mathverse_aggregate_results_submission(results, args, *, calculate_gain=Fals
 
 
 def mathverse_aggregate_results_eval(results, args, *, calculate_gain=False, random_scores=None):
-    split_flag = results[0]["metadata"]["split"]
-    problem_version = results[0]["problem_version"].lower().replace(" ", "_")
-    results_dict, scores = mathverse_evaluator.eval_results(results, config)
-    if scores["average"]["accuracy"] == 0:
-        return None
-    return scores["average"]["accuracy"]
+    scores = sum(results) / len(results)
+    return scores

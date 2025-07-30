@@ -1,4 +1,5 @@
 import os
+import time
 
 import pandas as pd
 from loguru import logger as eval_logger
@@ -18,6 +19,7 @@ class MathVerseEvaluator:
             "Content-Type": "application/json",
         }
         client = OpenAI(api_key=API_KEY, base_url=API_URL.rstrip("chat/completions"))
+        gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
     elif API_TYPE == "azure":
         API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
@@ -25,6 +27,10 @@ class MathVerseEvaluator:
         API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
         client = AzureOpenAI(azure_endpoint=API_URL, api_version=API_VERSION, api_key=API_KEY)
         gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+    server_config = ServerConfig(
+        model_name=gpt_model,
+    )
+    server = get_server(server_name=API_TYPE, config=server_config)
 
     def __init__(self, quick_extract=False):
         self.quick_extract = quick_extract

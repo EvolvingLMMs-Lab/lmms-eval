@@ -11,7 +11,14 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
+from transformers import (
+    AutoConfig,
+    AutoModel,
+    AutoModelForCausalLM,
+    AutoModelForImageTextToText,
+    AutoProcessor,
+    AutoTokenizer,
+)
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -90,7 +97,15 @@ class Huggingface(lmms):
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        self._model = AutoModelForCausalLM.from_pretrained(pretrained, **model_kwargs).eval()
+        config = AutoConfig.from_pretrained(pretrained)
+        if config.model_type in AutoModelForCausalLM._model_mapping.keys():
+            model_cls = AutoModelForCausalLM
+        elif config.model_type in AutoModelForImageTextToText._model_mapping.keys():
+            model_cls = AutoModelForImageTextToText
+        else:
+            model_cls = AutoModel
+
+        self._model = model_cls.from_pretrained(pretrained, **model_kwargs).eval()
         self.max_num_frames = max_num_frames
 
         if reasoning_prompt:
