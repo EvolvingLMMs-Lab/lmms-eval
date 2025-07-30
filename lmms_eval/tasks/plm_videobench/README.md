@@ -82,7 +82,7 @@ pip install lmms-eval
 
 # Use facebook/Perception-LM-1B for 1B parameters model and facebook/Perception-LM-3B for 3B parameters model.
 CHECKPOINTS_PATH=facebook/Perception-LM-8B
-OUTPUT_PATH=plm_evaluation
+OUTPUT_PATH=plmms_evaluation
 
 # PLM-VideoBench Tasks
 TASKS=fgqa_test,sgqa_test,rtloc_test,rcap_test,rdcap_test

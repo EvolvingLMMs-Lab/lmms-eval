@@ -10,7 +10,7 @@ from metrics.scoring.vlm_as_judge import OpenAIVLMJudger
 class AsciiArtVLMJudger(OpenAIVLMJudger):
     """A GPT-4o judge for assessing if two ASCII art images depict the same thing."""
 
-    def __init__(self, metric_config, model="gpt-4o-2024-08-06"):
+    def __init__(self, metric_config, model="gpt-4o-2024-11-20"):
         self.eval_prompt = 'Determine if the following two ASCII art images depict the same object. Your answer should be either "yes" or "no", but without the quotation marks.'
         super().__init__(
             metric_config,

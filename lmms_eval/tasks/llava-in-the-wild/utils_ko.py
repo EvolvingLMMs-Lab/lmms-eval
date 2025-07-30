@@ -5,11 +5,10 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
-import openai
-import requests
 import yaml
 from loguru import logger as eval_logger
-from openai import OpenAI
+
+from lmms_eval.llm_judge import Request, ServerConfig, get_server
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -27,29 +26,15 @@ with open(Path(__file__).parent / "llava-in-the-wild_ko.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-GPT_EVAL_MODEL_NAME = config["metadata"]["gpt_eval_model_name"]
-
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "openai")
 
-if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
-    API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
-    headers = {
-        "api-key": API_KEY,
-        "Content-Type": "application/json",
-    }
+# Initialize the judge server
+server_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=1024)
+server = get_server(server_name=API_TYPE, config=server_config)
 
 
 def get_eval(content: str, max_tokens: int, retries: int = 5):
-    global headers
-
     messages = [
         {
             "role": "system",
@@ -58,25 +43,20 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
         {"role": "user", "content": content},
     ]
 
-    payload = {
-        "model": GPT_EVAL_MODEL_NAME,
-        "messages": messages,
-        "temperature": 0.2,
-        "max_tokens": max_tokens,
-    }
-
-    if API_TYPE == "azure":
-        payload.pop("model")
+    # Update server config with specific parameters for this request
+    custom_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=max_tokens)
 
     for attempt in range(retries):
         try:
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            response_data = response.json()
+            # Create a Request object for the unified judge API
+            request = Request(messages=messages, config=custom_config)
 
-            content = response_data["choices"][0]["message"]["content"].strip()
+            # Use the unified judge API
+            response = server.evaluate(request)
+
+            content = response.content.strip() if response.content else ""
             if content != "":
-                return content, response_data["model"]
+                return content, response.model_used
             break  # If successful, break out of the loop
 
         except Exception as e:
@@ -91,7 +71,7 @@ def get_eval(content: str, max_tokens: int, retries: int = 5):
 
 def parse_score(review):
     try:
-        score_pair = review.split("\n")[0]
+        score_pair = review.split("\n")[0].strip()
         score_pair = score_pair.replace(",", " ")
         sp = score_pair.split(" ")
         if len(sp) == 2:

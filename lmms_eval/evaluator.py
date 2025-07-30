@@ -8,7 +8,7 @@ import sys
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -31,6 +31,7 @@ from lmms_eval.evaluator_utils import (
     print_writeout,
     run_task_tests,
 )
+from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
 from lmms_eval.models import get_model
 from lmms_eval.tasks import TaskManager, get_task_dict
@@ -51,6 +52,7 @@ from lmms_eval.utils import (
 def simple_evaluate(
     model,
     model_args: Optional[Union[str, dict]] = None,
+    launcher_args: Optional[Union[str, dict]] = None,
     tasks: Optional[List[Union[str, dict, object]]] = None,
     num_fewshot: Optional[int] = None,
     batch_size: Optional[Union[int, str]] = None,
@@ -80,11 +82,12 @@ def simple_evaluate(
     datetime_str: str = get_datetime_str(),
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
+    force_simple: bool = False,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model or LM object, see lm_eval.models.get_model
+        Name of model or LM object, see lmms_eval.models.get_model
     :param model_args: Optional[str, dict]
         String or dict arguments for each model class, see LM.create_from_arg_string and LM.create_from_arg_object.
         Ignored if `model` argument is a LM object.
@@ -170,15 +173,20 @@ def simple_evaluate(
     if model_args is None:
         model_args = ""
 
+    if launcher_args is not None:
+        launcher_args = simple_parse_args_string(launcher_args)
+        launcher_name = launcher_args.pop("name")
+        eval_launcher = get_launcher(launcher_name)(**launcher_args)
+    else:
+        eval_launcher = None
+
     if task_manager is None:
         task_manager = TaskManager(verbosity, model_name=model)
-
-    task_dict = get_task_dict(tasks, task_manager)
 
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lmms_eval.models.get_model(model).create_from_arg_string(
+        lm = lmms_eval.models.get_model(model, force_simple).create_from_arg_string(
             model_args,
             {
                 "batch_size": batch_size,
@@ -188,6 +196,8 @@ def simple_evaluate(
         )
     elif isinstance(model, lmms_eval.api.model.lmms):
         lm = model
+    task_type = "simple" if lm.is_simple else "chat"
+    task_dict = get_task_dict(tasks, task_manager, task_type)
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -250,6 +260,11 @@ def simple_evaluate(
             fewshot_as_multiturn=fewshot_as_multiturn,
         )
 
+    # Getting the rank settings
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    global_rank = int(os.environ.get("RANK", 0))
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
+
     results = evaluate(
         lm=lm,
         task_dict=task_dict,
@@ -265,9 +280,10 @@ def simple_evaluate(
         verbosity=verbosity,
         distributed_executor_backend=distributed_executor_backend,
         cli_args=cli_args,
+        eval_server_launcher=eval_launcher,
     )
 
-    if lm.rank == 0:
+    if global_rank == 0:
         if isinstance(model, str):
             model_name = model
         elif hasattr(model, "config") and hasattr(model.config, "_name_or_path"):
@@ -281,7 +297,7 @@ def simple_evaluate(
             "model_args": model_args,
         }
         # add more detailed model info if available TODO: add model info
-        # if isinstance(lm, lm_eval.models.huggingface.HFLM):
+        # if isinstance(lm, lmms_eval.models.huggingface.HFLM):
         #     results["config"].update(lm.get_model_info())
         # add info about execution
         results["config"].update(
@@ -326,6 +342,7 @@ def evaluate(
     fewshot_as_multiturn: bool = False,
     verbosity: str = "INFO",
     distributed_executor_backend: str = "accelerate",
+    eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -378,6 +395,11 @@ def evaluate(
     task_group_alias = collections.defaultdict(dict)
     # store num-fewshot value per task
     num_fewshot = collections.defaultdict(int)
+    # Getting the rank settings
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    global_rank = int(os.environ.get("RANK", 0))
+    world_size = int(os.environ.get("WORLD_SIZE", 1))
+    eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
     # get lists of group hierarchy and each type of request
     eval_tasks = get_task_list(task_dict)
@@ -385,6 +407,9 @@ def evaluate(
     if not log_samples:
         if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
+
+    if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
+        lm.accelerator = Accelerator()
 
     for task_output in eval_tasks:
         task: Task = task_output.task
@@ -422,8 +447,8 @@ def evaluate(
         limit = get_sample_size(task, limit)
         task.build_all_requests(
             limit=limit,
-            rank=lm.rank,
-            world_size=lm.world_size,
+            rank=global_rank,
+            world_size=world_size,
             cache_requests=cache_requests,  # later we will add them
             rewrite_requests_cache=rewrite_requests_cache,
             system_instruction=system_instruction,
@@ -440,13 +465,13 @@ def evaluate(
             reqtype = instance.request_type
             requests[reqtype].append(instance)
 
-        if lm.world_size > 1:
+        if world_size > 1:
             if distributed_executor_backend == "accelerate":
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
                 gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
             elif distributed_executor_backend == "torchrun":
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-                gathered_item = torch.zeros(lm.world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
+                gathered_item = torch.zeros(world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
                 dist.all_gather_into_tensor(gathered_item, instances_rnk)
                 gathered_item = gathered_item.cpu().detach().numpy().tolist()
             else:
@@ -468,7 +493,7 @@ def evaluate(
         for req in reqs:
             cloned_reqs.extend([req] * req.repeats)
 
-        if (lm.world_size > 1) and (padding_requests[reqtype] > 0):
+        if (world_size > 1) and (padding_requests[reqtype] > 0):
             for _ in range(padding_requests[reqtype]):
                 cloned_reqs.extend([req] * req.repeats)
 
@@ -479,7 +504,7 @@ def evaluate(
         for x, req in zip(resps, cloned_reqs):
             req.resps.append(x)
 
-        if lm.world_size > 1:
+        if world_size > 1:
             if distributed_executor_backend == "accelerate":
                 lm.accelerator.wait_for_everyone()
             elif distributed_executor_backend == "torchrun":
@@ -487,8 +512,19 @@ def evaluate(
             else:
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
-    RANK = lm.rank
-    WORLD_SIZE = lm.world_size
+    # Cleaning lm's cuda memory if you are launching llm as judge in local
+    lm.clean()
+    RANK = global_rank
+    WORLD_SIZE = world_size
+    if eval_server_launcher is not None and RANK == 0:
+        eval_server_launcher.launch()
+
+    if world_size > 1:
+        if distributed_executor_backend == "accelerate":
+            lm.accelerator.wait_for_everyone()
+        elif distributed_executor_backend == "torchrun":
+            dist.barrier()
+
     ### Postprocess outputs ###
     # TODO: del model here, maybe (idea: allow user to specify device of e.g. reward model separately)
     for task_output in eval_tasks:
@@ -507,7 +543,7 @@ def evaluate(
             instances.sort(key=lambda x: x.idx)
         # iterate over different filters used
         for filter_key in task.instances[0].filtered_resps.keys():
-            if not cli_args.process_with_media:
+            if cli_args is not None and not cli_args.process_with_media:
                 doc_iterator = create_iterator(enumerate(task.eval_docs_no_media), rank=RANK, limit=int(limit) if limit else None, world_size=WORLD_SIZE)
             else:
                 doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
@@ -552,8 +588,7 @@ def evaluate(
                                 ensure_ascii=False,
                             )
                         ),
-                        "prompt_hash": hash_string(requests[0].arguments[0]),
-                        "target_hash": hash_string(str(target)),
+                        # Removing prompt hash and target hash here
                     }
                     example.update(metrics)
                     task_output.logged_samples.append(example)
@@ -562,10 +597,6 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
-
-    if hasattr(lm, "_model"):
-        del lm._model
-        torch.cuda.empty_cache()
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
@@ -601,6 +632,8 @@ def evaluate(
         dist.barrier()  # Ensure all processes are synced before proceeding
 
     if RANK == 0:
+        if eval_server_launcher is not None:
+            eval_server_launcher.clean()
         ### Aggregate results over all datapoints ###
         # aggregate results ; run bootstrap CIs
         for task_output in eval_tasks:

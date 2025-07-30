@@ -258,7 +258,7 @@ def gpt_match(qa):
     return response_dict
 
 
-def llm_eval(data_dict):
+def llmms_eval(data_dict):
     set_default_backend(RuntimeEndpoint("http://localhost:30000"))
 
     try:
@@ -310,11 +310,11 @@ def llm_eval(data_dict):
 def vdc_process_results_generic(doc, result):
     pred = result[0]
     doc["pred"] = pred
-    eval_results = llm_eval(doc)
+    eval_results = llmms_eval(doc)
 
     return {
-        "llm_eval_score": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "score": eval_results["score"]},
-        "llm_eval_acc": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "acc": eval_results["acc"]},
+        "llmms_eval_score": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "score": eval_results["score"]},
+        "llmms_eval_acc": {"video_name": doc["video_name"], "caption": doc["caption"], "pred": pred, "acc": eval_results["acc"]},
     }
 
 

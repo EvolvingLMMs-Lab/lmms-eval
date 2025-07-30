@@ -2,75 +2,11 @@ import os
 import time
 
 import pandas as pd
-import requests
 from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
-DEMO_PROMPT_EXTRACT = """
-I am providing you a response from a model to a math problem, termed 'Model Response'. You should extract the answer from the response as 'Extracted Answer'. Directly output the extracted answer with no explanation.
-
-1.
-Model response: 'Rounded to two decimal places, the perimeter of the sector is approximately:\n\n(-2, 1)'
-Extracted Answer: (-2, 1)
-
-2.
-Model response: 'at those points.\n\nTherefore, the correct option that represents the meaning of the intersection points of the graphs is:\n\nD. They give the solutions to the equation $f(t)=g(t)$.",'
-Extracted Answer: D
-
-3.
-Model response: ' at 1 (there's a closed circle at y = 1), the range in interval notation is \\((-4, 1]\\).\n\nFinal values:\nDomain: \\((-3, 3]\\)\nRange: \\((-4, 1]\\)'
-Extracted Answer: Domain: \\((-3, 3]\\)\nRange: \\((-4, 1]\\)
-
-4.
-Model response: 'As it stands, I cannot provide the correct option letter because there isn't enough information to solve for 'y'.'
-Extracted Answer: null
-
-5.
-Model response: 'Given that AB = 17.6 meters, we can now substitute into the equation:\n\nd = 17.6 / cos(38\u00b0)\n\nTherefore, to one decimal place, the distance d between Ned and Bart is approximately 22.3 meters.'
-Extracted answer: 22.3
-
-6.
-Model response:  have all the coefficients for the quadratic function:\n\\( f(x) = ax^2 + bx + c \\)\n\\( f(x) = -1x^2 - 2x + 1 \\)\n\nTherefore, the equation for the graphed function \\( f \\) is:\n\\( f(x) = -x^2 - 2x + 1 \\)"'
-Extracted answer: f(x) = -x^2 - 2x + 1
-
-7.
-"""
-
-DEMO_PROMPT_SCORE = """
-Below are two answers to a math question. Question is [Question], [Standard Answer] is the standard answer to the question, and [Model_answer] is the answer extracted from a model's output to this question.  Determine whether these two answers are consistent.
-Please note that only when the [Model_answer] completely matches the [Standard Answer] means they are consistent. For non-multiple-choice questions, if the meaning is expressed in the same way, it is also considered consistent, for example, 0.5m and 50cm.
-If they are consistent, Judement is 1; if they are different, Judement is 0.
-
-[Question]: Write the set of numbers represented on the number line in interval notation.
-[Standard Answer]: (-2,1]
-[Model_answer] : Extracted Answer: \\((-2, 1)\\)
-Judgement: 0
-
-[Question]: As shown in the figure, circle O has a radius 1.0, if angle BAC = 60.0, then the length of BC is ()\nChoices:\nA:2\nB:2\u221a{{3}}\nC:\u221a{{3}}\nD:2\u221a{{2}}
-[Standard Answer]: C
-[Model_answer] : B:2\u221a{{3}}
-Judgement: 0
-
-[Question]: Find the domain and range of the function f using interval notation.
-[Standard Answer]: domain: [-4, 0) and range: (-3, 1]
-[Model_answer] : Range: \\((-4, 1]\\)
-Judgement: 0
-
-[Question]: As shown in the figure, circle O has a radius 1.0, if angle BAC = 60.0, then the length of BC is ()\nChoices:\nA:2\nB:2\u221a{{3}}\nC:\u221a{{3}}\nD:2\u221a{{2}}
-[Standard Answer]: C
-[Model_answer] : null
-Judgement: 0
-
-[Question]: Given the graph of the ellipse that intersects with x-axis at 9 and -9 and with y-axis at 3 and -3, determine its equation.A. \\frac{{x^2}}{{81}} + \\frac{{y^2}}{{9}} = 1 B. Can not determine.\n
-[Standard Answer]: A
-[Model_answer] : \\frac{{x^2}}{{81}} + \\frac{{y^2}}{{9}} = 1
-Judgement: 1
-
-[Question]: {question}
-[Standard Answer]: {gt}
-[Model_answer] : {extraction}
-Judgement: """
+from lmms_eval.llm_judge import ServerConfig, get_server
 
 
 class MathVerseEvaluator:
@@ -83,6 +19,7 @@ class MathVerseEvaluator:
             "Content-Type": "application/json",
         }
         client = OpenAI(api_key=API_KEY, base_url=API_URL.rstrip("chat/completions"))
+        gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
     elif API_TYPE == "azure":
         API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
@@ -90,6 +27,10 @@ class MathVerseEvaluator:
         API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
         client = AzureOpenAI(azure_endpoint=API_URL, api_version=API_VERSION, api_key=API_KEY)
         gpt_model = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+    server_config = ServerConfig(
+        model_name=gpt_model,
+    )
+    server = get_server(server_name=API_TYPE, config=server_config)
 
     def __init__(self, quick_extract=False):
         self.quick_extract = quick_extract
@@ -148,38 +89,25 @@ class MathVerseEvaluator:
         full_prompt = demo_prompt.format(question=question, gt=answer, extraction=extraction)
         return full_prompt
 
-    def extract_answer(self, response):
-        if not response:
-            return ""
-
-        # general extraction
-        try:
-            full_prompt = self.create_extract_prompt(DEMO_PROMPT_EXTRACT, response)
-            extraction = self.get_chat_response(full_prompt, temperature=0, max_tokens=256, n=1)
-            return extraction
-        except Exception as e:
-            eval_logger.error(e)
-            eval_logger.error(f"Error in extracting answer for problem")
-
-        return ""
-
-    def score_answer(self, question, answer, extraction, quick_match=False):
+    def score_answer(self, question, answer, model_response, quick_match=False):
         if quick_match:
-            return extraction == answer
+            return model_response == answer
 
         try:
-            full_prompt = self.create_match_prompt(DEMO_PROMPT_SCORE, question, answer, extraction)
-            while True:
-                extraction = self.get_chat_response(full_prompt, temperature=0, max_tokens=8, n=1)
-                judgement = extraction.replace("Judgement:", "").strip()
-                if judgement.strip() in ["0", "1"]:
-                    return int(judgement) == 1
+            result = self.server.evaluate_binary(question=question, answer=str(answer), prediction=model_response, output_format="0/1")
+
+            if result["success"]:
+                judge_response = result["result"]
+                return judge_response
+            else:
+                eval_logger.error(f"Judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
+                return 0
 
         except Exception as e:
             print(e)
             print(f"Error in matching answer")
 
-        return False
+        return 0
 
     def get_acc_with_contion(self, res_pd, key, value):
         """
@@ -191,14 +119,14 @@ class MathVerseEvaluator:
         acc = "{:.2f}".format(len(correct_pd) / len(total_pd) * 100) if len(total_pd) > 0 else "0.00"
         return len(correct_pd), len(total_pd), acc
 
-    def create_one_query(self, problem, shot_type, hint, query_type, examples=None, shot_num=0, use_caption=False, use_ocr=False):
+    def create_one_query(self, problem, shot_type, hint, query_type, examples=None, shot_num=0):
         ### [1] Demo prompt
         if shot_num == 0:
             demo_prompt = ""
         else:
             demos = []
-            shot_num = min(shot_num, len(examples))
-            for example in examples[:shot_num]:
+            shot_num = min(shot_num, len(examples)) if examples else 0
+            for example in examples[:shot_num] if examples else []:
                 prompt = ""
 
                 # question
@@ -254,7 +182,7 @@ class MathVerseEvaluator:
         return query
 
     def eval_results(self, results, config):
-        # extract and score for each question
+        # score each question directly without extraction
         for inst in tqdm(results):
             full_prediction = inst["prediction"].strip()
             problem = {
@@ -266,18 +194,22 @@ class MathVerseEvaluator:
                 prediction = " ".join(full_prediction.split(" ")[-config["metadata"]["trunk_response"] :])
             else:
                 prediction = full_prediction
-            extraction = self.extract_answer(prediction)
-            # set test set answer to None
-            true_false = self.score_answer(problem["question_for_eval"], problem["answer"], extraction, config["metadata"]["quick_match"]) if problem["answer"] is not None else False
 
-            inst["extraction"] = extraction
+            # Skip extraction and pass model's full response directly to scoring
+            # set test set answer to None
+            if "true_false" in inst:
+                true_false = inst["true_false"]
+            else:
+                true_false = self.score_answer(problem["question_for_eval"], problem["answer"], prediction, config["metadata"]["quick_match"]) if problem["answer"] is not None else False
+
+            inst["extraction"] = prediction  # Store the full prediction as extraction
             inst["prediction"] = prediction
             inst["true_false"] = true_false
 
         # calculate total scores
         sample_index = [result["sample_index"] for result in results]
         total = len(results)
-        correct = sum(1 for idx, pid in enumerate(sample_index) if results[idx]["true_false"])
+        correct = sum(1 for idx in range(len(sample_index)) if results[idx]["true_false"])
         accuracy = round(correct / total * 100, 2)
         scores = {"average": {"accuracy": accuracy, "correct": correct, "total": total}}
 

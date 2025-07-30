@@ -15,13 +15,10 @@ generation_kwargs:
   top_p: 1.0
   num_beams: 1
   do_sample: false
-process_results: !function dc100_en_utils.process_results # apply gpt eval here
+process_results: !function dc100_en_utils.process_results # apply llm judge eval here
 metric_list:
-  - metric: gpt_eval_info
-    aggregation: !function dc100_en_utils.dc100_en_aggregate_info
-    higher_is_better: false
-  - metric: gpt_eval_avg_score
-    aggregation: !function dc100_en_utils.dc100_en_aggregate_avg_score
+  - metric: llm_as_judge_eval
+    aggregation: mean
     higher_is_better: true
 metadata:
   version: 0.0

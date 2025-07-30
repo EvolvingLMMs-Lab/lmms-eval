@@ -14,13 +14,15 @@
 
 🏠 [LMMs-Lab Homepage](https://www.lmms-lab.com/) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Supported Tasks (90+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Supported Models (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentation](docs/README.md)
+📖 [Supported Tasks (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Supported Models (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentation](docs/README.md)
 
 ---
 
 ## Annoucement
 
-We warmly welcome contributions from the open-source community!
+- [2025-07] 🚀🚀 We have released the `lmms-eval-0.4`. Please refer to the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/releases/tag/v0.4.0) for more details. This is a major update with new features and improvements, for users wish to use `lmms-eval-0.3` please refer to the branch `stable/v0d3`.
+
+- [2025-04] 🚀🚀 Introducing Aero-1-Audio — a compact yet mighty audio model. We have officially supports evaluation for Aero-1-Audio and it supports batched evaluations! Feel free to try out.
 
 - [2025-07] 🎉🎉 We welcome the new task [PhyX](https://phyx-bench.github.io/), the first large-scale benchmark designed to assess models capacity for physics-grounded reasoning in visual scenarios.
 - [2025-06] 🎉🎉 We welcome the new task [VideoMathQA](https://mbzuai-oryx.github.io/VideoMathQA), designed to evaluate mathematical reasoning in real-world educational videos.
