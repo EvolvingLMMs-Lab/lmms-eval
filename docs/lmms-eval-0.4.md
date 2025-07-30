@@ -67,7 +67,7 @@ We could see that most benchmarks show minimal performance differences between v
 
 ### 1. Unified Message Interface
 
-![Pix-Pin-2025-07-29-23-25-27](https://i.postimg.cc/XnvBv2kz/Pix-Pin-2025-07-29-23-25-27.png)
+![Pix-Pin-2025-07-29-23-25-27](https://i.postimg.cc/hDgnZDgw/Pix-Pin-2025-07-30-11-24-44.png)
 
 **Replacing Legacy `doc_to_visual` and `doc_to_text` with `doc_to_messages`**
 
