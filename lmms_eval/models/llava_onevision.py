@@ -518,18 +518,6 @@ class Llava_OneVision(lmms):
                     prompt_question = conv.get_prompt()
                     question_input.append(prompt_question)
 
-            # preconfigure gen_kwargs with defaults
-            if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 1024
-            if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
-            if "do_sample" not in gen_kwargs:
-                gen_kwargs["do_sample"] = False
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
-            if "num_beams" not in gen_kwargs:
-                gen_kwargs["num_beams"] = 1
-
             input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             input_ids = self.pad_sequence(input_ids_list, batch_first=True, padding_value=pad_token_ids).to(self.device)
@@ -548,8 +536,18 @@ class Llava_OneVision(lmms):
 
             # These steps are not in LLaVA's original code, but are necessary for generation to work
             # TODO: attention to this major generation step...
+            # preconfigure gen_kwargs with defaults
+            if "max_new_tokens" not in gen_kwargs:
+                gen_kwargs["max_new_tokens"] = 1024
+
             if "image_aspect_ratio" in gen_kwargs.keys():
                 gen_kwargs.pop("image_aspect_ratio")
+            # When do_sample=False, remove sampling-related parameters to avoid warnings
+            # These might be in gen_kwargs or in the model's generation_config
+            if not gen_kwargs.get("do_sample", False):
+                gen_kwargs.pop("temperature", None)
+                gen_kwargs.pop("top_p", None)
+                gen_kwargs.pop("top_k", None)
             try:
                 with torch.inference_mode():
                     cont = self.model.generate(input_ids, attention_mask=attention_masks, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
@@ -732,12 +730,14 @@ class Llava_OneVision(lmms):
                 # preconfigure gen_kwargs with defaults
                 if "max_new_tokens" not in gen_kwargs:
                     gen_kwargs["max_new_tokens"] = 1024
-                if "temperature" not in gen_kwargs:
-                    gen_kwargs["temperature"] = 0
                 if "do_sample" not in gen_kwargs:
                     gen_kwargs["do_sample"] = False
-                if "top_p" not in gen_kwargs:
-                    gen_kwargs["top_p"] = None
+                # Only set temperature and top_p if do_sample is True
+                if gen_kwargs.get("do_sample", False):
+                    if "temperature" not in gen_kwargs:
+                        gen_kwargs["temperature"] = 1.0  # Default temperature for sampling
+                    if "top_p" not in gen_kwargs:
+                        gen_kwargs["top_p"] = 1.0  # Default top_p for sampling
                 if "num_beams" not in gen_kwargs:
                     gen_kwargs["num_beams"] = 1
 
@@ -761,6 +761,10 @@ class Llava_OneVision(lmms):
                 # TODO: attention to this major generation step...
                 if "image_aspect_ratio" in gen_kwargs.keys():
                     gen_kwargs.pop("image_aspect_ratio")
+                # Remove temperature and top_p when do_sample=False to avoid warnings
+                if not gen_kwargs.get("do_sample", False):
+                    gen_kwargs.pop("temperature", None)
+                    gen_kwargs.pop("top_p", None)
                 try:
                     with torch.inference_mode():
                         cont = self.model.generate(input_ids, attention_mask=attention_masks, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)

@@ -20,7 +20,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-NUM_SECONDS_TO_SLEEP = 5
+NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
+WORKERS = int(os.getenv("WORKERS", "32"))
 
 try:
     from vllm import LLM, SamplingParams
@@ -50,7 +51,7 @@ class VLLM(lmms):
         - VLLM chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
 
     Args:
-        model_version (str): HuggingFace model identifier or path to the model.
+        model (str): HuggingFace model identifier or path to the model.
             Default: "Qwen/Qwen2.5-VL-3B-Instruct"
         tensor_parallel_size (int): Number of GPUs to use for tensor parallelism.
             Default: 1
@@ -81,7 +82,7 @@ class VLLM(lmms):
             "--model",
             "vllm",
             "--model_args",
-            "model_version=meta-llama/Llama-4-Scout-17B-16E-Instruct,"
+            "model=meta-llama/Llama-4-Scout-17B-16E-Instruct,"
             "tensor_parallel_size=4,"
             "dtype=bfloat16,"
             "max_model_len=10240,"
@@ -118,7 +119,7 @@ class VLLM(lmms):
         "--model",
         "vllm",
         "--model_args",
-        "model_version=deepseek-ai/deepseek-vl2,"
+        "model=deepseek-ai/deepseek-vl2,"
         'hf_overrides={"architectures": ["DeepseekVLV2ForCausalLM"]},' # example of passing model specific arguments, JSON string will be parsed automatically
         f"chat_template={chat_template_file}," # chat template file path
         "tensor_parallel_size=2,"
@@ -145,12 +146,12 @@ class VLLM(lmms):
 
     def __init__(
         self,
-        model_version: str = "Qwen/Qwen2.5-VL-3B-Instruct",
+        model: str = "Qwen/Qwen2.5-VL-3B-Instruct",
         tensor_parallel_size: int = 1,
+        data_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
         max_frame_num: int = 32,
-        threads: int = 16,  # Threads to use for decoding visuals
         trust_remote_code: Optional[bool] = True,
         chat_template: Optional[str] = None,
         min_image_pixels: int = 28,  # minimum image dimension, required for Qwen 2/2.5-VL models
@@ -160,12 +161,13 @@ class VLLM(lmms):
         # Manually set a image token for GPT4V so that we can search for it
         # and split the text and image
         # Here we just use the same token as llava for convenient
-        self.model_version = model_version
+        self.model = model
         self.max_frame_num = max_frame_num
-        self.threads = threads
+        self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
+        self.data_parallel_size = data_parallel_size
         # Qwen 2/2.5-VL models enforce minimum image dimensions
-        self._enforce_image_resize = self._is_qwen_vl_model(model_version)
+        self._enforce_image_resize = self._is_qwen_vl_model(model)
 
         # Load chat template during initialization
         self.chat_template = None
@@ -191,13 +193,6 @@ class VLLM(lmms):
 
         # Set up vllm client
         os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
-        self.client = LLM(
-            model=self.model_version,
-            tensor_parallel_size=tensor_parallel_size,
-            gpu_memory_utilization=gpu_memory_utilization,
-            trust_remote_code=trust_remote_code,
-            **kwargs,
-        )
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -211,13 +206,27 @@ class VLLM(lmms):
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
+        # TODO: Support tensor parallelism in the future for flexible vllm parallel
+        if data_parallel_size > 1:
+            assert tensor_parallel_size == 1, "Data parallelism is not supported with tensor parallelism. For current vllm version"
+        if accelerator.num_processes > 1:
+            kwargs["distributed_executor_backend"] = "external_launcher"
+        self.client = LLM(
+            model=self.model,
+            tensor_parallel_size=tensor_parallel_size,
+            gpu_memory_utilization=gpu_memory_utilization,
+            trust_remote_code=trust_remote_code,
+            disable_log_stats=False,
+            seed=1,
+            **kwargs,
+        )
 
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
 
-    def _is_qwen_vl_model(self, model_version: str) -> bool:
+    def _is_qwen_vl_model(self, model: str) -> bool:
         qwen_vl_patterns = ["qwen2-vl", "qwen2.5-vl"]
-        return any(pattern in model_version.lower() for pattern in qwen_vl_patterns)
+        return any(pattern in model.lower() for pattern in qwen_vl_patterns)
 
     def _maybe_resize_image(self, img: Image.Image) -> Image.Image:
         # edge‐case validation
@@ -294,16 +303,14 @@ class VLLM(lmms):
                 contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
                 if "max_new_tokens" not in gen_kwargs:
                     gen_kwargs["max_new_tokens"] = 1024
-                if gen_kwargs["max_new_tokens"] > 4096:
-                    gen_kwargs["max_new_tokens"] = 4096
                 if "temperature" not in gen_kwargs:
                     gen_kwargs["temperature"] = 0
                 if "top_p" not in gen_kwargs:
                     gen_kwargs["top_p"] = 0.95
 
                 params = {
-                    "temperature": gen_kwargs["temperature"],
                     "max_tokens": gen_kwargs["max_new_tokens"],
+                    "temperature": gen_kwargs["temperature"],
                     "top_p": gen_kwargs["top_p"],
                 }
                 sampling_params = SamplingParams(**params)
@@ -316,7 +323,7 @@ class VLLM(lmms):
                     visuals = self.flatten(visuals)
                     imgs = []  # multiple images or frames for video
                     all_tasks = []
-                    with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                    with ThreadPoolExecutor(max_workers=WORKERS) as executor:
                         for visual in visuals:
                             if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
                                 all_tasks.append(executor.submit(self.encode_video, visual))
@@ -329,10 +336,10 @@ class VLLM(lmms):
                             imgs.append(task.result())
 
                 messages = [{"role": "user", "content": []}]
-                # When there is no image token in the context, append the image to the text
-                messages[0]["content"].append({"type": "text", "text": contexts})
+                # Add images first, then text
                 for img in self.flatten(imgs):
                     messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+                messages[0]["content"].append({"type": "text", "text": contexts})
 
                 batched_messages.append(messages)
 

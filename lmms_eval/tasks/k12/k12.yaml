@@ -12,11 +12,6 @@ generation_kwargs:
   until:
     - "ASSISTANT:"
   max_new_tokens: 16384
-  temperature: 0
-  top_p: 0.95
-  num_beams: 1
-  do_sample: false
-  repetition_penalty: 1.2
 process_results: !function utils.k12_process_results
 metric_list:
   - metric: llm_as_judge_eval
