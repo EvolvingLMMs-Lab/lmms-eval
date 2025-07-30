@@ -165,6 +165,17 @@ torchrun --nproc_per_node="${MLP_WORKER_GPU}" \
          --log_samples
 ```
 
+For vllm, you can use the following command to enable tensor parallel and data parallel to launch more workers to split data for faster evaluation:
+
+```bash
+accelerate launch --num_processes=1 --main_process_port=12346 -m lmms_eval \
+    --model vllm \
+    --model_args=model=Qwen/Qwen2.5-VL-3B-Instruct,tensor_parallel_size=2,data_parallel_size=4 \
+    --tasks ai2d \
+    --batch_size 512 \
+    --verbosity=DEBUG
+```
+
 **Key Benefits**:
 - **Scalability**: Evaluate large models and datasets across multiple GPUs/nodes
 - **Efficiency**: Automatic work distribution and result aggregation
