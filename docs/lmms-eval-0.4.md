@@ -25,13 +25,11 @@ LMMS-Eval v0.4 represents a significant evolution in multimodal model evaluation
     - [Distributed Evaluation API](#distributed-evaluation-api)
     - [Judge API Integration](#judge-api-integration)
     - [Batch Processing and Efficiency](#batch-processing-and-efficiency)
-    - [API Benefits](#api-benefits)
   - [New Benchmarks](#new-benchmarks)
     - [Vision Understanding](#vision-understanding)
     - [Reasoning-Oriented Benchmarks](#reasoning-oriented-benchmarks)
       - [Mathematical Reasoning](#mathematical-reasoning)
       - [Olympic-Level Challenges](#olympic-level-challenges)
-    - [Upcoming Benchmarks](#upcoming-benchmarks)
   - [Technical Details](#technical-details)
     - [Multi-Node Evaluation Architecture](#multi-node-evaluation-architecture)
     - [Async OpenAI API Integration](#async-openai-api-integration)
@@ -132,6 +130,19 @@ hf_messages = chat_messages.to_hf_messages()
 ```
 
 You can then use these messages with a chat template or the chat completion API. If you wish to implement your own message processing logic, please refer to the protocol definition in `lmms_eval/protocol.py` for more details.
+
+**Replacing the Simple Model with a Chat Model**
+
+To use the `doc_to_messages` function, you must implement a chat model capable of processing the message format it produces. Examples of such models can be found in the `lmms_eval/models/chat` directory.
+
+If you prefer to fall back to the previous simple model implementation, you can add the `--force_simple` flag to the launch command.
+
+To implement a new chat model, follow these steps:
+
+1. Create the chat model (e.g., `lmms_eval/models/vllm.py`).
+2. Register the model in `lmms_eval/models/__init__.py`.
+
+
 
 ### 2. Multi-Node Distributed Evaluation
 

@@ -126,13 +126,14 @@ class MyImageModel(lmms):
             messages = doc_to_messages(doc)
             
             # Process images and text from messages
-            images = []
+            images, videos, audios = messages.extract_media()
             text_prompt = ""
             for message in messages:
-                if message["type"] == "image":
-                    images.append(message["content"])
-                elif message["type"] == "text":
-                    text_prompt += message["content"]
+                if message.type == "text":
+                    text_prompt += message["text"]
+
+            # If your model support apply chat template
+            # text_prompt = self.processor.apply_chat_template(messages.to_hf_messages())
             
             # Prepare inputs for your model
             inputs = self.processor(
@@ -188,15 +189,11 @@ class MyVideoModel(lmms):
             messages = doc_to_messages(doc)
             
             # Extract video frames
-            video_frames = []
+            images, videos, audios = messages.extract_media()
             text_prompt = ""
             for message in messages:
-                if message["type"] == "video":
-                    # Process video into frames
-                    frames = self.extract_frames(message["content"], self.max_frames)
-                    video_frames.extend(frames)
-                elif message["type"] == "text":
-                    text_prompt += message["content"]
+                if message.type == "text":
+                    text_prompt += message["text"]
             
             # Process video frames and generate response
             # ...
@@ -229,16 +226,11 @@ class MyAudioModel(lmms):
             doc = self.task_dict[task][split][doc_id]
             messages = doc_to_messages(doc)
             
-            # Process audio data
-            audio_data = []
+            images, videos, audios = messages.extract_media()
             text_prompt = ""
             for message in messages:
-                if message["type"] == "audio":
-                    # Load and process audio
-                    audio = self.load_audio(message["content"], self.sample_rate)
-                    audio_data.append(audio)
-                elif message["type"] == "text":
-                    text_prompt += message["content"]
+                if message.type == "text":
+                    text_prompt += message["text"]
             
             # Process audio and generate response
             # ...
