@@ -9,7 +9,6 @@ from loguru import logger as eval_logger
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(hf_home)
 
-# 读取yaml文件
 with open(Path(__file__).parent / "lsdbench.yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -31,7 +30,6 @@ def lsdbench_doc_to_visual(doc):
     elif os.path.exists(video_path.replace("mp4", "mkv")):
         video_path = video_path.replace("mp4", "mkv")
     else:
-        # TODO: download video
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
