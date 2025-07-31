@@ -1,6 +1,6 @@
 # LSDBench: Long-video Sampling Dilemma Benchmark
 
-**LSDBench** is a benchmark designed to evaluate the sampling efficiency of Vision-Language Models (VLMs) in long-video tasks. It addresses the "Sampling Dilemma," where low-density sampling risks missing critical information, and high-density sampling introduces redundancy, slowing inference.
+**LSDBench** is a benchmark designed to evaluate the sampling efficiency and reasoning temporal grounding ability of Vision-Language Models (VLMs) in long-video tasks. It addresses the "Sampling Dilemma," where low-density sampling risks missing critical information, and high-density sampling introduces redundancy, slowing inference.
 
 **Key Resources**:  
 - **Arxiv Paper**: [📖 Does Your Vision-Language Model Get Lost in the Long Video Sampling Dilemma?](https://arxiv.org/abs/2503.12496)  
