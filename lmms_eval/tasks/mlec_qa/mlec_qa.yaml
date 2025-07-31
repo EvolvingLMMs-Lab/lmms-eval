@@ -1,0 +1,27 @@
+dataset_path: json
+dataset_kwargs:
+  data_files: dataset/mlec-qa/TCM_test.json
+task: mlec_qa
+test_split: train
+output_type: generate_until
+doc_to_text: !function utils.mlec_qa_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 10
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.mlec_qa_process_results
+metric_list:
+  - metric: mlec_qa_acc
+    aggregation: !function utils.mlec_qa_aggregate_results
+    higher_is_better: true
+metadata:
+  version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "" 
