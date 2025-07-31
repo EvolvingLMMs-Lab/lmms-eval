@@ -1,0 +1,31 @@
+dataset_path: TainU/LSDBench
+dataset_kwargs:
+  token: True
+  cache_dir: lsdbench
+  video: True
+task: lsdbench
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.lsdbench_doc_to_visual
+doc_to_text: !function utils.lsdbench_doc_to_text
+doc_to_target: "correct_answer"
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0.7
+  top_p: 0.001
+  top_k: 1
+  
+process_results: !function utils.lsdbench_process_results
+
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.lsdbench_aggregate_accuracy_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0
+
