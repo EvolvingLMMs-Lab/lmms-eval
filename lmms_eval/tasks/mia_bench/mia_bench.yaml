@@ -21,4 +21,4 @@ generation_kwargs:
 metadata:
   version: 0.0
   task_type: image
-  gpt_eval_model_name: "gpt-4o-2024-08-06"
+  gpt_eval_model_name: "gpt-4o-2024-11-20"

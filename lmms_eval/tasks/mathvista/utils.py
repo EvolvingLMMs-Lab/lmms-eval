@@ -80,7 +80,7 @@ def mathvista_process_results(doc, results):
     }
 
     return {
-        "gpt_eval_score": result,
+        "llm_as_judge_eval": result,
         "submission": result,
     }
 
@@ -119,10 +119,6 @@ def mathvista_aggregate_results(results, args, *, calculate_gain=False, random_s
                     gain = round(float(scores[key][sub_key]["accuracy"]) - float(random_scores[key][sub_key]["accuracy"]), 2)
                     scores[key][sub_key]["acc_gain"] = gain
 
-    path = generate_submission_file(f"mathvista_{split_flag}_scores.json", args)
-    with open(path, "w") as f:
-        json.dump(results_dict, f, indent=4)
-    eval_logger.info(f"Saved results to {path}")
     if scores["average"]["accuracy"] == 0:
         return None
     return scores["average"]["accuracy"]

@@ -11,11 +11,6 @@ doc_to_text: !function utils.mathverse_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
   max_new_tokens: 16384
-  temperature: 0.0
-  do_sample: true
-  top_p: 0.95
-  top_k: 50
-  repetition_penalty: 1.2
   until:
     - "</s>"
     - "Q:"
@@ -25,10 +20,7 @@ metric_list:
   - metric: gpt_eval_score
     aggregation: !function utils.mathverse_aggregate_results_eval
     higher_is_better: true
-  - metric: submission
-    aggregation: !function utils.mathverse_aggregate_results_submission
-    higher_is_better: true
-  
+
 lmms_eval_specific_kwargs:
   default:
     shot_type: "format-prompt" # can also be "custom-prompt"

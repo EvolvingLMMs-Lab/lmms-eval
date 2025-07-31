@@ -32,7 +32,7 @@ metric_list:
     higher_is_better: true
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-4o-2024-08-06"
+  gpt_eval_model_name: "gpt-4o-2024-11-20"
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

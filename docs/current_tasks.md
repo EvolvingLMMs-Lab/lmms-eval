@@ -1,7 +1,17 @@
 # Current Tasks
 
 > () indicates the task name in the lmms_eval. The task name is also used to specify the dataset in the configuration file.
-> The following is manually updated documentation. You could use `lmms_eval task --list` to list all supported tasks and their task names.
+
+**Note:** This documentation is manually maintained. For the most up-to-date and complete list of supported tasks, please run:
+```bash
+python -m lmms_eval --tasks list
+```
+
+To see the number of questions in each task:
+```bash
+python -m lmms_eval --tasks list_with_num
+```
+(Note: `list_with_num` will download all datasets and may require significant time and storage)
 
 ## 1. Image tasks:
 

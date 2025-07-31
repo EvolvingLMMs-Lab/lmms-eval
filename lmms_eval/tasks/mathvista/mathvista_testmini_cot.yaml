@@ -9,14 +9,10 @@ doc_to_visual: !function utils.mathvista_doc_to_visual
 doc_to_text: !function utils.mathvista_doc_to_text
 doc_to_target: "answer"
 generation_kwargs:
-  max_new_tokens: 1024
-  temperature: 0
-  top_p: 1.0
-  num_beams: 1
-  do_sample: false
+  max_new_tokens: 16384
 process_results: !function utils.mathvista_process_results
 metric_list:
-  - metric: gpt_eval_score
+  - metric: llm_as_judge_eval
     aggregation: !function utils.mathvista_aggregate_results
     higher_is_better: true
 
