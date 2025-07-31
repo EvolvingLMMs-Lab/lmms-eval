@@ -20,7 +20,7 @@
 
 ## Annoucement
 
-- [2025-07] 🚀🚀 We have released the `lmms-eval-0.4`. Please refer to the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) for more details. This is a major update with new features and improvements, for users wish to use `lmms-eval-0.3` please refer to the branch `stable/v0d3`.
+- [2025-07] 🚀🚀 We have released the `lmms-eval-0.4`. Please refer to the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) for more details. This is a major update with new features and improvements, for users wish to use `lmms-eval-0.3` please refer to the branch `stable/v0d3`. For our mission to better reproductability, we've opened a specific thread to discuss about the model's eval results in [discussion](https://github.com/EvolvingLMMs-Lab/lmms-eval/discussions/779).
 
 - [2025-04] 🚀🚀 Introducing Aero-1-Audio — a compact yet mighty audio model. We have officially supports evaluation for Aero-1-Audio and it supports batched evaluations! Feel free to try out.
 
