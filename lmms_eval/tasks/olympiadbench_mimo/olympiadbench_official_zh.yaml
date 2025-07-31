@@ -1,0 +1,8 @@
+# Copyright 2025 Xiaomi Corporation.
+
+group: olympiadbench_mimo_zh
+task:
+- olympiadbench_math_zh
+- olympiadbench_physics_zh
+metadata:
+  - version: 0.0

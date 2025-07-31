@@ -1,6 +1,5 @@
 group: olympiadbench
 task:
-- olympiadbench_test_en
-- olympiadbench_test_cn
+- olympiadbench_testmini
 metadata:
   - version: 0.0

@@ -1,6 +1,6 @@
 dataset_path: "gagan3012/multilingual-llava-bench"
+dataset_name: "arabic"
 dataset_kwargs:
-    config: arabic
     token: True
 task: "llava_in_the_wild_arabic"
 include: _default_template_yaml

@@ -15,16 +15,10 @@ generation_kwargs:
   top_p: 1.0
   num_beams: 1
   do_sample: false
-process_results: !function d170_cn_utils.process_results # apply gpt eval here
+process_results: !function d170_cn_utils.process_results # apply llm judge eval here
 metric_list:
-  - metric: gpt_eval_info
-    aggregation: !function d170_cn_utils.d170_cn_aggregate_info
-    higher_is_better: false
-  - metric: gpt_eval_avg_score
-    aggregation: !function d170_cn_utils.d170_cn_aggregate_avg_score
-    higher_is_better: true
-  - metric: gpt_eval_score2_rate
-    aggregation: !function d170_cn_utils.d170_cn_aggregate_score2_rate
+  - metric: llm_as_judge_eval
+    aggregation: mean
     higher_is_better: true
 metadata:
   version: 0.0
