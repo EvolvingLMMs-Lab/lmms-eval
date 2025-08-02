@@ -111,10 +111,10 @@ class ChatMessages(BaseModel):
         return base64_str
 
     # Function to encode the video
-    def encode_video(self, video_path):
+    def encode_video(self, video_path, max_frame_num=32):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frame_num, dtype=int)
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frame_num, dtype=int)
 
         # Ensure the last frame is included
         if total_frame_num - 1 not in uniform_sampled_frames:
