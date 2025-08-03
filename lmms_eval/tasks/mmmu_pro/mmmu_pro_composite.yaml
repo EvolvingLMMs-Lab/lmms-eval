@@ -5,7 +5,7 @@ test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.mmmu_pro_doc_to_visual
 doc_to_text: "Answer with the option letter for each multiple choice question from the given choices directly. For each question, the last line of your response should be in the following format: 'No: [id]\nAnswer: [LETTER]' (without quotes) where LETTER is one of options."
-doc_to_target: "{{answers}}"
+doc_to_target: "{{answer}}"
 # The return value of process_results will be used by metrics
 process_results: !function utils.mmmu_pro_composite_process_results
 

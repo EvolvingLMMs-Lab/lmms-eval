@@ -8,7 +8,8 @@ doc_to_text: "Write out the multiple-choice question in the image and then solve
 doc_to_target: "{{answer}}"
 # The return value of process_results will be used by metrics
 process_results: !function utils.mmmu_pro_process_results
-
+generation_kwargs:
+  max_new_tokens: 16384
 metric_list:
   - metric: mmmu_acc
     aggregation: !function utils.mmmu_pro_aggregate_results
