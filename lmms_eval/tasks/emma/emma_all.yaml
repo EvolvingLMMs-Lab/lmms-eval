@@ -1,0 +1,25 @@
+dataset_path: lmms-lab/EMMA
+dataset_name: All
+dataset_kwargs:
+  token: True
+  cache_dir: EMMA
+  force_download: true
+task: "emma"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.emma_doc_to_visual
+doc_to_text: !function utils.emma_doc_to_text
+doc_to_target: utils.emma_doc_to_target
+doc_to_messages: !function utils.emma_doc_to_messages
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0.7
+# The return value of process_results will be used by metrics
+process_results: !function utils.emma_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: emma_score
+    aggregation: !function utils.emma_aggregate_results
+    higher_is_better: true
+metadata:
+  strategy: CoT
