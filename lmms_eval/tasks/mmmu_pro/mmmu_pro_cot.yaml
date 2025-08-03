@@ -1,5 +1,5 @@
 group: mmmu_pro_cot
 task:
 - mmmu_pro_vision_cot
-- mmmu_pro_composite_cot
-- mmmu_pro_original_cot
+# - mmmu_pro_composite_cot
+- mmmu_pro_standard_cot

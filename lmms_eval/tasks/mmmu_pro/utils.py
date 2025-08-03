@@ -83,7 +83,7 @@ def mmmu_pro_process_results(doc, results):
 
 def mmmu_pro_composite_process_results(doc, results):
     pred = results[0]
-    gt_list = ast.literal_eval(doc["answers"])
+    gt_list = ast.literal_eval(doc["answer"])
     # Parse out option letters from the prediction
     option_letters = re.findall(r"\b[A-Z]\b", pred)
 
