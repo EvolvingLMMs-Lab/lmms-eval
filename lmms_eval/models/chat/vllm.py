@@ -19,6 +19,25 @@ except ImportError:
 class VLLM(VLLMSimple):
     is_simple = False
 
+    def __init__(
+        self,
+        model="Qwen/Qwen2.5-VL-3B-Instruct",
+        tensor_parallel_size=1,
+        data_parallel_size=1,
+        gpu_memory_utilization=0.8,
+        batch_size=1,
+        max_frame_num=32,
+        trust_remote_code=True,
+        chat_template=None,
+        max_pixels: int = 1605632,
+        min_image_pixels=28,
+        fps: Optional[int] = None,
+        **kwargs,
+    ):
+        super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, min_image_pixels, **kwargs)
+        self.fps = fps
+        self.max_pixels = max_pixels
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -45,7 +64,15 @@ class VLLM(VLLMSimple):
                     "top_p": gen_kwargs["top_p"],
                 }
                 sampling_params = SamplingParams(**params)
-                messages = chat_messages.to_openai_messages()
+                video_kwargs = {
+                    "max_pixels": self.max_pixels,
+                    "min_pixels": self.min_image_pixels,
+                }
+                if self.fps is not None:
+                    video_kwargs["fps"] = self.fps
+                else:
+                    video_kwargs["nframes"] = self.max_frame_num
+                messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
 
                 batched_messages.append(messages)
 

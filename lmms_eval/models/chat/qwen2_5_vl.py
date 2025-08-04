@@ -57,7 +57,15 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             gen_kwargs = all_gen_kwargs[0]
 
             # Apply chat template
-            batched_messages = [chat_message.to_hf_messages() for chat_message in chat_messages]
+            video_kwargs = {
+                "max_pixels": self.max_pixels,
+                "min_pixels": self.min_pixels,
+            }
+            if self.fps is not None:
+                video_kwargs["fps"] = self.fps
+            else:
+                video_kwargs["nframes"] = self.max_num_frames
+            batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
             image_inputs, video_inputs = process_vision_info(batched_messages)
             if video_inputs is not None:
