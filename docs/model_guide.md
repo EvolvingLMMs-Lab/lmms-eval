@@ -29,7 +29,7 @@ touch lmms_eval/models/chat/<my_model_filename>.py
 touch lmms_eval/models/simple/<my_model_filename>.py
 ```
 
-**As a rule of thumb, we recommend you to use `lmms_eval/models/chat/qwen_vl.py` and `lmms_eval/models/simple/instructblip.py` as reference implementations for your model. You can copy and paste the contents of one of these files into your new file to get started.**
+**As a rule of thumb, we recommend you to use `lmms_eval/models/chat/qwen2_5_vl.py` and `lmms_eval/models/simple/instructblip.py` as reference implementations for your model. You can copy and paste the contents of one of these files into your new file to get started.**
 
 ## Interface
 
@@ -51,7 +51,7 @@ Where `Instance` is a dataclass defined in [`lmms_eval.api.instance`](https://gi
 
 We support three types of requests, consisting of different interactions / measurements with an autoregressive LM.
 
-All three request types take as input `requests` of type `list[Instance]` that have a matching `Instance.request_type` to the method name. Overall, you can check the [construct_requests](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/api/task.py#L918) to see how the arguments are being constructed for different types of output type requests.
+All three request types take as input `requests` of type `list[Instance]` that have a matching `Instance.request_type` to the method name. Overall, you can check the [construct_requests](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/api/task.py#L1409) to see how the arguments are being constructed for different types of output type requests.
 
 - `generate_until`
   - Each request contains `Instance.args : Tuple[str, dict]` containing 1. an input string to the LM and 2. a dictionary of keyword arguments used to control generation parameters.
