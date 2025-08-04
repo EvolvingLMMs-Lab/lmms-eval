@@ -944,9 +944,14 @@ class ConfigurableTask(Task):
                     force_unzip = dataset_kwargs.get("force_unzip", False)
                     revision = dataset_kwargs.get("revision", "main")
                     create_link = dataset_kwargs.get("create_link", False)
-                    cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
-                    zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
-                    tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
+                    # If the user already has a cache dir, we skip download the zip files
+                    if not os.path.exists(cache_dir):
+                        cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
+                        zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
+                        tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
+                    else:
+                        zip_files = []
+                        tar_files = []
 
                     def unzip_video_data(zip_file):
                         import os
