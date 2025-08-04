@@ -3,9 +3,11 @@ from io import BytesIO
 from typing import Any, Dict, List, Literal, Union
 
 import numpy as np
+import torch
 from decord import VideoReader, cpu
 from PIL import Image
 from pydantic import BaseModel
+from qwen_vl_utils import fetch_video
 
 
 class ChatTextContent(BaseModel):
@@ -59,7 +61,7 @@ class ChatMessages(BaseModel):
         if video_kwargs is None:
             video_kwargs = {}
         enforce_images = video_kwargs.pop("enforce_images", False)
-        num_frames = video_kwargs.pop("num_frames", 32)
+        num_frames = video_kwargs.get("nframes", 32)
         hf_messages = []
         for message in self.messages:
             hf_message = {"role": message.role, "content": []}
@@ -74,13 +76,13 @@ class ChatMessages(BaseModel):
                         for f in range(num_frames):
                             hf_message["content"].append({"type": "image"})
                     else:
-                        hf_message["content"].append({"type": "video", "video": content.url})
+                        hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
                 elif content.type == "audio":
                     hf_message["content"].append({"type": "audio", "audio": content.url})
             hf_messages.append(hf_message)
         return hf_messages
 
-    def to_openai_messages(self):
+    def to_openai_messages(self, video_kwargs: Dict[str, str] = None):
         openai_messages = []
         for message in self.messages:
             openai_message = {"role": message.role, "content": []}
@@ -90,7 +92,10 @@ class ChatMessages(BaseModel):
                 elif content.type == "image":
                     openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(content.url)}"}})
                 elif content.type == "video":
-                    openai_message["content"].append({"type": "video_url", "video_url": {"url": f"data:image/png;base64,{self.encode_video(content.url)}"}})
+                    video_input = fetch_video({"type": "video", "video": content.url, **video_kwargs})
+                    for frame in video_input:
+                        image = Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8))
+                        openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(image)}"}})
                 # TODO, audio hasn't been implemented yet
                 elif content.type == "audio":
                     openai_message["content"].append({"type": "audio_url", "audio_url": {"url": content.url}})
@@ -109,27 +114,3 @@ class ChatMessages(BaseModel):
 
         base64_str = base64.b64encode(byte_data).decode("utf-8")
         return base64_str
-
-    # Function to encode the video
-    def encode_video(self, video_path, max_frame_num=32):
-        vr = VideoReader(video_path, ctx=cpu(0))
-        total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frame_num, dtype=int)
-
-        # Ensure the last frame is included
-        if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
-
-        frame_idx = uniform_sampled_frames.tolist()
-        frames = vr.get_batch(frame_idx).asnumpy()
-
-        base64_frames = []
-        for frame in frames:
-            img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
-
-        return base64_frames

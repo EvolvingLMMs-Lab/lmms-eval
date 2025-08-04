@@ -31,6 +31,9 @@ class Sglang(lmms):
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
         max_frame_num: int = 32,
+        fps: Optional[int] = None,
+        max_pixels: int = 1605632,
+        min_pixels: int = 28 * 28,
         threads: int = 16,  # Threads to use for decoding visuals
         trust_remote_code: Optional[bool] = True,
         chat_template: Optional[str] = None,
@@ -72,6 +75,9 @@ class Sglang(lmms):
 
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
+        self.fps = fps
+        self.max_pixels = max_pixels
+        self.min_pixels = min_pixels
 
     @property
     def config(self):
@@ -143,7 +149,11 @@ class Sglang(lmms):
                     "max_new_tokens": gen_kwargs["max_new_tokens"],
                     "top_p": gen_kwargs["top_p"],
                 }
-                video_kwargs = {"enforce_image": True, "num_frames": self.max_frame_num}
+                video_kwargs = {"enforce_image": True, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels}
+                if self.fps is not None:
+                    video_kwargs["fps"] = self.fps
+                else:
+                    video_kwargs["nframes"] = self.max_frame_num
                 messages = chat_messages.to_hf_messages(video_kwargs)
 
                 images, videos, audio = chat_messages.extract_media()
