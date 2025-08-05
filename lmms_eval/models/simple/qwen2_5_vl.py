@@ -287,9 +287,12 @@ class Qwen2_5_VL(lmms):
             if video_inputs is not None:
                 total_frames = video_inputs[0].shape[0]
                 indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
+                # Ensure unique indices if linspace produces duplicates for few frames
+                indices = np.unique(indices)
                 # Append the last frame index if not already included
                 if total_frames - 1 not in indices:
                     indices = np.append(indices, total_frames - 1)
+                    indices = np.unique(indices)  # Ensure uniqueness again
                 video_inputs[0] = video_inputs[0][indices]
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
