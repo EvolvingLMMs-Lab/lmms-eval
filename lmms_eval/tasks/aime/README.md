@@ -1,62 +1,54 @@
-# GSM8k
+# AIME
 
 ## Paper
-Training Verifiers to Solve Math Word Problems
-https://arxiv.org/abs/2110.14168
+The American Invitational Mathematics Examination (AIME) is a selective and prestigious 15-question 3-hour test given to high school students who qualify based on their AMC 10 or AMC 12 scores. All problems have integer answers between 0 and 999 inclusive. Questions increase in difficulty as the exam progresses.
 
-State-of-the-art language models can match human performance on many tasks, but
-they still struggle to robustly perform multi-step mathematical reasoning. To
-diagnose the failures of current models and support research, we introduce GSM8K,
-a dataset of 8.5K high quality linguistically diverse grade school math word problems.
-We find that even the largest transformer models fail to achieve high test performance,
-despite the conceptual simplicity of this problem distribution.
+The AIME dataset evaluates mathematical problem-solving capabilities on competition-level mathematics problems.
 
-NOTE: See the official implementation of the task:
-    https://github.com/openai/grade-school-math/blob/master/grade_school_math/calculator.py
-for how to make use of the dataset's calculator annotations in your language
-model's sample/generation function.
+Homepage: https://huggingface.co/datasets/simplescaling/aime_nofigures
 
-Homepage: https://github.com/openai/grade-school-math
+## Dataset
 
+This implementation includes both:
+- `aime_nofigures`: AIME problems without figures/diagrams
+- `aime_figures`: AIME problems with figures/diagrams
 
-## Citation
-```
-@misc{cobbe2021training,
-      title={Training Verifiers to Solve Math Word Problems},
-      author={Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
-      year={2021},
-      eprint={2110.14168},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
-}
-```
+The dataset uses problems from AIME competitions, formatted for language model evaluation.
 
-### Groups and Tasks
+## Groups and Tasks
 
 #### Groups
 
 - `math_word_problems`
-- `chain_of_thought`
-- `self_consistency`
 
 #### Tasks
 
-- `gsm8k_yaml`
-- `gsm8k_cot`: GSM8K with Chain-of-Thought
-- `gsm8k_cot_self_consistency`: GSM8K with Chain-of-Thought and Self-Consistency
-- `gsm8k_cot_llama`: GSM8K with prompt formatting modified to conform to the evaluation settings described by Meta here: https://huggingface.co/datasets/meta-llama/Meta-Llama-3.1-8B-Instruct-evals/viewer/Meta-Llama-3.1-8B-Instruct-evals__gsm8k__details?row=0
-    - Use this task with --fewshot_as_multiturn and --apply_chat_template to replicate Meta's reported performance.
+- `aime_nofigures`: AIME problems without figures
+- `aime_figures`: AIME problems with figures
+- `aime24_nofigures`: AIME 2024 problems without figures
+- `aime24_figures`: AIME 2024 problems with figures
+- `aime25_nofigures`: AIME 2025 problems without figures
+- Various aggregated versions (agg8, agg64) for multiple sampling
 
+### Evaluation
+
+The evaluation checks if the model's output matches the correct integer answer (0-999). The implementation includes:
+- Answer extraction from model outputs
+- Support for boxed answers (e.g., `\boxed{123}`)
+- Optional GPT-4o-mini based answer extraction for complex formats
+- Coverage and majority voting metrics for aggregated tasks
+
+### Environment Variables
+
+- `PROCESSOR=gpt-4o-mini`: Use GPT-4o-mini for answer extraction
+- `PROMPTSTEP`: Add thinking steps prompt
+- `PROMPTTOKEN`: Add thinking tokens prompt
+- `PROMPTLONG`: Add long thinking prompt
+- `PROMPTSHORT`: Add short thinking prompt
 
 ### Checklist
 
-- [x] Is in Eval-harness v1.0 ?
+- [ ] Is in Eval-harness v1.0?
 - [ ] Has been checked for regression from v1.0?
 - [ ] Has been checked for equivalence with original paper methodology?
 - [ ] "Main" checked variant clearly denoted?
-
-### Variant Wishlist
-
-- [ ] Variant with Calculator (see https://github.com/openai/grade-school-math/blob/master/grade_school_math/calculator.py for example implementation)
-- [ ] Using Verifiers
-- [ ] Majority voting "without CoT"
