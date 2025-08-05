@@ -182,7 +182,7 @@ class TaskConfig(dict):
 
 class Task(abc.ABC):
     """A task represents an entire benchmark including its dataset, problems,
-    answers, and evaluation methods. See BoolQ for a simple example implementation
+    answers, and evaluation methods. See MME for a simple example implementation
 
     A `doc` can be any python object which represents one instance of evaluation.
     This is usually a dictionary e.g.
