@@ -1,25 +1,16 @@
-# TODO: IMPLEMENT LMM JUDGE
-# IMPLEMENT NO LMM JUDGEs
-# INTERLEAVE FORMAT
-# doc to message, interlvade
-import datetime
 import logging
 import os
 import re
 from collections import defaultdict
 from pathlib import Path
 
-import cv2
-import numpy as np
 import yaml
 from latex2sympy2 import latex2sympy
-from PIL import Image
 from sympy import simplify
 from word2number import w2n
 
 from lmms_eval.llm_judge import get_server
 from lmms_eval.llm_judge.protocol import ServerConfig
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 try:
     from dotenv import load_dotenv
@@ -65,7 +56,7 @@ if config["metadata"]["use_lmms_judge"]:
     server = get_server(server_name=API_TYPE, config=server_config)
 
 
-def build_query(sample):
+def build_query(sample: dict) -> dict:
     """Build the text query by combining the context, question and options. The <image_n> token is still there
     Return a dictionary with the query and ground truth content.
     """
@@ -175,7 +166,6 @@ def emma_process_results(doc, results):
         if config["metadata"]["use_lmms_judge"]:
             # Use LMM judge to evaluate the prediction
             submit_prompt = create_test_prompt(score_demo_prompt, doc, pred)
-            print("Run here")
             try:
                 # Create a Request object for the unified judge API
                 from lmms_eval.llm_judge.protocol import Request
@@ -186,7 +176,6 @@ def emma_process_results(doc, results):
                 judge_response_obj = server.evaluate(request)
                 judge_response = judge_response_obj.content
                 judge_result = judge_response.strip().lower()
-                print(f"Judge response: {judge_response}")
 
                 # Parse the judge result to determine correctness
                 is_correct = "correct" in judge_result and "incorrect" not in judge_result

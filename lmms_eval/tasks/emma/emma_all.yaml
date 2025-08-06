@@ -25,5 +25,3 @@ metadata:
   strategy: CoT
   interleaved_format: True
   use_lmms_judge: True
-
-  
