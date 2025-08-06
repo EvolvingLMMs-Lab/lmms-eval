@@ -1,5 +1,5 @@
 dataset_path: lmms-lab/EMMA
-dataset_name: All
+dataset_name: All  # Options available are: "All" for all data, "Chemistry" for chemistry only, "Physics" for physics only, "Coding" for code only and "Math" for math only
 dataset_kwargs:
   token: True
   cache_dir: EMMA
@@ -23,3 +23,7 @@ metric_list:
     higher_is_better: true
 metadata:
   strategy: CoT
+  interleaved_format: True
+  use_lmms_judge: True
+
+  
