@@ -21,7 +21,7 @@ except ImportError:
 
 from dotenv import find_dotenv, load_dotenv
 from loguru import logger as eval_logger
-from openai import AzureOpenAI, OpenAI
+from openai import AzureOpenAI, DefaultHttpxClient, OpenAI
 from PIL import Image
 
 load_dotenv(verbose=True)
@@ -39,8 +39,16 @@ class OpenAICompatible(lmms):
         response_persistent_folder: str = None,
         azure_openai: bool = False,
         max_frames_num: int = 10,
+        httpx_trust_env: bool = True,
         **kwargs,
     ) -> None:
+        """
+        :param httpx_trust_env: bool
+            httpx.Client used by openai-python has trust_env set to True by default. A
+            False value of this param constructs a httpx.Client with trust_env set to
+            False.  Such a httpx.Client ignores environment variables (HTTP_PROXY,
+            HTTPS_PROXY, ALL_PROXY) and macOS proxy server settings.
+        """
         super().__init__()
         self.model_version = model_version
         self.timeout = timeout
@@ -64,10 +72,16 @@ class OpenAICompatible(lmms):
                 self.response_cache = {}
                 self.cache_mode = "start"
 
+        # In China mainland, people usually use a VPN client to access international web
+        # sites such as Google. Such a client usually configures macOS proxy server
+        # settings. openai-python uses a httpx.Client with trust_env set to True. Such a
+        # httpx.Client uses macOS proxy server settings. Adding httpx_trust_env option
+        # allows httpx to ignore proxy server settings set by VPN clients.
+        http_client = DefaultHttpxClient(trust_env=httpx_trust_env) if not httpx_trust_env else None
         self.client = (
-            OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"))
+            OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"), http_client=http_client)
             if not azure_openai
-            else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"))
+            else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"), http_client=http_client)
         )
 
         accelerator = Accelerator()
