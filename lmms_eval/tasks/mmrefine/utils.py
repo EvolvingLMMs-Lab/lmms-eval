@@ -1,6 +1,5 @@
-import json
-import os
 import io
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -81,6 +80,7 @@ def mmrefine_process_results(doc, results):
         metric_dict[_metric] = _result
     return metric_dict
 
+
 def mmrefine_aggregate_results(results, args=None, **kwargs):
     # calculate total scores
     results_dict = {f"{result['id']}_{result['solution_source']}": result for result in results}
@@ -89,8 +89,8 @@ def mmrefine_aggregate_results(results, args=None, **kwargs):
         assert len(results) == len(results_dict)
     except AssertionError:
         eval_logger.error(f"Length mismatch: {len(results)} results vs {len(results_dict)} unique entries")
-    
-    n_correct_solutions = len(results[results["solution_label"]=="correct"])
+
+    n_correct_solutions = len(results[results["solution_label"] == "correct"])
     n_incorrect_solutions = len(results) - n_correct_solutions
 
     vc = results["eval_result"].value_counts()
@@ -112,23 +112,30 @@ def mmrefine_aggregate_results(results, args=None, **kwargs):
 
     return scores
 
+
 def mmrefine_aggregate_results_refinement_failure(results, args=None, **kwargs):
     return mmrefine_aggregate_results(results, args, **kwargs)["Refinement Failure"]
+
 
 def mmrefine_aggregate_results_error_detection_success(results, args=None, **kwargs):
     return mmrefine_aggregate_results(results, args, **kwargs)["Error Detection Success"]
 
+
 def mmrefine_aggregate_results_error_correction_success(results, args=None, **kwargs):
     return mmrefine_aggregate_results(results, args, **kwargs)["Error Correction Success"]
+
 
 def mmrefine_aggregate_results_refinement_success(results, args=None, **kwargs):
     return mmrefine_aggregate_results(results, args, **kwargs)["Refinement Success"]
 
+
 def mmrefine_aggregate_results_false_error_detection(results, args=None, **kwargs):
     return mmrefine_aggregate_results(results, args, **kwargs)["False Error Detection"]
 
+
 def mmrefine_aggregate_results_validation_success(results, args=None, **kwargs):
     return mmrefine_aggregate_results(results, args, **kwargs)["Validation Success"]
+
 
 def mmrefine_aggregate_results_refscore(results, args=None, **kwargs):
     scores = mmrefine_aggregate_results(results, args, **kwargs)
@@ -143,6 +150,6 @@ def mmrefine_aggregate_results_refscore(results, args=None, **kwargs):
         json.dump(scores, f, indent=4)
     return scores["RefScore"]
 
+
 def mmrefine_aggregate_results_mrecall(results, args=None, **kwargs):
     return mmrefine_aggregate_results(results, args, **kwargs)["mRecall"]
-
