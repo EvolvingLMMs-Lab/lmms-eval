@@ -1,15 +1,23 @@
 import os
 import time
 
-import pandas as pd
 from loguru import logger as eval_logger
-from tqdm import tqdm
 from openai import AzureOpenAI, OpenAI
 
 from lmms_eval.llm_judge import ServerConfig, get_server
-from lmms_eval.tasks.mmrefine.prompts import REFINEMENT_PROMPT, EVAL_PROMPT_CORRECT, EVAL_PROMPT_INCORRECT, PARSING_PROMPT
+from lmms_eval.tasks.mmrefine.prompts import (EVAL_PROMPT_CORRECT,
+                                              EVAL_PROMPT_INCORRECT,
+                                              PARSING_PROMPT,
+                                              REFINEMENT_PROMPT)
+
 
 class MMRefineEvaluator:
+    """Evaluator for MMRefine mathematical problem refinement tasks.
+
+    Handles evaluation of model-generated refinements for multimodal
+    mathematical problem-solving, supporting OpenAI and Azure OpenAI APIs.
+    """
+
     API_TYPE = os.getenv("API_TYPE", "openai")
     if API_TYPE == "openai":
         API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
@@ -72,7 +80,6 @@ class MMRefineEvaluator:
                     time.sleep(sleep_time)
         return ""
 
-
     def evaluate_answer(self, problem, prediction):
         if not prediction:
             return {}
@@ -83,7 +90,7 @@ class MMRefineEvaluator:
                 resp = self.get_chat_response(full_prompt, temperature=0, max_tokens=256, n=1)
             except Exception as e:
                 eval_logger.error(e)
-                eval_logger.error(f"Error in evaluating answer for problem")
+                eval_logger.error("Error in evaluating answer for problem")
             try:
                 solution_correctness = int(resp.strip())
             except:
@@ -155,6 +162,6 @@ class MMRefineEvaluator:
                 return "Error Correction Success"
             if result["solution_correctness"] == 1:
                 return "Refinement Success"
-            
+
         result["eval_result"] = classify_results(result)
         return result
