@@ -5,10 +5,12 @@ from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
 
 from lmms_eval.llm_judge import ServerConfig, get_server
-from lmms_eval.tasks.mmrefine.prompts import (EVAL_PROMPT_CORRECT,
-                                              EVAL_PROMPT_INCORRECT,
-                                              PARSING_PROMPT,
-                                              REFINEMENT_PROMPT)
+from lmms_eval.tasks.mmrefine.prompts import (
+    EVAL_PROMPT_CORRECT,
+    EVAL_PROMPT_INCORRECT,
+    PARSING_PROMPT,
+    REFINEMENT_PROMPT,
+)
 
 
 class MMRefineEvaluator:
