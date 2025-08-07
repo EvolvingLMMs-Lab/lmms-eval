@@ -67,6 +67,7 @@ python -m lmms_eval --tasks list_with_num
   - MME-RealWorld English (mmerealworld)
   - MME-RealWorld Mini (mmerealworld_lite)
   - MME-RealWorld Chinese (mmerealworld_cn)
+- [MMRefine](http://mmrefine.github.io/) (mmrefine)
 - [MMStar](https://github.com/MMStar-Benchmark/MMStar) (mmstar)
 - [MMUPD](https://huggingface.co/datasets/MM-UPD/MM-UPD) (mmupd)
   - MMUPD Base (mmupd_base)
