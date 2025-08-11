@@ -155,6 +155,7 @@ class VLLM(lmms):
         trust_remote_code: Optional[bool] = True,
         chat_template: Optional[str] = None,
         min_image_pixels: int = 28,  # minimum image dimension, required for Qwen 2/2.5-VL models
+        disable_log_stats: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -216,10 +217,11 @@ class VLLM(lmms):
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
             trust_remote_code=trust_remote_code,
-            disable_log_stats=False,
+            disable_log_stats=disable_log_stats,
             seed=1,
             **kwargs,
         )
+        self.disable_log_stats = disable_log_stats
 
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)

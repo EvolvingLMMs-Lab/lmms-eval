@@ -96,20 +96,21 @@ class VLLM(VLLMSimple):
             res.extend(response_text)
             pbar.update(len(batch_requests))
 
-        metrics = self.get_format_metrics()
-        total_tokens = metrics["generation_tokens"]
-        avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
-        metric_dict = {
-            "total_tokens": total_tokens,
-            "e2e_latency": e2e_latency,
-            "avg_speed": avg_speed,
-            "additional_metrics": {
-                "ttft": metrics["ttft"],
-                "tpot": metrics["tpot"],
-                "rank": self.rank,
-            },
-        }
-        log_metrics(**metric_dict)
+        if not self.disable_log_stats:
+            metrics = self.get_format_metrics()
+            total_tokens = metrics["generation_tokens"]
+            avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+            metric_dict = {
+                "total_tokens": total_tokens,
+                "e2e_latency": e2e_latency,
+                "avg_speed": avg_speed,
+                "additional_metrics": {
+                    "ttft": metrics["ttft"],
+                    "tpot": metrics["tpot"],
+                    "rank": self.rank,
+                },
+            }
+            log_metrics(**metric_dict)
 
         pbar.close()
         return res
