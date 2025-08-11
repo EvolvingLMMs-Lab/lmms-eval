@@ -15,6 +15,19 @@ filter_list:
         regex_pattern: 'answer is \(?([ABCDEFGHIJ])\)?'
         # regex_pattern: r".*[aA]nswer:\s*([A-J])",
       - function: "take_first"
+  - name: "strict-match"
+    filter:
+      - function: "regex"
+        regex_pattern: "((?<=The answer is )(.*)(?=.)|(?<=answer is )(.*)(?=.)|(?<=The answer: )(.*)(?=.)|(?<=The final answer: )(.*)(?=.))"
+      - function: "take_first"
+  - name: "flexible-extract"
+    filter:
+      - function: !function utils.MultiChoiceRegexFilter
+        group_select: -1
+        ignore_case: true
+        ignore_punctuation: true
+        regex_pattern: "(\\([A-Z]\\))"
+      - function: "take_first"
 generation_kwargs:
   until:
     - "</s>"
