@@ -1,0 +1,42 @@
+dataset_path: "naver-ai/mmrefine"
+task: "mmrefine"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mmrefine_doc_to_visual
+doc_to_text: !function utils.mmrefine_doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.mmrefine_process_results
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 4096
+metric_list:
+  - metric: Refinement Failure
+    aggregation: !function utils.mmrefine_aggregate_results_refinement_failure
+    higher_is_better: false
+  - metric: Error Detection Success
+    aggregation: !function utils.mmrefine_aggregate_results_error_detection_success
+    higher_is_better: true
+  - metric: Error Correction Success
+    aggregation: !function utils.mmrefine_aggregate_results_error_correction_success
+    higher_is_better: true
+  - metric: Refinement Success
+    aggregation: !function utils.mmrefine_aggregate_results_refinement_success
+    higher_is_better: true
+  - metric: False Error Detection
+    aggregation: !function utils.mmrefine_aggregate_results_false_error_detection
+    higher_is_better: false
+  - metric: Validation Success
+    aggregation: !function utils.mmrefine_aggregate_results_validation_success
+    higher_is_better: true
+  - metric: RefScore
+    aggregation: !function utils.mmrefine_aggregate_results_refscore
+    higher_is_better: true
+  - metric: mRecall
+    aggregation: !function utils.mmrefine_aggregate_results_mrecall
+    higher_is_better: true
+metadata:
+  version: 0.0
+  gpt_eval_model_name: "gpt-4o-2024-11-20"
+  trunk_response: -1
+  quick_match: false
