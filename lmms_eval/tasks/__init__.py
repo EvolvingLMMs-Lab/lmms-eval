@@ -339,7 +339,7 @@ class TaskManager:
                             num_duplicate = len(
                                 list(
                                     filter(
-                                        lambda x: x.startswith(name),
+                                        lambda x: x == name,
                                         self.task_group_map[parent_name],
                                     )
                                 )
