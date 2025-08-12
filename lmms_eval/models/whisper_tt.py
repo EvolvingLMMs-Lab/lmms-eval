@@ -32,7 +32,7 @@ SAMPLING_RATE = 16_000
 
 
 # Warmup the model on app startup
-def warmup_model():
+def warmup_model(model_repo="openai/whisper-large-v3"):
     # create device, these constants are specific to n150 & n300
     device_id = 0
     device_params = {"l1_small_size": WHISPER_L1_SMALL_SIZE}
@@ -55,6 +55,7 @@ def warmup_model():
         create_functional_whisper_for_conditional_generation_inference_pipeline(
             ttnn_model,
             device,
+            model_repo,
         )
     )
 
@@ -91,7 +92,7 @@ class WhisperTT(lmms):
     ) -> None:
         super().__init__()
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
-        self._model = warmup_model()
+        self._model = warmup_model(pretrained)
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
