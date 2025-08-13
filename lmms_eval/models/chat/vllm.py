@@ -1,4 +1,6 @@
+import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple, Union
 
 from tqdm import tqdm
@@ -13,6 +15,8 @@ try:
     from vllm import LLM, SamplingParams
 except ImportError:
     vllm = None
+
+WORKERS = int(os.getenv("WORKERS", "32"))
 
 
 @register_model("vllm_chat")
@@ -38,6 +42,34 @@ class VLLM(VLLMSimple):
         self.fps = fps
         self.max_pixels = max_pixels
 
+    def make_one_request(self, request):
+        ctx, doc_to_messages, gen_kwargs, doc_id, task, split = request.arguments
+        chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
+        chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
+        if "max_new_tokens" not in gen_kwargs:
+            gen_kwargs["max_new_tokens"] = 4096
+        if "temperature" not in gen_kwargs:
+            gen_kwargs["temperature"] = 0
+        if "top_p" not in gen_kwargs:
+            gen_kwargs["top_p"] = 0.95
+
+        params = {
+            "temperature": gen_kwargs["temperature"],
+            "max_tokens": gen_kwargs["max_new_tokens"],
+            "top_p": gen_kwargs["top_p"],
+        }
+        sampling_params = SamplingParams(**params)
+        video_kwargs = {
+            "max_pixels": self.max_pixels,
+            "min_pixels": self.min_image_pixels,
+        }
+        if self.fps is not None:
+            video_kwargs["fps"] = self.fps
+        else:
+            video_kwargs["nframes"] = self.max_frame_num
+        messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
+        return messages, sampling_params, video_kwargs
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -47,36 +79,11 @@ class VLLM(VLLMSimple):
         e2e_latency = 0
         for batch_requests in batched_requests:
             batched_messages = []
-            for idx in range(len(batch_requests)):
-                ctx, doc_to_messages, gen_kwargs, doc_id, task, split = batch_requests[idx].arguments
-                chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
-                chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
-                if "max_new_tokens" not in gen_kwargs:
-                    gen_kwargs["max_new_tokens"] = 4096
-                if "temperature" not in gen_kwargs:
-                    gen_kwargs["temperature"] = 0
-                if "top_p" not in gen_kwargs:
-                    gen_kwargs["top_p"] = 0.95
-
-                params = {
-                    "temperature": gen_kwargs["temperature"],
-                    "max_tokens": gen_kwargs["max_new_tokens"],
-                    "top_p": gen_kwargs["top_p"],
-                }
-                sampling_params = SamplingParams(**params)
-                video_kwargs = {
-                    "max_pixels": self.max_pixels,
-                    "min_pixels": self.min_image_pixels,
-                }
-                if self.fps is not None:
-                    video_kwargs["fps"] = self.fps
-                else:
-                    video_kwargs["nframes"] = self.max_frame_num
-                messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
-
-                batched_messages.append(messages)
-
-            sampling_params = SamplingParams(**params)
+            with ThreadPoolExecutor(max_workers=WORKERS) as executor:
+                futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
+                for future in futures:
+                    messages, sampling_params, video_kwargs = future.result()
+                    batched_messages.append(messages)
 
             start_time = time.time()
             if self.chat_template is not None:
