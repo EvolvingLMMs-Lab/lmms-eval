@@ -63,7 +63,6 @@ def gmai_parse_results(pred, valid_options=("a", "b", "c", "d", "e")):
     # Regex to find the first valid letter (a–e)
     match = re.search(r"\b[a-e]\b", pred)
     if match:
-        print(match.group(0), "step 2")
         return match.group(0)
 
     # Fallback: if first char is a valid option
@@ -81,13 +80,11 @@ def gmai_process_results(doc,results):
         a dictionary with key: metric name, value: metric value
     """
     pred = results[0]
-    #print(pred)
     gt = doc["answer"].lower().strip().replace(".", "")
     pred_ans = gmai_parse_results(pred)
     if pred_ans is None or pred_ans == "other":
         score = 0.0
     score = 1.0 if pred_ans == gt else 0.0
-    #print(score)
     return {"accuracy": {"question_id" : doc['index'], "score" : score}}
 
 
