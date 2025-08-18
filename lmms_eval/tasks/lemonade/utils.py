@@ -1,17 +1,11 @@
 import os
 import zipfile
 from collections import defaultdict
-from datetime import datetime
 
 import cv2
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 import numpy as np
-import requests
-from datasets import load_dataset
 from huggingface_hub import hf_hub_download
-from lmms_eval.utils import load_yaml_config
 from PIL import Image
-from tqdm import tqdm
 
 MAX_NUM_FRAMES = 8
 
