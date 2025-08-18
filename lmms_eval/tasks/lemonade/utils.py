@@ -1,16 +1,17 @@
 import os
-from datasets import load_dataset
-from datetime import datetime
-import cv2
+import zipfile
 from collections import defaultdict
-from PIL import Image
+from datetime import datetime
+
+import cv2
+import lmms_eval.tasks._task_utils.file_utils as file_utils
 import numpy as np
 import requests
-import zipfile
-from tqdm import tqdm
-import lmms_eval.tasks._task_utils.file_utils as file_utils
-from lmms_eval.utils import load_yaml_config
+from datasets import load_dataset
 from huggingface_hub import hf_hub_download
+from lmms_eval.utils import load_yaml_config
+from PIL import Image
+from tqdm import tqdm
 
 MAX_NUM_FRAMES = 8
 
@@ -24,6 +25,7 @@ LEMONADE_ZIP_NAMES = [
 
 data_dir = "./data/lemonade"
 
+
 def download_and_extract_lemonade_videos(data_dir):
     os.makedirs(data_dir, exist_ok=True)
     videos_dir = os.path.join(data_dir, "videos")
@@ -31,17 +33,13 @@ def download_and_extract_lemonade_videos(data_dir):
 
     for zip_name in LEMONADE_ZIP_NAMES:
         print(f"Downloading {zip_name} from Hugging Face...")
-        zip_path = hf_hub_download(
-            repo_id="amathislab/LEMONADE",
-            filename=zip_name,
-            repo_type="dataset",
-            cache_dir=os.path.join(data_dir, "cache") 
-        )
+        zip_path = hf_hub_download(repo_id="amathislab/LEMONADE", filename=zip_name, repo_type="dataset", cache_dir=os.path.join(data_dir, "cache"))
 
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(videos_dir)
-    
+
     print("All videos downloaded and extracted successfully.\n")
+
 
 def load_video(video_file, start_frame, end_frame, max_num_frames=MAX_NUM_FRAMES):
 
@@ -89,10 +87,7 @@ def lemonade_doc_to_visual(doc):
 
     video_filename = doc["Clip"] + "_hololens.mp4"
 
-    video_path = os.path.join(
-        videos_dir,
-        video_filename
-    )
+    video_path = os.path.join(videos_dir, video_filename)
 
     if os.path.exists(video_path):
         start = int(doc["Start"])
@@ -102,15 +97,15 @@ def lemonade_doc_to_visual(doc):
         raise FileNotFoundError(f"Video file not found: {video_path}")
 
     return frames
-    
+
 
 def lemonade_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-        
+
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
-    
+
     question = "Question: " + doc["Question"]
     parsed_options = parse_options(eval(doc["Answers"]))
     choices = "Choices:\n" + parsed_options
@@ -148,7 +143,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
 
     for char in [",", ".", "!", "?", ";", ":", "'"]:
         response = response.strip(char)
-    response = " " + response + " " 
+    response = " " + response + " "
 
     index_ans = True
     ans_with_brack = False
@@ -160,7 +155,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         if f"{choice}." in response:
             candidates.append(choice)
             ans_with_period = True
-    for choice in all_choices: 
+    for choice in all_choices:
         if f"{choice}:" in response:
             candidates.append(choice)
             ans_with_colon = True
@@ -170,14 +165,14 @@ def parse_multi_choice_response(response, all_choices, index2ans):
                 candidates.append(choice)
                 ans_with_brack = True
     if len(candidates) == 0:
-        for choice in all_choices: 
+        for choice in all_choices:
             if f"{choice} " in response:
                 candidates.append(choice)
     if len(candidates) == 0 and len(response.split()) > 5:
         for index, ans in index2ans.items():
             if ans.lower() in response.lower():
                 candidates.append(index)
-                index_ans = False 
+                index_ans = False
     if len(candidates) == 0:
         pred_index = "A"
 
@@ -278,5 +273,5 @@ def lemonade_aggregate_results(results):
         print(f"  {k}: {v['acc']} ± {v['acc_stderr']} ({v['num']} examples)")
 
     print(f"\nOverall Accuracy: {overall_acc} ± {overall_stderr} ({total} examples)")
-        
+
     return overall_acc
