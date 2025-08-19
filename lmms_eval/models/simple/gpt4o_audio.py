@@ -4,15 +4,13 @@ import os
 import time
 from copy import deepcopy
 from io import BytesIO
-from typing import List, Tuple, Union
+from typing import Any, List
 
 import numpy as np
-import requests as url_requests
 from accelerate import Accelerator, DistributedType
-from openai import AzureOpenAI, OpenAI, models
+from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
@@ -49,24 +47,6 @@ else:
         f"Unsupported API_TYPE '{API_TYPE}'. Expected 'openai' or 'azure'."
     )
 
-
-# ... later in the file ...
-
-class GPT4OAudio:
-    def __init__(self, /* other params */, timeout: int = NUM_SECONDS_TO_SLEEP):
-        self.timeout = timeout
-        # ... other init logic ...
-
-        if API_TYPE == "openai":
-            self.client = OpenAI(api_key=API_KEY, timeout=self.timeout)
-        elif API_TYPE == "azure":
-            self.client = AzureOpenAI(
-                api_key=API_KEY,
-                azure_endpoint=API_URL,
-                api_version=API_VERSION,
-                timeout=self.timeout,
-            )
-        # ... rest of the method ...
 
 @register_model("gpt4o_audio")
 class GPT4OAudio(lmms):
@@ -130,7 +110,20 @@ class GPT4OAudio(lmms):
 
         self.device = self.accelerator.device
 
-    def encode_audio(self, audio_input: Union[str, np.ndarray, dict], max_size_mb: float = 24.0) -> str:
+    def encode_audio(self, audio_input: Any, max_size_mb: float = 24.0) -> str:
+        """
+        Encode audio input into a base64-encoded WAV string.
+        
+        Accepts: file path, dict{array,sampling_rate}, numpy array, objects with
+        array/sampling_rate attributes, path, bytes, or a callable returning such a dict.
+        
+        Args:
+            audio_input: Audio data in various formats
+            max_size_mb: Maximum size in MB for the encoded audio
+            
+        Returns:
+            Base64-encoded WAV audio string
+        """
         if isinstance(audio_input, str):
             audio_array, sample_rate = librosa.load(audio_input, sr=None)
         elif isinstance(audio_input, dict):
@@ -197,7 +190,9 @@ class GPT4OAudio(lmms):
                 else:
                     raise ValueError(f"Unsupported audio input type: {type(audio_input)}")
             except Exception as e:
-                raise ValueError(f"Failed to process audio input of type {type(audio_input)}: {e}")
+                raise ValueError(
+                    f"Failed to process audio input of type {type(audio_input)}: {e}"
+                ) from e
         
         if hasattr(audio_array, 'dtype') and audio_array.dtype != np.float32:
             audio_array = audio_array.astype(np.float32)
@@ -479,13 +474,6 @@ class GPT4OAudio(lmms):
                     json.dump(self.response_cache, f, indent=4)
         pbar.close()
         return res
-
-    def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError("TODO: Implement multi-round generation for GPT-4o Audio")
-
-    def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        # TODO? But I don't think we can implement this for audio because GPT-4o Audio does not support loglikelihood calculation
-        assert False, "GPT-4o Audio does not support loglikelihood"
 
     @property
     def rank(self):
