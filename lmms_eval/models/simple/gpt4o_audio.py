@@ -27,17 +27,46 @@ except ImportError:
 
 from loguru import logger as eval_logger
 
+# File: lmms_eval/models/simple/gpt4o_audio.py
+
 API_TYPE = os.getenv("API_TYPE", "openai")
 NUM_SECONDS_TO_SLEEP = 10
 if API_TYPE == "openai":
-    API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
+    API_URL = os.getenv(
+        "OPENAI_API_URL",
+        "https://api.openai.com/v1/chat/completions",
+    )
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
-
 elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://your-resource-name.openai.azure.com")
+    API_URL = os.getenv(
+        "AZURE_ENDPOINT",
+        "https://your-resource-name.openai.azure.com",
+    )
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     API_VERSION = os.getenv("AZURE_API_VERSION", "2024-08-01-preview")
+else:
+    raise ValueError(
+        f"Unsupported API_TYPE '{API_TYPE}'. Expected 'openai' or 'azure'."
+    )
 
+
+# ... later in the file ...
+
+class GPT4OAudio:
+    def __init__(self, /* other params */, timeout: int = NUM_SECONDS_TO_SLEEP):
+        self.timeout = timeout
+        # ... other init logic ...
+
+        if API_TYPE == "openai":
+            self.client = OpenAI(api_key=API_KEY, timeout=self.timeout)
+        elif API_TYPE == "azure":
+            self.client = AzureOpenAI(
+                api_key=API_KEY,
+                azure_endpoint=API_URL,
+                api_version=API_VERSION,
+                timeout=self.timeout,
+            )
+        # ... rest of the method ...
 
 @register_model("gpt4o_audio")
 class GPT4OAudio(lmms):
