@@ -60,22 +60,38 @@ We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness]
 
 ## Installation
 
-For direct usage, you can install the package from Git by running the following command:
+### Using uv (Recommended for consistent environments)
+
+We use `uv` for package management to ensure all developers use exactly the same package versions. First, install uv:
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+For development with consistent environment:
+```bash
+git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
+cd lmms-eval
+uv sync  # This creates/updates your environment from uv.lock
+```
+
+To run commands:
+```bash
+uv run python -m lmms_eval --help  # Run any command with uv run
+```
+
+To add new dependencies:
+```bash
+uv add <package>  # Updates both pyproject.toml and uv.lock
+```
+
+### Alternative Installation
+
+For direct usage from Git:
+```bash
 uv venv eval
 uv venv --python 3.12
 source eval/bin/activate
 uv pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
-```
-
-For development, you can install the package by cloning the repository and running the following command:
-```bash
-git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
-cd lmms-eval
-uv venv dev
-source dev/bin/activate
-uv pip install -e .
 ```
 
 <details>
