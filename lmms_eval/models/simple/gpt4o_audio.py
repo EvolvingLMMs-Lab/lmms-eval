@@ -6,7 +6,9 @@ from copy import deepcopy
 from io import BytesIO
 from typing import Any, List
 
+import librosa
 import numpy as np
+import soundfile as sf
 from accelerate import Accelerator, DistributedType
 from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
@@ -14,11 +16,9 @@ from tqdm import tqdm
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-import librosa
-import soundfile as sf
-
 try:
     from scipy import signal
+
     scipy_available = True
 except ImportError:
     scipy_available = False
@@ -43,9 +43,7 @@ elif API_TYPE == "azure":
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     API_VERSION = os.getenv("AZURE_API_VERSION", "2024-08-01-preview")
 else:
-    raise ValueError(
-        f"Unsupported API_TYPE '{API_TYPE}'. Expected 'openai' or 'azure'."
-    )
+    raise ValueError(f"Unsupported API_TYPE '{API_TYPE}'. Expected 'openai' or 'azure'.")
 
 
 @register_model("gpt4o_audio")
@@ -62,10 +60,10 @@ class GPT4OAudio(lmms):
         **kwargs,
     ) -> None:
         super().__init__()
-        
+
         if librosa is None or sf is None:
             raise ImportError("librosa and soundfile are required for GPT-4o audio. Please install with: pip install librosa soundfile")
-        
+
         self.model_version = model_version
         self.modality = modality
         self.audio_token = "<audio>"  # Audio token placeholder
@@ -73,7 +71,7 @@ class GPT4OAudio(lmms):
         self.continual_mode = continual_mode
         self.audio_voice = audio_voice
         self.audio_format = audio_format
-        
+
         if self.continual_mode:
             if response_persistent_folder is None:
                 raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
@@ -113,14 +111,14 @@ class GPT4OAudio(lmms):
     def encode_audio(self, audio_input: Any, max_size_mb: float = 24.0) -> str:
         """
         Encode audio input into a base64-encoded WAV string.
-        
+
         Accepts: file path, dict{array,sampling_rate}, numpy array, objects with
         array/sampling_rate attributes, path, bytes, or a callable returning such a dict.
-        
+
         Args:
             audio_input: Audio data in various formats
             max_size_mb: Maximum size in MB for the encoded audio
-            
+
         Returns:
             Base64-encoded WAV audio string
         """
@@ -133,51 +131,51 @@ class GPT4OAudio(lmms):
             # Raw audio array (16kHz)
             audio_array = audio_input
             sample_rate = 16000
-        elif hasattr(audio_input, 'array') and hasattr(audio_input, 'sampling_rate'):
+        elif hasattr(audio_input, "array") and hasattr(audio_input, "sampling_rate"):
             audio_array = audio_input.array
             sample_rate = audio_input.sampling_rate
-        elif hasattr(audio_input, '__array__'):
+        elif hasattr(audio_input, "__array__"):
             audio_array = np.array(audio_input)
             sample_rate = 16000
         else:
             try:
-                if 'AudioDecoder' in str(type(audio_input)):
-                    if hasattr(audio_input, 'get_all_samples'):
+                if "AudioDecoder" in str(type(audio_input)):
+                    if hasattr(audio_input, "get_all_samples"):
                         audio_data = audio_input.get_all_samples()
-                        if hasattr(audio_data, 'data') and hasattr(audio_data, 'sample_rate'):
+                        if hasattr(audio_data, "data") and hasattr(audio_data, "sample_rate"):
                             audio_array = audio_data.data.numpy()
                             sample_rate = audio_data.sample_rate
                         elif isinstance(audio_data, np.ndarray):
                             audio_array = audio_data
-                            if hasattr(audio_input, 'metadata') and hasattr(audio_input.metadata, 'sample_rate'):
+                            if hasattr(audio_input, "metadata") and hasattr(audio_input.metadata, "sample_rate"):
                                 sample_rate = audio_input.metadata.sample_rate
                             else:
                                 sample_rate = 16000
                         else:
                             raise ValueError(f"get_all_samples() returned unexpected type: {type(audio_data)}")
-                    elif hasattr(audio_input, 'decode'):
+                    elif hasattr(audio_input, "decode"):
                         audio_data = audio_input.decode()
                         if isinstance(audio_data, dict):
                             audio_array = audio_data["array"]
                             sample_rate = audio_data.get("sampling_rate", 16000)
                         else:
                             raise ValueError(f"decode() returned unexpected type: {type(audio_data)}")
-                    elif hasattr(audio_input, 'path') and hasattr(audio_input.path, '__str__'):
+                    elif hasattr(audio_input, "path") and hasattr(audio_input.path, "__str__"):
                         audio_array, sample_rate = librosa.load(str(audio_input.path), sr=None)
-                    elif hasattr(audio_input, 'bytes') and audio_input.bytes:
+                    elif hasattr(audio_input, "bytes") and audio_input.bytes:
                         buffer = BytesIO(audio_input.bytes)
                         audio_array, sample_rate = librosa.load(buffer, sr=None)
                     else:
                         eval_logger.info(f"AudioDecoder attributes: {dir(audio_input)}")
-                        if hasattr(audio_input, '_path'):
+                        if hasattr(audio_input, "_path"):
                             audio_array, sample_rate = librosa.load(audio_input._path, sr=None)
-                        elif hasattr(audio_input, 'file_path'):
+                        elif hasattr(audio_input, "file_path"):
                             audio_array, sample_rate = librosa.load(audio_input.file_path, sr=None)
                         else:
                             raise ValueError(f"Cannot find audio data in AudioDecoder object. Available attributes: {[attr for attr in dir(audio_input) if not attr.startswith('_')]}")
-                elif hasattr(audio_input, 'path'):
+                elif hasattr(audio_input, "path"):
                     audio_array, sample_rate = librosa.load(audio_input.path, sr=None)
-                elif hasattr(audio_input, 'bytes'):
+                elif hasattr(audio_input, "bytes"):
                     buffer = BytesIO(audio_input.bytes)
                     audio_array, sample_rate = librosa.load(buffer, sr=None)
                 elif callable(audio_input):
@@ -190,35 +188,33 @@ class GPT4OAudio(lmms):
                 else:
                     raise ValueError(f"Unsupported audio input type: {type(audio_input)}")
             except Exception as e:
-                raise ValueError(
-                    f"Failed to process audio input of type {type(audio_input)}: {e}"
-                ) from e
-        
-        if hasattr(audio_array, 'dtype') and audio_array.dtype != np.float32:
+                raise ValueError(f"Failed to process audio input of type {type(audio_input)}: {e}") from e
+
+        if hasattr(audio_array, "dtype") and audio_array.dtype != np.float32:
             audio_array = audio_array.astype(np.float32)
         elif not isinstance(audio_array, np.ndarray):
             audio_array = np.array(audio_array, dtype=np.float32)
-        
+
         # Handle multi-channel audio by taking first channel
         if len(audio_array.shape) > 1:
             audio_array = audio_array[0] if audio_array.shape[0] < audio_array.shape[1] else audio_array[:, 0]
-        
+
         if np.max(np.abs(audio_array)) > 1.0:
             audio_array = audio_array / np.max(np.abs(audio_array))
-        
+
         # Compress audio if it's too long (reduce duration or sample rate)
         max_bytes = int(max_size_mb * 1024 * 1024 * 0.75)
-        
+
         # Compression strategies
         compression_attempts = [
             {"sample_rate": sample_rate, "duration": None},  # Original
-            {"sample_rate": 16000, "duration": None},        # Downsample to 16kHz
-            {"sample_rate": 8000, "duration": None},         # Downsample to 8kHz
-            {"sample_rate": 16000, "duration": 60},          # 16kHz + max 60 seconds
-            {"sample_rate": 8000, "duration": 60},           # 8kHz + max 60 seconds
-            {"sample_rate": 16000, "duration": 30},          # 16kHz + max 30 seconds
+            {"sample_rate": 16000, "duration": None},  # Downsample to 16kHz
+            {"sample_rate": 8000, "duration": None},  # Downsample to 8kHz
+            {"sample_rate": 16000, "duration": 60},  # 16kHz + max 60 seconds
+            {"sample_rate": 8000, "duration": 60},  # 8kHz + max 60 seconds
+            {"sample_rate": 16000, "duration": 30},  # 16kHz + max 30 seconds
         ]
-        
+
         for attempt in compression_attempts:
             try:
                 if attempt["sample_rate"] != sample_rate and scipy_available:
@@ -231,20 +227,20 @@ class GPT4OAudio(lmms):
                 else:
                     compressed_audio = audio_array.copy()
                     compressed_sr = sample_rate
-                
+
                 if attempt["duration"] is not None:
                     max_samples = int(compressed_sr * attempt["duration"])
                     if len(compressed_audio) > max_samples:
                         compressed_audio = compressed_audio[:max_samples]
-                
+
                 buffer = BytesIO()
-                sf.write(buffer, compressed_audio, compressed_sr, format='WAV')
+                sf.write(buffer, compressed_audio, compressed_sr, format="WAV")
                 audio_bytes = buffer.getvalue()
-                
+
                 if len(audio_bytes) <= max_bytes:
                     eval_logger.info(f"Audio compressed: {len(audio_array)/sample_rate:.1f}s@{sample_rate}Hz -> {len(compressed_audio)/compressed_sr:.1f}s@{compressed_sr}Hz ({len(audio_bytes)/(1024*1024):.2f}MB)")
                     break
-                    
+
             except Exception as e:
                 eval_logger.warning(f"Compression attempt failed: {e}")
                 if attempt["duration"] is not None:
@@ -255,33 +251,32 @@ class GPT4OAudio(lmms):
                         truncated_audio = audio_array
                 else:
                     truncated_audio = audio_array
-                
+
                 buffer = BytesIO()
-                sf.write(buffer, truncated_audio, sample_rate, format='WAV')
+                sf.write(buffer, truncated_audio, sample_rate, format="WAV")
                 audio_bytes = buffer.getvalue()
-                
+
                 if len(audio_bytes) <= max_bytes:
                     eval_logger.info(f"Audio truncated to {len(truncated_audio)/sample_rate:.1f}s ({len(audio_bytes)/(1024*1024):.2f}MB)")
                     compressed_audio = truncated_audio
                     compressed_sr = sample_rate
                     break
-        
+
         else:
             eval_logger.warning(f"Could not compress audio below {max_size_mb}MB limit. Using truncated version.")
-        
+
         buffer = BytesIO()
-        sf.write(buffer, compressed_audio if 'compressed_audio' in locals() else audio_array, 
-                compressed_sr if 'compressed_sr' in locals() else sample_rate, format='WAV')
+        sf.write(buffer, compressed_audio if "compressed_audio" in locals() else audio_array, compressed_sr if "compressed_sr" in locals() else sample_rate, format="WAV")
         audio_bytes = buffer.getvalue()
-        
+
         if len(audio_bytes) == 0:
             raise ValueError("Generated audio bytes are empty")
-        
+
         base64_str = base64.b64encode(audio_bytes).decode("utf-8")
-        
+
         if not base64_str:
             raise ValueError("Base64 encoding resulted in empty string")
-        
+
         eval_logger.debug(f"Encoded audio: {len(audio_bytes)} bytes -> {len(base64_str)} base64 chars")
         return base64_str
 
@@ -315,7 +310,7 @@ class GPT4OAudio(lmms):
             else:
                 audios = self.flatten(audios)
                 encoded_audios = []
-                
+
                 for audio in audios:
                     try:
                         encoded_audio = self.encode_audio(audio, max_size_mb=20.0)
@@ -326,39 +321,27 @@ class GPT4OAudio(lmms):
 
             payload = {"messages": []}
             payload["model"] = self.model_version
-            
+
             payload["modalities"] = ["text"]
-            # GPT-4o Audio supports audio output also: 
+            # GPT-4o Audio supports audio output also:
             # payload["audio"] = {"voice": self.audio_voice, "format": self.audio_format}
 
             user_content = []
-            
+
             for encoded_audio in encoded_audios:
                 if encoded_audio and len(encoded_audio) > 0:
-                    user_content.append({
-                        "type": "input_audio",
-                        "input_audio": {
-                            "data": encoded_audio,
-                            "format": "wav"
-                        }
-                    })
-            
+                    user_content.append({"type": "input_audio", "input_audio": {"data": encoded_audio, "format": "wav"}})
+
             if contexts and contexts.strip():
-                user_content.append({
-                    "type": "text",
-                    "text": contexts
-                })
-            
+                user_content.append({"type": "text", "text": contexts})
+
             if not user_content:
                 eval_logger.warning("No audio or text content to send to API")
                 res.append("")
                 pbar.update(1)
                 continue
-            
-            payload["messages"].append({
-                "role": "user",
-                "content": user_content
-            })
+
+            payload["messages"].append({"role": "user", "content": user_content})
 
             # Generation parameters
             if "max_new_tokens" not in gen_kwargs:
@@ -389,7 +372,7 @@ class GPT4OAudio(lmms):
                                 audio_data_size = len(content["input_audio"]["data"])
                                 content["input_audio"]["data"] = f"[AUDIO_DATA_TRUNCATED_{audio_data_size}_BYTES]"
             eval_logger.info(f"API payload structure: {debug_payload}")
-            
+
             total_audio_size = 0
             for msg in payload["messages"]:
                 if "content" in msg:
@@ -397,26 +380,25 @@ class GPT4OAudio(lmms):
                         if content.get("type") == "input_audio":
                             audio_size = len(content["input_audio"]["data"])
                             total_audio_size += audio_size
-            
+
             eval_logger.info(f"Total audio data size: {total_audio_size} bytes ({total_audio_size / (1024*1024):.2f} MB)")
-            
+
             # Check if audio size is reasonable (OpenAI has limits)
             if total_audio_size > 20 * 1024 * 1024:  # 20MB limit (conservative)
                 eval_logger.warning(f"Audio data size ({total_audio_size / (1024*1024):.2f} MB) may exceed API limits")
 
-            
             for attempt in range(MAX_RETRIES):
                 try:
                     # For debugging purposes
                     # eval_logger.info(f"Making API call attempt {attempt + 1}/{MAX_RETRIES}")
                     # eval_logger.info(f"Using model: {payload['model']}")
                     # eval_logger.info(f"API type: {API_TYPE}")
-                    
+
                     if "audio" not in payload["model"].lower():
                         eval_logger.warning(f"Model name '{payload['model']}' may not support audio. Consider using 'gpt-4o-audio-preview'")
-                    
+
                     response = self.client.chat.completions.create(**payload)
-                    
+
                     # For debugging purposes
                     # eval_logger.info(f"API response structure: {response}")
                     # eval_logger.info(f"Response choices: {response.choices}")
@@ -424,10 +406,10 @@ class GPT4OAudio(lmms):
                     # eval_logger.info(f"Message: {response.choices[0].message}")
                     # eval_logger.info(f"Message content: {response.choices[0].message.content}")
                     # eval_logger.info(f"Message role: {response.choices[0].message.role}")
-                    
-                    if hasattr(response.choices[0].message, 'audio') and response.choices[0].message.audio:
+
+                    if hasattr(response.choices[0].message, "audio") and response.choices[0].message.audio:
                         eval_logger.info(f"Audio response detected: {response.choices[0].message.audio}")
-                    
+
                     response_text = response.choices[0].message.content
                     # For debugging purposes
                     # eval_logger.info(f"Response text: {response_text}")
@@ -449,12 +431,12 @@ class GPT4OAudio(lmms):
                 except Exception as e:
                     error_msg = str(e)
                     eval_logger.info(f"Attempt {attempt + 1}/{MAX_RETRIES} failed with error: {error_msg}")
-                    
-                    if hasattr(e, 'response') and hasattr(e.response, 'text'):
+
+                    if hasattr(e, "response") and hasattr(e.response, "text"):
                         eval_logger.info(f"Response body: {e.response.text}")
-                    if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                    if hasattr(e, "response") and hasattr(e.response, "status_code"):
                         eval_logger.info(f"Status code: {e.response.status_code}")
-                    if hasattr(e, 'response') and hasattr(e.response, 'headers'):
+                    if hasattr(e, "response") and hasattr(e.response, "headers"):
                         eval_logger.info(f"Response headers: {dict(e.response.headers)}")
 
                     if attempt == MAX_RETRIES - 1:
@@ -462,7 +444,7 @@ class GPT4OAudio(lmms):
                         response_text = ""
                     else:
                         time.sleep(NUM_SECONDS_TO_SLEEP)
-            
+
             res.append(response_text)
             pbar.update(1)
 
