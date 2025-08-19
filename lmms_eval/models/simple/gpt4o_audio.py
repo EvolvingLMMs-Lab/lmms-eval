@@ -442,13 +442,12 @@ class GPT4OAudio(lmms):
             res.append(response_text)
             pbar.update(1)
 
-            if self.continual_mode is True:
+            if self.continual_mode is True and self.accelerator.is_local_main_process:
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 cache_value = response_text if response_text is not None else ""
                 self.response_cache[doc_uuid] = cache_value
                 with open(self.response_persistent_file, "w") as f:
                     json.dump(self.response_cache, f, indent=4)
-
         pbar.close()
         return res
 
