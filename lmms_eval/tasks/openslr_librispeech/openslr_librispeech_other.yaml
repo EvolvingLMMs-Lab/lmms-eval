@@ -1,9 +1,9 @@
-dataset_path: openslr/librispeech_asr
+dataset_path: parquet
 dataset_kwargs:
-  token: True
+  data_files: "https://huggingface.co/datasets/openslr/librispeech_asr/resolve/main/other/test/0000.parquet"
 task: "openslr_librispeech_other"
-test_split: test
-dataset_name: other
+test_split: train
+dataset_name: null
 output_type: generate_until
 doc_to_visual: !function utils.librispeech_doc_to_audio
 doc_to_text: !function utils.librispeech_doc_to_text
