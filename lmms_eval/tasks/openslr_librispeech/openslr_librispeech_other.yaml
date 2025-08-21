@@ -1,12 +1,13 @@
 dataset_path: parquet
 dataset_kwargs:
-  data_files: "https://huggingface.co/datasets/openslr/librispeech_asr/resolve/main/other/test/0000.parquet"
+  data_files:
+    test: "https://huggingface.co/datasets/openslr/librispeech_asr/resolve/71cacbfb7e2354c4226d01e70d77d5fca3d04ba1/other/test/0000.parquet"
 task: "openslr_librispeech_other"
-test_split: train
+test_split: test
 dataset_name: null
 output_type: generate_until
-doc_to_visual: !function utils.librispeech_doc_to_audio
-doc_to_text: !function utils.librispeech_doc_to_text
+doc_to_visual: !function lmms_eval.tasks.librispeech.utils.librispeech_doc_to_audio
+doc_to_text: !function lmms_eval.tasks.librispeech.utils.librispeech_doc_to_text
 doc_to_target: "gt"
 generation_kwargs:
   max_new_tokens: 256
@@ -14,10 +15,10 @@ generation_kwargs:
   top_p: 1.0
   num_beams: 1
   do_sample: false
-process_results: !function utils.librispeech_process_result
+process_results: !function lmms_eval.tasks.librispeech.utils.librispeech_process_result
 metric_list:
   - metric: wer 
-    aggregation : !function utils.librispeech_wer
+    aggregation : !function lmms_eval.tasks.librispeech.utils.librispeech_wer
     higher_is_better : false
 metadata:
   - version: 0.0
