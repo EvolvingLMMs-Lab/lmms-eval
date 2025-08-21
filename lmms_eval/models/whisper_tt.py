@@ -32,7 +32,7 @@ SAMPLING_RATE = 16_000
 
 
 # Warmup the model on app startup
-def warmup_model(model_repo="openai/whisper-large-v3"):
+def warmup_model(model_repo):
     # create device, these constants are specific to n150 & n300
     device_id = 0
     device_params = {"l1_small_size": WHISPER_L1_SMALL_SIZE}
