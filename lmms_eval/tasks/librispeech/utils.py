@@ -39,7 +39,16 @@ def librispeech_doc_to_text(doc, lmms_eval_specific_kwargs):
 def librispeech_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
 
-    gt = doc["gt"]
+    # Handle different field names for ground truth across LibriSpeech datasets
+    # - openslr/librispeech_asr uses "gt" 
+    # - lmms-lab/librispeech uses "transcript"
+    if "gt" in doc:
+        gt = doc["gt"]
+    elif "transcript" in doc:
+        gt = doc["transcript"]
+    else:
+        raise KeyError("Neither 'gt' nor 'transcript' field found in document. Available fields: " + str(list(doc.keys())))
+    
     source = doc["source"]
     task = doc["task"]
 
