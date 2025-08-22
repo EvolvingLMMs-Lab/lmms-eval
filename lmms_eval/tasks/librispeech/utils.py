@@ -49,8 +49,15 @@ def librispeech_process_result(doc, result):
     else:
         raise KeyError("Neither 'gt' nor 'transcript' field found in document. Available fields: " + str(list(doc.keys())))
     
-    source = doc["source"]
-    task = doc["task"]
+    # Handle potentially missing source field - some datasets may not include this
+    source = doc.get("source", "unknown")
+    
+    # Handle potentially missing task field - infer from dataset context
+    if "task" in doc:
+        task = doc["task"]
+    else:
+        # Infer task from context - LibriSpeech is English ASR
+        task = "asr_en"
 
     data_dict = {"gt": gt, "pred": pred, "source": source, "task": task}
 
