@@ -2,10 +2,22 @@
 
 This document contains critical information about working with this codebase. Follow these guidelines precisely.
 
+## Environment Setup
+
+To ensure everyone uses the same environment, follow these steps:
+
+1. **Initial Setup**: Run `uv sync` to create/update your environment from the lockfile
+2. **After Pulling Changes**: If `uv.lock` has changed, run `uv sync` again
+3. **Adding Dependencies**: Use `uv add <package>` which updates both pyproject.toml and uv.lock
+4. **Removing Dependencies**: Use `uv remove <package>`
+
+The `uv.lock` file ensures all developers and CI/CD systems use exactly the same package versions.
+
 ## Core Development Rules
 
 1. Package Management
    - ONLY use uv, NEVER pip
+   - Environment setup: `uv sync` (creates consistent environment from uv.lock)
    - Installation: `uv add package`
    - Running tools: `uv run tool`
    - Upgrading: `uv add --dev package --upgrade-package package`
