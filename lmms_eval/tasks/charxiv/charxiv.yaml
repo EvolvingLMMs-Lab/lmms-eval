@@ -1,0 +1,4 @@
+group: charxiv
+task:
+  - charxiv_val_reasoning
+  - charxiv_val_descriptive
