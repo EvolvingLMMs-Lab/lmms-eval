@@ -1,0 +1,12 @@
+test_split: validation
+doc_to_messages: !function utils.charxiv_descriptive_doc_to_messages_cot
+doc_to_text: !function utils.charxiv_descriptive_doc_to_text_cot
+doc_to_target: "descriptive_a"
+include: _default_template_yaml
+task: charxiv_val_descriptive
+process_results: !function utils.charxiv_descriptive_process_results
+process_docs: !function utils.charxiv_descriptive_process_docs
+metric_list:
+  - metric: descriptive_acc
+    aggregation: !function utils.charxiv_descriptive_aggregate_results
+    higher_is_better: true

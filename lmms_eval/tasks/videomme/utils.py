@@ -4,10 +4,12 @@ import os
 import re
 import sys
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import cv2
+import datasets
 import numpy as np
 import yaml
 from loguru import logger as eval_logger
@@ -130,6 +132,13 @@ def extract_subtitles(video_path, subtitle_path):
         subtitle_frames.append((start_frame, end_frame, text))
 
     return subtitle_frames, total_frame
+
+
+def videmme_process_docs_base(dataset: datasets.Dataset, type: str) -> datasets.Dataset:
+    return dataset.filter(lambda x: x["duration"] == type)
+
+
+videomme_process_docs_long = partial(videmme_process_docs_base, type="long")
 
 
 def videomme_doc_to_visual(doc):
