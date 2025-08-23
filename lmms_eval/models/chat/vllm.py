@@ -42,23 +42,26 @@ class VLLM(VLLMSimple):
         self.fps = fps
         self.max_pixels = max_pixels
 
-    def make_one_request(self, request):
+    def make_one_request(self, request: Instance) -> Tuple[list[dict], dict]:
+        """
+        Build OpenAI-style messages and per-request sampling params from an Instance.
+        Returns (messages, params_dict). Does not mutate input.
+        """
         ctx, doc_to_messages, gen_kwargs, doc_id, task, split = request.arguments
-        chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
-        chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
-        if "max_new_tokens" not in gen_kwargs:
-            gen_kwargs["max_new_tokens"] = 4096
-        if "temperature" not in gen_kwargs:
-            gen_kwargs["temperature"] = 0
-        if "top_p" not in gen_kwargs:
-            gen_kwargs["top_p"] = 0.95
+        raw_messages = doc_to_messages(self.task_dict[task][split][doc_id])
+        chat_messages = ChatMessages(messages=raw_messages)
+        # Copy to avoid side-effects across threads
+        _gen = dict(gen_kwargs or {})
+        _gen.setdefault("max_new_tokens", 4096)
+        _gen.setdefault("temperature", 0)
+        _gen.setdefault("top_p", 0.95)
 
         params = {
-            "temperature": gen_kwargs["temperature"],
-            "max_tokens": gen_kwargs["max_new_tokens"],
-            "top_p": gen_kwargs["top_p"],
+            "temperature": _gen["temperature"],
+            "max_tokens": _gen["max_new_tokens"],
+            "top_p": _gen["top_p"],
         }
-        sampling_params = SamplingParams(**params)
+
         video_kwargs = {
             "max_pixels": self.max_pixels,
             "min_pixels": self.min_image_pixels,
@@ -68,8 +71,7 @@ class VLLM(VLLMSimple):
         else:
             video_kwargs["nframes"] = self.max_frame_num
         messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
-        return messages, sampling_params, video_kwargs
-
+        return messages, params
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
