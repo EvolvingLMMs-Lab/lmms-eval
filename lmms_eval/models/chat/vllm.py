@@ -72,6 +72,7 @@ class VLLM(VLLMSimple):
             video_kwargs["nframes"] = self.max_frame_num
         messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
         return messages, params
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")

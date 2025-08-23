@@ -4,36 +4,25 @@ from datasets import Dataset
 from openai import OpenAI
 from tqdm import tqdm
 
-from lmms_eval.tasks.charxiv.constant import DESCRIPTIVE_RESP_INST, REASONING_RESP_INST
+from lmms_eval.tasks.charxiv.constant import REASONING_RESP_INST
 from lmms_eval.tasks.charxiv.descriptive_utils import (
     build_descriptive_grading_queries,
+    descriptive_query_helper,
     get_descriptive_result_gpt,
     postprocess_descriptive_grading_queries,
 )
 from lmms_eval.tasks.charxiv.reasoning_utils import (
     build_reasoning_grading_queries,
+    get_number_instruction,
     get_reasoning_result_gpt,
 )
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
-MODEL_VERSION = os.getenv("MODEL_VERSION")
+# get environment else return dummy values, in a single line
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "YOUR_OPENAI_BASE_URL")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "YOUR_MODEL_VERSION")
 
 client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
-
-
-def get_number_instruction(answer):
-    base = answer.split(".")
-    whole, decimal = base[0], None if len(base) == 1 else base[1]
-    # check if it contains decimal places
-    if whole is not None and decimal is None:
-        inst = "* Your final answer must be an exact integer."
-    elif whole is not None and decimal is not None:
-        num_decimal = len(decimal)
-        inst = f"* Your final answer must be a number with {num_decimal} decimal places."
-    else:
-        raise ValueError(f"Invalid answer: {answer}")
-    return inst
 
 
 def charxiv_reasoning_doc_to_text_cot(doc, lmms_eval_specific_kwargs=None):
@@ -44,26 +33,6 @@ def charxiv_reasoning_doc_to_text_cot(doc, lmms_eval_specific_kwargs=None):
     elif inst_category == 4:
         question = REASONING_RESP_INST[inst_category].format(doc["reasoning_q"], get_number_instruction(doc["reasoning_a"]))
     return question
-
-
-def descriptive_query_helper(qid, subplot_loc):
-    if qid in [18, 19]:
-        # skip subplot location when asking about the layout of the subplots
-        return DESCRIPTIVE_RESP_INST[qid]
-    if isinstance(subplot_loc, list):
-        if subplot_loc[0] == 0:
-            # when there is only one subplot
-            prefix = "For the current plot, "
-        else:
-            # when there are multiple subplots
-            prefix = f"For the subplot at row {subplot_loc[0]} and column {subplot_loc[1]}, "
-    # when subplots do not form a grid
-    elif isinstance(subplot_loc, str):
-        prefix = f"For {subplot_loc}, "
-    else:
-        raise ValueError(f"Invalid subplot_loc: {subplot_loc}")
-    # return the question with the subplot location
-    return DESCRIPTIVE_RESP_INST[qid].format(prefix)
 
 
 def charxiv_descriptive_process_docs(dataset: Dataset) -> Dataset:
