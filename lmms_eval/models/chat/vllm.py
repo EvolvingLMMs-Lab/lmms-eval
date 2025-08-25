@@ -85,9 +85,10 @@ class VLLM(VLLMSimple):
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
                 futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
                 for future in futures:
-                    messages, sampling_params, video_kwargs = future.result()
+                    messages, sampling_params = future.result()
                     batched_messages.append(messages)
 
+            sampling_params = SamplingParams(**sampling_params)
             start_time = time.time()
             if self.chat_template is not None:
                 with open(self.chat_template, "r") as f:
