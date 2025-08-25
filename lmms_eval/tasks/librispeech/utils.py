@@ -27,7 +27,15 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
 def librispeech_doc_to_audio(doc):
-    return [doc["audio"]]
+    # Handle different field names for audio across LibriSpeech datasets
+    # Common field names: audio, file, path, audio_path
+    for audio_field in ["audio", "file", "path", "audio_path"]:
+        if audio_field in doc:
+            return [doc[audio_field]]
+    
+    # If no audio field found, provide helpful error
+    available_fields = list(doc.keys())
+    raise KeyError(f"No audio field found in document. Tried: ['audio', 'file', 'path', 'audio_path']. Available fields: {available_fields}")
 
 
 def librispeech_doc_to_text(doc, lmms_eval_specific_kwargs):
