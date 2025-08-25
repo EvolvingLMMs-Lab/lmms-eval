@@ -4,7 +4,7 @@ import os
 import time
 from copy import deepcopy
 from io import BytesIO
-from typing import Any, List
+from typing import Any, List, Tuple
 
 import librosa
 import numpy as np
@@ -13,6 +13,7 @@ from accelerate import Accelerator, DistributedType
 from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
 
+from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
@@ -122,73 +123,11 @@ class GPT4OAudio(lmms):
         Returns:
             Base64-encoded WAV audio string
         """
-        if isinstance(audio_input, str):
-            audio_array, sample_rate = librosa.load(audio_input, sr=None)
-        elif isinstance(audio_input, dict):
+        if isinstance(audio_input, dict):
             audio_array = audio_input["array"]
             sample_rate = audio_input.get("sampling_rate", 16000)
-        elif isinstance(audio_input, np.ndarray):
-            # Raw audio array (16kHz)
-            audio_array = audio_input
-            sample_rate = 16000
-        elif hasattr(audio_input, "array") and hasattr(audio_input, "sampling_rate"):
-            audio_array = audio_input.array
-            sample_rate = audio_input.sampling_rate
-        elif hasattr(audio_input, "__array__"):
-            audio_array = np.array(audio_input)
-            sample_rate = 16000
         else:
-            try:
-                if "AudioDecoder" in str(type(audio_input)):
-                    if hasattr(audio_input, "get_all_samples"):
-                        audio_data = audio_input.get_all_samples()
-                        if hasattr(audio_data, "data") and hasattr(audio_data, "sample_rate"):
-                            audio_array = audio_data.data.numpy()
-                            sample_rate = audio_data.sample_rate
-                        elif isinstance(audio_data, np.ndarray):
-                            audio_array = audio_data
-                            if hasattr(audio_input, "metadata") and hasattr(audio_input.metadata, "sample_rate"):
-                                sample_rate = audio_input.metadata.sample_rate
-                            else:
-                                sample_rate = 16000
-                        else:
-                            raise ValueError(f"get_all_samples() returned unexpected type: {type(audio_data)}")
-                    elif hasattr(audio_input, "decode"):
-                        audio_data = audio_input.decode()
-                        if isinstance(audio_data, dict):
-                            audio_array = audio_data["array"]
-                            sample_rate = audio_data.get("sampling_rate", 16000)
-                        else:
-                            raise ValueError(f"decode() returned unexpected type: {type(audio_data)}")
-                    elif hasattr(audio_input, "path") and hasattr(audio_input.path, "__str__"):
-                        audio_array, sample_rate = librosa.load(str(audio_input.path), sr=None)
-                    elif hasattr(audio_input, "bytes") and audio_input.bytes:
-                        buffer = BytesIO(audio_input.bytes)
-                        audio_array, sample_rate = librosa.load(buffer, sr=None)
-                    else:
-                        eval_logger.info(f"AudioDecoder attributes: {dir(audio_input)}")
-                        if hasattr(audio_input, "_path"):
-                            audio_array, sample_rate = librosa.load(audio_input._path, sr=None)
-                        elif hasattr(audio_input, "file_path"):
-                            audio_array, sample_rate = librosa.load(audio_input.file_path, sr=None)
-                        else:
-                            raise ValueError(f"Cannot find audio data in AudioDecoder object. Available attributes: {[attr for attr in dir(audio_input) if not attr.startswith('_')]}")
-                elif hasattr(audio_input, "path"):
-                    audio_array, sample_rate = librosa.load(audio_input.path, sr=None)
-                elif hasattr(audio_input, "bytes"):
-                    buffer = BytesIO(audio_input.bytes)
-                    audio_array, sample_rate = librosa.load(buffer, sr=None)
-                elif callable(audio_input):
-                    result = audio_input()
-                    if isinstance(result, dict) and "array" in result:
-                        audio_array = result["array"]
-                        sample_rate = result.get("sampling_rate", 16000)
-                    else:
-                        raise ValueError(f"Callable audio object returned unexpected type: {type(result)}")
-                else:
-                    raise ValueError(f"Unsupported audio input type: {type(audio_input)}")
-            except Exception as e:
-                raise ValueError(f"Failed to process audio input of type {type(audio_input)}: {e}") from e
+            raise ValueError(f"Unsupported audio input type: {type(audio_input)}. Only HuggingFace dataset format (dict with 'array' and 'sampling_rate' keys) is supported.")
 
         if hasattr(audio_array, "dtype") and audio_array.dtype != np.float32:
             audio_array = audio_array.astype(np.float32)
@@ -371,7 +310,8 @@ class GPT4OAudio(lmms):
                             if content.get("type") == "input_audio":
                                 audio_data_size = len(content["input_audio"]["data"])
                                 content["input_audio"]["data"] = f"[AUDIO_DATA_TRUNCATED_{audio_data_size}_BYTES]"
-            eval_logger.info(f"API payload structure: {debug_payload}")
+            # For debugging purposes
+            # eval_logger.info(f"API payload structure: {debug_payload}")
 
             total_audio_size = 0
             for msg in payload["messages"]:
@@ -381,7 +321,8 @@ class GPT4OAudio(lmms):
                             audio_size = len(content["input_audio"]["data"])
                             total_audio_size += audio_size
 
-            eval_logger.info(f"Total audio data size: {total_audio_size} bytes ({total_audio_size / (1024*1024):.2f} MB)")
+            # For debugging purposes
+            # eval_logger.info(f"Total audio data size: {total_audio_size} bytes ({total_audio_size / (1024*1024):.2f} MB)")
 
             # Check if audio size is reasonable (OpenAI has limits)
             if total_audio_size > 20 * 1024 * 1024:  # 20MB limit (conservative)
@@ -464,3 +405,10 @@ class GPT4OAudio(lmms):
     @property
     def world_size(self):
         return self._world_size
+
+    def generate_until_multi_round(self, requests) -> List[str]:
+        raise NotImplementedError("GPT4O-Audio not support")
+
+    def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
+        # TODO
+        assert False, "GPT4O-Audio not support"
