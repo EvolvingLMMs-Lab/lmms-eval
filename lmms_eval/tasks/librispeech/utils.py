@@ -8,6 +8,7 @@ import zhconv  # TODO: new package
 from lmms_eval.tasks.librispeech.cn_tn import TextNorm
 from lmms_eval.tasks.librispeech.whisper_normalizer.basic import BasicTextNormalizer
 from lmms_eval.tasks.librispeech.whisper_normalizer.english import EnglishTextNormalizer
+from typing import Any
 
 # ImportError: To support decoding audio files, please install 'librosa' and 'soundfile'.
 english_normalizer = EnglishTextNormalizer()
@@ -27,15 +28,7 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
 def librispeech_doc_to_audio(doc):
-    # Handle different field names for audio across LibriSpeech datasets
-    # Common field names: audio, file, path, audio_path
-    for audio_field in ["audio", "file", "path", "audio_path"]:
-        if audio_field in doc:
-            return [doc[audio_field]]
-    
-    # If no audio field found, provide helpful error
-    available_fields = list(doc.keys())
-    raise KeyError(f"No audio field found in document. Tried: ['audio', 'file', 'path', 'audio_path']. Available fields: {available_fields}")
+    return [doc["audio"]]
 
 
 def librispeech_doc_to_text(doc, lmms_eval_specific_kwargs):
@@ -47,25 +40,9 @@ def librispeech_doc_to_text(doc, lmms_eval_specific_kwargs):
 def librispeech_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
 
-    # Handle different field names for ground truth across LibriSpeech datasets
-    # - openslr/librispeech_asr uses "gt" 
-    # - lmms-lab/librispeech uses "transcript"
-    if "gt" in doc:
-        gt = doc["gt"]
-    elif "transcript" in doc:
-        gt = doc["transcript"]
-    else:
-        raise KeyError("Neither 'gt' nor 'transcript' field found in document. Available fields: " + str(list(doc.keys())))
-    
-    # Handle potentially missing source field - some datasets may not include this
-    source = doc.get("source", "unknown")
-    
-    # Handle potentially missing task field - infer from dataset context
-    if "task" in doc:
-        task = doc["task"]
-    else:
-        # Infer task from context - LibriSpeech is English ASR
-        task = "asr_en"
+    gt = doc["gt"]
+    source = doc["source"]
+    task = doc["task"]
 
     data_dict = {"gt": gt, "pred": pred, "source": source, "task": task}
 
@@ -203,6 +180,10 @@ def compute_wer(refs, hyps, language):
         distance += ed.eval(ref_items, pred_items)
         ref_length += len(ref_items)
     return distance / ref_length
+
+
+def librispeech_doc_to_target(doc: Any):
+    return doc["gt"]
 
 
 def librispeech_wer(results, args):
