@@ -4,7 +4,7 @@ dataset_kwargs:
 output_type: generate_until
 doc_to_visual: !function utils.openasr_doc_to_audio
 doc_to_text: !function utils.openasr_doc_to_text
-doc_to_target: "gt"
+doc_to_target: !function utils.openasr_doc_to_target
 generation_kwargs:
   max_new_tokens: 4096
   temperature: 0
