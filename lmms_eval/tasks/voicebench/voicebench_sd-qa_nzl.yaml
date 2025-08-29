@@ -1,0 +1,21 @@
+task: "voicebench_sd-qa_nzl"
+dataset_name: "sd-qa"
+test_split: nzl
+include: _default_template_yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    audio_column: "audio"
+    source_text_column: "prompt"
+    target_text_column: "reference"
+
+process_results: !function utils.voicebench_process_results_qa
+
+metric_list:
+  - metric: pedant_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: gpt4_score
+    aggregation: mean
+    higher_is_better: true
