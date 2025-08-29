@@ -1,0 +1,13 @@
+group: step2_audio_paralinguistic
+task:
+  - step2_audio_paralinguistic_age
+  - step2_audio_paralinguistic_emotions
+  - step2_audio_paralinguistic_event
+  - step2_audio_paralinguistic_gender
+  - step2_audio_paralinguistic_pitch
+  - step2_audio_paralinguistic_rhythm
+  - step2_audio_paralinguistic_scene
+  - step2_audio_paralinguistic_speed
+  - step2_audio_paralinguistic_vocalsound
+  - step2_audio_paralinguistic_voice_styles
+  - step2_audio_paralinguistic_voice_tone
