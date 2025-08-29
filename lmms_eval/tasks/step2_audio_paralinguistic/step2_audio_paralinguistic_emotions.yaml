@@ -1,0 +1,7 @@
+﻿task: "step2_audio_paralinguistic_emotions"
+test_split: emotions
+include: _default_template_yaml
+metric_list:
+  - metric: semantic_match
+    aggregation: !function utils.semantic_match_aggregate
+    higher_is_better: true
