@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import tempfile
 import time
 import uuid
 from io import BytesIO
@@ -44,12 +45,14 @@ class AsyncOpenAIChat(lmms):
     def __init__(
         self,
         model_version: str = "grok-2-latest",
+        base_url: str = None,
+        api_key: str = None,
         timeout: int = 600,
         max_retries: int = 5,
         max_size_in_mb: int = 20,
         mcp_server_path: str = None,
         num_cpus: int = None,
-        work_dir: str = "./workspace",
+        work_dir: str = None,
         fps: Optional[int] = None,
         nframes: Optional[int] = 64,
         max_pixels: Optional[int] = 151200,
@@ -65,10 +68,12 @@ class AsyncOpenAIChat(lmms):
             self.num_cpus = cpu_count() // 2
         else:
             self.num_cpus = num_cpus
-        self.work_dir = work_dir
+        self.work_dir = work_dir if work_dir is not None else tempfile.mkdtemp()
         self.fps = fps
         self.nframes = nframes
-        self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"), timeout=timeout)
+        self.base_url = base_url if base_url is not None else os.getenv("OPENAI_API_BASE")
+        self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
+        self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=timeout)
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         if mcp_server_path is not None:
@@ -123,9 +128,9 @@ class AsyncOpenAIChat(lmms):
             for idx, image in enumerate(images):
                 image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
                 image.save(image_path)
-                messages[-1]["content"].append({"type": "text", "text": f"Image {idx} has image path: {image_path}"})
+                messages[-1]["content"].append({"type": "text", "text": f"\nImage {idx} has image path: {image_path}"})
             for idx, video in enumerate(videos):
-                messages[-1]["content"].append({"type": "text", "text": f"Video {idx} has video path: {video}"})
+                messages[-1]["content"].append({"type": "text", "text": f"\nVideo {idx} has video path: {video}"})
 
         payload = {"messages": messages}
         payload["model"] = self.model_version
@@ -153,6 +158,7 @@ class AsyncOpenAIChat(lmms):
 
         while response.choices[0].finish_reason == "tool_calls":
             messages.append({"role": "assistant", "content": last_response})
+            messages.append({"role": "assistant", "tool_calls": response.choices[0].message.tool_calls})
             message = response.choices[0].message
             tool_messages = []
             if message.tool_calls:
@@ -164,13 +170,15 @@ class AsyncOpenAIChat(lmms):
                     tool_messages.append({"role": "tool", "name": call.function.name, "content": []})
                     for content in result.content:
                         tool_message = self.mcp_client.convert_result_to_openai_format(content)
-                        tool_messages[-1]["content"].append(tool_message)
+                        tool_messages[-1]["content"].extend(tool_message)
 
             response = await self.client.chat.completions.create(
                 model=self.model_version,
                 messages=messages + tool_messages,
                 max_tokens=gen_kwargs["max_new_tokens"],
                 temperature=gen_kwargs["temperature"],
+                tools=functions,
+                tool_choice="auto",
             )
             last_response = response.choices[0].message.content
             all_response += last_response
