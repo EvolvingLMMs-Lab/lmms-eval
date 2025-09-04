@@ -251,13 +251,23 @@ class Thyme(Qwen2_5_VLSimple):
 
         text = self.processor.apply_chat_template([conversation_history], tokenize=False, add_generation_prompt=True)
 
+        if process_vision_info is None:
+            raise ImportError(
+                "qwen_vl_utils is required for vision processing. "
+                "Please install it via: pip install qwen-vl-utils"
+            )
         images, videos = process_vision_info([conversation_history])
-        inputs = self.processor(text=text, images=images, videos=videos, padding=True, return_tensors="pt")
+        inputs = self.processor(
+            text=text,
+            images=images,
+            videos=videos,
+            padding=True,
+            return_tensors="pt",
+        )
         if self.device_map == "auto":
             inputs = inputs.to("cuda")
         else:
             inputs = inputs.to(self.device)
-
         generate_kwargs = {"max_new_tokens": 2048, "temperature": None, "do_sample": False, "eos_token_id": self.tokenizer.eos_token_id, "use_cache": True}
 
         generated_ids = self.model.generate(**inputs, **generate_kwargs)
