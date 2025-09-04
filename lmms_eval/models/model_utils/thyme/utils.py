@@ -31,7 +31,8 @@ REASONING_SYS_PROMPT = (
 SIMPLE_SYS_PROMPT = "You are a helpful assistant."
 
 
-def generate_prompt_simple_qa(user_question):
+def generate_prompt_simple_qa(user_question: str) -> str:
+    """Build a minimal VQA prompt that answers directly with no reasoning."""
     # Construct the prompt based on the given requirements
     prompt = (
         "You are an advanced AI assistant specializing in visual question "
