@@ -1,6 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
 # Run and reproduce Thyme results!
 # MME-RealWorld-Lite as an example
-export HF_HOME="~/.cache/huggingface"
+export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
 # pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 # pip3 install qwen_vl_utils autopep8 timeout_decorator
 
