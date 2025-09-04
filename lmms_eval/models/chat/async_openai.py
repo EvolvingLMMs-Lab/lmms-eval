@@ -82,6 +82,22 @@ class AsyncOpenAIChat(lmms):
         else:
             self.mcp_client = None
 
+        accelerator = Accelerator()
+        # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
+        if accelerator.num_processes > 1:
+            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            self.accelerator = accelerator
+            if self.accelerator.is_local_main_process:
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
+        else:
+            self.accelerator = accelerator
+            self._rank = self.accelerator.local_process_index
+            self._world_size = self.accelerator.num_processes
+
+        self.device = self.accelerator.device
+
     @property
     def model(self):
         # returns the model, unwrapping it if using Accelerate
@@ -142,6 +158,8 @@ class AsyncOpenAIChat(lmms):
             gen_kwargs["temperature"] = 0
         if "top_p" not in gen_kwargs:
             gen_kwargs["top_p"] = None
+        if "do_sample" not in gen_kwargs:
+            gen_kwargs["do_sample"] = False
         # payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
         payload["max_tokens"] = gen_kwargs["max_new_tokens"]
         payload["temperature"] = gen_kwargs["temperature"]
