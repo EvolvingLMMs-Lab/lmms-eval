@@ -43,19 +43,19 @@ def generate_prompt_simple_qa(user_question: str) -> str:
     return prompt
 
 
-def generate_prompt_final_qa(user_question, user_image_path):
-    # Construct the prompt based on the given requirements
+def generate_prompt_final_qa(user_question: str, user_image_path: str) -> str:
+    """Build a reasoning-mode VQA prompt with image metadata (WxH)."""
     try:
         with Image.open(user_image_path) as img:
             user_image_size = f"{img.width}x{img.height}"
-    except Exception:
+    except (FileNotFoundError, OSError, IOError):
         user_image_size = "Unable to determine (error reading image)"
 
     prompt = f"""<image>
 {user_question}
 
-### User Image Path:** "{user_image_path}"
-### User Image Size:** "{user_image_size}"
+### User Image Path: "{user_image_path}"
+### User Image Size: "{user_image_size}"
 
 ### **Output Format (strict adherence required):**
 

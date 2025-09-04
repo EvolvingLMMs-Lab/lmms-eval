@@ -3,8 +3,6 @@ import os
 import re
 import tempfile
 import time
-
-# pandayin: used for temporary image file creation
 from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Tuple
 
@@ -33,21 +31,23 @@ from lmms_eval.protocol import ChatMessages
 try:
     from qwen_vl_utils import process_vision_info
 except ImportError:
-    eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
+    process_vision_info = None
+    eval_logger.warning("Failed to import qwen_vl_utils. Please install it via: pip install qwen-vl-utils")
 
 
 @contextmanager
-def extract_user_input(message_list: List[Dict[str, Any]]) -> Generator[Tuple[str, str], None, None]:
+def extract_user_input(message_list: List[Dict[str, Any]]) -> Generator[str, None, None]:
     """
-    Extracts the user's image, and save the image to a temporary file.
+    Context manager that extracts the user's image and saves it to a temporary file if needed.
+
     Args:
         message_list (List[Dict[str, Any]]): A list of user input.
 
     Yields:
-        Generator[Tuple[str, str], None, None]: output image_path.
+        str: Path to the image file (temporary or original).
 
     Raises:
-        ValueError: Not found valid user image.
+        ValueError: If no valid user image is found in the message list.
     """
     user_image = None
 
@@ -84,8 +84,8 @@ class Thyme(Qwen2_5_VLSimple):
         self.max_retry = max_retry
         self.verbose = verbose
 
-    # pandayin: Default behaviour. Thinking with images.
     def _generate_reasoning_mode(self, messages, user_image_path, temp_output_dir=None):
+        """Generate response using reasoning mode with image processing and code execution."""
         formatted_message = self._prepare_content_reasoning(messages, user_image_path)
 
         # Main retry loop
@@ -102,7 +102,7 @@ class Thyme(Qwen2_5_VLSimple):
 
             # Inner iteration loop
             retry_iterations = self.max_iterations
-            # pandayin: I'm tired. So just hard-code the generation kwargs here.
+            # TODO: Move generation parameters to configuration
             generate_kwargs = {
                 "max_new_tokens": 2048,
                 "temperature": 0.01,
@@ -243,8 +243,11 @@ class Thyme(Qwen2_5_VLSimple):
 
         return final_assistant_response, has_valid_answer, total_tokens
 
-    # pandayin: Fall back to simple QA mode when reasoning fails. Directly answer the question.
     def _generate_simple_mode(self, messages):
+        """
+        Generate response using simple QA mode without reasoning.
+        Falls back to this mode when reasoning mode fails.
+        """
         formatted_message = self._prepare_content_simple(messages)
         conversation_history = copy.deepcopy(formatted_message)
         total_tokens = 0
@@ -252,10 +255,7 @@ class Thyme(Qwen2_5_VLSimple):
         text = self.processor.apply_chat_template([conversation_history], tokenize=False, add_generation_prompt=True)
 
         if process_vision_info is None:
-            raise ImportError(
-                "qwen_vl_utils is required for vision processing. "
-                "Please install it via: pip install qwen-vl-utils"
-            )
+            raise ImportError("qwen_vl_utils is required for vision processing. " "Please install it via: pip install qwen-vl-utils")
         images, videos = process_vision_info([conversation_history])
         inputs = self.processor(
             text=text,
@@ -325,19 +325,19 @@ class Thyme(Qwen2_5_VLSimple):
             else:
                 video_kwargs["nframes"] = self.max_num_frames
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
-            # pandayin: For ease of implementation. We assume always batch_size = 1 for generation.
-            # pandayin: Only support single image input for now.
+            # Current implementation supports single image input with batch_size=1
+            if self.batch_size != 1:
+                eval_logger.warning(f"Thyme model currently only supports batch_size=1, got {self.batch_size}")
             answers = []
             cache_contexts = []
             start_time = time.time()
             for current_message in batched_messages:
                 with extract_user_input(current_message) as temp_image_path:
-                    # pandayin: Try reasoning mode first.
-                    # We automatically clean up all the intermediate files in the reasoning mode.
+                    # Try reasoning mode first with automatic cleanup of intermediate files
                     with tempfile.TemporaryDirectory() as temp_dir:
                         final_response, has_valid_answer, generated_total_tokens = self._generate_reasoning_mode(current_message, temp_image_path, temp_dir)
                     if not has_valid_answer:
-                        # pandayin: Fall back to simple QA mode if reasoning fails.
+                        # Fall back to simple QA mode if reasoning fails
                         final_response, generated_total_tokens = self._generate_simple_mode(current_message)
 
                 total_tokens += generated_total_tokens
@@ -352,9 +352,6 @@ class Thyme(Qwen2_5_VLSimple):
             for answer, context in zip(answers, cache_contexts):
                 clean_ans = parse_reasoning_model_answer(answer)
                 res.append(clean_ans)
-                # # ### SQLite-based caching of LMM responses
-                # # pandayin: Pass in attr, req, res, and will store/cache the results for MLLM:
-                # # Like this: dict[hash([attr, req])] = res
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
                 pbar.update(1)
 
@@ -366,8 +363,6 @@ class Thyme(Qwen2_5_VLSimple):
 
         # Calculate average speed
         avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
-
-        e2e_latency = end_time - start_time
         # Log metrics
         metric_dict = {
             "total_tokens": total_tokens,
