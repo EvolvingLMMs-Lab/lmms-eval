@@ -60,7 +60,7 @@ def check_dangerous_code(code_string):
     return False
 
 
-# pandayin: set a time limit to avoid dead loop, e.x., while(1) type loops.
+# Set a time limit to avoid infinite loops
 EXEC_TIME_LIMIT = 10
 # Define the temporary folder for processed images
 # IMPORTANT: Ensure this directory exists and is writable by the script.
@@ -85,7 +85,7 @@ class ReadOnlyPath:
                     f"Warning: Could not make '{self.path}' read-only: {e}",
                     file=sys.stderr,
                 )
-                self.original_permissions = None  # 确保我们不会在退出时尝试恢复权限
+                self.original_permissions = None  # Ensure we don't try to restore permissions on exit
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -130,8 +130,9 @@ def align_first_line_to_second(code_string: str) -> str:
     return "\n".join(lines)
 
 
-def get_image_paths(temp_output_dir):
-    extensions = ["jpg", "jpeg", "png", "bmp", "gif", "tiff"]
+def get_image_paths(temp_output_dir: str) -> list[str]:
+    """Get all image paths from a directory."""
+    extensions = ["jpg", "jpeg", "png", "bmp", "gif", "tiff", "webp"]
     image_paths = []
 
     for ext in extensions:
@@ -454,7 +455,7 @@ class OpenCVNamespaceTransformer(ast.NodeTransformer):
         return self.generic_visit(node)
 
 
-def ensure_temp_dir(temp_output_dir):
+def ensure_temp_dir(temp_output_dir: str) -> None:
     """Ensures the temporary directory for processed images exists."""
     os.makedirs(temp_output_dir, exist_ok=True)
     # Also ensure the directory is writable (basic check)
