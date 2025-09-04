@@ -141,12 +141,12 @@ class AsyncOpenAIChat(lmms):
         messages = chat_messages.to_openai_messages(video_kwargs)
         images, videos, audios = chat_messages.extract_media()
         if self.mcp_client is not None:
-            for idx, image in enumerate(images):
+            for image_idx, image in enumerate(images):
                 image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
                 image.save(image_path)
-                messages[-1]["content"].append({"type": "text", "text": f"\nImage {idx} has image path: {image_path}"})
-            for idx, video in enumerate(videos):
-                messages[-1]["content"].append({"type": "text", "text": f"\nVideo {idx} has video path: {video}"})
+                messages[-1]["content"].append({"type": "text", "text": f"\nImage {image_idx} has image path: {image_path}"})
+            for video_idx, video in enumerate(videos):
+                messages[-1]["content"].append({"type": "text", "text": f"\nVideo {video_idx} has video path: {video}"})
 
         payload = {"messages": messages}
         payload["model"] = self.model_version
