@@ -504,7 +504,10 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             if m + "_stderr" + "," + f in dic:
                 # if dic[m + "_stderr" + "," + f] != []:
                 se = dic[m + "_stderr" + "," + f]
-                se = "   N/A" if se == "N/A" or se == [] else "%.4f" % se
+                try:
+                    se = "   N/A" if se == "N/A" or se == [] else "%.4f" % se
+                except:
+                    se = "N/A"
                 if v != []:
                     values.append([k, version, f, n, m, hib, v, "±", se])
             else:
