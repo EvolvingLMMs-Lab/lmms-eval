@@ -37,10 +37,17 @@ class lmms(abc.ABC):
         self.cache_hook = CacheHook(None)
         self.task_dict = {}
         self.cache_dict = collections.defaultdict(dict)
+        self.initialized_cache_dir = False
+
+    def prepare_cache_dir(self):
+        if self.initialized_cache_dir:
+            return
         # initialize cache directory for this model instance
         resolved_name = self._resolve_model_name_for_cache()
         cache_hash = self.generate_cache_folder_hash_name(resolved_name)
         self._cache_dir = os.path.join(LMMS_EVAL_HOME, "eval_cache", cache_hash)
+        eval_logger.info(f"Resolved model folder for cache: {self._cache_dir}")
+        self.initialized_cache_dir = True
 
     def generate_cache_folder_hash_name(self, model_name: str):
         """
@@ -48,11 +55,15 @@ class lmms(abc.ABC):
         """
         task_dict_keys = list(self.task_dict.keys())
         class_name = type(self).__name__
-        hash_string = model_name + "|" + class_name + "|" + "|".join(task_dict_keys)
+        hash_string = "|".join(task_dict_keys)
 
         text_hash = unicodedata.normalize("NFC", hash_string)
         text_hash = text_hash.replace("\r\n", "\n").replace("\r", "\n")
-        return hashlib.sha256(text_hash.encode("utf-8")).hexdigest()
+
+        hash_string = hashlib.sha256(text_hash.encode("utf-8")).hexdigest()
+        model_name = os.path.basename(model_name)
+        folder_name = class_name + "_" + model_name + "_" + hash_string
+        return folder_name
 
     def _resolve_model_name_for_cache(self) -> str:
         """
@@ -95,6 +106,7 @@ class lmms(abc.ABC):
 
     def load_cache(self):
         if LMMS_EVAL_USE_CACHE == "True":
+            self.prepare_cache_dir()
             self.cache_dict = self.load_jsonl_cache()
         else:
             self.cache_dict = collections.defaultdict(dict)
@@ -197,6 +209,8 @@ class lmms(abc.ABC):
         """
         Get the response from the cache
         """
+        if LMMS_EVAL_USE_CACHE == "False":
+            return [], requests
         not_cached_requests = []
         responses = []
         for request in requests:
