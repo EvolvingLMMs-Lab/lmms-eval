@@ -1433,6 +1433,8 @@ class ConfigurableTask(Task):
                     # doc=doc,
                     arguments=arg,
                     idx=i,
+                    task_name=self.config.task,
+                    doc_id=doc_id,
                     **kwargs,
                 )
                 for i, arg in enumerate(arguments)
@@ -1452,6 +1454,8 @@ class ConfigurableTask(Task):
                             # doc=doc,
                             arguments=("", "{}".format(choice)),
                             idx=i,
+                            task_name=self.config.task,
+                            doc_id=doc_id,
                             **kwargs,
                         )
                         for i, choice in enumerate(choices)
@@ -1681,7 +1685,7 @@ class ConfigurableMessagesTask(ConfigurableTask):
         assert self.OUTPUT_TYPE == "generate_until", "Currently messages is used for generation only"
 
         arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
-        return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
+        return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, task_name=self.config.task, doc_id=doc_id, **kwargs)
 
     def __repr__(self):
         return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"num_samples={len(self.eval_docs)})"
