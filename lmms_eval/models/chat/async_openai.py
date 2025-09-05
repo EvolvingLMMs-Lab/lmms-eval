@@ -206,9 +206,6 @@ class AsyncOpenAIChat(lmms):
     def generate_until(self, requests) -> List[str]:
         self.load_cache()
         results, requests = self.get_response_from_cache(requests)
-        import pdb
-
-        pdb.set_trace()
 
         async def run():
             res = []
