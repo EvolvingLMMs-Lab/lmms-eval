@@ -47,7 +47,8 @@ class lmms(abc.ABC):
         Generate a cache hash for a model
         """
         task_dict_keys = list(self.task_dict.keys())
-        hash_string = model_name + "|" + "|".join(task_dict_keys)
+        class_name = type(self).__name__
+        hash_string = model_name + "|" + class_name + "|" + "|".join(task_dict_keys)
 
         text_hash = unicodedata.normalize("NFC", hash_string)
         text_hash = text_hash.replace("\r\n", "\n").replace("\r", "\n")
