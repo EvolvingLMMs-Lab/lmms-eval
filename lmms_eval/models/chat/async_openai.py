@@ -200,9 +200,13 @@ class AsyncOpenAIChat(lmms):
             )
             last_response = response.choices[0].message.content
             all_response += last_response
+        self.add_request_response_to_cache(request, all_response)
         return all_response, idx
 
     def generate_until(self, requests) -> List[str]:
+        self.load_cache()
+        results, requests = self.get_response_from_cache(requests)
+
         async def run():
             res = []
             pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
