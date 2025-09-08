@@ -1,0 +1,11 @@
+group: voicebench
+task:
+  - voicebench_advbench
+  - voicebench_alpacaeval
+  - voicebench_bbh
+  - voicebench_commoneval
+  - voicebench_ifeval
+  - voicebench_mmsu
+  - voicebench_openbookqa
+  - voicebench_sd-qa
+  - voicebench_wildvoice

@@ -1,0 +1,14 @@
+group: voicebench_mmsu
+task:
+  - voicebench_mmsu_biology
+  - voicebench_mmsu_business
+  - voicebench_mmsu_chemistry
+  - voicebench_mmsu_economics
+  - voicebench_mmsu_engineering
+  - voicebench_mmsu_health
+  - voicebench_mmsu_history
+  - voicebench_mmsu_law
+  - voicebench_mmsu_other
+  - voicebench_mmsu_philosophy
+  - voicebench_mmsu_physics
+  - voicebench_mmsu_psychology
