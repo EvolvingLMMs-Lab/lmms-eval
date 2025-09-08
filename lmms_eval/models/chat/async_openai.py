@@ -225,6 +225,7 @@ class AsyncOpenAIChat(lmms):
             pbar.close()
             return res
 
-        results = asyncio.run(run())
-        results.sort(key=lambda x: x[1])  # Sort by index to restore original
-        return [content for content, _ in results]
+        eval_results = asyncio.run(run())
+        eval_results.sort(key=lambda x: x[1])  # Sort by index to restore original
+        results = results + [content for content, _ in eval_results]
+        return results
