@@ -70,7 +70,7 @@ class lmms(abc.ABC):
         Best-effort resolution of a human-readable model identifier for cache naming.
         Checks common attributes; falls back to class name.
         """
-        for attr_name in ("model_name", "model_version", "model_id", "pretrained"):
+        for attr_name in ("model_name", "model_version", "model_id", "pretrained", "fps", "max_pixels", "min_pixels"):
             value = getattr(self, attr_name, None)
             if isinstance(value, str) and value:
                 return value
