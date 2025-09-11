@@ -120,6 +120,11 @@ class LongVila(VLLMSimple):
         conversation = self._to_remote_conversation(chat_messages)
 
         # Extract and preprocess media
+        if self.fps:
+            self.model_encoder.config.fps = self.fps
+        else:
+            self.model_encoder.config.num_video_frames = self.max_frame_num
+            self.model_encoder.config.fps = 0
         media = self.extract_media(conversation, self.model_encoder.config)
         if "video" in media and media["video"] is not None:
             media["video"] = [self.process_images(images, self.model_encoder.vision_tower.image_processor, self.model_encoder.config).half() for images in media["video"]]
