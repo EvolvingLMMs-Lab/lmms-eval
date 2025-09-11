@@ -50,3 +50,4 @@ span.log
 uv.lock
 workspace/*
 .claude/*
+remote_code/*
