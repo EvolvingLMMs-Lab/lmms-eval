@@ -22,7 +22,7 @@ warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoProcessor, Gemma3ForConditionalGeneration
+from transformers import AutoTokenizer, AutoProcessor, Gemma3ForConditionalGeneration
 
 
 @register_model("gemma3")
@@ -40,6 +40,7 @@ class Gemma3(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         trust_remote_code: Optional[bool] = True,
         use_cache=True,
+        attn_implementation: Optional[str] = None,
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
@@ -59,17 +60,23 @@ class Gemma3(lmms):
         else:
             self._device = torch.device(device)
             self.device_map = device_map if device_map else device
+        
+        # Prepare model loading arguments
+        model_kwargs = {
+            "torch_dtype": torch.bfloat16,
+            "device_map": self.device_map,
+        }
 
-        self._model = Gemma3ForConditionalGeneration.from_pretrained(pretrained, device_map=self.device_map, torch_dtype=torch.bfloat16, trust_remote_code=trust_remote_code).eval()
+        # Add attention implementation if specified
+        if attn_implementation is not None:
+            model_kwargs["attn_implementation"] = attn_implementation
+
+        self._model = Gemma3ForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code,  device_map=self.device_map)
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
-        # self.tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
-
-        # self.tokenizer.padding_side = "left"
-        # self.tokenizer.pad_token_id = self.tokenizer.eod_id
-        
-        self.prompt = "<img>{}</img>{}"
+    
         self._config = self._model.config
+        self._max_length = kwargs.get("max_length", 2048)
         self.model.tie_weights()
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
@@ -79,8 +86,6 @@ class Gemma3(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
-
-        
 
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
@@ -133,11 +138,6 @@ class Gemma3(lmms):
     @property
     def max_length(self):
         return self._max_length
-
-    # should be deleted since max_new_tokens is decided by gen_kwargs not a model property
-    # @property
-    # def max_new_tokens(self) -> int:
-    #     return 256
 
     @property
     def batch_size(self):
@@ -199,7 +199,7 @@ class Gemma3(lmms):
             elif not isinstance(until, list):
                 raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
             
-            # Avoid using '\n\n' as a stopper for Qwen2.5VL to prevent truncation, which can lead to incorrect results
+            # Avoid using '\n\n' as a stopper to prevent truncation, which can lead to incorrect results
             until = [item for item in until if item != "\n\n"]
             
             if isinstance(contexts, tuple):
@@ -226,10 +226,6 @@ class Gemma3(lmms):
                 processed_visuals = []
                 for visual in visual_list[i]:
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                        vr = decord.VideoReader(visual)
-                        first_frame = vr[0].asnumpy()
-                        height, width = first_frame.shape[:2]
-                        # max_pixels = height * width
                         processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                     elif isinstance(visual, Image.Image):  # Handle both single and multiple images
                         base64_image = visual.convert("RGB")
@@ -238,76 +234,27 @@ class Gemma3(lmms):
                         base64_bytes = base64.b64encode(buffer.getvalue())
                         base64_string = base64_bytes.decode("utf-8")
                         processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
-                        # processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"})
-                        # image_path = "/data/mllm/laolao77/ViRFT_COCO_base65/train-00000-of-00007-images/image_92.png"
-                 
-                        # processed_visuals.append({"type": "image", "image": image_path})
-                        
-                if self.interleave_visuals is False:
-                    message.append(
-                        {
-                            "role": "user",
-                            "content": processed_visuals + [{"type": "text", "text": context}],
-                        }
-                    )
-                    # image_path = "/data/mllm/laolao77/ViRFT_COCO_base65/train-00000-of-00007-images/image_92.png"
-                    # message.append(
-                    #     {
-                    #         "role": "user",
-                    #         "content": [
-                    #             {"type": "image", "image": image_path},
-                    #             {"type": "text", "text": "Detect all objects"}
-                    #         ]
-                    #     }
-                    # )
-                    
-                else:  # currently support find <image x> in the context
-                    assert True, "Interleaving visuals is not implemented yet."
-                    image_placeholders = re.findall(r"<image \d+>", context)
-                    content_parts = []
-                    text_parts = re.split(r"<image \d+>", context)
-                    if text_parts[0]:
-                        content_parts.append({"type": "text", "text": text_parts[0]})
-
-                    for i, placeholder in enumerate(image_placeholders):
-                        img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
-                        image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
-                        if processed_visuals and image_idx < len(processed_visuals):
-                            content_parts.append(processed_visuals[image_idx])
-                        if i + 1 < len(text_parts) and text_parts[i + 1]:
-                            content_parts.append({"type": "text", "text": text_parts[i + 1]})
-
-                    message.append(
-                        {
-                            "role": "user",
-                            "content": content_parts,
-                        }
-                    )
-
+                       
+                message.append(
+                    {
+                        "role": "user",
+                        "content": processed_visuals + [{"type": "text", "text": context}],
+                    }
+                )       
+                
                 batched_messages.append(message)
             
             inputs = self.processor.apply_chat_template(
                 batched_messages, add_generation_prompt=True, tokenize=True,
-                return_dict=True, return_tensors="pt", padding="max_length", pad_to_multiple_of=8, max_length=4096
+                return_dict=True, return_tensors="pt", padding="max_length", pad_to_multiple_of=8, max_length=self.max_length
 
             ).to(self.model.device, dtype=torch.bfloat16)
             
-            for k, v in inputs.items():
-                if isinstance(v, torch.Tensor):
-                    if v.device != self.model.device:
-                        eval_logger.error(f"[Mismatch] Input {k} is on {v.device}, model is on {self.model.device}")
-            # inputs = inputs.to("cuda")
             
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
                 inputs = inputs.to(self.device)
-            from transformers.tokenization_utils_base import BatchEncoding
-
-            # inputs = BatchEncoding({
-            #     k: (v.contiguous() if isinstance(v, torch.Tensor) else v)
-            #     for k, v in inputs.items()
-            # })
 
 
             # Set default generation kwargs
@@ -320,75 +267,22 @@ class Gemma3(lmms):
             # Update with provided kwargs
             current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
 
-            # pad_token_id = self.tokenizer.pad_token_id
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
-
-            # cont = self.model.generate(
-            #     **inputs,
-            #     eos_token_id=self.tokenizer.eos_token_id,
-            #     pad_token_id=pad_token_id,
-            #     do_sample=True if current_gen_kwargs["temperature"] > 0 else False,
-            #     temperature=current_gen_kwargs["temperature"],
-            #     top_p=current_gen_kwargs["top_p"],
-            #     num_beams=current_gen_kwargs["num_beams"],
-            #     max_new_tokens=current_gen_kwargs["max_new_tokens"],
-            #     use_cache=self.use_cache,
-            # )
-            for k, v in inputs.items():
-                if isinstance(v, torch.Tensor):
-                    assert v.device == self.model.device, f"Input {k} on {v.device}, but model is on {self.model.device}"
-            
-            # try:
-            #     with torch.inference_mode():
-            #         cont = self.model.generate(
-            #             **inputs,
-            #             do_sample=False,
-            #             max_new_tokens=100,
-            #         )
-            # except RuntimeError as e:
-            #     eval_logger.error(f"RuntimeError during generation: {e}")
-            #     for k, v in inputs.items():
-            #         eval_logger.error(f"Input dtype {k}: {v.dtype}, shape: {v.shape}, device: {v.device}")
-            #     exit(1)
-            if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 1024
-            if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
-            if "num_beams" not in gen_kwargs:
-                gen_kwargs["num_beams"] = 1
+            if current_gen_kwargs["temperature"] > 0:
+                current_gen_kwargs["do_sample"] = True
+            else:
+                current_gen_kwargs["do_sample"] = False
+                current_gen_kwargs["temperature"] = None
+                current_gen_kwargs["top_p"] = None
         
-            try:
-                # cont = self.model.generate(
-                #     **inputs,
-                #     eos_token_id=self.tokenizer.eos_token_id,
-                #     pad_token_id=pad_token_id,
-                #     do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                #     temperature=gen_kwargs["temperature"],
-                #     top_p=gen_kwargs["top_p"],
-                #     num_beams=gen_kwargs["num_beams"],
-                #     max_new_tokens=gen_kwargs["max_new_tokens"],
-                # )
-                
-                cont = self.model.generate(
-                    **inputs,
-                    # eos_token_id=self.tokenizer.eos_token_id,
-                    # pad_token_id=pad_token_id,
-                    do_sample=False,
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                )
-            except RuntimeError as e:
-                import traceback
-                eval_logger.error(f"RuntimeError during generation: {e}")
-                tb_str = traceback.format_exc()
-                # print(tb_str)
-                # eval_logger.error(tb_str)
-                for k, v in inputs.items():
-                    eval_logger.error(f"Input dtype {k}: {v.dtype}, shape: {v.shape}, device: {v.device}")
-                # print(f"batched_messages: {batched_messages}")
-                print(f"current_gen_kwargs: {current_gen_kwargs}")
-                print(f"Dtype of model : {self.model.dtype}")
+            cont = self.model.generate(
+                **inputs,
+                do_sample=current_gen_kwargs["do_sample"],
+                temperature=current_gen_kwargs["temperature"],
+                top_p=current_gen_kwargs["top_p"],
+                num_beams=current_gen_kwargs["num_beams"],
+                max_new_tokens=current_gen_kwargs["max_new_tokens"],
+                use_cache=self.use_cache
+            )
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
