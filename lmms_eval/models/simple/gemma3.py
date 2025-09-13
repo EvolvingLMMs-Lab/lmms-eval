@@ -1,16 +1,15 @@
-import os
-import uuid
 import base64
+import os
 import re
-
+import uuid
 import warnings
-from typing import List, Optional, Tuple, Union
-from PIL import Image
-import decord
 from io import BytesIO
+from typing import List, Optional, Tuple, Union
 
+import decord
 import torch
 from accelerate import Accelerator, DistributedType
+from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval import utils
@@ -22,7 +21,7 @@ warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
-from transformers import AutoTokenizer, AutoProcessor, Gemma3ForConditionalGeneration
+from transformers import AutoProcessor, AutoTokenizer, Gemma3ForConditionalGeneration
 
 
 @register_model("gemma3")
@@ -60,7 +59,7 @@ class Gemma3(lmms):
         else:
             self._device = torch.device(device)
             self.device_map = device_map if device_map else device
-        
+
         # Prepare model loading arguments
         model_kwargs = {
             "torch_dtype": torch.bfloat16,
@@ -72,9 +71,9 @@ class Gemma3(lmms):
             model_kwargs["attn_implementation"] = attn_implementation
 
         self._model = Gemma3ForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
-        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code,  device_map=self.device_map)
+        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code, device_map=self.device_map)
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
-    
+
         self._config = self._model.config
         self._max_length = kwargs.get("max_length", 2048)
         self.model.tie_weights()
@@ -82,7 +81,7 @@ class Gemma3(lmms):
         self.use_cache = use_cache
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
-        
+
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
@@ -91,7 +90,7 @@ class Gemma3(lmms):
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
         else:
             self.reasoning_prompt = None
-            
+
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
@@ -190,18 +189,18 @@ class Gemma3(lmms):
             split = split[0]
             visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             gen_kwargs = all_gen_kwargs[0]
-            
+
             # Set default until or update values from gen_kwargs if present
             until = gen_kwargs.get("until", [self.tokenizer.decode(self.eot_token_id)])
-            
+
             if isinstance(until, str):
                 until = [until]
             elif not isinstance(until, list):
                 raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
-            
+
             # Avoid using '\n\n' as a stopper to prevent truncation, which can lead to incorrect results
             until = [item for item in until if item != "\n\n"]
-            
+
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
 
@@ -214,11 +213,8 @@ class Gemma3(lmms):
                 if "<image>" in context:
                     context = context.replace("<image>", "")
 
-                message = [{
-                    "role": "system",
-                    "content": [{"type": "text", "text": self.system_prompt}]
-                }]
-                
+                message = [{"role": "system", "content": [{"type": "text", "text": self.system_prompt}]}]
+
                 if self.reasoning_prompt:
                     context = context.strip() + self.reasoning_prompt
                     contexts[i] = context
@@ -234,28 +230,24 @@ class Gemma3(lmms):
                         base64_bytes = base64.b64encode(buffer.getvalue())
                         base64_string = base64_bytes.decode("utf-8")
                         processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
-                       
+
                 message.append(
                     {
                         "role": "user",
                         "content": processed_visuals + [{"type": "text", "text": context}],
                     }
-                )       
-                
-                batched_messages.append(message)
-            
-            inputs = self.processor.apply_chat_template(
-                batched_messages, add_generation_prompt=True, tokenize=True,
-                return_dict=True, return_tensors="pt", padding="max_length", pad_to_multiple_of=8, max_length=self.max_length
+                )
 
-            ).to(self.model.device, dtype=torch.bfloat16)
-            
-            
+                batched_messages.append(message)
+
+            inputs = self.processor.apply_chat_template(batched_messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt", padding="max_length", pad_to_multiple_of=8, max_length=self.max_length).to(
+                self.model.device, dtype=torch.bfloat16
+            )
+
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
                 inputs = inputs.to(self.device)
-
 
             # Set default generation kwargs
             default_gen_kwargs = {
@@ -273,7 +265,7 @@ class Gemma3(lmms):
                 current_gen_kwargs["do_sample"] = False
                 current_gen_kwargs["temperature"] = None
                 current_gen_kwargs["top_p"] = None
-        
+
             cont = self.model.generate(
                 **inputs,
                 do_sample=current_gen_kwargs["do_sample"],
@@ -281,7 +273,7 @@ class Gemma3(lmms):
                 top_p=current_gen_kwargs["top_p"],
                 num_beams=current_gen_kwargs["num_beams"],
                 max_new_tokens=current_gen_kwargs["max_new_tokens"],
-                use_cache=self.use_cache
+                use_cache=self.use_cache,
             )
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
