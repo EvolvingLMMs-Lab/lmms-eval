@@ -301,26 +301,24 @@ class Llava_OneVision1_5(lmms):
             }
             # Update with provided kwargs
             current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
-            pad_token_id = self.tokenizer.pad_token_id
-
-            if current_gen_kwargs["temperature"] > 0:
-                current_gen_kwargs["do_sample"] = True
-            else:
-                current_gen_kwargs["do_sample"] = False
-                current_gen_kwargs["temperature"] = None
-                current_gen_kwargs["top_p"] = None
-
-            cont = self.model.generate(
+            pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+            do_sample = bool(current_gen_kwargs.get("temperature", 0) and current_gen_kwargs["temperature"] > 0)
+            gen_args = {
                 **inputs,
-                eos_token_id=self.tokenizer.eos_token_id,
-                pad_token_id=pad_token_id,
-                do_sample=current_gen_kwargs["do_sample"],
-                temperature=current_gen_kwargs["temperature"],
-                top_p=current_gen_kwargs["top_p"],
-                num_beams=current_gen_kwargs["num_beams"],
-                max_new_tokens=current_gen_kwargs["max_new_tokens"],
-                use_cache=self.use_cache,
-            )
+                "eos_token_id": self.tokenizer.eos_token_id,
+                "pad_token_id": pad_token_id,
+                "num_beams": current_gen_kwargs["num_beams"],
+                "max_new_tokens": current_gen_kwargs["max_new_tokens"],
+                "use_cache": self.use_cache,
+            }
+            if do_sample:
+                gen_args.update(
+                    do_sample=True,
+                    temperature=float(current_gen_kwargs.get("temperature", 1.0)),
+                    top_p=float(current_gen_kwargs.get("top_p", 1.0)),
+                )
+            with torch.inference_mode():
+                cont = self.model.generate(**gen_args)
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
