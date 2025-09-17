@@ -10,11 +10,7 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import (
-    AutoProcessor,
-    AutoTokenizer,
-    AutoModelForCausalLM
-)
+from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -80,11 +76,7 @@ class Llava_OneVision1_5(lmms):
             self.device_map = device_map if device_map else device
 
         # Prepare model loading arguments
-        model_kwargs = {
-            "torch_dtype": "auto",
-            "device_map": self.device_map,
-            "trust_remote_code": True
-        }
+        model_kwargs = {"torch_dtype": "auto", "device_map": self.device_map, "trust_remote_code": True}
 
         # Add attention implementation if specified
         if attn_implementation is not None:
@@ -99,8 +91,8 @@ class Llava_OneVision1_5(lmms):
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
         else:
             self.reasoning_prompt = None
-        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels,trust_remote_code=True)
-        self._tokenizer = AutoTokenizer.from_pretrained(pretrained,trust_remote_code=True)
+        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels, trust_remote_code=True)
+        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=True)
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
 
@@ -241,9 +233,7 @@ class Llava_OneVision1_5(lmms):
                         # max_pixels = height * width
                         processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                     elif isinstance(visual, Image.Image):
-                        processed_visuals.append(
-                            {"type": "image", "image": visual.convert("RGB")}
-                        )
+                        processed_visuals.append({"type": "image", "image": visual.convert("RGB")})
 
                 if self.interleave_visuals is False:
                     message.append(
