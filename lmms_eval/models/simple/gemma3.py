@@ -77,6 +77,7 @@ class Gemma3(lmms):
         except Exception:
             # Fallback to a more generic approach if specific model class not found
             from transformers import AutoModel
+
             self._model = AutoModel.from_pretrained(pretrained, **model_kwargs).eval()
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code, device_map=self.device_map)
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
@@ -166,10 +167,10 @@ class Gemma3(lmms):
 
     def flatten(self, input: List[List]) -> List:
         """Flatten a nested list into a single list.
-        
+
         Args:
             input: A nested list structure
-            
+
         Returns:
             A flattened single-level list
         """
@@ -181,10 +182,10 @@ class Gemma3(lmms):
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """Generate text completions for given requests.
-        
+
         Args:
             requests: List of Instance objects containing generation requests
-            
+
         Returns:
             List of generated text responses
         """
@@ -327,13 +328,13 @@ class Gemma3(lmms):
 
     def generate_until_multi_round(self, requests: List[Instance]) -> List[str]:
         """Generate text in a multi-round conversation format.
-        
+
         Args:
             requests: List of Instance objects for multi-round generation
-            
+
         Returns:
             List of generated responses
-            
+
         Raises:
             NotImplementedError: This method is not yet implemented
         """
