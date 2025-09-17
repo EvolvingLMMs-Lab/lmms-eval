@@ -182,7 +182,7 @@ class SRT_API(lmms):
                     imgs = None
                     break
 
-        time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
+                time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
         if self.add_time_instruction:
             contexts = f"{time_instruciton}\n{contexts}"
         else:
@@ -243,7 +243,7 @@ class SRT_API(lmms):
                     imgs = None
                     break
 
-        time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
+                time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
         if self.add_time_instruction:
             contexts = f"{time_instruciton}\n{contexts}"
         else:
