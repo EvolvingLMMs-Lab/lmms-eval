@@ -13,7 +13,6 @@ from tqdm import tqdm
 from transformers import (
     AutoProcessor,
     AutoTokenizer,
-    Qwen2_5_VLForConditionalGeneration,
     AutoModelForCausalLM
 )
 
@@ -32,12 +31,12 @@ except ImportError:
 class Llava_OneVision1_5(lmms):
     """
     Llava_OneVision1_5 Model
-    "https://huggingface.co/Deep-VLM/LLaVA-One-Vision-1.5-8B-Instruct"
+    "https://huggingface.co/lmms-lab/LLaVA-OneVision-1.5-8B-Instruct"
     """
 
     def __init__(
         self,
-        pretrained: str = "Deep-VLM/LLaVA-One-Vision-1.5-8B-Instruct",
+        pretrained: str = "lmms-lab/LLaVA-OneVision-1.5-8B-Instruct",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
