@@ -25,6 +25,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "fuyu": "Fuyu",
     "gemini_api": "GeminiAPI",
     "gpt4o_audio": "GPT4OAudio",
+    "gemma3": "Gemma3",
     "gpt4v": "GPT4V",
     "idefics2": "Idefics2",
     "instructblip": "InstructBLIP",
