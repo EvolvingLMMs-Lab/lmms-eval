@@ -51,11 +51,12 @@ class Llava_OneVision1_5(lmms):
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
+        max_length: int = 2048,
         **kwargs,
     ) -> None:
         super().__init__()
-        # Do not use kwargs for now
-        assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
+        if kwargs:
+            eval_logger.warning(f"Ignoring unexpected kwargs: {list(kwargs.keys())}")
 
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
@@ -104,7 +105,7 @@ class Llava_OneVision1_5(lmms):
         self.interleave_visuals = interleave_visuals
 
         self._config = self.model.config
-        self._max_length = kwargs.get("max_length", 2048)
+        self._max_length = int(max_length)
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
 
@@ -239,13 +240,10 @@ class Llava_OneVision1_5(lmms):
                         height, width = first_frame.shape[:2]
                         # max_pixels = height * width
                         processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
-                    elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                        base64_image = visual.convert("RGB")
-                        buffer = BytesIO()
-                        base64_image.save(buffer, format="JPEG")
-                        base64_bytes = base64.b64encode(buffer.getvalue())
-                        base64_string = base64_bytes.decode("utf-8")
-                        processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                    elif isinstance(visual, Image.Image):
+                        processed_visuals.append(
+                            {"type": "image", "image": visual.convert("RGB")}
+                        )
 
                 if self.interleave_visuals is False:
                     message.append(
