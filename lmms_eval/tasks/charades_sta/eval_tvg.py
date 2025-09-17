@@ -40,7 +40,7 @@ def extract_time(paragraph):
 
     timestamps = []
     # Check for The given query happens in m - n (seconds)
-    patterns = [r"(\d+\.*\d*)\s*-\s*(\d+\.*\d*)"]
+    patterns = [r"(\d+\.*\d*)\s*[–-]\s*(\d+\.*\d*)"]
 
     for time_pattern in patterns:
         time_matches = re.findall(time_pattern, paragraph)
@@ -84,6 +84,16 @@ def extract_time(paragraph):
             times.append(time_in_sec)
         times = times[: len(times) // 2 * 2]
         timestamps = [(times[i], times[i + 1]) for i in range(0, len(times), 2)]
+    # Fallback: if no timestamps found, search for any two number patterns with dash
+    if len(timestamps) == 0:
+        # More comprehensive pattern to match various formats like:
+        # xx - xx, x.xx s - x.xx s, x.xxs - x.xxs, etc.
+        # Also handle en dash (–) and regular dash (-)
+        fallback_pattern = r"(\d+(?:\.\d+)?)\s*s?\s*[–-]\s*(\d+(?:\.\d+)?)\s*s?"
+        fallback_matches = re.findall(fallback_pattern, paragraph)
+        if fallback_matches:
+            timestamps = [[float(start), float(end)] for start, end in fallback_matches]
+
     results = []
     for start, end in timestamps:
         if end > start:
