@@ -1,3 +1,4 @@
+#!/bin/bash
 # Run and exactly reproduce gemma3 results!
 # mme as an example
 

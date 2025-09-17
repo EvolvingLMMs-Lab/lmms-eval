@@ -1,16 +1,15 @@
 import base64
 import os
-import re
-import uuid
 import warnings
 from io import BytesIO
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-import decord
 import torch
 from accelerate import Accelerator, DistributedType
+from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
+from transformers import AutoModelForVision2Seq, AutoProcessor, AutoTokenizer
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -20,8 +19,10 @@ from lmms_eval.api.registry import register_model
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
-from loguru import logger as eval_logger
-from transformers import AutoProcessor, AutoTokenizer, Gemma3ForConditionalGeneration
+# Constants for default pixel values
+DEFAULT_MIN_PIXELS = 256 * 28 * 28
+DEFAULT_MAX_PIXELS = 1605632
+DEFAULT_MAX_FRAMES = 32
 
 
 @register_model("gemma3")
@@ -40,9 +41,9 @@ class Gemma3(lmms):
         trust_remote_code: Optional[bool] = True,
         use_cache=True,
         attn_implementation: Optional[str] = None,
-        min_pixels: int = 256 * 28 * 28,
-        max_pixels: int = 1605632,
-        max_num_frames: int = 32,
+        min_pixels: int = DEFAULT_MIN_PIXELS,
+        max_pixels: int = DEFAULT_MAX_PIXELS,
+        max_num_frames: int = DEFAULT_MAX_FRAMES,
         interleave_visuals: Optional[bool] = False,
         system_prompt: Optional[str] = "You are a helpful assistant.",
         reasoning_prompt: Optional[str] = None,
@@ -70,13 +71,19 @@ class Gemma3(lmms):
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        self._model = Gemma3ForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
+        # Try to load with AutoModelForVision2Seq which handles various vision-language models
+        try:
+            self._model = AutoModelForVision2Seq.from_pretrained(pretrained, **model_kwargs).eval()
+        except Exception:
+            # Fallback to a more generic approach if specific model class not found
+            from transformers import AutoModel
+            self._model = AutoModel.from_pretrained(pretrained, **model_kwargs).eval()
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code, device_map=self.device_map)
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
 
         self._config = self._model.config
         self._max_length = kwargs.get("max_length", 2048)
-        self.model.tie_weights()
+        self._model.tie_weights()
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
         self.system_prompt = system_prompt
@@ -157,7 +164,15 @@ class Gemma3(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         raise NotImplementedError("Not implemented for Gemma3.")
 
-    def flatten(self, input):
+    def flatten(self, input: List[List]) -> List:
+        """Flatten a nested list into a single list.
+        
+        Args:
+            input: A nested list structure
+            
+        Returns:
+            A flattened single-level list
+        """
         new_list = []
         for i in input:
             for j in i:
@@ -165,6 +180,14 @@ class Gemma3(lmms):
         return new_list
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
+        """Generate text completions for given requests.
+        
+        Args:
+            requests: List of Instance objects containing generation requests
+            
+        Returns:
+            List of generated text responses
+        """
         res = []
 
         def _collate(x):
@@ -221,15 +244,22 @@ class Gemma3(lmms):
 
                 processed_visuals = []
                 for visual in visual_list[i]:
-                    if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                        processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
-                    elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                        base64_image = visual.convert("RGB")
-                        buffer = BytesIO()
-                        base64_image.save(buffer, format="JPEG")
-                        base64_bytes = base64.b64encode(buffer.getvalue())
-                        base64_string = base64_bytes.decode("utf-8")
-                        processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                    try:
+                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                            if not os.path.exists(visual):
+                                eval_logger.warning(f"Video file not found: {visual}")
+                                continue
+                            processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                        elif isinstance(visual, Image.Image):  # Handle both single and multiple images
+                            base64_image = visual.convert("RGB")
+                            buffer = BytesIO()
+                            base64_image.save(buffer, format="JPEG")
+                            base64_bytes = base64.b64encode(buffer.getvalue())
+                            base64_string = base64_bytes.decode("utf-8")
+                            processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                    except Exception as e:
+                        eval_logger.error(f"Failed to process visual: {e}")
+                        continue
 
                 message.append(
                     {
@@ -295,5 +325,16 @@ class Gemma3(lmms):
         pbar.close()
         return res
 
-    def generate_until_multi_round(self, requests) -> List[str]:
+    def generate_until_multi_round(self, requests: List[Instance]) -> List[str]:
+        """Generate text in a multi-round conversation format.
+        
+        Args:
+            requests: List of Instance objects for multi-round generation
+            
+        Returns:
+            List of generated responses
+            
+        Raises:
+            NotImplementedError: This method is not yet implemented
+        """
         raise NotImplementedError("TODO: Implement multi-round generation")
