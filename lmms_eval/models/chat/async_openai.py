@@ -55,6 +55,7 @@ class AsyncOpenAIChat(lmms):
         work_dir: str = None,
         fps: Optional[int] = None,
         nframes: Optional[int] = 64,
+        max_frames: Optional[int] = None,
         max_pixels: Optional[int] = 151200,
         min_pixels: Optional[int] = 28 * 28,
         **kwargs,
@@ -76,6 +77,7 @@ class AsyncOpenAIChat(lmms):
         self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=timeout)
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
+        self.max_frames = max_frames
         if mcp_server_path is not None:
             self.mcp_client = MCPClient(mcp_server_path)
             os.makedirs(self.work_dir, exist_ok=True)
@@ -138,6 +140,8 @@ class AsyncOpenAIChat(lmms):
             video_kwargs["fps"] = self.fps
         else:
             video_kwargs["nframes"] = self.nframes
+        if self.max_frames is not None:
+            video_kwargs["max_frames"] = self.max_frames
         messages = chat_messages.to_openai_messages(video_kwargs)
         images, videos, audios = chat_messages.extract_media()
         if self.mcp_client is not None:
