@@ -9,7 +9,7 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoModelForVision2Seq, AutoProcessor, AutoTokenizer
+from transformers import AutoProcessor, AutoTokenizer, Gemma3ForConditionalGeneration
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -71,14 +71,8 @@ class Gemma3(lmms):
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        # Try to load with AutoModelForVision2Seq which handles various vision-language models
-        try:
-            self._model = AutoModelForVision2Seq.from_pretrained(pretrained, **model_kwargs).eval()
-        except Exception:
-            # Fallback to a more generic approach if specific model class not found
-            from transformers import AutoModel
-
-            self._model = AutoModel.from_pretrained(pretrained, **model_kwargs).eval()
+        # Minimal, generation-capable loader: use the dedicated Gemma3 class
+        self._model = Gemma3ForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code, device_map=self.device_map)
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
 
