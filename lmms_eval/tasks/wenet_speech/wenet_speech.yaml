@@ -1,0 +1,4 @@
+group: wenet_speech
+task:
+  - wenet_speech_dev
+  - wenet_speech_test_meeting
