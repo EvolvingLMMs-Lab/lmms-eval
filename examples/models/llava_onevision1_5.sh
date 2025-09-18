@@ -1,5 +1,4 @@
 export HF_HOME="~/.cache/huggingface"
-export HF_HOME=/vlm/huggingface
 
 # pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 
