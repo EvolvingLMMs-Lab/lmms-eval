@@ -1,0 +1,13 @@
+dataset_path: lmms-lab/voicebench
+dataset_kwargs:
+  token: True
+doc_to_target: "target_text"
+doc_to_visual: !function utils.voicebench_doc_to_audio
+doc_to_text: !function utils.voicebench_doc_to_text
+generation_kwargs:
+  max_new_tokens: 256
+  do_sample: false
+  temperature: 0.0
+
+metadata:
+  version: 0.0

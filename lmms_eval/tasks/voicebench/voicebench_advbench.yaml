@@ -1,0 +1,17 @@
+task: "voicebench_advbench"
+dataset_name: "advbench"
+test_split: test
+include: _default_template_yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    audio_column: "audio"
+    source_text_column: "prompt" 
+
+process_results: !function utils.voicebench_process_results_harm
+
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.voicebench_aggregate_results
+    higher_is_better: true
