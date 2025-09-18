@@ -1,0 +1,17 @@
+task: "voicebench_commoneval"
+dataset_name: "commoneval"
+test_split: test
+include: _default_template_yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    audio_column: "audio"
+    source_text_column: "prompt" 
+
+process_results: !function utils.voicebench_process_results_open
+
+metric_list:
+  - metric: llm_as_judge_eval
+    aggregation: mean
+    higher_is_better: true

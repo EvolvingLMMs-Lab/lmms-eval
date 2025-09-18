@@ -1,0 +1,13 @@
+group: voicebench_sd-qa
+task:
+  - voicebench_sd-qa_aus
+  - voicebench_sd-qa_gbr
+  - voicebench_sd-qa_ind_n
+  - voicebench_sd-qa_ind_s
+  - voicebench_sd-qa_irl
+  - voicebench_sd-qa_kenya
+  - voicebench_sd-qa_nga
+  - voicebench_sd-qa_nzl
+  - voicebench_sd-qa_phl
+  - voicebench_sd-qa_usa
+  - voicebench_sd-qa_zaf
