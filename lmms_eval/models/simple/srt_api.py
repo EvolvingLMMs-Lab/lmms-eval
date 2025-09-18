@@ -182,9 +182,9 @@ class SRT_API(lmms):
                     imgs = None
                     break
 
-                time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
-        if self.add_time_instruction:
-            contexts = f"{time_instruciton}\n{contexts}"
+                time_instruction = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
+        if self.add_time_instruction and self.modality == "video" and imgs is not None:
+            contexts = f"{time_instruction}\n{contexts}"
         else:
             contexts = f"{contexts}"
         # Handling video decode error
@@ -243,9 +243,9 @@ class SRT_API(lmms):
                     imgs = None
                     break
 
-                time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
-        if self.add_time_instruction:
-            contexts = f"{time_instruciton}\n{contexts}"
+                time_instruction = f"The video lasts for {video_time:.2f} seconds, and {len(frames)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
+        if self.add_time_instruction and self.modality == "video" and imgs is not None:
+            contexts = f"{time_instruction}\n{contexts}"
         else:
             contexts = f"{contexts}"
         # Handling video decode error
