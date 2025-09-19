@@ -1,0 +1,25 @@
+group: animalkingdom
+task: animalkingdom_action
+include: animalkingdom.yaml
+dataset_path: luciehmct/animalkingdom-test
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.animalkingdom_doc_to_visual
+doc_to_text: !function utils.animalkingdom_doc_to_text
+doc_to_target: !function utils.animalkingdom_doc_to_target
+process_results: !function utils.animalkingdom_process_results
+lmms_eval_specific_kwargs:
+  subtask: action
+generation_kwargs:
+  until:
+    - "<|im_end|>"
+  temperature: 0.0
+  top_p: 1.0
+  max_new_tokens: 512
+  do_sample: false
+metric_list:
+  - metric: jaccard
+    aggregation: !function utils.animalkingdom_jaccard_aggregation
+    higher_is_better: true
+metadata:
+  version: 1.0
