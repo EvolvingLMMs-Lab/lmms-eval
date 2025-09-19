@@ -1,0 +1,5 @@
+group: mammalps
+task: 
+  - mammalps_animal
+  - mammalps_action
+  - mammalps_activity

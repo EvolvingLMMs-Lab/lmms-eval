@@ -1,0 +1,24 @@
+group: mammalps
+task: mammalps_action
+dataset_path: luciehmct/mammalps
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mammalps_doc_to_visual
+doc_to_text: !function utils.mammalps_doc_to_text
+doc_to_target: !function utils.mammalps_doc_to_target
+process_results: !function utils.mammalps_process_results
+lmms_eval_specific_kwargs:
+  subtask: action
+generation_kwargs:
+  until:
+    - "<|im_end|>"
+  temperature: 0.0
+  top_p: 1.0
+  max_new_tokens: 512
+  do_sample: false
+metric_list:
+  - metric: jaccard
+    aggregation: !function utils.mammalps_jaccard_aggregation
+    higher_is_better: true
+metadata:
+  version: 1.0
