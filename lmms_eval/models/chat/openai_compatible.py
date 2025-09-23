@@ -1,8 +1,8 @@
-import asyncio
 import base64
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from typing import List, Tuple, Union
 
@@ -98,8 +98,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 batch_payloads.append(payload)
                 batch_responses.append(None)  # Placeholder for response
 
-            # Process all payloads concurrently using asyncio.gather
-            async def process_single_request(payload, i):
+            # Process all payloads concurrently using ThreadPoolExecutor
+            def process_single_request(payload, i):
                 if batch_responses[i] is not None:  # Skip cached responses
                     return batch_responses[i], i, 0, 0  # response, index, latency, tokens
                     
@@ -129,26 +129,32 @@ class OpenAICompatible(OpenAICompatibleSimple):
                             eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                             return "", i, 0, 0
                         else:
-                            await asyncio.sleep(self.timeout)
+                            time.sleep(self.timeout)
                 
                 return "", i, 0, 0  # Fallback
 
             # Create tasks for all non-cached requests and run them concurrently
-            async_tasks = [
-                process_single_request(payload, i)
+            tasks_to_run = [
+                (payload, i)
                 for i, payload in enumerate(batch_payloads)
                 if batch_responses[i] is None
             ]
             
-            if async_tasks:  # Only if there are requests to process
-                async def run_batch():
-                    return await asyncio.gather(*async_tasks)
-                
-                results = asyncio.run(run_batch())
-                for response_text, i, latency, tokens in results:
-                    batch_responses[i] = response_text
-                    e2e_latency += latency
-                    total_tokens += tokens
+            if tasks_to_run:  # Only if there are requests to process
+                max_workers = min(len(tasks_to_run), 32)  # Limit concurrent requests
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    # Submit all tasks
+                    future_to_index = {
+                        executor.submit(process_single_request, payload, i): i
+                        for payload, i in tasks_to_run
+                    }
+                    
+                    # Collect results as they complete
+                    for future in as_completed(future_to_index):
+                        response_text, i, latency, tokens = future.result()
+                        batch_responses[i] = response_text
+                        e2e_latency += latency
+                        total_tokens += tokens
 
             # Cache responses if in continual mode
             if self.continual_mode is True:
