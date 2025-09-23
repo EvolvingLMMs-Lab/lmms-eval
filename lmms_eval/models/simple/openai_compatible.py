@@ -279,45 +279,43 @@ class OpenAICompatible(lmms):
                 batch_responses.append(None)  # Placeholder for response
 
             # Process all payloads concurrently using asyncio.gather
-            async def process_batch_async():
-                async def process_single_request(payload, i):
-                    if batch_responses[i] is not None:  # Skip cached responses
-                        return batch_responses[i], i
-                        
-                    for attempt in range(self.max_retries):
-                        try:
-                            response = await self.client.chat.completions.create(**payload)
-                            response_text = response.choices[0].message.content
-                            return response_text, i
-
-                        except Exception as e:
-                            error_msg = str(e)
-                            eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
-
-                            # On last attempt, log error and set empty response
-                            if attempt == self.max_retries - 1:
-                                eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
-                                return "", i
-                            else:
-                                await asyncio.sleep(self.timeout)
+            async def process_single_request(payload, i):
+                if batch_responses[i] is not None:  # Skip cached responses
+                    return batch_responses[i], i
                     
-                    return "", i  # Fallback
+                for attempt in range(self.max_retries):
+                    try:
+                        response = await self.client.chat.completions.create(**payload)
+                        response_text = response.choices[0].message.content
+                        return response_text, i
 
-                # Create tasks for all non-cached requests
-                tasks = [
-                    process_single_request(payload, i)
-                    for i, payload in enumerate(batch_payloads)
-                    if batch_responses[i] is None
-                ]
+                    except Exception as e:
+                        error_msg = str(e)
+                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
+
+                        # On last attempt, log error and set empty response
+                        if attempt == self.max_retries - 1:
+                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
+                            return "", i
+                        else:
+                            await asyncio.sleep(self.timeout)
                 
-                if tasks:  # Only if there are requests to process
-                    results = await asyncio.gather(*tasks)
-                    for response_text, i in results:
-                        batch_responses[i] = response_text
+                return "", i  # Fallback
 
-            # Run the async batch processing
-            if any(response is None for response in batch_responses):
-                asyncio.run(process_batch_async())
+            # Create tasks for all non-cached requests and run them concurrently
+            tasks = [
+                process_single_request(payload, i)
+                for i, payload in enumerate(batch_payloads)
+                if batch_responses[i] is None
+            ]
+            
+            if tasks:  # Only if there are requests to process
+                async def run_batch():
+                    return await asyncio.gather(*tasks)
+                
+                results = asyncio.run(run_batch())
+                for response_text, i in results:
+                    batch_responses[i] = response_text
 
             # Cache responses if in continual mode
             if self.continual_mode is True:
