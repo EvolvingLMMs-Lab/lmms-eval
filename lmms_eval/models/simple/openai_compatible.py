@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import os
@@ -21,7 +22,7 @@ except ImportError:
 
 from dotenv import find_dotenv, load_dotenv
 from loguru import logger as eval_logger
-from openai import AzureOpenAI, DefaultHttpxClient, OpenAI
+from openai import AsyncOpenAI, AzureOpenAI, DefaultHttpxClient, OpenAI
 from PIL import Image
 
 load_dotenv(verbose=True)
@@ -80,7 +81,7 @@ class OpenAICompatible(lmms):
         # allows httpx to ignore proxy server settings set by VPN clients.
         http_client = DefaultHttpxClient(trust_env=httpx_trust_env) if not httpx_trust_env else None
         self.client = (
-            OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"), http_client=http_client)
+            AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"), http_client=http_client)
             if not azure_openai
             else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"), http_client=http_client)
         )
@@ -277,28 +278,46 @@ class OpenAICompatible(lmms):
                 batch_payloads.append(payload)
                 batch_responses.append(None)  # Placeholder for response
 
-            # Process all payloads in the batch (still sequential for OpenAI API, but organized in batches)
-            for i, payload in enumerate(batch_payloads):
-                if batch_responses[i] is not None:  # Skip cached responses
-                    continue
+            # Process all payloads concurrently using asyncio.gather
+            async def process_batch_async():
+                async def process_single_request(payload, i):
+                    if batch_responses[i] is not None:  # Skip cached responses
+                        return batch_responses[i], i
+                        
+                    for attempt in range(self.max_retries):
+                        try:
+                            response = await self.client.chat.completions.create(**payload)
+                            response_text = response.choices[0].message.content
+                            return response_text, i
+
+                        except Exception as e:
+                            error_msg = str(e)
+                            eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
+
+                            # On last attempt, log error and set empty response
+                            if attempt == self.max_retries - 1:
+                                eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
+                                return "", i
+                            else:
+                                await asyncio.sleep(self.timeout)
                     
-                for attempt in range(self.max_retries):
-                    try:
-                        response = self.client.chat.completions.create(**payload)
-                        response_text = response.choices[0].message.content
+                    return "", i  # Fallback
+
+                # Create tasks for all non-cached requests
+                tasks = [
+                    process_single_request(payload, i)
+                    for i, payload in enumerate(batch_payloads)
+                    if batch_responses[i] is None
+                ]
+                
+                if tasks:  # Only if there are requests to process
+                    results = await asyncio.gather(*tasks)
+                    for response_text, i in results:
                         batch_responses[i] = response_text
-                        break  # If successful, break out of the loop
 
-                    except Exception as e:
-                        error_msg = str(e)
-                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
-
-                        # On last attempt, log error and set empty response
-                        if attempt == self.max_retries - 1:
-                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
-                            batch_responses[i] = ""
-                        else:
-                            time.sleep(self.timeout)
+            # Run the async batch processing
+            if any(response is None for response in batch_responses):
+                asyncio.run(process_batch_async())
 
             # Cache responses if in continual mode
             if self.continual_mode is True:
