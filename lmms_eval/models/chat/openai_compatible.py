@@ -41,33 +41,22 @@ class OpenAICompatible(OpenAICompatibleSimple):
     def generate_until(self, requests) -> List[str]:
         res = []
         
-        def _collate(x):
-            # Simple collation for batching
-            return -len(str(x[0])), x[0]
-
-        # Group requests by their generation_kwargs for batching
-        from lmms_eval import utils
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
-        chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
-        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+        # Simple batching without complex collator
+        batch_size = getattr(self, 'batch_size_per_gpu', 1)
+        batched_requests = [requests[i:i + batch_size] for i in range(0, len(requests), batch_size)]
+        pbar = tqdm(total=len(batched_requests), disable=(self.rank != 0), desc="Model Responding")
 
         e2e_latency = 0
         total_tokens = 0
         
-        for chunk in chunks:
-            contexts, all_doc_to_messages, all_gen_kwargs, doc_ids, tasks, splits = zip(*chunk)
-            # Assume all gen kwargs in the batch are the same
-            gen_kwargs = all_gen_kwargs[0]
-            task = tasks[0]
-            split = splits[0]
-            
+        for batch_requests in batched_requests:
             batch_payloads = []
             batch_doc_uuids = []
             batch_responses = []
             
             # Process each request in the batch
-            for i, (ctx, doc_to_messages, doc_id) in enumerate(zip(contexts, all_doc_to_messages, doc_ids)):
+            for req in batch_requests:
+                ctx, doc_to_messages, gen_kwargs, doc_id, task, split = req.args
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 batch_doc_uuids.append(doc_uuid)
                 
@@ -117,12 +106,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 for attempt in range(self.max_retries):
                     try:
                         start_time = time.time()
-                        # Convert sync client to async if needed
-                        if not isinstance(self.client, AsyncOpenAI):
-                            # Use sync client in thread
-                            response = self.client.chat.completions.create(**payload)
-                        else:
-                            response = await self.client.chat.completions.create(**payload)
+                        response = self.client.chat.completions.create(**payload)
                         end_time = time.time()
 
                         response_text = response.choices[0].message.content
@@ -150,15 +134,15 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 return "", i, 0, 0  # Fallback
 
             # Create tasks for all non-cached requests and run them concurrently
-            tasks = [
+            async_tasks = [
                 process_single_request(payload, i)
                 for i, payload in enumerate(batch_payloads)
                 if batch_responses[i] is None
             ]
             
-            if tasks:  # Only if there are requests to process
+            if async_tasks:  # Only if there are requests to process
                 async def run_batch():
-                    return await asyncio.gather(*tasks)
+                    return await asyncio.gather(*async_tasks)
                 
                 results = asyncio.run(run_batch())
                 for response_text, i, latency, tokens in results:
