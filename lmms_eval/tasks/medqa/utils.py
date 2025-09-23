@@ -1,5 +1,5 @@
 import random
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -120,5 +120,3 @@ def _parse_multi_choice_response(response: str, all_choices: List[str]) -> str:
         start_indexes = [response.rfind(f" {can} ") for can in candidates]
         return candidates[int(np.argmax(start_indexes))]
     return candidates[0]
-
-
