@@ -33,6 +33,8 @@ class OpenAICompatible(lmms):
     def __init__(
         self,
         model_version: str = "grok-2-latest",
+        base_url: str = None,
+        api_key: str = None,
         timeout: int = 10,
         max_retries: int = 5,
         max_size_in_mb: int = 20,
@@ -80,11 +82,20 @@ class OpenAICompatible(lmms):
         # httpx.Client uses macOS proxy server settings. Adding httpx_trust_env option
         # allows httpx to ignore proxy server settings set by VPN clients.
         http_client = DefaultHttpxClient(trust_env=httpx_trust_env) if not httpx_trust_env else None
+        
+        # Use provided parameters or fall back to environment variables
+        api_key = api_key or os.getenv("OPENAI_API_KEY")
+        base_url = base_url or os.getenv("OPENAI_API_BASE")
+        
         self.client = (
-            OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"), http_client=http_client)
+            OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
             if not azure_openai
             else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"), http_client=http_client)
         )
+        
+        # Debug logging to check client type
+        eval_logger.info(f"OpenAI client type: {type(self.client)}")
+        eval_logger.info(f"OpenAI client base_url: {getattr(self.client, 'base_url', 'None')}")
 
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
