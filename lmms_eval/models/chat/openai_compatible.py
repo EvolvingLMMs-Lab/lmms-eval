@@ -22,7 +22,7 @@ except ImportError:
 
 from dotenv import find_dotenv, load_dotenv
 from loguru import logger as eval_logger
-from openai import AsyncOpenAI, AzureOpenAI, OpenAI
+from openai import AzureOpenAI, OpenAI
 from PIL import Image
 
 from lmms_eval.models.model_utils.gen_metrics import log_metrics

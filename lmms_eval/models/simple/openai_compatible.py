@@ -1,8 +1,8 @@
-import asyncio
 import base64
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from typing import List, Tuple, Union
 
@@ -22,7 +22,7 @@ except ImportError:
 
 from dotenv import find_dotenv, load_dotenv
 from loguru import logger as eval_logger
-from openai import AsyncOpenAI, AzureOpenAI, DefaultHttpxClient, OpenAI
+from openai import AzureOpenAI, DefaultHttpxClient, OpenAI
 from PIL import Image
 
 load_dotenv(verbose=True)
@@ -81,7 +81,7 @@ class OpenAICompatible(lmms):
         # allows httpx to ignore proxy server settings set by VPN clients.
         http_client = DefaultHttpxClient(trust_env=httpx_trust_env) if not httpx_trust_env else None
         self.client = (
-            AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"), http_client=http_client)
+            OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_API_BASE"), http_client=http_client)
             if not azure_openai
             else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"), http_client=http_client)
         )
@@ -278,14 +278,14 @@ class OpenAICompatible(lmms):
                 batch_payloads.append(payload)
                 batch_responses.append(None)  # Placeholder for response
 
-            # Process all payloads concurrently using asyncio.gather
-            async def process_single_request(payload, i):
+            # Process all payloads concurrently using ThreadPoolExecutor
+            def process_single_request(payload, i):
                 if batch_responses[i] is not None:  # Skip cached responses
                     return batch_responses[i], i
                     
                 for attempt in range(self.max_retries):
                     try:
-                        response = await self.client.chat.completions.create(**payload)
+                        response = self.client.chat.completions.create(**payload)
                         response_text = response.choices[0].message.content
                         return response_text, i
 
@@ -298,24 +298,30 @@ class OpenAICompatible(lmms):
                             eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                             return "", i
                         else:
-                            await asyncio.sleep(self.timeout)
+                            time.sleep(self.timeout)
                 
                 return "", i  # Fallback
 
             # Create tasks for all non-cached requests and run them concurrently
-            tasks = [
-                process_single_request(payload, i)
+            tasks_to_run = [
+                (payload, i)
                 for i, payload in enumerate(batch_payloads)
                 if batch_responses[i] is None
             ]
             
-            if tasks:  # Only if there are requests to process
-                async def run_batch():
-                    return await asyncio.gather(*tasks)
-                
-                results = asyncio.run(run_batch())
-                for response_text, i in results:
-                    batch_responses[i] = response_text
+            if tasks_to_run:  # Only if there are requests to process
+                max_workers = min(len(tasks_to_run), 32)  # Limit concurrent requests
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    # Submit all tasks
+                    future_to_index = {
+                        executor.submit(process_single_request, payload, i): i
+                        for payload, i in tasks_to_run
+                    }
+                    
+                    # Collect results as they complete
+                    for future in as_completed(future_to_index):
+                        response_text, i = future.result()
+                        batch_responses[i] = response_text
 
             # Cache responses if in continual mode
             if self.continual_mode is True:
