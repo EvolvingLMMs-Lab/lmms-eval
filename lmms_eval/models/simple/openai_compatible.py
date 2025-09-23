@@ -40,6 +40,7 @@ class OpenAICompatible(lmms):
         azure_openai: bool = False,
         max_frames_num: int = 10,
         httpx_trust_env: bool = True,
+        batch_size: int = 64,
         **kwargs,
     ) -> None:
         """
@@ -99,6 +100,27 @@ class OpenAICompatible(lmms):
             self._world_size = self.accelerator.num_processes
 
         self.device = self.accelerator.device
+        self.batch_size_per_gpu = int(batch_size)
+
+    @property
+    def batch_size(self):
+        return self.batch_size_per_gpu
+
+    def tok_encode(self, string: str):
+        # Simple tokenization for batching purposes - just return character count as approximation
+        return list(string.encode('utf-8'))
+
+    def tok_decode(self, tokens):
+        # Simple decode - not used in OpenAI compatible models but needed for interface
+        return ""
+
+    @property
+    def eot_token_id(self):
+        return 0  # Not used in OpenAI compatible models
+
+    @property
+    def rank(self):
+        return self._rank
 
     # Function to encode the image
     def encode_image(self, image: Union[Image.Image, str]):
@@ -157,93 +179,138 @@ class OpenAICompatible(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        
+        def _collate(x):
+            # the negative sign on len(toks) sorts descending - this has a few advantages:
+            # - time estimates will always be over not underestimates, which is more useful for planning
+            # - to know the size of a batch when going through the list, you know the first one is always the batch
+            #   padded context length. this is useful to simplify the batching logic and more importantly to make
+            #   automatic adaptive batches much much easier to implement
+            # - any OOMs will happen right away rather than near the end
+            toks = self.tok_encode(x[0])
+            return -len(toks), x[0]
 
-        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                if doc_uuid in self.response_cache:
-                    response_text = self.response_cache[doc_uuid]
-                    if response_text:
-                        res.append(response_text)
-                        pbar.update(1)
-                        continue
+        # we group requests by their generation_kwargs,
+        # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
+        # in the same batch.
+        from lmms_eval import utils
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
+        chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
+        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+        
+        for chunk in chunks:
+            contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
+            # we assume all gen kwargs in the batch are the same
+            # this is safe to assume because the `grouper` object ensures it.
+            gen_kwargs = all_gen_kwargs[0]
+            task = task[0]
+            split = split[0]
+            
+            batch_payloads = []
+            batch_doc_uuids = []
+            batch_responses = []
+            
+            # Process each request in the batch
+            for i, (context, doc_id_single) in enumerate(zip(contexts, doc_id)):
+                doc_uuid = f"{task}___{split}___{doc_id_single}"
+                batch_doc_uuids.append(doc_uuid)
+                
+                # Check cache first if in continual mode
+                if self.continual_mode is True and self.cache_mode == "resume":
+                    if doc_uuid in self.response_cache:
+                        response_text = self.response_cache[doc_uuid]
+                        if response_text:
+                            batch_responses.append(response_text)
+                            continue
 
-            visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-            if None in visuals:
-                visuals = []
-                imgs = []
-            else:
-                visuals = self.flatten(visuals)
-                imgs = []  # multiple images or frames for video
-                for visual in visuals:
-                    if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
-                        frames = self.encode_video(visual, self.max_frames_num)
-                        imgs.extend(frames)
-                    elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
-                        img = self.encode_image(visual)
-                        imgs.append(img)
-                    elif isinstance(visual, Image.Image):
-                        img = self.encode_image(visual)
-                        imgs.append(img)
+                visuals = [doc_to_visual[i](self.task_dict[task][split][doc_id_single])]
+                if None in visuals:
+                    visuals = []
+                    imgs = []
+                else:
+                    visuals = self.flatten(visuals)
+                    imgs = []  # multiple images or frames for video
+                    for visual in visuals:
+                        if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
+                            frames = self.encode_video(visual, self.max_frames_num)
+                            imgs.extend(frames)
+                        elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
+                            img = self.encode_image(visual)
+                            imgs.append(img)
+                        elif isinstance(visual, Image.Image):
+                            img = self.encode_image(visual)
+                            imgs.append(img)
 
-            payload = {"messages": []}
-            payload["model"] = self.model_version
+                payload = {"messages": []}
+                payload["model"] = self.model_version
 
-            # When there is no image token in the context, append the image to the text
-            payload["messages"].append({"role": "user", "content": []})
-            payload["messages"][0]["content"].append({"type": "text", "text": contexts})
-            for img in imgs:
-                payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+                # When there is no image token in the context, append the image to the text
+                payload["messages"].append({"role": "user", "content": []})
+                payload["messages"][0]["content"].append({"type": "text", "text": context})
+                for img in imgs:
+                    payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
 
-            if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 1024
-            if gen_kwargs["max_new_tokens"] > 4096:
-                gen_kwargs["max_new_tokens"] = 4096
-            if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
-            if "num_beams" not in gen_kwargs:
-                gen_kwargs["num_beams"] = 1
+                if "max_new_tokens" not in gen_kwargs:
+                    gen_kwargs["max_new_tokens"] = 1024
+                if gen_kwargs["max_new_tokens"] > 4096:
+                    gen_kwargs["max_new_tokens"] = 4096
+                if "temperature" not in gen_kwargs:
+                    gen_kwargs["temperature"] = 0
+                if "top_p" not in gen_kwargs:
+                    gen_kwargs["top_p"] = None
+                if "num_beams" not in gen_kwargs:
+                    gen_kwargs["num_beams"] = 1
 
-            # payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
-            payload["max_tokens"] = gen_kwargs["max_new_tokens"]
-            payload["temperature"] = gen_kwargs["temperature"]
+                # payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
+                payload["max_tokens"] = gen_kwargs["max_new_tokens"]
+                payload["temperature"] = gen_kwargs["temperature"]
 
-            if "o1" in self.model_version or "o3" in self.model_version:
-                # del payload["max_output_tokens"]
-                del payload["temperature"]
-                payload["reasoning_effort"] = "medium"
-                payload["response_format"] = {"type": "text"}
-                payload.pop("max_tokens")
-                payload["max_completion_tokens"] = gen_kwargs["max_tokens"]
+                if "o1" in self.model_version or "o3" in self.model_version:
+                    # del payload["max_output_tokens"]
+                    del payload["temperature"]
+                    payload["reasoning_effort"] = "medium"
+                    payload["response_format"] = {"type": "text"}
+                    payload.pop("max_tokens")
+                    payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
 
-            for attempt in range(self.max_retries):
-                try:
-                    response = self.client.chat.completions.create(**payload)
-                    response_text = response.choices[0].message.content
-                    break  # If successful, break out of the loop
+                batch_payloads.append(payload)
+                batch_responses.append(None)  # Placeholder for response
 
-                except Exception as e:
-                    error_msg = str(e)
-                    eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
+            # Process all payloads in the batch (still sequential for OpenAI API, but organized in batches)
+            for i, payload in enumerate(batch_payloads):
+                if batch_responses[i] is not None:  # Skip cached responses
+                    continue
+                    
+                for attempt in range(self.max_retries):
+                    try:
+                        response = self.client.chat.completions.create(**payload)
+                        response_text = response.choices[0].message.content
+                        batch_responses[i] = response_text
+                        break  # If successful, break out of the loop
 
-                    # On last attempt, log error and set empty response
-                    if attempt == self.max_retries - 1:
-                        eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
-                        response_text = ""
-                    else:
-                        time.sleep(self.timeout)
+                    except Exception as e:
+                        error_msg = str(e)
+                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
 
-            res.append(response_text)
-            pbar.update(1)
+                        # On last attempt, log error and set empty response
+                        if attempt == self.max_retries - 1:
+                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
+                            batch_responses[i] = ""
+                        else:
+                            time.sleep(self.timeout)
 
-            if self.continual_mode is True:  # Cache the response
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                self.response_cache[doc_uuid] = response_text
+            # Cache responses if in continual mode
+            if self.continual_mode is True:
+                for doc_uuid, response_text in zip(batch_doc_uuids, batch_responses):
+                    if response_text is not None:
+                        self.response_cache[doc_uuid] = response_text
                 with open(self.response_persistent_file, "w") as f:
                     json.dump(self.response_cache, f)
+
+            # Add all batch responses to results
+            res.extend([r for r in batch_responses if r is not None])
+            pbar.update(1)
 
         pbar.close()
         return res
