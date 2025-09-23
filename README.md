@@ -153,6 +153,12 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/llava_onevision.sh
 ```
 
+**Evaluation of LLaVA-OneVision1_5**
+
+```bash
+bash examples/models/llava_onevision1_5.sh
+```
+
 **Evaluation of LLaMA-3.2-Vision**
 
 ```bash
