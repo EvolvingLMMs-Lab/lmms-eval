@@ -83,30 +83,30 @@ class OpenAICompatible(lmms):
         # httpx.Client uses macOS proxy server settings. Adding httpx_trust_env option
         # allows httpx to ignore proxy server settings set by VPN clients.
         http_client = DefaultHttpxClient(trust_env=httpx_trust_env) if not httpx_trust_env else None
-        
+
         # Use provided parameters or fall back to environment variables
         api_key = api_key or os.getenv("OPENAI_API_KEY")
         base_url = base_url or os.getenv("OPENAI_API_BASE")
-        
+
         # Fix URL encoding issue - decode if it's URL encoded
-        if base_url and '%' in base_url:
+        if base_url and "%" in base_url:
             base_url = unquote(base_url)
             eval_logger.info(f"Decoded base_url: {base_url}")
-        
+
         # Remove trailing slash if present
-        if base_url and base_url.endswith('/'):
-            base_url = base_url.rstrip('/')
+        if base_url and base_url.endswith("/"):
+            base_url = base_url.rstrip("/")
             eval_logger.info(f"Cleaned base_url: {base_url}")
-        
+
         # Debug: Check the final base_url value
         eval_logger.info(f"Final base_url: {repr(base_url)}")
-        
+
         self.client = (
             OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
             if not azure_openai
             else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"), http_client=http_client)
         )
-        
+
         # Debug logging to check client type
         eval_logger.info(f"OpenAI client type: {type(self.client)}")
         eval_logger.info(f"OpenAI client base_url: {getattr(self.client, 'base_url', 'None')}")
@@ -134,7 +134,7 @@ class OpenAICompatible(lmms):
 
     def tok_encode(self, string: str):
         # Simple tokenization for batching purposes - just return character count as approximation
-        return list(string.encode('utf-8'))
+        return list(string.encode("utf-8"))
 
     def tok_decode(self, tokens):
         # Simple decode - not used in OpenAI compatible models but needed for interface
@@ -205,7 +205,7 @@ class OpenAICompatible(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        
+
         def _collate(x):
             # the negative sign on len(toks) sorts descending - this has a few advantages:
             # - time estimates will always be over not underestimates, which is more useful for planning
@@ -220,11 +220,12 @@ class OpenAICompatible(lmms):
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
         from lmms_eval import utils
+
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
-        
+
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             # we assume all gen kwargs in the batch are the same
@@ -232,16 +233,16 @@ class OpenAICompatible(lmms):
             gen_kwargs = all_gen_kwargs[0]
             task = task[0]
             split = split[0]
-            
+
             batch_payloads = []
             batch_doc_uuids = []
             batch_responses = []
-            
+
             # Process each request in the batch
             for i, (context, doc_id_single) in enumerate(zip(contexts, doc_id)):
                 doc_uuid = f"{task}___{split}___{doc_id_single}"
                 batch_doc_uuids.append(doc_uuid)
-                
+
                 # Check cache first if in continual mode
                 if self.continual_mode is True and self.cache_mode == "resume":
                     if doc_uuid in self.response_cache:
@@ -307,7 +308,7 @@ class OpenAICompatible(lmms):
             def process_single_request(payload, i):
                 if batch_responses[i] is not None:  # Skip cached responses
                     return batch_responses[i], i
-                    
+
                 for attempt in range(self.max_retries):
                     try:
                         response = self.client.chat.completions.create(**payload)
@@ -324,25 +325,18 @@ class OpenAICompatible(lmms):
                             return "", i
                         else:
                             time.sleep(self.timeout)
-                
+
                 return "", i  # Fallback
 
             # Create tasks for all non-cached requests and run them concurrently
-            tasks_to_run = [
-                (payload, i)
-                for i, payload in enumerate(batch_payloads)
-                if batch_responses[i] is None
-            ]
-            
+            tasks_to_run = [(payload, i) for i, payload in enumerate(batch_payloads) if batch_responses[i] is None]
+
             if tasks_to_run:  # Only if there are requests to process
                 max_workers = min(len(tasks_to_run), 32)  # Limit concurrent requests
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     # Submit all tasks
-                    future_to_index = {
-                        executor.submit(process_single_request, payload, i): i
-                        for payload, i in tasks_to_run
-                    }
-                    
+                    future_to_index = {executor.submit(process_single_request, payload, i): i for payload, i in tasks_to_run}
+
                     # Collect results as they complete
                     for future in as_completed(future_to_index):
                         response_text, i = future.result()
