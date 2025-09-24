@@ -1,0 +1,28 @@
+dataset_path: lmms-lab/LVBench
+dataset_kwargs:
+  token: True
+  cache_dir: lvbench
+  video: True
+  # From_YouTube: True
+test_split: train
+task: lvbench
+output_type: generate_until
+doc_to_visual: !function utils.lvbench_doc_to_visual
+doc_to_text: !function utils.lvbench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+# The return value of process_results will be used by metrics
+process_results: !function utils.lvbench_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: lvbench_score
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question with the option letter"
+metadata:
+  - version: 0.0
+

@@ -75,6 +75,8 @@ class VLLM(VLLMSimple):
 
     def generate_until(self, requests) -> List[str]:
         res = []
+        self.load_cache()
+        res, requests = self.get_response_from_cache(requests)
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
@@ -99,6 +101,8 @@ class VLLM(VLLMSimple):
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]
+            for req, text in zip(batch_requests, response_text):
+                self.add_request_response_to_cache(req, text)
 
             # Calculate timing metrics for batch
             e2e_latency += end_time - start_time

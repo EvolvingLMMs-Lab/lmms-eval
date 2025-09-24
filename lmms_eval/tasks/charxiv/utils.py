@@ -53,7 +53,7 @@ def charxiv_descriptive_process_docs(dataset: Dataset) -> Dataset:
         example[f"descriptive_a"] = example[f"descriptive_a{q_number}"]
         return {"qid": qid, **example}
 
-    dataset = dataset.map(_process_row, with_indices=True, num_proc=4)
+    dataset = dataset.map(_process_row, with_indices=True, num_proc=1)
     return dataset
 
 
