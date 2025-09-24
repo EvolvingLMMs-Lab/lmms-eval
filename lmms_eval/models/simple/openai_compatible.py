@@ -8,7 +8,6 @@ from typing import List, Tuple, Union
 from urllib.parse import unquote
 
 import numpy as np
-import requests as url_requests
 from accelerate import Accelerator, DistributedType
 from tqdm import tqdm
 
@@ -21,7 +20,7 @@ try:
 except ImportError:
     pass
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 from loguru import logger as eval_logger
 from openai import AzureOpenAI, DefaultHttpxClient, OpenAI
 from PIL import Image
