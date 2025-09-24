@@ -106,10 +106,6 @@ class OpenAICompatible(lmms):
             else AzureOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"), azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"), api_version=os.getenv("AZURE_OPENAI_API_VERSION"), http_client=http_client)
         )
 
-        # Debug logging to check client type
-        eval_logger.info(f"OpenAI client type: {type(self.client)}")
-        eval_logger.info(f"OpenAI client base_url: {getattr(self.client, 'base_url', 'None')}")
-
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:

@@ -93,19 +93,10 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 if batch_responses[i] is not None:  # Skip cached responses
                     return batch_responses[i], i, 0, 0  # response, index, latency, tokens
 
-                # Debug: Check client type before making request
-                eval_logger.info(f"Client type in process_single_request: {type(self.client)}")
-                eval_logger.info(f"Client base_url: {getattr(self.client, 'base_url', 'None')}")
-
                 for attempt in range(self.max_retries):
                     try:
                         start_time = time.time()
-
-                        # Debug: Check what create() returns
-                        eval_logger.info("About to call client.chat.completions.create")
                         response = self.client.chat.completions.create(**payload)
-                        eval_logger.info(f"Response type: {type(response)}")
-
                         end_time = time.time()
 
                         response_text = response.choices[0].message.content
@@ -123,7 +114,6 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     except Exception as e:
                         error_msg = str(e)
                         eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
-                        eval_logger.info(f"Exception type: {type(e)}")
 
                         if attempt == self.max_retries - 1:
                             eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
