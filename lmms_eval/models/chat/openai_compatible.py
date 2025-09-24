@@ -1,18 +1,10 @@
-import base64
 import json
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from io import BytesIO
-from typing import List, Tuple, Union
+from typing import List
 
-import numpy as np
-import requests as url_requests
-from accelerate import Accelerator, DistributedType
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
 try:
@@ -20,10 +12,8 @@ try:
 except ImportError:
     pass
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 from loguru import logger as eval_logger
-from openai import AzureOpenAI, OpenAI
-from PIL import Image
 
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.openai_compatible import (
@@ -112,7 +102,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         start_time = time.time()
 
                         # Debug: Check what create() returns
-                        eval_logger.info(f"About to call client.chat.completions.create")
+                        eval_logger.info("About to call client.chat.completions.create")
                         response = self.client.chat.completions.create(**payload)
                         eval_logger.info(f"Response type: {type(response)}")
 
