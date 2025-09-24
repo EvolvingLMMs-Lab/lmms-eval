@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from typing import List, Tuple, Union
+from urllib.parse import unquote
 
 import numpy as np
 import requests as url_requests
@@ -86,6 +87,19 @@ class OpenAICompatible(lmms):
         # Use provided parameters or fall back to environment variables
         api_key = api_key or os.getenv("OPENAI_API_KEY")
         base_url = base_url or os.getenv("OPENAI_API_BASE")
+        
+        # Fix URL encoding issue - decode if it's URL encoded
+        if base_url and '%' in base_url:
+            base_url = unquote(base_url)
+            eval_logger.info(f"Decoded base_url: {base_url}")
+        
+        # Remove trailing slash if present
+        if base_url and base_url.endswith('/'):
+            base_url = base_url.rstrip('/')
+            eval_logger.info(f"Cleaned base_url: {base_url}")
+        
+        # Debug: Check the final base_url value
+        eval_logger.info(f"Final base_url: {repr(base_url)}")
         
         self.client = (
             OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
