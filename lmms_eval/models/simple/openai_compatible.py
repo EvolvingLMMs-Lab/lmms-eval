@@ -90,15 +90,10 @@ class OpenAICompatible(lmms):
         # Fix URL encoding issue - decode if it's URL encoded
         if base_url and "%" in base_url:
             base_url = unquote(base_url)
-            eval_logger.info(f"Decoded base_url: {base_url}")
 
         # Remove trailing slash if present
         if base_url and base_url.endswith("/"):
             base_url = base_url.rstrip("/")
-            eval_logger.info(f"Cleaned base_url: {base_url}")
-
-        # Debug: Check the final base_url value
-        eval_logger.info(f"Final base_url: {repr(base_url)}")
 
         self.client = (
             OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
@@ -128,16 +123,14 @@ class OpenAICompatible(lmms):
         return self.batch_size_per_gpu
 
     def tok_encode(self, string: str):
-        # Simple tokenization for batching purposes - just return character count as approximation
         return list(string.encode("utf-8"))
 
     def tok_decode(self, tokens):
-        # Simple decode - not used in OpenAI compatible models but needed for interface
         return ""
 
     @property
     def eot_token_id(self):
-        return 0  # Not used in OpenAI compatible models
+        return 0
 
     @property
     def rank(self):
@@ -202,18 +195,9 @@ class OpenAICompatible(lmms):
         res = []
 
         def _collate(x):
-            # the negative sign on len(toks) sorts descending - this has a few advantages:
-            # - time estimates will always be over not underestimates, which is more useful for planning
-            # - to know the size of a batch when going through the list, you know the first one is always the batch
-            #   padded context length. this is useful to simplify the batching logic and more importantly to make
-            #   automatic adaptive batches much much easier to implement
-            # - any OOMs will happen right away rather than near the end
             toks = self.tok_encode(x[0])
             return -len(toks), x[0]
 
-        # we group requests by their generation_kwargs,
-        # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
-        # in the same batch.
         from lmms_eval import utils
 
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
@@ -223,8 +207,6 @@ class OpenAICompatible(lmms):
 
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-            # we assume all gen kwargs in the batch are the same
-            # this is safe to assume because the `grouper` object ensures it.
             gen_kwargs = all_gen_kwargs[0]
             task = task[0]
             split = split[0]
@@ -233,12 +215,10 @@ class OpenAICompatible(lmms):
             batch_doc_uuids = []
             batch_responses = []
 
-            # Process each request in the batch
             for i, (context, doc_id_single) in enumerate(zip(contexts, doc_id)):
                 doc_uuid = f"{task}___{split}___{doc_id_single}"
                 batch_doc_uuids.append(doc_uuid)
 
-                # Check cache first if in continual mode
                 if self.continual_mode is True and self.cache_mode == "resume":
                     if doc_uuid in self.response_cache:
                         response_text = self.response_cache[doc_uuid]
@@ -252,7 +232,7 @@ class OpenAICompatible(lmms):
                     imgs = []
                 else:
                     visuals = self.flatten(visuals)
-                    imgs = []  # multiple images or frames for video
+                    imgs = []
                     for visual in visuals:
                         if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
                             frames = self.encode_video(visual, self.max_frames_num)
@@ -267,7 +247,6 @@ class OpenAICompatible(lmms):
                 payload = {"messages": []}
                 payload["model"] = self.model_version
 
-                # When there is no image token in the context, append the image to the text
                 payload["messages"].append({"role": "user", "content": []})
                 payload["messages"][0]["content"].append({"type": "text", "text": context})
                 for img in imgs:
@@ -284,12 +263,10 @@ class OpenAICompatible(lmms):
                 if "num_beams" not in gen_kwargs:
                     gen_kwargs["num_beams"] = 1
 
-                # payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
                 payload["max_tokens"] = gen_kwargs["max_new_tokens"]
                 payload["temperature"] = gen_kwargs["temperature"]
 
                 if "o1" in self.model_version or "o3" in self.model_version:
-                    # del payload["max_output_tokens"]
                     del payload["temperature"]
                     payload["reasoning_effort"] = "medium"
                     payload["response_format"] = {"type": "text"}
@@ -297,11 +274,10 @@ class OpenAICompatible(lmms):
                     payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
 
                 batch_payloads.append(payload)
-                batch_responses.append(None)  # Placeholder for response
+                batch_responses.append(None)
 
-            # Process all payloads concurrently using ThreadPoolExecutor
             def process_single_request(payload, i):
-                if batch_responses[i] is not None:  # Skip cached responses
+                if batch_responses[i] is not None:
                     return batch_responses[i], i
 
                 for attempt in range(self.max_retries):
@@ -314,30 +290,25 @@ class OpenAICompatible(lmms):
                         error_msg = str(e)
                         eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
 
-                        # On last attempt, log error and set empty response
                         if attempt == self.max_retries - 1:
                             eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                             return "", i
                         else:
                             time.sleep(self.timeout)
 
-                return "", i  # Fallback
+                return "", i
 
-            # Create tasks for all non-cached requests and run them concurrently
             tasks_to_run = [(payload, i) for i, payload in enumerate(batch_payloads) if batch_responses[i] is None]
 
-            if tasks_to_run:  # Only if there are requests to process
-                max_workers = min(len(tasks_to_run), 32)  # Limit concurrent requests
+            if tasks_to_run:
+                max_workers = min(len(tasks_to_run), 32)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Submit all tasks
                     future_to_index = {executor.submit(process_single_request, payload, i): i for payload, i in tasks_to_run}
 
-                    # Collect results as they complete
                     for future in as_completed(future_to_index):
                         response_text, i = future.result()
                         batch_responses[i] = response_text
 
-            # Cache responses if in continual mode
             if self.continual_mode is True:
                 for doc_uuid, response_text in zip(batch_doc_uuids, batch_responses):
                     if response_text is not None:
@@ -345,7 +316,6 @@ class OpenAICompatible(lmms):
                 with open(self.response_persistent_file, "w") as f:
                     json.dump(self.response_cache, f)
 
-            # Add all batch responses to results
             res.extend([r for r in batch_responses if r is not None])
             pbar.update(1)
 

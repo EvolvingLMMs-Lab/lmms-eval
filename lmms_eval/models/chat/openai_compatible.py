@@ -31,7 +31,6 @@ class OpenAICompatible(OpenAICompatibleSimple):
     def generate_until(self, requests) -> List[str]:
         res = []
 
-        # Simple batching without complex collator
         batch_size = getattr(self, "batch_size_per_gpu", 1)
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         pbar = tqdm(total=len(batched_requests), disable=(self.rank != 0), desc="Model Responding")
@@ -44,13 +43,11 @@ class OpenAICompatible(OpenAICompatibleSimple):
             batch_doc_uuids = []
             batch_responses = []
 
-            # Process each request in the batch
             for req in batch_requests:
                 ctx, doc_to_messages, gen_kwargs, doc_id, task, split = req.args
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 batch_doc_uuids.append(doc_uuid)
 
-                # Check cache first if in continual mode
                 if self.continual_mode is True and self.cache_mode == "resume":
                     if doc_uuid in self.response_cache:
                         response_text = self.response_cache[doc_uuid]
@@ -86,12 +83,11 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
 
                 batch_payloads.append(payload)
-                batch_responses.append(None)  # Placeholder for response
+                batch_responses.append(None)
 
-            # Process all payloads concurrently using ThreadPoolExecutor
             def process_single_request(payload, i):
-                if batch_responses[i] is not None:  # Skip cached responses
-                    return batch_responses[i], i, 0, 0  # response, index, latency, tokens
+                if batch_responses[i] is not None:
+                    return batch_responses[i], i, 0, 0
 
                 for attempt in range(self.max_retries):
                     try:
@@ -102,7 +98,6 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         response_text = response.choices[0].message.content
                         latency = end_time - start_time
 
-                        # Get token counts from response if available
                         tokens = 0
                         if hasattr(response, "usage"):
                             tokens = response.usage.completion_tokens
@@ -121,25 +116,21 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         else:
                             time.sleep(self.timeout)
 
-                return "", i, 0, 0  # Fallback
+                return "", i, 0, 0
 
-            # Create tasks for all non-cached requests and run them concurrently
             tasks_to_run = [(payload, i) for i, payload in enumerate(batch_payloads) if batch_responses[i] is None]
 
-            if tasks_to_run:  # Only if there are requests to process
-                max_workers = min(len(tasks_to_run), 32)  # Limit concurrent requests
+            if tasks_to_run:
+                max_workers = min(len(tasks_to_run), 32)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Submit all tasks
                     future_to_index = {executor.submit(process_single_request, payload, i): i for payload, i in tasks_to_run}
 
-                    # Collect results as they complete
                     for future in as_completed(future_to_index):
                         response_text, i, latency, tokens = future.result()
                         batch_responses[i] = response_text
                         e2e_latency += latency
                         total_tokens += tokens
 
-            # Cache responses if in continual mode
             if self.continual_mode is True:
                 for doc_uuid, response_text in zip(batch_doc_uuids, batch_responses):
                     if response_text is not None:
@@ -147,7 +138,6 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 with open(self.response_persistent_file, "w") as f:
                     json.dump(self.response_cache, f)
 
-            # Add all batch responses to results
             res.extend([r for r in batch_responses if r is not None])
             pbar.update(1)
 
