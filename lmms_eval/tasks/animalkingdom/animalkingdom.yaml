@@ -1,0 +1,5 @@
+group: animalkingdom
+task:
+  - animalkingdom_animal
+  - animalkingdom_action  
+  - animalkingdom_activity
