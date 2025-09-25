@@ -7,7 +7,11 @@ import torch
 from decord import VideoReader, cpu
 from PIL import Image
 from pydantic import BaseModel
-from qwen_vl_utils import fetch_video
+
+try:
+    from qwen_vl_utils import fetch_video
+except ImportError:
+    fetch_video = None
 
 
 class ChatTextContent(BaseModel):
@@ -92,6 +96,8 @@ class ChatMessages(BaseModel):
                 elif content.type == "image":
                     openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(content.url)}"}})
                 elif content.type == "video":
+                    if fetch_video is None:
+                        raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
                     video_input = fetch_video({"type": "video", "video": content.url, **video_kwargs})
                     for frame in video_input:
                         image = Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8))
