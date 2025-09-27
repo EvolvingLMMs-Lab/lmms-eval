@@ -245,6 +245,7 @@ python -m lmms_eval --tasks list_with_num
   - egoschema_mcppl
   - egoschema_subset_mcppl
   - egoschema_subset
+- [LEMONADE](https://huggingface.co/datasets/amathislab/LEMONADE) (lemonade)
 - [LongVideoBench](https://github.com/longvideobench/LongVideoBench)
 - [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
   - Global Mode for entire video (moviechat_global)
