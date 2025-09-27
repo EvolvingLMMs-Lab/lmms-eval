@@ -3,48 +3,31 @@ import os
 import cv2
 import numpy as np
 import zipfile
+import yaml
 from collections import defaultdict
+from pathlib import Path
 from PIL import Image
 from typing import Any, Optional
 from huggingface_hub import hf_hub_download
 
-MAX_NUM_FRAMES = 8
-LEMONADE_ZIP_NAMES = [f"videos_batch_{i}.zip" for i in range(5)]
+with open(Path(__file__).parent / "lemonade.yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for line in raw_data:
+        if "!function" not in line:
+            safe_data.append(line)
+
+    config = yaml.safe_load("".join(safe_data))
 
 HF_HOME = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(HF_HOME)
-videos_dir = os.path.join(base_cache_dir, "videos")
+cache_dir = config["dataset_kwargs"]["cache_dir"]
+videos_dir = os.path.join(base_cache_dir, cache_dir)
 
-def download_and_extract_lemonade_videos(data_dir: str) -> None:
-    """
-    Download and extract LEMONADE files from Hugging Face into a local data directory.
+max_num_frames = config.get("lmms_eval_specific_kwargs", {}).get("max_num_frames", 8)
 
-    Args:
-        data_dir: Directory that stores the files.
-    Returns:
-        None
-    """
 
-    os.makedirs(data_dir, exist_ok=True)
-    os.makedirs(videos_dir, exist_ok=True)
-    print(f"Creating videos directory at {videos_dir}...")
-
-    for zip_name in LEMONADE_ZIP_NAMES:
-        print(f"Downloading {zip_name} from Hugging Face...")
-        zip_path = hf_hub_download(
-            repo_id="amathislab/LEMONADE",
-            filename=zip_name,
-            repo_type="dataset",
-            local_dir=os.path.join(base_cache_dir, "lemonade_zips"),
-            local_dir_use_symlinks=False,
-            resume_download=True,
-        )
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(videos_dir)
-
-    print("All videos downloaded and extracted successfully.\n")
-
-def load_video(video_file: str, start_frame: int, end_frame: int, max_num_frames: int = MAX_NUM_FRAMES) -> list[Image.Image]:
+def load_video(video_file: str, start_frame: int, end_frame: int, max_num_frames: int = max_num_frames) -> list[Image.Image]:
     """
     Args:
         video_file: Path to the video file.
@@ -109,17 +92,13 @@ def lemonade_doc_to_visual(doc: dict[str, Any]) -> list[Image.Image]:
         frames: List of PIL Image objects representing sampled frames
     """
 
-    if not os.path.exists(videos_dir) or len(os.listdir(videos_dir)) == 0:
-        print("Videos directory is empty — downloading and extracting...\n")
-        download_and_extract_lemonade_videos(base_cache_dir)
-
     video_filename = doc["Clip"] + "_hololens.mp4"
     video_path = os.path.join(videos_dir, video_filename)
 
     if os.path.exists(video_path):
         start = int(doc["Start"])
         end = int(doc["End"])
-        frames = load_video(video_path, start, end, max_num_frames=MAX_NUM_FRAMES)
+        frames = load_video(video_path, start, end, max_num_frames=max_num_frames)
     else:
         raise FileNotFoundError(
             f"Video file not found: {video_path}. "

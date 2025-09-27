@@ -1,4 +1,8 @@
 dataset_path: amathislab/LEMONADE
+dataset_kwargs:
+  video: true
+  cache_dir: lemonade_data
+  force_unzip: true
 task: "lemonade"
 test_split: test
 output_type: generate_until
@@ -21,3 +25,4 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: "Answer the following multiple-choice question using the given images.\n"
     post_prompt: "\nRespond only with the letter of the correct answer."
+  max_num_frames: 8
