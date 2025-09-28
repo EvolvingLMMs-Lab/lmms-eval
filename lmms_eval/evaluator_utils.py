@@ -180,9 +180,11 @@ def print_writeout(task) -> None:
     for inst in task.instances:
         # print the prompt for the first few documents
         if inst.doc_id < 1:
+            # Handle cases where inst.doc might be None (e.g., when using log_samples)
+            target = "N/A (document is None)" if inst.doc is None else task.doc_to_target(inst.doc)
             eval_logger.info(
                 f"Task: {task}; document {inst.doc_id}; context prompt (starting on next line):\
-    \n{inst.args[0]}\n(end of prompt on previous line)\ntarget string or answer choice index (starting on next line):\n{task.doc_to_target(inst.doc)}\n(end of target on previous line)"
+    \n{inst.args[0]}\n(end of prompt on previous line)\ntarget string or answer choice index (starting on next line):\n{target}\n(end of target on previous line)"
             )
             eval_logger.info(f"Request: {str(inst)}")
 
