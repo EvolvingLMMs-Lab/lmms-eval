@@ -177,6 +177,11 @@ def get_subtask_list(task_dict, task_root=None, depth=0):
 
 
 def print_writeout(task) -> None:
+    """Print first few documents for debugging purposes.
+
+    WARNING: This function is intended for debugging only and will significantly
+    impact performance during actual evaluations.
+    """
     for inst in task.instances:
         # print the prompt for the first few documents
         if inst.doc_id < 1:

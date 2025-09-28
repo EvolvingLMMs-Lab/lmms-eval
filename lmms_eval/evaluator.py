@@ -459,6 +459,11 @@ def evaluate(
         )
         eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
         if write_out:
+            eval_logger.warning(
+                "WARNING: --write_out is enabled. This flag is intended for debugging only "
+                "and will print verbose output for the first few documents of each task. "
+                "This may significantly impact performance. Consider using --log_samples instead for production use."
+            )
             print_writeout(task)
         # aggregate Instances by LM method requested to get output.
         for instance in task.instances:

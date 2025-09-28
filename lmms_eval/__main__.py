@@ -165,7 +165,7 @@ def parse_eval_args() -> argparse.Namespace:
         "-w",
         action="store_true",
         default=False,
-        help="Prints the prompt for the first few documents.",
+        help="DEBUGGING ONLY: Prints the prompt for the first few documents. This will impact performance. Use --log_samples for production.",
     )
     parser.add_argument(
         "--log_samples",
