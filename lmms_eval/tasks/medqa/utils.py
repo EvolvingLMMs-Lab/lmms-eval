@@ -3,17 +3,8 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-
+medqa_prompt = """Answer the following multiple choice question. There is only one correct answer. The last line of your response should be in the format 'Answer: $LETTER' (without quotes), where LETTER is one of A, B, C, D, or E."""
 def medqa_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict[str, Any]):
-    """
-    Build the MCQ prompt from MEDQA sample.
-
-    Expected doc fields (from `lmms-lab/MEDQA` parquet):
-    - "question": str
-    - "options": dict mapping letters to option strings (e.g., {"A": "...", "B": "..."})
-    - Some samples may also expose choices as list-like; we normalize to a lettered block.
-    - We do not use visuals for MEDQA.
-    """
     question = doc.get("question", "").strip()
 
     # Normalize options into A..E style lines
@@ -29,10 +20,8 @@ def medqa_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict[str, 
         # Fallback: try to format if already string-like
         options_block = str(options) if options is not None else ""
 
-    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
-    prompt = f"{question}\n{options_block}"
-    return f"{pre_prompt}{prompt}{post_prompt}"
+    prompt = f"{medqa_prompt}\nQuestion: {question}\n{options_block}\n"
+    return f"{prompt}"
 
 
 def medqa_doc_to_target(doc: Dict[str, Any]):
