@@ -459,6 +459,11 @@ def evaluate(
         )
         eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
         if write_out:
+            eval_logger.warning(
+                "DEPRECATION WARNING: --write_out is deprecated and will be removed in v0.5.0. "
+                "Use --log_samples instead for saving model outputs and debugging. "
+                "The write_out flag only prints the first few documents and impacts performance."
+            )
             print_writeout(task)
         # aggregate Instances by LM method requested to get output.
         for instance in task.instances:
