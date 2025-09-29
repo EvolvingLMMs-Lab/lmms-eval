@@ -8,6 +8,7 @@ assertion_prompt = """Answer the following multiple choice question. There is on
 
 mcq_prompt = """Answer the following multiple choice question. There is only one correct answer. The last line of your response should be in the format 'Answer: $LETTER' (without quotes), where LETTER is one of A, B, C, or D."""
 
+
 def csbench_mcq_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict) -> str:
     q = doc["Question"]
     a = doc["A"]
@@ -17,10 +18,12 @@ def csbench_mcq_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict) -> str:
     question = f"{assertion_prompt}\nQuestion: {q}\nA: {a}\nB: {b}\nC: {c}\nD: {d}\n"
     return question
 
+
 def csbench_assertion_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict) -> str:
     q = doc["Question"]
     question = f"{assertion_prompt}\nQuestion: {q}\n A: True\n B: False\n"
     return question
+
 
 def csbench_doc_to_target(doc: Dict) -> str:
     if doc["Format"].strip() == "Multiple-choice":
@@ -28,11 +31,13 @@ def csbench_doc_to_target(doc: Dict) -> str:
     else:
         return "A" if doc["Answer"].strip() == "True" else "B"
 
+
 def csbench_doc_to_choice(doc: Dict) -> List[str]:
     if doc["Format"].strip() == "Multiple-choice":
         return ["A", "B", "C", "D"]
     else:
         return ["A", "B"]
+
 
 def parse_multi_choice_response(response, all_choices):
     """
