@@ -4,6 +4,8 @@ from typing import Any, Dict, List
 import numpy as np
 
 medqa_prompt = """Answer the following multiple choice question. There is only one correct answer. The last line of your response should be in the format 'Answer: $LETTER' (without quotes), where LETTER is one of A, B, C, D, or E."""
+
+
 def medqa_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict[str, Any]):
     question = doc.get("question", "").strip()
 
