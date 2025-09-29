@@ -1,0 +1,28 @@
+dataset_path: amathislab/LEMONADE
+dataset_kwargs:
+  video: true
+  cache_dir: lemonade_data
+  force_unzip: true
+task: "lemonade"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.lemonade_doc_to_visual
+doc_to_text: !function utils.lemonade_doc_to_text
+doc_to_target: "Correct Answer"
+
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  do_sample: false
+
+process_results: !function utils.lemonade_process_results
+metric_list:
+  - metric: acc
+    aggregation: !function utils.lemonade_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Answer the following multiple-choice question using the given images.\n"
+    post_prompt: "\nRespond only with the letter of the correct answer."
+  max_num_frames: 8
