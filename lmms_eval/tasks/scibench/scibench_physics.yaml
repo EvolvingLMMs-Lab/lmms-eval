@@ -1,0 +1,24 @@
+dataset_path: lmms-lab/SciBench_Physics
+dataset_kwargs:
+  token: True
+test_split: test
+task: "scibench_physics"
+
+doc_to_text: !function utils.scibench_doc_to_text
+doc_to_target: "answer_number"
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: |
+      Please provide a clear and step-by-step solution for a scientific problem in the categories of Chemistry, Physics, or Mathematics. The problem will specify the unit of measurement, which should not be included in the answer. Express the final answer as a decimal number with three digits after the decimal point. Conclude the answer by stating "The answer is therefore \boxed{[ANSWER]}."
+    post_prompt: "\nLet's think step by step."
+
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+
+process_results: !function utils.scibench_process_results
+
+metadata:
+  version: 0.0
