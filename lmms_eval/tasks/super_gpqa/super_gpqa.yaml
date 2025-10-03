@@ -1,0 +1,25 @@
+dataset_path: lmms-lab/SuperGPQA
+dataset_kwargs:
+  token: True
+test_split: test
+task: "super_gpqa"
+
+doc_to_text: !function utils.super_gpqa_doc_to_text
+doc_to_target: !function utils.super_gpqa_doc_to_target
+doc_to_choice: !function utils.super_gpqa_doc_to_choice
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Answer the following multiple-choice question. There is only one correct answer. The last line of your response should be in the format 'Answer: $LETTER' (without quotes), where LETTER is one of A, B, C, D, E, F, G, H, I, or J."
+    post_prompt: ""
+
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+
+process_results: !function utils.super_gpqa_process_results
+
+metadata:
+  version: 0.0
+
