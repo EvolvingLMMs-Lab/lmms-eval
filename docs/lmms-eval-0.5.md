@@ -21,8 +21,6 @@ LMMS-Eval v0.5 represents a significant expansion in multimodal evaluation capab
   - [4. New Benchmarks](#4-new-benchmarks)
   - [5. Model Context Protocol (MCP) Integration](#5-model-context-protocol-mcp-integration)
   - [6. Async OpenAI Improvements](#6-async-openai-improvements)
-- [New Models](#new-models)
-- [New Benchmarks](#new-benchmarks)
 - [Usage Examples](#usage-examples)
 - [Technical Details](#technical-details)
 - [Migration Guide](#migration-guide)
@@ -141,38 +139,24 @@ python -m lmms_eval \
 
 Five new model integrations expanding audio and vision capabilities:
 
-#### GPT-4o Audio Preview
+| Model | Type | Key Features | Usage Example |
+|-------|------|--------------|---------------|
+| **GPT-4o Audio Preview** | Audio+Vision+Text | Paralinguistic understanding, multi-turn audio | `--model async_openai --model_args model_version=gpt-4o-audio-preview-2024-12-17` |
+| **Gemma-3** | Vision+Text | Enhanced video handling, efficient architecture | `--model gemma3 --model_args pretrained=google/gemma-3-2b-vision-it` |
+| **LLaVA-OneVision 1.5** | Vision+Text | Improved vision understanding, latest LLaVA | `--model llava_onevision1_5 --model_args pretrained=lmms-lab/llava-onevision-1.5-7b` |
+| **LongViLA-R1** | Video+Text | Long-context video, efficient video processing | `--model longvila --model_args pretrained=Efficient-Large-Model/LongViLA-R1-7B` |
+| **Thyme** | Vision+Text | Reasoning-focused, enhanced image handling | `--model thyme --model_args pretrained=thyme-ai/thyme-7b` |
+
+**Example Usage:**
 ```bash
+# GPT-4o Audio Preview for audio tasks
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-audio-preview-2024-12-17,base_url=https://api.openai.com/v1 \
+  --model_args model_version=gpt-4o-audio-preview-2024-12-17 \
   --tasks step2_audio_paralinguistic,voicebench \
   --batch_size 1
-```
 
-#### Gemma-3 Models
-Support for Google's Gemma-3 vision-language models with enhanced video handling:
-```bash
-python -m lmms_eval \
-  --model gemma3 \
-  --model_args pretrained=google/gemma-3-2b-vision-it \
-  --tasks ai2d,mmmu_val \
-  --batch_size 1
-```
-
-#### LLaVA-OneVision 1.5
-Latest LLaVA architecture with improved vision understanding:
-```bash
-python -m lmms_eval \
-  --model llava_onevision1_5 \
-  --model_args pretrained=lmms-lab/llava-onevision-1.5-7b \
-  --tasks mmstar,mme \
-  --batch_size 1
-```
-
-#### LongViLA-R1
-Long-context video understanding model:
-```bash
+# LongViLA for video understanding
 python -m lmms_eval \
   --model longvila \
   --model_args pretrained=Efficient-Large-Model/LongViLA-R1-7B \
@@ -180,59 +164,49 @@ python -m lmms_eval \
   --batch_size 1
 ```
 
-#### Thyme
-Specialized reasoning model with enhanced image handling:
-```bash
-python -m lmms_eval \
-  --model thyme \
-  --model_args pretrained=thyme-ai/thyme-7b \
-  --tasks mathvista_testmini,mmmu_val \
-  --batch_size 1
-```
-
 ### 4. New Benchmarks
 
-Beyond audio, v0.5 adds diverse vision and reasoning benchmarks:
+Beyond audio, v0.5 adds diverse vision and reasoning benchmarks significantly expanding LMMS-Eval's coverage into specialized domains:
 
-#### CSBench (Code Understanding)
-**3 variants**: MCQ, Assertion, Combined
-- Tests code comprehension and debugging
-- Multiple programming languages
-- Visual code representation understanding
+#### Vision & Reasoning Benchmarks
 
+| Benchmark | Variants | Focus | Metrics |
+|-----------|----------|-------|---------|
+| **CSBench** | 3 (MCQ, Assertion, Combined) | Code understanding, debugging | Accuracy |
+| **SciBench** | 4 (Math, Physics, Chemistry, Combined) | College-level STEM | GPT-4 Judge, Accuracy |
+| **MedQA** | 1 | Medical question answering | Accuracy |
+| **SuperGPQA** | 1 | Graduate-level science Q&A | Accuracy |
+| **Lemonade** | 1 | Video action recognition | Accuracy |
+| **CharXiv** | 3 (Descriptive, Reasoning, Combined) | Scientific chart interpretation | Accuracy, GPT-4 Judge |
+
+**Example Usage:**
 ```bash
+# Code understanding
 python -m lmms_eval --tasks csbench --batch_size 1
-```
 
-#### SciBench (STEM Reasoning)
-**4 variants**: Math, Physics, Chemistry, Combined
-- College-level science problems
-- Requires deep domain knowledge
-- Multi-step reasoning evaluation
-
-```bash
+# STEM reasoning
 python -m lmms_eval --tasks scibench --batch_size 1
-```
 
-#### Lemonade (Video Understanding)
-Action recognition and video question answering:
-- Multi-choice video understanding
-- Temporal reasoning
-- Action localization
-
-```bash
-python -m lmms_eval --tasks lemonade --batch_size 1
-```
-
-#### CharXiv (Chart Reasoning)
-**3 variants**: Descriptive, Reasoning, Combined
-- Scientific chart understanding
-- Data extraction and interpretation
-- Visual reasoning over charts
-
-```bash
+# Chart reasoning
 python -m lmms_eval --tasks charxiv --batch_size 1
 ```
+
+#### Reproducibility Validation
+
+We validated our benchmark implementations against official results using two popular language models. The table below compares lmms-eval scores with officially reported results to demonstrate reproducibility:
+
+| Model | Task | lmms-eval | Reported | Δ | Status |
+|-------|------|----------|-----------|-----|--------|
+| **Qwen-2.5-7B-Instruct** | MedQA | 53.89 | 54.28 | -0.39 | ✓ |
+| | SciBench | 43.86 | 42.97 | +0.89 | ✓ |
+| | CSBench | 69.01 | 69.51 | -0.50 | ✓ |
+| | SuperGPQA | 29.24 | 28.78 | +0.46 | ✓ |
+| **Llama-3.1-8B** | MedQA | 64.49 | 67.01 | -2.52 | ✓ |
+| | SciBench | 15.35 | 10.78 | +4.57 | † |
+| | CSBench | 62.49 | 57.87 | +4.62 | † |
+| | SuperGPQA | 21.94 | 19.72 | +2.22 | ✓ |
+
+**Status Legend**: ✓ = Strong agreement (Δ ≤ 2.5%) | † = Acceptable variance (2.5% < Δ ≤ 5%)
 
 ### 5. Model Context Protocol (MCP) Integration
 
@@ -268,35 +242,6 @@ python -m lmms_eval \
   --model_args model_version=gpt-4o,temperature=0.7,top_p=0.95,max_tokens=2048 \
   --tasks mmstar
 ```
-
-## New Models
-
-| Model | Type | Key Features | Usage |
-|-------|------|--------------|-------|
-| **GPT-4o Audio Preview** | Audio+Vision+Text | Paralinguistic understanding, multi-turn audio | `--model async_openai --model_args model_version=gpt-4o-audio-preview-2024-12-17` |
-| **Gemma-3** | Vision+Text | Enhanced video handling, efficient architecture | `--model gemma3 --model_args pretrained=google/gemma-3-2b-vision-it` |
-| **LLaVA-OneVision 1.5** | Vision+Text | Improved vision understanding, latest LLaVA | `--model llava_onevision1_5 --model_args pretrained=lmms-lab/llava-onevision-1.5-7b` |
-| **LongViLA-R1** | Video+Text | Long-context video, efficient video processing | `--model longvila --model_args pretrained=Efficient-Large-Model/LongViLA-R1-7B` |
-| **Thyme** | Vision+Text | Reasoning-focused, enhanced image handling | `--model thyme --model_args pretrained=thyme-ai/thyme-7b` |
-
-## New Benchmarks
-
-### Audio Benchmarks
-
-| Benchmark | Tasks | Focus | Metrics |
-|-----------|-------|-------|---------|
-| **Step2 Audio Paralinguistic** | 11 | Acoustic features, speaker attributes, environment | Accuracy |
-| **VoiceBench** | 30+ | Instruction following, reasoning, knowledge, accents | Accuracy, GPT-4 Judge |
-| **WenetSpeech** | 3 | ASR, meeting transcription | WER, Accuracy |
-
-### Vision & Reasoning Benchmarks
-
-| Benchmark | Tasks | Focus | Metrics |
-|-----------|-------|-------|---------|
-| **CSBench** | 3 | Code understanding, debugging | Accuracy |
-| **SciBench** | 4 | College-level STEM (math, physics, chemistry) | GPT-4 Judge, Accuracy |
-| **Lemonade** | 1 | Video action recognition | Accuracy |
-| **CharXiv** | 3 | Scientific chart interpretation | Accuracy, GPT-4 Judge |
 
 ## Usage Examples
 
