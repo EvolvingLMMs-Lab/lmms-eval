@@ -2,35 +2,49 @@ import re
 from math import isclose
 from typing import Dict, List, Tuple
 
-FEWSHOT_PROMPT = """Problem:
-Suppose that $10.0 \mathrm{~mol} \mathrm{C}_2 \mathrm{H}_6(\mathrm{~g})$ is confined to $4.860 \mathrm{dm}^3$ at $27^{\circ} \mathrm{C}$. Predict the pressure exerted by the ethane from the perfect gas.
 
-Solution:
-To predict ethane's pressure using the ideal gas law (PV = nRT), I'll convert temperature from 27°C to Kelvin (300.15 K, rounded to 300 K for significant figures), then substitute the given values: 10.0 mol of ethane, volume of 4.860 L, gas constant R = 0.0821 L·atm/(mol·K), and T = 300 K. Rearranging the ideal gas equation to P = nRT/V and calculating: P = (10.0 mol × 0.0821 L·atm/(mol·K) × 300 K) ÷ 4.860 L = 246.3 L·atm ÷ 4.860 L ≈ 50.7 atm. Since temperature has two significant figures, the final pressure is \(\boxed{50.7}\) atm.
-Final Answer: The final answer is \(\boxed{50.7}\). I hope it is correct.
-
-Problem:
-Assume that all gases are perfect and that data refer to 298.15 K unless otherwise stated. Calculate the change in chemical potential of a perfect gas when its pressure is increased isothermally from $1.8 \mathrm{~atm}$ to $29.5 \mathrm{~atm}$ at $40^{\circ} \mathrm{C}$.
-
-Solution:
-To determine the change in chemical potential (Δμ) of a perfect gas during pressure change, I begin with the fundamental relation μ = μ° + RT ln(P/P°), which yields Δμ = RT ln(Pf/Pi) for changes between two states. Converting the given temperature of 40°C to 313.15K and using R = 8.314 J/(mol·K), I calculate Δμ = (8.314 J/(mol·K))(313.15K)ln(29.5/1.8). The pressure ratio 29.5/1.8 ≈ 16.39 gives ln(16.39) ≈ 2.797, so Δμ = 8.314 × 313.15 × 2.797 ≈ 7274.5 J/mol, which rounds to 7.3 kJ/mol.
-Final Answer: The final answer is \(\boxed{7.3}\). I hope it is correct.
-
-Problem:
-Show that the small angular deviation of $\epsilon$ of a plumb line from the true vertical (i.e., toward the center of Earth) at a point on Earth's surface at a latitude $\lambda$ is $\epsilon = \frac{R\omega^2sin\lambda cos\lambda}{g_0 - R\omega^2 cos^2\lambda}$ where R is the radius of Earth. What is the value (in seconds of arc) of the maximum deviation? Note that the entire denominator in the answer is actually the effective $g$, and $g_0$ denotes the pure gravitational component.
-
-Solution:
-To determine the small angular deviation (ε) of a plumb line from true vertical due to Earth's rotation, we analyze the balance of forces at latitude λ: gravitational force (Fg = mg0) toward Earth's center and centrifugal force (Fc = mRω²cosλ) perpendicular to the rotation axis. The centrifugal force resolves into a vertical component (Fc,v = mRω²cos²λ) that reduces effective gravity to g = g0 - Rω²cos²λ, and a horizontal component (Fc,h = mRω²sinλcosλ) pulling toward the equator. The angular deviation equals the ratio of horizontal force to effective gravity: ε = Rω²sinλcosλ/(g0 - Rω²cos²λ). To find maximum deviation, we differentiate with respect to λ and find it occurs at λ = 45°. Using Earth values (R = 6.371×10⁶ m, ω = 7.292×10⁻⁵ rad/s, g0 ≈ 9.81 m/s²), we calculate the numerator at 45° as 1.697×10⁻² m/s² and denominator as 9.793 m/s², yielding εmax = 1.733×10⁻³ rad or approximately 357 arcseconds (6 arcminutes).
-Final Answer: The final answer is \(\boxed{6}\). I hope it is correct."""
+def parse_math_answer(raw_string):
+    return remove_boxed(last_boxed_only_string(raw_string))
 
 
-def scibench_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict) -> str:
-    pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
-    question = doc["problem_text"]
-    if doc["unit"].strip():
-        question = question + " The unit of the answer is " + doc["unit"] + "."
-    return f"{pre_prompt}{question}{post_prompt}"
+def remove_boxed(s):
+    left = "oxed{"  # change
+    try:
+        assert s[: len(left)] == left
+        assert s[-1] == "}"
+        answer = s[len(left) : -1]
+        if "=" in answer:
+            answer = answer.split("=")[-1].lstrip(" ")
+        return answer
+    except:
+        return None
+
+
+def last_boxed_only_string(string):
+    idx = string.rfind("oxed")  # change
+    if idx < 0:
+        idx = string.rfind("\\fbox")
+        if idx < 0:
+            return None
+    i = idx
+    right_brace_idx = None
+    num_left_braces_open = 0
+    while i < len(string):
+        if string[i] == "{":
+            num_left_braces_open += 1
+        if string[i] == "}":
+            num_left_braces_open -= 1
+            if num_left_braces_open == 0:
+                right_brace_idx = i
+                break
+        i += 1
+
+    if right_brace_idx == None:
+        retval = None
+    else:
+        retval = string[idx : right_brace_idx + 1]
+
+    return retval
 
 
 def extract_boxed_answers(text):
@@ -45,17 +59,12 @@ def extract_boxed_answers(text):
     return None
 
 
-def remove_not(x):
-    match_number = re.compile("[\$]?\ *10\^[{]?\ *-?[0-9]+\ *[}]?\ *[\$]?")
-    result = re.findall(match_number, x)
-    if len(result) != 0:
-        return re.split(match_number, x)[-1]
-    return None
-
-
 def cal_not(inputs):
+    # print("Input cal not: ", inputs, type(inputs), len(inputs))
     try:
-        x, ab = list(inputs)
+        # print("Hi")
+        x, ab = inputs
+        # print("Hi also", x, ab)
         match_number = re.compile("10\^[{]?\ *-?[0-9]+\ *[}]?")
         ab = re.findall(match_number, ab)[0]
         ab = ab[ab.find("^") + 1 :]
@@ -70,6 +79,14 @@ def cal_not(inputs):
     except:
         print("error")
     return inputs
+
+
+def remove_not(x):
+    match_number = re.compile("[\$]?\ *10\^[{]?\ *-?[0-9]+\ *[}]?\ *[\$]?")
+    result = re.findall(match_number, x)
+    if len(result) != 0:
+        return re.split(match_number, x)[-1]
+    return None
 
 
 def parse_not(inputs):
@@ -90,42 +107,66 @@ def parse_not(inputs):
 
 
 def equiv_with_unit(model_output, answer, unit):
-    model_output = model_output.replace(",", "")
-    print("Model_output: ", model_output)
+    """Fixed to handle None inputs gracefully"""
+
+    model_output = clean_number_string(model_output)
     try:
-        ans = float(answer.strip())
+        ans = float(clean_number_string(answer))
         first = isclose(float(model_output.strip()), ans, rel_tol=0.05)
     except:
         first = False
+
     try:
         model = model_output.strip().split()[0]
         second = isclose(float(model.strip()), ans, rel_tol=0.05)
     except:
         second = False
-    if first or second:
-        return True
-    return False
+
+    return first or second
 
 
 def clean_number_string(s):
+    """Fixed to handle None input"""
+    if s is None:
+        return ""
     return s.replace(",", "").replace("−", "-").strip()
 
 
-def scibench_process_results(doc: Dict, result: List[str]) -> Dict[str, float]:
-    pred = result[0]
-    pred = extract_boxed_answers(pred)
-    if pred:
-        res_equiv = isclose(float(clean_number_string(pred)), float(clean_number_string(doc["answer_number"])), rel_tol=0.05)
-        score = 1 if res_equiv else 0
-    else:
-        score = 0
-    return {"accuracy": score}
-
-
-def scibench_multishot_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict) -> str:
+def scibench_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict) -> str:
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     post_prompt = lmms_eval_specific_kwargs["post_prompt"]
     question = doc["problem_text"]
-    if doc["unit"].strip():
-        question = question + " The unit of the answer is " + doc["unit"] + "."
-    return FEWSHOT_PROMPT + "\n" + question + "\nAnswer: Let's think step by step."
+    unit_prob = doc["unit"].strip()
+    if remove_not(doc["unit"].strip()):
+        unit_prob = remove_not(doc["unit"]).strip()
+    if unit_prob:
+        question = doc["problem_text"].strip() + " The unit of the answer is " + unit_prob + "."
+    else:
+        question = doc["problem_text"].strip()
+    return f"{pre_prompt}\nQuestion: {question}{post_prompt}"
+
+
+def scibench_process_results(doc: Dict, result: List[str]) -> Dict[str, float]:
+    """Fixed version with proper null handling"""
+    pred = result[0]
+
+    pred = parse_math_answer(pred)
+    ans = doc["answer_number"].strip()
+    unit = doc["unit"].strip()
+    unit_prob = doc["unit"].strip()
+
+    if remove_not(doc["unit"].strip()):
+        unit_prob = remove_not(doc["unit"]).strip()
+    if unit_prob != unit:
+        pred = cal_not(parse_not(pred))
+        ans = cal_not((ans, unit))
+        if len(ans) > 1:
+            ans = ans[0]
+    try:
+        res_equiv = equiv_with_unit(pred, ans, unit)
+    except Exception as e:
+        print(f"Error in equiv_with_unit: {e}")
+        res_equiv = False
+
+    score = 1 if res_equiv else 0
+    return {"accuracy": score}

@@ -1,0 +1,4 @@
+group: csbench
+task:
+- csbench_mcq
+- csbench_assertion
