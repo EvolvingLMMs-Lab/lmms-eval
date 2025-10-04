@@ -24,6 +24,9 @@ metric_list:
   - metric: coco_cap_chair_s
     aggregation : !function utils.coco_cap_chair_aggregate_results_chair_s
     higher_is_better : false
+  - metric: coco_cap_recall
+    aggregation : !function utils.coco_cap_chair_aggregate_results_recall
+    higher_is_better : true
 
 metadata:
   - version: 0.0
