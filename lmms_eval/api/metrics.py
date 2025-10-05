@@ -531,10 +531,29 @@ def bootstrap_stderr(f, xs, iters):
     return sample_stddev(res)
 
 
+def bootstrap_chair_metric(metric_fn, xs, iters):
+    "for non multiprocessing for CHAIR"
+    print(f"bootstrapping for stddev: {metric_fn.__name__}")
+    res = []
+    from tqdm import tqdm
+    
+    for _ in tqdm(range(iters), desc="Bootstrap"):
+        bootstrap_sample = random.choices(xs, k=len(xs))
+        metric_value = metric_fn(bootstrap_sample)
+        res.append(metric_value)
+    
+    return sample_stddev(res)
+
 def stderr_for_metric(metric, bootstrap_iters: int):
     if bootstrap_iters <= 0:
         # return no function (don't compute stderr) if bootstrap iters = 0
         return None
+    # for coco_cap_chair
+    from lmms_eval.tasks.coco_cap_chair.utils import (
+        coco_cap_chair_aggregate_results_chair_i,
+        coco_cap_chair_aggregate_results_chair_s,
+        coco_cap_chair_aggregate_results_recall,
+    )
 
     bootstrappable = [
         median,
@@ -544,10 +563,17 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         bleu,
         chrf,
         ter,
+        coco_cap_chair_aggregate_results_chair_i,
+        coco_cap_chair_aggregate_results_chair_s,
+        coco_cap_chair_aggregate_results_recall,
     ]
 
     if metric in bootstrappable:
         return lambda x: bootstrap_stderr(metric, x, iters=bootstrap_iters)
+
+    if hasattr(metric, '__name__'):
+        if 'coco_cap_chair' in metric.__name__:
+            return lambda x: bootstrap_chair_metric(metric, x, iters=bootstrap_iters)
 
     stderr = {mean: mean_stderr, acc_all: acc_all_stderr}
 

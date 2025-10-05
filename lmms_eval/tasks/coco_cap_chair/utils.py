@@ -10,7 +10,7 @@ INVERSE_SYNONYM_DICT = {'person': 'person', 'girl': 'person', 'boy': 'person', '
 DOUBLE_WORD_DICT = {'motor bike': 'motor bike', 'motor cycle': 'motor cycle', 'air plane': 'air plane', 'traffic light': 'traffic light', 'street light': 'street light', 'traffic signal': 'traffic signal', 'stop light': 'stop light', 'fire hydrant': 'fire hydrant', 'stop sign': 'stop sign', 'parking meter': 'parking meter', 'suit case': 'suit case', 'sports ball': 'sports ball', 'baseball bat': 'baseball bat', 'baseball glove': 'baseball glove', 'tennis racket': 'tennis racket', 'wine glass': 'wine glass', 'hot dog': 'hot dog', 'cell phone': 'cell phone', 'mobile phone': 'mobile phone', 'teddy bear': 'teddy bear', 'hair drier': 'hair drier', 'potted plant': 'potted plant', 'bow tie': 'tie', 'laptop computer': 'laptop computer', 'stove top oven': 'stove top oven', 'home plate': 'home plate', 'train track': 'train track', 'baby bird': 'bird', 'adult bird': 'bird', 'baby cat': 'cat', 'adult cat': 'cat', 'baby dog': 'dog', 'adult dog': 'dog', 'baby horse': 'horse', 'adult horse': 'horse', 'baby sheep': 'sheep', 'adult sheep': 'sheep', 'baby cow': 'cow', 'adult cow': 'cow', 'baby elephant': 'elephant', 'adult elephant': 'elephant', 'baby bear': 'bear', 'adult bear': 'bear', 'baby zebra': 'zebra', 'adult zebra': 'zebra', 'baby giraffe': 'giraffe', 'adult giraffe': 'giraffe', 'baby animal': 'animal', 'adult animal': 'animal', 'baby cub': 'cub', 'adult cub': 'cub', 'passenger jet': 'jet', 'passenger train': 'train', 'toilet seat': 'toilet', 'wine glas': 'wine glass'}
 
 def coco_cap_chair_doc_to_visual(doc):
-    return [doc["image"].convert("RGB")]
+    return [doc["image"].convert("RGB"), doc["image"].convert("RGB")]
 
 
 def coco_cap_chair_doc_to_text(doc):
