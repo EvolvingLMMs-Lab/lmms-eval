@@ -83,6 +83,7 @@ Fine-grained paralinguistic feature evaluation:
 - **Acoustic Features**: pitch, rhythm, speed, voice_tone, voice_styles
 - **Speaker Attributes**: age, gender, emotions
 - **Environmental**: scene, event, vocalsound
+- Sematic Match metrics
 
 ```bash
 python -m lmms_eval \
@@ -100,6 +101,7 @@ Comprehensive voice and speech evaluation:
 - **Q&A**: openbookqa
 - **Accent Diversity**: sd-qa (11 regional variants: USA, UK, India, Australia, etc.)
 - **Expressiveness**: wildvoice
+- Metrics vary by task type, including accuracy(1-5), failure rate, LLM eval, etc.
 
 ```bash
 # Full VoiceBench
@@ -115,11 +117,11 @@ python -m lmms_eval \
   --batch_size 1
 ```
 
-#### WenetSpeech (3 splits)
+#### WenetSpeech (2 splits)
 Large-scale ASR and speech evaluation:
 - **dev**: Development set for validation
 - **test_meeting**: Meeting domain evaluation
-- WER (Word Error Rate) metrics
+- MER (Mixed Error Rate) metrics
 
 ```bash
 python -m lmms_eval \
@@ -141,7 +143,7 @@ Five new model integrations expanding audio and vision capabilities:
 
 | Model | Type | Key Features | Usage Example |
 |-------|------|--------------|---------------|
-| **GPT-4o Audio Preview** | Audio+Vision+Text | Paralinguistic understanding, multi-turn audio | `--model async_openai --model_args model_version=gpt-4o-audio-preview-2024-12-17` |
+| **GPT-4o Audio Preview** | Audio+Text | Paralinguistic understanding, multi-turn audio | `--model async_openai --model_args model_version=gpt-4o-audio-preview-2024-12-17` |
 | **Gemma-3** | Vision+Text | Enhanced video handling, efficient architecture | `--model gemma3 --model_args pretrained=google/gemma-3-2b-vision-it` |
 | **LLaVA-OneVision 1.5** | Vision+Text | Improved vision understanding, latest LLaVA | `--model llava_onevision1_5 --model_args pretrained=lmms-lab/llava-onevision-1.5-7b` |
 | **LongViLA-R1** | Video+Text | Long-context video, efficient video processing | `--model longvila --model_args pretrained=Efficient-Large-Model/LongViLA-R1-7B` |
