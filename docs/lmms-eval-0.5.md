@@ -202,11 +202,11 @@ We validated our benchmark implementations against official results using two po
 | | CSBench | 69.01 | 69.51 | -0.50 | ✓ |
 | | SuperGPQA | 29.24 | 28.78 | +0.46 | ✓ |
 | **Llama-3.1-8B** | MedQA | 64.49 | 67.01 | -2.52 | ✓ |
-| | SciBench | 15.35 | 10.78 | +4.57 | † |
-| | CSBench | 62.49 | 57.87 | +4.62 | † |
+| | SciBench | 15.35 | 10.78 | +4.57 | +- |
+| | CSBench | 62.49 | 57.87 | +4.62 | +- |
 | | SuperGPQA | 21.94 | 19.72 | +2.22 | ✓ |
 
-**Status Legend**: ✓ = Strong agreement (Δ ≤ 2.5%) | † = Acceptable variance (2.5% < Δ ≤ 5%)
+**Status Legend**: ✓ = Strong agreement (Δ ≤ 2.5%) | +- = Acceptable variance (2.5% < Δ ≤ 5%)
 
 ### 5. Model Context Protocol (MCP) Integration
 
