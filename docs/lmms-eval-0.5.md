@@ -567,7 +567,7 @@ The v0.5 release was made possible by contributions from the LMMS-Eval community
 - **GitHub Discussions**: Ask questions and share ideas at [lmms-eval/discussions](https://github.com/EvolvingLMMs-Lab/lmms-eval/discussions)
 - **Documentation**: Check the `docs/` directory for implementation guides
 
-### Common Questions
+### FAQs
 
 **Q: How do I enable caching?**
 ```bash
