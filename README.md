@@ -20,6 +20,7 @@
 
 ## Annoucement
 
+- [2025-10] 🚀🚀 **LMMs-Eval v0.5** is here! This major release introduces comprehensive audio evaluation, response caching, 5 new models (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), and 50+ new benchmark variants spanning audio (Step2, VoiceBench, WenetSpeech), vision (CharXiv, Lemonade), and reasoning (CSBench, SciBench, MedQA, SuperGPQA) with reproducible results. Please refer to the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md) for details.
 - [2025-07] 🚀🚀 We have released the `lmms-eval-0.4`. Please refer to the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) for more details. This is a major update with new features and improvements, for users wish to use `lmms-eval-0.3` please refer to the branch `stable/v0d3`. For our mission to better reproductability, we've opened a specific thread to discuss about the model's eval results in [discussion](https://github.com/EvolvingLMMs-Lab/lmms-eval/discussions/779).
 - [2025-07] 🎉🎉 We welcome the new task [PhyX](https://phyx-bench.github.io/), the first large-scale benchmark designed to assess models capacity for physics-grounded reasoning in visual scenarios.
 - [2025-06] 🎉🎉 We welcome the new task [VideoMathQA](https://mbzuai-oryx.github.io/VideoMathQA), designed to evaluate mathematical reasoning in real-world educational videos.
