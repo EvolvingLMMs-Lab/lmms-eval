@@ -2,14 +2,7 @@
 
 ## Introduction
 
-LMMS-Eval v0.5 represents a significant expansion in multimodal evaluation capabilities, introducing comprehensive audio understanding support alongside continued vision and reasoning enhancements. This release adds 77 new commits with major features including audio paralinguistics evaluation, response caching infrastructure, new model integrations, and diverse benchmarks spanning audio, vision, coding, and STEM domains.
-
-**Key Highlights:**
-- **Audio-First**: Comprehensive audio evaluation with paralinguistic analysis
-- **Response Caching**: Production-ready caching system for faster re-evaluation
-- **5 New Models**: Including audio-capable GPT-4o, LongViLA, Gemma-3
-- **50+ New Benchmark Variants**: Audio, vision, coding, and STEM tasks
-- **MCP Integration**: Model Context Protocol client support
+LMMs-Eval v0.5 represents a significant expansion in multimodal evaluation capabilities, introducing comprehensive audio understanding support alongside continued vision and reasoning enhancements.
 
 ## Table of Contents
 
