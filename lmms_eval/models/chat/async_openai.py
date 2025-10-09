@@ -176,7 +176,11 @@ class AsyncOpenAIChat(lmms):
 
         response = await self.client.chat.completions.create(**payload)
         last_response = response.choices[0].message.content
-        all_response += last_response
+        # Sometimes asyncio return None, skip this case
+        try:
+            all_response += last_response
+        except Exception as e:
+            all_response += f"Error: {str(e)}"
 
         while response.choices[0].finish_reason == "tool_calls":
             messages.append({"role": "assistant", "content": last_response})
@@ -209,7 +213,10 @@ class AsyncOpenAIChat(lmms):
                 tool_choice="auto",
             )
             last_response = response.choices[0].message.content
-            all_response += last_response
+            try:
+                all_response += last_response
+            except Exception as e:
+                all_response += str(e)
         self.add_request_response_to_cache(request, all_response)
         return all_response, idx
 
