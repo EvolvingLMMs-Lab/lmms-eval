@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.4.1"
+version = "0.5.0"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
@@ -43,7 +43,7 @@ dependencies = [
     "ftfy",
     "openai",
     "opencv-python-headless",
-    "av",
+    "av<16.0.0",
     "hf_transfer",
     "nltk",
     "sentencepiece",
@@ -74,6 +74,7 @@ dependencies = [
     "protobuf",
     "sentence_transformers",
     "python-dotenv",
+    "qwen-vl-utils>=0.0.14",
 ]
 
 [project.optional-dependencies]
