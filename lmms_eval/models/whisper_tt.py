@@ -33,7 +33,7 @@ SAMPLING_RATE = 16_000
 
 # Warmup the model on app startup
 def warmup_model(model_repo):
-    # create device, these constants are specific to n150 & n300
+    # create mesh device (even for single physical device), these constants are specific to n150 & n300
     device_id = 0
     device_params = {"l1_small_size": WHISPER_L1_SMALL_SIZE}
 
@@ -47,8 +47,19 @@ def warmup_model(model_repo):
         dispatch_core_type, dispatch_core_axis
     )
     device_params["dispatch_core_config"] = dispatch_core_config
-    device = ttnn.CreateDevice(device_id=device_id, **device_params)
+    
+    # Create mesh device (1x1 mesh for single device) instead of single device
+    # This is required for the mesh-enabled whisper model
+    eval_logger.info("Creating mesh device for whisper model...")
+    mesh_shape = ttnn.MeshShape(1, 1)  # Single device as 1x1 mesh
+    device = ttnn.open_mesh_device(
+        mesh_shape,
+        device_ids=ttnn.get_device_ids()[:1],  # Use first available device
+        **device_params
+    )
+    device.enable_async(True)
     device.enable_program_cache()
+    eval_logger.info(f"Mesh device created with {device.get_num_devices()} device(s)")
 
     # create model pipeline
     model_pipeline = (
@@ -68,8 +79,7 @@ def warmup_model(model_repo):
     sampling_rate, data = wavfile.read(input_file_path)
     _ttnn_output = model_pipeline(data, sampling_rate, stream=False)
 
-    eval_logger.info("Loading Stable Diffusion model...")
-    eval_logger.info("Model loaded and ready!")
+    eval_logger.info("Whisper model loaded and warmed up successfully!")
     return model_pipeline
 
 
