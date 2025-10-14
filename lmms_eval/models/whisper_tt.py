@@ -52,11 +52,7 @@ def warmup_model(model_repo):
     # This is required for the mesh-enabled whisper model
     eval_logger.info("Creating mesh device for whisper model...")
     mesh_shape = ttnn.MeshShape(1, 1)  # Single device as 1x1 mesh
-    device = ttnn.open_mesh_device(
-        mesh_shape,
-        device_ids=ttnn.get_device_ids()[:1],  # Use first available device
-        **device_params
-    )
+    device = ttnn.open_mesh_device(mesh_shape=mesh_shape, **device_params)
     device.enable_async(True)
     device.enable_program_cache()
     eval_logger.info(f"Mesh device created with {device.get_num_devices()} device(s)")
