@@ -42,10 +42,13 @@ class WhisperTT(lmms):
         base_url: str = None,
         timeout: int = 300,
         max_retries: int = 3,
+        num_concurrent: int = 1,
         **kwargs,
     ) -> None:
         super().__init__()
-        assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
+        # Log warning for unexpected kwargs but don't fail
+        if kwargs:
+            eval_logger.warning(f"Ignoring unexpected kwargs: {kwargs}")
         
         # Get base URL from env var or argument
         self.base_url = base_url or os.getenv("OPENAI_API_BASE", "http://127.0.0.1:8000")
