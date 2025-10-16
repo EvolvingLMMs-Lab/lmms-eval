@@ -115,6 +115,10 @@ class WhisperTT(lmms):
         Returns:
             Base64-encoded WAV file string
         """
+        # Ensure float32 to create 32-bit WAV files (not 64-bit)
+        # This prevents "Unsupported bit depth: 64" errors on the server
+        audio_array = audio_array.astype(np.float32)
+        
         # Create WAV file in memory
         wav_buffer = BytesIO()
         wavfile.write(wav_buffer, sampling_rate, audio_array)
