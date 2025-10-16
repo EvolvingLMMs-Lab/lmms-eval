@@ -2,7 +2,7 @@
 # Based on: https://github.com/junyangwang0410/AMBER
 # Dataset includes: images, questions, and complete ground truth annotations
 
-dataset_path: Kyunnilee/amber_g_new  # use this dataset
+dataset_path: Kyunnilee/amber_g  # use this dataset
 dataset_kwargs:
   trust_remote_code: true
 task: "amber_g"
