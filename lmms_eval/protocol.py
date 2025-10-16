@@ -86,7 +86,7 @@ class ChatMessages(BaseModel):
             hf_messages.append(hf_message)
         return hf_messages
 
-    def to_openai_messages(self, video_kwargs: Dict[str, str] = None):
+    def to_openai_messages(self, video_kwargs: Dict[str, str] = {}):
         openai_messages = []
         for message in self.messages:
             openai_message = {"role": message.role, "content": []}
