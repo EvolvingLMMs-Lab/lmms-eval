@@ -2,7 +2,7 @@
 line-length = 240
 
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[tomli]>=6.3"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,10 +13,10 @@ authors = [
 ]
 description = "A framework for evaluating large multi-modality language models"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.9"
