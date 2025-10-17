@@ -70,7 +70,7 @@ echo "=========================================="
 
 # Build the command
 CMD="uv run python -m lmms_eval \
-    --model vllm_chat \
+    --model vllm \
     --model_args model=${MODEL},tensor_parallel_size=${TENSOR_PARALLEL_SIZE},data_parallel_size=${DATA_PARALLEL_SIZE},gpu_memory_utilization=${GPU_MEMORY_UTILIZATION} \
     --tasks ${TASKS} \
     --batch_size ${BATCH_SIZE} \
