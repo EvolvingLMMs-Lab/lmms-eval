@@ -91,60 +91,68 @@ class Qwen_VL_API(lmms):
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
-            imgs = []
 
-            for idx, visual in enumerate(visuals):
-                temp_file = self.save_image_to_temp_file(visual)
-                imgs.append(temp_file.name)
-
-            messages = [{"role": "user", "content": []}]
-
-            if self.image_token not in contexts:
-                for img in imgs:
-                    messages[0]["content"].append({"image": img})
-                messages[0]["content"].append({"text": contexts})
-            else:
-                contexts = contexts.split(self.image_token)
-
-                for idx, img in enumerate(imgs):
-                    messages[0]["content"].append({"text": contexts[idx]})
-                    messages[0]["content"].append({"image": img})
-                messages[0]["content"].append({"text": contexts[-1]})
-
-            if "max_new_tokens" not in gen_kwargs or gen_kwargs["max_new_tokens"] > 1500:
-                gen_kwargs["max_new_tokens"] = 1024
-            if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
-            if "num_beams" not in gen_kwargs:
-                gen_kwargs["num_beams"] = 1
-
-            for attempt in range(5):
-                try:
-                    response_data = dashscope.MultiModalConversation.call(model=self.model_version, messages=messages, api_key=API_KEY, max_length=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
-                    break
-                except Exception as e:
-                    eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
-                    if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
-                        time.sleep(NUM_SECONDS_TO_SLEEP)
-                    else:  # If this was the last attempt, log and return empty
-                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
-                        res.append("")
-                        pbar.update(1)
-                        continue
+            temp_files = []
             try:
-                res.append(response_data["output"]["choices"][0]["message"]["content"][0]["text"].strip())
-            except Exception as e:
-                eval_logger.error(f"Error {e} happens when parsing input.")
-                eval_logger.error(f"{response_data}")
-                res.append("")
+                imgs = []
+                for visual in visuals:
+                    temp_file = self.save_image_to_temp_file(visual)
+                    temp_files.append(temp_file)
+                    imgs.append(temp_file.name)
 
-            if self.continual_mode is True:  # Cache the response
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                self.response_cache[doc_uuid] = res[-1]
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f)
+                messages = [{"role": "user", "content": []}]
+
+                if self.image_token not in contexts:
+                    for img in imgs:
+                        messages[0]["content"].append({"image": img})
+                    messages[0]["content"].append({"text": contexts})
+                else:
+                    contexts = contexts.split(self.image_token)
+
+                    for idx, img in enumerate(imgs):
+                        messages[0]["content"].append({"text": contexts[idx]})
+                        messages[0]["content"].append({"image": img})
+                    messages[0]["content"].append({"text": contexts[-1]})
+
+                if "max_new_tokens" not in gen_kwargs or gen_kwargs["max_new_tokens"] > 1500:
+                    gen_kwargs["max_new_tokens"] = 1024
+                if "temperature" not in gen_kwargs:
+                    gen_kwargs["temperature"] = 0
+                if "top_p" not in gen_kwargs:
+                    gen_kwargs["top_p"] = None
+                if "num_beams" not in gen_kwargs:
+                    gen_kwargs["num_beams"] = 1
+
+                for attempt in range(5):
+                    try:
+                        response_data = dashscope.MultiModalConversation.call(model=self.model_version, messages=messages, api_key=API_KEY, max_length=gen_kwargs["max_new_tokens"], temperature=gen_kwargs["temperature"])
+                        break
+                    except Exception as e:
+                        eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
+                        if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
+                            time.sleep(NUM_SECONDS_TO_SLEEP)
+                        else:  # If this was the last attempt, log and return empty
+                            eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
+                            res.append("")
+                            pbar.update(1)
+                            continue
+                try:
+                    res.append(response_data["output"]["choices"][0]["message"]["content"][0]["text"].strip())
+                except Exception as e:
+                    eval_logger.error(f"Error {e} happens when parsing input.")
+                    eval_logger.error(f"{response_data}")
+                    res.append("")
+
+                if self.continual_mode is True:  # Cache the response
+                    doc_uuid = f"{task}___{split}___{doc_id}"
+                    self.response_cache[doc_uuid] = res[-1]
+                    with open(self.response_persistent_file, "w") as f:
+                        json.dump(self.response_cache, f)
+
+            finally:
+                for temp_file in temp_files:
+                    temp_file.close()
+
             pbar.update(1)
 
         pbar.close()
