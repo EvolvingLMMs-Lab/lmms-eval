@@ -64,7 +64,6 @@ class ChatMessages(BaseModel):
     def to_hf_messages(self, video_kwargs: Dict[str, str] = None):
         if video_kwargs is None:
             video_kwargs = {}
-        enforce_images = video_kwargs.pop("enforce_images", False)
         num_frames = video_kwargs.get("nframes", 32)
         hf_messages = []
         for message in self.messages:
@@ -75,12 +74,7 @@ class ChatMessages(BaseModel):
                 elif content.type == "image":
                     hf_message["content"].append({"type": "image", "image": content.url})
                 elif content.type == "video":
-                    # Note this is a hacky way if you want to do video in multi-images way
-                    if enforce_images:
-                        for f in range(num_frames):
-                            hf_message["content"].append({"type": "image"})
-                    else:
-                        hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
+                    hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
                 elif content.type == "audio":
                     hf_message["content"].append({"type": "audio", "audio": content.url})
             hf_messages.append(hf_message)
