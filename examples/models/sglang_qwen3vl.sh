@@ -73,7 +73,7 @@ echo "=========================================="
 
 # Build the command
 CMD="uv run python -m lmms_eval \
-    --model sglang_runtime \
+    --model sglang \
     --model_args model=${MODEL},tensor_parallel_size=${TENSOR_PARALLEL_SIZE},gpu_memory_utilization=${GPU_MEMORY_UTILIZATION},max_pixels=${MAX_PIXELS},min_pixels=${MIN_PIXELS},max_frame_num=${MAX_FRAME_NUM},threads=${THREADS} \
     --tasks ${TASKS} \
     --batch_size ${BATCH_SIZE} \
