@@ -87,6 +87,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "thyme": "Thyme",
     "openai_compatible": "OpenAICompatible",
     "vllm": "VLLM",
+    "vllm_generate": "VLLMGenerate",
     "sglang": "Sglang",
     "huggingface": "Huggingface",
     "async_openai": "AsyncOpenAIChat",

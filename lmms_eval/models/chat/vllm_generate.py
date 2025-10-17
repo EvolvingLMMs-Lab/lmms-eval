@@ -4,11 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple, Union
 
 from tqdm import tqdm
+from transformers import AutoProcessor
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.chat.vllm import VLLM as VLLMChat
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
 try:
@@ -16,11 +17,26 @@ try:
 except ImportError:
     vllm = None
 
+from qwen_vl_utils import fetch_video, process_vision_info
+
 WORKERS = int(os.getenv("WORKERS", "32"))
 
 
-@register_model("vllm_chat")
-class VLLM(VLLMSimple):
+@register_model("vllm_generate")
+class VLLMGenerate(VLLMChat):
+    """
+    Different from .chat, use generate method instead of chat method.
+    The input is a list of vllm inputs, and the output is a list of responses.
+    The vllm inputs are a list of dictionaries, each dictionary contains the following keys:
+    - prompt: the prompt to the model
+    - multi_modal_data: the multi-modal data to the model
+    - mm_processor_kwargs: the multi-modal processor kwargs to the model
+    The vllm inputs are built from the Instance.
+    The responses are a list of strings.
+
+    So that we allow the processor to process correct video especially for Qwen3-VL series
+    """
+
     is_simple = False
 
     def __init__(
@@ -39,10 +55,12 @@ class VLLM(VLLMSimple):
         nframes: Optional[int] = 32,
         **kwargs,
     ):
-        super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, min_image_pixels, **kwargs)
-        self.fps = fps
-        self.max_pixels = max_pixels
-        self.nframes = nframes
+        super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, max_pixels, min_image_pixels, fps, nframes, **kwargs)
+        self.processor = AutoProcessor.from_pretrained(model)
+        if self.chat_template is not None:
+            with open(self.chat_template, "r") as f:
+                chat_template = f.read()
+                self.processor.chat_template = chat_template
 
     def make_one_request(self, request: Instance) -> Tuple[list[dict], dict]:
         """
@@ -73,8 +91,48 @@ class VLLM(VLLMSimple):
             video_kwargs["fps"] = self.fps
         else:
             video_kwargs["nframes"] = self.nframes
-        messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
-        return messages, params
+        messages = chat_messages.to_hf_messages(video_kwargs=video_kwargs)
+        images, videos, audios = chat_messages.extract_media()
+        video_inputs = []
+        video_metadatas = []
+        kwargs = {}
+        for video in videos:
+            video_dict = {
+                "type": "video",
+                "video": video,
+                **video_kwargs,
+            }
+            final_video, fps = fetch_video(video_dict, return_video_metadata=True, return_video_sample_fps=True)
+            frames, video_metadata = final_video
+            video_inputs.append(frames)
+            video_metadatas.append(video_metadata)
+            kwargs["fps"] = fps
+            kwargs["do_sample_frames"] = False
+        if len(videos) == 0:
+            video_inputs = None
+            video_metadatas = None
+        if len(images) == 0:
+            images = None
+        if len(audios) == 0:
+            audios = None
+
+        text = self.processor.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+
+        vllm_inputs = {"prompt": text, "multi_modal_data": {}}
+        if images is not None:
+            vllm_inputs["multi_modal_data"]["image"] = images
+        if video_inputs is not None:
+            vllm_inputs["multi_modal_data"]["video"] = video_inputs
+            vllm_inputs["mm_processor_kwargs"] = {
+                "video_metadata": video_metadatas,
+                **kwargs,
+            }
+
+        return vllm_inputs, params
 
     def generate_until(self, requests) -> List[str]:
         res = []
@@ -86,21 +144,16 @@ class VLLM(VLLMSimple):
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         e2e_latency = 0
         for batch_requests in batched_requests:
-            batched_messages = []
+            batched_vllm_inputs = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
                 futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
                 for future in futures:
-                    messages, sampling_params = future.result()
-                    batched_messages.append(messages)
+                    vllm_inputs, sampling_params = future.result()
+                    batched_vllm_inputs.append(vllm_inputs)
 
             sampling_params = SamplingParams(**sampling_params)
             start_time = time.time()
-            if self.chat_template is not None:
-                with open(self.chat_template, "r") as f:
-                    chat_template = f.read()
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
-            else:
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
+            response = self.client.generate(batched_vllm_inputs, sampling_params)
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]
