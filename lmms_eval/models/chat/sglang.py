@@ -3,7 +3,9 @@ import time
 import warnings
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
 from accelerate import Accelerator, DistributedType
+from PIL import Image
 from sglang import Engine
 from tqdm import tqdm
 from transformers import AutoProcessor
@@ -18,6 +20,7 @@ from lmms_eval.protocol import ChatMessages
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
+from qwen_vl_utils import process_vision_info
 
 
 @register_model("sglang_runtime")
@@ -30,7 +33,8 @@ class Sglang(lmms):
         tensor_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.8,
         batch_size: int = 1,
-        max_frame_num: int = 32,
+        nframes: int = 32,
+        max_frame_num: int = 768,
         fps: Optional[int] = None,
         max_pixels: int = 1605632,
         min_pixels: int = 28 * 28,
@@ -44,6 +48,7 @@ class Sglang(lmms):
         # and split the text and image
         # Here we just use the same token as llava for convenient
         self._model = model
+        self.nframes = nframes
         self.max_frame_num = max_frame_num
         self.threads = threads
         self.chat_template = chat_template
@@ -120,6 +125,26 @@ class Sglang(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "TODO, not implemented"
 
+    @property
+    def image_token_id(self):
+        image_token_id = getattr(self.processor, "image_token_id", None)
+        if image_token_id is None:
+            image_token = getattr(self.processor, "image_token", None)
+            if image_token is None:
+                raise ValueError("Image token not found in processor")
+            image_token_id = self.tokenizer.convert_tokens_to_ids(image_token)
+        return image_token_id
+
+    @property
+    def video_token_id(self):
+        video_token_id = getattr(self.processor, "video_token_id", None)
+        if video_token_id is None:
+            video_token = getattr(self.processor, "video_token", None)
+            if video_token is None:
+                raise ValueError("Video token not found in processor")
+            video_token_id = self.tokenizer.convert_tokens_to_ids(video_token)
+        return video_token_id
+
     def generate_until(self, requests) -> List[str]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
@@ -149,32 +174,42 @@ class Sglang(lmms):
                     "max_new_tokens": gen_kwargs["max_new_tokens"],
                     "top_p": gen_kwargs["top_p"],
                 }
-                video_kwargs = {"enforce_image": True, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels}
+                video_kwargs = {"enforce_image": True, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels, "max_frames": self.max_frame_num}
                 if self.fps is not None:
                     video_kwargs["fps"] = self.fps
                 else:
-                    video_kwargs["nframes"] = self.max_frame_num
+                    video_kwargs["nframes"] = self.nframes
                 messages = chat_messages.to_hf_messages(video_kwargs)
 
-                images, videos, audio = chat_messages.extract_media()
-                video_data = []
-                for video in videos:
-                    video_data.extend(load_video_decord(video, max_frames_num=self.max_frame_num))
-                if len(images) > 0:
-                    image_data.append(images)
-                if len(video_data) > 0:
-                    image_data.append(video_data)
-
                 batched_messages.append(messages)
-
+            image_inputs, video_inputs, video_kwargs = process_vision_info(batched_messages, return_video_kwargs=True, return_video_metadata=True)
             texts = self.processor.apply_chat_template(
                 batched_messages,
                 tokenize=False,
                 add_generation_prompt=True,
             )
+            if video_inputs is not None:
+                video_inputs, video_metadatas = zip(*video_inputs)
+                video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+            else:
+                video_metadatas = None
+            assert image_inputs is None or video_inputs is None, "Only one of image or video inputs should be provided"
+            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, video_metadata=video_metadatas, **video_kwargs, padding=True, return_tensors="pt")
+            # If video inputs is not None, we need to replace the image token ids with the video token ids before generating
+            # so that the visual tokens are being scattered correctly.
+            if video_inputs is not None:
+                input_ids = inputs.pop("input_ids")
+                input_ids[input_ids == self.video_token_id] = self.image_token_id
+                input_ids = input_ids.tolist()
+                image_inputs = []
+                for video_input in video_inputs:
+                    images = [Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8)) for frame in video_input]
+                    image_inputs.append(images)
+            else:
+                input_ids = inputs.pop("input_ids").tolist()
 
             start_time = time.time()
-            outputs = self.client.generate(texts, params, image_data=image_data)
+            outputs = self.client.generate(input_ids=input_ids, sampling_params=params, image_data=image_inputs)
             end_time = time.time()
 
             response_text = [o["text"] for o in outputs]
@@ -191,7 +226,7 @@ class Sglang(lmms):
 
                 total_tokens += output_tokens
 
-            if len(outputs) > 1:
+            if len(outputs) >= 1:
                 avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
 
             assert len(response_text) == len(batch_requests)
