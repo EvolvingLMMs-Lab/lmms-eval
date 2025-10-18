@@ -46,6 +46,7 @@ class Llava_OneVision1_5(lmms):
         max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
+        image_first: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
         max_length: int = 2048,
         **kwargs,
@@ -86,7 +87,7 @@ class Llava_OneVision1_5(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
-
+        self.image_first = image_first
         if reasoning_prompt:
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
         else:
@@ -236,12 +237,20 @@ class Llava_OneVision1_5(lmms):
                         processed_visuals.append({"type": "image", "image": visual.convert("RGB")})
 
                 if self.interleave_visuals is False:
-                    message.append(
-                        {
-                            "role": "user",
-                            "content": processed_visuals + [{"type": "text", "text": context}],
-                        }
-                    )
+                    if self.image_first:
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": [{"type": "text", "text": context}] + processed_visuals,
+                            }
+                        )
+                    else:
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": [{"type": "text", "text": context}] + processed_visuals,
+                            }
+                        )
                 else:  # currently support find <image x> in the context
                     image_placeholders = re.findall(r"<image \d+>", context)
                     content_parts = []
