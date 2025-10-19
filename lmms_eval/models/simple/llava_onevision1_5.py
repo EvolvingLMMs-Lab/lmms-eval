@@ -46,7 +46,7 @@ class Llava_OneVision1_5(lmms):
         max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
-        image_first: Optional[bool] = False,
+        image_first: Optional[bool] = True,
         reasoning_prompt: Optional[str] = None,
         max_length: int = 2048,
         **kwargs,
@@ -241,7 +241,7 @@ class Llava_OneVision1_5(lmms):
                         message.append(
                             {
                                 "role": "user",
-                                "content": [{"type": "text", "text": context}] + processed_visuals,
+                                "content": processed_visuals + [{"type": "text", "text": context}],
                             }
                         )
                     else:
