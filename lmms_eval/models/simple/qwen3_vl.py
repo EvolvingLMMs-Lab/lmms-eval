@@ -318,8 +318,7 @@ class Qwen3_VL(lmms):
             #pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             pad_token_id = self.tokenizer.eos_token_id
             current_gen_kwargs["top_p"] = None
-            debug = False
-            
+
             cont = self.model.generate(
                 **inputs,
                 eos_token_id=self.tokenizer.eos_token_id,
@@ -351,34 +350,6 @@ class Qwen3_VL(lmms):
                     generated_ids_trimmed.append(torch.tensor([], dtype=torch.long, device=out_ids.device))
             
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-            if debug:
-                print(">>>>>>>>>>>>")
-                print(self.processor)
-                print("doc_id: ", doc_id)
-                print("texts: ", texts)
-                print("inputs: ", inputs)
-                print("eos_token_id: ", self.tokenizer.eos_token_id)
-                print("pad_token_id: ", pad_token_id)
-                print("inputs['pixel_values'].sum(): ", inputs['pixel_values'].sum())
-                print("current_gen_kwargs: ", current_gen_kwargs)
-                print("do_sample: ", True if current_gen_kwargs["temperature"] > 0 else False)
-                print("temperature: ", current_gen_kwargs["temperature"])
-                print("top_p: ", current_gen_kwargs["top_p"])
-                print("num_beams: ", current_gen_kwargs["num_beams"])
-                print("max_new_tokens: ", current_gen_kwargs["max_new_tokens"])
-                print("use_cache: ", self.use_cache)
-                print("cont: ", cont)
-                print("generated_ids_trimmed: ", generated_ids_trimmed)
-                print("answers: ", answers)
-                print(">>>>>>>>>>>>>>>>>>>>>>")
-            
-            # Process answers to remove text after stop tokens
-            #for i, ans in enumerate(answers):
-            #    stop_pos = len(ans)  # Default to end of string
-            #    for term in until:
-            #        if term and term in ans:  # Ensure term is not empty and exists
-            #            stop_pos = min(stop_pos, ans.index(term))
-            #    answers[i] = ans[:stop_pos].strip()  # Trim whitespace from final answer
 
             for ans, context in zip(answers, contexts):
                 res.append(ans)
