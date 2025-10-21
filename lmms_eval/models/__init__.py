@@ -45,6 +45,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "longva": "LongVA",
     "mantis": "Mantis",
     "minicpm_v": "MiniCPM_V",
+    "minicpm_v_4_5": "MiniCPM_V_4_5",
     "minimonkey": "MiniMonkey",
     "moviechat": "MovieChat",
     "mplug_owl_video": "mplug_Owl",
