@@ -126,11 +126,16 @@ class VLLMGenerate(VLLMChat):
         if images is not None:
             vllm_inputs["multi_modal_data"]["image"] = images
         if video_inputs is not None:
-            vllm_inputs["multi_modal_data"]["video"] = video_inputs
-            vllm_inputs["mm_processor_kwargs"] = {
-                "video_metadata": video_metadatas,
-                **kwargs,
-            }
+            vllm_inputs["multi_modal_data"]["video"] = []
+            for video_input, video_metadata in zip(video_inputs, video_metadatas):
+                if "Qwen3VL" in type(self.processor).__name__:
+                    video_input = (video_input, video_metadata)
+                else:
+                    video_input = video_input
+                vllm_inputs["multi_modal_data"]["video"].append(video_input)
+                vllm_inputs["mm_processor_kwargs"] = {
+                    **kwargs,
+                }
 
         return vllm_inputs, params
 
