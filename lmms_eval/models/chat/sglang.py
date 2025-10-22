@@ -62,8 +62,8 @@ class Sglang(lmms):
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
         # Set up sglang client
-        self.client = Engine(model_path=model, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, **kwargs)
-        self.processor = AutoProcessor.from_pretrained(model)
+        self.client = Engine(model_path=model, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, trust_remote_code=trust_remote_code, **kwargs)
+        self.processor = AutoProcessor.from_pretrained(model, trust_remote_code=trust_remote_code)
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
