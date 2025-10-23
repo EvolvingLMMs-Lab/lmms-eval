@@ -8,6 +8,7 @@ import tempfile
 import time
 import uuid
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecodeError
 from typing import List, Optional, Tuple, Union
 
@@ -175,6 +176,68 @@ class Sglang(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "TODO, not implemented"
 
+    def _prepare_video_kwargs(self):
+        video_kwargs = {"max_pixels": self.max_pixels, "min_pixels": self.min_pixels, "max_frames": self.max_frame_num}
+        if self.fps is not None:
+            video_kwargs["fps"] = self.fps
+        else:
+            video_kwargs["nframes"] = self.nframes
+        return video_kwargs
+
+    def _prepare_single_message(self, batch_request):
+        """
+        Helper method to prepare a single message for batching.
+        This can be parallelized using ThreadPoolExecutor.
+        """
+        ctx, doc_to_messages, gen_kwargs, doc_id, task, split = batch_request.arguments
+        chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
+        chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
+
+        # Set default generation parameters
+        if "max_new_tokens" not in gen_kwargs:
+            gen_kwargs["max_new_tokens"] = 1024
+        if gen_kwargs["max_new_tokens"] > 4096:
+            gen_kwargs["max_new_tokens"] = 4096
+        if "temperature" not in gen_kwargs:
+            gen_kwargs["temperature"] = 0
+        if "top_p" not in gen_kwargs:
+            gen_kwargs["top_p"] = 0.95
+
+        # Prepare video kwargs
+        video_kwargs = self._prepare_video_kwargs()
+
+        # Convert to HF messages and extract media
+        messages = chat_messages.to_hf_messages(video_kwargs)
+        images, videos, audios = chat_messages.extract_media()
+
+        # Handle media files if tools are available
+        if self.tools is not None:
+            for image_idx, image in enumerate(images):
+                image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
+                image.save(image_path)
+                messages[-1]["content"].append({"type": "text", "text": f"\nImage {image_idx} has image path: {image_path}"})
+            for video_idx, video in enumerate(videos):
+                messages[-1]["content"].append({"type": "text", "text": f"\nVideo {video_idx} has video path: {video}"})
+
+        return messages, images
+
+    def _extract_gen_params(self, gen_kwargs):
+        """Extract generation parameters with defaults."""
+        if "max_new_tokens" not in gen_kwargs:
+            gen_kwargs["max_new_tokens"] = 1024
+        if gen_kwargs["max_new_tokens"] > 4096:
+            gen_kwargs["max_new_tokens"] = 4096
+        if "temperature" not in gen_kwargs:
+            gen_kwargs["temperature"] = 0
+        if "top_p" not in gen_kwargs:
+            gen_kwargs["top_p"] = 0.95
+
+        return {
+            "temperature": gen_kwargs["temperature"],
+            "max_new_tokens": gen_kwargs["max_new_tokens"],
+            "top_p": gen_kwargs["top_p"],
+        }
+
     @property
     def image_token_id(self):
         image_token_id = getattr(self.processor, "image_token_id", None)
@@ -204,42 +267,18 @@ class Sglang(lmms):
         total_tokens = 0
         e2e_latency = 0
         for batch_requests in batched_requests:
-            batched_messages = []
-            image_data = []
-            for idx in range(len(batch_requests)):
-                ctx, doc_to_messages, gen_kwargs, doc_id, task, split = batch_requests[idx].arguments
-                chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
-                chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
-                if "max_new_tokens" not in gen_kwargs:
-                    gen_kwargs["max_new_tokens"] = 1024
-                if gen_kwargs["max_new_tokens"] > 4096:
-                    gen_kwargs["max_new_tokens"] = 4096
-                if "temperature" not in gen_kwargs:
-                    gen_kwargs["temperature"] = 0
-                if "top_p" not in gen_kwargs:
-                    gen_kwargs["top_p"] = 0.95
+            # Prepare messages in parallel using ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(len(batch_requests), self.threads)) as executor:
+                batched_messages_and_images = list(executor.map(self._prepare_single_message, batch_requests))
 
-                params = {
-                    "temperature": gen_kwargs["temperature"],
-                    "max_new_tokens": gen_kwargs["max_new_tokens"],
-                    "top_p": gen_kwargs["top_p"],
-                }
-                video_kwargs = {"enforce_image": True, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels, "max_frames": self.max_frame_num}
-                if self.fps is not None:
-                    video_kwargs["fps"] = self.fps
-                else:
-                    video_kwargs["nframes"] = self.nframes
-                messages = chat_messages.to_hf_messages(video_kwargs)
-                images, videos, audios = chat_messages.extract_media()
-                if self.tools is not None:
-                    for image_idx, image in enumerate(images):
-                        image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
-                        image.save(image_path)
-                        messages[-1]["content"].append({"type": "text", "text": f"\nImage {image_idx} has image path: {image_path}"})
-                    for video_idx, video in enumerate(videos):
-                        messages[-1]["content"].append({"type": "text", "text": f"\nVideo {video_idx} has video path: {video}"})
+            # Unpack messages and images from parallel results
+            batched_messages = [msg for msg, _ in batched_messages_and_images]
+            image_data = [imgs for _, imgs in batched_messages_and_images]
 
-                batched_messages.append(messages)
+            # Extract generation parameters from first request (should be same for batch)
+            ctx, doc_to_messages, gen_kwargs, doc_id, task, split = batch_requests[0].arguments
+            params = self._extract_gen_params(gen_kwargs)
+
             image_inputs, video_inputs, video_kwargs = process_vision_info(batched_messages, return_video_kwargs=True, return_video_metadata=True)
             texts = self.processor.apply_chat_template(
                 batched_messages,
@@ -373,7 +412,7 @@ class Sglang(lmms):
                 finish_reason = "tool_calls"
             if finish_reason == "stop" or finish_reason == "length":
                 messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
-                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False, tools=self.tools, skip_special_tokens=True)
             elif finish_reason == "tool_calls":
                 try:
                     normed_content, tool_calls = self.function_call_parser.parse_non_stream(content)
@@ -421,13 +460,13 @@ class Sglang(lmms):
             else:
                 # Finish reason is neither "stop", "length", nor "tool_calls"
                 messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
-                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False, tools=self.tools, skip_special_tokens=True)
             turn_count += 1
             if turn_count > self.max_turn:
                 keep_rolling = False
 
         # Return the final message if max turns reached
-        return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+        return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False, tools=self.tools, skip_special_tokens=True)
 
     def req_level_generate(self, input_ids, image_data, sampling_params, batched_messages):
         """
