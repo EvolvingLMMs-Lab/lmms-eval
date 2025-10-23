@@ -1,10 +1,19 @@
+import asyncio
+import base64
+import io
 import json
+import os
+import shutil
+import tempfile
 import time
+import uuid
 import warnings
+from json import JSONDecodeError
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from accelerate import Accelerator, DistributedType
+from mcp.types import AudioContent, ImageContent, TextContent
 from PIL import Image
 from sglang import Engine
 from tqdm import tqdm
@@ -13,6 +22,7 @@ from transformers import AutoProcessor
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.mcp import MCPClient
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.load_video import load_video_decord
 from lmms_eval.protocol import ChatMessages
@@ -21,6 +31,16 @@ warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
 from qwen_vl_utils import process_vision_info
+
+try:
+    from sglang.srt.function_call.function_call_parser import FunctionCallParser
+except ImportError:
+    from sglang.srt.function_call_parser import FunctionCallParser
+
+try:
+    from sglang.srt.entrypoints.openai.protocol import Tool
+except ImportError:
+    from sglang.srt.openai_api.protocol import Tool
 
 
 @register_model("sglang_runtime")
@@ -41,6 +61,11 @@ class Sglang(lmms):
         threads: int = 16,  # Threads to use for decoding visuals
         trust_remote_code: Optional[bool] = True,
         chat_template: Optional[str] = None,
+        mcp_server_path: str = None,
+        max_turn: int = 5,
+        work_dir: str = None,
+        # No need to json decode this argument, it will be decoded by the server_args.py
+        json_model_override_args: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -52,7 +77,8 @@ class Sglang(lmms):
         self.max_frame_num = max_frame_num
         self.threads = threads
         self.chat_template = chat_template
-
+        self.max_turn = max_turn
+        self.work_dir = work_dir if work_dir is not None else tempfile.mkdtemp()
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
             if isinstance(value, str) and value.strip().startswith("{") and value.strip().endswith("}"):
@@ -60,10 +86,19 @@ class Sglang(lmms):
                     kwargs[key] = json.loads(value)
                 except json.JSONDecodeError:
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
-
+        kwargs["json_model_override_args"] = json_model_override_args
+        if mcp_server_path is not None:
+            self.mcp_client = MCPClient(mcp_server_path)
+        else:
+            self.mcp_client = None
+        self.processor = AutoProcessor.from_pretrained(model, trust_remote_code=trust_remote_code)
+        self.tools, self.tool_call_parser_type, self.sgl_tools, self.function_call_parser = self._init_tools_sglang()
         # Set up sglang client
         self.client = Engine(model_path=model, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, trust_remote_code=trust_remote_code, **kwargs)
-        self.processor = AutoProcessor.from_pretrained(model, trust_remote_code=trust_remote_code)
+        if chat_template is not None:
+            with open(chat_template, "r") as f:
+                chat_template = f.read()
+                self.processor.chat_template = chat_template
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -121,6 +156,21 @@ class Sglang(lmms):
 
     def tok_decode(self, tokens):
         return self.tokenizer.decode(tokens)
+
+    def get_mcp_tools(self):
+        """
+        Get the list of available MCP tools.
+        :return: List of available tools in OpenAI-compatible format.
+        """
+        if self.mcp_client is None:
+            return None
+
+        try:
+            tools = self.mcp_client.get_function_list_sync()
+            return tools
+        except Exception as e:
+            eval_logger.error(f"Failed to retrieve MCP tools: {str(e)}")
+            return None
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "TODO, not implemented"
@@ -180,6 +230,14 @@ class Sglang(lmms):
                 else:
                     video_kwargs["nframes"] = self.nframes
                 messages = chat_messages.to_hf_messages(video_kwargs)
+                images, videos, audios = chat_messages.extract_media()
+                if self.tools is not None:
+                    for image_idx, image in enumerate(images):
+                        image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
+                        image.save(image_path)
+                        messages[-1]["content"].append({"type": "text", "text": f"\nImage {image_idx} has image path: {image_path}"})
+                    for video_idx, video in enumerate(videos):
+                        messages[-1]["content"].append({"type": "text", "text": f"\nVideo {video_idx} has video path: {video}"})
 
                 batched_messages.append(messages)
             image_inputs, video_inputs, video_kwargs = process_vision_info(batched_messages, return_video_kwargs=True, return_video_metadata=True)
@@ -187,6 +245,7 @@ class Sglang(lmms):
                 batched_messages,
                 tokenize=False,
                 add_generation_prompt=True,
+                tools=self.tools,
             )
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
@@ -209,7 +268,10 @@ class Sglang(lmms):
                 input_ids = inputs.pop("input_ids").tolist()
 
             start_time = time.time()
-            outputs = self.client.generate(input_ids=input_ids, sampling_params=params, image_data=image_inputs)
+            if self.mcp_client is None:
+                outputs = self.batch_level_generate(input_ids=input_ids, sampling_params=params, image_data=image_inputs)
+            else:
+                outputs = self.req_level_generate(input_ids=input_ids, image_data=image_inputs, sampling_params=params, batched_messages=batched_messages)
             end_time = time.time()
 
             response_text = [o["text"] for o in outputs]
@@ -239,8 +301,149 @@ class Sglang(lmms):
         }
         log_metrics(**metric_dict)
 
+        if self.mcp_client is not None:
+            shutil.rmtree(self.work_dir)
+
         pbar.close()
         return res
 
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation for LLaVAHF")
+
+    def get_tool_call_parser_type(
+        self,
+        processing_class,
+    ) -> str:
+        items = FunctionCallParser.ToolCallParserEnum.items()
+        if "gpt-oss" in getattr(processing_class, "name_or_path", "").lower():
+            eval_logger.debug(f"gpt-oss model detected from name_or_path: {processing_class.name_or_path}")
+            eval_logger.debug("Using 'gpt-oss' tool call parser.")
+            return "gpt-oss"
+        for parser_type, parser_cls in items:
+            parser = parser_cls()
+            try:
+                # This is when processing_class is a tokenizer
+                tokenizer_vocab = processing_class.get_vocab()
+            except AttributeError:
+                try:
+                    # This is when processing_class is a processor
+                    tokenizer_vocab = processing_class.tokenizer.get_vocab()
+                except AttributeError as e:
+                    raise ValueError(f"Cannot get vocab from processing_class {processing_class}") from e
+
+            if parser.bot_token.strip() in tokenizer_vocab and (parser.eot_token == "" or parser.eot_token.strip() in tokenizer_vocab):
+                return parser_type
+        else:
+            raise ValueError(f"No tool call parser found for processing_class {processing_class}")
+
+    def _init_tools_sglang(self):
+        if self.mcp_client is None:
+            return [], None, [], None
+
+        tools = self.get_mcp_tools()
+        tool_call_parser_type = self.get_tool_call_parser_type(self.processor)
+        sgl_tools = [Tool.model_validate(tool_schema) for tool_schema in tools]
+        function_call_parser = FunctionCallParser(
+            sgl_tools,
+            tool_call_parser_type,
+        )
+        # Make the detector to ignore new line token
+        function_call_parser.detector.bot_token = function_call_parser.detector.bot_token.strip()
+        function_call_parser.detector.eot_token = function_call_parser.detector.eot_token.strip()
+
+        return (
+            tools,
+            tool_call_parser_type,
+            sgl_tools,
+            function_call_parser,
+        )
+
+    async def async_a_request(self, input_id, image, sampling_params, messages):
+        if not isinstance(image, list):
+            image = [image]
+        keep_rolling = True
+        turn_count = 0
+        while keep_rolling:
+            output = await self.client.async_generate(input_ids=input_id, image_data=image, sampling_params=sampling_params)
+            content = output["text"]
+            content_id = self.processor.tokenizer.encode(content)
+
+            finish_reason = output["meta_info"]["finish_reason"]["type"]
+            if self.function_call_parser.has_tool_call(content):
+                finish_reason = "tool_calls"
+            if finish_reason == "stop" or finish_reason == "length":
+                messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
+                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+            elif finish_reason == "tool_calls":
+                try:
+                    normed_content, tool_calls = self.function_call_parser.parse_non_stream(content)
+                except JSONDecodeError:
+                    normed_content = content
+                    tool_calls = []
+                except AttributeError:
+                    normed_content = content
+                    tool_calls = []
+
+                tool_messages = []
+                new_image_data = []
+                for tool_call in tool_calls:
+                    try:
+                        arguments = json.loads(tool_call.parameters)
+                    except JSONDecodeError:
+                        arguments = {}
+                    results = await self.mcp_client.run_tool(tool_call.name, arguments)
+                    content_list = []
+                    for result in results.content:
+                        if isinstance(result, ImageContent):
+                            new_image = Image.open(io.BytesIO(base64.b64decode(result.data)))
+                            new_image_data.append(new_image)
+                            content_list.append({"type": "image"})
+                        elif isinstance(result, TextContent):
+                            content_list.append({"type": "text", "text": result.text})
+                        else:
+                            raise ValueError(f"Unsupported result type: {type(result)}. Only ImageContent, TextContent are supported.")
+                    tool_messages.append({"role": "tool", "name": tool_call.name, "content": content_list})
+                original_text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+                # Get the text for the tool calling part without system prompt
+                tool_calling_text = self.processor.apply_chat_template(messages + tool_messages, tokenize=False, add_generation_prompt=True)
+                tool_calling_text = tool_calling_text.split(original_text)[1]
+                if len(new_image_data) == 0:
+                    new_image_data = None
+                inputs = self.processor(text=tool_calling_text, images=new_image_data, return_tensors="pt")
+                tool_input_ids = inputs.pop("input_ids").flatten().tolist()
+
+                # Append this round's result
+                messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
+                messages.extend(tool_messages)
+                if new_image_data is not None:
+                    image.extend(new_image_data)
+                input_id = input_id + content_id + tool_input_ids
+            else:
+                # Finish reason is neither "stop", "length", nor "tool_calls"
+                messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
+                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+            turn_count += 1
+            if turn_count > self.max_turn:
+                keep_rolling = False
+
+        # Return the final message if max turns reached
+        return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+
+    def req_level_generate(self, input_ids, image_data, sampling_params, batched_messages):
+        """
+        Generate at request level with tool calling support.
+        Returns output in the same format as batch_level_generate for consistency.
+        Note: Metrics (token counts, latency) are approximate for this mode.
+        """
+        loop = asyncio.get_event_loop()
+        output_list = []
+        text_list = loop.run_until_complete(asyncio.gather(*[self.async_a_request(input_id, image, sampling_params, messages) for input_id, image, messages in zip(input_ids, image_data, batched_messages)]))
+        output_list = [{"text": text} for text in text_list]
+        return output_list
+
+    def batch_level_generate(self, input_ids, image_data, sampling_params):
+        """
+        Generate at batch level without tool calling support.
+        Returns list of outputs with format: [{"text": "...", "meta_info": {...}}, ...]
+        """
+        return self.client.generate(input_ids=input_ids, image_data=image_data, sampling_params=sampling_params)
