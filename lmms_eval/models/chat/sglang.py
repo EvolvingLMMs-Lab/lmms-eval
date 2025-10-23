@@ -462,7 +462,7 @@ class Sglang(lmms):
                 messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
                 return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False, tools=self.tools, skip_special_tokens=True)
             turn_count += 1
-            if turn_count > self.max_turn:
+            if turn_count >= self.max_turn:
                 keep_rolling = False
 
         # Return the final message if max turns reached
