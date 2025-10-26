@@ -64,10 +64,10 @@ dataset_kwargs:
 task: "mme" # The name of the task, this should be registered in the task manager. If successful, you can call lmms_eval with this task name by setting `--tasks mme`.
 test_split: test # The split of the dataset to use as the test split.
 output_type: generate_until # The type of model output for the given task. Options are `generate_until`, `loglikelihood`, and `multiple_choice`.
-doc_to_visual: !function utils.mme_doc_to_visual # The function to process a sample into the appropriate input for the model. 
-doc_to_text: !function utils.mme_doc_to_text # The function to process a sample into the appropriate target output for the model.
-doc_to_target: "answer" # The function to process a sample into a list of possible string choices for `multiple_choice` tasks.
-doc_to_messages: !function utils.mme_doc_to_messages
+doc_to_visual: !function utils.mme_doc_to_visual # The function to process a sample into the appropriate visual input for the model. 
+doc_to_text: !function utils.mme_doc_to_text # The function to process a sample into the appropriate text input for the model.
+doc_to_target: "answer" # The function or column to process a sample into the appropriate target output for the model.
+doc_to_messages: !function utils.mme_doc_to_messages # The function to process a sample into interleaved format.
 generation_kwargs: # Auxiliary arguments for the `generate` function from HF transformers library. This would be used in different models files.
   max_new_tokens: 16
   temperature: 0
