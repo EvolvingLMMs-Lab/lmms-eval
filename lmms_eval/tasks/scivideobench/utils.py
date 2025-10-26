@@ -1,10 +1,12 @@
 import os
 import random
 import re
-from pathlib import Path
 from collections import defaultdict
-import yaml
 from datetime import timedelta
+from pathlib import Path
+
+import yaml
+
 
 def convert_time_to_frames_in_question(question, total_duration_sec, total_frames):
     def parse_time(tstr):
@@ -26,7 +28,7 @@ def convert_time_to_frames_in_question(question, total_duration_sec, total_frame
         end_frame = round((end_sec / total_sec) * total_frames)
         return f"frame {start_frame} to frame {end_frame}"
 
-    question = re.sub(r'(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})', replace_range, question)
+    question = re.sub(r"(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})", replace_range, question)
 
     # Replace standalone timestamps like 06:15
     def replace_single(match):
@@ -35,9 +37,10 @@ def convert_time_to_frames_in_question(question, total_duration_sec, total_frame
         frame = round((time_sec / total_sec) * total_frames)
         return f"frame {frame}"
 
-    question = re.sub(r'(?<!frame )(\d{1,2}:\d{2})(?!\s*[-–])', replace_single, question)
+    question = re.sub(r"(?<!frame )(\d{1,2}:\d{2})(?!\s*[-–])", replace_single, question)
 
     return question
+
 
 def scivideobench_doc_to_visual(doc):
     with open(Path(__file__).parent / "scivideobench.yaml", "r") as f:
@@ -52,7 +55,6 @@ def scivideobench_doc_to_visual(doc):
     video_dir = Path(dataset_path)
     video_path = video_dir / f"jove_{doc['video_id']}.mp4"
 
-
     if video_path.exists():
         return [str(video_path)]
     elif video_path.with_suffix(".MP4").exists():
@@ -61,6 +63,7 @@ def scivideobench_doc_to_visual(doc):
         return [str(video_path.with_suffix(".mkv"))]
     else:
         raise FileNotFoundError(f"Video not found: {video_path}")
+
 
 def format_options(opts):
     if isinstance(opts, dict):
@@ -73,14 +76,15 @@ def format_options(opts):
     else:
         raise TypeError(f"Unsupported options type: {type(opts)}")
 
+
 def scivideobench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
-    pre_prompt  = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     duration = doc["video_duration"]
-    converted_question = convert_time_to_frames_in_question(doc['question'], duration, int(duration))
+    converted_question = convert_time_to_frames_in_question(doc["question"], duration, int(duration))
 
     options_text = format_options(doc["options"])  # ← fix here
     input_text = f"{pre_prompt}{converted_question}\n{options_text}\n{post_prompt}"
@@ -91,8 +95,10 @@ def scivideobench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 def scivideobench_doc_to_choice(doc):
     return ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
+
 def scivideobench_doc_to_target(doc):
     return ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].index(doc["ground_truth"])
+
 
 def extract_answer_letter(s):
     """
@@ -101,27 +107,18 @@ def extract_answer_letter(s):
     """
     s = s.strip()
 
-    answer_prefixes = [
-        "The answer is",
-        "The correct answer is",
-        "The best answer is",
-        "Answer:",
-        "Option:",
-        "### Final Answer:\n$$\\boxed",
-        "the final answer is"
-    ]
+    answer_prefixes = ["The answer is", "The correct answer is", "The best answer is", "Answer:", "Option:", "### Final Answer:\n$$\\boxed", "the final answer is"]
     for prefix in answer_prefixes:
         s = s.replace(prefix, "")
 
-
     if len(s.split()) > 16 and not re.search("[ABCDEFGHIJ]", s):
         return ""
-
 
     matches = re.search(r"[ABCDEFGHIJKL]", s)
     if matches is None:
         return ""
     return matches[0]
+
 
 def scivideobench_process_results(doc, results):
     pred = results[0].strip() if isinstance(results, list) else results.strip()
@@ -130,7 +127,7 @@ def scivideobench_process_results(doc, results):
         pred = random.choice(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"])
 
     gold = doc["answer"].strip()
-    correct = (pred == gold)
+    correct = pred == gold
 
     data_dict = {
         "id": doc["video_id"],
@@ -139,12 +136,10 @@ def scivideobench_process_results(doc, results):
         "pred_answer": pred,
         "answer": gold,
         "correct": correct,
-        "raw_output": results[0] if isinstance(results, list) else results
+        "raw_output": results[0] if isinstance(results, list) else results,
     }
 
-    return {
-        "scivideobench_acc": data_dict
-    }
+    return {"scivideobench_acc": data_dict}
 
 
 def scivideobench_aggregate_results(results):
@@ -194,8 +189,4 @@ def scivideobench_aggregate_results(results):
     for k, v in printable_category.items():
         print(f"{k}: {v['acc']}% (samples: {v['num']})")
 
-    return {
-        "overall_acc": overall_acc,
-        "by_question_type": printable_qtype,
-        "by_category": printable_category
-    }
+    return {"overall_acc": overall_acc, "by_question_type": printable_qtype, "by_category": printable_category}
