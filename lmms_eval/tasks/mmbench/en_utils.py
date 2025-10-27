@@ -37,7 +37,9 @@ mmbench_evaluator = MMBench_Evaluator(sys_prompt=config["metadata"]["sys_prompt"
 
 
 def mmbench_doc_to_visual(doc):
-    return [doc["image"].convert("RGB")]
+    print("two image")
+    return [doc["image"].convert("RGB"), doc["image"].convert("RGB")]
+    # return [doc["image"].convert("RGB")]
 
 
 def mmbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
