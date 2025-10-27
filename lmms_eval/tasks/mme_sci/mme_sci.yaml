@@ -1,0 +1,39 @@
+# dataset_path: JCruan/MME-SCI
+dataset_path: "parquet"
+dataset_kwargs:
+  data_dir: "~/.cache/huggingface/datasets"
+  data_files:
+    - "~/.cache/huggingface/datasets/datasets--JCruan--MME-SCI/snapshots/local_snapshot/mmesci_1019_zh.parquet"
+
+  token: False
+
+task: "mme_sci"
+test_split: "train"
+output_type: "generate_until"
+
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "answer"
+doc_to_messages: !function utils.doc_to_messages
+
+generation_kwargs:
+  max_new_tokens: 8192
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.process_results
+
+metric_list:
+  - metric: mmesci
+    aggregation: !function utils.mmesci_agg
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "请在 '最终答案: ' 之后简洁地写出你给出的答案。"
+
+metadata:
+  - version: 0.0
