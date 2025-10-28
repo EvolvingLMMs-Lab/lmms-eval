@@ -1,9 +1,7 @@
-# dataset_path: JCruan/MME-SCI
-dataset_path: "parquet"
+dataset_path: JCruan/MME-SCI
 dataset_kwargs:
-  data_dir: "~/.cache/huggingface/datasets"
-  data_files: "~/.cache/huggingface/datasets/datasets--JCruan--MME-SCI/snapshots/local_snapshot/mmesci_1019_img.parquet"
   token: False
+
 
 task: "mme_sci_image"
 test_split: "train"

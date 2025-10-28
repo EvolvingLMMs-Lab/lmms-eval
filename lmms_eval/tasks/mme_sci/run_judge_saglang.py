@@ -1,8 +1,10 @@
-import sys
-import os
 import json
-from tqdm import tqdm
+import os
+import sys
+
 from openai import OpenAI
+from tqdm import tqdm
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(ROOT_DIR)
 from lmms_eval.llm_judge.launcher.sglang import SGLangLauncher
@@ -35,7 +37,7 @@ launcher = SGLangLauncher(
     timeout=TIMEOUT,
     enable_torch_compile=False,
     enable_cuda_graph=False,
-    log_level="warning", 
+    log_level="warning",
     log_level_http="warning",
 )
 launcher.launch()
@@ -85,15 +87,10 @@ for line in tqdm(lines, desc="Judging samples"):
         print(f"[ERROR] sample_id={sample_id} failed: {e}")
         judge_result = "error"
 
-    judged_samples.append({
-        "sample_id": sample_id,
-        "judge": judge_result,
-        "target": standard_answer,
-        "filtered_resps": ai_respond
-    })
+    judged_samples.append({"sample_id": sample_id, "judge": judge_result, "target": standard_answer, "filtered_resps": ai_respond})
 
 with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-    for item in judged_samples:   
+    for item in judged_samples:
         f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
 valid_samples = [x for x in judged_samples if x["judge"] in ["correct", "incorrect"]]
