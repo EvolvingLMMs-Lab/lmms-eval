@@ -343,7 +343,18 @@ def process_discriminative_task(data_item, ground_truth_item, metrics):
 
 def amber_g_doc_to_visual(doc):
     """Convert document to visual input."""
-    return [doc["image"].convert("RGB")]
+    # Read num_image from environment variable
+    num_image = int(os.environ.get("NUM_IMAGE", "1"))
+    
+    if num_image == 1:
+        # print("one image!")
+        return [doc["image"].convert("RGB")]
+    elif num_image == 2:
+        # print("two images!")
+        # Use the same image twice (similar to mmbench pattern)
+        return [doc["image"].convert("RGB"), doc["image"].convert("RGB")]
+    else:
+        raise ValueError(f"num_image must be 1 or 2, got {num_image}")
 
 
 def amber_g_doc_to_text(doc):
