@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import timedelta
 from typing import List, Union
 
 from mcp import ClientSession, StdioServerParameters
@@ -9,11 +10,12 @@ from openai import OpenAI
 
 
 class MCPClient:
-    def __init__(self, server_path: str):
+    def __init__(self, server_path: str, timeout: timedelta = timedelta(seconds=600)):
         """
         Initialize the MCPClient with the path to the MCP server.
         """
         self.server_path = server_path
+        self.timeout = timeout
 
     async def get_function_list(self):
         """
@@ -21,7 +23,7 @@ class MCPClient:
         """
         server_params = StdioServerParameters(command="python", args=[self.server_path])
         async with stdio_client(server=server_params) as (read_stream, write_stream):
-            async with ClientSession(read_stream, write_stream) as session:
+            async with ClientSession(read_stream, write_stream, read_timeout_seconds=self.timeout) as session:
                 await session.initialize()
 
                 tools = (await session.list_tools()).tools
@@ -40,7 +42,7 @@ class MCPClient:
         """
         server_params = StdioServerParameters(command="python", args=[self.server_path])
         async with stdio_client(server=server_params) as (read_stream, write_stream):
-            async with ClientSession(read_stream, write_stream) as session:
+            async with ClientSession(read_stream, write_stream, read_timeout_seconds=self.timeout) as session:
                 await session.initialize()
 
                 result = await session.call_tool(tool_name, tool_args)
