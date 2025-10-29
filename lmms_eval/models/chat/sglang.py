@@ -87,7 +87,8 @@ class Sglang(lmms):
                     kwargs[key] = json.loads(value)
                 except json.JSONDecodeError:
                     eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
-        kwargs["json_model_override_args"] = json_model_override_args
+        if json_model_override_args is not None:
+            kwargs["json_model_override_args"] = json_model_override_args
         if mcp_server_path is not None:
             self.mcp_client = MCPClient(mcp_server_path)
         else:
