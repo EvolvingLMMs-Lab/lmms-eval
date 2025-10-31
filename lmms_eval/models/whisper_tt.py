@@ -147,10 +147,11 @@ class WhisperTT(lmms):
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "Authorization": f"Bearer your-secret-key",  # This is hardcoded!
         }
         
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        # if self.api_key:
+        #     headers["Authorization"] = f"Bearer {self.api_key}"
         
         payload = {
             "file": base64_audio,
