@@ -57,7 +57,7 @@ class WhisperTT(lmms):
         self.pretrained = pretrained
         
         # Get API key from environment
-        self.api_key = os.getenv("OPENAI_API_KEY", "")
+        self.api_key = os.getenv("OPENAI_API_KEY", "your-secret-key")
         
         eval_logger.info(f"Initializing WhisperTT HTTP client with base_url: {self.base_url}")
         
