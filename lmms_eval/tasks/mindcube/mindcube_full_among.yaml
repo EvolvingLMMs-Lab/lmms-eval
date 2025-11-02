@@ -1,19 +1,4 @@
-dataset_path: oscarqjh/MindCube_lmmseval
 dataset_name: full
 test_split: among
 task: "mindcube_full_among"
-output_type: generate_until
-doc_to_visual: !function utils.mindcube_doc_to_visual
-doc_to_text: !function utils.mindcube_doc_to_text
-doc_to_target: "grounded_output"
-generation_kwargs:
-  max_new_tokens: 4096
-  temperature: 0.0
-  top_p: 1.0
-  do_sample: false
-  repetition_penalty: 1.0
-process_results: !function utils.mindcube_process_results
-metric_list:
-  - metric: overall_accuracy
-    aggregation: !function utils.mindcube_aggregate_results
-    higher_is_better: true
+include: _default_template_yaml
