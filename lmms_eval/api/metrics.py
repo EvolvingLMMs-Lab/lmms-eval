@@ -554,7 +554,14 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         coco_cap_chair_aggregate_results_chair_s,
         coco_cap_chair_aggregate_results_recall,
     )
-
+    # for amber_g
+    from lmms_eval.tasks.amber_g.utils import (
+        amber_g_aggregate_chair,
+        amber_g_aggregate_cover,
+        amber_g_aggregate_hal,
+        amber_g_aggregate_cog,
+    )
+    
     bootstrappable = [
         median,
         matthews_corrcoef,
@@ -566,6 +573,10 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         coco_cap_chair_aggregate_results_chair_i,
         coco_cap_chair_aggregate_results_chair_s,
         coco_cap_chair_aggregate_results_recall,
+        amber_g_aggregate_chair,
+        amber_g_aggregate_cover,
+        amber_g_aggregate_hal,
+        amber_g_aggregate_cog,
     ]
 
     if metric in bootstrappable:
@@ -573,6 +584,8 @@ def stderr_for_metric(metric, bootstrap_iters: int):
 
     if hasattr(metric, '__name__'):
         if 'coco_cap_chair' in metric.__name__:
+            return lambda x: bootstrap_chair_metric(metric, x, iters=bootstrap_iters)
+        if 'amber_g' in metric.__name__ or 'amber_' in metric.__name__:
             return lambda x: bootstrap_chair_metric(metric, x, iters=bootstrap_iters)
 
     stderr = {mean: mean_stderr, acc_all: acc_all_stderr}
