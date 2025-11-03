@@ -1,0 +1,4 @@
+dataset_name: tiny
+test_split: rotation
+task: "mindcube_tiny_rotation"
+include: _default_template_yaml

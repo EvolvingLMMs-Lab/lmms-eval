@@ -1,0 +1,4 @@
+dataset_name: full
+test_split: among
+task: "mindcube_full_among"
+include: _default_template_yaml
