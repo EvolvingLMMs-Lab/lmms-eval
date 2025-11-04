@@ -1,6 +1,8 @@
+import asyncio
 import base64
 import os
 from io import BytesIO
+import time
 from typing import List, Tuple
 
 import numpy as np
@@ -8,6 +10,7 @@ import requests
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from scipy.io import wavfile
+import aiohttp
 from tqdm import tqdm
 from transformers import AutoProcessor
 
@@ -35,7 +38,7 @@ class WhisperTT(lmms):
         pretrained: str = "openai/whisper-large-v3",
         device: str = "cuda",
         device_map: str = "cuda",
-        batch_size: int = 1,
+        batch_size: int = 1000,
         use_cache: bool = True,
         language: str = "en",
         task: str = "transcribe",
@@ -147,10 +150,11 @@ class WhisperTT(lmms):
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "Authorization": f"Bearer your-secret-key",  # This is hardcoded!
         }
         
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        # if self.api_key:
+        #     headers["Authorization"] = f"Bearer {self.api_key}"
         
         payload = {
             "file": base64_audio,
@@ -194,6 +198,76 @@ class WhisperTT(lmms):
         
         return ""
 
+    async def _generate_audio_transcription(self, session, audio_array: np.ndarray, sampling_rate: int, audio_index: int = None) -> str:
+        """
+        Transcribe audio using the tt-media-server HTTP API.
+        
+        Args:
+            audio_array: Audio data as numpy array
+            sampling_rate: Sampling rate of the audio
+            audio_index: Index of the audio for logging purposes
+            
+        Returns:
+            Transcription text
+        """
+        eval_logger.info(f"Starting async transcription request for audio {audio_index}")
+        # Encode audio to base64 WAV
+        base64_audio = self.encode_audio_to_base64_wav(audio_array, sampling_rate)
+
+        start_time = time.time()
+
+        # Prepare request
+        url = f"{self.base_url}/audio/transcriptions"
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer your-secret-key",
+            "Content-Type": "application/json"
+        }
+        
+        # if self.api_key:
+        #     headers["Authorization"] = f"Bearer {self.api_key}"
+        
+        payload = {
+            "file": base64_audio,
+            "stream": False
+        }
+
+        try:
+            async with session.post(
+                f"{self.base_url}/audio/transcriptions",
+                json=payload,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=15000)
+            ) as response:
+                elapsed = time.time() - start_time
+
+                if response.status != 200:
+                    eval_logger.info(f"❌ Image generation for eval failed with status: {response.status}")
+                    return False, elapsed, None
+
+                result = await response.json()
+                
+                # Extract transcription text from response
+                # The response format should contain the transcription
+                if isinstance(result, dict):
+                    # Try common keys for transcription text
+                    transcription = result.get('text') or result.get('transcription') or result.get('result')
+                    eval_logger.info(f"Transcription result for audio {audio_index}: {transcription}")
+                    if transcription:
+                        return transcription
+                    # If no known key, return the entire dict as string
+                    eval_logger.info(f"Unexpected response format: {result}")
+
+                eval_logger.info(f"✅ Eval succeeded in {elapsed:.2f}s")
+                return str(result)
+
+        except Exception as e:
+            elapsed = time.time() - start_time
+            eval_logger.info(f"❌ Image generation for eval failed: {e}")
+            return ""
+
+        return ""
+
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         raise NotImplementedError("Loglikelihood is not implemented for Whisper")
 
@@ -216,6 +290,13 @@ class WhisperTT(lmms):
         # Group requests by their generation_kwargs
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        
+        # Collect all audios from all chunks first
+        all_audios = []
+        all_contexts = []
+        all_gen_kwargs_list = []
+        
+        time_start = time.time()
         
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
@@ -241,33 +322,57 @@ class WhisperTT(lmms):
             sampling_rate = self.processor.feature_extractor.sampling_rate
             assert sampling_rate == SAMPLING_RATE, f"Expected sampling rate {SAMPLING_RATE}, but got {sampling_rate}"
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], sampling_rate) for audio in flattened_audios]
+            
+            # Collect all data
+            all_audios.extend(audios)
+            all_contexts.extend(contexts)
+            all_gen_kwargs_list.extend([gen_kwargs] * len(contexts))
+            
+        time_end_prep = time.time()
+        eval_logger.info(f"Preparation time for {len(all_audios)} requests: {time_end_prep - time_start:.2f}s")
 
-            try:
-                # Transcribe using HTTP API
-                answers = []
-                for audio in audios:
-                    answer = self.transcribe_audio(audio, sampling_rate)
-                    
-                    # Apply until tokens
-                    for term in until:
-                        if len(term) > 0:
-                            answer = answer.split(term)[0]
-                    
-                    answers.append(answer)
+        # Now run all transcriptions in parallel
+        async def run_transcriptions():
+            async with aiohttp.ClientSession() as session:
+                tasks = [self._generate_audio_transcription(session, audio, sampling_rate, i) for i, audio in enumerate(all_audios)]
+                return await asyncio.gather(*tasks)
 
-            except Exception as e:
-                eval_logger.error(f"Error while generating: {e}")
-                answers = [""] * len(contexts)
+        answers = asyncio.run(run_transcriptions())
+        
+        time_end_process = time.time()
 
-            for ans, context in zip(answers, contexts):
-                res.append(ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
-                pbar.update(1)
+        eval_logger.info(f"Total time for {len(all_audios)} requests across all chunks {time_end_process - time_start:.2f}s")
+
+        # Process results and apply until tokens
+        processed_answers = []
+        for ans, gen_kwargs in zip(answers, all_gen_kwargs_list):
+            # Apply until tokens
+            until = [self.tokenizer.decode(self.eot_token_id)]
+            if "until" in gen_kwargs:
+                until = gen_kwargs["until"]
+                if isinstance(until, str):
+                    until = [until]
+            
+            for term in until:
+                if len(term) > 0:
+                    ans = ans.split(term)[0]
+            
+            processed_answers.append(ans)
+
+        for ans, context, gen_kwargs in zip(processed_answers, all_contexts, all_gen_kwargs_list):
+            res.append(ans)
+            self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
+            pbar.update(1)
 
         # Reorder results back to original unsorted form
         res = re_ords.get_original(res)
 
         pbar.close()
+        
+        time_end_process = time.time()
+        
+        eval_logger.info(f"Total time for {len(all_audios)} requests across all chunks {time_end_process - time_start:.2f}s")
+
         return res
 
     def generate_until_multi_round(self, requests) -> List[str]:
