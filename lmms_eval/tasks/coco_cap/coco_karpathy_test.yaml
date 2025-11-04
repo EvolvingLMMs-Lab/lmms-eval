@@ -4,7 +4,7 @@ dataset_kwargs:
 task: "coco_karpathy_test"
 test_split: test
 output_type: generate_until
-doc_to_visual: !function utils.coco_doc_to_visual
+doc_to_visual: !function utils.coco_doc_to_visual_karpathy
 doc_to_text: "Describe the image briefly."
 doc_to_target: "answer"
 generation_kwargs:
