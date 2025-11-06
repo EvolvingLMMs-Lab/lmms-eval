@@ -92,6 +92,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "huggingface": "Huggingface",
     "async_openai": "AsyncOpenAIChat",
     "longvila": "LongVila",
+    "llava_onevision1_5": "Llava_OneVision1_5",
 }
 
 
