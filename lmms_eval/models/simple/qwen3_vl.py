@@ -14,7 +14,7 @@ from transformers import (
     AutoProcessor,
     AutoTokenizer,
     Qwen3VLForConditionalGeneration,
-    Qwen3VLMoeForConditionalGeneration
+    Qwen3VLMoeForConditionalGeneration,
 )
 
 from lmms_eval import utils
