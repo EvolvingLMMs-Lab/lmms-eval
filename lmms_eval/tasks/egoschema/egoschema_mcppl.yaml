@@ -2,6 +2,7 @@ dataset_name: "MC_PPL"
 task: "egoschema_mcppl"
 test_split: test
 output_type: multiple_choice
+doc_to_messages: !function utils.egoschema_doc_to_messages
 doc_to_visual: !function utils.egoschema_doc_to_visual
 doc_to_text: "question"
 doc_to_target: !function utils.egoschema_doc_to_answer

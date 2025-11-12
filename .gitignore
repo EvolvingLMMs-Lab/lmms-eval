@@ -51,3 +51,5 @@ uv.lock
 workspace/*
 .claude/*
 remote_code/*
+
+results/

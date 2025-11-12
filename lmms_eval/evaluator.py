@@ -46,6 +46,7 @@ from lmms_eval.utils import (
     run_task_tests,
     simple_parse_args_string,
 )
+from lmms_eval.video_samplers import get_video_sampler_cls
 
 
 @positional_deprecated
@@ -83,6 +84,7 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
+    video_sampler: Optional[str] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -183,6 +185,12 @@ def simple_evaluate(
     if task_manager is None:
         task_manager = TaskManager(verbosity, model_name=model)
 
+    if isinstance(video_sampler, str):
+        if video_sampler_kwargs is not None:
+            video_sampler_kwargs = ""
+        video_sampler_instance = get_video_sampler_cls(video_sampler).create_from_arg_string(video_sampler_kwargs)
+
+
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
@@ -191,6 +199,7 @@ def simple_evaluate(
             {
                 "batch_size": batch_size,
                 "max_batch_size": max_batch_size,
+                "video_sampler": video_sampler_instance,
                 "device": device,
             },
         )
@@ -255,6 +264,8 @@ def simple_evaluate(
         evaluation_tracker.general_config_tracker.log_experiment_args(
             model_source=model,
             model_args=model_args,
+            video_sampler=video_sampler,
+            video_sampler_kwargs=video_sampler_kwargs,
             system_instruction=system_instruction,
             chat_template=lm.chat_template if apply_chat_template else None,
             fewshot_as_multiturn=fewshot_as_multiturn,

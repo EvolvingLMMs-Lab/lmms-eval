@@ -54,8 +54,10 @@ class Qwen2_5_VL(lmms):
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
+        video_sampler: Optional[str] = None,
         **kwargs,
     ) -> None:
+        print("In Qwen2_5_VL constructor")
         super().__init__()
         # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
@@ -128,6 +130,7 @@ class Qwen2_5_VL(lmms):
         else:
             self._rank = 0
             self._world_size = 1
+        self.video_sampler = video_sampler
 
     @property
     def config(self):
@@ -223,7 +226,7 @@ class Qwen2_5_VL(lmms):
             for i in range(len(contexts)):
                 if "<image>" in contexts[i]:
                     contexts[i] = contexts[i].replace("<image>", "")
-
+            
             batched_messages = []
             for i, context in enumerate(contexts):
                 if "<image>" in context:
@@ -242,7 +245,12 @@ class Qwen2_5_VL(lmms):
                             first_frame = vr[0].asnumpy()
                             height, width = first_frame.shape[:2]
                             # max_pixels = height * width
-                            processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            processed_visuals.append({
+                                "type": "video", 
+                                "video": visual, 
+                                "max_pixels": self.max_pixels, 
+                                "min_pixels": self.min_pixels,
+                            })
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
                             base64_image = visual.convert("RGB")
                             buffer = BytesIO()
@@ -284,16 +292,16 @@ class Qwen2_5_VL(lmms):
 
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
             image_inputs, video_inputs = process_vision_info(batched_messages)
-            if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                # Ensure unique indices if linspace produces duplicates for few frames
-                indices = np.unique(indices)
-                # Append the last frame index if not already included
-                if total_frames - 1 not in indices:
-                    indices = np.append(indices, total_frames - 1)
-                    indices = np.unique(indices)  # Ensure uniqueness again
-                video_inputs[0] = video_inputs[0][indices]
+            # if video_inputs is not None:
+            #     total_frames = video_inputs[0].shape[0]
+            #     indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
+            #     # Ensure unique indices if linspace produces duplicates for few frames
+            #     indices = np.unique(indices)
+            #     # Append the last frame index if not already included
+            #     if total_frames - 1 not in indices:
+            #         indices = np.append(indices, total_frames - 1)
+            #         indices = np.unique(indices)  # Ensure uniqueness again
+            #     video_inputs[0] = video_inputs[0][indices]
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
             if self.device_map == "auto":

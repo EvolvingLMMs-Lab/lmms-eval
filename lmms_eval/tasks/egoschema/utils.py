@@ -31,6 +31,26 @@ cache_dir = os.path.join(cache_dir, "videos")
 
 from loguru import logger as eval_logger
 
+from PIL import Image as PIL_Image
+
+def egoschema_doc_to_messages(doc):
+    visuals = egoschema_doc_to_visual(doc)
+    if visuals is None:
+        visuals = []
+    text = egoschema_doc_to_text(doc)
+    messages = [{"role": "user", "content": []}]
+    content = []
+    for visual in visuals:
+        if isinstance(visual, PIL_Image.Image):
+            content.append({"type": "image", "url": visual})
+        elif isinstance(visual, dict):
+            content.append({"type": "audio", "url": visual})
+        elif isinstance(visual, str):
+            content.append({"type": "video", "url": visual, "question": doc['question']})
+    content.append({"type": "text", "text": text})
+    messages[0]["content"] = content
+    return messages
+
 
 # Pass in video path here
 # Can only work correctly with video llm

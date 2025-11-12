@@ -12,6 +12,10 @@ import numpy as np
 import torch
 import yaml
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
 import hashlib
@@ -274,6 +278,8 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
     parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
+    parser.add_argument("--video_sampler", type=str, default=None, help="Video sampler to use")
+    parser.add_argument("--video_sampler_kwargs", default="", help="String arguments for video sampler, e.g. `max_num_frames=32,ratio=1,t1=0.8,t2=-100,all_depth=5`",)
     args = parser.parse_args()
     return args
 
@@ -484,6 +490,8 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     results = evaluator.simple_evaluate(
         model=args.model,
         model_args=args.model_args,
+        video_sampler=args.video_sampler,
+        video_sampler_kwargs=args.video_sampler_kwargs,
         tasks=task_names,
         num_fewshot=args.num_fewshot,
         batch_size=args.batch_size,
