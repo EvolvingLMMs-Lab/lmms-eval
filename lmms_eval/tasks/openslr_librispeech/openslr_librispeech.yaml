@@ -1,0 +1,4 @@
+group: openslr_librispeech
+task:
+  - openslr_librispeech_other
+
