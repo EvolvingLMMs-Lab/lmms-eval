@@ -69,7 +69,10 @@ For development with consistent environment:
 ```bash
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
-uv sync  # This creates/updates your environment from uv.lock
+# Recommend
+uv pip install -e ".[all]"
+# If you want to use uv sync
+# uv sync  # This creates/updates your environment from uv.lock
 ```
 
 To run commands:
@@ -89,6 +92,7 @@ For direct usage from Git:
 uv venv eval
 uv venv --python 3.12
 source eval/bin/activate
+# You might need to add and include your own task yaml if using this installation
 uv pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 ```
 
