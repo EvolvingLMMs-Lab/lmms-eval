@@ -3,17 +3,16 @@ UEval (Unified Evaluation) Utils
 支持多模态生成评估 + Rubric 评估
 """
 
-import re
+import json
 import os
-from typing import Dict, List
-from loguru import logger as eval_logger
+import re
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from PIL import Image
-import json
-import time
 from google import genai
+from loguru import logger as eval_logger
+from PIL import Image
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gemini-2.5-pro")
@@ -77,8 +76,10 @@ You are given the question and the generated image(s). Judge whether the image m
 Return only the JSON object. If any image consists purely of text with no visual content, it should be judged as false directly.
 """.strip()
 
+
 def ueval_doc_to_visual(doc):
     return []
+
 
 def ueval_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["prompt"]
@@ -94,9 +95,7 @@ def parse_gemini_response(response_text: str) -> Dict[str, Any]:
     start = response_text.find("{")
     end = response_text.rfind("}") + 1
     if start == -1 or end <= start:
-        raise ValueError(
-            f"Could not locate JSON object in response:\n{response_text}"
-        )
+        raise ValueError(f"Could not locate JSON object in response:\n{response_text}")
     json_str = response_text[start:end]
 
     try:
@@ -106,20 +105,13 @@ def parse_gemini_response(response_text: str) -> Dict[str, Any]:
         eval_logger.debug(f"JSON parsing error: {e}, attempting to fix")
         try:
             # Fix unescaped backslashes in strings
-            fixed_json = re.sub(
-                r'(?<!\\)\\(?!["\\/bfnrtu])', r'\\\\', json_str
-            )
+            fixed_json = re.sub(r'(?<!\\)\\(?!["\\/bfnrtu])', r"\\\\", json_str)
             return json.loads(fixed_json)
         except Exception:
-            raise ValueError(
-                f"Failed to parse JSON. Original error: {e}\n"
-                f"JSON (first 500 chars): {json_str[:500]}"
-            )
+            raise ValueError(f"Failed to parse JSON. Original error: {e}\n" f"JSON (first 500 chars): {json_str[:500]}")
 
 
-def send_to_gemini(
-    prompt: str, image_paths: Optional[Sequence[str]], retries: int = 5
-) -> Optional[Dict[str, Any]]:
+def send_to_gemini(prompt: str, image_paths: Optional[Sequence[str]], retries: int = 5) -> Optional[Dict[str, Any]]:
     """
     Send prompt and images to Gemini API for evaluation
 
@@ -173,6 +165,7 @@ def normalize_criteria_value(value: Any) -> Any:
         return cleaned
     return value
 
+
 def get_eval(doc, model_text, model_images):
     """
     Evaluate model output against rubrics using Gemini judge
@@ -193,56 +186,50 @@ def get_eval(doc, model_text, model_images):
     # Evaluate text rubrics
     for rubric in doc.get("text_rubrics", []):
         template = TEXT_TEMPLATE
-        prompt = (
-            template.replace("<<question>>", question)
-            .replace("<<text_answer>>", model_text or "")
-            .replace("<<rubric_item>>", rubric.get("criterion", ""))
-        )
+        prompt = template.replace("<<question>>", question).replace("<<text_answer>>", model_text or "").replace("<<rubric_item>>", rubric.get("criterion", ""))
 
         parsed = send_to_gemini(prompt, image_paths=None)
         print(parsed)
         if parsed:
             criteria_met = normalize_criteria_value(parsed.get("criteria_met"))
-            all_results.append({
-                "criterion": rubric.get("criterion", ""),
-                "criteria_met": criteria_met,
-                "explanation": parsed.get("explanation", ""),
-                "rubric_tags": rubric.get("tags", []),
-                "type": "text",
-                "raw_response": str(parsed),
-            })
+            all_results.append(
+                {
+                    "criterion": rubric.get("criterion", ""),
+                    "criteria_met": criteria_met,
+                    "explanation": parsed.get("explanation", ""),
+                    "rubric_tags": rubric.get("tags", []),
+                    "type": "text",
+                    "raw_response": str(parsed),
+                }
+            )
 
     # Evaluate image rubrics
     for rubric in doc.get("image_rubrics", []):
         # Choose template based on question type
         if question_type == "closed":
             template = IMAGE_TEMPLATE_CLOSED
-            prompt = (
-                template.replace("<<question>>", question)
-                .replace("<<rubric_item>>", rubric.get("criterion", ""))
-            )
+            prompt = template.replace("<<question>>", question).replace("<<rubric_item>>", rubric.get("criterion", ""))
         else:  # open type
             template = IMAGE_TEMPLATE_OPEN
-            prompt = (
-                template.replace("<<question>>", question)
-                .replace("<<text_answer>>", model_text or "")
-                .replace("<<rubric_item>>", rubric.get("criterion", ""))
-            )
+            prompt = template.replace("<<question>>", question).replace("<<text_answer>>", model_text or "").replace("<<rubric_item>>", rubric.get("criterion", ""))
 
         parsed = send_to_gemini(prompt, image_paths=model_images)
         print(parsed)
         if parsed:
             criteria_met = normalize_criteria_value(parsed.get("criteria_met"))
-            all_results.append({
-                "criterion": rubric.get("criterion", ""),
-                "criteria_met": criteria_met,
-                "explanation": parsed.get("explanation", ""),
-                "rubric_tags": rubric.get("tags", []),
-                "type": "image",
-                "raw_response": str(parsed),
-            })
+            all_results.append(
+                {
+                    "criterion": rubric.get("criterion", ""),
+                    "criteria_met": criteria_met,
+                    "explanation": parsed.get("explanation", ""),
+                    "rubric_tags": rubric.get("tags", []),
+                    "type": "image",
+                    "raw_response": str(parsed),
+                }
+            )
 
     return all_results
+
 
 def ueval_process_results(doc, results):
     """
@@ -272,15 +259,11 @@ def ueval_process_results(doc, results):
     text_results = [r for r in eval_results if r["type"] == "text"]
     image_results = [r for r in eval_results if r["type"] == "image"]
 
-    text_met = sum(
-        1 for r in text_results if r["criteria_met"] is True
-    )
+    text_met = sum(1 for r in text_results if r["criteria_met"] is True)
     text_total = len(text_results)
     text_score = text_met / text_total if text_total > 0 else 0.0
 
-    image_met = sum(
-        1 for r in image_results if r["criteria_met"] is True
-    )
+    image_met = sum(1 for r in image_results if r["criteria_met"] is True)
     image_total = len(image_results)
     image_score = image_met / image_total if image_total > 0 else 0.0
 
@@ -289,17 +272,12 @@ def ueval_process_results(doc, results):
     # Extract domain from task_type field
     domain = doc.get("task_type", "unknown")
 
-    eval_logger.info(
-        f"[{domain}] Sample {doc.get('id', 'N/A')}: "
-        f"Text={text_met}/{text_total}, "
-        f"Image={image_met}/{image_total}, "
-        f"Overall={overall_score:.4f}"
-    )
+    eval_logger.info(f"[{domain}] Sample {doc.get('id', 'N/A')}: " f"Text={text_met}/{text_total}, " f"Image={image_met}/{image_total}, " f"Overall={overall_score:.4f}")
 
     return {
-        "text_score": {"score": text_score, "domain": domain, "id": doc.get('id', 'N/A')},
-        "image_score": {"score": image_score, "domain": domain, "id": doc.get('id', 'N/A')},
-        "overall_score": {"score": overall_score, "domain": domain, "id": doc.get('id', 'N/A')},
+        "text_score": {"score": text_score, "domain": domain, "id": doc.get("id", "N/A")},
+        "image_score": {"score": image_score, "domain": domain, "id": doc.get("id", "N/A")},
+        "overall_score": {"score": overall_score, "domain": domain, "id": doc.get("id", "N/A")},
     }
 
 
@@ -340,9 +318,7 @@ def _compute_domain_breakdown(results: List[Dict], metric_key: str) -> Dict:
 
     eval_logger.info(f"\n{metric_key.upper()} Per-Domain Breakdown:")
     for domain, stats in sorted(per_domain.items()):
-        eval_logger.info(
-            f"  {domain}: {stats['average']:.4f} (n={stats['count']})"
-        )
+        eval_logger.info(f"  {domain}: {stats['average']:.4f} (n={stats['count']})")
     eval_logger.info(f"  Macro Average: {macro_avg:.4f}")
 
     return {

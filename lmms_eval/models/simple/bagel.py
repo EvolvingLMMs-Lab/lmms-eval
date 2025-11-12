@@ -6,8 +6,12 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
-from accelerate import Accelerator
-from accelerate import infer_auto_device_map, init_empty_weights, load_checkpoint_and_dispatch
+from accelerate import (
+    Accelerator,
+    infer_auto_device_map,
+    init_empty_weights,
+    load_checkpoint_and_dispatch,
+)
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
@@ -23,10 +27,7 @@ if os.path.exists(bagel_path):
     sys.path.append(bagel_path)
     eval_logger.info(f"Added Bagel path to sys.path: {bagel_path}")
 else:
-    eval_logger.warning(
-        f"Bagel repository not found at {bagel_path}. "
-        f"Please clone it: cd {wd} && git clone https://github.com/ByteDance-Seed/Bagel.git"
-    )
+    eval_logger.warning(f"Bagel repository not found at {bagel_path}. " f"Please clone it: cd {wd} && git clone https://github.com/ByteDance-Seed/Bagel.git")
 
 
 @register_model("bagel")
@@ -74,9 +75,13 @@ class Bagel(lmms):
             from data.transforms import ImageTransform
             from inferencer import InterleaveInferencer
             from modeling.autoencoder import load_ae
+            from modeling.bagel import Bagel as BagelModel
             from modeling.bagel import (
-                BagelConfig, Bagel as BagelModel, Qwen2Config, Qwen2ForCausalLM,
-                SiglipVisionConfig, SiglipVisionModel
+                BagelConfig,
+                Qwen2Config,
+                Qwen2ForCausalLM,
+                SiglipVisionConfig,
+                SiglipVisionModel,
             )
             from modeling.qwen2 import Qwen2Tokenizer
 
@@ -156,9 +161,7 @@ class Bagel(lmms):
             self.response_persistent_folder = response_persistent_folder
 
         if output_image_dir is None:
-            self.output_image_dir = os.path.join(
-                self.response_persistent_folder, "bagel_generated_images"
-            )
+            self.output_image_dir = os.path.join(self.response_persistent_folder, "bagel_generated_images")
         else:
             self.output_image_dir = output_image_dir
 
@@ -171,10 +174,7 @@ class Bagel(lmms):
 
         if self.continual_mode:
             os.makedirs(self.response_persistent_folder, exist_ok=True)
-            self.response_persistent_file = os.path.join(
-                self.response_persistent_folder,
-                "bagel_response.json"
-            )
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, "bagel_response.json")
 
             if os.path.exists(self.response_persistent_file):
                 with open(self.response_persistent_file, "r") as f:
@@ -186,10 +186,7 @@ class Bagel(lmms):
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
             if self.continual_mode:
-                eval_logger.warning(
-                    "Continual mode is not supported for distributed inference. "
-                    "Automatically disabling continual_mode."
-                )
+                eval_logger.warning("Continual mode is not supported for distributed inference. " "Automatically disabling continual_mode.")
                 self.continual_mode = False
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
@@ -210,23 +207,17 @@ class Bagel(lmms):
         model_path = self.pretrained
 
         # Load configurations
-        llm_config = self.Qwen2Config.from_json_file(
-            os.path.join(model_path, "llm_config.json")
-        )
+        llm_config = self.Qwen2Config.from_json_file(os.path.join(model_path, "llm_config.json"))
         llm_config.qk_norm = True
         llm_config.tie_word_embeddings = False
         llm_config.layer_module = "Qwen2MoTDecoderLayer"
 
-        vit_config = self.SiglipVisionConfig.from_json_file(
-            os.path.join(model_path, "vit_config.json")
-        )
+        vit_config = self.SiglipVisionConfig.from_json_file(os.path.join(model_path, "vit_config.json"))
         vit_config.rope = False
         vit_config.num_hidden_layers -= 1
 
         # Load VAE
-        vae_model, vae_config = self.load_ae(
-            local_path=os.path.join(model_path, "ae.safetensors")
-        )
+        vae_model, vae_config = self.load_ae(local_path=os.path.join(model_path, "ae.safetensors"))
 
         # Create model config
         config = self.BagelConfig(
@@ -236,7 +227,7 @@ class Bagel(lmms):
             vit_config=vit_config,
             vae_config=vae_config,
             vit_max_num_patch_per_side=70,
-            connector_act='gelu_pytorch_tanh',
+            connector_act="gelu_pytorch_tanh",
             latent_patch_size=2,
             max_latent_size=64,
         )
@@ -246,9 +237,7 @@ class Bagel(lmms):
             language_model = self.Qwen2ForCausalLM(llm_config)
             vit_model = self.SiglipVisionModel(vit_config)
             model = self.BagelModel(language_model, vit_model, config)
-            model.vit_model.vision_model.embeddings.convert_conv2d_to_linear(
-                vit_config, meta=True
-            )
+            model.vit_model.vision_model.embeddings.convert_conv2d_to_linear(vit_config, meta=True)
 
         # Load tokenizer
         tokenizer = self.Qwen2Tokenizer.from_pretrained(model_path)
@@ -266,15 +255,7 @@ class Bagel(lmms):
         )
 
         # Ensure certain modules are on the same device
-        same_device_modules = [
-            'language_model.model.embed_tokens',
-            'time_embedder',
-            'latent_pos_embed',
-            'vae2llm',
-            'llm2vae',
-            'connector',
-            'vit_pos_embed'
-        ]
+        same_device_modules = ["language_model.model.embed_tokens", "time_embedder", "latent_pos_embed", "vae2llm", "llm2vae", "connector", "vit_pos_embed"]
 
         if torch.cuda.device_count() == 1:
             first_device = device_map.get(same_device_modules[0], "cuda:0")
@@ -305,14 +286,12 @@ class Bagel(lmms):
         elif self.precision_mode == "4bit":
             # NF4: 4-bit quantization
             try:
-                from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
-
-                bnb_quantization_config = BnbQuantizationConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_compute_dtype=torch.bfloat16,
-                    bnb_4bit_use_double_quant=False,
-                    bnb_4bit_quant_type="nf4"
+                from accelerate.utils import (
+                    BnbQuantizationConfig,
+                    load_and_quantize_model,
                 )
+
+                bnb_quantization_config = BnbQuantizationConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=False, bnb_4bit_quant_type="nf4")
                 model = load_and_quantize_model(
                     model,
                     weights_location=checkpoint_path,
@@ -322,20 +301,17 @@ class Bagel(lmms):
                 ).eval()
                 eval_logger.info("Loaded model in 4-bit (NF4) quantization")
             except ImportError:
-                raise ImportError(
-                    "4-bit quantization requires bitsandbytes. "
-                    "Install it with: pip install bitsandbytes"
-                )
+                raise ImportError("4-bit quantization requires bitsandbytes. " "Install it with: pip install bitsandbytes")
 
         elif self.precision_mode == "8bit":
             # INT8: 8-bit quantization
             try:
-                from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
-
-                bnb_quantization_config = BnbQuantizationConfig(
-                    load_in_8bit=True,
-                    torch_dtype=torch.float32
+                from accelerate.utils import (
+                    BnbQuantizationConfig,
+                    load_and_quantize_model,
                 )
+
+                bnb_quantization_config = BnbQuantizationConfig(load_in_8bit=True, torch_dtype=torch.float32)
                 model = load_and_quantize_model(
                     model,
                     weights_location=checkpoint_path,
@@ -345,10 +321,7 @@ class Bagel(lmms):
                 ).eval()
                 eval_logger.info("Loaded model in 8-bit (INT8) quantization")
             except ImportError:
-                raise ImportError(
-                    "8-bit quantization requires bitsandbytes. "
-                    "Install it with: pip install bitsandbytes"
-                )
+                raise ImportError("8-bit quantization requires bitsandbytes. " "Install it with: pip install bitsandbytes")
 
         else:
             raise ValueError(f"Unknown precision mode: {self.precision_mode}")
@@ -386,6 +359,7 @@ class Bagel(lmms):
         """Set random seeds for reproducibility"""
         if seed > 0:
             import random
+
             random.seed(seed)
             np.random.seed(seed)
             torch.manual_seed(seed)
@@ -395,12 +369,7 @@ class Bagel(lmms):
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
-    def generate_text_and_image(
-        self,
-        prompt: str,
-        doc_id: str,
-        task: str
-    ) -> Tuple[str, List[str]]:
+    def generate_text_and_image(self, prompt: str, doc_id: str, task: str) -> Tuple[str, List[str]]:
         """
         Generate text and image from prompt
 
@@ -429,11 +398,7 @@ class Bagel(lmms):
         }
 
         # Generate
-        result = self.inferencer(
-            text=prompt,
-            think=self.show_thinking,
-            **inference_hyper
-        )
+        result = self.inferencer(text=prompt, think=self.show_thinking, **inference_hyper)
 
         # Extract text
         output_text = result.get("text", "")
@@ -452,27 +417,18 @@ class Bagel(lmms):
 
     def format_output(self, text: str, images: List[str]) -> str:
         """Format output as JSON string"""
-        output_dict = {
-            "text": text,
-            "images": images
-        }
+        output_dict = {"text": text, "images": images}
         return json.dumps(output_dict, ensure_ascii=False)
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """Main inference method"""
         res = []
-        pbar = tqdm(
-            total=len(requests),
-            disable=(self.rank != 0),
-            desc="Bagel Generating"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Bagel Generating")
 
         def get_uuid(task, split, doc_id):
             return f"{task}___{split}___{doc_id}"
 
-        for contexts, _, _, doc_id, task, split in [
-            reg.args for reg in requests
-        ]:
+        for contexts, _, _, doc_id, task, split in [reg.args for reg in requests]:
             doc_uuid = get_uuid(task, split, doc_id)
 
             # Check cache
@@ -486,9 +442,7 @@ class Bagel(lmms):
 
             # Generate
             prompt = contexts
-            output_text, output_images = self.generate_text_and_image(
-                prompt, str(doc_id), task
-            )
+            output_text, output_images = self.generate_text_and_image(prompt, str(doc_id), task)
 
             # Format output
             formatted_output = self.format_output(output_text, output_images)
@@ -507,12 +461,8 @@ class Bagel(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         """Not supported for generation models"""
-        raise NotImplementedError(
-            "Bagel is a generation model and does not support loglikelihood"
-        )
+        raise NotImplementedError("Bagel is a generation model and does not support loglikelihood")
 
     def generate_until_multi_round(self, requests) -> List[str]:
         """Multi-round dialogue generation"""
-        raise NotImplementedError(
-            "TODO: Implement multi-round dialogue generation"
-        )
+        raise NotImplementedError("TODO: Implement multi-round dialogue generation")
