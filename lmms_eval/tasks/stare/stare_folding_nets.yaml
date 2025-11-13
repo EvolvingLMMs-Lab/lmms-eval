@@ -1,0 +1,4 @@
+dataset_name: folding_nets
+test_split: test
+task: "stare_folding_nets"
+include: _default_template_yaml

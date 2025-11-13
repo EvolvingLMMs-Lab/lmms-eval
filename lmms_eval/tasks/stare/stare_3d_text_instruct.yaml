@@ -1,0 +1,4 @@
+dataset_name: 3d_text_instruct
+test_split: test
+task: "stare_3d_text_instruct"
+include: _default_template_yaml
