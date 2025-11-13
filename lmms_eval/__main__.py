@@ -487,6 +487,21 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     request_caching_args = request_caching_arg_to_dict(cache_requests=args.cache_requests)
     datetime_str = utils.get_datetime_str(timezone=args.timezone)
 
+    # Configure metrics logging destination for downstream log_metrics calls.
+    os.environ.pop("LMMS_EVAL_METRICS_PATH", None)
+    if args.output_path:
+        from lmms_eval.loggers.evaluation_tracker import GeneralConfigTracker
+
+        fallback_model_name = args.model if isinstance(args.model, str) else str(args.model)
+        candidate_model_name = GeneralConfigTracker._get_model_name(args.model_args or "") or fallback_model_name
+        sanitized_model_name = utils.sanitize_model_name(candidate_model_name) or utils.sanitize_model_name(fallback_model_name) or "model"
+
+        metrics_dir = Path(args.output_path).expanduser().resolve() / sanitized_model_name
+        metrics_dir.mkdir(parents=True, exist_ok=True)
+        date_id = datetime_str.replace(":", "-")
+        metrics_path = metrics_dir / f"{date_id}_metrics.json"
+        os.environ["LMMS_EVAL_METRICS_PATH"] = str(metrics_path)
+
     results = evaluator.simple_evaluate(
         model=args.model,
         model_args=args.model_args,

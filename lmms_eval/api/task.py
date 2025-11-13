@@ -789,8 +789,6 @@ class ConfigurableTask(Task):
                 elif (not delimiter_has_whitespace) and (not choice_has_whitespace):
                     eval_logger.warning(f'Both target_delimiter "{self.config.target_delimiter}" and target choice: "{choice}" do not have whitespace, ignore if the language you are evaluating on does not require/use whitespace')
 
-        self.video_sampler_kwargs = self.config.video_sampler_kwargs
-
     def _prepare_model_specific_config(self):
         self.lmms_eval_specific_kwargs = self.config.lmms_eval_specific_kwargs
         if self.lmms_eval_specific_kwargs is not None:

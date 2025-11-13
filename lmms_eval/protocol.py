@@ -27,6 +27,7 @@ class ChatImageContent(BaseModel):
 class ChatVideoContent(BaseModel):
     type: Literal["video"] = "video"
     url: Any
+    question: str = None
 
 
 class ChatAudioContent(BaseModel):
@@ -74,6 +75,8 @@ class ChatMessages(BaseModel):
                 elif content.type == "image":
                     hf_message["content"].append({"type": "image", "image": content.url})
                 elif content.type == "video":
+                    if content.question is not None:
+                        video_kwargs["question"] = content.question
                     hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
                 elif content.type == "audio":
                     hf_message["content"].append({"type": "audio", "audio": content.url})

@@ -290,8 +290,12 @@ class Sglang(lmms):
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
                 video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+                for req, meta in zip(batch_requests, video_metadatas):
+                    req.video_metadata = meta
             else:
                 video_metadatas = None
+                for req in batch_requests:
+                    req.video_metadata = None
             assert image_inputs is None or video_inputs is None, "Only one of image or video inputs should be provided"
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, video_metadata=video_metadatas, **video_kwargs, padding=True, return_tensors="pt")
             # If video inputs is not None, we need to replace the image token ids with the video token ids before generating

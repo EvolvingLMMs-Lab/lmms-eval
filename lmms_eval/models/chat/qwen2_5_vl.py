@@ -5,6 +5,7 @@ import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
+import torch
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -26,6 +27,18 @@ except ImportError:
 class Qwen2_5_VL(Qwen2_5_VLSimple):
     is_simple = False
 
+    def get_num_tokens(self, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        vision_start_token_id = self.tokenizer.convert_tokens_to_ids("<|vision_start|>")
+        vision_end_token_id = self.tokenizer.convert_tokens_to_ids("<|vision_end|>")
+        start = (inputs.input_ids == vision_start_token_id)        # [B, L]
+        end   = (inputs.input_ids == vision_end_token_id)          # [B, L]
+        level = start.cumsum(dim=1) - end.cumsum(dim=1)
+        in_vision_span = level > 0
+        in_vision_span = in_vision_span | start | end
+        num_vision_tokens = in_vision_span.sum(dim=1)
+        num_tokens = inputs.attention_mask.sum(dim=1)
+        return num_tokens, num_vision_tokens
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -36,13 +49,19 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, group_fn=lambda x: x[2], grouping=True)
+        re_ords = utils.Collator([(idx, reg.args) for idx, reg in enumerate(requests)], _collate, group_fn=lambda x: x[1][2], grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        chunk_offset = 0
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         e2e_latency = 0
+        vision_processing_latency = 0
         total_tokens = 0
+        total_num_input_vision_tokens = 0
+        total_num_input_tokens = 0
         for chunk in chunks:
+            chunk_request_indices, chunk = zip(*chunk)
+            chunk_requests = [requests[idx] for idx in chunk_request_indices]
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
             chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
@@ -68,15 +87,21 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             video_kwargs["video_sampler"] = self.video_sampler
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
-            image_inputs, video_inputs = process_vision_info(batched_messages)
-            # if video_inputs is not None:
-            #     total_frames = video_inputs[0].shape[0]
-            #     indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-            #     # Append the last frame index if not already included
-            #     if total_frames - 1 not in indices:
-            #         indices = np.append(indices, total_frames - 1)
-            #     video_inputs[0] = video_inputs[0][indices]
+            
+            # Vision Info
+            start_time = time.time()
+            image_inputs, video_inputs = process_vision_info(batched_messages, return_video_metadata=True)
+            video_metadata_seq = []
+            if video_inputs:
+                frames, video_metadata_seq = zip(*video_inputs)
+                video_inputs = list(frames)
+                video_metadata_seq = list(video_metadata_seq)
+            else:
+                video_inputs = None
+            assert len(chunk_requests) == len(video_metadata_seq)
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+            end_time = time.time()
+            vision_info_time = end_time - start_time
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -102,6 +127,8 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 current_gen_kwargs["top_p"] = None
                 current_gen_kwargs["top_k"] = None
 
+            
+
             start_time = time.time()
             cont = self.model.generate(
                 **inputs,
@@ -116,13 +143,24 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 use_cache=self.use_cache,
             )
             end_time = time.time()
+            generation_latency = end_time - start_time
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
             # Calculate timing metrics for batch
-            e2e_latency += end_time - start_time
+            vision_processing_latency += vision_info_time
+            e2e_latency += generation_latency
             total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
+            num_input_tokens, num_input_vision_tokens = self.get_num_tokens(inputs)
+            total_num_input_tokens += num_input_tokens.sum()
+            total_num_input_vision_tokens += num_input_vision_tokens.sum()
+
+            for k, (inst, meta) in enumerate(zip(chunk_requests, video_metadata_seq)):
+                inst.video_metadata = meta
+                inst.num_input_tokens = num_input_tokens[k].cpu().item()
+                inst.num_input_vision_tokens = num_input_vision_tokens[k].cpu().item()
+            
 
             for ans, context in zip(answers, texts):
                 clean_ans = parse_reasoning_model_answer(ans)
@@ -145,6 +183,13 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             "avg_speed": avg_speed,
             "additional_metrics": {
                 "rank": self.rank,
+                "vision_processing_latency": vision_processing_latency,
+                "total_num_input_tokens": total_num_input_tokens,
+                "total_num_input_vision_tokens": total_num_input_vision_tokens,
+                "avg_num_input_tokens": total_num_input_tokens / len(requests),
+                "avg_num_input_vision_tokens": total_num_input_vision_tokens / len(requests),
+                "avg_vision_processing_latency": vision_processing_latency / len(requests),
+                "avg_e2e_latency": e2e_latency / len(requests),
             },
         }
         log_metrics(**metric_dict)

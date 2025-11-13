@@ -24,5 +24,5 @@ class UniformVideoSampler(BaseVideoSampler):
     ) -> Tuple[List[int], int]:
         nframes = smart_nframes(ele, total_frames=ele["total_frames"], video_fps=ele["video_fps"])
         idx = torch.linspace(ele["start_frame"], ele["end_frame"], nframes).round().long().tolist()
-        return idx, nframes
+        return idx
 

@@ -108,6 +108,7 @@ class VLLMGenerate(VLLMChat):
             video_metadatas.append(video_metadata)
             kwargs["fps"] = fps
             kwargs["do_sample_frames"] = False
+        request.video_metadata = video_metadatas if video_metadatas else None
         if len(videos) == 0:
             video_inputs = None
             video_metadatas = None

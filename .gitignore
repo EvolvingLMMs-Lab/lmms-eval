@@ -53,3 +53,4 @@ workspace/*
 remote_code/*
 
 results/
+lavis

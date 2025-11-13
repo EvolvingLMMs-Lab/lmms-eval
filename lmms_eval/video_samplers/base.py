@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 from lmms_eval import utils
+from accelerate import Accelerator
 
 
 class BaseVideoSampler(ABC):
@@ -11,6 +12,13 @@ class BaseVideoSampler(ABC):
     Samplers take a raw ``visual`` item (e.g. a video path or frame list) and
     return a dictionary payload understood by the downstream processor.
     """
+
+    def __init__(self, *args, **kwargs):
+        self.batch_size = int(kwargs.get("batch_size", 128))
+        device_pref = kwargs.get("device", None)
+        accelerator = Accelerator(cpu=(device_pref == "cpu"))
+        self.accelerator = accelerator
+        self.device = accelerator.device
 
     @classmethod
     def create_from_arg_string(cls: Type[T], arg_string: str, additional_config: Optional[dict] = None) -> T:

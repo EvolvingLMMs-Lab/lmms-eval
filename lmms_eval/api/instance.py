@@ -10,7 +10,9 @@ class Instance:
     metadata: Tuple[str, int, int] = field(default_factory=lambda: (None, None, None))  # TODO: better typehints here
     resps: list = field(default_factory=list)
     filtered_resps: dict = field(default_factory=dict)
-
+    video_metadata: object = None
+    num_input_tokens: int = None
+    num_input_vision_tokens: int = None
     # initialized after init
     task_name: str = None
     doc_id: str = None
