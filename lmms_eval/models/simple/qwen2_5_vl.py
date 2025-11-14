@@ -57,7 +57,6 @@ class Qwen2_5_VL(lmms):
         video_sampler: Optional[str] = None,
         **kwargs,
     ) -> None:
-        print("In Qwen2_5_VL constructor")
         super().__init__()
         # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"

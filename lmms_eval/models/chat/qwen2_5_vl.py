@@ -186,13 +186,67 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 "vision_processing_latency": vision_processing_latency,
                 "total_num_input_tokens": total_num_input_tokens,
                 "total_num_input_vision_tokens": total_num_input_vision_tokens,
+                "num_requests": len(requests),
+            },
+        }
+
+        if torch.distributed.is_available() and torch.distributed.is_initialized():
+            gathered = [None] * torch.distributed.get_world_size()
+            torch.distributed.all_gather_object(gathered, metric_dict)
+
+            if self.rank == 0:
+                total_tokens = sum(m["total_tokens"] for m in gathered)
+                total_requests = sum(m["additional_metrics"]["num_requests"] for m in gathered)
+                total_vision_processing_latency = sum(m["additional_metrics"]["vision_processing_latency"] for m in gathered)
+                total_e2e_latency = sum(m["e2e_latency"] for m in gathered)
+                total_num_input_tokens = sum(m["additional_metrics"]["total_num_input_tokens"].cpu().item() for m in gathered)
+                total_num_input_vision_tokens = sum(m["additional_metrics"]["total_num_input_vision_tokens"].cpu().item() for m in gathered)
+                
+                throughput = total_tokens / total_e2e_latency if total_e2e_latency > 0 else 0.0
+                avg_latency_per_req = total_e2e_latency / total_requests if total_requests else 0.0
+                avg_vision_processing_latency = total_vision_processing_latency / total_requests if total_vision_processing_latency > 0 else 0.0
+                avg_num_input_tokens = total_num_input_tokens / total_requests if total_num_input_tokens > 0 else 0.0
+                avg_num_input_vision_tokens = total_num_input_vision_tokens / total_requests if total_num_input_vision_tokens > 0 else 0.0
+                avg_total_tokens = total_tokens / total_requests if total_tokens > 0 else 0.0
+
+                metric_dict = {
+                    "total_tokens": total_tokens,
+                    "e2e_latency": total_e2e_latency,
+                    "avg_speed": throughput,
+                    "additional_metrics": {
+                        "rank": self.rank,
+                        "vision_processing_latency": total_vision_processing_latency,
+                        "total_num_input_tokens": total_num_input_tokens,
+                        "total_num_input_vision_tokens": total_num_input_vision_tokens,
+                        "num_requests": total_requests,
+                        "avg_num_output_tokens": avg_total_tokens,
+                        "avg_num_input_tokens": avg_num_input_tokens,
+                        "avg_num_input_vision_tokens": avg_num_input_vision_tokens,
+                        "avg_vision_processing_latency": avg_vision_processing_latency,
+                        "avg_e2e_latency": avg_latency_per_req,
+                        "per_worker": gathered
+                    },
+                }
+                log_metrics(**metric_dict)
+        else:
+            metric_dict = {
+            "total_tokens": total_tokens,
+            "e2e_latency": e2e_latency,
+            "avg_speed": avg_speed,
+            "additional_metrics": {
+                "rank": self.rank,
+                "vision_processing_latency": vision_processing_latency,
+                "total_num_input_tokens": total_num_input_tokens,
+                "total_num_input_vision_tokens": total_num_input_vision_tokens,
+                "num_requests": len(requests),
+                "avg_num_output_tokens": total_tokens / len(requests),
                 "avg_num_input_tokens": total_num_input_tokens / len(requests),
                 "avg_num_input_vision_tokens": total_num_input_vision_tokens / len(requests),
                 "avg_vision_processing_latency": vision_processing_latency / len(requests),
                 "avg_e2e_latency": e2e_latency / len(requests),
             },
         }
-        log_metrics(**metric_dict)
+            log_metrics(**agg_metric_dict)
 
         pbar.close()
         return res

@@ -1,0 +1,23 @@
+dataset_name: "MINERVA"
+task: "minerva"
+test_split: test
+output_type: generate_until
+doc_to_messages: !function utils.minerva_doc_to_messages
+doc_to_text: !function utils.minerva_doc_to_text
+doc_to_target: !function utils.minerva_doc_to_answer
+process_results: !function utils.minerva_process_results_generation
+metric_list:
+  - metric: submission
+    aggregation: !function utils.minerva_aggregate_mc
+    higher_is_better: true
+  - metric: score
+    aggregation: !function utils.minerva_aggregate_score
+    higher_is_better: true
+include: _default_template_yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  aria:
+    pre_prompt: "Please answer the question about the video:\n"
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."

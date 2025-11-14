@@ -1,6 +1,7 @@
 import abc
 import ast
 import copy
+import importlib
 import inspect
 import itertools
 import json
@@ -27,6 +28,10 @@ from typing import (
 )
 
 import datasets
+try:
+    import torch
+except ImportError:
+    torch = None
 import numpy as np
 from accelerate import Accelerator
 from datasets import Audio, DownloadConfig, Image, Sequence
@@ -939,7 +944,47 @@ class ConfigurableTask(Task):
                 cache_dir = dataset_kwargs["cache_dir"]
                 cache_dir = os.path.join(hf_home, cache_dir)
                 accelerator = Accelerator()
+                external_downloader_spec = dataset_kwargs.get("external_downloader") if dataset_kwargs is not None else None
                 if accelerator.is_main_process:
+                    if external_downloader_spec:
+
+                        def _resolve_external_downloader(spec):
+                            if callable(spec):
+                                return spec, {}
+                            if isinstance(spec, str):
+                                if "." not in spec:
+                                    raise ValueError("external_downloader string must be a fully qualified path, e.g. 'pkg.module.fn'")
+                                module_path, attr_name = spec.rsplit(".", 1)
+                                return getattr(importlib.import_module(module_path), attr_name), {}
+                            if isinstance(spec, dict):
+                                if "fn" not in spec:
+                                    raise ValueError("external_downloader dict must include a 'fn' key")
+                                fn, base_kwargs = _resolve_external_downloader(spec["fn"])
+                                kwargs = {**base_kwargs, **spec.get("kwargs", {})}
+                                return fn, kwargs
+                            raise TypeError(f"Unsupported external_downloader spec type: {type(spec)}")
+
+                        downloader_fn, downloader_kwargs = _resolve_external_downloader(external_downloader_spec)
+                        downloader_kwargs.setdefault("cache_dir", cache_dir)
+                        downloader_kwargs.setdefault("videos_dir", os.path.join(cache_dir, "videos"))
+                        download_result = downloader_fn(**downloader_kwargs)
+
+                        def _set_nested(target_dict, dotted_key, value):
+                            keys = dotted_key.split(".")
+                            curr = target_dict
+                            for key in keys[:-1]:
+                                if key not in curr or not isinstance(curr[key], dict):
+                                    curr[key] = {}
+                                curr = curr[key]
+                            curr[keys[-1]] = value
+
+                        if isinstance(external_downloader_spec, dict):
+                            result_target = external_downloader_spec.get("result_dataset_kwarg")
+                            if result_target and download_result is not None:
+                                if dataset_kwargs is None:
+                                    dataset_kwargs = {}
+                                _set_nested(dataset_kwargs, result_target, os.path.expanduser(str(download_result)))
+
                     force_download = dataset_kwargs.get("force_download", False)
                     force_unzip = dataset_kwargs.get("force_unzip", False)
                     revision = dataset_kwargs.get("revision", "main")
@@ -1024,8 +1069,21 @@ class ConfigurableTask(Task):
                             eval_logger.info(f"Symbolic link created successfully: {cache_path} -> {cache_dir}")
 
                 accelerator.wait_for_everyone()
-                dataset_kwargs.pop("cache_dir")
-                dataset_kwargs.pop("video")
+                if dataset_kwargs is not None:
+                    if accelerator.num_processes > 1:
+                        if torch is not None and torch.distributed.is_available() and torch.distributed.is_initialized():
+                            shared_dataset_kwargs = [dataset_kwargs if accelerator.is_main_process else None]
+                            torch.distributed.broadcast_object_list(shared_dataset_kwargs, src=0)
+                            dataset_kwargs = shared_dataset_kwargs[0]
+                        elif accelerator.is_main_process:
+                            eval_logger.warning("Multiple processes detected but torch.distributed is not initialized. Secondary ranks may not receive updated dataset kwargs.")
+                    if "external_downloader" in dataset_kwargs:
+                        external_downloader = dataset_kwargs.pop("external_downloader", None)
+                        if 'data_files' in external_downloader:
+                            dataset_kwargs['data_files'] = external_downloader.pop('data_files')
+                            dataset_kwargs['split'] = external_downloader.pop('split', 'test')
+                    dataset_kwargs.pop("cache_dir", None)
+                    dataset_kwargs.pop("video", None)
 
             if "builder_script" in dataset_kwargs:
                 builder_script = dataset_kwargs["builder_script"]

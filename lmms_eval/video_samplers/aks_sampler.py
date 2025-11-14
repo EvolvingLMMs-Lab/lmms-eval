@@ -23,7 +23,6 @@ class AKSVideoSampler(BaseVideoSampler):
         self.t1 = kwargs.get("t1", 0.8)
         self.t2 = kwargs.get("t2", -100)
         self.all_depth = kwargs.get("all_depth", 5)
-        print(f"AKSVideoSampler initialized with extract_feature_model: {self.extract_feature_model}, max_num_frames: {self.max_num_frames}, ratio: {self.ratio}, t1: {self.t1}, t2: {self.t2}, all_depth: {self.all_depth}")
 
     def load_feature_model(self):
         if self.extract_feature_model == 'blip':
