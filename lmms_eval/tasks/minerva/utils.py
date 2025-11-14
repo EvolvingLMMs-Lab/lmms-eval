@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 from decord import VideoReader, cpu
+from lmms_eval.tasks.minerva.download_videos import main as download_videos
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 
@@ -25,19 +26,63 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 # To HF HOME cache dir
 # And load it here
 HF_HOME = os.environ["HF_HOME"] if "HF_HOME" in os.environ else os.path.expanduser("~/.cache/huggingface/hub")
-cache_dir = config["dataset_kwargs"]["cache_dir"]
-cache_dir = os.path.join(HF_HOME, cache_dir)
-cache_dir = os.path.join(cache_dir, "videos")
+_CACHE_SUBDIR = config["dataset_kwargs"]["cache_dir"]
+CACHE_DIR = Path(os.path.join(HF_HOME, _CACHE_SUBDIR)).expanduser()
+VIDEOS_DIR = CACHE_DIR / "videos"
+cache_dir = str(CACHE_DIR)
+videos_dir = str(VIDEOS_DIR)
+OPTIONS = ["A", "B", "C", "D", "E"]
 
 from loguru import logger as eval_logger
 
 from PIL import Image as PIL_Image
 
-def egoschema_doc_to_messages(doc):
-    visuals = egoschema_doc_to_visual(doc)
+import requests
+MINERVA_JSON_URL = "https://storage.mtls.cloud.google.com/neptunedata/minerva.json"
+
+
+def download_file(url: str, target_dir: str | Path, filename: str | None = None) -> Path:
+    target_path = Path(target_dir).expanduser().resolve()
+    target_path.mkdir(parents=True, exist_ok=True)
+
+    if filename is None:
+        filename = url.split("/")[-1] or "downloaded_file"
+    file_path = target_path / filename
+    if file_path.exists():
+        return file_path
+
+    with requests.get(url, stream=True, timeout=30) as response:
+        response.raise_for_status()
+        with file_path.open("wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+
+    return file_path
+
+
+def download_dataset(
+    cache_dir: str | Path | None = None,
+    videos_dir: str | Path | None = None,
+    url: str = MINERVA_JSON_URL,
+    **_,
+) -> Path:
+    target_cache_dir = Path(cache_dir).expanduser().resolve() if cache_dir else CACHE_DIR
+    target_videos_dir = Path(videos_dir).expanduser().resolve() if videos_dir else VIDEOS_DIR
+
+    json_file = download_file(url, target_cache_dir, "minerva.json")
+    download_videos(output_dir=target_videos_dir, json_file=json_file)
+    return json_file
+
+
+def minerva_doc_to_question(doc):
+    return doc["question"]
+
+def minerva_doc_to_messages(doc):
+    visuals = minerva_doc_to_visual(doc)
     if visuals is None:
         visuals = []
-    text = egoschema_doc_to_text(doc)
+    text = minerva_doc_to_text(doc)
     messages = [{"role": "user", "content": []}]
     content = []
     for visual in visuals:
@@ -46,7 +91,7 @@ def egoschema_doc_to_messages(doc):
         elif isinstance(visual, dict):
             content.append({"type": "audio", "url": visual})
         elif isinstance(visual, str):
-            content.append({"type": "video", "url": visual, "question": egoschema_doc_to_question(doc)})
+            content.append({"type": "video", "url": visual, "question": minerva_doc_to_question(doc)})
     content.append({"type": "text", "text": text})
     messages[0]["content"] = content
     return messages
@@ -54,9 +99,9 @@ def egoschema_doc_to_messages(doc):
 
 # Pass in video path here
 # Can only work correctly with video llm
-def egoschema_doc_to_visual(doc):
-    video_path = doc["video_idx"] + ".mp4"
-    video_path = os.path.join(cache_dir, video_path)
+def minerva_doc_to_visual(doc):
+    video_path = doc["video_id"] + ".mp4"
+    video_path = os.path.join(videos_dir, video_path)
     if os.path.exists(video_path):
         video_path = video_path
     elif os.path.exists(video_path.replace("mp4", "MP4")):
@@ -65,11 +110,9 @@ def egoschema_doc_to_visual(doc):
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
-def egoschema_doc_to_question(doc):
-    return doc["question"]
 
 # This is the place where you format your question
-def egoschema_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+def minerva_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
     pre_prompt = ""
@@ -79,21 +122,20 @@ def egoschema_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if "post_prompt" in lmms_eval_specific_kwargs:
         post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
-    question = egoschema_doc_to_question(doc)
-    if "option" in doc:
-        for op in doc["option"]:
-            question += "\n" + op
-        post_prompt = "\nAnswer with the option's letter from the given choices directly."
+    question = minerva_doc_to_question(doc)
+    for i, choice in enumerate(OPTIONS):
+        question += f"\n{choice}. {doc[f'answer_choice_{i}']}"
+    post_prompt = "\nAnswer with the option's letter from the given choices directly."
 
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def egoschema_doc_to_answer(doc):
-    return doc["answer"]
+def minerva_doc_to_answer(doc):
+    return doc["answer_id"]
 
 
 # Process result for mc_ppl
-def egoschema_process_results(doc, result):
+def minerva_process_results(doc, result):
     # Initialize minimum value and index
     min_value = float("inf")
     min_index = -1
@@ -105,16 +147,15 @@ def egoschema_process_results(doc, result):
             min_index = i
 
     # Return the result with the index of the lowest value
-    return {"submission": {doc["video_idx"]: min_index}, "score": {"pred": min_index, "ground_truth": doc["answer"]}}
+    return {"submission": {doc["video_id"]: min_index}, "score": {"pred": min_index, "ground_truth": doc["answer_id"]}}
 
 
 def get_multi_choice_info(doc):
     all_choices = []
     index2ans = {}
-    OPTIONS = ["A", "B", "C", "D", "E"]
-    for i in range(5):
+    for i in range(len(OPTIONS)):
         # import pdb;pdb.set_trace()
-        index2ans[OPTIONS[i]] = doc["option"][i].strip()
+        index2ans[OPTIONS[i]] = doc[f'answer_choice_{i}'].strip()
         all_choices.append(OPTIONS[i])
 
     return index2ans, all_choices
@@ -198,7 +239,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
 
 
 # Process result for mcq answer generation
-def egoschema_process_results_generation(doc, result):
+def minerva_process_results_generation(doc, result):
     # import pdb;pdb.set_trace()
     pred = result[0]
 
@@ -208,12 +249,12 @@ def egoschema_process_results_generation(doc, result):
     pred_to_index = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4}
     index = pred_to_index.get(parsed_pred, -1)  # Default to -1 if the prediction is not found
 
-    return {"submission": {doc["video_idx"]: index}, "score": {"pred": index, "ground_truth": doc["answer"]}}
+    return {"submission": {doc["video_idx"]: index}, "score": {"pred": index, "ground_truth": doc["answer_id"]}}
 
 
-def egoschema_aggregate_submissions(results, args, task):
+def minerva_aggregate_submissions(results, args, task):
     now_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    submission_file_name = f"inference_results_egoschema_{task}_{now_date_time}.json"
+    submission_file_name = f"inference_results_minerva_{task}_{now_date_time}.json"
     path = file_utils.generate_submission_file(submission_file_name, args)
 
     # results is a list of 5031 dict,
@@ -230,15 +271,15 @@ def egoschema_aggregate_submissions(results, args, task):
 
 
 # Factory into different aggregate
-def egoschema_aggregate_mc(results, args):
-    egoschema_aggregate_submissions(results, args, "MC")
+def minerva_aggregate_mc(results, args):
+    minerva_aggregate_submissions(results, args, "MC")
 
 
-def egoschema_aggregate_mc_ppl(results, args):
-    egoschema_aggregate_submissions(results, args, "MC_PPL")
+def minerva_aggregate_mc_ppl(results, args):
+    minerva_aggregate_submissions(results, args, "MC_PPL")
 
 
-def egoschema_aggregate_score(results, args):
+def minerva_aggregate_score(results, args):
     yes_count = 0
 
     # results is a list of dict
@@ -251,5 +292,5 @@ def egoschema_aggregate_score(results, args):
     return accuracy
 
 
-def egoschema_doc_to_choice(doc):
-    return [op.split(".")[1].strip() for op in doc["option"]]
+def minerva_doc_to_choice(doc):
+    return [doc[f'answer_choice_{i}'] for i in range(len(OPTIONS))]

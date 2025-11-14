@@ -12,6 +12,10 @@ import numpy as np
 import torch
 import yaml
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
 import hashlib
@@ -274,6 +278,8 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
     parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
+    parser.add_argument("--video_sampler", type=str, default=None, help="Video sampler to use")
+    parser.add_argument("--video_sampler_kwargs", default="", help="String arguments for video sampler, e.g. `max_num_frames=32,ratio=1,t1=0.8,t2=-100,all_depth=5`",)
     args = parser.parse_args()
     return args
 
@@ -481,9 +487,28 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     request_caching_args = request_caching_arg_to_dict(cache_requests=args.cache_requests)
     datetime_str = utils.get_datetime_str(timezone=args.timezone)
 
+    # Configure metrics logging destination for downstream log_metrics calls.
+    os.environ.pop("LMMS_EVAL_METRICS_PATH", None)
+    if args.output_path:
+        from lmms_eval.loggers.evaluation_tracker import GeneralConfigTracker
+
+        fallback_model_name = args.model if isinstance(args.model, str) else str(args.model)
+        candidate_model_name = GeneralConfigTracker._get_model_name(args.model_args or "") or fallback_model_name
+        sanitized_model_name = utils.sanitize_model_name(candidate_model_name) or utils.sanitize_model_name(fallback_model_name) or "model"
+
+        is_distributed = torch.distributed.is_available() and torch.distributed.is_initialized()
+        if not is_distributed or (is_distributed and torch.distributed.get_rank() == 0):
+            metrics_dir = Path(args.output_path).expanduser().resolve() / sanitized_model_name
+            metrics_dir.mkdir(parents=True, exist_ok=True)
+            date_id = datetime_str.replace(":", "-")
+            metrics_path = metrics_dir / f"{date_id}_metrics.json"
+            os.environ["LMMS_EVAL_METRICS_PATH"] = str(metrics_path)
+
     results = evaluator.simple_evaluate(
         model=args.model,
         model_args=args.model_args,
+        video_sampler=args.video_sampler,
+        video_sampler_kwargs=args.video_sampler_kwargs,
         tasks=task_names,
         num_fewshot=args.num_fewshot,
         batch_size=args.batch_size,

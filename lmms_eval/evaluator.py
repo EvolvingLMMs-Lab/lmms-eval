@@ -46,6 +46,7 @@ from lmms_eval.utils import (
     run_task_tests,
     simple_parse_args_string,
 )
+from lmms_eval.video_samplers import get_video_sampler_cls
 
 
 @positional_deprecated
@@ -83,6 +84,8 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
+    video_sampler: Optional[str] = None,
+    video_sampler_kwargs: Optional[str] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -183,6 +186,17 @@ def simple_evaluate(
     if task_manager is None:
         task_manager = TaskManager(verbosity, model_name=model)
 
+    if isinstance(video_sampler, str):
+        if video_sampler_kwargs is None:
+            video_sampler_kwargs = ""
+        video_sampler_instance = get_video_sampler_cls(video_sampler).create_from_arg_string(video_sampler_kwargs,
+            {
+                "batch_size": batch_size,
+                "device": device,
+            }
+        )
+
+
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
@@ -191,6 +205,7 @@ def simple_evaluate(
             {
                 "batch_size": batch_size,
                 "max_batch_size": max_batch_size,
+                "video_sampler": video_sampler_instance,
                 "device": device,
             },
         )
@@ -255,6 +270,8 @@ def simple_evaluate(
         evaluation_tracker.general_config_tracker.log_experiment_args(
             model_source=model,
             model_args=model_args,
+            video_sampler=video_sampler,
+            video_sampler_kwargs=video_sampler_kwargs,
             system_instruction=system_instruction,
             chat_template=lm.chat_template if apply_chat_template else None,
             fewshot_as_multiturn=fewshot_as_multiturn,
@@ -410,6 +427,20 @@ def evaluate(
 
     if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
         lm.accelerator = Accelerator()
+
+    def _serialize_video_metadata(meta):
+        if isinstance(meta, dict):
+            return {k: _serialize_video_metadata(v) for k, v in meta.items()}
+        if isinstance(meta, (list, tuple)):
+            return [_serialize_video_metadata(v) for v in meta]
+        if hasattr(meta, "tolist"):
+            try:
+                return meta.tolist()
+            except TypeError:
+                pass
+        if isinstance(meta, (np.generic,)):
+            return meta.item()
+        return meta
 
     for task_output in eval_tasks:
         task: Task = task_output.task
@@ -578,6 +609,18 @@ def evaluate(
                             # else:
                             #     filtered_arguments.append(_handle_non_serializable(value))
 
+                    video_metadata_list = []
+                    seen_instance_ids = set()
+                    for req in requests:
+                        if id(req) in seen_instance_ids:
+                            continue
+                        seen_instance_ids.add(id(req))
+                        meta = getattr(req, "video_metadata", None)
+                        num_input_tokens = getattr(req, "num_input_tokens", None)
+                        num_input_vision_tokens = getattr(req, "num_input_vision_tokens", None)
+                        if meta is None:
+                            continue
+                        video_metadata_list.append(_serialize_video_metadata(meta))
                     example = {
                         "doc_id": doc_id,
                         "doc": saved_doc,
@@ -595,6 +638,14 @@ def evaluate(
                         ),
                         # Removing prompt hash and target hash here
                     }
+                    if video_metadata_list:
+                        example["video_metadata"] = (
+                            video_metadata_list if len(video_metadata_list) > 1 else video_metadata_list[0]
+                        )
+                    if num_input_tokens is not None:
+                        example["num_input_tokens"] = num_input_tokens
+                    if num_input_vision_tokens is not None:
+                        example["num_input_vision_tokens"] = num_input_vision_tokens
                     example.update(metrics)
                     task_output.logged_samples.append(example)
                 for metric, value in metrics.items():

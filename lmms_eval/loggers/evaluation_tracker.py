@@ -78,6 +78,8 @@ class GeneralConfigTracker:
         self,
         model_source: str,
         model_args: str,
+        video_sampler: str,
+        video_sampler_kwargs: str,
         system_instruction: str,
         chat_template: str,
         fewshot_as_multiturn: bool,
@@ -86,6 +88,8 @@ class GeneralConfigTracker:
         self.model_source = model_source
         self.model_name = GeneralConfigTracker._get_model_name(model_args)
         self.model_name_sanitized = sanitize_model_name(self.model_name)
+        self.video_sampler = video_sampler
+        self.video_sampler_kwargs = video_sampler_kwargs
         self.system_instruction = system_instruction
         self.system_instruction_sha = hash_string(system_instruction) if system_instruction else None
         self.chat_template = chat_template
