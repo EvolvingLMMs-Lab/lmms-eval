@@ -2,6 +2,8 @@ from .base import BaseVideoSampler
 from . import register_video_sampler
 from typing import Any, Dict, Optional
 import torchvision.transforms as T
+import sys
+sys.path.append("./external")
 from lavis.models import load_model_and_preprocess
 from torchvision.transforms.functional import InterpolationMode
 import numpy as np

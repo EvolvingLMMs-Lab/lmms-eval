@@ -74,6 +74,10 @@ def download_dataset(
     download_videos(output_dir=target_videos_dir, json_file=json_file)
     return json_file
 
+
+def minerva_doc_to_question(doc):
+    return doc["question"]
+
 def minerva_doc_to_messages(doc):
     visuals = minerva_doc_to_visual(doc)
     if visuals is None:
@@ -87,7 +91,7 @@ def minerva_doc_to_messages(doc):
         elif isinstance(visual, dict):
             content.append({"type": "audio", "url": visual})
         elif isinstance(visual, str):
-            content.append({"type": "video", "url": visual, "question": doc['question']})
+            content.append({"type": "video", "url": visual, "question": minerva_doc_to_question(doc)})
     content.append({"type": "text", "text": text})
     messages[0]["content"] = content
     return messages
@@ -118,7 +122,7 @@ def minerva_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if "post_prompt" in lmms_eval_specific_kwargs:
         post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
-    question = doc["question"]
+    question = minerva_doc_to_question(doc)
     for i, choice in enumerate(OPTIONS):
         question += f"\n{choice}. {doc[f'answer_choice_{i}']}"
     post_prompt = "\nAnswer with the option's letter from the given choices directly."

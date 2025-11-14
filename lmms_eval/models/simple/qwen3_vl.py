@@ -55,6 +55,7 @@ class Qwen3_VL(lmms):
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
+        video_sampler: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -132,6 +133,7 @@ class Qwen3_VL(lmms):
         else:
             self._rank = 0
             self._world_size = 1
+        self.video_sampler = video_sampler
 
     @property
     def config(self):
@@ -288,16 +290,16 @@ class Qwen3_VL(lmms):
 
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
             image_inputs, video_inputs = process_vision_info(batched_messages)
-            if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                # Ensure unique indices if linspace produces duplicates for few frames
-                indices = np.unique(indices)
-                # Append the last frame index if not already included
-                if total_frames - 1 not in indices:
-                    indices = np.append(indices, total_frames - 1)
-                    indices = np.unique(indices)  # Ensure uniqueness again
-                video_inputs[0] = video_inputs[0][indices]
+            # if video_inputs is not None:
+            #     total_frames = video_inputs[0].shape[0]
+            #     indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
+            #     # Ensure unique indices if linspace produces duplicates for few frames
+            #     indices = np.unique(indices)
+            #     # Append the last frame index if not already included
+            #     if total_frames - 1 not in indices:
+            #         indices = np.append(indices, total_frames - 1)
+            #         indices = np.unique(indices)  # Ensure uniqueness again
+            #     video_inputs[0] = video_inputs[0][indices]
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
             if self.device_map == "auto":

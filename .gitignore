@@ -55,3 +55,4 @@ remote_code/*
 results/
 lavis
 cookies.txt
+external/

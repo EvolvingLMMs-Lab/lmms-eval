@@ -46,7 +46,7 @@ def egoschema_doc_to_messages(doc):
         elif isinstance(visual, dict):
             content.append({"type": "audio", "url": visual})
         elif isinstance(visual, str):
-            content.append({"type": "video", "url": visual, "question": doc['question']})
+            content.append({"type": "video", "url": visual, "question": egoschema_doc_to_question(doc)})
     content.append({"type": "text", "text": text})
     messages[0]["content"] = content
     return messages
@@ -65,6 +65,8 @@ def egoschema_doc_to_visual(doc):
         sys.exit(f"video path:{video_path} does not exist, please check")
     return [video_path]
 
+def egoschema_doc_to_question(doc):
+    return doc["question"]
 
 # This is the place where you format your question
 def egoschema_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -77,7 +79,7 @@ def egoschema_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if "post_prompt" in lmms_eval_specific_kwargs:
         post_prompt = lmms_eval_specific_kwargs["post_prompt"]
 
-    question = doc["question"]
+    question = egoschema_doc_to_question(doc)
     if "option" in doc:
         for op in doc["option"]:
             question += "\n" + op
