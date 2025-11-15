@@ -1,10 +1,10 @@
 task: scivideobench
 tag: video_qa
-dataset_path: /path/to/scivideobench_videos/
+dataset_path: groundmore/scivideobench
 dataset_kwargs:
-  data_files:
-    test:
-      - /path/to/scivideobench_1k.jsonl
+  token: True
+  cache_dir: scivideobench
+  video: True
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.scivideobench_doc_to_visual

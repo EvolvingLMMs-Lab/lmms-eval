@@ -8,6 +8,18 @@ from pathlib import Path
 import yaml
 
 
+hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
+base_cache_dir = os.path.expanduser(hf_home)
+with open(Path(__file__).parent / "scivideobench.yaml", "r") as f:
+    raw_data = f.readlines()
+    safe_data = []
+    for i, line in enumerate(raw_data):
+        # remove function definition since yaml load cannot handle it
+        if "!function" not in line:
+            safe_data.append(line)
+cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
+
+
 def convert_time_to_frames_in_question(question, total_duration_sec, total_frames):
     def parse_time(tstr):
         mm, ss = map(int, tstr.split(":"))
@@ -43,26 +55,17 @@ def convert_time_to_frames_in_question(question, total_duration_sec, total_frame
 
 
 def scivideobench_doc_to_visual(doc):
-    with open(Path(__file__).parent / "scivideobench.yaml", "r") as f:
-        raw_data = f.readlines()
-        safe_data = []
-        for i, line in enumerate(raw_data):
-            # remove function definition since yaml load cannot handle it
-            if "!function" not in line:
-                safe_data.append(line)
-    dataset_path = yaml.safe_load("".join(safe_data))["dataset_path"]
-
-    video_dir = Path(dataset_path)
-    video_path = video_dir / f"jove_{doc['video_id']}.mp4"
-
-    if video_path.exists():
-        return [str(video_path)]
-    elif video_path.with_suffix(".MP4").exists():
-        return [str(video_path.with_suffix(".MP4"))]
-    elif video_path.with_suffix(".mkv").exists():
-        return [str(video_path.with_suffix(".mkv"))]
+    cache_dir = os.path.join(base_cache_dir, cache_name)
+    video_path = os.path.join(cache_dir, f"jove_{doc['video_id']}.mp4")
+    if os.path.exists(video_path):
+        video_path = video_path
+    elif os.path.exists(video_path.replace("mp4", "MP4")):
+        video_path = video_path.replace("mp4", "MP4")
+    elif os.path.exists(video_path.replace("mp4", "mkv")):
+        video_path = video_path.replace("mp4", "mkv")
     else:
         raise FileNotFoundError(f"Video not found: {video_path}")
+    return [video_path]
 
 
 def format_options(opts):
