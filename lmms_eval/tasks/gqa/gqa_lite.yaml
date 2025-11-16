@@ -8,6 +8,7 @@ output_type: generate_until
 doc_to_visual: !function utils.gqa_doc_to_visual
 doc_to_text: !function utils.gqa_doc_to_text
 doc_to_target: "answer"
+process_docs: !function utils.gqa_process_docs
 generation_kwargs:
   max_new_tokens: 16
   temperature: 0
