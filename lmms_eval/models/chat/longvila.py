@@ -133,7 +133,16 @@ class LongVila(VLLMSimple):
         input_ids = self.tokenize_conversation(conversation, self.model_encoder.tokenizer, add_generation_prompt=True).unsqueeze(0).cuda()
 
         # Create prompt embeddings using the model encoder
-        inputs_embeds, _, _ = self.model_encoder._embed(input_ids, media, {"video": {}}, None, None)
+        try:
+            inputs_embeds, _, _ = self.model_encoder._embed(input_ids, media, {"video": {}}, None, None)
+        except Exception as e:
+            # 128 runs no problem, but other may have some issue, if encounter error, try to set to 128, then set back
+            self.max_frame_num = 128
+            old_fps = self.fps
+            self.fps = None
+            inputs_embeds, params = self.make_one_request(request)
+            self.max_frame_num = self.max_frame_num
+            self.fps = old_fps
 
         return inputs_embeds, params
 
