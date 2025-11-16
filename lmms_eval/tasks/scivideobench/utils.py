@@ -7,7 +7,6 @@ from pathlib import Path
 
 import yaml
 
-
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(hf_home)
 with open(Path(__file__).parent / "scivideobench.yaml", "r") as f:
