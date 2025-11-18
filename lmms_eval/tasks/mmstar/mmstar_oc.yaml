@@ -1,0 +1,6 @@
+dataset_path: morpheushoc/MMStar_opencompass
+task: "mmstar_oc"
+doc_to_visual: !function utils.mmstar_oc_doc_to_visual
+doc_to_text: !function utils.mmstar_oc_doc_to_text
+process_results: !function utils.mmstar_process_results
+include: _default_template_yaml
