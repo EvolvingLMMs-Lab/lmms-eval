@@ -16,3 +16,13 @@ This directory contains the `ovobench_data` subfolder with three tasks: `backwar
 [https://github.com/JoeLeelyf/OVO-Bench/blob/main/data/ovo_bench_new.json](https://github.com/JoeLeelyf/OVO-Bench/blob/main/data/ovo_bench_new.json)
 
 A key limitation is that model implementations must support the `generate_until_multi_round` logic to correctly evaluate the `realtime` task.
+
+## 📊 Evaluation Results
+
+Below are the evaluation results on OVO-Bench
+
+| Model         | n_frames | EPM   | HLD   | ASI   | Backward Avg. | STU   | OJR   | ATR   | FPD   | ACR   | OCR   | Realtime Avg. | REC   | CRR   | SSR   | Forward Avg. |
+|---------------|----------|-------|-------|-------|---------------|-------|-------|-------|-------|-------|-------|---------------|-------|-------|-------|--------------|
+| Qwen2-VL-7B   | 64       | 48.48 | 37.10 | 58.11 | 47.90         | 47.75 | 53.26 | 61.21 | 63.37 | 46.79 | 59.73 | 55.35         | 32.66 | 50.83 | 66.14 | 49.88        |
+
+> **Note**: All values are accuracy percentages (%). Rounded to two decimal places for readability.
