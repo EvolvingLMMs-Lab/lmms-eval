@@ -31,7 +31,7 @@ CACHE_DIR = Path(os.path.join(HF_HOME, _CACHE_SUBDIR)).expanduser()
 VIDEOS_DIR = CACHE_DIR / "videos"
 cache_dir = str(CACHE_DIR)
 videos_dir = str(VIDEOS_DIR)
-OPTIONS = ["A", "B", "C", "D", "E"]
+OPTIONS = ["a", "b", "c", "d", "e"]
 
 from loguru import logger as eval_logger
 
@@ -78,11 +78,11 @@ def download_dataset(
 def minerva_doc_to_question(doc):
     return doc["question"]
 
-def minerva_doc_to_messages(doc):
+def minerva_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     visuals = minerva_doc_to_visual(doc)
     if visuals is None:
         visuals = []
-    text = minerva_doc_to_text(doc)
+    text = minerva_doc_to_text(doc, lmms_eval_specific_kwargs=lmms_eval_specific_kwargs)
     messages = [{"role": "user", "content": []}]
     content = []
     for visual in visuals:
@@ -124,8 +124,7 @@ def minerva_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     question = minerva_doc_to_question(doc)
     for i, choice in enumerate(OPTIONS):
-        question += f"\n{choice}. {doc[f'answer_choice_{i}']}"
-    post_prompt = "\nAnswer with the option's letter from the given choices directly."
+        question += f"\n({choice}) {doc[f'answer_choice_{i}']}"
 
     return f"{pre_prompt}{question}{post_prompt}"
 
@@ -177,10 +176,15 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     ans_with_dot = False
     candidates = []
     # import pdb; pdb.set_trace()
-    for choice in all_choices:  # e.g., (A) (B) (C) (D)
+    for choice in all_choices:  # e.g., (a) (b) (c) (d) (e)
         if f"({choice})" in response:
             candidates.append(f"({choice})")
             ans_with_brack = True
+    
+    for choice in all_choices:
+        if f"{choice}" == response.strip():
+            candidates.append(f"{choice}")
+            ans_with_space = True
 
     # if len(candidates) == 0:
     for choice in all_choices:  # e.g., A B C D
@@ -234,6 +238,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     else:  # if only one candidate, use it.
         pred_index = candidates[0]
         pred_index = pred_index.replace("(", "").replace(")", "").replace(".", "").strip()
+    print(f"IN UTILS parse_multi_choice_response response: {response}, pred_index: {pred_index}, candidates: {candidates}, all_choices: {all_choices}, index2ans: {index2ans}")
 
     return pred_index, len(candidates) > 0
 
@@ -246,10 +251,10 @@ def minerva_process_results_generation(doc, result):
     index2ans, all_choices = get_multi_choice_info(doc)
     parsed_pred, matched_tag = parse_multi_choice_response(pred, all_choices, index2ans)
 
-    pred_to_index = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4}
+    pred_to_index = {choice: i for i, choice in enumerate(all_choices)}
     index = pred_to_index.get(parsed_pred, -1)  # Default to -1 if the prediction is not found
 
-    return {"submission": {doc["video_idx"]: index}, "score": {"pred": index, "ground_truth": doc["answer_id"]}}
+    return {"submission": {doc["video_id"]: index}, "score": {"pred": index, "ground_truth": doc["answer_id"]}}
 
 
 def minerva_aggregate_submissions(results, args, task):

@@ -19,6 +19,8 @@ class BaseVideoSampler(ABC):
         accelerator = Accelerator(cpu=(device_pref == "cpu"))
         self.accelerator = accelerator
         self.device = accelerator.device
+        self.return_frames = False
+        self.will_process_messages = False
 
     @classmethod
     def create_from_arg_string(cls: Type[T], arg_string: str, additional_config: Optional[dict] = None) -> T:

@@ -186,6 +186,7 @@ def simple_evaluate(
     if task_manager is None:
         task_manager = TaskManager(verbosity, model_name=model)
 
+    video_sampler_instance = None
     if isinstance(video_sampler, str):
         if video_sampler_kwargs is None:
             video_sampler_kwargs = ""

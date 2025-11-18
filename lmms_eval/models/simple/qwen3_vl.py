@@ -46,6 +46,8 @@ class Qwen3_VL(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
         attn_implementation: Optional[str] = None,
+        resized_height: Optional[int] = None,
+        resized_width: Optional[int] = None,
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
@@ -133,6 +135,8 @@ class Qwen3_VL(lmms):
         else:
             self._rank = 0
             self._world_size = 1
+        self.resized_height = resized_height
+        self.resized_width = resized_width
         self.video_sampler = video_sampler
 
     @property

@@ -45,6 +45,8 @@ class Qwen2_5_VL(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
         attn_implementation: Optional[str] = None,
+        resized_height: Optional[int] = None,
+        resized_width: Optional[int] = None,
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
@@ -129,6 +131,8 @@ class Qwen2_5_VL(lmms):
         else:
             self._rank = 0
             self._world_size = 1
+        self.resized_height = resized_height
+        self.resized_width = resized_width
         self.video_sampler = video_sampler
 
     @property
@@ -352,9 +356,9 @@ class Qwen2_5_VL(lmms):
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
                 pbar.update(1)
 
-                # eval_logger.debug(f"Question: {context}")
-                # eval_logger.debug(f"Model Raw Response: {ans}")
-                # eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                eval_logger.debug(f"Question: {context}")
+                eval_logger.debug(f"Model Raw Response: {ans}")
+                eval_logger.debug(f"Model Clean Response: {clean_ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 

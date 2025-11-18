@@ -16,8 +16,8 @@ metric_list:
 include: _default_template_yaml
 lmms_eval_specific_kwargs:
   default:
-    pre_prompt: ""
-    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+    pre_prompt: "You will be given a question about a video and five possible answer options. You are provided frames from the video.\n\n"
+    post_prompt: "\n\nOutput the final answer in the format “Final Answer: (X)” where X is the correct letter choice from (a)-(e). DO NOT OUTPUT text or any other words with the answer."
   aria:
     pre_prompt: "Please answer the question about the video:\n"
     post_prompt: "\nAnswer with the option's letter from the given choices directly."

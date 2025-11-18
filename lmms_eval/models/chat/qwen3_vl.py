@@ -60,10 +60,16 @@ class Qwen3_VL(Qwen3_VLSimple):
         total_num_input_vision_tokens = 0
         total_num_input_tokens = 0
         for chunk in chunks:
+            # Vision Info
+            start_time = time.time()
+            video_metadata_seq = []
             chunk_request_indices, chunk = zip(*chunk)
             chunk_requests = [requests[idx] for idx in chunk_request_indices]
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
             chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
+            if self.video_sampler.will_process_messages:
+                chat_messages, video_metadata_seq = zip(*[self.video_sampler.process_messages(chat_message, eval_logger) for chat_message in chat_messages])
+                assert len(chunk_requests) == len(video_metadata_seq)
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
             visuals = []
             videos = []
@@ -76,10 +82,16 @@ class Qwen3_VL(Qwen3_VLSimple):
             gen_kwargs = all_gen_kwargs[0]
 
             # Apply chat template
-            video_kwargs = {
-                "max_pixels": self.max_pixels,
-                "min_pixels": self.min_pixels,
-            }
+            if self.resized_height is not None and self.resized_width is not None:
+                video_kwargs = {
+                    "resized_height": self.resized_height,
+                    "resized_width": self.resized_width
+                }
+            elif self.max_pixels is not None and self.min_pixels is not None:
+                video_kwargs = {
+                    "max_pixels": self.max_pixels,
+                    "min_pixels": self.min_pixels,
+                }
             if self.fps is not None:
                 video_kwargs["fps"] = self.fps
             else:
@@ -87,17 +99,14 @@ class Qwen3_VL(Qwen3_VLSimple):
             video_kwargs["video_sampler"] = self.video_sampler
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
-            # Vision Info
-            start_time = time.time()
             image_inputs, video_inputs = process_vision_info(batched_messages, return_video_metadata=True)
-            video_metadata_seq = []
             if video_inputs:
                 frames, video_metadata_seq = zip(*video_inputs)
                 video_inputs = list(frames)
                 video_metadata_seq = list(video_metadata_seq)
+                assert len(chunk_requests) == len(video_metadata_seq)
             else:
                 video_inputs = None
-            assert len(chunk_requests) == len(video_metadata_seq)
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, padding_side=padding_side, return_tensors="pt")
             end_time = time.time()

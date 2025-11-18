@@ -33,11 +33,11 @@ from loguru import logger as eval_logger
 
 from PIL import Image as PIL_Image
 
-def egoschema_doc_to_messages(doc):
+def egoschema_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     visuals = egoschema_doc_to_visual(doc)
     if visuals is None:
         visuals = []
-    text = egoschema_doc_to_text(doc)
+    text = egoschema_doc_to_text(doc, lmms_eval_specific_kwargs=lmms_eval_specific_kwargs)
     messages = [{"role": "user", "content": []}]
     content = []
     for visual in visuals:

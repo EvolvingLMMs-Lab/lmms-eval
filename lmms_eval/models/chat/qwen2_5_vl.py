@@ -64,6 +64,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             chunk_requests = [requests[idx] for idx in chunk_request_indices]
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
             chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
+            eval_logger.debug(f"chat_messages: {chat_messages}")
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
             visuals = []
             videos = []
@@ -76,18 +77,24 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             gen_kwargs = all_gen_kwargs[0]
 
             # Apply chat template
-            video_kwargs = {
-                "max_pixels": self.max_pixels,
-                "min_pixels": self.min_pixels,
-            }
+            if self.resized_height is not None and self.resized_width is not None:
+                video_kwargs = {
+                    "resized_height": self.resized_height,
+                    "resized_width": self.resized_width
+                }
+            elif self.max_pixels is not None and self.min_pixels is not None:
+                video_kwargs = {
+                    "max_pixels": self.max_pixels,
+                    "min_pixels": self.min_pixels,
+                }
             if self.fps is not None:
                 video_kwargs["fps"] = self.fps
             else:
                 video_kwargs["nframes"] = self.max_num_frames
             video_kwargs["video_sampler"] = self.video_sampler
+            eval_logger.debug(f"video sampler in worker: {self.video_sampler!r}")
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
-            
             # Vision Info
             start_time = time.time()
             image_inputs, video_inputs = process_vision_info(batched_messages, return_video_metadata=True)
@@ -127,8 +134,6 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 current_gen_kwargs["top_p"] = None
                 current_gen_kwargs["top_k"] = None
 
-            
-
             start_time = time.time()
             cont = self.model.generate(
                 **inputs,
@@ -144,7 +149,6 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             )
             end_time = time.time()
             generation_latency = end_time - start_time
-
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
@@ -246,7 +250,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 "avg_e2e_latency": e2e_latency / len(requests),
             },
         }
-            log_metrics(**agg_metric_dict)
+            log_metrics(**metric_dict)
 
         pbar.close()
         return res
