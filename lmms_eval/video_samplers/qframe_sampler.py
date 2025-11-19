@@ -36,6 +36,7 @@ class QFrameVideoSampler(BaseVideoSampler):
         self.mid_frames = int(kwargs.get("mid_frames", 6))
         self.low_frames = int(kwargs.get("low_frames", 8))
         self.return_frames = True
+        self.baseline = kwargs.get("baseline", False)
         self.will_process_messages = True
 
     def text_image_matching(self, question, images, tau=1.0):
@@ -103,18 +104,23 @@ class QFrameVideoSampler(BaseVideoSampler):
 
                     try:
                         indices = self.text_image_matching(question, visual, tau=self.tau)
-                    
-                        visual_tmp = [None] * len(visual)
+
                         visual = [Image.fromarray(v).convert("RGB") for v in visual]
-                        width, height = visual[0].size
-                        for idx in indices[:self.high_frames]:
-                            visual_tmp[idx] = visual[idx].resize((width // 2, height // 2), Image.Resampling.LANCZOS)
-                        for idx in indices[self.high_frames: self.high_frames+self.mid_frames]:
-                            visual_tmp[idx] =visual[idx].resize((width // 4, height // 4), Image.Resampling.LANCZOS)
-                        for idx in indices[self.high_frames+self.mid_frames: self.high_frames+self.mid_frames+self.low_frames]:
-                            visual_tmp[idx] =visual[idx].resize((width // 8, height // 8), Image.Resampling.LANCZOS)
-                        
-                        visual = [v for v in visual_tmp if v is not None ]
+                        if not self.baseline:
+                            visual_tmp = [None] * len(visual)
+                            width, height = visual[0].size
+                            for idx in indices[:self.high_frames]:
+                                visual_tmp[idx] = visual[idx].resize((width // 2, height // 2), Image.Resampling.LANCZOS)
+                            for idx in indices[self.high_frames: self.high_frames+self.mid_frames]:
+                                visual_tmp[idx] =visual[idx].resize((width // 4, height // 4), Image.Resampling.LANCZOS)
+                            for idx in indices[self.high_frames+self.mid_frames: self.high_frames+self.mid_frames+self.low_frames]:
+                                visual_tmp[idx] =visual[idx].resize((width // 8, height // 8), Image.Resampling.LANCZOS)
+                            visual = [v for v in visual_tmp if v is not None ]
+                        else:
+                            visual_tmp = [None] * len(visual)
+                            for idx in indices:
+                                visual_tmp[idx] = visual[idx]
+                            visual = [v for v in visual_tmp if v is not None ]
                     except Exception as e:
                         eval_logger.info(f"{e}")
                         if len(visual) >= self.sample_frames:
