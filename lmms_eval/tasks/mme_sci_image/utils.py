@@ -92,9 +92,6 @@ def mmesci_agg(results: List[Dict[str, Any]]) -> Dict[str, float]:
     PORT = os.getenv("PORT", "8001")
     TIMEOUT = os.getenv("TIMEOUT", "600")
 
-    INPUT_FILE = f"lmms-eval/logs/mme_sci_image.jsonl"
-    OUTPUT_FILE = "lmms-eval/logs/judge_output/outputs_judged_image.jsonl"
-
     sys_prompt_of_judger = (
         "You are a strict and impartial judge. "
         "Based on the original question, the standard answer, and the AI assistant's response provided by the user, "
@@ -109,7 +106,7 @@ def mmesci_agg(results: List[Dict[str, Any]]) -> Dict[str, float]:
 
     judged_samples = []
 
-    with open(INPUT_FILE, "r", encoding="utf-8") as f:
+    with open(results, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     for line in tqdm(lines, desc="Judging samples"):
@@ -150,10 +147,6 @@ def mmesci_agg(results: List[Dict[str, Any]]) -> Dict[str, float]:
             judge_result = "error"
 
         judged_samples.append({"sample_id": sample_id, "judge": judge_result, "target": standard_answer, "filtered_resps": ai_respond})
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        for item in judged_samples:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
     valid_samples = [x for x in judged_samples if x["judge"] in ["correct", "incorrect"]]
     total = len(valid_samples)
