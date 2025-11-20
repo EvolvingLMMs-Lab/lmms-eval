@@ -1,19 +1,26 @@
+import datasets
 from datasets import load_dataset
+from tqdm import tqdm
 
-GQA_RAW_IMAGE_DATASET = None
-GQA_ID2IMAGE = None
+
+def gqa_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
+    gqa_raw_image_dataset = load_dataset("lmms-lab/GQA", "testdev_balanced_images", split="testdev", token=True)
+    gqa_id2image = {}
+    for row in tqdm(gqa_raw_image_dataset, desc="Loading GQA images"):
+        gqa_id2image[row["id"]] = row["image"].convert("RGB")
+
+    def _process_doc(doc):
+        image = gqa_id2image[doc["imageId"]]
+        return {
+            "image": image,
+        }
+
+    return dataset.map(_process_doc, num_proc=8)
 
 
 def gqa_doc_to_visual(doc):
-    global GQA_RAW_IMAGE_DATASET
-    global GQA_ID2IMAGE
-    if GQA_RAW_IMAGE_DATASET is None:
-        GQA_RAW_IMAGE_DATASET = load_dataset("lmms-lab/GQA", "testdev_balanced_images", split="testdev", token=True)
-        GQA_ID2IMAGE = {}
-        for row in GQA_RAW_IMAGE_DATASET:
-            GQA_ID2IMAGE[row["id"]] = row["image"].convert("RGB")
-    image = GQA_ID2IMAGE[doc["imageId"]]
-    return [image]
+    image = [doc["image"].convert("RGB")]
+    return image
 
 
 def gqa_doc_to_text(doc, lmms_eval_specific_kwargs):

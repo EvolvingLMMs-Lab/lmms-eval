@@ -13,7 +13,8 @@ from tqdm import tqdm
 from transformers import (
     AutoProcessor,
     AutoTokenizer,
-    Qwen2_5_VLForConditionalGeneration,
+    Qwen3VLForConditionalGeneration,
+    Qwen3VLMoeForConditionalGeneration,
 )
 
 from lmms_eval import utils
@@ -30,16 +31,16 @@ except ImportError:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
-@register_model("qwen2_5_vl")
-class Qwen2_5_VL(lmms):
+@register_model("qwen3_vl")
+class Qwen3_VL(lmms):
     """
-    Qwen2.5_VL Model
-    "https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct"
+    Qwen3_VL Model
+    "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct"
     """
 
     def __init__(
         self,
-        pretrained: str = "Qwen/Qwen2.5-VL-3B-Instruct",
+        pretrained: str = "Qwen/Qwen3-VL-4B-Instruct",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
@@ -92,7 +93,10 @@ class Qwen2_5_VL(lmms):
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, **model_kwargs).eval()
+        # check whether its an MoE model
+        match = re.search(r"A\d+B", pretrained)
+        model_fn = Qwen3VLMoeForConditionalGeneration if match else Qwen3VLForConditionalGeneration
+        self._model = model_fn.from_pretrained(pretrained, **model_kwargs).eval()
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
@@ -281,7 +285,6 @@ class Qwen2_5_VL(lmms):
                     )
 
                 batched_messages.append(message)
-
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
             image_inputs, video_inputs = process_vision_info(batched_messages)
             if video_inputs is not None:
@@ -296,6 +299,7 @@ class Qwen2_5_VL(lmms):
                 video_inputs[0] = video_inputs[0][indices]
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, padding_side=padding_side, return_tensors="pt")
+
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:

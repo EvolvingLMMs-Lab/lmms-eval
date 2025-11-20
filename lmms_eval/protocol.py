@@ -137,7 +137,7 @@ class ChatMessages(BaseModel):
         if len(indices) % merge_size != 0:
             indices.extend(indices[-1] for _ in range(merge_size - len(indices) % merge_size))
         timestamps = [idx / fps for idx in indices]
-        timestamps = [(timestamps[i] + timestamps[i + merge_size - 1]) / 2 for i in range(0, len(timestamps), merge_size)]
+        # timestamps = [(timestamps[i] + timestamps[i + merge_size - 1]) / 2 for i in range(0, len(timestamps), merge_size)]
         return timestamps
 
     def encode_image(self, image: Union[Image.Image, str]):

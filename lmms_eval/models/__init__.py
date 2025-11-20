@@ -18,6 +18,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "plm": "PerceptionLM",
     "aria": "Aria",
     "auroracap": "AuroraCap",
+    "bagel": "Bagel",
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
@@ -52,6 +53,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "oryx": "Oryx",
     "phi3v": "Phi3v",
     "phi4_multimodal": "Phi4",
+    "qwen3_vl": "Qwen3_VL",
     "qwen2_5_omni": "Qwen2_5_Omni",
     "qwen2_5_vl": "Qwen2_5_VL",
     "qwen2_5_vl_interleave": "Qwen2_5_VL_Interleave",
@@ -83,6 +85,7 @@ AVAILABLE_SIMPLE_MODELS = {
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "llava_hf": "LlavaHf",
+    "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
     "thyme": "Thyme",
     "openai_compatible": "OpenAICompatible",
@@ -92,6 +95,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "huggingface": "Huggingface",
     "async_openai": "AsyncOpenAIChat",
     "longvila": "LongVila",
+    "llava_onevision1_5": "Llava_OneVision1_5",
 }
 
 

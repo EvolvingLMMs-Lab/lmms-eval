@@ -13,7 +13,7 @@ from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.reasoning_model_utils import (
     parse_reasoning_model_answer,
 )
-from lmms_eval.models.simple.qwen2_5_vl import Qwen2_5_VL as Qwen2_5_VLSimple
+from lmms_eval.models.simple.qwen3_vl import Qwen3_VL as Qwen3_VLSimple
 from lmms_eval.protocol import ChatMessages
 
 try:
@@ -22,8 +22,8 @@ except ImportError:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
-@register_model("qwen2_5_vl_chat")
-class Qwen2_5_VL(Qwen2_5_VLSimple):
+@register_model("qwen3_vl_chat")
+class Qwen3_VL(Qwen3_VLSimple):
     is_simple = False
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
