@@ -85,7 +85,7 @@ class Qwen3_VL(lmms):
 
         # Prepare model loading arguments
         model_kwargs = {
-            "torch_dtype": "bfloat16",
+            "dtype": "bfloat16",
             "device_map": self.device_map,
         }
 
