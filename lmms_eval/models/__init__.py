@@ -80,6 +80,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "videochat_flash": "VideoChat_Flash",
     "whisper": "Whisper",
     "whisper_vllm": "WhisperVllm",
+    "whisper_tt": "WhisperTT",
     "vora": "VoRA",
 }
 

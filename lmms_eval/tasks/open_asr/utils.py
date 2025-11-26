@@ -27,7 +27,13 @@ dir_name = os.path.dirname(os.path.abspath(__file__))
 
 
 def openasr_doc_to_audio(doc):
-    return [doc["audio"]]
+    # Accept multiple common audio field names across datasets
+    for key in ["audio", "file", "path", "audio_path"]:
+        if key in doc:
+            return [doc[key]]
+    raise KeyError(
+        f"No audio field found. Tried ['audio','file','path','audio_path']. Available: {list(doc.keys())}"
+    )
 
 
 def openasr_doc_to_text(doc, lmms_eval_specific_kwargs):
@@ -39,11 +45,22 @@ def openasr_doc_to_text(doc, lmms_eval_specific_kwargs):
 def openasr_process_result(doc, result):
     pred = result[0] if len(result) > 0 else ""
 
-    gt = doc["text"]
+    # Normalize target field across datasets (e.g., 'text', 'transcript', 'gt')
+    gt = openasr_doc_to_target(doc)
 
     data_dict = {"gt": gt, "pred": pred}
 
     return {"wer": data_dict}
+
+
+def openasr_doc_to_target(doc):
+    # Prefer 'text' (Open-ASR), fallback to 'transcript' or 'gt'
+    for key in ["text", "transcript", "gt"]:
+        if key in doc:
+            return doc[key]
+    raise KeyError(
+        f"No target field found. Tried ['text','transcript','gt']. Available: {list(doc.keys())}"
+    )
 
 
 PUNCS = "!,.?;:"
