@@ -1,0 +1,18 @@
+dataset_path: https://huggingface.co/datasets/lmms-lab-si/EASI-Leaderboard-Data/resolve/main/MindCubeBench_raw_qa.tsv
+task: "mindcubebench"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.mindcubebench_doc_to_visual
+doc_to_text: !function utils.mindcubebench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0.0
+  do_sample: false
+process_results: !function utils.mindcubebench_process_results
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0

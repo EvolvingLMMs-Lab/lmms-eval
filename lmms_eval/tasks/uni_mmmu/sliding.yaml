@@ -1,0 +1,65 @@
+dataset_path: G:/Uni-MMMU/data/sliding_puzzle_dataset
+dataset_name: null
+task: "uni_mmmu_sliding"
+test_split: validation
+output_type: generate_until
+
+doc_to_visual: !function utils.sliding_doc_to_visual
+doc_to_text: !function utils.sliding_doc_to_text
+doc_to_target: "steps_words"
+doc_to_messages: !function utils.sliding_doc_to_messages
+
+process_results: !function utils.sliding_process_results
+
+generation_kwargs:
+  max_new_tokens: 4096
+  do_sample: false
+  temperature: 0.0
+
+metric_list:
+  - metric: sliding_text_exact
+    aggregation: mean
+    higher_is_better: true
+  - metric: sliding_text_frame_acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: sliding_img_exact
+    aggregation: mean
+    higher_is_better: true
+  - metric: sliding_img_frame_acc
+    aggregation: mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_template: |
+      You are given a 3×3 sliding puzzle image with colored tiles (1-9) and one empty space.
+
+      Your task:
+      1. Parse the current puzzle state from the image
+      2. Find a sequence of moves to solve it (tiles in order, empty at bottom-right)
+      3. Valid moves: "tile_1", "tile_2", ..., "tile_9" (moving that tile into the empty space)
+      4. Generate images showing the puzzle state after each move
+
+      Output format:
+      1) A sequence of images showing the puzzle state at each step
+      2) A JSON array of moves wrapped as:
+      <ANSWER_JSON>
+      ["tile_3", "tile_6", ...]
+      </ANSWER_JSON>
+
+      Requirements:
+      - Parse colors accurately (use palette: 9 distinct colors)
+      - Only move tiles adjacent to the empty space
+      - Generate one image per step with updated tile positions
+      - Goal: tiles 1-8 in reading order, position 9 empty
+
+    evaluation_params:
+      grid_h: 3
+      grid_w: 3
+      num_categories: 9
+      tolerance: 0.80
+
+metadata:
+  version: 1.0
+  description: "3x3 sliding puzzle with step-by-step visualization"

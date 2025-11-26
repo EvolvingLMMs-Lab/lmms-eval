@@ -1,0 +1,60 @@
+dataset_path: G:/Uni-MMMU/data/jigsaw_dataset_2x2ref
+dataset_name: null
+task: "uni_mmmu_jigsaw"
+test_split: validation
+output_type: generate_until
+
+doc_to_visual: !function utils.jigsaw_doc_to_visual
+doc_to_text: !function utils.jigsaw_doc_to_text
+doc_to_target: "label"
+doc_to_messages: !function utils.jigsaw_doc_to_messages
+
+process_results: !function utils.jigsaw_process_results
+
+generation_kwargs:
+  max_new_tokens: 2048
+  do_sample: false
+  temperature: 0.0
+
+metric_list:
+  - metric: jigsaw_image_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: jigsaw_text_acc
+    aggregation: mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    # Jigsaw 任务的提示词模板
+    prompt_template: |
+      You are a unified vision-language model. You will be given:
+      (1) a 2×2 reference image with the bottom-right cell hidden, and
+      (2) two candidate patch images ("Candidate 0" and "Candidate 1").
+
+      Your job:
+      - For each candidate, synthesize a completed 2×2 image by placing that candidate EXACTLY into the bottom-right cell. Keep the other three cells pixel-identical to the reference (no filtering, no re-rendering). If sizes differ, only scale the candidate to fit that quadrant; do NOT rotate, mirror, or alter colors.
+      - Compare the two completed results and decide which candidate yields the correct completion.
+
+      Output EXACTLY the following, in order:
+
+      1) A single image with Candidate 0 placed in the bottom-right cell
+
+      2) A single image with Candidate 1 placed in the bottom-right cell
+
+      3) analysis comparing seam continuity, color/texture gradient, structural alignment, and global semantics
+
+      4) One strict JSON object with your decision, wrapped as:
+      <FINAL_ANSWER_JSON>
+      {"choice": 0 or 1, "rationale": "≤30 words decisive cue"}
+      </FINAL_ANSWER_JSON>
+
+      Hard constraints:
+      - Deterministic, single outcome. No hedging, no multiple possibilities.
+      - No meta talk about prompts, models, or pipelines.
+      - Do not restate the task as the answer; reason from visual evidence.
+      - The only edits allowed are pasting the candidate into the bottom-right cell and necessary size matching for that cell. All other pixels must remain identical to the reference.
+
+metadata:
+  version: 1.0
+  description: "Jigsaw puzzle completion task requiring image synthesis and reasoning"

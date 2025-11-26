@@ -1,0 +1,69 @@
+dataset_path: G:/Uni-MMMU/data/maze_dataset
+dataset_name: null
+task: "uni_mmmu_maze"
+test_split: validation
+output_type: generate_until
+
+doc_to_visual: !function utils.maze_doc_to_visual
+doc_to_text: !function utils.maze_doc_to_text
+doc_to_target: "steps_long"
+doc_to_messages: !function utils.maze_doc_to_messages
+
+process_results: !function utils.maze_process_results
+
+generation_kwargs:
+  max_new_tokens: 4096
+  do_sample: false
+  temperature: 0.0
+
+metric_list:
+  - metric: maze_text_exact
+    aggregation: mean
+    higher_is_better: true
+  - metric: maze_text_frame_acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: maze_img_exact
+    aggregation: mean
+    higher_is_better: true
+  - metric: maze_img_frame_acc
+    aggregation: mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_template: |
+      You are given a maze image showing:
+      - '#' for walls (dark gray)
+      - ' ' for floors (light beige)
+      - 'S' for start position (blue)
+      - 'G' for goal position (green)
+
+      Your task:
+      1. Parse the maze layout from the image
+      2. Find the shortest path from S to G
+      3. Generate a sequence of moves: "up", "down", "left", "right"
+      4. For each step, generate an image showing the current position
+
+      Output format:
+      1) A sequence of images showing the agent's position at each step
+      2) A JSON array of moves wrapped as:
+      <ANSWER_JSON>
+      ["move1", "move2", ...]
+      </ANSWER_JSON>
+
+      Requirements:
+      - Use only valid moves (no diagonal, no wall crossing)
+      - Generate one image per step showing 'S' at current position
+      - Keep 'G' visible throughout
+      - Walls '#' and floors ' ' remain unchanged
+
+    evaluation_params:
+      grid_h: 6
+      grid_w: 6
+      tolerance: 0.75
+      sg_factor: 0.5
+
+metadata:
+  version: 1.0
+  description: "Maze navigation with step-by-step visualization"
