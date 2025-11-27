@@ -114,18 +114,19 @@ def sanitize_list(sub):
         return str(sub)
 
 
-def simple_parse_args_string(args_string):
+def _smart_comma_split(args_string):
     """
-    Parses something like
-        args1=val1,arg2=val2
-    Into a dictionary
-    Handles JSON values with nested commas, e.g., arg='{"key1":val1,"key2":val2}'
+    Splits a string by comma, but not if inside quotes or braces.
+    
+    This is useful for parsing argument strings that may contain JSON or 
+    other structured values with nested commas.
+    
+    Args:
+        args_string: The string to split
+        
+    Returns:
+        List of split arguments
     """
-    args_string = args_string.strip()
-    if not args_string:
-        return {}
-
-    # Smart split: split by comma, but not if inside quotes or braces
     arg_list = []
     current_arg = []
     depth = 0  # Track nesting depth of braces/brackets
@@ -159,6 +160,23 @@ def simple_parse_args_string(args_string):
     arg = "".join(current_arg).strip()
     if arg:
         arg_list.append(arg)
+    
+    return arg_list
+
+
+def simple_parse_args_string(args_string):
+    """
+    Parses something like
+        args1=val1,arg2=val2
+    Into a dictionary
+    Handles JSON values with nested commas, e.g., arg='{"key1":val1,"key2":val2}'
+    """
+    args_string = args_string.strip()
+    if not args_string:
+        return {}
+
+    # Smart split: split by comma, but not if inside quotes or braces
+    arg_list = _smart_comma_split(args_string)
 
     args_dict = {k: handle_arg_string(v) for k, v in [arg.split("=", 1) for arg in arg_list]}
     return args_dict
