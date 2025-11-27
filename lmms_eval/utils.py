@@ -117,13 +117,13 @@ def sanitize_list(sub):
 def _smart_comma_split(args_string):
     """
     Splits a string by comma, but not if inside quotes or braces.
-    
-    This is useful for parsing argument strings that may contain JSON or 
+
+    This is useful for parsing argument strings that may contain JSON or
     other structured values with nested commas.
-    
+
     Args:
         args_string: The string to split
-        
+
     Returns:
         List of split arguments
     """
@@ -160,7 +160,7 @@ def _smart_comma_split(args_string):
     arg = "".join(current_arg).strip()
     if arg:
         arg_list.append(arg)
-    
+
     return arg_list
 
 
