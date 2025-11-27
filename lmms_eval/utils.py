@@ -124,16 +124,16 @@ def simple_parse_args_string(args_string):
     args_string = args_string.strip()
     if not args_string:
         return {}
-    
+
     # Smart split: split by comma, but not if inside quotes or braces
     arg_list = []
     current_arg = []
     depth = 0  # Track nesting depth of braces/brackets
     in_quotes = False
     quote_char = None
-    
+
     for i, char in enumerate(args_string):
-        if char in ('"', "'") and (i == 0 or args_string[i-1] != '\\'):
+        if char in ('"', "'") and (i == 0 or args_string[i - 1] != "\\"):
             if not in_quotes:
                 in_quotes = True
                 quote_char = char
@@ -141,25 +141,25 @@ def simple_parse_args_string(args_string):
                 in_quotes = False
                 quote_char = None
         elif not in_quotes:
-            if char in ('{', '['):
+            if char in ("{", "["):
                 depth += 1
-            elif char in ('}', ']'):
+            elif char in ("}", "]"):
                 depth -= 1
-            elif char == ',' and depth == 0:
+            elif char == "," and depth == 0:
                 # This is a separator comma, not inside JSON
-                arg = ''.join(current_arg).strip()
+                arg = "".join(current_arg).strip()
                 if arg:
                     arg_list.append(arg)
                 current_arg = []
                 continue
-        
+
         current_arg.append(char)
-    
+
     # Don't forget the last argument
-    arg = ''.join(current_arg).strip()
+    arg = "".join(current_arg).strip()
     if arg:
         arg_list.append(arg)
-    
+
     args_dict = {k: handle_arg_string(v) for k, v in [arg.split("=", 1) for arg in arg_list]}
     return args_dict
 
