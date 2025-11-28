@@ -63,20 +63,24 @@ class Qwen3_VL(Qwen3_VLSimple):
             }
             if self.fps is not None:
                 video_kwargs["fps"] = self.fps
+                # limit the number of frames in case fps is set
+                video_kwargs["max_frames"] = self.max_num_frames
             else:
                 video_kwargs["nframes"] = self.max_num_frames
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
-            image_inputs, video_inputs = process_vision_info(batched_messages)
+            image_inputs, video_inputs, video_kwargs_qwen = process_vision_info(batched_messages, return_video_kwargs=True, image_patch_size=16, return_video_metadata=True)
+            video_kwargs = {**video_kwargs, **video_kwargs_qwen}
+
+            video_metadatas = None
             if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                # Append the last frame index if not already included
-                if total_frames - 1 not in indices:
-                    indices = np.append(indices, total_frames - 1)
-                video_inputs[0] = video_inputs[0][indices]
-            padding_side = "left" if self.batch_size > 1 else "right"
-            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, padding_side=padding_side, return_tensors="pt")
+                video_inputs, video_metadatas = zip(*video_inputs)
+                video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+
+            if self.batch_size > 1:
+                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, video_metadata=video_metadatas, **video_kwargs, do_resize=False, padding=True, padding_side="left", return_tensors="pt")
+            else:
+                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, video_metadata=video_metadatas, **video_kwargs, do_resize=False, return_tensors="pt")
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
