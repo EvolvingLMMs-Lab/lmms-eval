@@ -293,7 +293,7 @@ class Qwen2_5_VL(lmms):
 
                 batched_messages.append(message)
 
-            texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
+            texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
             image_inputs, video_inputs = process_vision_info(batched_messages)
             # if video_inputs is not None:
             #     total_frames = video_inputs[0].shape[0]
