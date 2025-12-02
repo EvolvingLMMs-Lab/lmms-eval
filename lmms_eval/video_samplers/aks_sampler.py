@@ -135,7 +135,7 @@ class AKSVideoSampler(BaseVideoSampler):
 
         return T.Compose(mapped)
 
-    def get_frames(self, vr, frame_num, backend):
+    def get_frames(self, vr, frame_num, backend): # (T, C, H, W)
         if backend == 'torchcodec':
             full_raw_image_tensors = vr.get_frames_at(indices=frame_num).data
         elif backend == 'decord':

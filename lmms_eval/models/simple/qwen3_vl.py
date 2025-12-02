@@ -62,7 +62,7 @@ class Qwen3_VL(lmms):
     ) -> None:
         super().__init__()
         # Do not use kwargs for now
-        assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
+        # assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
@@ -78,6 +78,7 @@ class Qwen3_VL(lmms):
             raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
+        eval_logger.info(f"Accelerator: {accelerator.distributed_type}")
         self.accelerator = accelerator
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
@@ -87,14 +88,16 @@ class Qwen3_VL(lmms):
             self.device_map = device_map if device_map else device
 
         # Prepare model loading arguments
-        model_kwargs = {
+        model_kwargs = kwargs.copy()
+        model_kwargs.update({
             "torch_dtype": "bfloat16",
             "device_map": self.device_map,
-        }
+        })
 
         # Add attention implementation if specified
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
+        print("model_kwargs: ", model_kwargs)
 
         # check whether its an MoE model
         match = re.search(r"A\d+B", pretrained)
