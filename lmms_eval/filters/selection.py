@@ -19,7 +19,7 @@ class TakeFirstFilter(Filter):
         """
         Assuming each entry of `resps` is a list of model responses, we discard all but the first response.
         """
-        return map(lambda r: r[0], resps)
+        return map(lambda r: r[0] if r else "", resps)
 
 
 @register_filter("take_first_k")
