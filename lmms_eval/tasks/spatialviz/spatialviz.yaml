@@ -1,0 +1,5 @@
+# Official SpatialViz paper use this configuration
+dataset_name: 
+test_split: test
+task: "spatialviz_full"
+include: _default_template_yaml
