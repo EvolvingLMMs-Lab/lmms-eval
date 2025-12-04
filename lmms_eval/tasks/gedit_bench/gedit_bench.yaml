@@ -1,0 +1,110 @@
+dataset_path: stepfun-ai/GEdit-Bench
+dataset_kwargs:
+  token: True
+  load_from_disk: True
+task: "gedit_bench"
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.gedit_bench_doc_to_visual
+doc_to_text: !function utils.gedit_bench_doc_to_text
+doc_to_target: "instruction"
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.gedit_bench_process_results
+
+# Metrics breakdown:
+# - Overall scores (all samples)
+# - By language: en (English), cn (Chinese)
+# - By subset: fullset (all), intersection (subset with both en and cn)
+# - Score types: semantics, quality, overall
+
+metric_list:
+  # ==========================================
+  # Overall Scores (All Samples)
+  # ==========================================
+  - metric: gedit_bench_semantics_score
+    aggregation: !function utils.gedit_bench_aggregate_results
+    higher_is_better: true
+  - metric: gedit_bench_quality_score
+    aggregation: !function utils.gedit_bench_aggregate_results
+    higher_is_better: true
+  - metric: gedit_bench_overall_score
+    aggregation: !function utils.gedit_bench_aggregate_results
+    higher_is_better: true
+
+  # ==========================================
+  # English - Fullset
+  # ==========================================
+  - metric: gedit_bench_semantics_score
+    aggregation: !function utils.gedit_bench_aggregate_en_fullset
+    higher_is_better: true
+    metric_name: gedit_bench_en_fullset_semantics
+  - metric: gedit_bench_quality_score
+    aggregation: !function utils.gedit_bench_aggregate_en_fullset
+    higher_is_better: true
+    metric_name: gedit_bench_en_fullset_quality
+  - metric: gedit_bench_overall_score
+    aggregation: !function utils.gedit_bench_aggregate_en_fullset
+    higher_is_better: true
+    metric_name: gedit_bench_en_fullset_overall
+
+  # ==========================================
+  # English - Intersection
+  # ==========================================
+  - metric: gedit_bench_semantics_score
+    aggregation: !function utils.gedit_bench_aggregate_en_intersection
+    higher_is_better: true
+    metric_name: gedit_bench_en_intersection_semantics
+  - metric: gedit_bench_quality_score
+    aggregation: !function utils.gedit_bench_aggregate_en_intersection
+    higher_is_better: true
+    metric_name: gedit_bench_en_intersection_quality
+  - metric: gedit_bench_overall_score
+    aggregation: !function utils.gedit_bench_aggregate_en_intersection
+    higher_is_better: true
+    metric_name: gedit_bench_en_intersection_overall
+
+  # ==========================================
+  # Chinese - Fullset
+  # ==========================================
+  - metric: gedit_bench_semantics_score
+    aggregation: !function utils.gedit_bench_aggregate_cn_fullset
+    higher_is_better: true
+    metric_name: gedit_bench_cn_fullset_semantics
+  - metric: gedit_bench_quality_score
+    aggregation: !function utils.gedit_bench_aggregate_cn_fullset
+    higher_is_better: true
+    metric_name: gedit_bench_cn_fullset_quality
+  - metric: gedit_bench_overall_score
+    aggregation: !function utils.gedit_bench_aggregate_cn_fullset
+    higher_is_better: true
+    metric_name: gedit_bench_cn_fullset_overall
+
+  # ==========================================
+  # Chinese - Intersection
+  # ==========================================
+  - metric: gedit_bench_semantics_score
+    aggregation: !function utils.gedit_bench_aggregate_cn_intersection
+    higher_is_better: true
+    metric_name: gedit_bench_cn_intersection_semantics
+  - metric: gedit_bench_quality_score
+    aggregation: !function utils.gedit_bench_aggregate_cn_intersection
+    higher_is_better: true
+    metric_name: gedit_bench_cn_intersection_quality
+  - metric: gedit_bench_overall_score
+    aggregation: !function utils.gedit_bench_aggregate_cn_intersection
+    higher_is_better: true
+    metric_name: gedit_bench_cn_intersection_overall
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.1
+    description: "GEdit-Bench with detailed metrics by language and subset"

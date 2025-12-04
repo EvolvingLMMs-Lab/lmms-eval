@@ -1057,13 +1057,21 @@ class ConfigurableTask(Task):
                 **dataset_kwargs if dataset_kwargs is not None else {},
             )
 
+        # Ensure dataset is a DatasetDict so downstream logic that expects multiple splits works.
+        if not isinstance(self.dataset, datasets.DatasetDict):
+            split_name = self.config.test_split or self.config.validation_split or self.config.training_split or "train"
+            self.dataset = datasets.DatasetDict({split_name: self.dataset})
+
         if self.config.process_docs is not None:
             for split in self.dataset:
                 if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
                     self.dataset[split] = self.config.process_docs(self.dataset[split])
 
         # copy dataset, remove image features
-        self.dataset_no_image = self.dataset.copy()
+        try:
+            self.dataset_no_image = self.dataset.copy()
+        except AttributeError:
+            self.dataset_no_image = datasets.DatasetDict({k: v for k, v in self.dataset.items()})
         for doc_name in self.dataset_no_image:
             remove_cols = []
             features = self.dataset_no_image[doc_name].features
