@@ -234,10 +234,18 @@ class Bagel(lmms):
         else:
             self.response_persistent_folder = response_persistent_folder
 
-        if output_image_dir is None:
-            self.output_image_dir = os.path.join(self.response_persistent_folder, "bagel_generated_images")
-        else:
+        # Check for task-specific output directory from environment variables
+        # Priority: output_image_dir param > IMGEDIT_OUTPUT_DIR > GEDIT_BENCH_OUTPUT_DIR > default
+        if output_image_dir is not None:
             self.output_image_dir = output_image_dir
+        elif os.getenv("IMGEDIT_OUTPUT_DIR"):
+            self.output_image_dir = os.getenv("IMGEDIT_OUTPUT_DIR")
+            eval_logger.info(f"Using IMGEDIT_OUTPUT_DIR: {self.output_image_dir}")
+        elif os.getenv("GEDIT_BENCH_OUTPUT_DIR"):
+            self.output_image_dir = os.getenv("GEDIT_BENCH_OUTPUT_DIR")
+            eval_logger.info(f"Using GEDIT_BENCH_OUTPUT_DIR: {self.output_image_dir}")
+        else:
+            self.output_image_dir = os.path.join(self.response_persistent_folder, "bagel_generated_images")
 
         os.makedirs(self.output_image_dir, exist_ok=True)
         eval_logger.info(f"Image output directory: {self.output_image_dir}")

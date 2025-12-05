@@ -128,6 +128,57 @@ def _save_image_to_structure(
         return ""
 
 
+def _create_result_entry(key, task_type, instruction_language, score, intersection_exist):
+    """Helper to create a result entry dict"""
+    return {
+        "key": key,
+        "task_type": task_type,
+        "instruction_language": instruction_language,
+        "score": score,
+        "intersection_exist": intersection_exist,
+    }
+
+
+def _create_all_metric_results(key, task_type, instruction_language, semantics_score, quality_score, overall_score, intersection_exist):
+    """
+    Create result dict with all metric keys for detailed breakdown.
+
+    Returns metrics for:
+    - Overall scores (all samples)
+    - English fullset and intersection
+    - Chinese fullset and intersection
+    """
+    base_entry = {
+        "key": key,
+        "task_type": task_type,
+        "instruction_language": instruction_language,
+        "intersection_exist": intersection_exist,
+    }
+
+    return {
+        # Overall scores (used for global aggregation)
+        "gedit_bench_semantics_score": {**base_entry, "score": semantics_score},
+        "gedit_bench_quality_score": {**base_entry, "score": quality_score},
+        "gedit_bench_overall_score": {**base_entry, "score": overall_score},
+        # English fullset metrics
+        "gedit_bench_en_fullset_semantics": {**base_entry, "score": semantics_score},
+        "gedit_bench_en_fullset_quality": {**base_entry, "score": quality_score},
+        "gedit_bench_en_fullset_overall": {**base_entry, "score": overall_score},
+        # English intersection metrics
+        "gedit_bench_en_intersection_semantics": {**base_entry, "score": semantics_score},
+        "gedit_bench_en_intersection_quality": {**base_entry, "score": quality_score},
+        "gedit_bench_en_intersection_overall": {**base_entry, "score": overall_score},
+        # Chinese fullset metrics
+        "gedit_bench_cn_fullset_semantics": {**base_entry, "score": semantics_score},
+        "gedit_bench_cn_fullset_quality": {**base_entry, "score": quality_score},
+        "gedit_bench_cn_fullset_overall": {**base_entry, "score": overall_score},
+        # Chinese intersection metrics
+        "gedit_bench_cn_intersection_semantics": {**base_entry, "score": semantics_score},
+        "gedit_bench_cn_intersection_quality": {**base_entry, "score": quality_score},
+        "gedit_bench_cn_intersection_overall": {**base_entry, "score": overall_score},
+    }
+
+
 def gedit_bench_process_results(doc, results, **kwargs):
     """
     Process model predictions:
@@ -141,7 +192,7 @@ def gedit_bench_process_results(doc, results, **kwargs):
         **kwargs: Additional arguments (may include full_docs)
 
     Returns:
-        Dict with metrics: semantics_score, quality_score, overall_score
+        Dict with metrics for all breakdown categories
     """
     # Get configuration from environment variables or use defaults
     # Note: defaults should match bagel.py's output_image_dir structure
@@ -186,29 +237,7 @@ def gedit_bench_process_results(doc, results, **kwargs):
 
     if input_image_pil is None:
         eval_logger.warning(f"No input image found for key {key} (neither in doc nor as _SRCIMG file)")
-        return {
-            "gedit_bench_semantics_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_quality_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_overall_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-        }
+        return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
 
     # Save generated images to required structure (or use existing)
     edited_image_path = None
@@ -242,56 +271,12 @@ def gedit_bench_process_results(doc, results, **kwargs):
     # If still no edited image, return zero scores
     if edited_image_path is None:
         eval_logger.warning(f"No generated images found for key {key}")
-        return {
-            "gedit_bench_semantics_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_quality_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_overall_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-        }
+        return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
 
     # Evaluate using VIEScore
     if not VIESCORE_AVAILABLE:
         eval_logger.warning("VIEScore not available, skipping evaluation")
-        return {
-            "gedit_bench_semantics_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_quality_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_overall_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-        }
+        return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
 
     try:
         # Load edited image
@@ -311,61 +296,18 @@ def gedit_bench_process_results(doc, results, **kwargs):
         score_list = vie_score.evaluate([input_image_pil, edited_image_pil], instruction)
         semantics_score, quality_score, overall_score = score_list
 
-        eval_logger.info(f"[{task_type}] Key {key}: " f"Semantics={semantics_score:.3f}, " f"Quality={quality_score:.3f}, " f"Overall={overall_score:.3f}, " f"Language={instruction_language}")
+        eval_logger.info(f"[{task_type}] Key {key}: " f"Semantics={semantics_score:.3f}, " f"Quality={quality_score:.3f}, " f"Overall={overall_score:.3f}, " f"Language={instruction_language}, " f"Intersection={intersection_exist}")
 
-        return {
-            "gedit_bench_semantics_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": float(semantics_score),
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_quality_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": float(quality_score),
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_overall_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": float(overall_score),
-                "intersection_exist": intersection_exist,
-            },
-        }
+        return _create_all_metric_results(key, task_type, instruction_language, float(semantics_score), float(quality_score), float(overall_score), intersection_exist)
     except Exception as e:
         eval_logger.error(f"Error evaluating key {key}: {e}")
-        return {
-            "gedit_bench_semantics_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_quality_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-            "gedit_bench_overall_score": {
-                "key": key,
-                "task_type": task_type,
-                "instruction_language": instruction_language,
-                "score": 0.0,
-                "intersection_exist": intersection_exist,
-            },
-        }
+        return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
 
 
 def gedit_bench_aggregate_results(results):
     """
-    Aggregate results across all samples and compute final scores
+    Aggregate results across all samples and compute final scores.
+    Also logs detailed breakdown by task type, language, and intersection status.
 
     Args:
         results: List of result dicts from process_results, each containing:
@@ -409,34 +351,34 @@ def gedit_bench_aggregate_results(results):
                 non_intersection_scores.append(r["score"])
 
     # Log statistics
-    eval_logger.info(f"Overall average score: {avg_score:.3f}")
+    eval_logger.info(f"Overall average score: {avg_score:.4f}")
     eval_logger.info(f"Number of samples: {len(scores)}")
 
     if task_type_scores:
         eval_logger.info("Scores by task type:")
         for task_type, task_scores in sorted(task_type_scores.items()):
             task_avg = np.mean(task_scores)
-            eval_logger.info(f"  {task_type}: {task_avg:.3f} (n={len(task_scores)})")
+            eval_logger.info(f"  {task_type}: {task_avg:.4f} (n={len(task_scores)})")
 
     if language_scores:
         eval_logger.info("Scores by language:")
         for language, lang_scores in sorted(language_scores.items()):
             lang_avg = np.mean(lang_scores)
-            eval_logger.info(f"  {language}: {lang_avg:.3f} (n={len(lang_scores)})")
+            eval_logger.info(f"  {language}: {lang_avg:.4f} (n={len(lang_scores)})")
 
     if intersection_scores:
         intersection_avg = np.mean(intersection_scores)
-        eval_logger.info(f"Intersection samples average: {intersection_avg:.3f} (n={len(intersection_scores)})")
+        eval_logger.info(f"Intersection samples average: {intersection_avg:.4f} (n={len(intersection_scores)})")
 
     if non_intersection_scores:
         non_intersection_avg = np.mean(non_intersection_scores)
-        eval_logger.info(f"Non-intersection samples average: {non_intersection_avg:.3f} (n={len(non_intersection_scores)})")
+        eval_logger.info(f"Non-intersection samples average: {non_intersection_avg:.4f} (n={len(non_intersection_scores)})")
 
-    return avg_score
+    return float(avg_score)
 
 
 # ============================================
-# Detailed Aggregation Functions by Language and Subset
+# Helper Function for Filtered Aggregation
 # ============================================
 
 
@@ -447,7 +389,7 @@ def _aggregate_by_filter(results, language: str = None, intersection_only: bool 
     Args:
         results: List of result dicts
         language: Filter by language ("en" or "cn"), None for all
-        intersection_only: True for intersection subset, False for non-intersection, None for all
+        intersection_only: True for intersection subset only, None for all (fullset)
 
     Returns:
         Average score for filtered samples
@@ -465,12 +407,12 @@ def _aggregate_by_filter(results, language: str = None, intersection_only: bool 
             if r.get("instruction_language", "unknown") != language:
                 continue
 
-        # Apply intersection filter
-        if intersection_only is not None:
+        # Apply intersection filter (only filter if intersection_only is True)
+        # intersection_only=None means fullset (all samples of that language)
+        # intersection_only=True means only intersection samples
+        if intersection_only is True:
             is_intersection = r.get("intersection_exist", False)
-            if intersection_only and not is_intersection:
-                continue
-            if not intersection_only and is_intersection:
+            if not is_intersection:
                 continue
 
         filtered_scores.append(r["score"])
@@ -478,12 +420,99 @@ def _aggregate_by_filter(results, language: str = None, intersection_only: bool 
     if not filtered_scores:
         return 0.0
 
-    return float(np.mean(filtered_scores))
+    avg = float(np.mean(filtered_scores))
+
+    # Log filter info
+    lang_str = language if language else "all"
+    subset_str = "intersection" if intersection_only else "fullset"
+    eval_logger.debug(f"Aggregating {lang_str} {subset_str}: {avg:.4f} (n={len(filtered_scores)})")
+
+    return avg
 
 
-# ==========================================
-# English Language Aggregations
-# ==========================================
+# ============================================
+# English - Fullset Aggregations
+# ============================================
+
+
+def gedit_bench_aggregate_en_fullset_semantics(results):
+    """Aggregate English fullset semantics scores"""
+    return _aggregate_by_filter(results, language="en", intersection_only=None)
+
+
+def gedit_bench_aggregate_en_fullset_quality(results):
+    """Aggregate English fullset quality scores"""
+    return _aggregate_by_filter(results, language="en", intersection_only=None)
+
+
+def gedit_bench_aggregate_en_fullset_overall(results):
+    """Aggregate English fullset overall scores"""
+    return _aggregate_by_filter(results, language="en", intersection_only=None)
+
+
+# ============================================
+# English - Intersection Aggregations
+# ============================================
+
+
+def gedit_bench_aggregate_en_intersection_semantics(results):
+    """Aggregate English intersection semantics scores"""
+    return _aggregate_by_filter(results, language="en", intersection_only=True)
+
+
+def gedit_bench_aggregate_en_intersection_quality(results):
+    """Aggregate English intersection quality scores"""
+    return _aggregate_by_filter(results, language="en", intersection_only=True)
+
+
+def gedit_bench_aggregate_en_intersection_overall(results):
+    """Aggregate English intersection overall scores"""
+    return _aggregate_by_filter(results, language="en", intersection_only=True)
+
+
+# ============================================
+# Chinese - Fullset Aggregations
+# ============================================
+
+
+def gedit_bench_aggregate_cn_fullset_semantics(results):
+    """Aggregate Chinese fullset semantics scores"""
+    return _aggregate_by_filter(results, language="cn", intersection_only=None)
+
+
+def gedit_bench_aggregate_cn_fullset_quality(results):
+    """Aggregate Chinese fullset quality scores"""
+    return _aggregate_by_filter(results, language="cn", intersection_only=None)
+
+
+def gedit_bench_aggregate_cn_fullset_overall(results):
+    """Aggregate Chinese fullset overall scores"""
+    return _aggregate_by_filter(results, language="cn", intersection_only=None)
+
+
+# ============================================
+# Chinese - Intersection Aggregations
+# ============================================
+
+
+def gedit_bench_aggregate_cn_intersection_semantics(results):
+    """Aggregate Chinese intersection semantics scores"""
+    return _aggregate_by_filter(results, language="cn", intersection_only=True)
+
+
+def gedit_bench_aggregate_cn_intersection_quality(results):
+    """Aggregate Chinese intersection quality scores"""
+    return _aggregate_by_filter(results, language="cn", intersection_only=True)
+
+
+def gedit_bench_aggregate_cn_intersection_overall(results):
+    """Aggregate Chinese intersection overall scores"""
+    return _aggregate_by_filter(results, language="cn", intersection_only=True)
+
+
+# ============================================
+# Legacy Functions (for backward compatibility)
+# ============================================
 
 
 def gedit_bench_aggregate_en_fullset(results):
@@ -496,11 +525,6 @@ def gedit_bench_aggregate_en_intersection(results):
     return _aggregate_by_filter(results, language="en", intersection_only=True)
 
 
-# ==========================================
-# Chinese Language Aggregations
-# ==========================================
-
-
 def gedit_bench_aggregate_cn_fullset(results):
     """Aggregate Chinese fullset scores (all Chinese samples)"""
     return _aggregate_by_filter(results, language="cn", intersection_only=None)
@@ -509,11 +533,6 @@ def gedit_bench_aggregate_cn_fullset(results):
 def gedit_bench_aggregate_cn_intersection(results):
     """Aggregate Chinese intersection subset scores"""
     return _aggregate_by_filter(results, language="cn", intersection_only=True)
-
-
-# ==========================================
-# Intersection/Non-intersection Aggregations (All Languages)
-# ==========================================
 
 
 def gedit_bench_aggregate_intersection(results):
