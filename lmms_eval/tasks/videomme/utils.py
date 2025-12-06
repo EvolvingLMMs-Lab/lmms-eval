@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import cv2
+import datasets
 import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-import datasets
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 VIDEO_TYPE = ["short", "medium", "long"]
