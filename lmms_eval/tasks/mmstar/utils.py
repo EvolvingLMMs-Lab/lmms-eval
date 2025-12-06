@@ -50,6 +50,7 @@ def mmstar_oc_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     question = doc["question"]
+    question = question.replace("<image 1>", "")
     options = {cand: doc[cand] for cand in string.ascii_uppercase if cand in doc}
 
     options_prompt = "Options:\n"
