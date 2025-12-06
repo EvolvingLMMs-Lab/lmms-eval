@@ -100,8 +100,14 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
             pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
             do_sample = bool(gen_kwargs.get("temperature", 0) and gen_kwargs["temperature"] > 0)
 
+            # Filter out keys not supported by model.generate()
+            # LLaVA-OneVision-1.5 uses Qwen2_5_VLProcessor which produces second_per_grid_ts,
+            # but the model's forward method does not accept this parameter
+            unsupported_keys = ["second_per_grid_ts"]
+            filtered_inputs = {k: v for k, v in inputs.items() if k not in unsupported_keys}
+
             gen_args = {
-                **inputs,
+                **filtered_inputs,
                 "eos_token_id": self.tokenizer.eos_token_id,
                 "pad_token_id": pad_token_id,
                 "num_beams": gen_kwargs["num_beams"],
