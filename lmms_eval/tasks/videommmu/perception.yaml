@@ -5,7 +5,7 @@ output_type: generate_until
 doc_to_visual: !function utils.videommmu_doc_to_visual
 doc_to_text: !function utils.videommmu_doc_to_text_perception_comprehension
 doc_to_target: !function utils.videommmu_doc_to_answer
-process_results: !function utils.videommmu_process_results
+process_results: !function utils.videommmu_process_results_gemini_judge
 metric_list:
   - metric: mmmu_acc
     aggregation: !function utils.videommmu_aggregate_results

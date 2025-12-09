@@ -1,5 +1,7 @@
 import base64
 import re
+import os
+import json
 from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
@@ -24,6 +26,7 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.reasoning_model_utils import (
     parse_reasoning_model_answer,
 )
+from lmms_eval.models.model_utils.load_video import read_video_decord_base64
 
 try:
     from qwen_vl_utils import process_vision_info
@@ -55,9 +58,31 @@ class Qwen3_VL(lmms):
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
+        continual_mode: bool = False,
+        response_persistent_folder: str = None,
         **kwargs,
     ) -> None:
         super().__init__()
+        self.model_name = pretrained
+        self.continual_mode = continual_mode
+        if self.continual_mode:
+            if response_persistent_folder is None:
+                response_persistent_folder = "./logs/qwen3_vl_persistent_folder"
+            self.response_persistent_folder = response_persistent_folder
+            if not os.path.exists(self.response_persistent_folder):
+                os.makedirs(self.response_persistent_folder)
+            
+            safe_model_name = self.model_name.replace("/", "_")
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{safe_model_name}_response.json")
+
+            if os.path.exists(self.response_persistent_file):
+                with open(self.response_persistent_file, "r") as f:
+                    self.response_cache = json.load(f)
+                self.cache_mode = "resume"
+            else:
+                self.response_cache = {}
+                self.cache_mode = "start"
+
         # Do not use kwargs for now
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
@@ -68,11 +93,28 @@ class Qwen3_VL(lmms):
 
         self.use_custom_video_loader = use_custom_video_loader
         self.fps = fps
-        # if self.fps and not self.use_custom_video_loader:
-        #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
         self.max_image_size = max_image_size
-        if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
+        
+        # Validation: custom video loader specific parameters
+        if self.use_custom_video_loader:
+            eval_logger.info("=" * 80)
+            eval_logger.info("🔧 DEBUG MODE ENABLED - Using custom video loader with decord")
+            eval_logger.info(f"🔧 DEBUG: fps={self.fps}, max_num_frames={max_num_frames}, max_image_size={self.max_image_size}")
+            eval_logger.info("=" * 80)
+            
+            # Write to INIT file
+            init_file = "/mnt/sfs-common/krhu/lmms-eval/INIT_CALLED.txt"
+            import datetime
+            with open(init_file, "w") as f:
+                f.write(f"=== __init__ CALLED at {datetime.datetime.now()} ===\n")
+                f.write(f"use_custom_video_loader=True\n")
+                f.write(f"fps={self.fps}, max_num_frames={max_num_frames}, max_image_size={self.max_image_size}\n")
+                f.flush()
+            
+            if self.fps is None and max_num_frames is None:
+                eval_logger.warning("Neither fps nor max_num_frames specified for custom video loader, defaulting to max_num_frames=32")
+        else:
+            eval_logger.info("Using official Qwen3-VL processor for video loading")
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -120,6 +162,10 @@ class Qwen3_VL(lmms):
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
             ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            if self.continual_mode:
+                eval_logger.warning("Continual mode is not supported with distributed inference. Disabling continual mode.")
+                self.continual_mode = False
+            
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
@@ -185,6 +231,34 @@ class Qwen3_VL(lmms):
         return new_list
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
+        # FORCE write to file - this WILL work
+        import sys
+        import datetime
+        debug_file = "/mnt/sfs-common/krhu/lmms-eval/GENERATE_UNTIL_CALLED.txt"
+        with open(debug_file, "w") as f:
+            f.write(f"=== generate_until CALLED at {datetime.datetime.now()} ===\n")
+            f.write(f"use_custom_video_loader = {self.use_custom_video_loader}\n")
+            f.write(f"Number of requests: {len(requests)}\n")
+            f.write(f"fps={self.fps}, max_num_frames={self.max_num_frames}, max_image_size={self.max_image_size}\n")
+            f.flush()
+        
+        # Removed the test exception - let's see if we get here naturally
+        
+        # Force print to stderr
+        print("\n" + "=" * 80, file=sys.stderr)
+        print("🚀🚀🚀 generate_until CALLED 🚀🚀🚀", file=sys.stderr)
+        print(f"🚀 use_custom_video_loader = {self.use_custom_video_loader}", file=sys.stderr)
+        print(f"🚀 Number of requests: {len(requests)}", file=sys.stderr)
+        print("=" * 80 + "\n", file=sys.stderr)
+        sys.stderr.flush()
+        
+        # Also use ERROR level
+        eval_logger.error("=" * 80)
+        eval_logger.error("🚀🚀🚀 generate_until CALLED 🚀🚀🚀")
+        eval_logger.error(f"🚀 use_custom_video_loader = {self.use_custom_video_loader}")
+        eval_logger.error(f"🚀 Number of requests: {len(requests)}")
+        eval_logger.error("=" * 80)
+        
         res = []
 
         def _collate(x):
@@ -205,9 +279,38 @@ class Qwen3_VL(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
+            
+            orig_contexts = contexts
+            orig_doc_id = doc_id
+            orig_task = task
+            orig_split = split
+            cached_results_map = {}
+            non_cached_indices = []
+
+            if self.continual_mode:
+                def get_uuid(t, s, d):
+                    return f"{t}___{s}___{d}"
+
+                for i in range(len(contexts)):
+                    uuid = get_uuid(task[i], split[i], doc_id[i])
+                    if uuid in self.response_cache:
+                        cached_results_map[i] = self.response_cache[uuid]
+                    else:
+                        non_cached_indices.append(i)
+
+                if len(non_cached_indices) == 0:
+                    for i in range(len(contexts)):
+                        res.append(cached_results_map[i])
+                        pbar.update(1)
+                    continue
+
+                contexts = tuple([contexts[i] for i in non_cached_indices])
+                doc_id = tuple([doc_id[i] for i in non_cached_indices])
+
             task = task[0]
             split = split[0]
             visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
+            eval_logger.error(f"🔍 Processing chunk: {len(visual_list)} items, visual_list={visual_list}")
             gen_kwargs = all_gen_kwargs[0]
 
             # Set default until or update values from gen_kwargs if present
@@ -229,6 +332,7 @@ class Qwen3_VL(lmms):
                     contexts[i] = contexts[i].replace("<image>", "")
 
             batched_messages = []
+            
             for i, context in enumerate(contexts):
                 if "<image>" in context:
                     context = context.replace("<image>", "")
@@ -239,14 +343,44 @@ class Qwen3_VL(lmms):
                     contexts[i] = context
 
                 processed_visuals = []
+                
                 if visual_list[i] is not None:
-                    for visual in visual_list[i]:
+                    for idx, visual in enumerate(visual_list[i]):
                         if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                            vr = decord.VideoReader(visual)
-                            first_frame = vr[0].asnumpy()
-                            height, width = first_frame.shape[:2]
-                            # max_pixels = height * width
-                            processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            if self.use_custom_video_loader:
+                                # Custom mode: convert to base64 images using decord
+                                debug_file = "/mnt/sfs-common/krhu/lmms-eval/GENERATE_UNTIL_CALLED.txt"
+                                import datetime
+                                with open(debug_file, "a") as f:
+                                    f.write(f"🎥 Found video file: {visual}\n")
+                                    f.write(f"🎥 About to use custom decord loader\n")
+                                    f.flush()
+                                
+                                eval_logger.error(f"🎥 Custom video loader: Processing video: {visual}")
+                                eval_logger.error(f"🎥 Params: num_frm={self.max_num_frames}, fps={self.fps}, max_image_size={self.max_image_size}")
+                                visual_frames = read_video_decord_base64(
+                                    visual, 
+                                    num_frm=self.max_num_frames, 
+                                    fps=self.fps, 
+                                    img_format="JPEG", 
+                                    max_image_size=self.max_image_size
+                                )
+                                eval_logger.error(f"🎥 Extracted {len(visual_frames)} frames using DECORD")
+                                # Add as images
+                                for base64_frame in visual_frames:
+                                    processed_visuals.append({
+                                        "type": "image", 
+                                        "image": f"data:image/jpeg;base64,{base64_frame}", 
+                                        "max_pixels": self.max_pixels, 
+                                        "min_pixels": self.min_pixels
+                                    })
+                            else:
+                                # Official mode: add video path (processor will handle loading)
+                                eval_logger.info(f"[DEBUG] Official mode: Adding video path: {visual}")
+                                processed_visuals.append({
+                                    "type": "video", 
+                                    "video": visual,
+                                })
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
                             base64_image = visual.convert("RGB")
                             buffer = BytesIO()
@@ -255,6 +389,8 @@ class Qwen3_VL(lmms):
                             base64_string = base64_bytes.decode("utf-8")
                             processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
 
+                eval_logger.error(f"📦 Sample {i}: Processed {len(processed_visuals)} items, types={[v['type'] for v in processed_visuals]}")
+                
                 if self.interleave_visuals is False:
                     message.append(
                         {
@@ -285,20 +421,59 @@ class Qwen3_VL(lmms):
                     )
 
                 batched_messages.append(message)
-            texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
-            image_inputs, video_inputs = process_vision_info(batched_messages)
-            if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                # Ensure unique indices if linspace produces duplicates for few frames
-                indices = np.unique(indices)
-                # Append the last frame index if not already included
-                if total_frames - 1 not in indices:
-                    indices = np.append(indices, total_frames - 1)
-                    indices = np.unique(indices)  # Ensure uniqueness again
-                video_inputs[0] = video_inputs[0][indices]
-            padding_side = "left" if self.batch_size > 1 else "right"
-            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, padding_side=padding_side, return_tensors="pt")
+            
+            # ====== OFFICIAL MODE vs CUSTOM MODE ======
+            debug_file = "/mnt/sfs-common/krhu/lmms-eval/GENERATE_UNTIL_CALLED.txt"
+            import datetime
+            with open(debug_file, "a") as f:
+                f.write(f"\n🎬 Processing Mode: {'CUSTOM' if self.use_custom_video_loader else 'OFFICIAL'} at {datetime.datetime.now()}\n")
+                f.write(f"use_custom_video_loader={self.use_custom_video_loader}\n")
+                f.flush()
+            
+            eval_logger.error(f"🎬 Processing Mode: {'CUSTOM' if self.use_custom_video_loader else 'OFFICIAL'}")
+            
+            if self.use_custom_video_loader:
+                with open(debug_file, "a") as f:
+                    f.write("✅ ENTERING CUSTOM MODE\n")
+                    f.flush()
+                # Custom mode: videos already converted to base64 images
+                # Check what's in batched_messages
+                for idx, msg in enumerate(batched_messages):
+                    for m in msg:
+                        if m["role"] == "user":
+                            content_types = [c.get("type") for c in m["content"] if isinstance(c, dict)]
+                            eval_logger.error(f"🎬 Message {idx} content types: {content_types}")
+                            # Check for any video entries
+                            has_video = any(c.get("type") == "video" for c in m["content"] if isinstance(c, dict))
+                            if has_video:
+                                eval_logger.error(f"⚠️⚠️⚠️ WARNING: Found 'video' type in message {idx}!")
+                
+                texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
+                
+                # Extract only images from batched_messages (videos already converted to images)
+                eval_logger.error(f"📞 About to call process_vision_info with {len(batched_messages)} messages")
+                image_inputs, _ = process_vision_info(batched_messages)
+                video_inputs = None  # No videos to process since they're already converted to images
+                eval_logger.error(f"📞 process_vision_info returned {len(image_inputs) if image_inputs else 0} images")
+                eval_logger.error(f"📞 video_inputs=None (custom mode)")
+                
+                padding_side = "left" if self.batch_size > 1 else "right"
+                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, padding_side=padding_side, return_tensors="pt")
+            else:
+                # Official mode: let processor handle video loading and sampling
+                proc_kwargs = {}
+                if self.fps is not None:
+                    proc_kwargs["fps"] = self.fps
+                if self.max_num_frames is not None:
+                    proc_kwargs["num_frames"] = self.max_num_frames
+                if self.max_image_size is not None:
+                    proc_kwargs["max_image_size"] = self.max_image_size
+                
+                # Use processor with messages directly (official way)
+                padding_side = "left" if self.batch_size > 1 else "right"
+                texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True, **proc_kwargs)
+                image_inputs, video_inputs = process_vision_info(batched_messages, **proc_kwargs)
+                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, padding_side=padding_side, return_tensors="pt")
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -343,11 +518,34 @@ class Qwen3_VL(lmms):
                         ans = ans.split(term)[0]
                 answers[i] = ans
 
+            generated_results = []
             for ans, context in zip(answers, contexts):
                 clean_ans = parse_reasoning_model_answer(ans)
-                res.append(clean_ans)
+                generated_results.append(clean_ans)
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
-                pbar.update(1)
+
+            if self.continual_mode:
+                gen_ptr = 0
+                for i in range(len(orig_contexts)):
+                    if i in cached_results_map:
+                        res.append(cached_results_map[i])
+                        pbar.update(1)
+                    else:
+                        clean_ans = generated_results[gen_ptr]
+                        res.append(clean_ans)
+
+                        uuid = get_uuid(orig_task[i], orig_split[i], orig_doc_id[i])
+                        self.response_cache[uuid] = clean_ans
+
+                        pbar.update(1)
+                        gen_ptr += 1
+
+                with open(self.response_persistent_file, "w") as f:
+                    json.dump(self.response_cache, f)
+            else:
+                for ans in generated_results:
+                    res.append(ans)
+                    pbar.update(1)
 
                 # eval_logger.debug(f"Question: {context}")
                 # eval_logger.debug(f"Model Raw Response: {ans}")

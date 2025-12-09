@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/VideoMMMU
+dataset_path: lmms-lab/videofinal
 dataset_kwargs:
   token: True
   video: True

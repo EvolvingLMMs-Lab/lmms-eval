@@ -7,6 +7,7 @@ import av
 import numpy as np
 from av.codec.context import CodecContext
 from decord import VideoReader, cpu
+from loguru import logger as eval_logger
 from PIL import Image
 
 
@@ -148,4 +149,78 @@ def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[f
         byte_data = output_buffer.getvalue()
         base64_str = base64.b64encode(byte_data).decode("utf-8")
         base64_frames.append(base64_str)
+    return base64_frames
+
+
+def read_video_decord_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, img_format="JPEG", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize"):
+    """
+    Read video using decord and return base64 encoded frames.
+    
+    Args:
+        video_path (str): The path to the video file.
+        num_frm (int, optional): The maximum number of frames to extract. Defaults to 8.
+        fps (float, optional): The frames per second for extraction. If provided, will calculate
+                              num_frm based on video duration and fps. Defaults to None.
+        img_format (str, optional): The format of the output images (e.g., 'JPEG', 'PNG'). Defaults to "JPEG".
+        max_image_size (Optional[Union[Tuple[int, int], int]], optional): Maximum image size for resizing.
+        resize_strategy (str, optional): Resize strategy ('resize' or 'thumbnail'). Defaults to "resize".
+    
+    Returns:
+        List[str]: A list of base64 encoded frame strings.
+    """
+    import sys
+    print(f"\n📹 [DEBUG-DECORD] Loading video: {video_path}", file=sys.stderr, flush=True)
+    print(f"📹 [DEBUG-DECORD] Parameters: num_frm={num_frm}, fps={fps}, max_image_size={max_image_size}", file=sys.stderr, flush=True)
+    eval_logger.info(f"[DEBUG-DECORD] Loading video: {video_path}")
+    eval_logger.info(f"[DEBUG-DECORD] Parameters: num_frm={num_frm}, fps={fps}, max_image_size={max_image_size}")
+    
+    if type(video_path) == str:
+        vr = VideoReader(video_path, ctx=cpu(0))
+    else:
+        vr = VideoReader(video_path[0], ctx=cpu(0))
+    
+    total_frame_num = len(vr)
+    video_fps = vr.get_avg_fps()
+    eval_logger.info(f"[DEBUG-DECORD] Video info: total_frames={total_frame_num}, fps={video_fps}")
+    
+    # If fps is provided, calculate the number of frames to sample based on video duration
+    original_num_frm = num_frm
+    if fps is not None:
+        video_duration = total_frame_num / video_fps  # in seconds
+        num_frm = min(num_frm, int(video_duration * fps))
+        eval_logger.info(f"[DEBUG-DECORD] FPS-based sampling: video_duration={video_duration:.2f}s, adjusted num_frm from {original_num_frm} to {num_frm}")
+    
+    # Sample frames uniformly
+    uniform_sampled_frames = np.linspace(0, total_frame_num - 1, num_frm, dtype=int)
+    frame_idx = uniform_sampled_frames.tolist()
+    eval_logger.info(f"[DEBUG-DECORD] Sampling frame indices: {frame_idx}")
+    
+    frames = vr.get_batch(frame_idx).asnumpy()  # (frames, height, width, channels)
+    eval_logger.info(f"[DEBUG-DECORD] Loaded frames shape: {frames.shape}")
+    
+    base64_frames = []
+    for i, frame in enumerate(frames):
+        img = Image.fromarray(frame)
+        original_size = img.size
+        
+        # Apply resizing if specified
+        if max_image_size:
+            if resize_strategy == "resize":
+                if isinstance(max_image_size, int):
+                    max_image_size = (max_image_size, max_image_size)
+                img = img.resize(max_image_size)
+            elif resize_strategy == "thumbnail":
+                img.thumbnail(max_image_size)
+            else:
+                raise ValueError(f"Unknown resize strategy: {resize_strategy}")
+            eval_logger.info(f"[DEBUG-DECORD] Frame {i}: resized from {original_size} to {img.size}")
+        
+        # Convert to base64
+        output_buffer = BytesIO()
+        img.save(output_buffer, format=img_format)
+        byte_data = output_buffer.getvalue()
+        base64_str = base64.b64encode(byte_data).decode("utf-8")
+        base64_frames.append(base64_str)
+    
+    eval_logger.info(f"[DEBUG-DECORD] Successfully converted {len(base64_frames)} frames to base64")
     return base64_frames
