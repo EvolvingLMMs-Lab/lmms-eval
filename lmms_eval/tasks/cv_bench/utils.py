@@ -5,17 +5,20 @@ from typing import Any, Dict, List, Optional
 
 def _extract_answer_letter(text: str) -> str:
     """
-    Извлекает букву варианта ответа из строки, например:
+    Extract the answer choice letter from a string.
+
+    Examples:
     'A answer1' -> 'A'
     'A) answer2' -> 'A'
     '(B) answer' -> 'B'
     'C' -> 'C'
     '(C)' -> 'C'
     'A.' -> 'A'
-    Возвращает "", если буква не найдена.
+
+    Return an empty string if no letter is found.
     """
     text = text.strip()
-    match = re.match(r'[\(\s]*([A-Z])[\)\.\s]*', text, flags=re.IGNORECASE)
+    match = re.match(r"[\(\s]*([A-Z])[\)\.\s]*", text, flags=re.IGNORECASE)
     if match:
         return match.group(1).upper()
     return ""
@@ -46,16 +49,7 @@ def cv_bench_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]:
     pred_letter = _extract_answer_letter(response)
     flag = pred_letter == grounded_output
 
-    cv_bench_submission = {
-        "id": doc["idx"],
-        "gt_content": grounded_output,
-        "pred_parsed": pred_letter,
-        "pred": response,
-        "type": doc["type"],
-        "task": doc["task"],
-        "source": doc["source"],
-        "is_correct": flag
-    }
+    cv_bench_submission = {"id": doc["idx"], "gt_content": grounded_output, "pred_parsed": pred_letter, "pred": response, "type": doc["type"], "task": doc["task"], "source": doc["source"], "is_correct": flag}
     return {key_name: cv_bench_submission}
 
 
@@ -82,5 +76,5 @@ def cv_bench_default_aggregate_results(results: List[Dict]):
     omni_3d = source_accuracies["Omni3D"]
 
     # original formula
-    cv_bench_accuracy = 1/2 * ((ade20k_2d + coco_2d) / 2 + omni_3d)
+    cv_bench_accuracy = 1 / 2 * ((ade20k_2d + coco_2d) / 2 + omni_3d)
     return cv_bench_accuracy

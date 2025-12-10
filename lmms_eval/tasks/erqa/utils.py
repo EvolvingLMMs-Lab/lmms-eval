@@ -5,7 +5,6 @@ from pathlib import Path
 
 import yaml
 
-
 eval_logger = logging.getLogger("lmms-eval")
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
@@ -34,7 +33,7 @@ def _extract_answer_letter(text: str) -> str:
     Return an empty string if no letter is found.
     """
     text = text.strip()
-    match = re.match(r'[\(\s]*([A-Z])[\)\.\s]*', text, flags=re.IGNORECASE)
+    match = re.match(r"[\(\s]*([A-Z])[\)\.\s]*", text, flags=re.IGNORECASE)
     if match:
         return match.group(1).upper()
     return ""
@@ -84,10 +83,10 @@ def erqa_aggregate_results(results):
     accuracy = total_correct / total_samples if total_samples > 0 else 0
     sub_task_accuracies = {sub_task: sum(scores) / len(scores) for sub_task, scores in sub_task_to_eval_samples.items()}
 
-    eval_logger.info("%-40s", 'ERQA per-sub-task accuracy')
+    eval_logger.info("%-40s", "ERQA per-sub-task accuracy")
     eval_logger.info("-" * 40)
     for sub_task, acc in sub_task_accuracies.items():
         eval_logger.info("%-20s: %.4f", sub_task, acc)
     eval_logger.info("=" * 40)
-    
+
     return accuracy

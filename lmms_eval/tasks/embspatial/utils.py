@@ -16,7 +16,7 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
         if "!function" not in line:
             safe_data.append(line)
 
-    config = yaml.safe_load("".join(safe_data))uv run pytest
+    config = yaml.safe_load("".join(safe_data))
 
 
 def _extract_answer_letter(text: str) -> str:
@@ -34,7 +34,7 @@ def _extract_answer_letter(text: str) -> str:
     Return an empty string if no letter is found.
     """
     text = text.strip()
-    match = re.match(r'[\(\s]*([A-Z])[\)\.\s]*', text, flags=re.IGNORECASE)
+    match = re.match(r"[\(\s]*([A-Z])[\)\.\s]*", text, flags=re.IGNORECASE)
     if match:
         return match.group(1).upper()
     return ""
@@ -91,7 +91,7 @@ def embspatial_aggregate_results(results: List[Dict]):
     accuracy = total_correct / total_samples if total_samples > 0 else 0
     sub_task_accuracies = {sub_task: sum(scores) / len(scores) for sub_task, scores in sub_task_to_eval_samples.items()}
 
-    eval_logger.info("%-40s", 'EmbSpatial Per-Sub-Task Accuracy')
+    eval_logger.info("%-40s", "EmbSpatial Per-Sub-Task Accuracy")
     eval_logger.info("-" * 40)
 
     for sub_task, acc in sub_task_accuracies.items():

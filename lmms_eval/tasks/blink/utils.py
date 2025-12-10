@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -31,7 +30,7 @@ def _extract_answer_letter(text: str) -> str:
     Return an empty string if no letter is found.
     """
     text = text.strip()
-    match = re.match(r'[\(\s]*([A-Z])[\)\.\s]*', text, flags=re.IGNORECASE)
+    match = re.match(r"[\(\s]*([A-Z])[\)\.\s]*", text, flags=re.IGNORECASE)
     if match:
         return match.group(1).upper()
     return ""
@@ -50,7 +49,7 @@ def blink_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: Optional[d
 
 def blink_doc_to_visual(doc: dict) -> list:
     keys = doc.keys()
-    image_keys = [item for item in keys if re.match(r'^image_\d+$', item)]
+    image_keys = [item for item in keys if re.match(r"^image_\d+$", item)]
     image_list = []
     for image_key in image_keys:
         image = doc[image_key]
