@@ -1,0 +1,2 @@
+task: dynamath_reasoning
+include: _default_template_yaml
