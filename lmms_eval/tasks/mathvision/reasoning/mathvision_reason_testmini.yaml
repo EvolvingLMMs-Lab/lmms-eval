@@ -1,0 +1,6 @@
+dataset_path: MathLLMs/MathVision
+dataset_kwargs:
+  token: True
+task: "mathvision_reason_testmini_reasoning"
+test_split: testmini
+include: _default_template_yaml
