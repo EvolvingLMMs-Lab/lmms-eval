@@ -1,0 +1,21 @@
+dataset_path: BLINK-Benchmark/BLINK
+test_split: val
+output_type: generate_until
+doc_to_visual: !function utils.blink_doc_to_visual
+doc_to_text: !function utils.blink_doc_to_text
+doc_to_target: "answer"
+
+process_results: !function utils.blink_process_results
+
+metric_list:
+  - metric: blink_acc
+    aggregation: !function utils.blink_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Note: You only need to respond with {} without providing any additional information.\n"
+    post_prompt: ""
+
+generation_kwargs:
+  max_new_tokens: 1024

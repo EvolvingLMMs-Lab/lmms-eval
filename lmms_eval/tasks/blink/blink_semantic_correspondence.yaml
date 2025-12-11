@@ -1,0 +1,4 @@
+dataset_name: "Semantic_Correspondence"
+tag: "blink_groups"
+task: "blink_semantic_correspondence"
+include: _default_template_yaml

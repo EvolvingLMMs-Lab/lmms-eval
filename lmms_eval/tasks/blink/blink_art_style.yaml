@@ -1,0 +1,4 @@
+dataset_name: "Art_Style"
+tag: "blink_groups"
+task: "blink_art_style"
+include: _default_template_yaml

@@ -1,0 +1,4 @@
+dataset_name: "Jigsaw"
+tag: "blink_groups"
+task: "blink_jigsaw"
+include: _default_template_yaml
