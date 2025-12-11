@@ -1,0 +1,4 @@
+dataset_name: "Relative_Reflectance"
+tag: "blink_groups"
+task: "blink_relative_reflectance"
+include: _default_template_yaml

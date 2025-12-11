@@ -1,0 +1,4 @@
+dataset_name: "Visual_Similarity"
+tag: "blink_groups"
+task: "blink_visual_similarity"
+include: _default_template_yaml

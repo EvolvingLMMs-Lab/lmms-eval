@@ -1,0 +1,5 @@
+dataset_path: nyu-visionx/CV-Bench
+dataset_name: "2D"
+task: "cv_bench_2d"
+test_split: test
+include: _default_template_yaml

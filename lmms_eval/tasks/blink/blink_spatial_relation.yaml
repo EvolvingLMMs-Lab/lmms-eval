@@ -1,0 +1,4 @@
+dataset_name: "Spatial_Relation"
+tag: "blink_groups"
+task: "blink_spatial_relation"
+include: _default_template_yaml
