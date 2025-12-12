@@ -19,6 +19,7 @@ import base64
 import json
 import os
 import re
+import shutil
 from collections import defaultdict
 from io import BytesIO
 from typing import Dict, List, Optional, Tuple
@@ -696,12 +697,9 @@ def _call_gpt_for_evaluation(
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{original_b64}"}},
         ]
 
-        # For extract type, only show the edited image
-        if edit_type != "extract":
-            content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{edited_b64}"}})
-        else:
-            # For extract, replace the second image with the edited one
-            content[1] = {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{edited_b64}"}}
+        # Keep consistent with original ImgEdit basic_bench.py:
+        # always send both original and edited images (even for "extract").
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{edited_b64}"}})
 
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -847,9 +845,12 @@ def _call_model_for_evaluation(
 def imgedit_process_results(doc, results, **kwargs):
     """
     Process model predictions:
-    1. Parse JSON output to extract text and images
-    2. Save images to required directory structure
+    1. Parse JSON output to extract text and images from unified model output path
+    2. Reorganize images to ImgEdit required directory structure
     3. Evaluate using GPT-4o or Qwen2.5-VL
+
+    Model saves images to: {output_dir}/imgedit/{key}.png
+    ImgEdit requires: {output_dir}/{model_name}/{key}.png
 
     Args:
         doc: Document containing input image, instruction, key, edit_type, etc.
@@ -931,43 +932,68 @@ def imgedit_process_results(doc, results, **kwargs):
                 except Exception as e:
                     eval_logger.warning(f"Failed to load image from {full_path}: {e}")
 
-    # 5. Try to load from saved _SRCIMG file
+    # 5. Try to load from saved _SRCIMG file (unified path or reorganized path)
     if input_image_pil is None:
-        src_img_path = os.path.join(output_base_dir, model_name, f"{key}_SRCIMG.png")
-        if os.path.exists(src_img_path):
-            try:
-                input_image_pil = Image.open(src_img_path).convert("RGB")
-                eval_logger.debug(f"Loaded source image from _SRCIMG: {src_img_path}")
-            except Exception as e:
-                eval_logger.warning(f"Failed to load source image from {src_img_path}: {e}")
+        # Try unified path first: {output_dir}/imgedit/{key}_SRCIMG.png
+        unified_src_path = None
+        if model_images and len(model_images) > 0:
+            gen_path = model_images[0]
+            unified_src_path = gen_path.replace(f"{key}.png", f"{key}_SRCIMG.png")
+
+        # Also try reorganized path: {output_dir}/{model_name}/{key}_SRCIMG.png
+        reorganized_src_path = os.path.join(output_base_dir, model_name, f"{key}_SRCIMG.png")
+
+        for src_path in [unified_src_path, reorganized_src_path]:
+            if src_path and os.path.exists(src_path):
+                try:
+                    input_image_pil = Image.open(src_path).convert("RGB")
+                    eval_logger.debug(f"Loaded source image from _SRCIMG: {src_path}")
+                    break
+                except Exception as e:
+                    eval_logger.warning(f"Failed to load source image from {src_path}: {e}")
 
     # Return zero scores if no input image
     if input_image_pil is None:
         eval_logger.warning(f"No input image found for key {key}. " f"Tried: input_image={doc.get('input_image') is not None}, " f"image_path={doc.get('image_path', '')}, " f"id={image_id}, origin_img_root={origin_img_root}")
         return _create_zero_result(key, edit_type)
 
-    # Find edited image
+    # Reorganize generated images to ImgEdit required structure
+    # Model output: {output_dir}/imgedit/{key}.png
+    # ImgEdit: {output_dir}/{model_name}/{key}.png
     edited_image_path = None
     edited_image_pil = None
+    target_dir = os.path.join(output_base_dir, model_name)
+    target_path = os.path.join(target_dir, f"{key}.png")
 
     if model_images and len(model_images) > 0:
         generated_image_path = model_images[0]
         if os.path.exists(generated_image_path):
-            edited_image_path = generated_image_path
+            # Reorganize: copy to ImgEdit required structure
+            os.makedirs(target_dir, exist_ok=True)
+            if generated_image_path != target_path:
+                shutil.copy2(generated_image_path, target_path)
+                eval_logger.debug(f"Reorganized image from {generated_image_path} to {target_path}")
+
+                # Also copy source image if exists
+                src_img_unified = generated_image_path.replace(f"{key}.png", f"{key}_SRCIMG.png")
+                if os.path.exists(src_img_unified):
+                    src_target = os.path.join(target_dir, f"{key}_SRCIMG.png")
+                    shutil.copy2(src_img_unified, src_target)
+
+            edited_image_path = target_path
             try:
                 edited_image_pil = Image.open(edited_image_path).convert("RGB")
             except Exception as e:
                 eval_logger.warning(f"Failed to load edited image: {e}")
 
-    # Try to find from standard location
-    if edited_image_pil is None:
-        existing_path = os.path.join(output_base_dir, model_name, f"{key}.png")
-        if os.path.exists(existing_path):
-            edited_image_path = existing_path
-            try:
-                edited_image_pil = Image.open(existing_path).convert("RGB")
-            except Exception as e:
-                eval_logger.warning(f"Failed to load edited image from {existing_path}: {e}")
+    # Try to find from standard location if not found
+    if edited_image_pil is None and os.path.exists(target_path):
+        edited_image_path = target_path
+        try:
+            edited_image_pil = Image.open(target_path).convert("RGB")
+            eval_logger.debug(f"Found existing generated image at {target_path}")
+        except Exception as e:
+            eval_logger.warning(f"Failed to load edited image from {target_path}: {e}")
 
     # Return zero scores if no edited image
     if edited_image_pil is None:
@@ -1048,138 +1074,55 @@ def _create_zero_result(key: str, edit_type: str) -> Dict:
 # ============================================
 
 
-def imgedit_aggregate_results(results):
+def imgedit_aggregate_score(results):
     """
-    Aggregate results across all samples and compute final scores.
-    Returns overall average score.
+    Simple aggregation: compute mean of all scores.
+    Used for imgedit_score1, imgedit_score2, imgedit_score3.
+    """
+    if not results:
+        return 0.0
+    scores = [r["score"] for r in results if "score" in r]
+    if not scores:
+        return 0.0
+    return float(np.mean(scores))
 
-    Args:
-        results: List of result dicts from process_results
 
-    Returns:
-        Final aggregated score (average across all samples)
+def imgedit_aggregate_avg_score(results):
+    """
+    Aggregate avg_score (the main metric) and print final summary.
+    This follows the original ImgEdit benchmark logic:
+    - Step 1: Each sample has avg_score = (score1 + score2 + score3) / 3
+    - Step 2: Group by edit_type and compute type averages
+    - Final: Overall average of all avg_scores
     """
     if not results:
         return 0.0
 
-    # Calculate average score
     scores = [r["score"] for r in results if "score" in r]
     if not scores:
         return 0.0
 
-    avg_score = np.mean(scores)
+    overall_avg = float(np.mean(scores))
 
-    # Log breakdown by edit type
+    # Compute per-type averages (like step2_typescore.py)
     edit_type_scores = defaultdict(list)
-
     for r in results:
         if "score" in r:
             edit_type = r.get("edit_type", "unknown")
             edit_type_scores[edit_type].append(r["score"])
 
-    # Log statistics
-    eval_logger.info(f"Overall average score: {avg_score:.3f}")
-    eval_logger.info(f"Number of samples: {len(scores)}")
-
-    if edit_type_scores:
-        eval_logger.info("Scores by edit type:")
-        for edit_type, type_scores in sorted(edit_type_scores.items()):
-            type_avg = np.mean(type_scores)
-            eval_logger.info(f"  {edit_type}: {type_avg:.3f} (n={len(type_scores)})")
-
-    return avg_score
-
-
-def imgedit_aggregate_by_type(results):
-    """
-    Aggregate results by edit type and return a dict of scores per type.
-
-    Args:
-        results: List of result dicts from process_results
-
-    Returns:
-        Dict mapping edit_type to average score
-    """
-    if not results:
-        return {}
-
-    edit_type_scores = defaultdict(list)
-
-    for r in results:
-        if "score" in r:
-            edit_type = r.get("edit_type", "unknown")
-            edit_type_scores[edit_type].append(r["score"])
-
-    type_averages = {}
-    for edit_type, type_scores in edit_type_scores.items():
-        type_averages[edit_type] = float(np.mean(type_scores))
-
-    # Log the breakdown
-    eval_logger.info("=" * 50)
-    eval_logger.info("Scores by Edit Type:")
-    eval_logger.info("=" * 50)
+    # Log final summary in original ImgEdit format
+    eval_logger.info("=" * 60)
+    eval_logger.info("ImgEdit Benchmark Final Results")
+    eval_logger.info("=" * 60)
+    eval_logger.info(f"Overall Average Score: {overall_avg:.3f}")
+    eval_logger.info(f"Total Samples: {len(scores)}")
+    eval_logger.info("-" * 60)
+    eval_logger.info("Scores by Edit Type (avg_score):")
     for edit_type in IMGEDIT_EDIT_TYPES:
-        if edit_type in type_averages:
-            eval_logger.info(f"  {edit_type}: {type_averages[edit_type]:.3f} (n={len(edit_type_scores[edit_type])})")
-    eval_logger.info("=" * 50)
+        if edit_type in edit_type_scores:
+            type_avg = np.mean(edit_type_scores[edit_type])
+            eval_logger.info(f"  {edit_type:12s}: {type_avg:.3f} (n={len(edit_type_scores[edit_type])})")
+    eval_logger.info("=" * 60)
 
-    return type_averages
-
-
-# Per-type aggregation functions for YAML
-def _aggregate_for_type(results, target_type: str):
-    """Helper to aggregate scores for a specific edit type"""
-    if not results:
-        return 0.0
-
-    type_scores = [r["score"] for r in results if r.get("edit_type") == target_type and "score" in r]
-
-    if not type_scores:
-        return 0.0
-
-    return float(np.mean(type_scores))
-
-
-def imgedit_aggregate_replace(results):
-    """Aggregate scores for 'replace' edit type"""
-    return _aggregate_for_type(results, "replace")
-
-
-def imgedit_aggregate_add(results):
-    """Aggregate scores for 'add' edit type"""
-    return _aggregate_for_type(results, "add")
-
-
-def imgedit_aggregate_adjust(results):
-    """Aggregate scores for 'adjust' edit type"""
-    return _aggregate_for_type(results, "adjust")
-
-
-def imgedit_aggregate_remove(results):
-    """Aggregate scores for 'remove' edit type"""
-    return _aggregate_for_type(results, "remove")
-
-
-def imgedit_aggregate_style(results):
-    """Aggregate scores for 'style' edit type"""
-    return _aggregate_for_type(results, "style")
-
-
-def imgedit_aggregate_action(results):
-    """Aggregate scores for 'action' edit type"""
-    return _aggregate_for_type(results, "action")
-
-
-def imgedit_aggregate_extract(results):
-    """Aggregate scores for 'extract' edit type"""
-    return _aggregate_for_type(results, "extract")
-
-
-def imgedit_aggregate_background(results):
-    """Aggregate scores for 'background' edit type"""
-    return _aggregate_for_type(results, "background")
-
-
-def imgedit_aggregate_compose(results):
-    """Aggregate scores for 'compose' edit type"""
-    return _aggregate_for_type(results, "compose")
+    return overall_avg

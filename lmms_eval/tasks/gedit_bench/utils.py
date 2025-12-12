@@ -182,9 +182,12 @@ def _create_all_metric_results(key, task_type, instruction_language, semantics_s
 def gedit_bench_process_results(doc, results, **kwargs):
     """
     Process model predictions:
-    1. Parse JSON output to extract text and images
-    2. Save images to required directory structure
+    1. Parse JSON output to extract text and images from unified model output path
+    2. Reorganize images to GEdit-Bench required directory structure
     3. Evaluate using VIEScore
+
+    Model saves images to: {output_dir}/gedit_bench/{key}.png
+    GEdit-Bench requires: {output_dir}/{model_name}/fullset/{task_type}/{language}/{key}.png
 
     Args:
         doc: Document containing input image, instruction, key, task_type, etc.
@@ -195,11 +198,11 @@ def gedit_bench_process_results(doc, results, **kwargs):
         Dict with metrics for all breakdown categories
     """
     # Get configuration from environment variables or use defaults
-    # Note: defaults should match bagel.py's output_image_dir structure
     model_name = os.getenv("GEDIT_BENCH_MODEL_NAME", "bagel")
     output_base_dir = os.getenv("GEDIT_BENCH_OUTPUT_DIR", "./logs/bagel_persistent_folder/bagel_generated_images")
     vie_backbone = os.getenv("GEDIT_BENCH_VIE_BACKBONE", "gpt4o")
     vie_key_path = os.getenv("GEDIT_BENCH_VIE_KEY_PATH", None)
+
     pred = results[0] if results else "{}"
     try:
         pred = json.loads(pred)
@@ -220,53 +223,59 @@ def gedit_bench_process_results(doc, results, **kwargs):
     # Get input image (try different possible field names)
     input_image = doc.get("input_image") or doc.get("input_image_raw")
 
-    # If input_image is None, try to load from saved _SRCIMG file
-    # This happens when process_results is called after generation, and the doc doesn't contain PIL image data
+    # Try to get input image from multiple sources
     input_image_pil = None
     if input_image is not None:
         input_image_pil = input_image.convert("RGB") if hasattr(input_image, "convert") else input_image
     else:
-        # Try to load from _SRCIMG file saved during generation
-        src_img_path = os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language, f"{key}_SRCIMG.png")
-        if os.path.exists(src_img_path):
-            try:
-                input_image_pil = Image.open(src_img_path).convert("RGB")
-                eval_logger.debug(f"Loaded source image from {src_img_path}")
-            except Exception as e:
-                eval_logger.warning(f"Failed to load source image from {src_img_path}: {e}")
+        # Try to load from _SRCIMG file saved by model
+        # Model saves to: {output_dir}/gedit_bench/{key}_SRCIMG.png
+        src_paths = []
+        if model_images and len(model_images) > 0:
+            src_paths.append(model_images[0].replace(f"{key}.png", f"{key}_SRCIMG.png"))
+        # Also check target location
+        src_paths.append(os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language, f"{key}_SRCIMG.png"))
+
+        for src_path in src_paths:
+            if src_path and os.path.exists(src_path):
+                try:
+                    input_image_pil = Image.open(src_path).convert("RGB")
+                    eval_logger.debug(f"Loaded source image from {src_path}")
+                    break
+                except Exception as e:
+                    eval_logger.warning(f"Failed to load source image from {src_path}: {e}")
 
     if input_image_pil is None:
         eval_logger.warning(f"No input image found for key {key} (neither in doc nor as _SRCIMG file)")
         return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
 
-    # Save generated images to required structure (or use existing)
+    # Reorganize generated images to GEdit-Bench required structure
+    # Model saves to: {output_dir}/gedit_bench/{key}.png
+    # GEdit-Bench requires: {output_dir}/{model_name}/fullset/{task_type}/{language}/{key}.png
     edited_image_path = None
+    target_dir = os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language)
+    target_path = os.path.join(target_dir, f"{key}.png")
+
     if model_images and len(model_images) > 0:
-        # Use first generated image
         generated_image_path = model_images[0]
-        # Check if the image is already at the target location
         if os.path.exists(generated_image_path):
-            edited_image_path = generated_image_path
-            # Also copy to standard structure if not already there
-            target_path = os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language, f"{key}.png")
-            if generated_image_path != target_path and not os.path.exists(target_path):
-                edited_image_path = _save_image_to_structure(
-                    generated_image_path,
-                    key,
-                    task_type,
-                    instruction_language,
-                    output_base_dir,
-                    model_name,
-                )
+            # Reorganize: copy to GEdit-Bench required structure
+            os.makedirs(target_dir, exist_ok=True)
+            if generated_image_path != target_path:
+                shutil.copy2(generated_image_path, target_path)
+                eval_logger.debug(f"Reorganized image: {generated_image_path} -> {target_path}")
+                # Also copy source image if exists
+                src_img = generated_image_path.replace(f"{key}.png", f"{key}_SRCIMG.png")
+                if os.path.exists(src_img):
+                    shutil.copy2(src_img, os.path.join(target_dir, f"{key}_SRCIMG.png"))
+            edited_image_path = target_path
         else:
             eval_logger.warning(f"Generated image not found at {generated_image_path}")
 
-    # If no image from model results, try to find existing generated image in the standard location
-    if edited_image_path is None:
-        existing_path = os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language, f"{key}.png")
-        if os.path.exists(existing_path):
-            edited_image_path = existing_path
-            eval_logger.debug(f"Found existing generated image at {existing_path}")
+    # If no image from model results, try to find at expected location
+    if edited_image_path is None and os.path.exists(target_path):
+        edited_image_path = target_path
+        eval_logger.debug(f"Found existing generated image at {target_path}")
 
     # If still no edited image, return zero scores
     if edited_image_path is None:

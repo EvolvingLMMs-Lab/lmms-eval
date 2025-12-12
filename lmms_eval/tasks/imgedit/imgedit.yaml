@@ -15,13 +15,20 @@
 #   - IMGEDIT_MODEL_NAME: Name of the model being evaluated (default: "default")
 #   - IMGEDIT_OUTPUT_DIR: Directory to save generated images (default: "./logs/imgedit_results")
 #   - IMGEDIT_ORIGIN_IMG_ROOT: Root directory of original images (for runtime loading)
-#   - IMGEDIT_EVAL_BACKBONE: Evaluation model - "gpt4o" (default) or "qwen25vl"
+#   - IMGEDIT_EVAL_BACKBONE: Evaluation model - "gpt4o" (default), "qwen25vl", or "vllm_qwen"
 #   - OPENAI_API_KEY: OpenAI API key (for GPT-4o)
 #   - OPENAI_BASE_URL: Optional custom OpenAI API base URL
 #   - QWEN_MODEL_PATH: Path to Qwen2.5-VL model (for qwen25vl backend)
+#   - VLLM_API_BASE: vLLM API base URL (for vllm_qwen backend)
+#
+# Scoring follows original ImgEdit benchmark (basic_bench.py + step1 + step2):
+#   - Each sample gets 3 dimension scores (Prompt Compliance, Visual Quality, Physical Integrity)
+#   - avg_score = (score1 + score2 + score3) / 3 for each sample
+#   - Final scores are averages across samples
+#   - Per edit_type scores are printed in logs during aggregation
 
 # Local dataset path (after running prepare_dataset.py)
-dataset_path: sysuyy/ImgEdit
+dataset_path: /pfs/training-data/kemingwu/hf_cache/datasets/ImgEdit/imgedit_dataset
 dataset_kwargs:
   load_from_disk: True
 task: "imgedit"
@@ -41,88 +48,34 @@ generation_kwargs:
   num_beams: 1
   do_sample: false
 
-# Process results using GPT-4o or Qwen2.5-VL evaluation (controlled by IMGEDIT_EVAL_BACKBONE)
+# Process results using GPT-4o or Qwen2.5-VL evaluation
 process_results: !function utils.imgedit_process_results
 
-# Metrics
+# Metrics - Following original ImgEdit benchmark scoring
 # ==========================================
-# Overall metrics (aggregated across all edit types)
+# score1: Prompt Compliance / Style Fidelity / etc. (depends on edit_type)
+# score2: Visual Naturalness / Content Preservation / etc.
+# score3: Physical & Detail Integrity / Rendering Quality / etc.
+# avg_score: (score1 + score2 + score3) / 3 (main metric, like step1_get_avgscore.py)
+# Per edit_type scores are printed in logs (like step2_typescore.py)
 # ==========================================
-# Score1: Prompt Compliance / Style Fidelity / etc. (depends on edit type)
-# Score2: Visual Naturalness / Content Preservation / etc.
-# Score3: Physical & Detail Integrity / Rendering Quality / etc.
-# avg_score: Average of Score1, Score2, Score3
 metric_list:
-  # Overall scores
+  # Three dimension scores
   - metric: imgedit_score1
-    aggregation: !function utils.imgedit_aggregate_results
+    aggregation: !function utils.imgedit_aggregate_score
     higher_is_better: true
   - metric: imgedit_score2
-    aggregation: !function utils.imgedit_aggregate_results
+    aggregation: !function utils.imgedit_aggregate_score
     higher_is_better: true
   - metric: imgedit_score3
-    aggregation: !function utils.imgedit_aggregate_results
-    higher_is_better: true
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_results
+    aggregation: !function utils.imgedit_aggregate_score
     higher_is_better: true
 
-  # ==========================================
-  # Per-type average scores
-  # ==========================================
-  # Replace type
+  # Main metric: avg_score (following step1_get_avgscore.py)
+  # Per edit_type scores are printed in logs (following step2_typescore.py)
   - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_replace
+    aggregation: !function utils.imgedit_aggregate_avg_score
     higher_is_better: true
-    metric_name: imgedit_replace_score
-
-  # Add type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_add
-    higher_is_better: true
-    metric_name: imgedit_add_score
-
-  # Adjust type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_adjust
-    higher_is_better: true
-    metric_name: imgedit_adjust_score
-
-  # Remove type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_remove
-    higher_is_better: true
-    metric_name: imgedit_remove_score
-
-  # Style type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_style
-    higher_is_better: true
-    metric_name: imgedit_style_score
-
-  # Action type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_action
-    higher_is_better: true
-    metric_name: imgedit_action_score
-
-  # Extract type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_extract
-    higher_is_better: true
-    metric_name: imgedit_extract_score
-
-  # Background type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_background
-    higher_is_better: true
-    metric_name: imgedit_background_score
-
-  # Compose type
-  - metric: imgedit_avg_score
-    aggregation: !function utils.imgedit_aggregate_compose
-    higher_is_better: true
-    metric_name: imgedit_compose_score
 
 lmms_eval_specific_kwargs:
   default:
@@ -130,5 +83,5 @@ lmms_eval_specific_kwargs:
     post_prompt: ""
 
 metadata:
-  - version: 0.2
-    description: "ImgEdit Benchmark - Unified Image Editing Evaluation using GPT-4o or Qwen2.5-VL"
+  - version: 0.6
+    description: "ImgEdit Benchmark - Unified Image Editing Evaluation (GPT-4o/Qwen2.5-VL)"
