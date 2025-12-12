@@ -1068,10 +1068,7 @@ class ConfigurableTask(Task):
                     self.dataset[split] = self.config.process_docs(self.dataset[split])
 
         # copy dataset, remove image features
-        try:
-            self.dataset_no_image = self.dataset.copy()
-        except AttributeError:
-            self.dataset_no_image = datasets.DatasetDict({k: v for k, v in self.dataset.items()})
+        self.dataset_no_image = self.dataset.copy()
         for doc_name in self.dataset_no_image:
             remove_cols = []
             features = self.dataset_no_image[doc_name].features
