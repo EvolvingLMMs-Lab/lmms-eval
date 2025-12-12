@@ -4,8 +4,8 @@ test_split: valid
 output_type: generate_until
 doc_to_visual: !function utils.vlmsareblind_doc_to_visual
 doc_to_text: !function utils.vlmsareblind_doc_to_text
-doc_to_target: !function utils.vlmsareblind_doc_to_target
-process_results: !function utils.vlmsareblind_process_result
+doc_to_target: "groundtruth"
+process_results: !function utils.vlmsareblind_process_results
 generation_kwargs:
   max_new_tokens: 32
   temperature: 0
@@ -13,15 +13,17 @@ generation_kwargs:
   num_beams: 1
   do_sample: false
 metric_list:
-  - metric: exact_match
+  - metric: accuracy
     aggregation: mean
+    higher_is_better: true
+  - metric: accuracy_by_task
+    aggregation: !function utils.vlmsareblind_aggregate_by_task
     higher_is_better: true
 metadata:
   - version: 0.0
-  - description: "VLMs Are Blind: A benchmark testing visual reasoning capabilities of VLMs through path-counting tasks in subway connection diagrams."
+  - description: " Vision language models are blind"
   - reference: "https://arxiv.org/abs/2407.06581"
-  
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "\nAnswer with a number in curly brackets, e.g., {3}."
+    post_prompt: "\nAnswer only in the required format."
