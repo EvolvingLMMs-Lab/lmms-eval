@@ -117,6 +117,13 @@ reka = [
 qwen = [
     "qwen_vl_utils",
 ]
+emu3 = [
+    "torch==2.2.1",
+    "transformers==4.44.0",
+    "tiktoken==0.6.0",
+    "flash-attn==2.5.7",
+    "pillow",
+]
 mmsearch = [
     "playwright",
     "requests",

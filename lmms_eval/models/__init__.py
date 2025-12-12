@@ -133,6 +133,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "async_hf_model": "AsyncHFModel",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
+    "emu3": "EMU3",
 }
 
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
