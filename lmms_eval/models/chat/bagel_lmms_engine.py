@@ -15,9 +15,11 @@ from PIL import Image
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
+from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.protocol import ChatMessages
 
 try:
     from lmms_engine.datasets.processor import BagelDataProcessor, ProcessorConfig
@@ -30,6 +32,7 @@ except Exception as e:
 
 @register_model("bagel_lmms_engine")
 class BagelLmmsEngine(lmms):
+    is_simple = False
     """
     Bagel LMMs Engine
     Supports text-to-image generation with optional thinking process
@@ -207,12 +210,13 @@ class BagelLmmsEngine(lmms):
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
-    def generate_text_and_image(self, prompt: str, doc_id: str, task: str) -> Tuple[str, List[str]]:
+    def generate_text_and_image(self, prompt: str, image: Image.Image, doc_id: str, task: str) -> Tuple[str, List[str]]:
         """
         Generate text and image from prompt
 
         Args:
             prompt: Input text prompt
+            image: Input image
             doc_id: Document ID for file naming
             task: Task name for file naming
 
@@ -233,10 +237,11 @@ class BagelLmmsEngine(lmms):
             "cfg_renorm_min": self.cfg_renorm_min,
             "cfg_renorm_type": self.cfg_renorm_type,
             "image_shapes": self.image_shapes,
+            "enable_sde": False,  # Always disable SDE for eval
         }
 
         # Generate
-        result = self.inferencer(text=prompt, think=self.show_thinking, **inference_hyper)
+        result = self.inferencer(text=prompt, think=self.show_thinking, image=image, **inference_hyper)
 
         # Extract text
         output_text = result.get("text", "")
@@ -251,8 +256,10 @@ class BagelLmmsEngine(lmms):
                 image_pil = Image.fromarray(image_pil.to(torch.uint8).cpu().numpy())
                 image = image_pil
 
+            task_dir = os.path.join(self.output_image_dir, task)
+            os.makedirs(task_dir, exist_ok=True)
             safe_filename = f"{task}_{doc_id}.png"
-            image_path = os.path.join(self.output_image_dir, safe_filename)
+            image_path = os.path.join(task_dir, safe_filename)
             image.save(image_path)
             output_images.append(image_path)
             eval_logger.info(f"Saved image: {image_path}")
@@ -267,12 +274,20 @@ class BagelLmmsEngine(lmms):
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """Main inference method"""
         res = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Bagel Generating")
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, _, _, doc_id, task, split in [reg.args for reg in requests]:
+        for request in requests:
+            ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = request.arguments
             # Generate
-            prompt = contexts
-            output_text, output_images = self.generate_text_and_image(prompt, str(doc_id), task)
+            prompt = ctx
+            chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
+            chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
+            images, videos, _ = chat_messages.extract_media()
+            if len(images) == 0:
+                image = None
+            else:
+                image = images[0]
+            output_text, output_images = self.generate_text_and_image(prompt, image, str(doc_id), task)
 
             # Format output
             formatted_output = self.format_output(output_text, output_images)
