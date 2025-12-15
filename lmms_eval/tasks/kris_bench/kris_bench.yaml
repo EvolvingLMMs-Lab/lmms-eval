@@ -1,0 +1,208 @@
+# KRIS-Bench task configuration for lmms-eval
+#
+# This task uses a local jsonl index file listing all samples.
+# Images are loaded at runtime from:
+#   $KRIS_BENCH_DATA_ROOT/{category}/{filename}
+#
+# Scoring uses a multimodal judge (GPT-4o or vLLM Qwen-VL) inside process_results.
+
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    train: /pfs/training-data/kemingwu/workspace/unify_model/lmms-eval/lmms_eval/tasks/kris_bench/kris_bench.jsonl
+
+task: "kris_bench"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.kris_bench_doc_to_visual
+doc_to_text: !function utils.kris_bench_doc_to_text
+doc_to_target: !function utils.kris_bench_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.kris_bench_process_results
+
+metric_list:
+  - metric: kris_bench_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_consistency
+    higher_is_better: true
+  - metric: kris_bench_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_instruction
+    higher_is_better: true
+  - metric: kris_bench_quality_score
+    aggregation: !function utils.kris_bench_aggregate_quality
+    higher_is_better: true
+  - metric: kris_bench_knowledge_score
+    aggregation: !function utils.kris_bench_aggregate_knowledge
+    higher_is_better: true
+  - metric: kris_bench_overall_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # ---------------------------------------------------------------------------
+  # Dimension-level reporting (per requested taxonomy)
+  # Each metric is averaged over samples that belong to that dimension.
+  # "avg" is the per-sample mean over available metric dimensions:
+  #   - Non-knowledge: mean(consistency, instruction, quality)
+  #   - Knowledge:     mean(consistency, instruction, quality, knowledge)
+  # ---------------------------------------------------------------------------
+
+  # Factual Knowledge -> Attribute Perception
+  - metric: kris_bench_factual_attribute_perception_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_attribute_perception_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_attribute_perception_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_attribute_perception_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # Factual Knowledge -> Spatial Perception
+  - metric: kris_bench_factual_spatial_perception_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_spatial_perception_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_spatial_perception_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_spatial_perception_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # Factual Knowledge -> Temporal Prediction (Reverse / Intermediate / Forward)
+  - metric: kris_bench_factual_temporal_reverse_prediction_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_reverse_prediction_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_reverse_prediction_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_reverse_prediction_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  - metric: kris_bench_factual_temporal_intermediate_prediction_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_intermediate_prediction_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_intermediate_prediction_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_intermediate_prediction_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  - metric: kris_bench_factual_temporal_forward_prediction_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_forward_prediction_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_forward_prediction_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_factual_temporal_forward_prediction_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # Conceptual Knowledge -> Social Science
+  - metric: kris_bench_conceptual_social_science_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_social_science_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_social_science_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_social_science_knowledge_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_social_science_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # Conceptual Knowledge -> Natural Science
+  - metric: kris_bench_conceptual_natural_science_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_natural_science_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_natural_science_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_natural_science_knowledge_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_natural_science_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # Procedural Knowledge -> Logical Reasoning
+  - metric: kris_bench_procedural_logical_reasoning_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_logical_reasoning_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_logical_reasoning_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_logical_reasoning_knowledge_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_logical_reasoning_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # Procedural Knowledge -> Instruction Decomposition
+  - metric: kris_bench_procedural_instruction_decomposition_consistency_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_instruction_decomposition_instruction_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_instruction_decomposition_quality_score
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_instruction_decomposition_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+  # Big-class averages (3 avgs)
+  - metric: kris_bench_factual_knowledge_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_conceptual_knowledge_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+  - metric: kris_bench_procedural_knowledge_avg
+    aggregation: !function utils.kris_bench_aggregate_mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  - version: 0.1
+    description: "KRIS-Bench (image editing & knowledge plausibility) with GPT-judge/vLLM-judge"
+

@@ -1,0 +1,79 @@
+# StructEditBench (Structured-Visuals) task config for lmms-eval
+# Reference eval: github_repo/Structured-Visuals/qwen_scoring.py
+#
+# Expected dataset fields (minimum):
+#   - source_image (PIL.Image) or input_image/image: source image for editing
+#   - instruction/edit_prompt/prompt/edit_instruction: edit instruction for the model
+#   - qa_list: list[{question, ground_truth_answer|answer, label(editing|maintain)}]
+#   - category: one of {chart, math, graph, puzzle, science, table}
+#
+# Scoring backend:
+#   - Default uses OpenAI-compatible vLLM API (STRUCTEDITBENCH_EVAL_BACKBONE=vllm_qwen)
+#     and requires VLLM_API_BASE (+ optional VLLM_MODEL_NAME/VLLM_API_KEY).
+#   - You can also use GPT-4o (STRUCTEDITBENCH_EVAL_BACKBONE=gpt4o) with OPENAI_API_KEY.
+
+# Local dataset folder currently contains parquet shards under `data/`.
+# Use datasets' parquet loader to get a DatasetDict directly (no framework changes needed).
+dataset_path: parquet
+dataset_kwargs:
+  data_files:
+    train: /pfs/training-data/kemingwu/hf_cache/datasets/SructVisuals/StructEditBench/data/train-*.parquet
+
+task: "structeditbench"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.structeditbench_doc_to_visual
+doc_to_text: !function utils.structeditbench_doc_to_text
+doc_to_target: !function utils.structeditbench_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.structeditbench_process_results
+
+metric_list:
+  # Global metrics (percentage, higher is better)
+  - metric: structeditbench_weighted_accuracy
+    aggregation: !function utils.structeditbench_aggregate_score
+    higher_is_better: true
+  - metric: structeditbench_editing_accuracy
+    aggregation: !function utils.structeditbench_aggregate_score
+    higher_is_better: true
+  - metric: structeditbench_maintain_accuracy
+    aggregation: !function utils.structeditbench_aggregate_score
+    higher_is_better: true
+
+  # Category breakdown for weighted accuracy (matches README expectation)
+  - metric: structeditbench_chart_weighted_accuracy
+    aggregation: !function utils.structeditbench_aggregate_chart
+    higher_is_better: true
+  - metric: structeditbench_math_weighted_accuracy
+    aggregation: !function utils.structeditbench_aggregate_math
+    higher_is_better: true
+  - metric: structeditbench_graph_weighted_accuracy
+    aggregation: !function utils.structeditbench_aggregate_graph
+    higher_is_better: true
+  - metric: structeditbench_puzzle_weighted_accuracy
+    aggregation: !function utils.structeditbench_aggregate_puzzle
+    higher_is_better: true
+  - metric: structeditbench_science_weighted_accuracy
+    aggregation: !function utils.structeditbench_aggregate_science
+    higher_is_better: true
+  - metric: structeditbench_table_weighted_accuracy
+    aggregation: !function utils.structeditbench_aggregate_table
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  - version: 0.1
+    description: "StructEditBench (Structured-Visuals) editing benchmark, scored via QA+judge (qwen_scoring.py)"
+

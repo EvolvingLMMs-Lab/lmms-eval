@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
-from accelerate import Accelerator, init_empty_weights, load_checkpoint_and_dispatch
+from accelerate import Accelerator
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
@@ -15,17 +15,9 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
-# Add Bagel repository to Python path
-# Expected: lmms-eval/Bagel/ directory at project root
+# Add lmms-engine to Python path for official Bagel implementation.
+# (We don't require the separate upstream Bagel repo for this wrapper.)
 wd = Path(__file__).parent.parent.parent.parent.resolve()
-bagel_path = os.path.join(str(wd), "Bagel")
-if os.path.exists(bagel_path) and bagel_path not in sys.path:
-    sys.path.append(bagel_path)
-    eval_logger.info(f"Added Bagel path to sys.path: {bagel_path}")
-else:
-    eval_logger.warning(f"Bagel repository not found at {bagel_path}. " f"Please clone it: cd {wd} && git clone https://github.com/ByteDance-Seed/Bagel.git")
-
-# Add lmms-engine to Python path for official Bagel implementation
 engine_src_path = Path(wd).parent / "lmms-engine" / "src"
 if engine_src_path.exists():
     engine_src_str = str(engine_src_path.resolve())
@@ -88,34 +80,18 @@ class Bagel(lmms):
 
         # Import Bagel dependencies
         try:
-            from lmms_engine.models.bagel.autoencoder import load_ae
             from lmms_engine.models.bagel.bagel import Bagel as BagelModel
-            from lmms_engine.models.bagel.bagel import (
-                BagelConfig,
-                Qwen2Config,
-                Qwen2ForCausalLM,
-                SiglipVisionConfig,
-                SiglipVisionModel,
-            )
-            from lmms_engine.models.bagel.data_utils import (
-                add_special_tokens,
-                pil_img2rgb,
-            )
+            from lmms_engine.models.bagel.bagel import BagelConfig
+            from lmms_engine.models.bagel.data_utils import add_special_tokens
             from lmms_engine.models.bagel.inferencer import InterleaveInferencer
             from lmms_engine.models.bagel.qwen2 import Qwen2Tokenizer
             from lmms_engine.models.bagel.transforms import ImageTransform
 
             self.add_special_tokens = add_special_tokens
-            self.pil_img2rgb = pil_img2rgb
             self.ImageTransform = ImageTransform
             self.InterleaveInferencer = InterleaveInferencer
-            self.load_ae = load_ae
             self.BagelConfig = BagelConfig
             self.BagelModel = BagelModel
-            self.Qwen2Config = Qwen2Config
-            self.Qwen2ForCausalLM = Qwen2ForCausalLM
-            self.SiglipVisionConfig = SiglipVisionConfig
-            self.SiglipVisionModel = SiglipVisionModel
             self.Qwen2Tokenizer = Qwen2Tokenizer
 
         except Exception as e:
@@ -229,6 +205,46 @@ class Bagel(lmms):
         self._load_model()
 
         eval_logger.info("Bagel model initialized successfully")
+
+    def _build_inference_hyper(self, *, use_edit_mode: bool) -> dict:
+        """Build inferencer kwargs, keeping behavior consistent across tasks."""
+        common = {
+            "max_think_token_n": self.max_think_token_n if self.show_thinking else 1024,
+            "do_sample": self.do_sample if self.show_thinking else False,
+            "text_temperature": self.text_temperature if self.show_thinking else 0.3,
+            "cfg_text_scale": self.cfg_text_scale,
+            "timestep_shift": self.timestep_shift,
+            "num_timesteps": self.num_timesteps,
+            "cfg_renorm_min": self.cfg_renorm_min,
+            "cfg_renorm_type": self.cfg_renorm_type,
+        }
+        if use_edit_mode:
+            common.update(
+                cfg_img_scale=self.cfg_img_scale,
+                cfg_interval=[0.0, 1.0],
+            )
+        else:
+            common.update(
+                cfg_interval=[self.cfg_interval, 1.0],
+                image_shapes=self.image_shapes,
+            )
+        return common
+
+    @staticmethod
+    def _make_doc_uuid(task: str, split: str, doc_id) -> str:
+        return f"{task}___{split}___{doc_id}"
+
+    def _cache_get(self, doc_uuid: str) -> Optional[str]:
+        if not self.continual_mode or self.cache_mode != "resume":
+            return None
+        return self.response_cache.get(doc_uuid)
+
+    def _cache_put(self, doc_uuid: str, formatted_output: str) -> None:
+        if not self.continual_mode:
+            return
+        self.response_cache[doc_uuid] = formatted_output
+        with open(self.response_persistent_file, "w") as f:
+            json.dump(self.response_cache, f, ensure_ascii=False, indent=2)
 
     def _load_model(self):
         """
@@ -396,11 +412,15 @@ class Bagel(lmms):
         if visuals is None:
             return None
         if isinstance(visuals, (list, tuple)):
+            imgs = []
             for visual in visuals:
                 img = self._convert_visual_to_image(visual)
                 if img is not None:
-                    return img
-            return None
+                    imgs.append(img)
+            if not imgs:
+                return None
+            # Return a list if there are multiple images (for multi-image conditioning tasks)
+            return imgs[0] if len(imgs) == 1 else imgs
         return self._convert_visual_to_image(visuals)
 
     def _convert_visual_to_image(self, visual):
@@ -454,47 +474,75 @@ class Bagel(lmms):
             eval_logger.warning(f"Edit mode requested but no input image provided for doc_id {doc_id}; falling back to generation.")
             use_edit_mode = False
 
-        if use_edit_mode:
-            inference_hyper = {
-                "max_think_token_n": self.max_think_token_n if self.show_thinking else 1024,
-                "do_sample": self.do_sample if self.show_thinking else False,
-                "text_temperature": self.text_temperature if self.show_thinking else 0.3,
-                "cfg_text_scale": self.cfg_text_scale,
-                "cfg_img_scale": self.cfg_img_scale,
-                "cfg_interval": [0.0, 1.0],
-                "timestep_shift": self.timestep_shift,
-                "num_timesteps": self.num_timesteps,
-                "cfg_renorm_min": self.cfg_renorm_min,
-                "cfg_renorm_type": self.cfg_renorm_type,
-            }
+        inference_hyper = self._build_inference_hyper(use_edit_mode=use_edit_mode)
 
-            if hasattr(input_image, "convert"):
-                input_image = input_image.convert("RGB")
+        # NOTE: lmms-engine InterleaveInferencer.__call__ returns output_list[0].
+        # When think=True, output_list[0] is the think text (str), and the image is later in the list.
+        # So we must use interleave_inference to retrieve both text and image.
+        if self.show_thinking:
+            input_list = []
+            if use_edit_mode:
+                if isinstance(input_image, (list, tuple)):
+                    for img in input_image:
+                        if hasattr(img, "convert"):
+                            img = img.convert("RGB")
+                        input_list.append(img)
+                else:
+                    if hasattr(input_image, "convert"):
+                        input_image = input_image.convert("RGB")
+                    input_list.append(input_image)
+            input_list.append(prompt)
 
-            result = self.inferencer(image=input_image, text=prompt, think=self.show_thinking, **inference_hyper)
+            output_list = self.inferencer.interleave_inference(input_list, think=True, **inference_hyper)
+            output_text = ""
+            result = {"image": None}
+            for item in output_list:
+                if isinstance(item, str):
+                    output_text = item
+                elif isinstance(item, dict):
+                    # image dict from gen_image
+                    if "image" in item and item["image"] is not None:
+                        result["image"] = item["image"]
+                elif hasattr(item, "save"):
+                    # PIL.Image
+                    result["image"] = item
         else:
-            inference_hyper = {
-                "max_think_token_n": self.max_think_token_n if self.show_thinking else 1024,
-                "do_sample": self.do_sample if self.show_thinking else False,
-                "text_temperature": self.text_temperature if self.show_thinking else 0.3,
-                "cfg_text_scale": self.cfg_text_scale,
-                "cfg_interval": [self.cfg_interval, 1.0],
-                "timestep_shift": self.timestep_shift,
-                "num_timesteps": self.num_timesteps,
-                "cfg_renorm_min": self.cfg_renorm_min,
-                "cfg_renorm_type": self.cfg_renorm_type,
-                "image_shapes": self.image_shapes,
-            }
+            if use_edit_mode:
+                if isinstance(input_image, (list, tuple)):
+                    imgs = []
+                    for img in input_image:
+                        if hasattr(img, "convert"):
+                            img = img.convert("RGB")
+                        imgs.append(img)
+                    if len(imgs) <= 1:
+                        result = self.inferencer(image=imgs[0] if imgs else None, text=prompt, think=False, **inference_hyper)
+                    else:
+                        output_list = self.inferencer.interleave_inference([*imgs, prompt], think=False, **inference_hyper)
+                        output_text = ""
+                        result = {"image": None}
+                        for item in output_list:
+                            if isinstance(item, str):
+                                output_text = item
+                            elif isinstance(item, dict):
+                                if "image" in item and item["image"] is not None:
+                                    result["image"] = item["image"]
+                            elif hasattr(item, "save"):
+                                result["image"] = item
+                else:
+                    if hasattr(input_image, "convert"):
+                        input_image = input_image.convert("RGB")
+                    result = self.inferencer(image=input_image, text=prompt, think=False, **inference_hyper)
+            else:
+                result = self.inferencer(text=prompt, think=False, **inference_hyper)
 
-            result = self.inferencer(text=prompt, think=self.show_thinking, **inference_hyper)
-
-        # Extract text
-        output_text = result.get("text", "")
+            # Extract text (if present)
+            if "output_text" not in locals():
+                output_text = result.get("text", "") if isinstance(result, dict) else str(result)
 
         # Save image to: {output_dir}/{task}/{key}.png
         # Task's process_results handles reorganization to task-specific structure
         output_images = []
-        if "image" in result and result["image"] is not None:
+        if isinstance(result, dict) and "image" in result and result["image"] is not None:
             image = result["image"]
             # Convert tensor to PIL Image if needed
             if torch.is_tensor(image):
@@ -530,22 +578,17 @@ class Bagel(lmms):
         desc = "Bagel Editing" if self.task_mode == "edit" else "Bagel Generating"
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc=desc)
 
-        def get_uuid(task, split, doc_id):
-            return f"{task}___{split}___{doc_id}"
-
         for req in requests:
             # Unpack arguments: (ctx, generation_kwargs, doc_to_visual, doc_id, task, split)
             contexts, gen_kwargs, doc_to_visual, doc_id, task, split = req.args
-            doc_uuid = get_uuid(task, split, doc_id)
+            doc_uuid = self._make_doc_uuid(task, split, doc_id)
 
             # Check cache
-            if self.continual_mode and self.cache_mode == "resume":
-                if doc_uuid in self.response_cache:
-                    content = self.response_cache[doc_uuid]
-                    if content:
-                        res.append(content)
-                        pbar.update(1)
-                        continue
+            cached = self._cache_get(doc_uuid)
+            if cached:
+                res.append(cached)
+                pbar.update(1)
+                continue
 
             # Get document (if available) and potential input images
             doc = None
@@ -578,10 +621,7 @@ class Bagel(lmms):
             res.append(formatted_output)
 
             # Update cache
-            if self.continual_mode:
-                self.response_cache[doc_uuid] = formatted_output
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f, ensure_ascii=False, indent=2)
+            self._cache_put(doc_uuid, formatted_output)
 
             pbar.update(1)
 
