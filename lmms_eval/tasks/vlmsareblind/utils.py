@@ -1,7 +1,6 @@
 import re
 from collections import defaultdict
 
-
 TASKS = [
     "circled letter",
     "counting grid - blank grids",
@@ -47,18 +46,12 @@ def parse_response(response: str, task: str) -> str | None:
     """
     response = response.strip().lower()
     task = task.lower()
-    
+
     if task == "touching circles":
         if response in ["yes", "no"]:
             return response
 
-    if task in [
-        "line plot intersections", 
-        "subway connections", 
-        "olympic counting - circles", 
-        "olympic counting - pentagons", 
-        "nested squares"
-    ]:
+    if task in ["line plot intersections", "subway connections", "olympic counting - circles", "olympic counting - pentagons", "nested squares"]:
         match = re.search(r"\{?(\d+)\}?", response)
         if match:
             return match.group(1)
@@ -69,16 +62,16 @@ def parse_response(response: str, task: str) -> str | None:
             return match.group(1)
 
     if task.startswith("counting grid"):
-        match = re.search(r"\{(\d+)\}\s*\{(\d+)\}", response) # {3}{4}, {3} {4}, etc.
+        match = re.search(r"\{(\d+)\}\s*\{(\d+)\}", response)  # {3}{4}, {3} {4}, etc.
         if match:
             return f"{match.group(1)},{match.group(2)}"
-        match = re.search(r"\((\d+)\s*,\s*(\d+)\)", response) # (3,4), (3, 4), etc.
+        match = re.search(r"\((\d+)\s*,\s*(\d+)\)", response)  # (3,4), (3, 4), etc.
         if match:
             return f"{match.group(1)},{match.group(2)}"
-        match = re.search(r"rows=\{(\d+)\}\scolumns=\{(\d+)\}", response) # rows={3} columns={4}, rows={3} columns={4}, etc.
+        match = re.search(r"rows=\{(\d+)\}\scolumns=\{(\d+)\}", response)  # rows={3} columns={4}, rows={3} columns={4}, etc.
         if match:
             return f"{match.group(1)},{match.group(2)}"
-    
+
     return None
 
 
@@ -97,10 +90,7 @@ def vlmsareblind_process_results(doc: dict, results: list[str]) -> dict:
     else:
         is_correct = prediction.strip().lower() == normalized_target
 
-    return {
-        "accuracy": float(is_correct),
-        "accuracy_by_task": {"task": task, "is_correct": is_correct}
-    }
+    return {"accuracy": float(is_correct), "accuracy_by_task": {"task": task, "is_correct": is_correct}}
 
 
 def vlmsareblind_aggregate_by_task(results: list[dict]) -> dict[str, float]:
@@ -115,7 +105,7 @@ def vlmsareblind_aggregate_by_task(results: list[dict]) -> dict[str, float]:
         task_total[task] += 1
         if is_correct:
             task_correct[task] += 1
-        
+
     task_accuracy = {task: task_correct[task] / task_total[task] for task in task_correct}
     task_accuracy["task_mean"] = sum(task_accuracy.values()) / len(task_accuracy)
 
