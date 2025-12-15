@@ -64,6 +64,8 @@ def construct_prompt(doc, mc_prompt="", open_ended_prompt="", prompt_type="reaso
 def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         question = construct_prompt(doc)
+    elif "format" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["format"] == "qwen3_vl":
+        return mmmu_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs)
     else:
         question = construct_prompt(doc, lmms_eval_specific_kwargs["multiple_choice_prompt"], lmms_eval_specific_kwargs["open_ended_prompt"], lmms_eval_specific_kwargs["prompt_type"])
     if config["metadata"]["interleaved_format"]:
@@ -72,7 +74,44 @@ def mmmu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return question
 
 
+def mmmu_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs=None):
+    """
+    Adapted from Qwen3-VL Technical Report: https://arxiv.org/pdf/2511.21631
+    """
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
+    open_ended_prompt = lmms_eval_specific_kwargs.get("open_ended_prompt", "")
+
+    question = doc["question"]
+    options = parse_options(ast.literal_eval(doc["options"]))
+    question_type = doc["question_type"]
+
+    if question_type == "multiple-choice":
+        prompt = f"{pre_prompt}{question}\nOptions:\n{options}\n{post_prompt}"
+    else:
+        # open ended question
+        prompt = f"{pre_prompt}{question}\nOptions:\n{options}\n{open_ended_prompt}"
+
+    return prompt
+
+
+def mmmu_doc_to_messages_qwen3vl(doc, lmms_eval_specific_kwargs=None):
+    # If you use doc to messages, the interleaved format is always used
+    question = mmmu_doc_to_text(doc, lmms_eval_specific_kwargs)
+    visuals = mmmu_doc_to_visual(doc)
+    messages = [{"role": "user", "content": []}]
+
+    for img in visuals:
+        messages[0]["content"].append({"type": "image", "url": img})
+    messages[0]["content"].append({"type": "text", "text": question})
+    return messages
+
+
 def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+
+    if "format" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["format"] == "qwen3_vl":
+        return mmmu_doc_to_messages_qwen3vl(doc, lmms_eval_specific_kwargs)
+
     # If you use doc to messages, the interleaved format is always used
     config["metadata"]["interleaved_format"] = True
     question = mmmu_doc_to_text(doc, lmms_eval_specific_kwargs)
