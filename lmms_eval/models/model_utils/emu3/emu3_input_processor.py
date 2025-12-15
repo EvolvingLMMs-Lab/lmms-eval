@@ -133,14 +133,7 @@ class Emu3Processor(ProcessorMixin):
 
         image_tokens = None
         if mode == 'G':
-            if image is not None:
-                raise ValueError("You have to specify only `text` in generation mode")
-
-            if isinstance(ratio, str):
-                ratio = [ratio] * len(text)
-
-            if len(ratio) != len(text):
-                raise ValueError("ratio number must match text number")
+            raise NotImplementedError("Mode G is not implemented in this adapted Processor version")
         else:
             if image is None:
                 raise ValueError("Invalid input image. Please provide exactly one PIL.Image.Image per text.")
@@ -172,13 +165,7 @@ class Emu3Processor(ProcessorMixin):
                 )
                 prompt += self.chat_template.format(image_prompt=image_prompt, text_prompt=text_prompt)
             else:
-                h, w = self.calculate_generate_size(ratio[idx], image_area, self.vision_tokenizer.spatial_scale_factor)
-                image_prompt = (
-                    self.tokenizer.boi_token +
-                    self.prefix_template.format(H=h, W=w) +
-                    self.tokenizer.img_token
-                )
-                prompt += (text_prompt + image_prompt)
+                raise NotImplementedError("Invalid Mode: generation mode not supported by this adapted processor")
 
             prompt_list.append(prompt)
             size_list.append([h, w])
@@ -248,15 +235,6 @@ class Emu3Processor(ProcessorMixin):
         image_row_str = ["".join(token_row) for token_row in image_token_str]
         imgstr = self.tokenizer.eol_token.join(image_row_str)
         return imgstr
-
-    def calculate_generate_size(self, ratio, image_area, spatial_scale_factor):
-        w, h = map(int, ratio.split(":"))
-        current_area = h * w
-        target_ratio = (image_area / current_area) ** 0.5
-
-        th = int(round(h * target_ratio / spatial_scale_factor))
-        tw = int(round(w * target_ratio / spatial_scale_factor))
-        return th, tw
 
     def tokenize_image(self, image: List[Image.Image], *, padding_image: bool = False):
         is_all_same_size, prev_size = True, None
