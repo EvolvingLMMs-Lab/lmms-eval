@@ -124,6 +124,21 @@ emu3 = [
     "flash-attn==2.5.7",
     "pillow",
 ]
+emu3_5 = [
+    "pillow>=9.0.0",
+    "numpy>=1.21.0",
+    "tqdm>=4.64.0",
+    "protobuf>=3.20.0",
+    "tiktoken>=0.12.0",
+    "imageio==2.37.0",
+    "imageio-ffmpeg==0.6.0",
+    "omegaconf==2.3.0",
+    "torch>=2.6.0",
+    "torchvision>=0.15.0",
+    "torchaudio>=2.0.0",
+    "transformers==4.48.2",
+    "accelerate>=0.20.0"
+]
 mmsearch = [
     "playwright",
     "requests",

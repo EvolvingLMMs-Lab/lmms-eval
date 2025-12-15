@@ -134,6 +134,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
     "emu3": "EMU3",
+    "emu3p5": "EMU3_5",
 }
 
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
