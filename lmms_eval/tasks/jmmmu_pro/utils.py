@@ -4,10 +4,11 @@ import os
 import re
 from collections import defaultdict
 from pathlib import Path
+
 import yaml
+
 from lmms_eval.loggers.evaluation_tracker import GeneralConfigTracker
 from lmms_eval.utils import sanitize_model_name
-
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -387,7 +388,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Return the predicted index e.g., A, B, C, D, or "X" if not parsed.
     """
     from typing import Optional
-    
+
     # Precompile commonly used regex patterns
     FULLWIDTH_MAP = {chr(ord("Ａ") + i): chr(ord("A") + i) for i in range(26)}
     FULLWIDTH_TRANS = str.maketrans(FULLWIDTH_MAP)
