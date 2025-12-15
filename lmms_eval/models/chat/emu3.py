@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
-from accelerate import Accelerator
+from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
@@ -97,7 +97,14 @@ class EMU3(lmms):
 
         # Prepare model for distributed training if needed
         if accelerator.num_processes > 1:
-            self._model = accelerator.prepare_model(self._model, evaluation_mode=True)
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            if accelerator.distributed_type == DistributedType.FSDP:
+                self._model = accelerator.prepare(self._model)
+            else:
+                self._model = accelerator.prepare_model(self._model, evaluation_mode=True)
             self._rank = accelerator.local_process_index
             self._world_size = accelerator.num_processes
         else:
@@ -108,7 +115,10 @@ class EMU3(lmms):
 
     @property
     def model(self):
-        return self._model
+        if hasattr(self, "accelerator"):
+            return self.accelerator.unwrap_model(self._model)
+        else:
+            return self._model
 
     @property
     def tokenizer(self):
@@ -197,7 +207,7 @@ class EMU3(lmms):
                         skipped_multi_image += 1
                         # Add empty placeholder answer for this skipped sample
                         res.append("")
-                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[0]), "")
+                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
                     else:

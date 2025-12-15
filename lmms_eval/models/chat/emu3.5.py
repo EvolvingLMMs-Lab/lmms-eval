@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
-from accelerate import Accelerator
+from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
@@ -13,6 +13,9 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.protocol import ChatMessages
+from lmms_eval.models.model_utils.emu3p5.download_utils import (
+    ensure_local_weights,
+)
 from lmms_eval.models.model_utils.emu3p5.emu3_5_image_processor import (
     Emu3_5VisionVQImageProcessor,
 )
@@ -62,6 +65,11 @@ class EMU3_5(lmms):
             self._device = torch.device(device)
             self.device_map = device_map if device_map else device
 
+        # Ensure main model weights are available locally
+        pretrained = ensure_local_weights(
+            pretrained, "BAAI/Emu3.5", accelerator=accelerator
+        )
+
         # Load main model
         eval_logger.info(f"Loading EMU3.5 model from {pretrained}")
         self._model = AutoModelForCausalLM.from_pretrained(
@@ -76,6 +84,11 @@ class EMU3_5(lmms):
         eval_logger.info(f"Loading EMU3.5 Text Tokenizer from {pretrained}")
         self._txt_tokenizer = load_emu3_tokenizer(
             pretrained, trust_remote_code=trust_remote_code, padding_side="left"
+        )
+
+        # Ensure vision tokenizer weights are available locally
+        vq_hub = ensure_local_weights(
+            vq_hub, "BAAI/Emu3.5-VisionTokenizer", accelerator=accelerator
         )
 
         # Load image processor (local modified) and image tokenizer
@@ -103,7 +116,14 @@ class EMU3_5(lmms):
 
         # Prepare model for distributed training if needed
         if accelerator.num_processes > 1:
-            self._model = accelerator.prepare_model(self._model, evaluation_mode=True)
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            if accelerator.distributed_type == DistributedType.FSDP:
+                self._model = accelerator.prepare(self._model)
+            else:
+                self._model = accelerator.prepare_model(self._model, evaluation_mode=True)
             self._rank = accelerator.local_process_index
             self._world_size = accelerator.num_processes
         else:
@@ -114,7 +134,10 @@ class EMU3_5(lmms):
 
     @property
     def model(self):
-        return self._model
+        if hasattr(self, "accelerator"):
+            return self.accelerator.unwrap_model(self._model)
+        else:
+            return self._model
 
     @property
     def tokenizer(self):
@@ -135,14 +158,6 @@ class EMU3_5(lmms):
     @property
     def world_size(self):
         return self._world_size
-
-    def flatten(self, input):
-        """Flatten nested lists for handling multiple images."""
-        new_list = []
-        for i in input:
-            for j in i:
-                new_list.append(j)
-        return new_list
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
@@ -194,14 +209,14 @@ class EMU3_5(lmms):
                         skipped_text_only += 1
                         # Add empty placeholder answer for this skipped sample
                         res.append("")
-                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[0]), "")
+                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
                     else:
                         # If not skipping, we still can't process it (EMU3.5 requires images)
                         # So we add empty answer
                         res.append("")
-                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[0]), "")
+                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
 
@@ -212,7 +227,7 @@ class EMU3_5(lmms):
                         skipped_multi_image += 1
                         # Add empty placeholder answer for this skipped sample
                         res.append("")
-                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[0]), "")
+                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
                     else:
@@ -270,11 +285,17 @@ class EMU3_5(lmms):
                 use_cache=self.use_cache,
             )
 
+            # Filter inputs to only include keys accepted by model.generate()
+            model_inputs = {
+                "input_ids": inputs["input_ids"],
+                "attention_mask": inputs["attention_mask"],
+            }
+
             with torch.no_grad():
-                outputs = self.model.generate(**inputs, generation_config=generation_config)
+                outputs = self.model.generate(**model_inputs, generation_config=generation_config)
 
             # Trim input_ids from outputs
-            outputs_trimmed = outputs[:, inputs.input_ids.shape[-1] :]
+            outputs_trimmed = outputs[:, model_inputs["input_ids"].shape[-1] :]
             answers = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=True)
 
             for ans, item in zip(answers, sample_data):
