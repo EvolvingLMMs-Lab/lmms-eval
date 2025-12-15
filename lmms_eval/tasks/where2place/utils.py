@@ -38,7 +38,7 @@ def _text2pts(text: str, width: int = 640, height: int = 480, normalization_cons
     points = []
 
     for match in matches:
-        vector = [float(num) if '.' in num else int(num) for num in match.split(',')]
+        vector = [float(num) if "." in num else int(num) for num in match.split(",")]
         if len(vector) == 2:
             x, y = vector
             if not is_absolute:
@@ -53,7 +53,7 @@ def _text2pts(text: str, width: int = 640, height: int = 480, normalization_cons
 def where2place_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]:
     key_name = "where2place_acc"
 
-    mask = np.array(doc["mask"]) / 255.
+    mask = np.array(doc["mask"]) / 255.0
     # some values might not be exactly 255 or 0
     mask = np.round(mask, 0).astype(int)
     if mask.ndim == 3:
@@ -72,12 +72,8 @@ def where2place_process_results(doc: Dict, result: List[str]) -> Dict[str, Dict]
     # process the answer
     acc = 0.0
     if len(points) > 0:
-        in_range = (points[:, 0] >= 0) & (points[:, 0] < mask.shape[1]) & \
-                    (points[:, 1] >= 0) & (points[:, 1] < mask.shape[0])
-        acc = np.concatenate([
-            mask[points[in_range, 1], points[in_range, 0]],
-            np.zeros(points.shape[0] - in_range.sum())
-        ]).mean()
+        in_range = (points[:, 0] >= 0) & (points[:, 0] < mask.shape[1]) & (points[:, 1] >= 0) & (points[:, 1] < mask.shape[0])
+        acc = np.concatenate([mask[points[in_range, 1], points[in_range, 0]], np.zeros(points.shape[0] - in_range.sum())]).mean()
     where2place_submission = {"id": doc["question_id"], "pred": response, "parsed_points": list(map(tuple, points)), "accuracy": acc}
     return {key_name: where2place_submission}
 
