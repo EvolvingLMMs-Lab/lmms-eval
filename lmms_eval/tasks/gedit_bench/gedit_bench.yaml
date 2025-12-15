@@ -1,8 +1,7 @@
 # dataset_path: stepfun-ai/GEdit-Bench
-dataset_path: /pfs/training-data/kemingwu/hf_cache/datasets/GEdit-Bench
+dataset_path: stepfun-ai/GEdit-Bench
 dataset_kwargs:
   token: True
-  load_from_disk: True
 task: "gedit_bench"
 test_split: train
 output_type: generate_until

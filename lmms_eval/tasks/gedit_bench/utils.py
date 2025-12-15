@@ -16,13 +16,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 # Try to import VIEScore
-try:
-    from lmms_eval.tasks.gedit_bench.viescore import VIEScore
-
-    VIESCORE_AVAILABLE = True
-except ImportError:
-    VIESCORE_AVAILABLE = False
-    eval_logger.warning("VIEScore not available. Please install it: pip install viescore. " "Evaluation scores will not be computed.")
+from lmms_eval.tasks.gedit_bench.viescore import VIEScore
 
 # Task groups for GEdit-Bench
 GEDIT_BENCH_GROUPS = [
@@ -48,17 +42,12 @@ def calculate_dimensions(target_area, ratio):
     return int(width), int(height), int(new_area)
 
 
-def _get_vie_score(backbone: str = "gpt4o", key_path: Optional[str] = None):
+def _get_vie_score():
     """
     Get or create VIEScore instance.
     Note: In multi-process environments, each process will have its own instance.
     """
-    if not VIESCORE_AVAILABLE:
-        raise ImportError("VIEScore is not available. Please install it: pip install viescore")
-
-    # Create a new instance each time (safe for multi-process)
-    # VIEScore initialization is relatively lightweight
-    return VIEScore(backbone=backbone, task="tie", key_path=key_path)
+    return VIEScore(task="tie")
 
 
 def gedit_bench_doc_to_visual(doc):
@@ -197,16 +186,11 @@ def gedit_bench_process_results(doc, results, **kwargs):
     Returns:
         Dict with metrics for all breakdown categories
     """
-    # Get configuration from environment variables or use defaults
-    model_name = os.getenv("GEDIT_BENCH_MODEL_NAME", "bagel")
-    output_base_dir = os.getenv("GEDIT_BENCH_OUTPUT_DIR", "./logs/bagel_persistent_folder/bagel_generated_images")
-    vie_backbone = os.getenv("GEDIT_BENCH_VIE_BACKBONE", "gpt4o")
-    vie_key_path = os.getenv("GEDIT_BENCH_VIE_KEY_PATH", None)
 
-    pred = results[0] if results else "{}"
+    pred = results[0]
     try:
         pred = json.loads(pred)
-    except (json.JSONDecodeError, TypeError):
+    except json.JSONDecodeError:
         eval_logger.warning(f"Failed to parse prediction JSON: {pred}")
         pred = {"text": "", "images": []}
 
@@ -219,77 +203,12 @@ def gedit_bench_process_results(doc, results, **kwargs):
     instruction = doc.get("instruction", "")
     instruction_language = doc.get("instruction_language", "en")
     intersection_exist = doc.get("Intersection_exist", False)
-
-    # Get input image (try different possible field names)
-    input_image = doc.get("input_image") or doc.get("input_image_raw")
-
-    # Try to get input image from multiple sources
-    input_image_pil = None
-    if input_image is not None:
-        input_image_pil = input_image.convert("RGB") if hasattr(input_image, "convert") else input_image
-    else:
-        # Try to load from _SRCIMG file saved by model
-        # Model saves to: {output_dir}/gedit_bench/{key}_SRCIMG.png
-        src_paths = []
-        if model_images and len(model_images) > 0:
-            src_paths.append(model_images[0].replace(f"{key}.png", f"{key}_SRCIMG.png"))
-        # Also check target location
-        src_paths.append(os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language, f"{key}_SRCIMG.png"))
-
-        for src_path in src_paths:
-            if src_path and os.path.exists(src_path):
-                try:
-                    input_image_pil = Image.open(src_path).convert("RGB")
-                    eval_logger.debug(f"Loaded source image from {src_path}")
-                    break
-                except Exception as e:
-                    eval_logger.warning(f"Failed to load source image from {src_path}: {e}")
-
-    if input_image_pil is None:
-        eval_logger.warning(f"No input image found for key {key} (neither in doc nor as _SRCIMG file)")
-        return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
-
-    # Reorganize generated images to GEdit-Bench required structure
-    # Model saves to: {output_dir}/gedit_bench/{key}.png
-    # GEdit-Bench requires: {output_dir}/{model_name}/fullset/{task_type}/{language}/{key}.png
-    edited_image_path = None
-    target_dir = os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language)
-    target_path = os.path.join(target_dir, f"{key}.png")
-
-    if model_images and len(model_images) > 0:
-        generated_image_path = model_images[0]
-        if os.path.exists(generated_image_path):
-            # Reorganize: copy to GEdit-Bench required structure
-            os.makedirs(target_dir, exist_ok=True)
-            if generated_image_path != target_path:
-                shutil.copy2(generated_image_path, target_path)
-                eval_logger.debug(f"Reorganized image: {generated_image_path} -> {target_path}")
-                # Also copy source image if exists
-                src_img = generated_image_path.replace(f"{key}.png", f"{key}_SRCIMG.png")
-                if os.path.exists(src_img):
-                    shutil.copy2(src_img, os.path.join(target_dir, f"{key}_SRCIMG.png"))
-            edited_image_path = target_path
-        else:
-            eval_logger.warning(f"Generated image not found at {generated_image_path}")
-
-    # If no image from model results, try to find at expected location
-    if edited_image_path is None and os.path.exists(target_path):
-        edited_image_path = target_path
-        eval_logger.debug(f"Found existing generated image at {target_path}")
-
-    # If still no edited image, return zero scores
-    if edited_image_path is None:
-        eval_logger.warning(f"No generated images found for key {key}")
-        return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
+    input_image_pil = doc.get("input_image")
 
     # Evaluate using VIEScore
-    if not VIESCORE_AVAILABLE:
-        eval_logger.warning("VIEScore not available, skipping evaluation")
-        return _create_all_metric_results(key, task_type, instruction_language, 0.0, 0.0, 0.0, intersection_exist)
-
     try:
         # Load edited image
-        edited_image_pil = Image.open(edited_image_path).convert("RGB")
+        edited_image_pil = Image.open(model_images[0]).convert("RGB")
 
         # Resize images to target area (512x512 equivalent)
         source_img_width, source_img_height, _ = calculate_dimensions(512 * 512, input_image_pil.width / input_image_pil.height)
@@ -299,13 +218,11 @@ def gedit_bench_process_results(doc, results, **kwargs):
         edited_image_pil = edited_image_pil.resize((edited_img_width, edited_img_height))
 
         # Get VIEScore instance
-        vie_score = _get_vie_score(backbone=vie_backbone, key_path=vie_key_path)
+        vie_score = _get_vie_score()
 
         # Evaluate: VIEScore.evaluate returns [semantics_score, quality_score, overall_score]
         score_list = vie_score.evaluate([input_image_pil, edited_image_pil], instruction)
         semantics_score, quality_score, overall_score = score_list
-
-        eval_logger.info(f"[{task_type}] Key {key}: " f"Semantics={semantics_score:.3f}, " f"Quality={quality_score:.3f}, " f"Overall={overall_score:.3f}, " f"Language={instruction_language}, " f"Intersection={intersection_exist}")
 
         return _create_all_metric_results(key, task_type, instruction_language, float(semantics_score), float(quality_score), float(overall_score), intersection_exist)
     except Exception as e:
@@ -517,38 +434,3 @@ def gedit_bench_aggregate_cn_intersection_quality(results):
 def gedit_bench_aggregate_cn_intersection_overall(results):
     """Aggregate Chinese intersection overall scores"""
     return _aggregate_by_filter(results, language="cn", intersection_only=True)
-
-
-# ============================================
-# Legacy Functions (for backward compatibility)
-# ============================================
-
-
-def gedit_bench_aggregate_en_fullset(results):
-    """Aggregate English fullset scores (all English samples)"""
-    return _aggregate_by_filter(results, language="en", intersection_only=None)
-
-
-def gedit_bench_aggregate_en_intersection(results):
-    """Aggregate English intersection subset scores"""
-    return _aggregate_by_filter(results, language="en", intersection_only=True)
-
-
-def gedit_bench_aggregate_cn_fullset(results):
-    """Aggregate Chinese fullset scores (all Chinese samples)"""
-    return _aggregate_by_filter(results, language="cn", intersection_only=None)
-
-
-def gedit_bench_aggregate_cn_intersection(results):
-    """Aggregate Chinese intersection subset scores"""
-    return _aggregate_by_filter(results, language="cn", intersection_only=True)
-
-
-def gedit_bench_aggregate_intersection(results):
-    """Aggregate intersection subset scores (all languages)"""
-    return _aggregate_by_filter(results, language=None, intersection_only=True)
-
-
-def gedit_bench_aggregate_fullset(results):
-    """Aggregate fullset scores (all samples, all languages)"""
-    return _aggregate_by_filter(results, language=None, intersection_only=None)
