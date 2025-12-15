@@ -8,8 +8,8 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
 #SBATCH --time=12:00:00
-#SBATCH --output=/iopsstor/scratch/cscs/%u/lmms_eval/logs/paired_tok_%j.out
-#SBATCH --error=/iopsstor/scratch/cscs/%u/lmms_eval/logs/paired_tok_%j.err
+#SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.out
+#SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.err
 
 TASKS="ai2d,vqav2,mme,mmmu"
 BATCH_SIZE=1
@@ -73,7 +73,9 @@ echo "📦 Setting up lmms-eval package..."
 cd "$EVAL_DIR" || exit
 pip uninstall jupyterlab -y  # Uninstall conflicting package
 pip install -e .
-pip install -e .[emu3]
+
+#echo "📦 Install Emu3 specific versions"
+#pip install -e .[emu3]
 
 echo "<<New Packages>>"
 pip list

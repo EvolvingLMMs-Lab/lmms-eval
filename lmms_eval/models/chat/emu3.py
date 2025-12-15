@@ -35,9 +35,13 @@ class EMU3(lmms):
         trust_remote_code: bool = True,
         torch_dtype: torch.dtype = torch.bfloat16,
         use_cache: bool = True,
+        max_ratio: int = -1,
+        max_pixels: int = 1024 * 1024,
+        min_pixels: int = 512 * 512
         **kwargs,
     ):
         super().__init__()
+        self.max_ratio = max_ratio # if -1 skip ratio cherck and resize.
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -119,6 +123,37 @@ class EMU3(lmms):
                 new_list.append(j)
         return new_list
 
+    def preprocess_image_aspect_ratio(self, image: Image.Image, max_ratio: float = 4.9) -> Image.Image:
+        """
+        Resize image to ensure aspect ratio is within EMU3's constraints.
+        EMU3 requires aspect ratio < 5, so we use 4.9 as the safe limit.
+
+        Args:
+            image: PIL Image to preprocess
+            max_ratio: Maximum allowed aspect ratio (default 4.9 to be safe)
+
+        Returns:
+            Preprocessed PIL Image
+        """
+        width, height = image.size
+        aspect_ratio = width / height
+
+        # Check if aspect ratio is within bounds
+        if aspect_ratio > max_ratio:
+            # Width is too large, resize to fit
+            new_width = int(height * max_ratio)
+            new_height = height
+            eval_logger.warning(f"Resizing image from {width}x{height} (ratio={aspect_ratio:.2f}) to {new_width}x{new_height} (ratio={max_ratio:.2f})")
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        elif aspect_ratio < (1 / max_ratio):
+            # Height is too large, resize to fit
+            new_width = width
+            new_height = int(width * max_ratio)
+            eval_logger.warning(f"Resizing image from {width}x{height} (ratio={aspect_ratio:.2f}) to {new_width}x{new_height} (ratio={1/max_ratio:.2f})")
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        return image
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -132,44 +167,62 @@ class EMU3(lmms):
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
+        # iterate through batches
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
-            # Get chat messages
             chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
             # Convert to ChatMessages protocol
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
 
-            # Extract media
-            images_list = []
-            for messages in chat_messages:
-                visual, video, audio = messages.extract_media()
-                images_list.append(visual)
-            images = self.flatten(images_list)
+            # Extract media and text per message
+            # EMU3 requires len(images) == len(texts) in understanding mode
+            batch_data = []
 
-            # Extract text from messages
-            texts = []
-            for chat_message in chat_messages:
+            for idx, chat_message in enumerate(chat_messages):
+                # Extract images for this message
+                visual, _, _ = chat_message.extract_media()
+
+                # Extract text for this message
                 text = ""
                 for message in chat_message.messages:
                     for content in message.content:
                         if content.type == "text":
                             text += content.text
-                texts.append(text)
 
-            # Convert image URLs to PIL Images if needed
-            processed_images = []
-            for img in images:
-                if isinstance(img, str):
-                    processed_images.append(Image.open(img))
+                # EMU3 expects exactly one image per text prompt in understanding mode
+                # If there are multiple images, use the first one
+                if visual and len(visual) > 0:
+                    if len(visual) > 1:
+                        eval_logger.warning(f"Sample with multiple images encountered ({len(visual)})! Only take 1st!")
+                    img = visual[0]  # Use first image only
+                    if isinstance(img, str):
+                        img = Image.open(img)
+                    # Preprocess image to ensure aspect ratio constraints
+                    if self.max_ratio > 0:
+                        img = self.preprocess_image_aspect_ratio(img, max_ratio=self.max_ratio)
+                    batch_data.append({"text": text, "image": img, "context": ctx[idx]})
                 else:
-                    processed_images.append(img)
+                    # EMU3 requires images in understanding mode, skip text-only samples
+                    eval_logger.warning(f"Skipping text-only sample (EMU3 requires images): {text[:50]}...")
+                    # Add placeholder answer for this sample
+                    res.append("")
+                    self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[0]), "")
+
+            # If all samples were text-only, skip this batch
+            if len(batch_data) == 0:
+                pbar.update(len(chunk))
+                continue
 
             gen_kwargs = all_gen_kwargs[0]
+
+            # Prepare inputs for EMU3
+            texts = [item["text"] for item in batch_data]
+            processed_images = [item["image"] for item in batch_data]
 
             # Process inputs for EMU3
             inputs = self.processor(
                 text=texts,
-                image=processed_images if processed_images else None,
+                image=processed_images,
                 mode="U",  # Understanding mode
                 return_tensors="pt",
                 padding="longest",
@@ -195,19 +248,25 @@ class EMU3(lmms):
                 use_cache=self.use_cache,
             )
 
+            # Filter inputs to only include keys accepted by model.generate()
+            model_inputs = {
+                "input_ids": inputs["input_ids"],
+                "attention_mask": inputs["attention_mask"],
+            }
+
             with torch.no_grad():
-                outputs = self.model.generate(**inputs, generation_config=generation_config)
+                outputs = self.model.generate(**model_inputs, generation_config=generation_config)
 
             # Trim input_ids from outputs
-            outputs_trimmed = outputs[:, inputs.input_ids.shape[-1] :]
+            outputs_trimmed = outputs[:, model_inputs["input_ids"].shape[-1] :]
             answers = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=True)
 
-            for ans, context in zip(answers, texts):
+            for ans, item in zip(answers, batch_data):
                 res.append(ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
+                self.cache_hook.add_partial("generate_until", (item["context"], gen_kwargs), ans)
                 pbar.update(1)
 
-                eval_logger.debug(f"Question: {context}")
+                eval_logger.debug(f"Question: {item['text']}")
                 eval_logger.debug(f"Model Response: {ans}")
 
         # Reorder results back to original unsorted form

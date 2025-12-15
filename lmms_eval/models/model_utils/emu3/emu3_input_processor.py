@@ -77,7 +77,6 @@ class Emu3Processor(ProcessorMixin):
         self.vis_tok_spatial_factor = 2 ** (len(self.vision_tokenizer.config.ch_mult) - 1)
 
         super().__init__(image_processor, tokenizer, chat_template=chat_template)
-        self.const_helper = self.build_const_helper()
 
     @torch.no_grad()
     def __call__(
