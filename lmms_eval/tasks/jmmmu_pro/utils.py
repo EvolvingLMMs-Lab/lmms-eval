@@ -128,22 +128,39 @@ DOMAIN_CAT2SUB_CAT = {
 }
 
 SUBDOMAINS = [
-    'Accounting', 'Agriculture', 'Architecture_and_Engineering',
-    'Basic_Medical_Science', 'Biology', 'Chemistry', 'Clinical_Medicine',
-    'Computer_Science', 'Design', 'Diagnostics_and_Laboratory_Medicine',
-    'Economics', 'Electronics', 'Energy_and_Power', 'Finance',
-    'Japanese_Art', 'Japanese_Heritage', 'Japanese_History', 'Manage',
-    'Marketing', 'Materials', 'Math', 'Mechanical_Engineering', 'Music',
-    'Pharmacy', 'Physics', 'Psychology', 'Public_Health', 'World_History'
+    "Accounting",
+    "Agriculture",
+    "Architecture_and_Engineering",
+    "Basic_Medical_Science",
+    "Biology",
+    "Chemistry",
+    "Clinical_Medicine",
+    "Computer_Science",
+    "Design",
+    "Diagnostics_and_Laboratory_Medicine",
+    "Economics",
+    "Electronics",
+    "Energy_and_Power",
+    "Finance",
+    "Japanese_Art",
+    "Japanese_Heritage",
+    "Japanese_History",
+    "Manage",
+    "Marketing",
+    "Materials",
+    "Math",
+    "Mechanical_Engineering",
+    "Music",
+    "Pharmacy",
+    "Physics",
+    "Psychology",
+    "Public_Health",
+    "World_History",
 ]
 
-CULTURE_SPECIFIC_SUBDOMAINS = [
-    'Japanese_Art', 'Japanese_Heritage', 'Japanese_History', 'World_History'
-]
+CULTURE_SPECIFIC_SUBDOMAINS = ["Japanese_Art", "Japanese_Heritage", "Japanese_History", "World_History"]
 
-CULTURE_AGNOSTIC_SUBDOMAINS = [
-    s for s in SUBDOMAINS if s not in CULTURE_SPECIFIC_SUBDOMAINS
-]
+CULTURE_AGNOSTIC_SUBDOMAINS = [s for s in SUBDOMAINS if s not in CULTURE_SPECIFIC_SUBDOMAINS]
 
 
 def jmmmu_pro_aggregate_results(results, args):
@@ -210,12 +227,8 @@ def jmmmu_pro_aggregate_results(results, args):
     culture_specific_acc = calculate_ins_level_acc(culture_specific_results)
     culture_agnostic_acc = calculate_ins_level_acc(culture_agnostic_results)
 
-    culture_specific_num = sum([
-        r["num_example"] for r in culture_specific_results.values()
-    ])
-    culture_agnostic_num = sum([
-        r["num_example"] for r in culture_agnostic_results.values()
-    ])
+    culture_specific_num = sum([r["num_example"] for r in culture_specific_results.values()])
+    culture_agnostic_num = sum([r["num_example"] for r in culture_agnostic_results.values()])
 
     # Add aggregated results to subdomain_results
     subdomain_results["culture-specific"] = {
@@ -231,7 +244,7 @@ def jmmmu_pro_aggregate_results(results, args):
     # Only save if output_path is provided
     if args.output_path is not None:
         # Extract model name from model_args (e.g., pretrained=model_name)
-        model_args = getattr(args, 'model_args', '')
+        model_args = getattr(args, "model_args", "")
         model_name = GeneralConfigTracker._get_model_name(model_args)
         if model_name:
             model_name_sanitized = sanitize_model_name(model_name)
@@ -289,12 +302,8 @@ def jmmmu_pro_subdomain_results(results, args):
     culture_specific_acc = calculate_ins_level_acc(culture_specific_results)
     culture_agnostic_acc = calculate_ins_level_acc(culture_agnostic_results)
 
-    culture_specific_num = sum([
-        r["num_example"] for r in culture_specific_results.values()
-    ])
-    culture_agnostic_num = sum([
-        r["num_example"] for r in culture_agnostic_results.values()
-    ])
+    culture_specific_num = sum([r["num_example"] for r in culture_specific_results.values()])
+    culture_agnostic_num = sum([r["num_example"] for r in culture_agnostic_results.values()])
 
     # Add aggregated results to subdomain_results
     subdomain_results["culture-specific"] = {
@@ -309,7 +318,7 @@ def jmmmu_pro_subdomain_results(results, args):
     # Save to the same directory as results.json: output_path/{model_name_sanitized}/
     # Only save if output_path is provided
     if args.output_path is not None:
-        model_name_sanitized = sanitize_model_name(getattr(args, 'model', ''))
+        model_name_sanitized = sanitize_model_name(getattr(args, "model", ""))
         if model_name_sanitized:
             save_dir = os.path.join(args.output_path, model_name_sanitized)
         else:
@@ -392,7 +401,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     # Precompile commonly used regex patterns
     FULLWIDTH_MAP = {chr(ord("Ａ") + i): chr(ord("A") + i) for i in range(26)}
     FULLWIDTH_TRANS = str.maketrans(FULLWIDTH_MAP)
-    
+
     OPTION_LINE_RE = re.compile(
         r"""^\s*
             (?:[-*・>\u2022]\s*)?      # bullets
@@ -401,7 +410,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         """,
         re.VERBOSE | re.IGNORECASE,
     )
-    
+
     EXPLICIT_RE = re.compile(
         r"""(?ix)
         (?:answer|final|correct|solution|ans
@@ -416,7 +425,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         \b
         """
     )
-    
+
     MARKDOWN_LETTER_RE = re.compile(
         r"""
         [【\[\(\*]*([A-Z])[】\]\)\*]*   # plain or emphasized letter
@@ -424,21 +433,21 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         """,
         re.IGNORECASE | re.VERBOSE,
     )
-    
+
     def _normalize(text: str) -> str:
         # Normalize full-width letters and strip obvious bold markers.
         text = text.translate(FULLWIDTH_TRANS)
         return text
-    
+
     def _is_option_line(line: str) -> bool:
         return bool(OPTION_LINE_RE.match(line))
-    
+
     def _explicit_in_line(line: str) -> Optional[str]:
         m = EXPLICIT_RE.search(line)
         if m:
             return m.group(1).upper()
         return None
-    
+
     def _last_standalone_letter(lines: list[str]) -> Optional[str]:
         """Fallback: pick the last standalone letter (A–Z) not on an option line."""
         candidates: list[str] = []
@@ -449,7 +458,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
                 letter = m.group(1).upper()
                 candidates.append(letter)
         return candidates[-1] if candidates else None
-    
+
     def parse_answer(text: str) -> Optional[str]:
         """
         Parse a model free-form response and return an answer letter (A–Z) or None.
@@ -460,33 +469,33 @@ def parse_multi_choice_response(response, all_choices, index2ans):
         """
         if not text:
             return None
-        
+
         norm = _normalize(text)
         lines = [ln.strip() for ln in norm.splitlines() if ln.strip()]
         if not lines:
             return None
-        
+
         # 1) First non-empty line explicit marker
         first_line = lines[0]
         hit = _explicit_in_line(first_line)
         if hit:
             return hit
-        
+
         # 2) Explicit marker anywhere
         hit_any = _explicit_in_line(norm)
         if hit_any:
             return hit_any
-        
+
         # 3) Last standalone letter outside option lines
         return _last_standalone_letter(lines)
-    
+
     # Use answer_parser logic
     parsed_letter = parse_answer(response)
-    
+
     # Validate that the parsed letter is in all_choices
     if parsed_letter and parsed_letter in all_choices:
         return parsed_letter
-    
+
     # If not found or not valid, return "X"
     return "X"
 
