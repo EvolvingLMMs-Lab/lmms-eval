@@ -1,0 +1,17 @@
+task: "jmmmu_pro_vision"
+dataset_path: JMMMU/JMMMU-Pro
+dataset_name: vision
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.jmmmu_pro_doc_to_visual
+doc_to_text: "あなたの役割は画像で与えられた問題を解くことです。与えられた選択肢の中から最も適切な回答のアルファベットを直接記入してください。"
+doc_to_target: "{{answer}}"
+# The return value of process_results will be used by metrics
+process_results: !function utils.jmmmu_pro_process_results
+
+metric_list:
+  - metric: jmmmu_pro_acc
+    aggregation: !function utils.jmmmu_pro_aggregate_results
+    higher_is_better: true
+
+include: _default_template_yaml
