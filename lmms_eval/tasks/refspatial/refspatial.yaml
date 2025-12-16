@@ -1,0 +1,6 @@
+group: refspatial
+task:
+  - refspatial_groups
+aggregate_metric_list:
+  - metric: refspatial_acc
+    weight_by_size: True
