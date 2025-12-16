@@ -40,10 +40,11 @@ class BagelLmmsEngine(lmms):
     Example usage:
     accelerate launch -m lmms_eval \
         --model bagel_lmms_engine \
-        --model_args pretrained=lmms-lab/BAGEL-7B-MoT-ver.LE \
-        --tasks ueval \
+        --model_args pretrained=lmms-lab/BAGEL-7B-MoT-ver.LE,device_map=cuda,output_image_dir=./logs/bagel_images,num_timesteps=50,cfg_img_scale=2.0,cfg_renorm_type="text_channel",cfg_interval=0.0 \
+        --tasks gedit_bench \
         --batch_size 1 \
-        --output_path ./logs/
+        --output_path ./logs/ \
+        --log_samples --process_with_media
     """
 
     def __init__(
@@ -54,6 +55,7 @@ class BagelLmmsEngine(lmms):
         output_image_dir: Optional[str] = None,
         show_thinking: bool = False,
         cfg_text_scale: float = 4.0,
+        cfg_img_scale: float = 1.5,
         cfg_interval: float = 0.4,
         timestep_shift: float = 3.0,
         num_timesteps: int = 50,
@@ -80,6 +82,7 @@ class BagelLmmsEngine(lmms):
 
         # Generation hyperparameters
         self.cfg_text_scale = cfg_text_scale
+        self.cfg_img_scale = cfg_img_scale
         self.cfg_interval = cfg_interval
         self.timestep_shift = timestep_shift
         self.num_timesteps = num_timesteps
@@ -196,6 +199,10 @@ class BagelLmmsEngine(lmms):
     def tokenizer(self):
         return self._tokenizer
 
+    @property
+    def device(self):
+        return self._device
+
     def set_seed(self, seed: int):
         """Set random seeds for reproducibility"""
         if seed > 0:
@@ -231,6 +238,7 @@ class BagelLmmsEngine(lmms):
             "do_sample": self.do_sample if self.show_thinking else False,
             "text_temperature": self.text_temperature if self.show_thinking else 0.3,
             "cfg_text_scale": self.cfg_text_scale,
+            "cfg_img_scale": self.cfg_img_scale,
             "cfg_interval": [self.cfg_interval, 1.0],
             "timestep_shift": self.timestep_shift,
             "num_timesteps": self.num_timesteps,
