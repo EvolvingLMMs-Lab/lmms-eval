@@ -196,6 +196,7 @@ python -m lmms_eval --tasks list_with_num
   - ICON-QA Validation (iconqa_val)
   - ICON-QA Test (iconqa_test)
 - [JMMMU](https://mmmu-japanese-benchmark.github.io/JMMMU/) (jmmmu)
+- [JMMMU-Pro](https://mmmu-japanese-benchmark.github.io/JMMMU_Pro/) (jmmmu_pro)
 - [LLaVA-NeXT-Interleave-Bench](https://huggingface.co/datasets/lmms-lab/LLaVA-NeXT-Interleave-Bench) (llava_interleave_bench)
   - llava_interleave_bench_in_domain
   - llava_interleave_bench_out_domain
