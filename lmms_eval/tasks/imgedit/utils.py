@@ -230,9 +230,6 @@ def imgedit_process_results(doc, results, **kwargs):
 
     # Get OpenAI client (singleton, initialized once)
     client = _get_openai_client()
-    import pdb
-
-    pdb.set_trace()
     if client is None:
         return _create_zero_result(key, edit_type)
 
