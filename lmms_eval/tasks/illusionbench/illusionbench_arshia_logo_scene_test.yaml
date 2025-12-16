@@ -1,0 +1,27 @@
+dataset_path: parquet
+dataset_kwargs:
+  data_files:
+    Illusion_LOGO: /data1/zwb/hf/datasets/arshia_illusionbench_test100/illusionbench_Illusion_LOGO_test100.parquet
+process_docs: !function arshia_utils.illusionbench_arshia_process_docs
+task: illusionbench_arshia_logo_scene_test
+test_split: Illusion_LOGO
+output_type: generate_until
+doc_to_visual: !function arshia_utils.illusionbench_arshia_doc_to_visual
+doc_to_text: !function arshia_utils.illusionbench_arshia_doc_to_text_scene
+doc_to_target: !function arshia_utils.illusionbench_arshia_doc_to_target
+process_results: !function arshia_utils.illusionbench_arshia_process_results_scene
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0.0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+metric_list:
+  - metric: scene_recall
+    aggregation: !function arshia_utils.illusionbench_arshia_aggregate
+    higher_is_better: true
+metadata:
+  version: 0.1
+  prompt_type: official_like
+
+

@@ -1,0 +1,30 @@
+dataset_path: arrow
+dataset_kwargs:
+  data_files:
+    Illusion_IN: /data1/zwb/hf/datasets/arshia_illusionbench/arshiahemmat___illusion_bench/default/0.0.0/5e4c87c393a28cd0ede1a2b0b7f15afcb8c4e294/illusion_bench-Illusion_IN-*.arrow
+process_docs: !function arshia_utils.illusionbench_arshia_process_docs
+task: illusionbench_arshia_in
+test_split: Illusion_IN
+output_type: generate_until
+doc_to_visual: !function arshia_utils.illusionbench_arshia_doc_to_visual
+doc_to_text: !function arshia_utils.illusionbench_arshia_doc_to_text
+process_results: !function arshia_utils.illusionbench_arshia_process_results
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0.0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+metric_list:
+  - metric: shape_recall
+    aggregation: !function arshia_utils.illusionbench_arshia_aggregate
+    higher_is_better: true
+  - metric: scene_recall
+    aggregation: !function arshia_utils.illusionbench_arshia_aggregate
+    higher_is_better: true
+metadata:
+  version: 0.1
+  prompt_type: official_like
+
+
+
