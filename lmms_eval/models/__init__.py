@@ -15,10 +15,12 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
+    "azure_trapi": "AzureTRAPI",
     "plm": "PerceptionLM",
     "aria": "Aria",
     "auroracap": "AuroraCap",
     "bagel": "Bagel",
+    "bagel_visual_cot": "BagelVisualCoT",
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
     "cogvlm2": "CogVLM2",

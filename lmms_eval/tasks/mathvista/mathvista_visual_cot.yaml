@@ -1,0 +1,47 @@
+dataset_path: AI4Math/MathVista
+dataset_kwargs:
+  token: True
+task: "mathvista_visual_cot"
+test_split: testmini
+tag: visual_reasoning_collection
+output_type: generate_until
+doc_to_visual: !function utils.mathvista_doc_to_visual
+doc_to_text: !function utils.mathvista_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0.0
+process_results: !function utils.mathvista_process_results
+metric_list:
+  - metric: llm_as_judge_eval
+    aggregation: !function utils.mathvista_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    shot_type: "step-by-step"
+    shot: 0
+    use_caption: False
+    use_ocr: False
+  bagel_visual_cot:
+    shot_type: "step-by-step"
+    shot: 0
+    use_caption: False
+    use_ocr: False
+    # Generation prompt template (optional, uses default if not specified)
+    generation_prompt_template: "Generate a detailed mathematical diagram or visualization to help solve this problem: {question}"
+    # Stage 1: Image generation parameters
+    stage1_cfg_text_scale: 4.0
+    stage1_timestep_shift: 3.0
+    stage1_num_timesteps: 50
+    stage1_image_ratio: "1:1"
+    # Stage 2: Visual understanding parameters
+    stage2_max_new_tokens: 512
+    stage2_temperature: 0.0
+    stage2_do_sample: False
+    # Debugging
+    save_intermediate: True
+
+metadata:
+  version: 1.0
+  description: "MathVista with Bagel Visual Chain-of-Thought reasoning"

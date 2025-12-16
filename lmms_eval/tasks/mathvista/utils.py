@@ -122,3 +122,4 @@ def mathvista_aggregate_results(results, args, *, calculate_gain=False, random_s
     if scores["average"]["accuracy"] == 0:
         return None
     return scores["average"]["accuracy"]
+
