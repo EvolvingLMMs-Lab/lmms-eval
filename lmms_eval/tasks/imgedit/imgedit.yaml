@@ -1,0 +1,87 @@
+# ImgEdit Benchmark Configuration
+# Paper: ImgEdit: A Unified Image Editing Benchmark
+# https://github.com/sysuyy/ImgEdit
+#
+# Dataset preparation:
+#   1. Download Benchmark.tar from https://huggingface.co/datasets/sysuyy/ImgEdit/blob/main/Benchmark.tar
+#   2. Extract: tar -xvf Benchmark.tar
+#   3. Run prepare_dataset.py to convert JSON to HuggingFace dataset format:
+#      python lmms_eval/tasks/imgedit/prepare_dataset.py \
+#          --json_file /path/to/singleturn.json \
+#          --img_root /path/to/singleturn/ \
+#          --output_dir /path/to/output/dataset
+#
+# Environment variables:
+#   - IMGEDIT_MODEL_NAME: Name of the model being evaluated (default: "default")
+#   - IMGEDIT_OUTPUT_DIR: Directory to save generated images (default: "./logs/imgedit_results")
+#   - IMGEDIT_ORIGIN_IMG_ROOT: Root directory of original images (for runtime loading)
+#   - IMGEDIT_EVAL_BACKBONE: Evaluation model - "gpt4o" (default), "qwen25vl", or "vllm_qwen"
+#   - OPENAI_API_KEY: OpenAI API key (for GPT-4o)
+#   - OPENAI_BASE_URL: Optional custom OpenAI API base URL
+#   - QWEN_MODEL_PATH: Path to Qwen2.5-VL model (for qwen25vl backend)
+#   - VLLM_API_BASE: vLLM API base URL (for vllm_qwen backend)
+#
+# Scoring follows original ImgEdit benchmark (basic_bench.py + step1 + step2):
+#   - Each sample gets 3 dimension scores (Prompt Compliance, Visual Quality, Physical Integrity)
+#   - avg_score = (score1 + score2 + score3) / 3 for each sample
+#   - Final scores are averages across samples
+#   - Per edit_type scores are printed in logs during aggregation
+
+# Local dataset path (after running prepare_dataset.py)
+dataset_path: /pfs/training-data/kemingwu/hf_cache/datasets/ImgEdit/imgedit_dataset
+dataset_kwargs:
+  load_from_disk: True
+task: "imgedit"
+test_split: train  # The prepared dataset uses "train" split
+output_type: generate_until
+
+# Document processing functions
+doc_to_visual: !function utils.imgedit_doc_to_visual
+doc_to_text: !function utils.imgedit_doc_to_text
+doc_to_target: "prompt"
+
+# Generation parameters
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+# Process results using GPT-4o or Qwen2.5-VL evaluation
+process_results: !function utils.imgedit_process_results
+
+# Metrics - Following original ImgEdit benchmark scoring
+# ==========================================
+# score1: Prompt Compliance / Style Fidelity / etc. (depends on edit_type)
+# score2: Visual Naturalness / Content Preservation / etc.
+# score3: Physical & Detail Integrity / Rendering Quality / etc.
+# avg_score: (score1 + score2 + score3) / 3 (main metric, like step1_get_avgscore.py)
+# Per edit_type scores are printed in logs (like step2_typescore.py)
+# ==========================================
+metric_list:
+  # Three dimension scores
+  - metric: imgedit_score1
+    aggregation: !function utils.imgedit_aggregate_score
+    higher_is_better: true
+  - metric: imgedit_score2
+    aggregation: !function utils.imgedit_aggregate_score
+    higher_is_better: true
+  - metric: imgedit_score3
+    aggregation: !function utils.imgedit_aggregate_score
+    higher_is_better: true
+
+  # Main metric: avg_score (following step1_get_avgscore.py)
+  # Per edit_type scores are printed in logs (following step2_typescore.py)
+  - metric: imgedit_avg_score
+    aggregation: !function utils.imgedit_aggregate_avg_score
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  - version: 0.6
+    description: "ImgEdit Benchmark - Unified Image Editing Evaluation (GPT-4o/Qwen2.5-VL)"
