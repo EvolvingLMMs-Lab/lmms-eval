@@ -1,0 +1,4 @@
+group: jmmmu_pro_cot
+task:
+- jmmmu_pro_standard_cot
+- jmmmu_pro_vision_cot
