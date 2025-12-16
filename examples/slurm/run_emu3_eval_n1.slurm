@@ -11,8 +11,8 @@
 #SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.out
 #SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.err
 
-TASKS="ai2d,vqav2,mme,mmmu"
-BATCH_SIZE=1
+TASKS="mme" #ai2d,vqav2_test,mme,mmmu"
+BATCH_SIZE=2
 MODEL="emu3"
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/emu3_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
@@ -62,6 +62,15 @@ echo "Output-Path:          ${RES_PATH}"
 echo "Eval-Repo-Location:   ${EVAL_DIR}"
 echo "========================================"
 echo ""
+
+# Run evaluation command
+echo "Running LM evaluation..."
+# Conditionally set/unset offline mode
+if [ "$OFFLINE_DATASETS" = "true" ]; then
+    export HF_DATASETS_OFFLINE=1
+else
+    unset HF_DATASETS_OFFLINE
+fi
 
 echo "###Setup Packages & environment#####"
 echo ""
