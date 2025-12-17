@@ -11,7 +11,6 @@
 #
 # The script will prompt you to enter the SoccerNet password during execution.
 
-
 import ast
 import json
 import math
@@ -58,7 +57,7 @@ base_cache_dir = os.path.expanduser(hf_home)
 benchmark_cache_dir = os.path.join(base_cache_dir, "hub", "datasets--cplou99--FALCON-Bench", "snapshots")
 
 
-with open(Path(__file__).parent / "FALCONBench_mcq.yaml", "r") as f:
+with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
     for i, line in enumerate(raw_data):
@@ -143,7 +142,7 @@ def FALCONbench_doc_to_text_mcq(doc, lmms_eval_specific_kwargs):
 
     question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(doc["options"])])
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-    post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+    post_prompt = "Answer with the option's letter from the given choices directly"
 
     return f"{pre_prompt}\n{question}\n{post_prompt}"
 

@@ -1,32 +1,13 @@
-dataset_path: cplou99/FALCON-Bench
-dataset_kwargs:
-  token: True
-  cache_dir: falconbench
-  video: True
-  force_download: False
-  local_files_only: False
-test_split: test
-
-
 task: FALCONBench_oq
-doc_to_visual: !function utils.FALCONbench_doc_to_visual_fullvideo
 doc_to_text: !function utils.FALCONbench_doc_to_text_oq
 doc_to_target: "answer"
 generation_kwargs:
-  until:
-    - "ASSISTANT:"
   max_new_tokens: 64
   temperature: 0
   do_sample: False
 process_results: !function utils.FALCONbench_process_results_oq
 metric_list:
   - metric: gpt_eval_score_acc
-    aggregation: !function utils.FALCONbench_aggregate_results_oq # parse scores from each QA pairs
+    aggregation: !function utils.FALCONbench_aggregate_results_oq 
     higher_is_better: true
-
-
-lmms_eval_specific_kwargs:
-  default:
-    pre_prompt:  "Answer the following question based on the provided frames.\n"
-    post_prompt: ""
-    
+include: _default_template_yaml
