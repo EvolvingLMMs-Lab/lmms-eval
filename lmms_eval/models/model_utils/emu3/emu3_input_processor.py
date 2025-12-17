@@ -176,46 +176,16 @@ class Emu3Processor(ProcessorMixin):
     @torch.no_grad()
     def batch_decode(self, *args, **kwargs):
         docs = self.tokenizer.batch_decode(*args, **kwargs)
-        return [self.multimodal_decode(d) for d in docs]
+        return docs
 
     @torch.no_grad()
     def decode(self, *args, **kwargs):
         doc = self.tokenizer.decode(*args, **kwargs)
-        return self.multimodal_decode(doc)
+        return doc
 
     @torch.no_grad()
     def vision_encode(self, *args, **kwargs):
         return self.vision_tokenizer.encode(*args, **kwargs)
-
-    @torch.no_grad()
-    def vision_decode(self, *args, **kwargs):
-        return self.vision_tokenizer.decode(*args, **kwargs)
-
-    @torch.no_grad()
-    def multimodal_decode(self, doc):
-        multimodal_output = []
-        pattern = rf'({re.escape(self.tokenizer.boi_token)}.*?{re.escape(self.tokenizer.eoi_token)})'
-        chunks = re.split(pattern, doc)
-        for c in chunks:
-            if len(c) == 0:
-                continue
-
-            if self.tokenizer.boi_token in c:
-                image = []
-                image_rows = re.split(re.escape(self.tokenizer.eol_token), c)
-                for r in image_rows:
-                    token_ids = re.findall(self.visual_template[1], r)
-                    if len(token_ids) > 0:
-                        row_token = [int(m) for m in token_ids]
-                        image.append(row_token)
-                image = torch.tensor(image, dtype=torch.long, device=self.vision_tokenizer.device)
-                image = self.vision_tokenizer.decode(image[None]).float()
-                image = self.image_processor.postprocess(image)["pixel_values"][0]
-                multimodal_output.append(image)
-            else:
-                multimodal_output.append(c)
-
-        return multimodal_output if len(multimodal_output) > 1 else multimodal_output[0]
 
     @property
     def model_input_names(self):

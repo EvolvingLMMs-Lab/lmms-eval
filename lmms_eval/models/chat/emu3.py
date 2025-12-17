@@ -47,6 +47,8 @@ class EMU3(lmms):
         do_check_aspect_ratio: bool = False,
         skip_text_only: bool = True,
         skip_multi_image: bool = True,
+        debug_samples: bool = False,
+        num_debug_samples: int = 5,
         **kwargs,
     ):
         super().__init__()
@@ -99,6 +101,9 @@ class EMU3(lmms):
         self.use_cache = use_cache
         self.skip_text_only = skip_text_only
         self.skip_multi_image = skip_multi_image
+        self.debug_samples = debug_samples
+        self.num_debug_samples = num_debug_samples
+        self._debug_samples_printed = 0  # Counter for tracking printed samples
 
         # Prepare models for distributed training if needed
         if accelerator.num_processes > 1:
@@ -122,6 +127,8 @@ class EMU3(lmms):
         self.processor = Emu3Processor(image_processor, image_tokenizer, self._tokenizer)
 
         eval_logger.info(f"EMU3 model loaded successfully on rank {self.rank}/{self.world_size}")
+        if self.debug_samples and self.rank == 0:
+            eval_logger.info(f"Debug mode enabled: will print first {self.num_debug_samples} samples")
 
         # Report model sizes and GPU memory usage on each rank
         device_idx = self._device.index if self._device.type == "cuda" else None
@@ -299,6 +306,16 @@ class EMU3(lmms):
                 res.append(ans)
                 self.cache_hook.add_partial("generate_until", (item["context"], gen_kwargs), ans)
                 pbar.update(1)
+
+                # Debug sample output (only on rank 0 to avoid duplicates in multi-GPU)
+                if self.debug_samples and self._debug_samples_printed < self.num_debug_samples and self.rank == 0:
+                    self._debug_samples_printed += 1
+                    eval_logger.info("=" * 80)
+                    eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/{self.num_debug_samples}")
+                    eval_logger.info("=" * 80)
+                    eval_logger.info(f"PROMPT: {item['text']}")
+                    eval_logger.info(f"ANSWER: {ans}")
+                    eval_logger.info("=" * 80)
 
                 eval_logger.debug(f"Question: {item['text']}")
                 eval_logger.debug(f"Model Response: {ans}")

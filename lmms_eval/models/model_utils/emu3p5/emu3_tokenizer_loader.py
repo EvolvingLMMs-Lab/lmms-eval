@@ -38,7 +38,7 @@ def load_emu3_tokenizer(
     """
     try:
         eval_logger.info(
-            f"Loading Emu3.5 tokenizer from {pretrained_path} with "
+            f"Loading Emu3.5 Text tokenizer from {pretrained_path} with "
             f"trust_remote_code={trust_remote_code}"
         )
 

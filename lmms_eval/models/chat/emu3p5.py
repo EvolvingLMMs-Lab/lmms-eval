@@ -1,3 +1,6 @@
+import os
+import sys
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -5,7 +8,7 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoModel, AutoModelForCausalLM
+from transformers import AutoTokenizer
 from transformers.generation.configuration_utils import GenerationConfig
 
 from lmms_eval import utils
@@ -16,13 +19,33 @@ from lmms_eval.protocol import ChatMessages
 from lmms_eval.models.model_utils.emu3p5.download_utils import (
     ensure_local_weights,
 )
-from lmms_eval.models.model_utils.emu3p5.emu3_5_image_processor import (
-    Emu3_5VisionVQImageProcessor,
-)
-from lmms_eval.models.model_utils.emu3.emu3_input_processor import Emu3Processor
 from lmms_eval.models.model_utils.emu3p5.emu3_tokenizer_loader import (
-    load_emu3_tokenizer,
+    load_emu3_tokenizer
 )
+from lmms_eval.models.model_utils.emu3p5.emu3p5_input_processor import Emu3p5Processor
+from lmms_eval.models.model_utils.memory_utils import print_memory_stats
+
+# Check if Emu3.5 submodule is initialized
+_current_file = Path(__file__).resolve()
+_repo_root = _current_file.parents[3]  # Go up to lmms-eval root
+_emu35_src_path = _repo_root / "external" / "Emu3.5" / "src"
+_emu35_modeling_file = _emu35_src_path / "emu3p5" / "modeling_emu3.py"
+
+if not _emu35_modeling_file.exists():
+    eval_logger.error(
+        "Emu3.5 submodule is not initialized. Please run the following commands:\n"
+        f"  cd {_repo_root}\n"
+        "  git submodule update --init --recursive external/Emu3.5\n"
+    )
+    sys.exit(1)
+
+# Add external Emu3.5 to path
+if str(_emu35_src_path) not in sys.path:
+    sys.path.insert(0, str(_emu35_src_path))
+
+# Import Emu3 classes from external directory
+from emu3p5 import Emu3Config, Emu3ForCausalLM
+from vision_tokenizer import build_vision_tokenizer
 
 
 
@@ -46,12 +69,14 @@ class EMU3_5(lmms):
         attn_implementation: Optional[str] = "flash_attention_2",
         trust_remote_code: bool = True,
         torch_dtype: torch.dtype = torch.bfloat16,
+        image_tokenizer_dtype: Optional[torch.dtype] = None,
         use_cache: bool = True,
         emu3_min_pixels: int = 512 * 512,
         emu3_max_pixels: int = 1024 * 1024,
-        do_check_aspect_ratio: bool = False,
         skip_text_only: bool = True,
         skip_multi_image: bool = True,
+        debug_samples: bool = False,
+        num_debug_samples: int = 5,
         **kwargs,
     ):
         super().__init__()
@@ -70,20 +95,25 @@ class EMU3_5(lmms):
             pretrained, "BAAI/Emu3.5", accelerator=accelerator
         )
 
-        # Load main model
+        # Load main model using Emu3ForCausalLM directly
         eval_logger.info(f"Loading EMU3.5 model from {pretrained}")
-        self._model = AutoModelForCausalLM.from_pretrained(
+        model_config = Emu3Config.from_pretrained(
             pretrained,
+            trust_remote_code=trust_remote_code,
+        )
+        self._model = Emu3ForCausalLM.from_pretrained(
+            pretrained,
+            config=model_config,
             device_map=device_map if accelerator.num_processes == 1 else None,
             torch_dtype=torch_dtype,
             attn_implementation=attn_implementation,
-            trust_remote_code=trust_remote_code,
         ).eval()
 
         # Load tokenizer (with fallback handling for missing tokenization file)
-        eval_logger.info(f"Loading EMU3.5 Text Tokenizer from {pretrained}")
+        txt_tok_path = _emu35_src_path / "tokenizer_emu3_ibq"
+        eval_logger.info(f"Loading EMU3.5 Text Tokenizer from {txt_tok_path}")
         self._txt_tokenizer = load_emu3_tokenizer(
-            pretrained, trust_remote_code=trust_remote_code, padding_side="left"
+            str(txt_tok_path), trust_remote_code=trust_remote_code, padding_side="left"
         )
 
         # Ensure vision tokenizer weights are available locally
@@ -91,30 +121,36 @@ class EMU3_5(lmms):
             vq_hub, "BAAI/Emu3.5-VisionTokenizer", accelerator=accelerator
         )
 
-        # Load image processor (local modified) and image tokenizer
-        eval_logger.info(f"Loading EMU3.5 Vision Pre-Processor from {vq_hub}")
-        image_processor = Emu3_5VisionVQImageProcessor.from_pretrained(
-            vq_hub,
-            trust_remote_code=trust_remote_code,
+        eval_logger.info(f"Loading EMU3.5 Vision Tokenizer from {vq_hub}")
+        # Use build_vision_tokenizer for loading the IBQ vision tokenizer
+        vq_device = self.device_map if self.device_map != "auto" else self._device
+        vq_kwargs = {}
+        if image_tokenizer_dtype is not None:
+            vq_kwargs["dtype"] = image_tokenizer_dtype
+        image_tokenizer = build_vision_tokenizer(
+            type="ibq",
+            model_path=vq_hub,
+            device=vq_device,
+            **vq_kwargs,
+        )
+
+        self.processor = Emu3p5Processor(
+            vision_tokenizer=image_tokenizer,
+            tokenizer=self._txt_tokenizer,
             min_pixels=emu3_min_pixels,
             max_pixels=emu3_max_pixels,
-            do_check_aspect_ratio=do_check_aspect_ratio,
         )
-        eval_logger.info(f"Loading EMU3.5 Vision Tokenizer from {vq_hub}")
-        image_tokenizer = AutoModel.from_pretrained(vq_hub,
-                                                    device_map=self.device_map,
-                                                    trust_remote_code=trust_remote_code).eval()
-
-        # Create EMU3.5 processor (Use same as EMU3 -> Same format)
-        self.processor = Emu3Processor(image_processor, image_tokenizer, self._txt_tokenizer)
 
         # Set instance variables
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
         self.skip_text_only = skip_text_only
         self.skip_multi_image = skip_multi_image
+        self.debug_samples = debug_samples
+        self.num_debug_samples = num_debug_samples
+        self._debug_samples_printed = 0  # Counter for tracking printed samples
 
-        # Prepare model for distributed training if needed
+        # Prepare models for distributed training if needed
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
@@ -122,8 +158,10 @@ class EMU3_5(lmms):
             ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self._model)
+                image_tokenizer = accelerator.prepare(image_tokenizer)
             else:
                 self._model = accelerator.prepare_model(self._model, evaluation_mode=True)
+                image_tokenizer = accelerator.prepare_model(image_tokenizer, evaluation_mode=True)
             self._rank = accelerator.local_process_index
             self._world_size = accelerator.num_processes
         else:
@@ -131,6 +169,18 @@ class EMU3_5(lmms):
             self._world_size = 1
 
         eval_logger.info(f"EMU3.5 model loaded successfully on rank {self.rank}/{self.world_size}")
+        if self.debug_samples and self.rank == 0:
+            eval_logger.info(f"Debug mode enabled: will print first {self.num_debug_samples} samples")
+
+        # Report model sizes and GPU memory usage on each rank
+        device_idx = self._device.index if self._device.type == "cuda" else None
+        print_memory_stats(
+            main_model=self._model,
+            image_tokenizer=image_tokenizer,
+            accelerator=self.accelerator,
+            device_idx=device_idx,
+            rank=self.rank,
+        )
 
     @property
     def model(self):
@@ -248,18 +298,17 @@ class EMU3_5(lmms):
             images = [item["image"] for item in sample_data]
 
             # Convert image URLs to PIL Images if needed
-            processed_images = []
+            loaded_images = []
             for img in images:
                 if isinstance(img, str):
-                    processed_images.append(Image.open(img))
+                    loaded_images.append(Image.open(img))
                 else:
-                    processed_images.append(img)
+                    loaded_images.append(img)
 
-            # Process inputs for EMU3.5
+            # Process inputs for EMU3.5 - for EMU3.5 we only perform sequential processing for now
             inputs = self.processor(
                 text=texts,
-                image=processed_images if processed_images else None,
-                mode="U",  # Understanding mode
+                image=loaded_images if loaded_images else None,
                 return_tensors="pt",
                 padding="longest",
             )
@@ -288,10 +337,10 @@ class EMU3_5(lmms):
             # Filter inputs to only include keys accepted by model.generate()
             model_inputs = {
                 "input_ids": inputs["input_ids"],
-                "attention_mask": inputs["attention_mask"],
+                "attention_mask": inputs["attention_mask"]
             }
 
-            with torch.no_grad():
+            with torch.inference_mode():
                 outputs = self.model.generate(**model_inputs, generation_config=generation_config)
 
             # Trim input_ids from outputs
@@ -302,6 +351,16 @@ class EMU3_5(lmms):
                 res.append(ans)
                 self.cache_hook.add_partial("generate_until", (item["context"], gen_kwargs), ans)
                 pbar.update(1)
+
+                # Debug sample output (only on rank 0 to avoid duplicates in multi-GPU)
+                if self.debug_samples and self._debug_samples_printed < self.num_debug_samples and self.rank == 0:
+                    self._debug_samples_printed += 1
+                    eval_logger.info("=" * 80)
+                    eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/{self.num_debug_samples}")
+                    eval_logger.info("=" * 80)
+                    eval_logger.info(f"PROMPT: {item['text']}")
+                    eval_logger.info(f"ANSWER: {ans}")
+                    eval_logger.info("=" * 80)
 
                 eval_logger.debug(f"Question: {item['text']}")
                 eval_logger.debug(f"Model Response: {ans}")
