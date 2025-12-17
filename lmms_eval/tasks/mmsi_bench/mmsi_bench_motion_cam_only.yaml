@@ -1,0 +1,32 @@
+dataset_path: RunsenXu/MMSI-Bench
+
+task: "mmsi_bench_motion_cam_only"
+dataset_kwargs:
+  token: True
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.msr_doc_to_visual
+doc_to_text: !function utils.msr_doc_to_text_with_gen_prompt
+doc_to_target: "answer"
+process_results: !function utils.msr_process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly. Enclose the option's letter within ``."
+    generation_prompt: "Given two consecutive first-person images of the same scene, generate an auxiliary schematic visualization that illustrates the relative motion between Frame 1 and Frame 2. Requirements: - Do NOT add new scene content. - Represent major static landmarks as simplified shapes or outlines. - Overlay arrows indicating the apparent displacement of these landmarks from Frame 1 to Frame 2. - Nearby objects should have longer arrows than distant objects. - Use consistent arrow directions for all landmarks. - The diagram should be abstract, clean, and geometry-focused, not photorealistic. - No labels indicating the final answer."
+
+
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  do_sample: False
+
+
+metric_list:
+  - metric: Motion (Cam.)
+    aggregation: !function utils.msr_aggregate_results
+    higher_is_better: true
+
+metadata:
+  - version: 0.0

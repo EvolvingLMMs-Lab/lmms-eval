@@ -223,14 +223,14 @@ class BagelVisualCoT(lmms):
             pil_image = Image.open(image_path).convert("RGB")
 
             # Call Bagel inferencer with image input for visual understanding
-            # Note: This assumes inferencer accepts 'images' parameter
             result = self.bagel.inferencer(
+                image=pil_image,  # Use 'image' not 'images'
                 text=question,
-                images=[pil_image],
+                understanding_output=True,
                 think=False,
                 max_new_tokens=self.stage2_max_new_tokens,
-                temperature=self.stage2_temperature,
                 do_sample=self.stage2_do_sample,
+                text_temperature=self.stage2_temperature,
             )
 
             answer_text = result.get("text", "")
@@ -295,9 +295,23 @@ class BagelVisualCoT(lmms):
         for request in requests:
             contexts, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
 
-            # Generate visualization prompt using template
-            # The template can use {question} placeholder which will be replaced with contexts
-            generation_prompt = self.generation_prompt_template.format(question=contexts)
+            # Parse contexts to extract generation_prompt if provided
+            import re
+            gen_prompt_match = re.search(r'\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]', contexts, re.DOTALL)
+            question_match = re.search(r'\[QUESTION\](.*?)\[/QUESTION\]', contexts, re.DOTALL)
+
+            if gen_prompt_match and question_match:
+                # Use custom generation prompt from task config
+                custom_gen_prompt = gen_prompt_match.group(1).strip()
+                actual_question = question_match.group(1).strip()
+                generation_prompt = custom_gen_prompt.replace("{question}", actual_question)
+                # Update contexts to be just the question for stage 2
+                contexts = contexts.replace(f"[GEN_PROMPT]{gen_prompt_match.group(1)}[/GEN_PROMPT]", "")
+                contexts = contexts.replace(f"[QUESTION]{question_match.group(1)}[/QUESTION]", question_match.group(1))
+                eval_logger.info("Using custom generation prompt from task config")
+            else:
+                # Use default template
+                generation_prompt = self.generation_prompt_template.format(question=contexts)
 
             eval_logger.info(f"\n{'='*60}")
             eval_logger.info(f"Processing doc {doc_id} from task {task}")

@@ -22,12 +22,36 @@ def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return question
 
 
+def msr_doc_to_text_with_gen_prompt(doc, lmms_eval_specific_kwargs=None):
+    """
+    Version for visual CoT models that includes generation prompt in a parseable format
+    """
+    question = doc["question"].strip()
+
+    # Add generation prompt as a special marker if provided
+    if "generation_prompt" in lmms_eval_specific_kwargs:
+        gen_prompt = lmms_eval_specific_kwargs["generation_prompt"]
+        # Format: [GEN_PROMPT]...[/GEN_PROMPT][QUESTION]...[/QUESTION]
+        question = f"[GEN_PROMPT]{gen_prompt}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
+
+    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
+        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
+    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
+        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
+
+    return question
+
+
 def msr_doc_to_visual(doc):
-    # image_list = [image.convert("RGB") for image in doc["images"]]
     image_list = []
     for img_data in doc["images"]:
-        image = Image.open(io.BytesIO(img_data))
-        image = image.convert("RGB")
+        # Check if already a PIL Image object
+        if isinstance(img_data, Image.Image):
+            image = img_data.convert("RGB")
+        else:
+            # If bytes data, decode it
+            image = Image.open(io.BytesIO(img_data))
+            image = image.convert("RGB")
         image_list.append(image)
     return image_list
 

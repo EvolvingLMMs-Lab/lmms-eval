@@ -34,12 +34,24 @@ else:
 class Bagel(lmms):
     """
     Bagel Multimodal Model
-    Supports text-to-image generation with optional thinking process
+    Supports both image understanding and text-to-image generation
 
-    Example usage:
+    Modes:
+        - "understanding": Visual understanding (image + text -> text)
+        - "generation": Image generation (text -> image)
+
+    Example usage for understanding:
     accelerate launch -m lmms_eval \
         --model bagel \
-        --model_args pretrained=/path/to/BAGEL-7B-MoT,mode=1 \
+        --model_args pretrained=/path/to/BAGEL-7B-MoT,mode=understanding \
+        --tasks mmbench \
+        --batch_size 1 \
+        --output_path ./logs/
+
+    Example usage for generation:
+    accelerate launch -m lmms_eval \
+        --model bagel \
+        --model_args pretrained=/path/to/BAGEL-7B-MoT,mode=generation \
         --tasks ueval \
         --batch_size 1 \
         --output_path ./logs/
@@ -48,6 +60,7 @@ class Bagel(lmms):
     def __init__(
         self,
         pretrained: str,
+        mode: str = "generation",
         load_in_4bit: bool = False,
         load_in_8bit: bool = False,
         output_image_dir: Optional[str] = None,
@@ -59,6 +72,7 @@ class Bagel(lmms):
         cfg_renorm_min: float = 0.0,
         cfg_renorm_type: str = "global",
         max_think_token_n: int = 1024,
+        max_new_tokens: int = 512,
         do_sample: bool = False,
         text_temperature: float = 0.3,
         seed: int = 0,
@@ -68,6 +82,13 @@ class Bagel(lmms):
         **kwargs,
     ) -> None:
         super().__init__()
+
+        # Validate mode
+        if mode not in ["understanding", "generation"]:
+            raise ValueError(f"mode must be 'understanding' or 'generation', got '{mode}'")
+
+        self.mode = mode
+        self.max_new_tokens = max_new_tokens
 
         # Import Bagel dependencies
         try:
@@ -369,6 +390,35 @@ class Bagel(lmms):
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
+    def understand_image(self, prompt: str, image, doc_id: str) -> str:
+        """
+        Understand image and answer question
+
+        Args:
+            prompt: Input text prompt/question
+            image: PIL Image to understand
+            doc_id: Document ID for logging
+
+        Returns:
+            Generated text answer
+        """
+        self.set_seed(self.seed)
+
+        # Call inferencer in understanding mode
+        result = self.inferencer(
+            image=image,
+            text=prompt,
+            understanding_output=True,
+            think=self.show_thinking,
+            max_think_token_n=self.max_new_tokens if self.show_thinking else self.max_new_tokens,
+            do_sample=self.do_sample,
+            text_temperature=self.text_temperature,
+        )
+
+        # Extract text answer
+        output_text = result.get("text", "")
+        return output_text
+
     def generate_text_and_image(self, prompt: str, doc_id: str, task: str) -> Tuple[str, List[str]]:
         """
         Generate text and image from prompt
@@ -420,6 +470,16 @@ class Bagel(lmms):
         output_dict = {"text": text, "images": images}
         return json.dumps(output_dict, ensure_ascii=False)
 
+    def flatten(self, input_list):
+        """Flatten a nested list"""
+        output = []
+        for item in input_list:
+            if isinstance(item, list):
+                output.extend(self.flatten(item))
+            else:
+                output.append(item)
+        return output
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """Main inference method"""
         res = []
@@ -428,7 +488,7 @@ class Bagel(lmms):
         def get_uuid(task, split, doc_id):
             return f"{task}___{split}___{doc_id}"
 
-        for contexts, _, _, doc_id, task, split in [reg.args for reg in requests]:
+        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             doc_uuid = get_uuid(task, split, doc_id)
 
             # Check cache
@@ -440,12 +500,37 @@ class Bagel(lmms):
                         pbar.update(1)
                         continue
 
-            # Generate
             prompt = contexts
-            output_text, output_images = self.generate_text_and_image(prompt, str(doc_id), task)
 
-            # Format output
-            formatted_output = self.format_output(output_text, output_images)
+            # Choose mode: understanding or generation
+            if self.mode == "understanding":
+                # Image understanding mode
+                if doc_to_visual is None:
+                    eval_logger.warning(f"No image provided for understanding mode, doc_id={doc_id}")
+                    res.append("")
+                    pbar.update(1)
+                    continue
+
+                # Get image from doc_to_visual
+                visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+                visuals = self.flatten(visuals)
+
+                if not visuals or len(visuals) == 0:
+                    eval_logger.warning(f"No visual data found for doc_id={doc_id}")
+                    res.append("")
+                    pbar.update(1)
+                    continue
+
+                # Use first image for understanding
+                image = visuals[0]
+                output_text = self.understand_image(prompt, image, str(doc_id))
+                formatted_output = output_text
+
+            else:
+                # Image generation mode
+                output_text, output_images = self.generate_text_and_image(prompt, str(doc_id), task)
+                formatted_output = self.format_output(output_text, output_images)
+
             res.append(formatted_output)
 
             # Update cache

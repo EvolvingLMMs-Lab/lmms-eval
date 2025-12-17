@@ -2,7 +2,7 @@ dataset_path: neulab/VisualPuzzles
 dataset_kwargs:
   token: True
 task: "VisualPuzzles_direct"
-test_split: train
+test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.VisualPuzzles_doc_to_visual
 doc_to_text: !function utils.VisualPuzzles_doc_to_text

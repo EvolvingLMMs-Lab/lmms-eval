@@ -1,0 +1,44 @@
+dataset_path: neulab/VisualPuzzles
+dataset_kwargs:
+  token: True
+task: "VisualPuzzles_direct_categorized"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.VisualPuzzles_doc_to_visual
+doc_to_text: !function utils.VisualPuzzles_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.VisualPuzzles_process_result
+
+# Metrics for each category
+metric_list:
+  - metric: inductive
+    aggregation: !function utils.VisualPuzzles_aggregate_results
+    higher_is_better: true
+  - metric: spatial
+    aggregation: !function utils.VisualPuzzles_aggregate_results
+    higher_is_better: true
+  - metric: deductive
+    aggregation: !function utils.VisualPuzzles_aggregate_results
+    higher_is_better: true
+  - metric: analogical
+    aggregation: !function utils.VisualPuzzles_aggregate_results
+    higher_is_better: true
+  - metric: algorithmic
+    aggregation: !function utils.VisualPuzzles_aggregate_results
+    higher_is_better: true
+  - metric: average
+    aggregation: !function utils.VisualPuzzles_aggregate_results
+    higher_is_better: true
+
+metadata:
+  - version: 0.0
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "MULTI_CHOICE_DIRECT_PROMPT"
