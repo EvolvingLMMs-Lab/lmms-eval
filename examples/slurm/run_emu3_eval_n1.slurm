@@ -83,8 +83,11 @@ cd "$EVAL_DIR" || exit
 pip uninstall jupyterlab -y  # Uninstall conflicting package
 pip install -e .
 
-#echo "📦 Install Emu3 specific versions"
-#pip install -e .[emu3]
+echo "📦 Installing task-specific dependencies..."
+source "${EVAL_DIR}/examples/install_task_deps.sh" "${TASKS}" "${EVAL_DIR}"
+
+echo "📦 Install Emu3 specific versions"
+pip install -e .[emu3]
 
 echo "<<New Packages>>"
 pip list
