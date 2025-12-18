@@ -40,6 +40,19 @@ EMU3_MAX_PIXELS="${EMU3_MAX_PIXELS:-1048576}"    # 1024*1024
 export HF_HOME="${HF_HOME:-~/.cache/huggingface}"
 export HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-1}"
 
+# SETUP Dependencies
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+# Install task-specific dependencies
+echo "📦 Installing task-specific dependencies..."
+source "${REPO_ROOT}/examples/install_task_deps.sh" "${TASKS}" "${REPO_ROOT}"
+
+# Install Emu3 model dependencies
+echo "📦 Installing Emu3 model dependencies..."
+cd "${REPO_ROOT}" || exit 1
+pip install -e .[emu3]
+
 # ========== Print Configuration ==========
 echo "======================================"
 echo "Llama-Emu3 Benchmark Configuration"

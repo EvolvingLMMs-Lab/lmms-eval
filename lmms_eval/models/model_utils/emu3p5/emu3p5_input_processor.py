@@ -165,10 +165,77 @@ class Emu3p5Processor:
         doc = self.txt_tokenizer.decode(*args, **kwargs)
         return doc
 
+    @torch.no_grad()
+    def encode_and_inject_vision_tokens(
+        self,
+        texts: List[str],
+        images: List[List[Image.Image]],
+        image_placeholder: str = "<image>",
+        **kwargs,
+    ) -> BatchFeature:
+        """
+        Process texts with image placeholders and inject IBQ vision tokens.
+
+        This method accepts texts that already have a chat template applied,
+        containing image placeholder markers. It encodes images using IBQ
+        and replaces the placeholders with formatted token strings.
+
+        Args:
+            texts: List of strings with chat template already applied,
+                   containing image_placeholder markers where images should be inserted
+            images: List of image lists, one list per text (supports multiple images per text)
+            image_placeholder: Token to replace with vision tokens (e.g., "<|image|>", "<image>")
+            **kwargs: Tokenization kwargs (return_tensors, padding, etc.)
+
+        Returns:
+            BatchFeature with input_ids and attention_mask
+
+        Raises:
+            ValueError: If number of placeholders doesn't match number of images
+        """
+        processed_texts = []
+
+        #iterate through samples one by one and encode images
+        for text, img_list in zip(texts, images):
+            # Count expected placeholders
+            num_placeholders = text.count(image_placeholder)
+            if num_placeholders != len(img_list):
+                raise ValueError(
+                    f"Mismatch: {num_placeholders} placeholders in text "
+                    f"but {len(img_list)} images provided"
+                )
+
+            # Encode all images for this text
+            if len(img_list) > 0:
+                # Process each image via IBQ
+                for img in img_list:
+                    # Calculate target area (same logic as tokenize_image)
+                    w, h = img.size
+                    curr_area = w * h
+                    target_area = max(min(self.max_pixels, curr_area), self.min_pixels)
+
+                    # Build image via IBQ (returns formatted string with special tokens)
+                    image_string = build_image(
+                        img, target_area, self.txt_tokenizer, self.vision_tokenizer
+                    )
+
+                    # Replace first occurrence only to maintain order
+                    text = text.replace(image_placeholder, image_string, 1)
+
+            processed_texts.append(text)
+
+        # Tokenize the final texts (add_special_tokens=False since template already applied)
+        text_inputs = self.txt_tokenizer(
+            processed_texts, add_special_tokens=False, **kwargs
+        )
+        return BatchFeature(
+            data={**text_inputs}, tensor_type=kwargs.get("return_tensors")
+        )
+
     def tokenize_image(self, image: List[Image.Image]):
         """
         Tokenize images using IBQ vision tokenizer. FOR NOW ONLY SEQUENTIALLY SUPPORTED!
-        
+
         Smart resize of image normalization applied here!
 
         Return list of image strings.
@@ -176,7 +243,7 @@ class Emu3p5Processor:
         image_strings=[]
         for img in image:
             w, h = img.size
-            curr_area = w * h 
+            curr_area = w * h
             target_area = max(min(self.max_pixels, curr_area), self.min_pixels)
             image_strings.append(build_image(img, target_area, self.txt_tokenizer, self.vision_tokenizer))
 
