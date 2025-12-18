@@ -19,7 +19,6 @@ JUST WITH GENERATION RELATED CODE REMOVED TO KEEP DEPENDENCIES MINIMAL
 """
 
 from math import ceil
-import re
 from typing import List, Optional, Sequence
 
 from PIL import Image
@@ -194,6 +193,7 @@ class Emu3Processor(ProcessorMixin):
         return list(dict.fromkeys(tokenizer_input_names + image_processor_input_names))
 
     def to_imgstr(self, image_tokens):
+        """Convert vision tokens ids to image string (excluding several special tokens bit including eol)"""
         image_tokens = image_tokens.cpu().numpy().tolist()
         image_token_str = [
             [
@@ -206,7 +206,76 @@ class Emu3Processor(ProcessorMixin):
         imgstr = self.tokenizer.eol_token.join(image_row_str)
         return imgstr
 
+    @torch.no_grad()
+    def encode_and_inject_vision_tokens(
+        self,
+        texts: List[str],
+        images: List[List[Image.Image]],
+        image_placeholder: str = "<image>",
+        padding_image: bool = False,
+        **kwargs,
+    ) -> BatchFeature:
+        """
+        Process texts with image placeholders and inject vision tokens.
+
+        This method accepts texts that already have a chat template applied,
+        containing image placeholder markers. It encodes images to discrete
+        vision tokens and replaces the placeholders with token strings.
+
+        Args:
+            texts: List of strings with chat template already applied,
+                   containing image_placeholder markers where images should be inserted
+            images: List of image lists, one list per text (supports multiple images per text)
+            image_placeholder: Token to replace with vision tokens (e.g., "<|image|>", "<image>")
+            padding_image: Whether to pad images to same size
+            **kwargs: Tokenization kwargs (return_tensors, padding, etc.)
+
+        Returns:
+            BatchFeature with input_ids and attention_mask
+
+        Raises:
+            ValueError: If number of placeholders doesn't match number of images
+        """
+        processed_texts = []
+
+        for text, img_list in zip(texts, images):
+            # Count expected placeholders
+            num_placeholders = text.count(image_placeholder)
+            if num_placeholders != len(img_list):
+                raise ValueError(
+                    f"Mismatch: {num_placeholders} placeholders in text "
+                    f"but {len(img_list)} images provided"
+                )
+
+            # Encode all images for this text
+            if len(img_list) > 0:
+                image_tokens = self.tokenize_image(img_list, padding_image=padding_image)
+
+                # Replace placeholders with vision token strings (with special tokens)
+                for tokens in image_tokens:
+                    h, w = tokens.shape
+                    imgstr = self.to_imgstr(tokens)
+                    # Wrap with EMU3 special tokens (same as in __call__ mode='U')
+                    image_prompt = (
+                        self.tokenizer.boi_token
+                        + self.prefix_template.format(H=h, W=w)
+                        + self.tokenizer.img_token
+                        + imgstr
+                        + self.tokenizer.eol_token
+                        + self.tokenizer.eof_token
+                        + self.tokenizer.eoi_token
+                    )
+                    # Replace first occurrence only to maintain order
+                    text = text.replace(image_placeholder, image_prompt, 1)
+
+            processed_texts.append(text)
+
+        # Tokenize the final texts
+        text_inputs = self.tokenizer(processed_texts, **kwargs)
+        return BatchFeature(data={**text_inputs}, tensor_type=kwargs.get("return_tensors"))
+
     def tokenize_image(self, image: List[Image.Image], *, padding_image: bool = False):
+        """Given a list of PIL images, preprocesses & tokenizes them and return a list of tokenized images."""
         is_all_same_size, prev_size = True, None
         for im in image:
             if prev_size is not None:
