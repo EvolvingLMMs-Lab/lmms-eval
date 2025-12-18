@@ -1,0 +1,12 @@
+dataset_path: cplou99/FALCON-Bench
+dataset_kwargs:
+  token: True
+  cache_dir: falconbench
+  video: True
+  force_download: False
+  local_files_only: True
+test_split: test
+doc_to_visual: !function utils.FALCONbench_doc_to_visual_fullvideo
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt:  "Answer the following question based on the provided frames.\n"
