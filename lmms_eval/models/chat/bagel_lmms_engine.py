@@ -277,6 +277,8 @@ class BagelLmmsEngine(lmms):
     def format_output(self, text: str, images: List[str]) -> str:
         """Format output as JSON string"""
         output_dict = {"text": text, "images": images}
+        if len(images) == 0:
+            return text
         return json.dumps(output_dict, ensure_ascii=False)
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
