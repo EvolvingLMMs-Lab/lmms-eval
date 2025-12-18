@@ -4,6 +4,8 @@ import re
 from collections import defaultdict
 from typing import List, Tuple
 
+import librosa
+import numpy as np
 from loguru import logger as eval_logger
 
 DEFAULT_PRE_PROMPT = ""
@@ -107,13 +109,20 @@ def av_speakerbench_doc_to_audiovisual(doc):
 
 
 def av_speakerbench_doc_to_audio(doc):
-    """Return the audio-only clip path, joined with CACHE_ROOT."""
+    """
+    Return audio as a dict with waveform and sampling_rate for unified audio handling.
+    Falls back to the absolute path if loading fails.
+    """
     path = doc.get("audio_path")
     if not path:
         return []
-    path = os.path.join(CACHE_ROOT, path)
-    path = os.path.expanduser(path)
-    return [path]
+    abs_path = os.path.expanduser(os.path.join(CACHE_ROOT, path))
+    try:
+        audio, sr = librosa.load(abs_path, sr=None, mono=True)
+        return [{"array": audio.astype(np.float32), "sampling_rate": sr}]
+    except Exception as e:
+        eval_logger.warning(f"Failed to load audio {abs_path}: {e}")
+        return [abs_path]
 
 
 def av_speakerbench_doc_to_visual(doc):
