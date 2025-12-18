@@ -23,22 +23,22 @@ generation_kwargs:
 
 
 metric_list:
-  - metric: Positional Relationship (Obj.-Obj.)
+  - metric: Positional Relationship (Obj.–Obj.)
     aggregation: !function utils.msr_aggregate_results 
     higher_is_better: true
-  - metric: Positional Relationship (Cam.-Obj.)
+  - metric: Positional Relationship (Cam.–Obj.)
     aggregation: !function utils.msr_aggregate_results 
     higher_is_better: true
-  - metric: Positional Relationship (Cam.-Cam.)
+  - metric: Positional Relationship (Cam.–Cam.)
     aggregation: !function utils.msr_aggregate_results 
     higher_is_better: true
-  - metric: Positional Relationship (Obj.-Reg.)
+  - metric: Positional Relationship (Obj.–Reg.)
     aggregation: !function utils.msr_aggregate_results 
     higher_is_better: true
-  - metric: Positional Relationship (Cam.-Reg.)
+  - metric: Positional Relationship (Cam.–Reg.)
     aggregation: !function utils.msr_aggregate_results 
     higher_is_better: true
-  - metric: Positional Relationship (Reg.-Reg.)
+  - metric: Positional Relationship (Reg.–Reg.)
     aggregation: !function utils.msr_aggregate_results 
     higher_is_better: true
   - metric: Attribute (Meas.)
