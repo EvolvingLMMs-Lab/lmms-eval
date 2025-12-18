@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=a-infra01
 #SBATCH --job-name=eval-emu3p5
-#SBATCH --environment=emu3p5
+#SBATCH --environment=emu3
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --partition=normal
@@ -11,9 +11,13 @@
 #SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3p5_%j.out
 #SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3p5_%j.err
 
-TASKS="ai2d,vqav2,mme,mmmu"
-BATCH_SIZE=1
-MODEL="emu3p5"
+# Tasks for Math often need judge GPT: mathvista,mathvision. Tabmwp not implemented
+
+TASKS="mmmu_val_group_img,vqav2_val" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
+BATCH_SIZE=1  # for now only sequential processing possible for Emu3.5
+MODEL="emu3p5" 
+MODEL_ARGS=""
+#MODEL_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/emu3p5_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
@@ -63,6 +67,15 @@ echo "Eval-Repo-Location:   ${EVAL_DIR}"
 echo "========================================"
 echo ""
 
+# Run evaluation command
+echo "Running LM evaluation..."
+# Conditionally set/unset offline mode
+if [ "$OFFLINE_DATASETS" = "true" ]; then
+    export HF_DATASETS_OFFLINE=1
+else
+    unset HF_DATASETS_OFFLINE
+fi
+
 echo "###Setup Packages & environment#####"
 echo ""
 echo "<<Current Packages>>"
@@ -84,10 +97,15 @@ echo "<<New Packages>>"
 pip list
 echo ""
 
+# Construct model_args parameter if MODEL_ARGS is non-empty
+MODEL_ARGS_PARAM=""
+if [ -n "${MODEL_ARGS}" ]; then
+    MODEL_ARGS_PARAM="--model_args ${MODEL_ARGS}"
+fi
 
 accelerate launch -m lmms_eval \
     --model "${MODEL}" \
-    --model_args "${MODEL_ARGS}" \
+    ${MODEL_ARGS_PARAM} \
     --tasks "${TASKS}" \
     --batch_size "${BATCH_SIZE}" \
     --output_path "${RES_PATH}"

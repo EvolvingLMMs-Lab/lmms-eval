@@ -26,3 +26,14 @@ accelerate launch --num_processes=1 --main_process_port=12346 -m lmms_eval \
     --tasks "${TASKS}" \
     --batch_size 1 \
     --device cuda:0
+
+# Debug mode: Print first N samples (prompts and answers) to console
+# Useful for verifying model behavior and debugging issues
+# Example: Print first 10 samples
+# accelerate launch --num_processes=1 --main_process_port=12346 -m lmms_eval \
+#     --model emu3 \
+#     --model_args attn_implementation=flash_attention_2,debug_samples=true,num_debug_samples=10 \
+#     --tasks mme,ai2d,vqav2,gqa \
+#     --batch_size 1 \
+#     --device cuda:0
+

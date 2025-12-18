@@ -7,13 +7,15 @@
 #SBATCH --partition=normal
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
-#SBATCH --time=12:00:00
+#SBATCH --time=11:59:00
 #SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.out
 #SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.err
 
-TASKS="mme" #ai2d,vqav2_test,mme,mmmu"
-BATCH_SIZE=2
+TASKS="vqav2_val,mmmu_val_group_img" #"pope,gqa,vqav2_val,mmmu_val_group_img,mme,ai2d,docvqa,infovqa,ocrbench_v2,chartqa"
+BATCH_SIZE=1
 MODEL="emu3"
+MODEL_ARGS=""
+#MODEL_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/emu3_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
@@ -44,7 +46,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Automatically get number of available GPUS to configure accelerate properöy
+# Automatically get number of available GPUS to configure accelerate properly
 NUM_GPUS=$(echo "$CUDA_VISIBLE_DEVICES" | awk -F',' '{print NF}')
 echo "Number of GPUs available: $NUM_GPUS"
 echo "GPUS: $CUDA_VISIBLE_DEVICES"
@@ -86,17 +88,22 @@ pip install -e .
 echo "📦 Installing task-specific dependencies..."
 source "${EVAL_DIR}/examples/install_task_deps.sh" "${TASKS}" "${EVAL_DIR}"
 
-echo "📦 Install Emu3 specific versions"
-pip install -e .[emu3]
+#echo "📦 Install Emu3 specific versions"
+#pip install -e .[emu3]
 
 echo "<<New Packages>>"
 pip list
 echo ""
 
+# Construct model_args parameter if MODEL_ARGS is non-empty
+MODEL_ARGS_PARAM=""
+if [ -n "${MODEL_ARGS}" ]; then
+    MODEL_ARGS_PARAM="--model_args ${MODEL_ARGS}"
+fi
 
 accelerate launch -m lmms_eval \
     --model "${MODEL}" \
-    --model_args "${MODEL_ARGS}" \
+    ${MODEL_ARGS_PARAM} \
     --tasks "${TASKS}" \
     --batch_size "${BATCH_SIZE}" \
     --output_path "${RES_PATH}"
