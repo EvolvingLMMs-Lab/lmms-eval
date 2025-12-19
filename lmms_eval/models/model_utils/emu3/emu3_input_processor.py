@@ -77,6 +77,42 @@ class Emu3Processor(ProcessorMixin):
 
         super().__init__(image_processor, tokenizer, chat_template=chat_template)
 
+        # Cache special tokens for performance
+        self._cache_special_tokens()
+
+    def _cache_special_tokens(self) -> None:
+        """Cache special tokens for efficient access during processing."""
+        # Try to access token attributes first, fall back to token strings if needed
+        try:
+            self.bos_token = self.tokenizer.bos_token
+        except AttributeError:
+            self.bos_token = "<|bos|>"
+
+        try:
+            self.boi_token = self.tokenizer.boi_token
+        except AttributeError:
+            self.boi_token = "<|img_start|>"
+
+        try:
+            self.img_token = self.tokenizer.img_token
+        except AttributeError:
+            self.img_token = "<|img_token_start|>"
+
+        try:
+            self.eol_token = self.tokenizer.eol_token
+        except AttributeError:
+            self.eol_token = "<|img_end_of_row|>"
+
+        try:
+            self.eof_token = self.tokenizer.eof_token
+        except AttributeError:
+            self.eof_token = "<|img_end_of_frame|>"
+
+        try:
+            self.eoi_token = self.tokenizer.eoi_token
+        except AttributeError:
+            self.eoi_token = "<|img_end|>"
+
     @torch.no_grad()
     def __call__(
         self,
@@ -149,18 +185,18 @@ class Emu3Processor(ProcessorMixin):
 
         prompt_list, size_list = [], []
         for idx, text_prompt in enumerate(text):
-            prompt = self.tokenizer.bos_token
+            prompt = self.bos_token
             if mode == 'U':
                 h, w = image_tokens[idx].shape
                 imgstr = self.to_imgstr(image_tokens[idx])
                 image_prompt = (
-                    self.tokenizer.boi_token +
+                    self.boi_token +
                     self.prefix_template.format(H=h, W=w) +
-                    self.tokenizer.img_token +
+                    self.img_token +
                     imgstr +
-                    self.tokenizer.eol_token +
-                    self.tokenizer.eof_token +
-                    self.tokenizer.eoi_token
+                    self.eol_token +
+                    self.eof_token +
+                    self.eoi_token
                 )
                 prompt += self.chat_template.format(image_prompt=image_prompt, text_prompt=text_prompt)
             else:
@@ -203,7 +239,7 @@ class Emu3Processor(ProcessorMixin):
             for token_row in image_tokens
         ]
         image_row_str = ["".join(token_row) for token_row in image_token_str]
-        imgstr = self.tokenizer.eol_token.join(image_row_str)
+        imgstr = self.eol_token.join(image_row_str)
         return imgstr
 
     @torch.no_grad()
@@ -257,13 +293,13 @@ class Emu3Processor(ProcessorMixin):
                     imgstr = self.to_imgstr(tokens)
                     # Wrap with EMU3 special tokens (same as in __call__ mode='U')
                     image_prompt = (
-                        self.tokenizer.boi_token
+                        self.boi_token
                         + self.prefix_template.format(H=h, W=w)
-                        + self.tokenizer.img_token
+                        + self.img_token
                         + imgstr
-                        + self.tokenizer.eol_token
-                        + self.tokenizer.eof_token
-                        + self.tokenizer.eoi_token
+                        + self.eol_token
+                        + self.eof_token
+                        + self.eoi_token
                     )
                     # Replace first occurrence only to maintain order
                     text = text.replace(image_placeholder, image_prompt, 1)
