@@ -14,8 +14,13 @@
 TASKS="mmmu_val_group_img,vqav2_val" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
 BATCH_SIZE=1
 MODEL="llama_emu3"
-#MODEL_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
-MODEL_ARGS=""
+DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
+
+PRETRAINED="/users/rkreft/MLLM-infra01-folder/rkreft/Meg-Runs/image-extension/llama3-3b-SFT-15n-8192sl-240gbsz-0.9i-0.1t-stage2-base-ST-MASKED-PLW0.1-PACKED-eqsample-loss-SEED28/HF"
+TOKENIZER_PATH="/capstor/store/cscs/swissai/infra01/MLLM/llama3_vision_instruct_emu3_tokenizer"
+EMU3_MIN_PIXELS="${EMU3_MIN_PIXELS:-262144}"     # 512*512
+EMU3_MAX_PIXELS="${EMU3_MAX_PIXELS:-1048576}"    # 1024*1024
+
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/llama_emu3_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
@@ -51,6 +56,13 @@ NUM_GPUS=$(echo "$CUDA_VISIBLE_DEVICES" | awk -F',' '{print NF}')
 echo "Number of GPUs available: $NUM_GPUS"
 echo "GPUS: $CUDA_VISIBLE_DEVICES"
 
+# ========== Build model_args ==========
+MODEL_ARGS="model_descriptor=$PRETRAINED"
+MODEL_ARGS="$MODEL_ARGS,tokenizer_path=$TOKENIZER_PATH"
+MODEL_ARGS="$MODEL_ARGS,emu3_min_pixels=$EMU3_MIN_PIXELS"
+MODEL_ARGS="$MODEL_ARGS,emu3_max_pixels=$EMU3_MAX_PIXELS"
+MODEL_ARGS="$MODEL_ARGS,$DEBUG_ARGS"
+
 # Print configuration
 echo "========================================"
 echo "MLLM Evaluation Configuration"
@@ -62,6 +74,7 @@ echo "Offline datasets:     ${OFFLINE_DATASETS}"
 echo "Num GPU:              ${NUM_GPUS}"
 echo "Output-Path:          ${RES_PATH}"
 echo "Eval-Repo-Location:   ${EVAL_DIR}"
+echo "Model-Args            ${MODEL_ARGS}"
 echo "========================================"
 echo ""
 
