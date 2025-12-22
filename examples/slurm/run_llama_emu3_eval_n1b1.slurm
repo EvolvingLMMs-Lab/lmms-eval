@@ -11,7 +11,7 @@
 #SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.out
 #SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.err
 
-TASKS="mmmu_val_group_img,vqav2_val" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
+TASKS="vqav2_val" #,pope,gqa,vqav2_val,mmmu_val_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
 BATCH_SIZE=1
 MODEL="llama_emu3"
 DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
@@ -102,7 +102,7 @@ echo "📦 Installing task-specific dependencies..."
 source "${EVAL_DIR}/examples/install_task_deps.sh" "${TASKS}" "${EVAL_DIR}"
 
 echo "📦 Install Emu3 specific versions"
-pip install -e .[emu3]
+#pip install -e .[emu3]
 
 echo "<<New Packages>>"
 pip list
