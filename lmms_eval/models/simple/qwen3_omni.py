@@ -159,10 +159,106 @@ class Qwen3_Omni(lmms):
         return new_list
 
     def resample_audio(self, audio: np.ndarray, current_sample_rate: int):
-        if current_sample_rate != 16000:
-            if isinstance(audio, np.ndarray):
-                audio = librosa.resample(audio, orig_sr=current_sample_rate, target_sr=16000).astype(np.float32)
+        if isinstance(audio, np.ndarray):
+            # Convert stereo to mono if needed
+            if audio.ndim == 2:
+                # Audio might be (channels, samples) or (samples, channels)
+                # Assume the smaller dimension is the channel dimension
+                if audio.shape[0] <= audio.shape[1]:
+                    # Shape is (channels, samples), average over channels (axis 0)
+                    audio = np.mean(audio, axis=0)
+                else:
+                    # Shape is (samples, channels), average over channels (axis 1)
+                    audio = np.mean(audio, axis=1)
+            elif audio.ndim == 1:
+                pass  # Already mono
+            else:
+                # For higher dimensional arrays, try to reduce to mono
+                audio = audio.mean(axis=tuple(range(audio.ndim - 1)))
+
+            # Ensure audio is float32
+            audio = audio.astype(np.float32)
+
+            # Resample to 16kHz if needed
+            if current_sample_rate != 16000:
+                audio = librosa.resample(audio, orig_sr=current_sample_rate, target_sr=16000)
+
+            audio = audio.astype(np.float32)
         return audio
+
+    def _decode_audio(self, audio_obj) -> dict:
+        """Decode an AudioDecoder object or audio dict to a standard dict format."""
+        # If already a dict with array and sampling_rate, return as is
+        if isinstance(audio_obj, dict) and "array" in audio_obj and "sampling_rate" in audio_obj:
+            return audio_obj
+
+        # Handle AudioDecoder from datasets library
+        type_name = str(type(audio_obj).__name__)
+        if type_name == "AudioDecoder":
+            try:
+                if hasattr(audio_obj, "get_all_samples"):
+                    decoded_audio = audio_obj.get_all_samples()
+
+                    # Extract audio array
+                    if hasattr(decoded_audio, "samples"):
+                        audio_array = decoded_audio.samples
+                    elif hasattr(decoded_audio, "array"):
+                        audio_array = decoded_audio.array
+                    elif hasattr(decoded_audio, "data"):
+                        audio_array = decoded_audio.data
+                    else:
+                        audio_array = decoded_audio
+
+                    # Convert tensor to numpy if needed
+                    if hasattr(audio_array, "cpu") and hasattr(audio_array, "numpy"):
+                        audio_array = audio_array.cpu().numpy()
+                    elif hasattr(audio_array, "detach"):
+                        audio_array = audio_array.detach().cpu().numpy()
+                    elif str(type(audio_array).__name__) == "Tensor":
+                        try:
+                            audio_array = audio_array.cpu().numpy()
+                        except Exception:
+                            audio_array = np.array(audio_array)
+
+                    # Extract sampling rate
+                    sampling_rate = 16000  # default
+                    if hasattr(decoded_audio, "sample_rate"):
+                        sampling_rate = decoded_audio.sample_rate
+                    elif hasattr(decoded_audio, "sampling_rate"):
+                        sampling_rate = decoded_audio.sampling_rate
+                    elif hasattr(audio_obj, "metadata") and audio_obj.metadata:
+                        if hasattr(audio_obj.metadata, "sample_rate"):
+                            sampling_rate = audio_obj.metadata.sample_rate
+                        elif isinstance(audio_obj.metadata, dict) and "sample_rate" in audio_obj.metadata:
+                            sampling_rate = audio_obj.metadata["sample_rate"]
+                    elif hasattr(audio_obj, "_desired_sample_rate") and audio_obj._desired_sample_rate:
+                        sampling_rate = audio_obj._desired_sample_rate
+
+                    return {"array": audio_array, "sampling_rate": sampling_rate}
+
+                elif hasattr(audio_obj, "decode"):
+                    decoded_audio = audio_obj.decode()
+                    if isinstance(decoded_audio, dict):
+                        return decoded_audio
+                    elif hasattr(decoded_audio, "array") and hasattr(decoded_audio, "sampling_rate"):
+                        return {"array": decoded_audio.array, "sampling_rate": decoded_audio.sampling_rate}
+
+                elif hasattr(audio_obj, "__call__"):
+                    decoded_audio = audio_obj()
+                    if isinstance(decoded_audio, dict):
+                        return decoded_audio
+                    elif hasattr(decoded_audio, "array") and hasattr(decoded_audio, "sampling_rate"):
+                        return {"array": decoded_audio.array, "sampling_rate": decoded_audio.sampling_rate}
+
+                # Try direct attribute access
+                if hasattr(audio_obj, "array") and hasattr(audio_obj, "sampling_rate"):
+                    return {"array": audio_obj.array, "sampling_rate": audio_obj.sampling_rate}
+
+            except Exception as e:
+                eval_logger.error(f"Error decoding AudioDecoder: {e}")
+                raise ValueError(f"Failed to decode AudioDecoder object: {e}")
+
+        raise ValueError(f"Unknown audio type: {type(audio_obj)}")
 
     def _check_if_video_has_audio(self, video_path):
         clip = VideoFileClip(video_path)
@@ -215,9 +311,11 @@ class Qwen3_Omni(lmms):
                         single_message["content"].append({"type": "text", "text": context})
                         message.append(single_message)
 
-                    elif isinstance(visual, dict):
+                    elif isinstance(visual, dict) or str(type(visual).__name__) == "AudioDecoder":
+                        # Handle audio dict or AudioDecoder
                         current_use_audio = True
-                        audio = self.resample_audio(visual["array"], visual["sampling_rate"])
+                        audio_dict = self._decode_audio(visual)
+                        audio = self.resample_audio(audio_dict["array"], audio_dict["sampling_rate"])
                         audio_splits = split_audio(audio, 4800000)
                         single_message = {"role": "user", "content": []}
                         for j in range(len(audio_splits)):
@@ -225,10 +323,12 @@ class Qwen3_Omni(lmms):
                         single_message["content"].append({"type": "text", "text": context})
                         message.append(single_message)
 
-                    elif isinstance(visual, (list, tuple)) and all(isinstance(v, dict) for v in visual):
+                    elif isinstance(visual, (list, tuple)) and len(visual) > 0 and (isinstance(visual[0], dict) or str(type(visual[0]).__name__) == "AudioDecoder"):
+                        # Handle list of audio dicts or AudioDecoders
                         current_use_audio = True
                         for j, v in enumerate(visual):
-                            audio = self.resample_audio(v["array"], v["sampling_rate"])
+                            audio_dict = self._decode_audio(v)
+                            audio = self.resample_audio(audio_dict["array"], audio_dict["sampling_rate"])
                             audio_splits = split_audio(audio, 4800000)
                             single_message = {"role": "user", "content": []}
                             for k in range(len(audio_splits)):
