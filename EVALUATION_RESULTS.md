@@ -1,6 +1,6 @@
 # Omni-Modal Model Evaluation Results
 
-**Date:** 2025-12-25
+**Date:** 2025-12-26
 **Branch:** add-omni-models
 **Evaluation Limit:** 10 samples per task
 
@@ -9,12 +9,13 @@
 1. **Qwen3-Omni** (`qwen3_omni`)
    - Model: `Qwen/Qwen3-Omni-30B-A3B-Instruct`
    - Uses `Qwen3OmniMoeForConditionalGeneration` and `Qwen3OmniMoeProcessor`
-   - Supports: images, video, audio
+   - Supports: images, video, audio, and mixed audio+image inputs
 
 2. **Video-SALMONN** (`video_salmonn`)
    - Model: `tsinghua-ee/video-SALMONN-2_plus_7B`
    - Base: `Qwen/Qwen2.5-VL-7B-Instruct` with LoRA adapters (PEFT)
-   - Supports: images, video
+   - Supports: images, video (with embedded audio tracks)
+   - Note: Does NOT support standalone audio files
 
 3. **Uni-MoE** (`uni_moe`)
    - Model: `HIT-TMG/Uni-MoE-2.0-Omni`
@@ -25,71 +26,22 @@
 
 ### Summary Table
 
-| Model | Task | Status | Score | Notes |
-|-------|------|--------|-------|-------|
-| qwen3_omni | mme | Success | 0 | Image task, limited samples |
-| qwen3_omni | mmau | Success | 20% accuracy | Audio understanding task |
-| qwen3_omni | omni_bench | Success | 0% accuracy | Audio-visual task, limited samples |
-| video_salmonn | mme | Success | 170 | Image task |
-| video_salmonn | mmau | Success | 30% accuracy | Audio understanding task |
-| video_salmonn | omni_bench | Success | 40% accuracy | Audio-visual task |
-| uni_moe | - | Not Tested | - | Requires custom installation |
+| Model | Task | Score | Notes |
+|-------|------|-------|-------|
+| qwen3_omni | mme | 0 | Image task, limited samples |
+| qwen3_omni | mmau | **60%** | Audio understanding task |
+| qwen3_omni | omni_bench | **70%** | Audio+image task |
+| video_salmonn | mme | 170 | Image task |
+| video_salmonn | mmau | 30% | Audio ignored (not supported) |
+| video_salmonn | omni_bench | 40% | Audio ignored (not supported) |
+| uni_moe | - | - | Requires custom installation |
 
-### Detailed Results
+### Key Fixes Applied
 
-#### qwen3_omni
-
-**MME (Image Understanding)**
-```
-|      Tasks      |Version|Filter|n-shot|  Metric  |   |Value|   |Stderr|
-|-----------------|-------|------|-----:|----------|---|-----|---|------|
-|mme              |   N/A |      |      |          |   |     |   |      |
-| - mme_cognition |      1|none  |     0|mme_score |↑  |    0|±  |   N/A|
-| - mme_perception|      1|none  |     0|mme_score |↑  |    0|±  |   N/A|
-```
-
-**MMAU (Audio Understanding)**
-```
-|      Tasks      |Version|Filter|n-shot|  Metric  |   |Value|   |Stderr|
-|-----------------|-------|------|-----:|----------|---|-----|---|------|
-|mmau             |    N/A|      |      |          |   |     |   |      |
-| - mmau_test     |      0|none  |     0|submission|↑  |N/A  |±  |   N/A|
-| - mmau_test_mini|      0|none  |     0|accuracy  |↑  |   20|±  |   N/A|
-```
-
-**Omni-Bench (Audio-Visual)**
-```
-|  Tasks   |Version|Filter|n-shot| Metric |   |Value|   |Stderr|
-|----------|------:|------|-----:|--------|---|----:|---|------|
-|omni_bench|      0|none  |     0|accuracy|↑  |    0|±  |   N/A|
-```
-
-#### video_salmonn
-
-**MME (Image Understanding)**
-```
-|      Tasks      |Version|Filter|n-shot|  Metric  |   |Value|   |Stderr|
-|-----------------|-------|------|-----:|----------|---|-----|---|------|
-|mme              |   N/A |      |      |          |   |     |   |      |
-| - mme_cognition |      1|none  |     0|mme_score |↑  |    0|±  |   N/A|
-| - mme_perception|      1|none  |     0|mme_score |↑  |  170|±  |   N/A|
-```
-
-**MMAU (Audio Understanding)**
-```
-|      Tasks      |Version|Filter|n-shot|  Metric  |   |Value|   |Stderr|
-|-----------------|-------|------|-----:|----------|---|-----|---|------|
-|mmau             |    N/A|      |      |          |   |     |   |      |
-| - mmau_test     |      0|none  |     0|submission|↑  |N/A  |±  |   N/A|
-| - mmau_test_mini|      0|none  |     0|accuracy  |↑  |   30|±  |   N/A|
-```
-
-**Omni-Bench (Audio-Visual)**
-```
-|  Tasks   |Version|Filter|n-shot| Metric |   |Value|   |Stderr|
-|----------|------:|------|-----:|--------|---|----:|---|------|
-|omni_bench|      0|none  |     0|accuracy|↑  |   40|±  |   N/A|
-```
+1. **Mixed modality handling**: Fixed flatten logic to preserve `[audio, image]` groupings
+2. **Tuple output handling**: Model returns `(text_ids, audio)` tuple even when `return_audio=False`
+3. **Audio preprocessing**: Added stereo-to-mono conversion and 16kHz resampling
+4. **AudioDecoder support**: Handle new datasets library audio format
 
 ## Installation Notes
 
@@ -105,6 +57,8 @@ python -m lmms_eval --model qwen3_omni --model_args pretrained=Qwen/Qwen3-Omni-3
 pip install transformers peft qwen-vl-utils
 python -m lmms_eval --model video_salmonn --model_args pretrained=tsinghua-ee/video-SALMONN-2_plus_7B --tasks <task>
 ```
+
+**Important**: video_salmonn does NOT support standalone audio inputs. Use video files with embedded audio tracks instead.
 
 ### uni_moe
 ```bash

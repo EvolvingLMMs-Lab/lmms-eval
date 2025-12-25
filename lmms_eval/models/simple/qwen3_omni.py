@@ -281,7 +281,21 @@ class Qwen3_Omni(lmms):
             task = task[0]
             split = split[0]
             visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
-            visuals = self.flatten(visuals)
+
+            # Check if visuals contain mixed modalities (e.g., [audio, image] from omni_bench)
+            # If so, don't flatten - preserve the grouping for the mixed list handler
+            should_flatten = True
+            if visuals and len(visuals) > 0 and isinstance(visuals[0], (list, tuple)) and len(visuals[0]) > 1:
+                first_visual = visuals[0]
+                has_audio = any(isinstance(v, dict) or str(type(v).__name__) == "AudioDecoder" for v in first_visual)
+                has_image = any(isinstance(v, Image.Image) for v in first_visual)
+                has_video = any(isinstance(v, str) and str(v).endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")) for v in first_visual)
+                # If multiple modality types are present, don't flatten
+                if sum([has_audio, has_image, has_video]) > 1:
+                    should_flatten = False
+
+            if should_flatten:
+                visuals = self.flatten(visuals)
 
             gen_kwargs = all_gen_kwargs[0]
 
@@ -323,8 +337,8 @@ class Qwen3_Omni(lmms):
                         single_message["content"].append({"type": "text", "text": context})
                         message.append(single_message)
 
-                    elif isinstance(visual, (list, tuple)) and len(visual) > 0 and (isinstance(visual[0], dict) or str(type(visual[0]).__name__) == "AudioDecoder"):
-                        # Handle list of audio dicts or AudioDecoders
+                    elif isinstance(visual, (list, tuple)) and len(visual) > 0 and all(isinstance(v, dict) or str(type(v).__name__) == "AudioDecoder" for v in visual):
+                        # Handle list of audio dicts or AudioDecoders (ALL items must be audio)
                         current_use_audio = True
                         for j, v in enumerate(visual):
                             audio_dict = self._decode_audio(v)
@@ -335,6 +349,25 @@ class Qwen3_Omni(lmms):
                                 single_message["content"].append({"type": "audio", "audio": audio_splits[k]})
                             single_message["content"].append({"type": "text", "text": context})
                             message.append(single_message)
+
+                    elif isinstance(visual, (list, tuple)) and len(visual) > 0:
+                        # Handle mixed list (e.g., [audio, image] from omni_bench)
+                        single_message = {"role": "user", "content": []}
+                        for v in visual:
+                            if isinstance(v, Image.Image):
+                                single_message["content"].append({"type": "image", "image": v})
+                            elif isinstance(v, dict) or str(type(v).__name__) == "AudioDecoder":
+                                current_use_audio = True
+                                audio_dict = self._decode_audio(v)
+                                audio = self.resample_audio(audio_dict["array"], audio_dict["sampling_rate"])
+                                audio_splits = split_audio(audio, 4800000)
+                                for audio_chunk in audio_splits:
+                                    single_message["content"].append({"type": "audio", "audio": audio_chunk})
+                            elif isinstance(v, str) and v.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
+                                current_use_audio = self._check_if_video_has_audio(v)
+                                single_message["content"].append({"type": "video", "video": v})
+                        single_message["content"].append({"type": "text", "text": context})
+                        message.append(single_message)
 
                     else:
                         raise ValueError(f"Unknown visual type: {type(visual)}")
@@ -376,7 +409,10 @@ class Qwen3_Omni(lmms):
                     use_audio_in_video=current_use_audio,
                     thinker_do_sample=False,
                 )
-                if self.return_audio:
+                # Model returns (text_ids, audio) tuple even when return_audio=False
+                if isinstance(cont, tuple):
+                    cont = cont[0]
+                elif self.return_audio:
                     cont = cont[0]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")

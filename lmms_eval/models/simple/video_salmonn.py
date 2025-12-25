@@ -214,7 +214,12 @@ class VideoSALMONN(lmms):
                                 "min_pixels": self.min_pixels,
                             })
                         elif isinstance(visual, dict) and "array" in visual:
-                            pass
+                            # video-SALMONN-2 does not support standalone audio inputs
+                            # Audio should be embedded in video files - the model extracts audio internally
+                            eval_logger.warning(
+                                "video-SALMONN-2 does not support standalone audio inputs. "
+                                "Audio will be ignored. Use video files with embedded audio tracks instead."
+                            )
 
                 message.append({
                     "role": "user",
