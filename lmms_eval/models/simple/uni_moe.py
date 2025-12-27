@@ -17,6 +17,8 @@ try:
     from uni_moe.model.processing_qwen2_vl import Qwen2VLProcessor
     from uni_moe.model.modeling_out import GrinQwen2VLOutForConditionalGeneration
     from uni_moe.qwen_vl_utils import process_mm_info
+    # Import this to enable single-GPU inference for MoE layers
+    from uni_moe.model import deepspeed_moe_inference_utils  # noqa: F401
     UNI_MOE_AVAILABLE = True
 except ImportError:
     eval_logger.warning(
@@ -192,7 +194,8 @@ class UniMoE(lmms):
                     visual = visuals[i] if i < len(visuals) else None
 
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
-                        content.append({"type": "text", "text": "<audio>\n<image>\n" + context})
+                        # Use <video> for video inputs, <audio> for audio from video
+                        content.append({"type": "text", "text": "<audio>\n<video>\n" + context})
                         content.append({"type": "video", "video": visual})
                         has_audio = True
                         has_image = True
@@ -240,6 +243,7 @@ class UniMoE(lmms):
             texts = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             texts = texts.replace("<image>", "<|vision_start|><|image_pad|><|vision_end|>")
             texts = texts.replace("<audio>", "<|audio_start|><|audio_pad|><|audio_end|>")
+            texts = texts.replace("<video>", "<|vision_start|><|video_pad|><|vision_end|>")
 
             image_inputs, video_inputs, audio_inputs = process_mm_info(messages)
 
@@ -255,25 +259,43 @@ class UniMoE(lmms):
             inputs["input_ids"] = inputs["input_ids"].unsqueeze(0) if inputs["input_ids"].dim() == 1 else inputs["input_ids"]
             inputs = inputs.to(device=self.model.device)
 
-            if "max_new_tokens" not in gen_kwargs:
-                gen_kwargs["max_new_tokens"] = 4096
-            if "temperature" not in gen_kwargs:
-                gen_kwargs["temperature"] = 0
-            if "top_p" not in gen_kwargs:
-                gen_kwargs["top_p"] = None
-            if "num_beams" not in gen_kwargs:
-                gen_kwargs["num_beams"] = 1
+            # Fix processor key mismatch: processor returns second_grid_ts but model expects second_per_grid_ts
+            if "second_grid_ts" in inputs:
+                inputs["second_per_grid_ts"] = inputs.pop("second_grid_ts")
+
+            # Remove labels as they're not needed for generation
+            if "labels" in inputs:
+                del inputs["labels"]
+
+            # Convert float tensors to bfloat16 to match model dtype
+            for key in ["pixel_values", "pixel_values_videos"]:
+                if key in inputs and inputs[key] is not None:
+                    inputs[key] = inputs[key].to(torch.bfloat16)
+
+            # Extract generation parameters with defaults
+            # Note: Uni-MoE requires temperature > 0 and do_sample=True for proper generation
+            max_new_tokens = gen_kwargs.get("max_new_tokens", 4096)
+            temperature = gen_kwargs.get("temperature", 0)
+            top_p = gen_kwargs.get("top_p", None)
+            num_beams = gen_kwargs.get("num_beams", 1)
+
+            # If temperature is 0 or not set, use greedy decoding but still generate properly
+            if temperature <= 0:
+                do_sample = False
+                temperature = None
+            else:
+                do_sample = gen_kwargs.get("do_sample", True)
 
             try:
                 output_ids = self.model.generate(
                     **inputs,
                     use_cache=self.use_cache,
                     pad_token_id=self.tokenizer.eos_token_id,
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                    temperature=gen_kwargs["temperature"] if gen_kwargs["temperature"] > 0 else None,
-                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                    top_p=gen_kwargs["top_p"],
-                    num_beams=gen_kwargs["num_beams"],
+                    max_new_tokens=max_new_tokens,
+                    temperature=temperature,
+                    do_sample=do_sample,
+                    top_p=top_p,
+                    num_beams=num_beams,
                 )
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
