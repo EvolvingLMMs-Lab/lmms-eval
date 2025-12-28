@@ -24,8 +24,8 @@ except ImportError:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install via `pip install qwen-vl-utils`")
 
 
-@register_model("video_salmonn")
-class VideoSALMONN(lmms):
+@register_model("video_salmonn_2")
+class VideoSALMONN2(lmms):
     """
     video-SALMONN-2_plus_7B
     https://huggingface.co/tsinghua-ee/video-SALMONN-2_plus_7B

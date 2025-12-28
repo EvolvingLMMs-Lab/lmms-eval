@@ -71,7 +71,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "tinyllava": "TinyLlava",
     "videoChatGPT": "VideoChatGPT",
     "video_llava": "VideoLLaVA",
-    "video_salmonn": "VideoSALMONN",
+    "video_salmonn_2": "VideoSALMONN2",
     "videochat2": "VideoChat2",
     "videollama3": "VideoLLaMA3",
     "videochat_flash": "VideoChat_Flash",
