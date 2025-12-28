@@ -69,7 +69,6 @@ AVAILABLE_SIMPLE_MODELS = {
     "slime": "Slime",
     "srt_api": "SRT_API",
     "tinyllava": "TinyLlava",
-    "uni_moe": "UniMoE",
     "videoChatGPT": "VideoChatGPT",
     "video_llava": "VideoLLaVA",
     "video_salmonn": "VideoSALMONN",

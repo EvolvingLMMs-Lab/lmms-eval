@@ -41,15 +41,13 @@ class Qwen3_Omni(lmms):
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
-        use_cache=True,
+        use_cache: bool = True,
         attn_implementation: Optional[str] = "flash_attention_2",
-        max_num_frames: int = 768,
+        max_num_frames: int = 128,
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[float] = None,
         max_image_size: Optional[int] = None,
         system_prompt: str = "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech.",
-        return_audio: bool = False,
-        speaker: str = "Ethan",
         **kwargs,
     ) -> None:
         super().__init__()
@@ -88,8 +86,11 @@ class Qwen3_Omni(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
         self.system_prompt = system_prompt
-        self.return_audio = return_audio
-        self.speaker = speaker
+
+        # Disable talker
+        if hasattr(self._model, "disable_talker"):
+            self._model.disable_talker()
+            eval_logger.info("Disabled talker module for faster text-only inference")
 
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
@@ -397,7 +398,7 @@ class Qwen3_Omni(lmms):
             try:
                 cont = self.model.generate(
                     **inputs,
-                    return_audio=self.return_audio,
+                    return_audio=False,
                     eos_token_id=self.tokenizer.eos_token_id,
                     pad_token_id=pad_token_id,
                     do_sample=True if gen_kwargs["temperature"] > 0 else False,
@@ -411,8 +412,6 @@ class Qwen3_Omni(lmms):
                 )
                 # Model returns (text_ids, audio) tuple even when return_audio=False
                 if isinstance(cont, tuple):
-                    cont = cont[0]
-                elif self.return_audio:
                     cont = cont[0]
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
