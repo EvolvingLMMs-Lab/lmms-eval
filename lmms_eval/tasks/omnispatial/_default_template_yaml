@@ -14,9 +14,40 @@ doc_to_target: "gt"
 process_results: !function utils.omnispatial_process_results
 
 metric_list:
-  - metric: omnispatial_score
+  - metric: omnispatial
     aggregation: !function utils.omnispatial_aggregate_results
     higher_is_better: true
+  - metric: omnispatial_motion_analysis
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_manipulation
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_traffic_analysis
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_localization
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_geospatial_strategy
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_geometric_reasoning
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_pattern_recognition
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_allocentric
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_hypothetical
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_egocentric
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+
 
 dataset_kwargs:
   token: True

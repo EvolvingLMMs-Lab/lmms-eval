@@ -3,7 +3,9 @@ import os
 import re
 from collections import defaultdict
 from pathlib import Path
+from typing import Any, Dict, List
 
+import numpy as np
 import yaml
 from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
@@ -40,18 +42,17 @@ if config["metadata"]["eval_type"] == "llm":
     server = get_server(server_name=API_TYPE, config=server_config)
 
 
-def omnispatial_doc_to_visual(doc):
+def omnispatial_doc_to_visual(doc: dict) -> list:
     visual = []
     image_path = os.path.join(cache_dir, doc["image_path"])
     if os.path.exists(image_path):
-        image_path = image_path
         visual.append(Image.open(image_path).convert("RGB"))
     else:
         raise FileExistsError(f"video path:{image_path} does not exist.")
     return visual
 
 
-def omnispatial_doc_to_text(doc):
+def omnispatial_doc_to_text(doc: dict[str, Any]) -> str:
     prompt = SYS_PROMPTS[config["metadata"]["prompt_type"]] + "\n" + FORMAT_PROMPTS[config["metadata"]["eval_type"]] + "\n\n" + doc["question"]
     options = doc["options"]
     for i in range(len(options)):
@@ -59,8 +60,7 @@ def omnispatial_doc_to_text(doc):
     return prompt
 
 
-def omnispatial_process_results(doc, results):
-    key_name = "omnispatial_score"
+def omnispatial_process_results(doc: Dict, results: List[str]) -> Dict[str, Dict]:
     # extract grounded answer
     grounded_output = doc["gt"]
     response = results[0]
@@ -100,20 +100,25 @@ def omnispatial_process_results(doc, results):
                 judge_response = response.content.strip().lower()
                 flag = "true" in judge_response
             else:
-                eval_logger.error(f"Judge evaluation failed: {response.content}")
+                eval_logger.error("Judge evaluation failed: %s", response.content)
                 flag = False
 
         except Exception as e:
-            eval_logger.error(f"Error getting judge response: {e}")
+            eval_logger.error("Error getting judge response: %s", e)
             flag = False
     else:
         assert False, f"Unknown eval_type: {eval_type}"
+    category = "omnispatial_" + doc["sub_task_type"].lower()
+    key_benchmark = "omnispatial"
+    omnispatial_submission = {"id": doc["id"], "query": query, "gt_content": grounded_output, "pred": response, "task": doc["task_type"], "sub_task": category, "is_correct": flag}
+    return {category: omnispatial_submission, key_benchmark: omnispatial_submission}
 
-    omnispatial_submission = {"id": doc["id"], "query": query, "gt_content": grounded_output, "pred": response, "task": doc["task_type"], "sub_task": doc["sub_task_type"], "is_correct": flag}
-    return {key_name: omnispatial_submission}
+
+def omnispatial_group_aggregate_results(results: List[Dict]) -> float:
+    return float(np.mean([sample["is_correct"] for sample in results]))
 
 
-def omnispatial_aggregate_results(results):
+def omnispatial_aggregate_results(results: List[Dict]) -> float:
     sub_task_to_eval_samples = defaultdict(list)
     task_to_eval_samples = defaultdict(list)
     total_samples = len(results)
@@ -135,22 +140,22 @@ def omnispatial_aggregate_results(results):
     accuracy = total_correct / total_samples if total_samples > 0 else 0
     sub_task_accuracies = {sub_task: sum(scores) / len(scores) for sub_task, scores in sub_task_to_eval_samples.items()}
     task_accuracies = {task: sum(scores) / len(scores) for task, scores in task_to_eval_samples.items()}
-    print(f"{'Total Samples':<20}: {total_samples}")
-    print(f"{'Total Correct':<20}: {total_correct}")
-    print(f"{'Overall Accuracy':<20}: {accuracy:.4f}")
-    print()
+    eval_logger.info(f"{'Total Samples':<20}: {total_samples}")
+    eval_logger.info(f"{'Total Correct':<20}: {total_correct}")
+    eval_logger.info(f"{'Overall Accuracy':<20}: {accuracy:.4f}")
+    eval_logger.info("\n")
 
-    print(f"{'Per-Sub-Task Accuracy':<40}")
-    print("-" * 40)
+    eval_logger.info(f"{'Per-Sub-Task Accuracy':<40}")
+    eval_logger.info("-" * 40)
     for sub_task, acc in sub_task_accuracies.items():
-        print(f"{sub_task:<20}: {acc:.4f}")
-    print("=" * 40)
+        eval_logger.info(f"{sub_task:<20}: {acc:.4f}")
+    eval_logger.info("=" * 40)
 
-    print(f"{'Per-Task Accuracy':<40}")
-    print("-" * 40)
+    eval_logger.info(f"{'Per-Task Accuracy':<40}")
+    eval_logger.info("-" * 40)
     for task, acc in task_accuracies.items():
-        print(f"{task:<20}: {acc:.4f}")
-    print("=" * 40)
+        eval_logger.info(f"{task:<20}: {acc:.4f}")
+    eval_logger.info("=" * 40)
     return accuracy
 
 
@@ -196,9 +201,9 @@ You are a spatial-reasoning assistant.
 
 Task
 -----
-You will receive  
-1. **Image** - a single RGB frame depicting a scene.  
-2. **Question** - a natural-language query about spatial relationships between objects in the image.  
+You will receive
+1. **Image** - a single RGB frame depicting a scene.
+2. **Question** - a natural-language query about spatial relationships between objects in the image.
 3. **Options** - ≥2 answer candidates, each tagged by a capital letter (A, B, C, D…).
 
 Based on the image and question, provide your answer.
@@ -211,7 +216,7 @@ You are a spatial-reasoning assistant.
 
 Task
 -----
-You will receive  
+You will receive
 1. **Image** - a single RGB frame depicting a scene.
 2. **Question** - a natural-language query about spatial relationships between objects in the image.
 3. **Options** - ≥2 answer candidates, each tagged by a capital letter (A, B, C, D…).
@@ -226,9 +231,9 @@ You are a spatial-reasoning assistant.
 
 Task
 -----
-You will receive  
-1. **Image** - a single RGB frame depicting a scene.  
-2. **Question** - a natural-language query about spatial relationships between objects in the image.  
+You will receive
+1. **Image** - a single RGB frame depicting a scene.
+2. **Question** - a natural-language query about spatial relationships between objects in the image.
 3. **Options** - ≥2 answer candidates, each tagged by a capital letter (A, B, C, D…).
 
 Guidelines
@@ -261,8 +266,8 @@ You are a spatial-reasoning assistant.
 
 Task
 -----
-You will receive  
-1. **Question** - a natural-language query about spatial relationships.  
+You will receive
+1. **Question** - a natural-language query about spatial relationships.
 2. **Options** - ≥2 answer candidates, each tagged by a capital letter (A, B, C, D…).
 
 Based on the question only, provide your answer.
