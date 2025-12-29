@@ -133,10 +133,7 @@ E: {choices["E"]}"""
 def normalize_math_notation(text):
     """Normalize mathematical notation for comparison (e.g., n² -> n^2, n³ -> n^3)"""
     # Convert superscript numbers to caret notation
-    superscript_map = {
-        '²': '^2', '³': '^3', '¹': '^1', '⁰': '^0',
-        '⁴': '^4', '⁵': '^5', '⁶': '^6', '⁷': '^7', '⁸': '^8', '⁹': '^9'
-    }
+    superscript_map = {"²": "^2", "³": "^3", "¹": "^1", "⁰": "^0", "⁴": "^4", "⁵": "^5", "⁶": "^6", "⁷": "^7", "⁸": "^8", "⁹": "^9"}
     normalized = text
     for sup, caret in superscript_map.items():
         normalized = normalized.replace(sup, caret)
@@ -152,20 +149,20 @@ def evaluate_with_rule_based(doc, prediction):
         # Rule-based evaluation for multiple-choice questions
         pred_str = str(prediction).strip()
         answer_str = str(answer).strip()
-        
+
         # Method 1: Extract letter from prediction and compare
         letter_match = re.search(r"\b([A-E])\b", pred_str, re.IGNORECASE)
         if letter_match:
             extracted_letter = letter_match.group(1).upper()
             if extracted_letter == answer_str.upper():
                 return True
-        
+
         # Method 2: Check if answer letter appears in prediction (case-insensitive)
         if answer_str.upper() in pred_str.upper():
             # Make sure it's a standalone letter, not part of another word
             if re.search(rf"\b{re.escape(answer_str)}\b", pred_str, re.IGNORECASE):
                 return True
-        
+
         # Method 3: Check if the full answer text (letter + content) matches
         if answer_str in doc.get("choices", {}):
             choice_text = doc["choices"][answer_str].strip().lower()
@@ -181,39 +178,39 @@ def evaluate_with_rule_based(doc, prediction):
                     # Check if at least one key word appears in prediction
                     if any(word in pred_lower for word in words):
                         return True
-        
+
         return False
     else:
         # Rule-based evaluation for open-ended questions
         pred_normalized = str(prediction).strip().lower()
         answer_normalized = str(answer).strip().lower()
-        
+
         # Normalize mathematical notation (e.g., n² -> n^2)
         pred_normalized = normalize_math_notation(pred_normalized)
         answer_normalized = normalize_math_notation(answer_normalized)
-        
+
         # Remove common punctuation and extra whitespace for comparison
         pred_clean = " ".join(pred_normalized.split())
         answer_clean = " ".join(answer_normalized.split())
-        
+
         # Method 1: Exact match (after normalization)
         if pred_clean == answer_clean:
             return True
-        
+
         # Method 2: Check if answer appears as a substring in prediction
         # This handles cases like: answer="Depth-First Search (DFS)", prediction="The algorithm is depth-first search (DFS)."
         if answer_clean in pred_clean:
             return True
-        
+
         # Method 3: Check if prediction appears as a substring in answer (for shorter predictions)
         if pred_clean in answer_clean:
             return True
-        
+
         # Method 4: For numerical answers, try to extract and compare numbers
         # Extract numbers from both strings
-        pred_numbers = re.findall(r'\d+\.?\d*', pred_normalized)
-        answer_numbers = re.findall(r'\d+\.?\d*', answer_normalized)
-        
+        pred_numbers = re.findall(r"\d+\.?\d*", pred_normalized)
+        answer_numbers = re.findall(r"\d+\.?\d*", answer_normalized)
+
         if len(answer_numbers) > 0 and len(pred_numbers) > 0:
             # Try to match numbers (allowing for floating point differences)
             try:
@@ -224,26 +221,26 @@ def evaluate_with_rule_based(doc, prediction):
                     return True
             except ValueError:
                 pass
-        
+
         # Method 5: Word-level matching for short answers (2-5 words)
         answer_words = [w.strip(string.punctuation) for w in answer_clean.split() if w.strip(string.punctuation)]
         pred_words = [w.strip(string.punctuation) for w in pred_clean.split() if w.strip(string.punctuation)]
-        
+
         if 2 <= len(answer_words) <= 5:
             # Check if all answer words appear in prediction (order-independent)
             if all(word in pred_words for word in answer_words if len(word) > 2):
                 return True
-        
+
         # Method 6: Special handling for mathematical complexity notation (O(n²) vs O(n^2))
         # Extract O() notation patterns
-        pred_o_match = re.search(r'O\s*\([^)]+\)', pred_clean, re.IGNORECASE)
-        answer_o_match = re.search(r'O\s*\([^)]+\)', answer_clean, re.IGNORECASE)
+        pred_o_match = re.search(r"O\s*\([^)]+\)", pred_clean, re.IGNORECASE)
+        answer_o_match = re.search(r"O\s*\([^)]+\)", answer_clean, re.IGNORECASE)
         if pred_o_match and answer_o_match:
             pred_o_content = normalize_math_notation(pred_o_match.group(0).lower())
             answer_o_content = normalize_math_notation(answer_o_match.group(0).lower())
             if pred_o_content == answer_o_content:
                 return True
-        
+
         return False
 
 
@@ -255,28 +252,28 @@ def evaluate_with_llm_judge(doc, prediction):
     """
     # First try rule-based evaluation
     rule_correct = evaluate_with_rule_based(doc, prediction)
-    
+
     # If rule-based says it's correct, return immediately
     if rule_correct:
         return True, "rule-based"
-    
+
     # Get question type
     question_type = doc["question_type"]
-    
+
     # For multiple-choice questions, only use rule-based evaluation
     # Don't use GPT judge for multiple-choice questions
     if question_type == "multiple-choice":
         return False, "rule-based"
-    
+
     # For open-ended questions, if rule-based says it's incorrect, try GPT judge for semantic equivalence
     # This handles cases like "O(n²)" vs "O(n^2)" where rule-based might be too strict
     try:
         server = get_llm_judge_server()
         formatted_question = construct_question_prompt(doc)
         answer = doc["answer"]
-        
+
         full_answer = str(answer)
-        
+
         custom_prompt = """You are a strict evaluator assessing answer correctness. You must output 1 for fully correct answers and 0 for any other case.
 
 # Evaluation Rules for Open-Ended Questions
@@ -289,15 +286,9 @@ def evaluate_with_llm_judge(doc, prediction):
 - For questions requiring units, both value and unit must be correct.
 
 Return only "1" or "0" with no additional text or formatting."""
-        
-        result = server.evaluate_binary(
-            question=formatted_question,
-            answer=full_answer,
-            prediction=prediction,
-            output_format="0/1",
-            custom_prompt=custom_prompt
-        )
-        
+
+        result = server.evaluate_binary(question=formatted_question, answer=full_answer, prediction=prediction, output_format="0/1", custom_prompt=custom_prompt)
+
         if result["success"]:
             judge_response = result["result"]
             judge_score = str(judge_response).strip()
@@ -307,7 +298,7 @@ Return only "1" or "0" with no additional text or formatting."""
             eval_logger.error(f"GPT judge evaluation failed: {result.get('raw_response', 'Unknown error')}")
             # Fall back to rule-based result if GPT fails
             return rule_correct, "rule-based"
-    
+
     except Exception as e:
         eval_logger.error(f"Error getting GPT judge response: {e}")
         # Fall back to rule-based result if GPT fails
@@ -351,14 +342,7 @@ def mmvu_process_results(doc, results):
         # For open-ended, just use the prediction as-is (truncated for logging)
         extracted_answer = pred_ans[:100] + "..." if len(pred_ans) > 100 else pred_ans
 
-    data_dict = {
-        "question_id": doc["id"],
-        "category": category,
-        "pred_answer": extracted_answer,
-        "answer": doc["answer"],
-        "correct": int(correct),
-        "eval_method": eval_method  # "rule-based" or "gpt-based"
-    }
+    data_dict = {"question_id": doc["id"], "category": category, "pred_answer": extracted_answer, "answer": doc["answer"], "correct": int(correct), "eval_method": eval_method}  # "rule-based" or "gpt-based"
 
     return {f"accuracy": data_dict}
 
