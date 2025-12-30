@@ -3,6 +3,7 @@ import re
 import string
 import sys
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import yaml
 from loguru import logger as eval_logger
@@ -28,7 +29,7 @@ cache_dir_val = os.path.join(base_cache_dir, cache_name_val)
 _server = None
 
 
-def get_llm_judge_server():
+def get_llm_judge_server() -> Any:
     """Lazy initialization of LLM judge server"""
     global _server
     if _server is None:
@@ -130,7 +131,7 @@ E: {choices["E"]}"""
         return f"Question: {doc['question']}"
 
 
-def normalize_math_notation(text):
+def normalize_math_notation(text: str) -> str:
     """Normalize mathematical notation for comparison (e.g., n² -> n^2, n³ -> n^3)"""
     # Convert superscript numbers to caret notation
     superscript_map = {"²": "^2", "³": "^3", "¹": "^1", "⁰": "^0", "⁴": "^4", "⁵": "^5", "⁶": "^6", "⁷": "^7", "⁸": "^8", "⁹": "^9"}
@@ -140,7 +141,7 @@ def normalize_math_notation(text):
     return normalized
 
 
-def evaluate_with_rule_based(doc, prediction):
+def evaluate_with_rule_based(doc: Dict[str, Any], prediction: str) -> bool:
     """Rule-based evaluation - returns True if correct, False otherwise"""
     answer = doc["answer"]
     question_type = doc["question_type"]
@@ -244,7 +245,7 @@ def evaluate_with_rule_based(doc, prediction):
         return False
 
 
-def evaluate_with_llm_judge(doc, prediction):
+def evaluate_with_llm_judge(doc: Dict[str, Any], prediction: str) -> tuple[bool, str]:
     """
     Hybrid evaluation: first try rule-based, if rule-based returns False, use GPT judge only for open-ended questions.
     For multiple-choice questions, only use rule-based evaluation.
