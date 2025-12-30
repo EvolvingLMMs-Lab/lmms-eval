@@ -61,13 +61,14 @@ def ovo_doc_to_messages(doc, lmms_eval_specific_kwargs):
 
 
 def ovo_back_real_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    """Convert a backward/realtime document into the flat text prompt."""
     text = build_prompt(doc, index=None)
-
     return text
 
 
 # prepare for multiround generation
 def ovo_forward_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None, round_idx=None, previous_round_info=None):
+    """Assemble the prompt/visual payloads for forward tasks, one round at a time."""
     if round_idx is None:
         prompt = build_prompt(doc, index=0)
         return prompt
@@ -85,6 +86,7 @@ def ovo_forward_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output
 
 
 def ovo_doc_to_visual(doc, lmms_eval_specific_kwargs):
+    """Return the relevant video chunk path for the document/round."""
     assert lmms_eval_specific_kwargs["data_dir"] is not None
     if "round_idx" in lmms_eval_specific_kwargs:
         i = lmms_eval_specific_kwargs["round_idx"]
@@ -100,6 +102,7 @@ def ovo_doc_to_visual(doc, lmms_eval_specific_kwargs):
 
 
 def ovo_back_real_process_results(doc, results):
+    """Normalize backward/realtime generation output into a structured record."""
     if isinstance(results, list) and isinstance(results[0], list):
         response = results[0][0].strip()
     else:
@@ -109,6 +112,7 @@ def ovo_back_real_process_results(doc, results):
 
 
 def ovo_forward_process_results(doc, results):
+    """Map forward task responses back onto the original document structure."""
     if isinstance(results, list) and isinstance(results[0], list):
         results = results[0][0]
     else:
@@ -119,6 +123,7 @@ def ovo_forward_process_results(doc, results):
 
 
 def ovo_back_real_acc(results, args):
+    """Score backward/realtime outputs and persist summary JSON files."""
     results, scores = calculate_score_backward_realtime(results)
     task_name = get_task_type(list(scores.keys())[0])
     path = generate_submission_file(f"{task_name}_acc_results.json", args)
@@ -143,6 +148,7 @@ def ovo_back_real_acc(results, args):
 
 
 def ovo_forward_acc(results, args):
+    """Score forward outputs, save JSON files, and return the aggregated average."""
     results, scores = calculate_score_forward(results)
     path = generate_submission_file("forward_acc_results.json", args)
     with open(path, "w") as f:
