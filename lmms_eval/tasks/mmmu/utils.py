@@ -116,14 +116,32 @@ def mmmu_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     config["metadata"]["interleaved_format"] = True
     question = mmmu_doc_to_text(doc, lmms_eval_specific_kwargs)
     visuals = mmmu_doc_to_visual(doc)
+
+    # Duplicate the single image when NUM_IMAGE=2
+    num_image = int(os.environ.get("NUM_IMAGE", "1"))
+    if num_image == 1:
+        pass
+    elif num_image == 2:
+        if len(visuals) == 1:
+            visuals = [visuals[0], visuals[0]]
+    else:
+        raise ValueError(f"num_image must be 1 or 2, got {num_image}")
+
     messages = [{"role": "user", "content": []}]
     interleaved_content = question.split("<image>")
-    for i, (image, text) in enumerate(zip(visuals, interleaved_content)):
-        if text.strip() != "":
-            messages[0]["content"].append({"type": "text", "text": text.strip()})
-        messages[0]["content"].append({"type": "image", "url": image})
-    # There will be one more text part after the last image
-    messages[0]["content"].append({"type": "text", "text": interleaved_content[-1].strip()})
+
+    # Allow more visuals than placeholders by only attaching pre-image text
+    # if a corresponding segment exists. Always append the final trailing text.
+    for i in range(len(visuals)):
+        if i < len(interleaved_content) - 1:
+            text = interleaved_content[i].strip()
+            if text != "":
+                messages[0]["content"].append({"type": "text", "text": text})
+        messages[0]["content"].append({"type": "image", "url": visuals[i]})
+
+    # Append the trailing text after the last image
+    if len(interleaved_content) > 0:
+        messages[0]["content"].append({"type": "text", "text": interleaved_content[-1].strip()})
 
     return messages
 
