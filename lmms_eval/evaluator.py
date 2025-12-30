@@ -576,6 +576,7 @@ def evaluate(
                         "doc_id": doc_id,
                         "doc": saved_doc,
                         "target": target,
+                        # "pred": metrics['coco_cap_chair_i']['pred'],
                         "arguments": filtered_arguments,
                         "resps": [req.resps for req in requests],
                         "filtered_resps": [req.filtered_resps[filter_key] for req in requests],

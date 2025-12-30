@@ -37,9 +37,15 @@ mmbench_evaluator = MMBench_Evaluator(sys_prompt=config["metadata"]["sys_prompt"
 
 
 def mmbench_doc_to_visual(doc):
-    return [doc["image"].convert("RGB")]
-
-
+    num_image = int(os.environ.get("NUM_IMAGE", "1"))
+    
+    if num_image == 1:
+        return [doc["image"].convert("RGB")]
+    elif num_image == 2:
+        return [doc["image"].convert("RGB"), doc["image"].convert("RGB")]
+    else:
+        raise ValueError(f"num_image must be 1 or 2, got {num_image}")
+        
 def mmbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     option_candidate = ["A", "B", "C", "D", "E"]
     options_prompt, options_dict = mmbench_evaluator.create_options_prompt(doc, option_candidate)

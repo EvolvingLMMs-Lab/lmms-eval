@@ -156,6 +156,7 @@ class VLLM(lmms):
         chat_template: Optional[str] = None,
         min_image_pixels: int = 28,  # minimum image dimension, required for Qwen 2/2.5-VL models
         disable_log_stats: bool = False,
+        image_first: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -167,6 +168,7 @@ class VLLM(lmms):
         self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
         self.data_parallel_size = data_parallel_size
+        self.image_first = image_first
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model)
 
@@ -338,11 +340,14 @@ class VLLM(lmms):
                             imgs.append(task.result())
 
                 messages = [{"role": "user", "content": []}]
-                # Add images first, then text
-                for img in self.flatten(imgs):
-                    messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
-                messages[0]["content"].append({"type": "text", "text": contexts})
-
+                if self.image_first:
+                    for img in self.flatten(imgs):
+                        messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+                    messages[0]["content"].append({"type": "text", "text": contexts})
+                else:
+                    messages[0]["content"].append({"type": "text", "text": contexts})
+                    for img in self.flatten(imgs):
+                        messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
                 batched_messages.append(messages)
 
             sampling_params = SamplingParams(**params)

@@ -2,7 +2,7 @@ import os
 
 
 def generate_submission_file(file_name, args, subpath="submissions"):
-    if args.output_path is None:
+    if args is None or args.output_path is None:
         # If no output path is specified, use current directory
         path = subpath
     else:
