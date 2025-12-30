@@ -21,6 +21,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
+    "cot_scorer_empty": "CoTScorerEmpty",
     "egogpt": "EgoGPT",
     "from_log": "FromLog",
     "fuyu": "Fuyu",

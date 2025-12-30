@@ -204,7 +204,7 @@ class FrameCoTScorer:
     def _cache_dir(self) -> str:
         reasoner = _sanitize_reasoner_name(self.reasoner_name)
         scorer = _sanitize_scorer_name(self.scorer_name)
-        subdir = f"{self.task_name}_{reasoner}_{scorer}_{self.candidates}"
+        subdir = f"{self.task_name}_{reasoner}_{scorer}_t{self.scorer_type}_{self.candidates}"
         return os.path.join(self.cache_root, subdir)
 
     def _cache_path(self, video_path: str) -> str:
