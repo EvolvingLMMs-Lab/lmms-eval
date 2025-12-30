@@ -81,6 +81,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "vora": "VoRA",
     "whisper_vllm": "WhisperVllm",
     "whisper": "Whisper",
+    "whisper_tt": "WhisperTT",
     "xcomposer2_4KHD": "XComposer2_4KHD",
     "xcomposer2d5": "XComposer2D5",
 }
