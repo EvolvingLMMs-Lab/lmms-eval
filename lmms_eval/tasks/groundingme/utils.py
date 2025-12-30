@@ -1,7 +1,9 @@
 import logging
-import re
-import json
 import math
+import re
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import json
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -70,24 +72,24 @@ def smart_resize_qwen(
         w_bar = max(factor, int(math.ceil(width * beta / factor) * factor))
     return h_bar, w_bar
 
-def _normalize_bbox(bbox, width, height):
+def _normalize_bbox(bbox: List[float], width: int, height: int) -> List[float]:
     """Normalize bbox from either [0, 1] or [0, 999] range to pixel coordinates."""
     if all(coord <= 1 for coord in bbox):
         return [bbox[0] * width, bbox[1] * height, bbox[2] * width, bbox[3] * height]
     else:
         return [bbox[0] / 999 * width, bbox[1] / 999 * height, bbox[2] / 999 * width, bbox[3] / 999 * height]
 
-def convert_bbox_from_mimo(bbox, width, height):
+def convert_bbox_from_mimo(bbox: List[float], width: int, height: int) -> List[float]:
     """Convert bbox coordinates from MIMO resized space to original image space."""
     mimo_width, mimo_height = smart_resize_mimo(height, width)
     return [bbox[0]/mimo_width*width, bbox[1]/mimo_height*height, bbox[2]/mimo_width*width, bbox[3]/mimo_height*height]
 
-def convert_bbox_from_qwen(bbox, width, height):
+def convert_bbox_from_qwen(bbox: List[float], width: int, height: int) -> List[float]:
     """Convert bbox coordinates from Qwen resized space to original image space."""
     qwen_width, qwen_height = smart_resize_qwen(height, width)
     return [bbox[0]/qwen_width*width, bbox[1]/qwen_height*height, bbox[2]/qwen_width*width, bbox[3]/qwen_height*height]
 
-def groundingme_doc_to_visual(doc):
+def groundingme_doc_to_visual(doc: Dict[str, Any]) -> List[Any]:
     """Convert document to visual input for model evaluation."""
     return [doc["image"].convert("RGB")]
 
@@ -95,13 +97,13 @@ def groundingme_doc_to_visual(doc):
 PROMPT = "All spatial relationships are defined from the viewer's perspective, where 'front' means closer to the viewer and 'back' means farther from the viewer. Please provide the bounding box coordinate of the object the following statement describes:\n{description}\nEnsure that all details mentioned about the object are accurate. Provide at most one bounding box. If a matching object is found, provide its bounding box as a JSON in the format {{\"bbox_2d\": [x1, y1, x2, y2]}}. If no matching object is found, output {{\"bbox_2d\": null}}."
 
 
-def groundingme_doc_to_text(doc):
+def groundingme_doc_to_text(doc: Dict[str, Any]) -> str:
     """Convert document to text prompt for model evaluation."""
     assert isinstance(doc["description"], str), "Answer must be a string"
     return PROMPT.format(description=doc["description"])
 
 
-def parse_bbox(input_str):
+def parse_bbox(input_str: str) -> List[float]:
     """Extract bounding box from JSON format: {"bbox_2d": [x1, y1, x2, y2]} or {"bbox_2d": null}."""
     try:
         match = re.search(r'\{.*"bbox_2d".*\}', input_str, re.DOTALL)
@@ -120,7 +122,7 @@ def parse_bbox(input_str):
         else:
             raise ValueError(f"No bbox found in input string: {input_str}")
 
-    except:
+    except (ValueError, AttributeError, IndexError):
         pattern1 = r"(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)"
         matches = re.findall(pattern1, input_str)
         if matches:
@@ -265,7 +267,7 @@ def groundingme_aggregation_result(results, metric):
             results_dict[metric].append(score)
             
     results_dict[metric] = sum(results_dict[metric]) / len(results_dict[metric])
-    print(f"Aggregated {metric} score: {results_dict[metric]}")
+    eval_logger.info(f"Aggregated {metric} score: {results_dict[metric]}")
     return results_dict[metric]
 
 
