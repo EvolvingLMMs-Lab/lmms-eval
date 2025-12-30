@@ -99,10 +99,6 @@ def ovo_doc_to_visual(doc, lmms_eval_specific_kwargs):
     return [chunk_video_path]
 
 
-def ovo_doc_to_target(doc, lmms_eval_specific_kwargs=None):
-    chr(65 + doc["gt"])
-
-
 def ovo_back_real_process_results(doc, results):
     if isinstance(results, list) and isinstance(results[0], list):
         response = results[0][0].strip()

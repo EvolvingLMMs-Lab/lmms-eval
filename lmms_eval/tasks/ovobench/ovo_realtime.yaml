@@ -3,7 +3,6 @@ dataset_name: realtime
 task: "ovo_realtime"
 test_split: test
 output_type: generate_until
-doc_to_messages: !function utils.ovo_doc_to_messages
 doc_to_text: !function utils.ovo_back_real_doc_to_text
 doc_to_visual: !function utils.ovo_doc_to_visual
 doc_to_target: "answer"

@@ -3,7 +3,6 @@ dataset_name: forward
 task: "ovo_forward"
 test_split: test
 output_type: generate_until_multi_round
-doc_to_messages: !function utils.ovo_doc_to_messages
 doc_to_text: !function utils.ovo_forward_doc_to_text
 doc_to_visual: !function utils.ovo_doc_to_visual
 doc_to_target: "answer"
