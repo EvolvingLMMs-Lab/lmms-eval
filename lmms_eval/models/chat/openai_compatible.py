@@ -78,7 +78,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 if "o1" in self.model_version or "o3" in self.model_version or "o4" in self.model_version or "gpt-5" in self.model_version:
                     del payload["temperature"]
                     payload.pop("max_tokens")
-                    #payload["reasoning_effort"] = "medium"
+                    # payload["reasoning_effort"] = "medium"
                     payload["response_format"] = {"type": "text"}
                     payload["max_completion_tokens"] = 5000
 

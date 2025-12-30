@@ -1,30 +1,71 @@
+import json
 import logging
 import math
 import re
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import json
-
 eval_logger = logging.getLogger("lmms-eval")
 
-REC_METRICS = ["IoU", "ACC@0.5", "ACC@0.75", "ACC@0.9", "Center_ACC", "MACC", 
-                    "Discriminative_ACC@0.5", "Discriminative_ACC@0.75", "Discriminative_ACC@0.9", "Discriminative_MACC",
-                    "Spatial_ACC@0.5", "Spatial_ACC@0.75", "Spatial_ACC@0.9", "Spatial_MACC",
-                    "Limited_ACC@0.5", "Limited_ACC@0.75", "Limited_ACC@0.9", "Limited_MACC",
-                    "Rejection_ACC",
-                    "D_Appearance_ACC@0.5", "D_Appearance_ACC@0.75", "D_Appearance_ACC@0.9", "D_Appearance_MACC",
-                    "D_Component_ACC@0.5", "D_Component_ACC@0.75", "D_Component_ACC@0.9", "D_Component_MACC",
-                    "D_Text_ACC@0.5", "D_Text_ACC@0.75", "D_Text_ACC@0.9", "D_Text_MACC",
-                    "D_State_ACC@0.5", "D_State_ACC@0.75", "D_State_ACC@0.9", "D_State_MACC",
-                    "Relationship_ACC@0.5", "Relationship_ACC@0.75", "Relationship_ACC@0.9", "Relationship_MACC",
-                    "Counting_ACC@0.5", "Counting_ACC@0.75", "Counting_ACC@0.9", "Counting_MACC",
-                    "Occlusion_ACC@0.5", "Occlusion_ACC@0.75", "Occlusion_ACC@0.9", "Occlusion_MACC",
-                    "Small_ACC@0.5", "Small_ACC@0.75", "Small_ACC@0.9", "Small_MACC",
-                    "R_Appearance_ACC", "R_Component_ACC", "R_Text_ACC", "R_State_ACC"]
+REC_METRICS = [
+    "IoU",
+    "ACC@0.5",
+    "ACC@0.75",
+    "ACC@0.9",
+    "Center_ACC",
+    "MACC",
+    "Discriminative_ACC@0.5",
+    "Discriminative_ACC@0.75",
+    "Discriminative_ACC@0.9",
+    "Discriminative_MACC",
+    "Spatial_ACC@0.5",
+    "Spatial_ACC@0.75",
+    "Spatial_ACC@0.9",
+    "Spatial_MACC",
+    "Limited_ACC@0.5",
+    "Limited_ACC@0.75",
+    "Limited_ACC@0.9",
+    "Limited_MACC",
+    "Rejection_ACC",
+    "D_Appearance_ACC@0.5",
+    "D_Appearance_ACC@0.75",
+    "D_Appearance_ACC@0.9",
+    "D_Appearance_MACC",
+    "D_Component_ACC@0.5",
+    "D_Component_ACC@0.75",
+    "D_Component_ACC@0.9",
+    "D_Component_MACC",
+    "D_Text_ACC@0.5",
+    "D_Text_ACC@0.75",
+    "D_Text_ACC@0.9",
+    "D_Text_MACC",
+    "D_State_ACC@0.5",
+    "D_State_ACC@0.75",
+    "D_State_ACC@0.9",
+    "D_State_MACC",
+    "Relationship_ACC@0.5",
+    "Relationship_ACC@0.75",
+    "Relationship_ACC@0.9",
+    "Relationship_MACC",
+    "Counting_ACC@0.5",
+    "Counting_ACC@0.75",
+    "Counting_ACC@0.9",
+    "Counting_MACC",
+    "Occlusion_ACC@0.5",
+    "Occlusion_ACC@0.75",
+    "Occlusion_ACC@0.9",
+    "Occlusion_MACC",
+    "Small_ACC@0.5",
+    "Small_ACC@0.75",
+    "Small_ACC@0.9",
+    "Small_MACC",
+    "R_Appearance_ACC",
+    "R_Component_ACC",
+    "R_Text_ACC",
+    "R_State_ACC",
+]
 
-def smart_resize_mimo(
-    height: int, width: int, factor: int = 28, min_pixels: int = 28 * 28 * 8, max_pixels: int = 28 * 28 * 4096
-):
+
+def smart_resize_mimo(height: int, width: int, factor: int = 28, min_pixels: int = 28 * 28 * 8, max_pixels: int = 28 * 28 * 4096):
     """Resize image for MIMO models with factor-divisible dimensions and pixel constraints."""
     if max(height, width) < 10:
         raise ValueError(f"At least one dimension must be larger than 10 pixels, got height:{height}, width:{width}")
@@ -33,12 +74,10 @@ def smart_resize_mimo(
             height = factor
             width = int(width * (factor / height))
         else:
-            width = factor 
+            width = factor
             height = int(height * (factor / width))
     elif max(height, width) / min(height, width) > 200:
-        raise ValueError(
-            f"absolute aspect ratio must be smaller than 200, got {max(height, width) / min(height, width)}"
-        )
+        raise ValueError(f"absolute aspect ratio must be smaller than 200, got {max(height, width) / min(height, width)}")
     h_bar = round(height / factor) * factor
     w_bar = round(width / factor) * factor
     if h_bar * w_bar > max_pixels:
@@ -52,14 +91,10 @@ def smart_resize_mimo(
     return h_bar, w_bar
 
 
-def smart_resize_qwen(
-    height: int, width: int, factor: int = 28, min_pixels: int = 4 * 28 * 28, max_pixels: int = 16384 * 28 * 28
-):
+def smart_resize_qwen(height: int, width: int, factor: int = 28, min_pixels: int = 4 * 28 * 28, max_pixels: int = 16384 * 28 * 28):
     """Resize image for Qwen models with factor-divisible dimensions and pixel constraints."""
     if max(height, width) / min(height, width) > 200:
-        raise ValueError(
-            f"absolute aspect ratio must be smaller than {200}, got {max(height, width) / min(height, width)}"
-        )
+        raise ValueError(f"absolute aspect ratio must be smaller than {200}, got {max(height, width) / min(height, width)}")
     h_bar = max(factor, int(round(height / factor) * factor))
     w_bar = max(factor, int(round(width / factor) * factor))
     if h_bar * w_bar > max_pixels:
@@ -72,6 +107,7 @@ def smart_resize_qwen(
         w_bar = max(factor, int(math.ceil(width * beta / factor) * factor))
     return h_bar, w_bar
 
+
 def _normalize_bbox(bbox: List[float], width: int, height: int) -> List[float]:
     """Normalize bbox from either [0, 1] or [0, 999] range to pixel coordinates."""
     if all(coord <= 1 for coord in bbox):
@@ -79,15 +115,18 @@ def _normalize_bbox(bbox: List[float], width: int, height: int) -> List[float]:
     else:
         return [bbox[0] / 999 * width, bbox[1] / 999 * height, bbox[2] / 999 * width, bbox[3] / 999 * height]
 
+
 def convert_bbox_from_mimo(bbox: List[float], width: int, height: int) -> List[float]:
     """Convert bbox coordinates from MIMO resized space to original image space."""
     mimo_width, mimo_height = smart_resize_mimo(height, width)
-    return [bbox[0]/mimo_width*width, bbox[1]/mimo_height*height, bbox[2]/mimo_width*width, bbox[3]/mimo_height*height]
+    return [bbox[0] / mimo_width * width, bbox[1] / mimo_height * height, bbox[2] / mimo_width * width, bbox[3] / mimo_height * height]
+
 
 def convert_bbox_from_qwen(bbox: List[float], width: int, height: int) -> List[float]:
     """Convert bbox coordinates from Qwen resized space to original image space."""
     qwen_width, qwen_height = smart_resize_qwen(height, width)
-    return [bbox[0]/qwen_width*width, bbox[1]/qwen_height*height, bbox[2]/qwen_width*width, bbox[3]/qwen_height*height]
+    return [bbox[0] / qwen_width * width, bbox[1] / qwen_height * height, bbox[2] / qwen_width * width, bbox[3] / qwen_height * height]
+
 
 def groundingme_doc_to_visual(doc: Dict[str, Any]) -> List[Any]:
     """Convert document to visual input for model evaluation."""
@@ -137,7 +176,7 @@ def groundingme_process_result(doc, result):
     pred_raw = parse_bbox(result[0] if len(result) > 0 else "")
     bbox = doc["bbox"] if doc["subtask_l1"] != "Rejection" else [0, 0, 0, 0]
     height, width = doc["height"], doc["width"]
-    
+
     # Try different coordinate format interpretations and select the best one
     pred_candidates = [
         pred_raw,  # Original format
@@ -145,15 +184,15 @@ def groundingme_process_result(doc, result):
         convert_bbox_from_mimo(pred_raw, width, height),  # MIMO format
         convert_bbox_from_qwen(pred_raw, width, height),  # Qwen format
     ]
-    
+
     ious = [compute_iou(bbox, pred) for pred in pred_candidates]
     best_idx = ious.index(max(ious))
     pred_best, iou = pred_candidates[best_idx], ious[best_idx]
-    
+
     center_acc = compute_center_accuracy(bbox, pred_best)
     thresholds = [round(0.5 + x * 0.05, 2) for x in range(10)]
     accs = [compute_accuracy(iou, t) for t in thresholds]
-    
+
     data_dict = {
         "subtask_l1": doc["subtask_l1"],
         "subtask_l2": doc["subtask_l2"],
@@ -168,7 +207,7 @@ def groundingme_process_result(doc, result):
         "acc_9": accs[8],
         "macc": sum(accs) / len(accs),
     }
-    
+
     return {f"groundingme_{metric}": data_dict for metric in REC_METRICS}
 
 
@@ -229,7 +268,7 @@ def groundingme_aggregation_result(results, metric):
         is_l2_metric = 1
         l1_name = "Limited"
         l2_name = metric.split("_")[0]
-    
+
     metric_type = 0
     if "ACC@0.5" in metric:
         metric_type = "ACC@0.5"
@@ -256,7 +295,7 @@ def groundingme_aggregation_result(results, metric):
             score = result["center_acc"]
         elif metric_type == "IoU":
             score = result["iou"]
-        
+
         if is_l1_metric == 1:
             if result["subtask_l1"] == l1_name:
                 results_dict[metric].append(score)
@@ -265,7 +304,7 @@ def groundingme_aggregation_result(results, metric):
                 results_dict[metric].append(score)
         else:
             results_dict[metric].append(score)
-            
+
     results_dict[metric] = sum(results_dict[metric]) / len(results_dict[metric])
     eval_logger.info(f"Aggregated {metric} score: {results_dict[metric]}")
     return results_dict[metric]
@@ -274,164 +313,218 @@ def groundingme_aggregation_result(results, metric):
 def groundingme_iou(results):
     return groundingme_aggregation_result(results, "IoU")
 
+
 def groundingme_acc05(results):
     return groundingme_aggregation_result(results, "ACC@0.5")
+
 
 def groundingme_acc075(results):
     return groundingme_aggregation_result(results, "ACC@0.75")
 
+
 def groundingme_acc09(results):
     return groundingme_aggregation_result(results, "ACC@0.9")
+
 
 def groundingme_center_acc(results):
     return groundingme_aggregation_result(results, "Center_ACC")
 
+
 def groundingme_macc(results):
     return groundingme_aggregation_result(results, "MACC")
+
 
 def groundingme_discriminative_acc05(results):
     return groundingme_aggregation_result(results, "Discriminative_ACC@0.5")
 
+
 def groundingme_discriminative_acc075(results):
     return groundingme_aggregation_result(results, "Discriminative_ACC@0.75")
+
 
 def groundingme_discriminative_acc09(results):
     return groundingme_aggregation_result(results, "Discriminative_ACC@0.9")
 
+
 def groundingme_discriminative_macc(results):
     return groundingme_aggregation_result(results, "Discriminative_MACC")
+
 
 def groundingme_spatial_acc05(results):
     return groundingme_aggregation_result(results, "Spatial_ACC@0.5")
 
+
 def groundingme_spatial_acc075(results):
     return groundingme_aggregation_result(results, "Spatial_ACC@0.75")
+
 
 def groundingme_spatial_acc09(results):
     return groundingme_aggregation_result(results, "Spatial_ACC@0.9")
 
+
 def groundingme_spatial_macc(results):
     return groundingme_aggregation_result(results, "Spatial_MACC")
+
 
 def groundingme_limited_acc05(results):
     return groundingme_aggregation_result(results, "Limited_ACC@0.5")
 
+
 def groundingme_limited_acc075(results):
     return groundingme_aggregation_result(results, "Limited_ACC@0.75")
+
 
 def groundingme_limited_acc09(results):
     return groundingme_aggregation_result(results, "Limited_ACC@0.9")
 
+
 def groundingme_limited_macc(results):
     return groundingme_aggregation_result(results, "Limited_MACC")
+
 
 def groundingme_rejection_acc(results):
     return groundingme_aggregation_result(results, "Rejection_ACC@0.5")
 
+
 def groundingme_d_appearance_acc05(results):
     return groundingme_aggregation_result(results, "D_Appearance_ACC@0.5")
+
 
 def groundingme_d_appearance_acc075(results):
     return groundingme_aggregation_result(results, "D_Appearance_ACC@0.75")
 
+
 def groundingme_d_appearance_acc09(results):
     return groundingme_aggregation_result(results, "D_Appearance_ACC@0.9")
+
 
 def groundingme_d_appearance_macc(results):
     return groundingme_aggregation_result(results, "D_Appearance_MACC")
 
+
 def groundingme_d_component_acc05(results):
     return groundingme_aggregation_result(results, "D_Component_ACC@0.5")
+
 
 def groundingme_d_component_acc075(results):
     return groundingme_aggregation_result(results, "D_Component_ACC@0.75")
 
+
 def groundingme_d_component_acc09(results):
     return groundingme_aggregation_result(results, "D_Component_ACC@0.9")
+
 
 def groundingme_d_component_macc(results):
     return groundingme_aggregation_result(results, "D_Component_MACC")
 
+
 def groundingme_d_text_acc05(results):
     return groundingme_aggregation_result(results, "D_Text_ACC@0.5")
+
 
 def groundingme_d_text_acc075(results):
     return groundingme_aggregation_result(results, "D_Text_ACC@0.75")
 
+
 def groundingme_d_text_acc09(results):
     return groundingme_aggregation_result(results, "D_Text_ACC@0.9")
+
 
 def groundingme_d_text_macc(results):
     return groundingme_aggregation_result(results, "D_Text_MACC")
 
+
 def groundingme_d_state_acc05(results):
     return groundingme_aggregation_result(results, "D_State_ACC@0.5")
+
 
 def groundingme_d_state_acc075(results):
     return groundingme_aggregation_result(results, "D_State_ACC@0.75")
 
+
 def groundingme_d_state_acc09(results):
     return groundingme_aggregation_result(results, "D_State_ACC@0.9")
+
 
 def groundingme_d_state_macc(results):
     return groundingme_aggregation_result(results, "D_State_MACC")
 
+
 def groundingme_relationship_acc05(results):
     return groundingme_aggregation_result(results, "Relationship_ACC@0.5")
+
 
 def groundingme_relationship_acc075(results):
     return groundingme_aggregation_result(results, "Relationship_ACC@0.75")
 
+
 def groundingme_relationship_acc09(results):
     return groundingme_aggregation_result(results, "Relationship_ACC@0.9")
+
 
 def groundingme_relationship_macc(results):
     return groundingme_aggregation_result(results, "Relationship_MACC")
 
+
 def groundingme_counting_acc05(results):
     return groundingme_aggregation_result(results, "Counting_ACC@0.5")
+
 
 def groundingme_counting_acc075(results):
     return groundingme_aggregation_result(results, "Counting_ACC@0.75")
 
+
 def groundingme_counting_acc09(results):
     return groundingme_aggregation_result(results, "Counting_ACC@0.9")
+
 
 def groundingme_counting_macc(results):
     return groundingme_aggregation_result(results, "Counting_MACC")
 
+
 def groundingme_occlusion_acc05(results):
     return groundingme_aggregation_result(results, "Occlusion_ACC@0.5")
+
 
 def groundingme_occlusion_acc075(results):
     return groundingme_aggregation_result(results, "Occlusion_ACC@0.75")
 
+
 def groundingme_occlusion_acc09(results):
     return groundingme_aggregation_result(results, "Occlusion_ACC@0.9")
+
 
 def groundingme_occlusion_macc(results):
     return groundingme_aggregation_result(results, "Occlusion_MACC")
 
+
 def groundingme_small_acc05(results):
     return groundingme_aggregation_result(results, "Small_ACC@0.5")
+
 
 def groundingme_small_acc075(results):
     return groundingme_aggregation_result(results, "Small_ACC@0.75")
 
+
 def groundingme_small_acc09(results):
     return groundingme_aggregation_result(results, "Small_ACC@0.9")
+
 
 def groundingme_small_macc(results):
     return groundingme_aggregation_result(results, "Small_MACC")
 
+
 def groundingme_r_appearance_acc(results):
     return groundingme_aggregation_result(results, "R_Appearance_ACC@0.5")
+
 
 def groundingme_r_component_acc(results):
     return groundingme_aggregation_result(results, "R_Component_ACC@0.5")
 
+
 def groundingme_r_text_acc(results):
     return groundingme_aggregation_result(results, "R_Text_ACC@0.5")
+
 
 def groundingme_r_state_acc(results):
     return groundingme_aggregation_result(results, "R_State_ACC@0.5")
