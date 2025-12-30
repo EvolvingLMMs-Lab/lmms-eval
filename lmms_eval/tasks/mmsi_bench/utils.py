@@ -23,11 +23,12 @@ def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def msr_doc_to_visual(doc):
-    # image_list = [image.convert("RGB") for image in doc["images"]]
     image_list = []
     for img_data in doc["images"]:
-        image = Image.open(io.BytesIO(img_data))
-        image = image.convert("RGB")
+        if isinstance(img_data, Image.Image):
+            image = img_data.convert("RGB")
+        else:
+            image = Image.open(io.BytesIO(img_data)).convert("RGB")
         image_list.append(image)
     return image_list
 
