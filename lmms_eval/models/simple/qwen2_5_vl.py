@@ -354,5 +354,178 @@ class Qwen2_5_VL(lmms):
         pbar.close()
         return res
 
-    def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError("TODO: Implement multi-round generation")
+    def generate_until_multi_round(self, requests: List[Instance]) -> List[str]:
+        res = []
+
+        def _collate(x):
+            toks = self.tokenizer.encode(x[0])
+            return -len(toks), x[0]
+
+        metadata = requests[0].metadata
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
+        chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
+        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+
+        for chunk in chunks:
+            batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_to_text, batched_doc_id, batched_task, batched_split = zip(*chunk)
+            task = batched_task[0]
+            split = batched_split[0]
+            batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]
+            assert len(batched_visuals) == 1
+
+            gen_kwargs = all_gen_kwargs[0]
+            if "until" in gen_kwargs:
+                gen_kwargs.pop("until")
+
+            round_idx = 0
+            batched_round_res = []
+            batched_previous_round_info = None
+            while True:
+                contexts = []
+                visuals_list = []
+
+                if round_idx != 0:
+                    visuals_list, contexts, batched_terminal_signal, batched_round_res, batched_previous_round_info = list(
+                        zip(
+                            *[
+                                batched_doc_to_text[0](
+                                    self.task_dict[task][split][ids],
+                                    previous_output=[round_res[ids_idx] for round_res in batched_round_res],
+                                    round_idx=round_idx,
+                                    previous_round_info=batched_previous_round_info[ids_idx] if batched_previous_round_info is not None else None,
+                                )
+                                for ids_idx, ids in enumerate(batched_doc_id)
+                            ]
+                        )
+                    )
+                    batched_round_res = list(zip(*batched_round_res))
+                    if batched_terminal_signal[0]:
+                        break
+                else:
+                    visuals_list = batched_visuals
+                    contexts = list(batched_contexts)
+
+                for i in range(len(contexts)):
+                    if "<image>" in contexts[i]:
+                        contexts[i] = contexts[i].replace("<image>", "")
+
+                batched_messages = []
+                for i, context in enumerate(contexts):
+                    if "<image>" in context:
+                        context = context.replace("<image>", "")
+
+                    message = [{"role": "system", "content": self.system_prompt}]
+                    if self.reasoning_prompt:
+                        context = context.strip() + self.reasoning_prompt
+
+                    processed_visuals = []
+                    if visuals_list[i] is not None:
+                        for visual in visuals_list[i]:
+                            if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):
+                                vr = decord.VideoReader(visual)
+                                first_frame = vr[0].asnumpy()
+                                height, width = first_frame.shape[:2]
+                                processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            elif isinstance(visual, Image.Image):
+                                base64_image = visual.convert("RGB")
+                                buffer = BytesIO()
+                                base64_image.save(buffer, format="JPEG")
+                                base64_bytes = base64.b64encode(buffer.getvalue())
+                                base64_string = base64_bytes.decode("utf-8")
+                                processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+
+                    if self.interleave_visuals is False:
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": processed_visuals + [{"type": "text", "text": context}],
+                            }
+                        )
+                    else:
+                        image_placeholders = re.findall(r"<image \d+>", context)
+                        content_parts = []
+                        text_parts = re.split(r"<image \d+>", context)
+                        if text_parts[0]:
+                            content_parts.append({"type": "text", "text": text_parts[0]})
+
+                        for j, placeholder in enumerate(image_placeholders):
+                            img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
+                            image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
+                            if processed_visuals and image_idx < len(processed_visuals):
+                                content_parts.append(processed_visuals[image_idx])
+                            if j + 1 < len(text_parts) and text_parts[j + 1]:
+                                content_parts.append({"type": "text", "text": text_parts[j + 1]})
+
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": content_parts,
+                            }
+                        )
+
+                    batched_messages.append(message)
+
+                texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
+                image_inputs, video_inputs = process_vision_info(batched_messages)
+                if video_inputs is not None:
+                    total_frames = video_inputs[0].shape[0]
+                    indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
+                    indices = np.unique(indices)
+                    if total_frames - 1 not in indices:
+                        indices = np.append(indices, total_frames - 1)
+                        indices = np.unique(indices)
+                    video_inputs[0] = video_inputs[0][indices]
+                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+
+                if self.device_map == "auto":
+                    inputs = inputs.to("cuda")
+                else:
+                    inputs = inputs.to(self.device)
+
+                default_gen_kwargs = {
+                    "max_new_tokens": 32768,
+                    "temperature": 0.0,
+                    "top_p": None,
+                    "num_beams": 1,
+                }
+                current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
+                pad_token_id = self.tokenizer.pad_token_id
+
+                if current_gen_kwargs["temperature"] > 0:
+                    current_gen_kwargs["do_sample"] = True
+                else:
+                    current_gen_kwargs["do_sample"] = False
+                    current_gen_kwargs["temperature"] = None
+                    current_gen_kwargs["top_p"] = None
+
+                cont = self.model.generate(
+                    **inputs,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    pad_token_id=pad_token_id,
+                    do_sample=current_gen_kwargs["do_sample"],
+                    temperature=current_gen_kwargs["temperature"],
+                    top_p=current_gen_kwargs["top_p"],
+                    num_beams=current_gen_kwargs["num_beams"],
+                    max_new_tokens=current_gen_kwargs["max_new_tokens"],
+                    use_cache=self.use_cache,
+                )
+
+                generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
+                answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+
+                clean_answers = []
+                for ans in answers:
+                    clean_ans = parse_reasoning_model_answer(ans)
+                    clean_answers.append(clean_ans)
+
+                batched_round_res.append(clean_answers)
+                round_idx += 1
+
+            res.extend(list(zip(*batched_round_res)))
+            self.cache_hook.add_partial("generate_until_multi_round", (batched_contexts[0], gen_kwargs), batched_round_res)
+            pbar.update(1)
+
+        res = re_ords.get_original(res)
+        pbar.close()
+        return res
