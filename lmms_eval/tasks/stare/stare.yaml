@@ -1,0 +1,5 @@
+# Official STARE paper use this configuration
+dataset_name: All
+test_split: train
+task: "stare_full"
+include: _default_template_yaml
