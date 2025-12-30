@@ -1,0 +1,57 @@
+dataset_path: kcz358/imgedit
+dataset_kwargs:
+  token: True
+task: "imgedit"
+test_split: test
+output_type: generate_until
+
+# Document processing functions
+doc_to_visual: !function utils.imgedit_doc_to_visual
+doc_to_text: !function utils.imgedit_doc_to_text
+doc_to_target: "prompt"
+
+# Generation parameters
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+# Process results using GPT-4o or Qwen2.5-VL evaluation
+process_results: !function utils.imgedit_process_results
+
+# Metrics - Following original ImgEdit benchmark scoring
+# ==========================================
+# score1: Prompt Compliance / Style Fidelity / etc. (depends on edit_type)
+# score2: Visual Naturalness / Content Preservation / etc.
+# score3: Physical & Detail Integrity / Rendering Quality / etc.
+# avg_score: (score1 + score2 + score3) / 3 (main metric, like step1_get_avgscore.py)
+# Per edit_type scores are printed in logs (like step2_typescore.py)
+# ==========================================
+metric_list:
+  # Three dimension scores
+  - metric: imgedit_score1
+    aggregation: !function utils.imgedit_aggregate_score
+    higher_is_better: true
+  - metric: imgedit_score2
+    aggregation: !function utils.imgedit_aggregate_score
+    higher_is_better: true
+  - metric: imgedit_score3
+    aggregation: !function utils.imgedit_aggregate_score
+    higher_is_better: true
+
+  # Main metric: avg_score (following step1_get_avgscore.py)
+  # Per edit_type scores are printed in logs (following step2_typescore.py)
+  - metric: imgedit_avg_score
+    aggregation: !function utils.imgedit_aggregate_avg_score
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  - version: 0.6
+    description: "ImgEdit Benchmark - Unified Image Editing Evaluation (GPT-4o/Qwen2.5-VL)"
