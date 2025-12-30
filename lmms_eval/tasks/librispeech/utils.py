@@ -1,6 +1,7 @@
 import os
 import re
 import unicodedata
+from typing import Any
 
 import editdistance as ed  # TODO: new package
 import zhconv  # TODO: new package
@@ -8,7 +9,6 @@ import zhconv  # TODO: new package
 from lmms_eval.tasks.librispeech.cn_tn import TextNorm
 from lmms_eval.tasks.librispeech.whisper_normalizer.basic import BasicTextNormalizer
 from lmms_eval.tasks.librispeech.whisper_normalizer.english import EnglishTextNormalizer
-from typing import Any
 
 # ImportError: To support decoding audio files, please install 'librosa' and 'soundfile'.
 english_normalizer = EnglishTextNormalizer()
