@@ -150,11 +150,9 @@ class WhisperTT(lmms):
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "Authorization": f"Bearer your-secret-key",  # This is hardcoded!
         }
-        
-        # if self.api_key:
-        #     headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         
         payload = {
             "file": base64_audio,
@@ -220,12 +218,10 @@ class WhisperTT(lmms):
         url = f"{self.base_url}/audio/transcriptions"
         headers = {
             "accept": "application/json",
-            "Authorization": f"Bearer your-secret-key",
             "Content-Type": "application/json"
         }
-        
-        # if self.api_key:
-        #     headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         
         payload = {
             "file": base64_audio,
@@ -242,8 +238,8 @@ class WhisperTT(lmms):
                 elapsed = time.time() - start_time
 
                 if response.status != 200:
-                    eval_logger.info(f"❌ Image generation for eval failed with status: {response.status}")
-                    return False, elapsed, None
+                    eval_logger.info(f"❌ Audio transcription failed with status: {response.status}")
+                    return ""
 
                 result = await response.json()
                 
