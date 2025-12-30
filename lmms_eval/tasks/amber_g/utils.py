@@ -10,7 +10,7 @@ from pathlib import Path
 import datasets
 
 # Configuration
-AMBER_BASE_DIR = os.environ.get("AMBER_BASE_DIR", "/home/annelee/playground/data/eval/reverse_eval/amber")
+AMBER_BASE_DIR = os.environ.get("AMBER_BASE_DIR", "./data/amber")
 SIMILARITY_THRESHOLD = 0.8
 EVALUATION_TYPE = 'g'  # Default to g
 METADATA_DIR = os.path.join(AMBER_BASE_DIR, "metadata")
@@ -24,7 +24,6 @@ _ANNOTATIONS = None
 _METRICS_INIT = None
 _NLP = None  # Lazy load spaCy
 
-# this was annoying issue..
 def get_nlp():
     """Lazy load spaCy model."""
     global _NLP

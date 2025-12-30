@@ -340,22 +340,14 @@ class VLLM(lmms):
                             imgs.append(task.result())
 
                 messages = [{"role": "user", "content": []}]
-                # print(f"image_first: {self.image_first}", flush=True)
                 if self.image_first:
-                    # print(f"IMAGE_FIRST", flush=True)
                     for img in self.flatten(imgs):
                         messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
                     messages[0]["content"].append({"type": "text", "text": contexts})
                 else:
-                    # print(f"IMAGE_LAST", flush=True)
                     messages[0]["content"].append({"type": "text", "text": contexts})
                     for img in self.flatten(imgs):
                         messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
-                # Ooriginal Code
-                # Add images first, then text
-                # for img in self.flatten(imgs):
-                #     messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
-                # messages[0]["content"].append({"type": "text", "text": contexts})
                 batched_messages.append(messages)
 
             sampling_params = SamplingParams(**params)

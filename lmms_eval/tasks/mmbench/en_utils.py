@@ -40,10 +40,8 @@ def mmbench_doc_to_visual(doc):
     num_image = int(os.environ.get("NUM_IMAGE", "1"))
     
     if num_image == 1:
-        # print("one image!")
         return [doc["image"].convert("RGB")]
     elif num_image == 2:
-        # print("two images!")
         return [doc["image"].convert("RGB"), doc["image"].convert("RGB")]
     else:
         raise ValueError(f"num_image must be 1 or 2, got {num_image}")
