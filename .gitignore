@@ -51,3 +51,4 @@ uv.lock
 workspace/*
 .claude/*
 remote_code/*
+score_cache/*
