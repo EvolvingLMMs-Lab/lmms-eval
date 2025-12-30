@@ -102,6 +102,34 @@ def handle_non_serializable(o):
         return str(o)
 
 
+def is_multimodal_content(value: Any) -> bool:
+    """
+    Check if a value is multimodal content (image, audio, video) that should
+    not be serialized to log files.
+
+    Returns True for:
+    - PIL.Image objects
+    - numpy arrays (typically image/audio data)
+    - bytes (binary data)
+    - torch tensors
+    - dicts with 'array' key (HuggingFace audio format)
+    - dicts with 'bytes' key (HuggingFace image format)
+    """
+    if isinstance(value, (bytes, bytearray, np.ndarray, torch.Tensor)):
+        return True
+    if isinstance(value, dict):
+        if "array" in value or "bytes" in value:
+            return True
+    try:
+        from PIL import Image
+
+        if isinstance(value, Image.Image):
+            return True
+    except ImportError:
+        pass
+    return False
+
+
 def sanitize_list(sub):
     """
     Takes possible nested list and recursively converts all inner component to strings
