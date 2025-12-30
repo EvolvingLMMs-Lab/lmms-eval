@@ -60,9 +60,7 @@ def spatialviz_doc_to_text(doc: Dict[str, Any]) -> str:
     return text
 
 
-def spatialviz_process_results(
-    doc: Dict[str, Any], results: List[str]
-) -> Dict[str, Dict[str, Any]]:
+def spatialviz_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Dict[str, Any]]:
     key_name = "spatialviz_score"
     grounded_output = doc["Answer"]
     response = results[0]
@@ -149,16 +147,9 @@ def spatialviz_aggregate_results(results: List[Dict[str, Any]]) -> float:
             key_to_eval_samples[key].append(0)
 
     accuracy = total_correct / total_samples if total_samples > 0 else 0
-    task_accuracies = {
-        task: sum(scores) / len(scores) for task, scores in task_to_eval_samples.items()
-    }
-    category_accuracies = {
-        category: sum(scores) / len(scores)
-        for category, scores in category_to_eval_samples.items()
-    }
-    key_accuracies = {
-        key: sum(scores) / len(scores) for key, scores in key_to_eval_samples.items()
-    }
+    task_accuracies = {task: sum(scores) / len(scores) for task, scores in task_to_eval_samples.items()}
+    category_accuracies = {category: sum(scores) / len(scores) for category, scores in category_to_eval_samples.items()}
+    key_accuracies = {key: sum(scores) / len(scores) for key, scores in key_to_eval_samples.items()}
 
     eval_logger.info(f"{'Total Samples':<20}: {total_samples}")
     eval_logger.info(f"{'Total Correct':<20}: {total_correct}")
