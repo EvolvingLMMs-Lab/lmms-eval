@@ -79,55 +79,6 @@ def gedit_bench_doc_to_target(doc):
     return doc.get("instruction", "")
 
 
-def _save_image_to_structure(
-    image_path: str,
-    key: str,
-    task_type: str,
-    instruction_language: str,
-    output_base_dir: str,
-    model_name: str = "default",
-) -> str:
-    """
-    Save image to the required directory structure:
-    results/{model_name}/fullset/{task_type}/{instruction_language}/{key}.png
-
-    Args:
-        image_path: Path to the generated image
-        key: Unique key for this sample
-        task_type: Task type (e.g., "background_change")
-        instruction_language: Language of instruction ("en" or "cn")
-        output_base_dir: Base directory for outputs
-        model_name: Name of the model being evaluated
-
-    Returns:
-        Path to the saved image
-    """
-    # Create directory structure
-    save_dir = os.path.join(output_base_dir, model_name, "fullset", task_type, instruction_language)
-    os.makedirs(save_dir, exist_ok=True)
-
-    # Save image with key as filename (preserve extension if exists)
-    if os.path.exists(image_path):
-        # Copy image to new location
-        save_path = os.path.join(save_dir, f"{key}.png")
-        shutil.copy2(image_path, save_path)
-        return save_path
-    else:
-        eval_logger.warning(f"Image not found at {image_path}, skipping save")
-        return ""
-
-
-def _create_result_entry(key, task_type, instruction_language, score, intersection_exist):
-    """Helper to create a result entry dict"""
-    return {
-        "key": key,
-        "task_type": task_type,
-        "instruction_language": instruction_language,
-        "score": score,
-        "intersection_exist": intersection_exist,
-    }
-
-
 def _create_all_metric_results(key, task_type, instruction_language, semantics_score, quality_score, overall_score, intersection_exist):
     """
     Create result dict with all metric keys for detailed breakdown.
