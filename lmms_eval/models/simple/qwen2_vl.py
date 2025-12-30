@@ -417,5 +417,224 @@ class Qwen2_VL(lmms):
         pbar.close()
         return res
 
-    def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError("TODO: Implement multi-round generation")
+    def generate_until_multi_round(self, requests: List[Instance]) -> List[str]:
+        res = []
+
+        def _collate(x):
+            toks = self.tokenizer.encode(x[0])
+            return -len(toks), x[0]
+
+        import lmms_eval.utils as utils
+
+        metadata = requests[0].metadata
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
+        chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
+        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+
+        for chunk in chunks:
+            batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_to_text, batched_doc_id, batched_task, batched_split = zip(*chunk)
+            task = batched_task[0]
+            split = batched_split[0]
+
+            batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]
+            if None in batched_visuals:
+                batched_visuals = [None] * len(batched_visuals)
+            else:
+                batched_visuals = [self.flatten([visuals]) if visuals is not None else [] for visuals in batched_visuals]
+
+            gen_kwargs = all_gen_kwargs[0]
+            if "until" in gen_kwargs:
+                gen_kwargs.pop("until")
+
+            until = [self.tokenizer.decode(self.eot_token_id)]
+
+            round_idx = 0
+            batched_round_res = []
+            batched_previous_round_info = None
+            while True:
+                contexts = []
+                visuals_list = []
+
+                if round_idx != 0:
+                    visuals_list, contexts, batched_terminal_signal, batched_round_res, batched_previous_round_info = list(
+                        zip(
+                            *[
+                                batched_doc_to_text[0](
+                                    self.task_dict[task][split][ids],
+                                    previous_output=[round_res[ids_idx] for round_res in batched_round_res],
+                                    round_idx=round_idx,
+                                    previous_round_info=batched_previous_round_info[ids_idx] if batched_previous_round_info is not None else None,
+                                )
+                                for ids_idx, ids in enumerate(batched_doc_id)
+                            ]
+                        )
+                    )
+                    batched_round_res = list(zip(*batched_round_res))
+                    if batched_terminal_signal[0]:
+                        break
+                else:
+                    visuals_list = batched_visuals
+                    contexts = list(batched_contexts)
+
+                contexts = [ctx.replace("<image>", "") for ctx in contexts]
+
+                batched_messages = []
+                for i, context in enumerate(contexts):
+                    message = [{"role": "system", "content": self.system_prompt}]
+                    current_context = context
+
+                    if self.reasoning_prompt:
+                        current_context = current_context.strip() + self.reasoning_prompt
+
+                    processed_visuals = []
+                    relevant_visuals = visuals_list[i] if i < len(visuals_list) and visuals_list[i] is not None else []
+
+                    for visual in relevant_visuals:
+                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                            try:
+                                vr = decord.VideoReader(visual)
+                                if len(vr) > 0:
+                                    first_frame = vr[0].asnumpy()
+                                    height, width = first_frame.shape[:2]
+                                    processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                                else:
+                                    eval_logger.warning(f"Skipping empty video: {visual}")
+                            except Exception as e:
+                                eval_logger.error(f"Failed to process video {visual}: {e}")
+                        elif isinstance(visual, Image.Image):
+                            try:
+                                base64_image = visual.convert("RGB")
+                                buffer = BytesIO()
+                                base64_image.save(buffer, format="JPEG")
+                                base64_bytes = base64.b64encode(buffer.getvalue())
+                                base64_string = base64_bytes.decode("utf-8")
+                                processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            except Exception as e:
+                                eval_logger.error(f"Failed to process PIL image: {e}")
+
+                    if not self.interleave_visuals:
+                        if processed_visuals:
+                            content_payload = processed_visuals + [{"type": "text", "text": current_context}]
+                        else:
+                            content_payload = [{"type": "text", "text": current_context}]
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": content_payload,
+                            }
+                        )
+                    else:
+                        image_placeholders = re.findall(r"<image \d+>", current_context)
+                        content_parts = []
+                        text_parts = re.split(r"<image \d+>", current_context)
+                        if text_parts[0]:
+                            content_parts.append({"type": "text", "text": text_parts[0]})
+
+                        for idx, placeholder in enumerate(image_placeholders):
+                            try:
+                                img_idx_match = re.search(r"<image (\d+)>", placeholder)
+                                if img_idx_match:
+                                    img_idx = int(img_idx_match.group(1)) - 1
+                                    if 0 <= img_idx < len(processed_visuals):
+                                        content_parts.append(processed_visuals[img_idx])
+                                    else:
+                                        eval_logger.warning(f"Image index {img_idx + 1} out of range for available visuals ({len(processed_visuals)}) in context.")
+                                else:
+                                    eval_logger.warning(f"Could not parse index from placeholder: {placeholder}")
+                            except Exception as e:
+                                eval_logger.error(f"Error processing placeholder {placeholder}: {e}")
+
+                            if idx + 1 < len(text_parts) and text_parts[idx + 1]:
+                                content_parts.append({"type": "text", "text": text_parts[idx + 1]})
+
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": content_parts,
+                            }
+                        )
+
+                    batched_messages.append(message)
+
+                texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
+                image_inputs, video_inputs = process_vision_info(batched_messages)
+
+                if video_inputs is not None and len(video_inputs) > 0 and video_inputs[0] is not None:
+                    video_tensor = video_inputs[0]
+                    if isinstance(video_tensor, torch.Tensor) and video_tensor.ndim > 0 and video_tensor.shape[0] > 0:
+                        total_frames = video_tensor.shape[0]
+                        indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int, endpoint=True)
+                        if len(indices) > self.max_num_frames:
+                            indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int, endpoint=True)
+                            indices = np.unique(indices)
+
+                        video_inputs[0] = video_tensor[indices]
+                    else:
+                        eval_logger.warning(f"Unexpected video_inputs format or empty tensor: {type(video_tensor)}")
+
+                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+
+                if self.device_map == "auto":
+                    inputs = inputs.to("cuda")
+                else:
+                    inputs = inputs.to(self.device)
+
+                default_gen_kwargs = {
+                    "max_new_tokens": 128,
+                    "temperature": 0.0,
+                    "top_p": None,
+                    "num_beams": 1,
+                }
+                current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
+
+                pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+
+                cont = self.model.generate(
+                    **inputs,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    pad_token_id=pad_token_id,
+                    do_sample=True if current_gen_kwargs["temperature"] > 0 else False,
+                    temperature=current_gen_kwargs["temperature"],
+                    top_p=current_gen_kwargs["top_p"],
+                    num_beams=current_gen_kwargs["num_beams"],
+                    max_new_tokens=current_gen_kwargs["max_new_tokens"],
+                    use_cache=self.use_cache,
+                )
+
+                generated_ids_trimmed = []
+                for in_ids, out_ids in zip(inputs.input_ids, cont):
+                    input_len = len(in_ids)
+                    try:
+                        eos_pos = (out_ids[input_len:] == self.tokenizer.eos_token_id).nonzero(as_tuple=True)[0]
+                        if len(eos_pos) > 0:
+                            generated_ids_trimmed.append(out_ids[input_len : input_len + eos_pos[0]])
+                        else:
+                            generated_ids_trimmed.append(out_ids[input_len:])
+                    except IndexError:
+                        generated_ids_trimmed.append(torch.tensor([], dtype=torch.long, device=out_ids.device))
+
+                answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+
+                clean_answers = []
+                for ans in answers:
+                    stop_pos = len(ans)
+                    for term in until:
+                        if term and term in ans:
+                            stop_pos = min(stop_pos, ans.index(term))
+                    clean_ans = ans[:stop_pos].strip()
+                    clean_answers.append(clean_ans)
+
+                batched_round_res.append(clean_answers)
+                round_idx += 1
+
+            transposed_res = list(zip(*batched_round_res))
+            res.extend(transposed_res)
+
+            self.cache_hook.add_partial("generate_until_multi_round", (batched_contexts[0], gen_kwargs), batched_round_res)
+            pbar.update(1)
+
+        res = re_ords.get_original(res)
+
+        pbar.close()
+        return res
