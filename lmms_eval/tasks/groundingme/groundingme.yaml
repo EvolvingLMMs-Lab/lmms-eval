@@ -1,0 +1,181 @@
+task: "groundingme"
+output_type: generate_until
+test_split: test
+dataset_path: lirang04/GroundingME
+doc_to_visual: !function utils.groundingme_doc_to_visual
+doc_to_text: !function utils.groundingme_doc_to_text
+doc_to_target: ""
+generation_kwargs:
+  max_new_tokens: 20480
+  temperature: 0.0
+  do_sample: false
+process_results: !function utils.groundingme_process_result
+metric_list:
+  - metric: groundingme_IoU
+    aggregation: !function utils.groundingme_iou
+    higher_is_better: true
+  - metric: groundingme_ACC@0.5
+    aggregation: !function utils.groundingme_acc05
+    higher_is_better: true
+  - metric: groundingme_ACC@0.75
+    aggregation: !function utils.groundingme_acc075
+    higher_is_better: true
+  - metric: groundingme_ACC@0.9
+    aggregation: !function utils.groundingme_acc09
+    higher_is_better: true
+  - metric: groundingme_Center_ACC
+    aggregation: !function utils.groundingme_center_acc
+    higher_is_better: true
+  - metric: groundingme_MACC
+    aggregation: !function utils.groundingme_macc
+    higher_is_better: true
+  - metric: groundingme_Discriminative_ACC@0.5
+    aggregation: !function utils.groundingme_discriminative_acc05
+    higher_is_better: true
+  - metric: groundingme_Discriminative_ACC@0.75
+    aggregation: !function utils.groundingme_discriminative_acc075
+    higher_is_better: true
+  - metric: groundingme_Discriminative_ACC@0.9
+    aggregation: !function utils.groundingme_discriminative_acc09
+    higher_is_better: true
+  - metric: groundingme_Discriminative_MACC
+    aggregation: !function utils.groundingme_discriminative_macc
+    higher_is_better: true
+  - metric: groundingme_Spatial_ACC@0.5
+    aggregation: !function utils.groundingme_spatial_acc05
+    higher_is_better: true
+  - metric: groundingme_Spatial_ACC@0.75
+    aggregation: !function utils.groundingme_spatial_acc075
+    higher_is_better: true
+  - metric: groundingme_Spatial_ACC@0.9
+    aggregation: !function utils.groundingme_spatial_acc09
+    higher_is_better: true
+  - metric: groundingme_Spatial_MACC
+    aggregation: !function utils.groundingme_spatial_macc
+    higher_is_better: true
+  - metric: groundingme_Limited_ACC@0.5
+    aggregation: !function utils.groundingme_limited_acc05
+    higher_is_better: true
+  - metric: groundingme_Limited_ACC@0.75
+    aggregation: !function utils.groundingme_limited_acc075
+    higher_is_better: true
+  - metric: groundingme_Limited_ACC@0.9
+    aggregation: !function utils.groundingme_limited_acc09
+    higher_is_better: true
+  - metric: groundingme_Limited_MACC
+    aggregation: !function utils.groundingme_limited_macc
+    higher_is_better: true
+  - metric: groundingme_Rejection_ACC
+    aggregation: !function utils.groundingme_rejection_acc
+    higher_is_better: true
+  - metric: groundingme_D_Appearance_ACC@0.5
+    aggregation: !function utils.groundingme_d_appearance_acc05
+    higher_is_better: true
+  - metric: groundingme_D_Appearance_ACC@0.75
+    aggregation: !function utils.groundingme_d_appearance_acc075
+    higher_is_better: true
+  - metric: groundingme_D_Appearance_ACC@0.9
+    aggregation: !function utils.groundingme_d_appearance_acc09
+    higher_is_better: true
+  - metric: groundingme_D_Appearance_MACC
+    aggregation: !function utils.groundingme_d_appearance_macc
+    higher_is_better: true
+  - metric: groundingme_D_Component_ACC@0.5
+    aggregation: !function utils.groundingme_d_component_acc05
+    higher_is_better: true
+  - metric: groundingme_D_Component_ACC@0.75
+    aggregation: !function utils.groundingme_d_component_acc075
+    higher_is_better: true
+  - metric: groundingme_D_Component_ACC@0.9
+    aggregation: !function utils.groundingme_d_component_acc09
+    higher_is_better: true
+  - metric: groundingme_D_Component_MACC
+    aggregation: !function utils.groundingme_d_component_macc
+    higher_is_better: true
+  - metric: groundingme_D_Text_ACC@0.5
+    aggregation: !function utils.groundingme_d_text_acc05
+    higher_is_better: true
+  - metric: groundingme_D_Text_ACC@0.75
+    aggregation: !function utils.groundingme_d_text_acc075
+    higher_is_better: true
+  - metric: groundingme_D_Text_ACC@0.9
+    aggregation: !function utils.groundingme_d_text_acc09
+    higher_is_better: true
+  - metric: groundingme_D_Text_MACC
+    aggregation: !function utils.groundingme_d_text_macc
+    higher_is_better: true
+  - metric: groundingme_D_State_ACC@0.5
+    aggregation: !function utils.groundingme_d_state_acc05
+    higher_is_better: true
+  - metric: groundingme_D_State_ACC@0.75
+    aggregation: !function utils.groundingme_d_state_acc075
+    higher_is_better: true
+  - metric: groundingme_D_State_ACC@0.9
+    aggregation: !function utils.groundingme_d_state_acc09
+    higher_is_better: true
+  - metric: groundingme_D_State_MACC
+    aggregation: !function utils.groundingme_d_state_macc
+    higher_is_better: true
+  - metric: groundingme_Relationship_ACC@0.5
+    aggregation: !function utils.groundingme_relationship_acc05
+    higher_is_better: true
+  - metric: groundingme_Relationship_ACC@0.75
+    aggregation: !function utils.groundingme_relationship_acc075
+    higher_is_better: true
+  - metric: groundingme_Relationship_ACC@0.9
+    aggregation: !function utils.groundingme_relationship_acc09
+    higher_is_better: true
+  - metric: groundingme_Relationship_MACC
+    aggregation: !function utils.groundingme_relationship_macc
+    higher_is_better: true
+  - metric: groundingme_Counting_ACC@0.5
+    aggregation: !function utils.groundingme_counting_acc05
+    higher_is_better: true
+  - metric: groundingme_Counting_ACC@0.75
+    aggregation: !function utils.groundingme_counting_acc075
+    higher_is_better: true
+  - metric: groundingme_Counting_ACC@0.9
+    aggregation: !function utils.groundingme_counting_acc09
+    higher_is_better: true
+  - metric: groundingme_Counting_MACC
+    aggregation: !function utils.groundingme_counting_macc
+    higher_is_better: true
+  - metric: groundingme_Occlusion_ACC@0.5
+    aggregation: !function utils.groundingme_occlusion_acc05
+    higher_is_better: true
+  - metric: groundingme_Occlusion_ACC@0.75
+    aggregation: !function utils.groundingme_occlusion_acc075
+    higher_is_better: true
+  - metric: groundingme_Occlusion_ACC@0.9
+    aggregation: !function utils.groundingme_occlusion_acc09
+    higher_is_better: true
+  - metric: groundingme_Occlusion_MACC
+    aggregation: !function utils.groundingme_occlusion_macc
+    higher_is_better: true
+  - metric: groundingme_Small_ACC@0.5
+    aggregation: !function utils.groundingme_small_acc05
+    higher_is_better: true
+  - metric: groundingme_Small_ACC@0.75
+    aggregation: !function utils.groundingme_small_acc075
+    higher_is_better: true
+  - metric: groundingme_Small_ACC@0.9
+    aggregation: !function utils.groundingme_small_acc09
+    higher_is_better: true
+  - metric: groundingme_Small_MACC
+    aggregation: !function utils.groundingme_small_macc
+    higher_is_better: true
+  - metric: groundingme_R_Appearance_ACC
+    aggregation: !function utils.groundingme_r_appearance_acc
+    higher_is_better: true
+  - metric: groundingme_R_Component_ACC
+    aggregation: !function utils.groundingme_r_component_acc
+    higher_is_better: true
+  - metric: groundingme_R_Text_ACC
+    aggregation: !function utils.groundingme_r_text_acc
+    higher_is_better: true
+  - metric: groundingme_R_State_ACC
+    aggregation: !function utils.groundingme_r_state_acc
+    higher_is_better: true
+metadata:
+  version: '0.0'
+
