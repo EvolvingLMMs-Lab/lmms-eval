@@ -34,7 +34,7 @@ API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-    API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
+    API_KEY = os.getenv("OPENAI_API_KEY", "")
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",

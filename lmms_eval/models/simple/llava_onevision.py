@@ -72,7 +72,7 @@ class Llava_OneVision(lmms):
         pretrained: str = "lmms-lab/llava-onevision-qwen2-7b-ov",
         truncation: Optional[bool] = True,
         device: Optional[str] = "cuda:0",
-        batch_size: Optional[Union[int, str]] = 1,
+        batch_size: Optional[Union[int, str]] = 2,
         model_name: Optional[str] = None,
         attn_implementation: Optional[str] = best_fit_attn_implementation,
         device_map: Optional[str] = "cuda:0",
@@ -406,7 +406,9 @@ class Llava_OneVision(lmms):
 
         origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
 
+        xyz =0
         for chunk in chunks:
+
             batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_id, batched_task, batched_split = zip(*chunk)
             task = batched_task[0]
             split = batched_split[0]
@@ -422,6 +424,9 @@ class Llava_OneVision(lmms):
             question_input = []
             # import ipdb; ipdb.set_trace()
             for visual, context in zip(batched_visuals, batched_contexts):
+                if xyz == 0:
+                    print(context)
+                xyz +=1
                 if origin_image_aspect_ratio is not None and self._config.image_aspect_ratio != origin_image_aspect_ratio:
                     self._config.image_aspect_ratio = origin_image_aspect_ratio
                     eval_logger.info(f"Resetting image aspect ratio to {origin_image_aspect_ratio}")
@@ -590,8 +595,11 @@ class Llava_OneVision(lmms):
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
-
+        xyz= 0
         for chunk in chunks:
+            if xyz == 0:
+                print(chunk)
+            xyz +=1
             batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_to_text, batched_doc_id, batched_task, batched_split = zip(*chunk)
             task = batched_task[0]
             split = batched_split[0]
