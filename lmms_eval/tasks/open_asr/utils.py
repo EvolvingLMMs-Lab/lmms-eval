@@ -31,9 +31,7 @@ def openasr_doc_to_audio(doc):
     for key in ["audio", "file", "path", "audio_path"]:
         if key in doc:
             return [doc[key]]
-    raise KeyError(
-        f"No audio field found. Tried ['audio','file','path','audio_path']. Available: {list(doc.keys())}"
-    )
+    raise KeyError(f"No audio field found. Tried ['audio','file','path','audio_path']. Available: {list(doc.keys())}")
 
 
 def openasr_doc_to_text(doc, lmms_eval_specific_kwargs):
@@ -58,9 +56,7 @@ def openasr_doc_to_target(doc):
     for key in ["text", "transcript", "gt"]:
         if key in doc:
             return doc[key]
-    raise KeyError(
-        f"No target field found. Tried ['text','transcript','gt']. Available: {list(doc.keys())}"
-    )
+    raise KeyError(f"No target field found. Tried ['text','transcript','gt']. Available: {list(doc.keys())}")
 
 
 PUNCS = "!,.?;:"

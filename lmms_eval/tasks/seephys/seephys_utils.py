@@ -4,16 +4,18 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import List, Dict, Any, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image
+
 from lmms_eval.tasks.seephys.seephys_evals import SeephysEvaluator, load_seephys_config
 
 config = load_seephys_config()
 seephys_evaluator = SeephysEvaluator()
+
 
 def seephys_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
     if "images" not in doc or not doc["images"]:
@@ -39,13 +41,13 @@ def seephys_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
 
 def seephys_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict = None) -> str:
     question = doc.get("question", "")
-    if not isinstance(question, str) or question.lower() == 'nan':
+    if not isinstance(question, str) or question.lower() == "nan":
         question = ""
 
     lang = doc.get("language", "English")
     sig_figs = doc.get("sig_figs")
 
-    if lang == 'English':
+    if lang == "English":
         question += "\nPlease answer this question with reasoning. First output your reasoning process in <think> </think> tags and then output the final answer in <answer> </answer> tags."
     else:
         question += "\n请用推理来回答这个问题。首先在<think></think>标签中输出推理过程，然后在<answer></answer>标签中输入最终答案。"
@@ -53,7 +55,7 @@ def seephys_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict = N
     try:
         if sig_figs and (isinstance(sig_figs, (str, int, float)) and not np.isnan(float(sig_figs))):
             sf_str = str(int(float(sig_figs)))
-            if lang == 'English':
+            if lang == "English":
                 question += f" The final answer should retain {sf_str} significant figures."
             else:
                 question += f" 最终答案应保留{sf_str}位有效数字。"
@@ -61,7 +63,7 @@ def seephys_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Dict = N
         pass
 
     return question
-   
+
 
 def seephys_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Any]:
     """

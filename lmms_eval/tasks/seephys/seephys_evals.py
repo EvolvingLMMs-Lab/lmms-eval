@@ -1,18 +1,20 @@
 # seephys_evals.py
 import ast
+import json
 import os
 import re
 import time
-from typing import Dict, Any, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional
+
 import yaml
 from loguru import logger as eval_logger
 from openai import OpenAI
+from sympy import Eq, latex, simplify
 from sympy.parsing.latex import parse_latex
-from sympy import latex, Eq, simplify
-from pathlib import Path
-import json
 
 FAIL_MSG = "Failed to obtain answer via API."
+
 
 def load_seephys_config() -> Dict[str, Any]:
     config_path = Path(__file__).parent / "seephys.yaml"
@@ -44,6 +46,7 @@ def load_seephys_config() -> Dict[str, Any]:
         eval_logger.error(f"Error parsing YAML config {config_path}: {e}")
         return {"metadata": {}}
 
+
 config = load_seephys_config()
 
 if "metadata" not in config:
@@ -63,7 +66,7 @@ class SeephysEvaluator:
             if not API_KEY:
                 eval_logger.error("OPENAI_API_KEY not found. Please set the environment variable: `export OPENAI_API_KEY=$Your_KEY`")
                 raise ValueError("OPENAI_API_KEY is required for LLM-as-a-judge evaluation.")
-            
+
             self.client = OpenAI(api_key=API_KEY, base_url=API_URL)
             eval_logger.debug(f"Initialized SeephysEvaluator judger client for model {self.juder_model}")
 
@@ -90,14 +93,14 @@ class SeephysEvaluator:
             choices = resp_dict.get("choices", [])
             if choices and isinstance(choices, list):
                 c0 = choices[0]
-               
+
                 if isinstance(c0, dict):
                     msg = c0.get("message") or c0.get("message", {})
                     if isinstance(msg, dict):
                         content = msg.get("content")
                         if content:
                             return content.strip()
-                
+
                 text = c0.get("text")
                 if text:
                     return text.strip()
@@ -144,7 +147,6 @@ class SeephysEvaluator:
                 eval_logger.debug(f"Judger raw response (attempt {attempt}): {json.dumps(resp_dict, indent=2)[:8000]}")
                 content = self._extract_content_from_response(resp_dict)
 
-                
                 usage = resp_dict.get("usage", {}) or {}
                 finish_reason = ""
                 try:
@@ -173,7 +175,7 @@ class SeephysEvaluator:
                     continue
 
                 if not content:
-                
+
                     textual = json.dumps(resp_dict, ensure_ascii=False)[:8000]
                     return textual
 
@@ -250,9 +252,8 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
     def build_seephys_scoring_prompt(self, line: dict, pred: str) -> str:
         query = line.get("question", "")
         gt = line.get("answer", "")
-        
-        full_prompt = self.get_ICE_scoring().strip() + \
-                      f"\n[Question]: {query}\n[Standard Answer]: {gt}\n[Model Answer]: {pred}\nJudgement: "
+
+        full_prompt = self.get_ICE_scoring().strip() + f"\n[Question]: {query}\n[Standard Answer]: {gt}\n[Model Answer]: {pred}\nJudgement: "
         return full_prompt
 
     def _extract_answer_by_rule(self, line: dict) -> str:
@@ -263,7 +264,7 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
         3) Try to extract last math expression pattern
         4) Fallback to returning full response
         """
-        response = line.get('prediction', '') or ''
+        response = line.get("prediction", "") or ""
         response = str(response).strip()
         if not response:
             return ""
@@ -275,7 +276,7 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
             if m:
                 ans = m.group(1).strip()
                 # strip wrapping $ signs
-                ans = re.sub(r'^\$+|\$+$', '', ans).strip()
+                ans = re.sub(r"^\$+|\$+$", "", ans).strip()
                 return ans
         except Exception:
             pass
@@ -289,14 +290,14 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
                 m2 = re.search(pattern, tail, re.DOTALL | re.IGNORECASE)
                 if m2:
                     ans = m2.group(1).strip()
-                    ans = re.sub(r'^\$+|\$+$', '', ans).strip()
+                    ans = re.sub(r"^\$+|\$+$", "", ans).strip()
                     return ans
                 # otherwise use last non-empty line of tail
                 lines = [ln.strip() for ln in tail.splitlines() if ln.strip()]
                 if lines:
                     cand = lines[-1]
-                    cand = re.sub(r'^[=:]\s*', '', cand).strip()
-                    cand = re.sub(r'^\$+|\$+$', '', cand).strip()
+                    cand = re.sub(r"^[=:]\s*", "", cand).strip()
+                    cand = re.sub(r"^\$+|\$+$", "", cand).strip()
                     return cand
         except Exception:
             pass
@@ -307,9 +308,9 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
             if lines:
                 last = lines[-1]
                 # If it looks numeric or latex-like, return it
-                if re.search(r'[\d\\\%\+\-\^\./eE]', last):
-                    cand = re.sub(r'^[=:]\s*', '', last).strip()
-                    cand = re.sub(r'^\$+|\$+$', '', cand).strip()
+                if re.search(r"[\d\\\%\+\-\^\./eE]", last):
+                    cand = re.sub(r"^[=:]\s*", "", last).strip()
+                    cand = re.sub(r"^\$+|\$+$", "", cand).strip()
                     return cand
         except Exception:
             pass
@@ -320,7 +321,7 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
             matches = re.findall(math_pattern, response)
             if matches:
                 last_match = matches[-1][0]
-                last_match = re.sub(r'^\$+|\$+$', '', last_match).strip()
+                last_match = re.sub(r"^\$+|\$+$", "", last_match).strip()
                 return last_match
         except Exception:
             pass
@@ -331,7 +332,7 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
     def _quick_compare(self, response_expr, answer_expr, tol=1e-6):
         if response_expr is None or answer_expr is None:
             return False
-        
+
         try:
             if response_expr.is_Number and answer_expr.is_Number:
                 return abs(float(response_expr - answer_expr)) < tol
@@ -342,7 +343,7 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
             return False
 
     def _post_check(self, line: dict, prefetch: bool = False) -> Any:
-        ans = line.get('answer', '')
+        ans = line.get("answer", "")
         try:
             res = self._extract_answer_by_rule(line)
         except Exception:
@@ -350,7 +351,6 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
 
         if str(res).strip() == str(ans).strip():
             return str(res).strip() if prefetch else True
-
 
         try:
             parsed_res = parse_latex(res)
@@ -378,7 +378,7 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
 
         extracted_answer = self._extract_answer_by_rule(line)
         if extracted_answer == "":
-            
+
             log += "No extracted answer from model output.\n"
             return dict(log=log, res=0, extracted=extracted_answer)
 
@@ -390,8 +390,8 @@ Now please provide your judgement (0 or 1), DONNOT output explanation:
                 continue
 
             cleaned = str(res_str).strip()
-            
-            score_match = re.search(r'\b(0|1)\b', cleaned)
+
+            score_match = re.search(r"\b(0|1)\b", cleaned)
             if score_match:
                 score = int(score_match.group(1))
                 return dict(log=f"LLM judger returned: {cleaned}", res=score, extracted=extracted_answer)

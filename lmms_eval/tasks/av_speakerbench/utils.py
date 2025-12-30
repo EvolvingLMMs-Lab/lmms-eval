@@ -14,6 +14,7 @@ DEFAULT_POST_PROMPT = "The best answer is:"
 HF_HOME = os.getenv("HF_HOME", "~/.cache/huggingface")
 CACHE_ROOT = os.path.expanduser(os.getenv("AV_SPEAKERBENCH_CACHE", os.path.join(HF_HOME, "AV-SpeakerBench")))
 
+
 def _parse_choices(raw_choices: Union[str, List, Tuple]) -> Tuple[List[str], List[str], Dict[str, str]]:
     """
     Args:
@@ -40,7 +41,6 @@ def _parse_choices(raw_choices: Union[str, List, Tuple]) -> Tuple[List[str], Lis
         labels.append(label)
         index2ans[label] = body
     return normalized_choices, labels, index2ans
-
 
 
 def av_speakerbench_doc_to_target(doc: Dict[str, Any]) -> str:
@@ -73,28 +73,19 @@ def _build_prompt(doc: Dict[str, Any], modality_instruction: str, lmms_eval_spec
 
 def av_speakerbench_doc_to_text_av(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Dict[str, Any]] = None) -> str:
     """Prompt for audiovisual mode."""
-    modality_instruction = (
-        "Select the best answer to the following multiple-choice question based on the audiovisual clip. "
-        "Respond with only the letter (A, B, C, or D) of the correct option.\n"
-    )
+    modality_instruction = "Select the best answer to the following multiple-choice question based on the audiovisual clip. " "Respond with only the letter (A, B, C, or D) of the correct option.\n"
     return _build_prompt(doc, modality_instruction, lmms_eval_specific_kwargs)
 
 
 def av_speakerbench_doc_to_text_audio(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Dict[str, Any]] = None) -> str:
     """Prompt for audio-only mode."""
-    modality_instruction = (
-        "Select the best answer to the following multiple-choice question based on the audio clip. "
-        "Focus on the audio and respond with only the letter (A, B, C, or D).\n"
-    )
+    modality_instruction = "Select the best answer to the following multiple-choice question based on the audio clip. " "Focus on the audio and respond with only the letter (A, B, C, or D).\n"
     return _build_prompt(doc, modality_instruction, lmms_eval_specific_kwargs)
 
 
 def av_speakerbench_doc_to_text_visual(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Dict[str, Any]] = None) -> str:
     """Prompt for visual-only mode."""
-    modality_instruction = (
-        "Select the best answer to the following multiple-choice question based on the silent visual clip. "
-        "Rely on the visuals only and respond with the letter (A, B, C, or D).\n"
-    )
+    modality_instruction = "Select the best answer to the following multiple-choice question based on the silent visual clip. " "Rely on the visuals only and respond with the letter (A, B, C, or D).\n"
     return _build_prompt(doc, modality_instruction, lmms_eval_specific_kwargs)
 
 

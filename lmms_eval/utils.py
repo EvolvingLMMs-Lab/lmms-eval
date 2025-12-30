@@ -717,10 +717,7 @@ def import_function(loader, node):
         return function
     except Exception as ex:
         # Re-raise with context to aid debugging
-        raise ImportError(
-            f"Failed to import function '{function_name}' from module '{module_name}'. "
-            f"Tried relative path '{module_path}' and absolute import."
-        ) from ex
+        raise ImportError(f"Failed to import function '{function_name}' from module '{module_name}'. " f"Tried relative path '{module_path}' and absolute import.") from ex
 
 
 def load_yaml_config(yaml_path=None, yaml_config=None, yaml_dir=None, mode="full"):
