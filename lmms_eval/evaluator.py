@@ -41,6 +41,7 @@ from lmms_eval.utils import (
     get_git_commit_hash,
     handle_non_serializable,
     hash_string,
+    is_multimodal_content,
     make_table,
     positional_deprecated,
     run_task_tests,
@@ -562,7 +563,8 @@ def evaluate(
                     target = task.doc_to_target(doc)
                     saved_doc = {}
                     for key, value in doc.items():
-                        saved_doc[key] = value
+                        if not is_multimodal_content(value):
+                            saved_doc[key] = value
                     filtered_arguments = []
                     for req in requests:
                         # check if req.args is a list of tuples, and each item in the list is a serializable object
