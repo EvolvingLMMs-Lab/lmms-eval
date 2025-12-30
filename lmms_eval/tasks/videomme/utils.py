@@ -157,12 +157,30 @@ def videomme_doc_to_visual(doc):
 
 
 def videomme_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+
+    if "format" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["format"] == "qwen3_vl":
+        return videomme_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs)
+
     option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]
     option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
     question = question + "\n" + option
     post_prompt = lmms_eval_specific_kwargs["post_prompt"] if "post_prompt" in lmms_eval_specific_kwargs else "The best answer is:"
     full_prompt = option_prompt + "\n" + question + "\n" + post_prompt
+    return full_prompt
+
+
+def videomme_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs=None):
+    """
+    Adapted from: https://github.com/open-compass/VLMEvalKit/blob/main/vlmeval/vlm/qwen3_vl/prompt.py#L93
+    """
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
+
+    question = doc["question"]
+    option = "\n".join([f"{opt}" for i, opt in enumerate(doc["options"])])
+
+    full_prompt = f"{pre_prompt}{question}\nOptions:\n{option}\n{post_prompt}"
     return full_prompt
 
 
@@ -227,6 +245,11 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
                         continue
                 subtitle_text = "\n".join(textlist)
         subtitle = subtitle_text
+
+    if "format" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["format"] == "qwen3_vl":
+        prompt = videomme_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs)
+        full_prompt = subtitles_prompt + subtitle + "\n" + prompt
+        return full_prompt
 
     option_prompt = "Select the best answer to the following multiple-choice question based on the video and the subtitles. Respond with only the letter (A, B, C, or D) of the correct option."
     question = doc["question"]

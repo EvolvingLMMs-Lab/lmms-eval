@@ -39,37 +39,43 @@ def extract_time(paragraph):
             candidates.append(sentence)
 
     timestamps = []
-    # Check for The given query happens in m - n (seconds)
-    patterns = [r"(\d+\.*\d*)\s*[–-]\s*(\d+\.*\d*)"]
-
-    for time_pattern in patterns:
-        time_matches = re.findall(time_pattern, paragraph)
-        if time_matches:
-            timestamps = [[float(start), float(end)] for start, end in time_matches]
+    # Compile patterns once outside the loop for better performance
+    main_pattern = re.compile(r"(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)")
+    time_number_pattern = re.compile(r"\b(\d+(?:\.\d+)?)\b")
+    time_format_pattern = re.compile(r"\b(\d{1,2}:\d{2}:\d{2})\b")
+    fallback_pattern = re.compile(r"(\d+(?:\.\d+)?)\s*s?\s*[–-]\s*(\d+(?:\.\d+)?)\s*s?")
 
     if len(sentences) == 0:
         return []
+
+    # Check for The given query happens in m - n (seconds)
+    # Search only in candidates, not the entire paragraph
+    for sentence in candidates:
+        time_matches = main_pattern.findall(sentence)
+        if time_matches:
+            timestamps = [[float(start), float(end)] for start, end in time_matches]
+            break
+
     # check for other formats e.g.:
     # 1 .Starting time: 0.8 seconds
     # Ending time: 1.1 seconds
     # 2. The start time for this event is 0 seconds, and the end time is 12 seconds.
     if len(timestamps) == 0:
         times = []
-        time_regex = re.compile(r"\b(\d+\.\d+\b|\b\d+)\b")  # time formats (e.g., 18, 18.5)
         for sentence in candidates:
-            time = re.findall(time_regex, sentence)
+            time = time_number_pattern.findall(sentence)
             if time:
                 time_in_sec = float(time[0])
                 times.append(time_in_sec)
         times = times[: len(times) // 2 * 2]
         timestamps = [(times[i], times[i + 1]) for i in range(0, len(times), 2)]
+
     # Check for  examples like:
     # 3. The event 'person flipped the light switch near the door' starts at 00:00:18 and ends at 00:00:23.
     if len(timestamps) == 0:
         times = []
-        time_regex = re.compile(r"\b((\d{1,2}:\d{2}:\d{2}))\b")  # time formats (e.g., 18:00, 00:18:05)
         for sentence in candidates:
-            time = re.findall(time_regex, sentence)
+            time = time_format_pattern.findall(sentence)
             if time:
                 t = time[0]
             else:
@@ -84,15 +90,17 @@ def extract_time(paragraph):
             times.append(time_in_sec)
         times = times[: len(times) // 2 * 2]
         timestamps = [(times[i], times[i + 1]) for i in range(0, len(times), 2)]
+
     # Fallback: if no timestamps found, search for any two number patterns with dash
     if len(timestamps) == 0:
         # More comprehensive pattern to match various formats like:
         # xx - xx, x.xx s - x.xx s, x.xxs - x.xxs, etc.
         # Also handle en dash (–) and regular dash (-)
-        fallback_pattern = r"(\d+(?:\.\d+)?)\s*s?\s*[–-]\s*(\d+(?:\.\d+)?)\s*s?"
-        fallback_matches = re.findall(fallback_pattern, paragraph)
-        if fallback_matches:
-            timestamps = [[float(start), float(end)] for start, end in fallback_matches]
+        for sentence in candidates:
+            fallback_matches = fallback_pattern.findall(sentence)
+            if fallback_matches:
+                timestamps = [[float(start), float(end)] for start, end in fallback_matches]
+                break
 
     results = []
     for start, end in timestamps:

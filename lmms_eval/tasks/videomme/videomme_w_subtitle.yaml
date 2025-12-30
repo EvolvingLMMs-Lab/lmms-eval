@@ -34,6 +34,11 @@ lmms_eval_specific_kwargs:
     frame_num: 768
     pre_prompt: ""
     post_prompt: "\nAnswer the question using a single word or phrase."
+  qwen3_vl:
+    frame_num: 768
+    format: "qwen3_vl"
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
   # gpt4v:
   #   pre_prompt: ""
   #   post_prompt: 

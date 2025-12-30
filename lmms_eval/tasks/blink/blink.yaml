@@ -1,0 +1,5 @@
+group: blink
+task:
+  - blink_groups
+aggregate_metric_list:
+  - metric: blink_acc

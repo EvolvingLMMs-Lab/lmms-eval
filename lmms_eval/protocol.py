@@ -64,7 +64,6 @@ class ChatMessages(BaseModel):
     def to_hf_messages(self, video_kwargs: Dict[str, str] = None):
         if video_kwargs is None:
             video_kwargs = {}
-        enforce_images = video_kwargs.pop("enforce_images", False)
         num_frames = video_kwargs.get("nframes", 32)
         hf_messages = []
         for message in self.messages:
@@ -75,18 +74,13 @@ class ChatMessages(BaseModel):
                 elif content.type == "image":
                     hf_message["content"].append({"type": "image", "image": content.url})
                 elif content.type == "video":
-                    # Note this is a hacky way if you want to do video in multi-images way
-                    if enforce_images:
-                        for f in range(num_frames):
-                            hf_message["content"].append({"type": "image"})
-                    else:
-                        hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
+                    hf_message["content"].append({"type": "video", "video": content.url, **video_kwargs})
                 elif content.type == "audio":
                     hf_message["content"].append({"type": "audio", "audio": content.url})
             hf_messages.append(hf_message)
         return hf_messages
 
-    def to_openai_messages(self, video_kwargs: Dict[str, str] = None):
+    def to_openai_messages(self, video_kwargs: Dict[str, str] = {}):
         openai_messages = []
         for message in self.messages:
             openai_message = {"role": message.role, "content": []}
@@ -107,6 +101,44 @@ class ChatMessages(BaseModel):
                     openai_message["content"].append({"type": "audio_url", "audio_url": {"url": content.url}})
             openai_messages.append(openai_message)
         return openai_messages
+
+    def to_qwen3_vl_openai_messages(self, video_kwargs: Dict[str, str] = {}):
+        openai_messages = []
+        for message in self.messages:
+            openai_message = {"role": message.role, "content": []}
+            for content in message.content:
+                if content.type == "text":
+                    openai_message["content"].append({"type": "text", "text": content.text})
+                elif content.type == "image":
+                    openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(content.url)}"}})
+                elif content.type == "video":
+                    if fetch_video is None:
+                        raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
+                    video_input, fps = fetch_video({"type": "video", "video": content.url, **video_kwargs}, return_video_metadata=True, return_video_sample_fps=True)
+                    frames, video_metadata = video_input
+                    timestamps = self._calculate_timestamps(video_metadata)
+                    for frame, timestamp in zip(frames, timestamps):
+                        image = Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8))
+                        openai_message["content"].append({"type": "text", "text": f"<{timestamp:.1f} seconds>"})
+                        openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(image)}"}})
+                # TODO, audio hasn't been implemented yet
+                elif content.type == "audio":
+                    openai_message["content"].append({"type": "audio_url", "audio_url": {"url": content.url}})
+            openai_messages.append(openai_message)
+        return openai_messages
+
+    def _calculate_timestamps(self, video_metadata: Dict[str, Any]):
+        indices = video_metadata["frames_indices"]
+        if not isinstance(indices, list):
+            indices = indices.tolist()
+        fps = video_metadata["fps"]
+        # Note this is a hardcode value for Qwen3-VL, should only be used for Qwen3-VL
+        merge_size = 2
+        if len(indices) % merge_size != 0:
+            indices.extend(indices[-1] for _ in range(merge_size - len(indices) % merge_size))
+        timestamps = [idx / fps for idx in indices]
+        # timestamps = [(timestamps[i] + timestamps[i + merge_size - 1]) / 2 for i in range(0, len(timestamps), merge_size)]
+        return timestamps
 
     def encode_image(self, image: Union[Image.Image, str]):
         if isinstance(image, str):

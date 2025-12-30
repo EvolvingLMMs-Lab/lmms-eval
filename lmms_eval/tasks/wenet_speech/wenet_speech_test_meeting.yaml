@@ -1,0 +1,16 @@
+task: "wenet_speech_test_meeting"
+test_split: test_meeting
+include: _default_template_yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    audio_column: "audio"
+    source_text_column: "text" 
+
+process_results: !function utils.wenet_speech_process_results
+
+metric_list:
+  - metric: mer
+    aggregation: mean
+    higher_is_better: false  # Lower MER is better

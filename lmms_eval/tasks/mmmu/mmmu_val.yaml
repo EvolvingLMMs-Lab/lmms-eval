@@ -19,5 +19,9 @@ lmms_eval_specific_kwargs:
     prompt_type: "format"
     multiple_choice_prompt: "Answer with the option's letter from the given choices directly."
     open_ended_prompt: "Answer the question using a single word or phrase."
-
+  qwen3_vl:
+    format: "qwen3_vl"
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+    open_ended_prompt: "Please select the correct answer from the options above."
 include: _default_template_yaml

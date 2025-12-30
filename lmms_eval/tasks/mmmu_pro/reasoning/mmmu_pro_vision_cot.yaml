@@ -1,0 +1,10 @@
+task: "mmmu_pro_vision_cot_reasoning"
+dataset_path: MMMU/MMMU_Pro
+dataset_name: vision
+test_split: test
+
+metadata:
+  version: 0.0
+  interleaved_format: false
+
+include: _default_template_yaml

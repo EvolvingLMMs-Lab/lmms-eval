@@ -4,7 +4,7 @@ dataset_name: vision
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.mmmu_pro_doc_to_visual
-doc_to_text: "Answer with the option letter from the given choices directly."
+doc_to_text: !function utils.mmmu_pro_doc_to_text
 doc_to_target: "{{answer}}"
 # The return value of process_results will be used by metrics
 process_results: !function utils.mmmu_pro_process_results
@@ -13,5 +13,13 @@ metric_list:
   - metric: mmmu_acc
     aggregation: !function utils.mmmu_pro_aggregate_results
     higher_is_better: true
-
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Answer with the option letter from the given choices directly."
+  qwen3_vl:
+    format: "qwen3_vl"
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+    vision_prompt: "Question: analyze the image and answer the associated question."
 include: _default_template_yaml

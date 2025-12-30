@@ -55,6 +55,11 @@ python -m lmms_eval --tasks list_with_num
 - [MathVista](https://mathvista.github.io/) (mathvista)
   - MathVista Validation (mathvista_testmini)
   - MathVista Test (mathvista_test)
+- [MathVision](https://huggingface.co/datasets/MathLLMs/MathVision) (mathvision)
+  - MathVision TestMini (mathvision_testmini)
+  - MathVision Test (mathvision_test)
+  - MathVision Reason TestMini (mathvision_reason_testmini)
+  - MathVision Reason Test (mathvision_reason_test)
 - [MMBench](https://github.com/open-compass/MMBench) (mmbench)
   - MMBench English (mmbench_en)
     - MMBench English Dev (mmbench_en_dev)
@@ -67,6 +72,9 @@ python -m lmms_eval --tasks list_with_num
   - MME-RealWorld English (mmerealworld)
   - MME-RealWorld Mini (mmerealworld_lite)
   - MME-RealWorld Chinese (mmerealworld_cn)
+- [MME-SCI](https://huggingface.co/datasets/JCruan/MME-SCI) (mme_sci)
+  - MME-SCI (mme_sci)
+  - MME-SCI-Image (mme_sci_images)
 - [MMRefine](http://mmrefine.github.io/) (mmrefine)
 - [MMStar](https://github.com/MMStar-Benchmark/MMStar) (mmstar)
 - [MMUPD](https://huggingface.co/datasets/MM-UPD/MM-UPD) (mmupd)
@@ -188,6 +196,7 @@ python -m lmms_eval --tasks list_with_num
   - ICON-QA Validation (iconqa_val)
   - ICON-QA Test (iconqa_test)
 - [JMMMU](https://mmmu-japanese-benchmark.github.io/JMMMU/) (jmmmu)
+- [JMMMU-Pro](https://mmmu-japanese-benchmark.github.io/JMMMU_Pro/) (jmmmu_pro)
 - [LLaVA-NeXT-Interleave-Bench](https://huggingface.co/datasets/lmms-lab/LLaVA-NeXT-Interleave-Bench) (llava_interleave_bench)
   - llava_interleave_bench_in_domain
   - llava_interleave_bench_out_domain
@@ -245,6 +254,7 @@ python -m lmms_eval --tasks list_with_num
   - egoschema_mcppl
   - egoschema_subset_mcppl
   - egoschema_subset
+- [LEMONADE](https://huggingface.co/datasets/amathislab/LEMONADE) (lemonade)
 - [LongVideoBench](https://github.com/longvideobench/LongVideoBench)
 - [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
   - Global Mode for entire video (moviechat_global)

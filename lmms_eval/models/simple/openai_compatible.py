@@ -319,6 +319,7 @@ class OpenAICompatible(lmms):
             res.extend([r for r in batch_responses if r is not None])
             pbar.update(1)
 
+        res = re_ords.get_original(res)
         pbar.close()
         return res
 

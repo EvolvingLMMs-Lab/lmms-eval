@@ -165,7 +165,9 @@ def parse_eval_args() -> argparse.Namespace:
         "-w",
         action="store_true",
         default=False,
-        help="Prints the prompt for the first few documents.",
+        help="DEPRECATED: This flag is deprecated and will be removed in a future version. "
+        "For debugging, use --log_samples to save all outputs to files. "
+        "This flag prints prompts for the first few documents to console, impacting performance.",
     )
     parser.add_argument(
         "--log_samples",
@@ -398,6 +400,14 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     eval_logger.info(f"Evaluation tracker args: {evaluation_tracker_args}")
 
     evaluation_tracker = EvaluationTracker(**evaluation_tracker_args)
+
+    if args.write_out:
+        eval_logger.warning(
+            "DEPRECATION WARNING: --write_out is deprecated and will be removed in v0.5.0. "
+            "For debugging and analysis, use --log_samples instead, which saves all model "
+            "outputs to files without impacting performance. The --write_out flag only prints "
+            "the first few documents to console and provides limited debugging value."
+        )
 
     if args.predict_only:
         args.log_samples = True

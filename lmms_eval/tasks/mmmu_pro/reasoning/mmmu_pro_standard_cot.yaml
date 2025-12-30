@@ -1,0 +1,10 @@
+task: "mmmu_pro_standard_cot_reasoning"
+dataset_path: MMMU/MMMU_Pro
+dataset_name: standard (10 options)
+test_split: test
+
+metadata:
+  version: 0.0
+  interleaved_format: false
+
+include: _default_template_yaml

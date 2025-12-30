@@ -1,0 +1,21 @@
+dataset_path: Idavidrein/gpqa
+dataset_name: gpqa_diamond
+task: gpqa_diamond_reasoning
+output_type: generate_until
+training_split: train
+# Because huggingface dataset only has train split
+validation_split: train
+test_split: null
+doc_to_text: !function utils.doc_to_text
+doc_to_messages: !function utils.doc_to_messages
+doc_to_target: answer
+process_results: !function utils.process_results
+process_docs: !function utils.process_docs
+generation_kwargs:
+  max_new_tokens: 49152
+num_fewshot: 0
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+metadata:
+  version: 1.0

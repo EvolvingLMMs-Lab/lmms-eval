@@ -30,17 +30,19 @@ class VLLM(VLLMSimple):
         data_parallel_size=1,
         gpu_memory_utilization=0.8,
         batch_size=1,
-        max_frame_num=32,
+        max_frame_num=768,
         trust_remote_code=True,
         chat_template=None,
         max_pixels: int = 1605632,
         min_image_pixels=28,
         fps: Optional[int] = None,
+        nframes: Optional[int] = 32,
         **kwargs,
     ):
         super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, min_image_pixels, **kwargs)
         self.fps = fps
         self.max_pixels = max_pixels
+        self.nframes = nframes
 
     def make_one_request(self, request: Instance) -> Tuple[list[dict], dict]:
         """
@@ -65,11 +67,12 @@ class VLLM(VLLMSimple):
         video_kwargs = {
             "max_pixels": self.max_pixels,
             "min_pixels": self.min_image_pixels,
+            "max_frames": self.max_frame_num,
         }
         if self.fps is not None:
             video_kwargs["fps"] = self.fps
         else:
-            video_kwargs["nframes"] = self.max_frame_num
+            video_kwargs["nframes"] = self.nframes
         messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
         return messages, params
 
