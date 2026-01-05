@@ -185,7 +185,6 @@ python -m lmms_eval --tasks list_with_num
 - [VisualWebBench](https://visualwebbench.github.io/) (visualwebbench)
 - [V*-Bench](https://github.com/V-Bench/V-Bench) (vstar_bench)
 - [WorldSense](https://worldsense.github.io/) (worldsense)
-- [AV-SpeakerBench](https://plnguyen2908.github.io/AV-SpeakerBench-project-page/) (av-speakerbench)
 
 ---
 
@@ -375,6 +374,7 @@ python -m lmms_eval --tasks list_with_num
   - air_bench_foundation (foundation audio tasks)
 - [Alpaca Audio](https://huggingface.co/datasets/alpaca-audio) (alpaca_audio)
 - [AV-Odyssey](https://github.com/AV-Odyssey/AV-Odyssey) (av_odyssey)
+- [AV-SpeakerBench](https://plnguyen2908.github.io/AV-SpeakerBench-project-page/) (av_speakerbench)
 - [Clotho-AQA](https://zenodo.org/record/6473207) (clotho_aqa)
 - [MuchoMusic](https://huggingface.co/datasets/MuchoMusic/MuchoMusic) (muchomusic)
 - [MMAU](https://github.com/MMAU-Bench/MMAU) (mmau)
