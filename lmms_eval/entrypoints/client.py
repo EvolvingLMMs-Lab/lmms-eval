@@ -107,7 +107,6 @@ class EvalClient:
         model: str,
         tasks: List[str],
         model_args: Optional[Dict[str, Any]] = None,
-        launcher_args: Optional[Dict[str, Any]] = None,
         num_fewshot: Optional[int] = None,
         batch_size: Optional[Union[int, str]] = None,
         device: Optional[str] = None,
@@ -125,7 +124,6 @@ class EvalClient:
             model: Model name (e.g., "qwen_vl", "llava")
             tasks: List of task names to evaluate
             model_args: Model-specific arguments
-            launcher_args: Launcher-specific arguments
             num_fewshot: Number of few-shot examples
             batch_size: Batch size for evaluation
             device: Device to run on (e.g., "cuda:0")
@@ -143,7 +141,6 @@ class EvalClient:
             "model": model,
             "tasks": tasks,
             "model_args": model_args,
-            "launcher_args": launcher_args,
             "num_fewshot": num_fewshot,
             "batch_size": batch_size,
             "device": device,
@@ -245,37 +242,6 @@ class EvalClient:
             Dict with queue_size, running_job, queued_jobs, etc.
         """
         return self._request("GET", "/queue")
-
-    # =========================================================================
-    # Statistics
-    # =========================================================================
-
-    def compare_results(
-        self,
-        results_a: Dict[str, Any],
-        results_b: Dict[str, Any],
-        test_type: str = "bootstrap",
-    ) -> Dict[str, Any]:
-        """
-        Perform statistical comparison between two result sets.
-
-        Args:
-            results_a: First set of results
-            results_b: Second set of results
-            test_type: Type of statistical test
-
-        Returns:
-            Dict with comparison results
-        """
-        return self._request(
-            "POST",
-            "/stats/compare",
-            json={
-                "results_a": results_a,
-                "results_b": results_b,
-                "test_type": test_type,
-            },
-        )
 
 
 class AsyncEvalClient:
@@ -381,19 +347,3 @@ class AsyncEvalClient:
 
     async def get_queue_status(self) -> Dict[str, Any]:
         return await self._request("GET", "/queue")
-
-    async def compare_results(
-        self,
-        results_a: Dict[str, Any],
-        results_b: Dict[str, Any],
-        test_type: str = "bootstrap",
-    ) -> Dict[str, Any]:
-        return await self._request(
-            "POST",
-            "/stats/compare",
-            json={
-                "results_a": results_a,
-                "results_b": results_b,
-                "test_type": test_type,
-            },
-        )

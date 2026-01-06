@@ -34,6 +34,7 @@ class JobStatus(str, Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class EvaluateRequest(BaseModel):
@@ -43,9 +44,6 @@ class EvaluateRequest(BaseModel):
     tasks: List[str] = Field(..., description="List of task names to evaluate")
     model_args: Optional[Dict[str, Any]] = Field(
         default=None, description="Model arguments"
-    )
-    launcher_args: Optional[Dict[str, Any]] = Field(
-        default=None, description="Launcher arguments"
     )
     num_fewshot: Optional[int] = Field(
         default=None, description="Number of few-shot examples"
@@ -270,7 +268,7 @@ async def job_worker():
             job_id = await state.job_queue.get()
             job = state.jobs.get(job_id)
 
-            if job is None:
+            if job is None or job.status == JobStatus.CANCELLED:
                 state.job_queue.task_done()
                 continue
 
@@ -435,11 +433,11 @@ async def cancel_job(job_id: str):
     if job.status == JobStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Cannot cancel a running job")
 
-    if job.status in (JobStatus.COMPLETED, JobStatus.FAILED):
-        raise HTTPException(status_code=400, detail="Job already finished")
+    if job.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
+        raise HTTPException(status_code=400, detail="Job already finished or cancelled")
 
-    # Remove from jobs dict (it will be skipped by worker)
-    del state.jobs[job_id]
+    job.status = JobStatus.CANCELLED
+    job.completed_at = datetime.now().isoformat()
 
     return {"message": f"Job {job_id} cancelled"}
 
