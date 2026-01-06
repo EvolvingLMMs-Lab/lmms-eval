@@ -1,5 +1,4 @@
 import asyncio
-import json
 import tempfile
 import uuid
 from collections import defaultdict
@@ -15,6 +14,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from lmms_eval.entrypoints.server_args import ServerArgs
+
+# =============================================================================
+# Security Warning
+# =============================================================================
+# WARNING: This server is intended for use in trusted environments only.
+# Do NOT expose this server to untrusted networks without additional security
+# layers such as authentication, rate limiting, and network isolation.
+# =============================================================================
+
 
 # =============================================================================
 # Enums and Models
@@ -167,17 +175,10 @@ async def run_evaluation_subprocess(config: dict) -> dict:
     This allows GPU-based evaluation to run in a separate process
     while the server remains responsive.
     """
-    # Create temporary files for config and output
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump(config, f)
-        config_path = f.name
-
-    output_path = config.get("output_dir", tempfile.mktemp(suffix="_results"))
+    output_path = config.get("output_dir") or tempfile.mkdtemp(prefix="lmms_eval_")
 
     # Build command
     num_gpus = config.get("num_gpus", 1)
-
-    # Use accelerate launch for multi-GPU support
     cmd = [
         "accelerate",
         "launch",
@@ -198,7 +199,7 @@ async def run_evaluation_subprocess(config: dict) -> dict:
         if isinstance(config["model_args"], dict):
             model_args_str = ",".join(f"{k}={v}" for k, v in config["model_args"].items())
         else:
-            model_args_str = config["model_args"]
+            model_args_str = str(config["model_args"])
         cmd.extend(["--model_args", model_args_str])
 
     if config.get("batch_size"):
@@ -211,7 +212,7 @@ async def run_evaluation_subprocess(config: dict) -> dict:
         cmd.extend(["--num_fewshot", str(config["num_fewshot"])])
 
     if config.get("gen_kwargs"):
-        cmd.extend(["--gen_kwargs", config["gen_kwargs"]])
+        cmd.extend(["--gen_kwargs", str(config["gen_kwargs"])])
 
     if config.get("log_samples"):
         cmd.append("--log_samples")
@@ -225,10 +226,9 @@ async def run_evaluation_subprocess(config: dict) -> dict:
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,  # Combine stderr into stdout
+        stderr=asyncio.subprocess.STDOUT,
     )
 
-    # Stream output in real-time
     while True:
         line = await proc.stdout.readline()
         if not line:
@@ -237,13 +237,9 @@ async def run_evaluation_subprocess(config: dict) -> dict:
 
     await proc.wait()
 
-    # Clean up config file
-    Path(config_path).unlink(missing_ok=True)
-
     if proc.returncode != 0:
         raise RuntimeError(f"Evaluation failed with return code {proc.returncode}")
 
-    # Parse and return results from output directory
     return parse_output_directory(output_path)
 
 

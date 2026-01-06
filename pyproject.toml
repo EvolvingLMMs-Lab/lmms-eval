@@ -87,7 +87,6 @@ core = [
 server = [
     "fastapi",
     "uvicorn",
-    "httpx",
 ]
 audio = [
     "more-itertools",
