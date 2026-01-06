@@ -58,6 +58,13 @@ class EvalClient:
         """Close the HTTP client."""
         self.client.close()
 
+    def __del__(self):
+        """Ensure client is closed on garbage collection."""
+        try:
+            self.client.close()
+        except Exception:
+            pass
+
     def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """Make an HTTP request and return JSON response."""
         url = f"{self.base_url}{endpoint}"
@@ -297,6 +304,21 @@ class AsyncEvalClient:
 
     async def close(self):
         await self.client.aclose()
+
+    def __del__(self):
+        """Ensure client is closed on garbage collection."""
+        try:
+            # Note: This is sync cleanup for async client - best effort only
+            if hasattr(self, "client") and not self.client.is_closed:
+                import warnings
+
+                warnings.warn(
+                    "AsyncEvalClient was not properly closed. Use 'async with' or call 'await client.close()'.",
+                    ResourceWarning,
+                    stacklevel=2,
+                )
+        except Exception:
+            pass
 
     async def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         url = f"{self.base_url}{endpoint}"

@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from lmms_eval.entrypoints.server_args import ServerArgs
@@ -172,8 +173,8 @@ def parse_output_directory(output_path: str) -> Dict[str, Dict[str, Any]]:
         # Use latest timestamp
         sorted_ts = sorted(timestamps.keys(), reverse=True)
         if len(sorted_ts) > 1:
-            print(
-                f"[WARNING] Multiple timestamps for '{model_name}': {sorted_ts}. Using latest."
+            logger.warning(
+                f"Multiple timestamps for '{model_name}': {sorted_ts}. Using latest."
             )
 
         result[model_name] = timestamps[sorted_ts[0]]
@@ -236,7 +237,7 @@ async def run_evaluation_subprocess(config: dict) -> dict:
         cmd.append("--predict_only")
 
     # Run subprocess with streaming output
-    print(f"[EVAL] Launching: {' '.join(cmd)}")
+    logger.info(f"[EVAL] Launching: {' '.join(cmd)}")
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -248,7 +249,7 @@ async def run_evaluation_subprocess(config: dict) -> dict:
         line = await proc.stdout.readline()
         if not line:
             break
-        print(f"[EVAL] {line.decode().rstrip()}")
+        logger.info(f"[EVAL] {line.decode().rstrip()}")
 
     await proc.wait()
 
@@ -301,7 +302,7 @@ async def job_worker():
             break
         except Exception as e:
             # Log error but keep worker running
-            print(f"Worker error: {e}")
+            logger.error(f"Worker error: {e}")
 
 
 # =============================================================================
@@ -316,7 +317,7 @@ async def lifespan(app: FastAPI):
     state.reset()
     state.job_queue = asyncio.Queue()
     state.worker_task = asyncio.create_task(job_worker())
-    print("Evaluation server started, worker ready")
+    logger.info("Evaluation server started, worker ready")
 
     yield
 
@@ -327,7 +328,7 @@ async def lifespan(app: FastAPI):
             await state.worker_task
         except asyncio.CancelledError:
             pass
-    print("Evaluation server shutdown complete")
+    logger.info("Evaluation server shutdown complete")
 
 
 app = FastAPI(
@@ -483,8 +484,8 @@ def launch_server(args: ServerArgs):
         >>> args = ServerArgs(host="0.0.0.0", port=8080)
         >>> launch_server(args)
     """
-    print(f"Starting LMMS-Eval server at http://{args.host}:{args.port}")
-    print("API docs available at /docs")
+    logger.info(f"Starting LMMS-Eval server at http://{args.host}:{args.port}")
+    logger.info("API docs available at /docs")
 
     uvicorn.run(
         app,
