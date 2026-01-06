@@ -2,6 +2,7 @@ import asyncio
 import json
 import tempfile
 import uuid
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime
@@ -115,6 +116,50 @@ state = ServerState()
 # =============================================================================
 
 
+def parse_output_directory(output_path: str) -> Dict[str, Dict[str, Any]]:
+    """
+    Parse output directory: output_path/model_name/YYYYMMDD_HHMMSS_results.json
+
+    Returns:
+        {model_name: {"results": path, "samples": [paths]}}
+    """
+    output_dir = Path(output_path)
+    if not output_dir.exists():
+        return {}
+
+    result = {}
+
+    for model_dir in output_dir.iterdir():
+        if not model_dir.is_dir():
+            continue
+
+        model_name = model_dir.name
+
+        # Group files by timestamp
+        timestamps = defaultdict(lambda: {"results": None, "samples": []})
+
+        for file in model_dir.glob("*_results.json"):
+            timestamp = file.name.split("_results.json")[0]
+            timestamps[timestamp]["results"] = str(file)
+
+        for file in model_dir.glob("*_samples_*.jsonl"):
+            # Extract timestamp (everything before first _samples_)
+            timestamp = file.name.split("_samples_")[0]
+            timestamps[timestamp]["samples"].append(str(file))
+
+        if not timestamps:
+            continue
+
+        # Use latest timestamp
+        sorted_ts = sorted(timestamps.keys(), reverse=True)
+        if len(sorted_ts) > 1:
+            print(f"[WARNING] Multiple timestamps for '{model_name}': {sorted_ts}. Using latest.")
+
+        result[model_name] = timestamps[sorted_ts[0]]
+
+    return result
+
+
 async def run_evaluation_subprocess(config: dict) -> dict:
     """
     Run evaluation in a subprocess using accelerate/torchrun.
@@ -197,6 +242,9 @@ async def run_evaluation_subprocess(config: dict) -> dict:
 
     if proc.returncode != 0:
         raise RuntimeError(f"Evaluation failed with return code {proc.returncode}")
+
+    # Parse and return results from output directory
+    return parse_output_directory(output_path)
 
 
 async def job_worker():
