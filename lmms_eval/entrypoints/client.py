@@ -18,6 +18,7 @@ Example usage:
     >>> print(result)
 """
 
+import asyncio
 import time
 from typing import Any, Dict, List, Optional, Union
 
@@ -329,8 +330,6 @@ class AsyncEvalClient:
         timeout: Optional[float] = None,
         verbose: bool = True,
     ) -> Dict[str, Any]:
-        import asyncio
-
         start_time = time.time()
 
         while True:
