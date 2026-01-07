@@ -1,4 +1,4 @@
 dataset_name: full
 test_split: test
-task: "vsibench"
+task: "vsibench_pruned"
 include: _default_template_yaml

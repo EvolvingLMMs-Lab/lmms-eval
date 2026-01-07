@@ -1,4 +1,4 @@
-dataset_name: full
+dataset_name: debiased
 test_split: test
-task: "vsibench"
+task: "vsibench_debiased"
 include: _default_template_yaml

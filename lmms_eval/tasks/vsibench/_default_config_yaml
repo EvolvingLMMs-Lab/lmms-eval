@@ -1,0 +1,38 @@
+dataset_path: nyu-visionx/VSI-Bench
+dataset_kwargs:
+  token: True
+  cache_dir: vsibench
+  video: True
+output_type: generate_until
+process_docs: !function utils.process_docs
+doc_to_visual: !function utils.vsibench_doc_to_visual
+doc_to_text: !function utils.vsibench_doc_to_text
+doc_to_target: "ground_truth"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.vsibench_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: vsibench_score
+    aggregation: !function utils.vsibench_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Please answer the question using a single word or phrase."
+  gemini_api:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Do not response anything other than a single number!"
+  gpt4v:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Do not response anything other than a single number!"
+metadata:
+  - version: 0.0
