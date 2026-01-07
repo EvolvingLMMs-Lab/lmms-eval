@@ -26,17 +26,17 @@ dependencies = [
     "isort>=5.13.2",
     "datasets>=2.19.0",
     "evaluate>=0.4.0",
-    "httpx==0.23.3",
+    "httpx>=0.23.3",
     "jsonlines",
     "aiohttp",
     "numexpr",
-    "numpy==1.26.4",
+    "numpy>=1.26.4",
     "peft>=0.2.0",
     "pybind11>=2.6.2",
     "pytablewriter",
     "sacrebleu>=1.5.0",
     "scikit-learn>=0.24.1",
-    "sqlitedict==2.1.0",
+    "sqlitedict>=2.1.0",
     "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
     "torchvision>=0.16.0",
     "timm",
@@ -63,7 +63,7 @@ dependencies = [
     "openpyxl",
     "loguru",
     "hf_transfer",
-    "tenacity==8.3.0",
+    "tenacity>=8.3.0",
     "wandb>=0.16.0",
     "tiktoken",
     "pre-commit",
@@ -98,7 +98,7 @@ gemini = [
     "google-generativeai",
 ]
 reka = [
-    "httpx==0.23.3",
+    "httpx>=0.23.3",
     "reka-api",
 ]
 qwen = [
