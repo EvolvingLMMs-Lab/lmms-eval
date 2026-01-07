@@ -101,19 +101,128 @@ class HealthResponse(BaseModel):
 
 
 class ServerState:
-    """Global server state container."""
+    """Global server state container with thread-safe job management."""
 
     def __init__(self):
         self.job_queue: asyncio.Queue = None
-        self.jobs: Dict[str, JobInfo] = {}
+        self._jobs: Dict[str, JobInfo] = {}
+        self._jobs_lock: asyncio.Lock = None
         self.worker_task: asyncio.Task = None
         self.current_job_id: Optional[str] = None
 
     def reset(self):
         self.job_queue = asyncio.Queue()
-        self.jobs = {}
+        self._jobs = {}
+        self._jobs_lock = asyncio.Lock()
         self.worker_task = None
         self.current_job_id = None
+
+    # -------------------------------------------------------------------------
+    # Thread-safe job operations
+    # -------------------------------------------------------------------------
+
+    async def get_job(self, job_id: str) -> Optional[JobInfo]:
+        """Get a job by ID (thread-safe)."""
+        async with self._jobs_lock:
+            return self._jobs.get(job_id)
+
+    async def get_job_with_position(self, job_id: str) -> Optional[JobInfo]:
+        """Get a job by ID, updating queue position if queued (thread-safe)."""
+        async with self._jobs_lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return None
+
+            if job.status == JobStatus.QUEUED:
+                position = sum(1 for j in self._jobs.values() if j.status == JobStatus.QUEUED and j.created_at < job.created_at)
+                job.position_in_queue = position
+
+            return job
+
+    async def add_job(self, request: "EvaluateRequest") -> tuple[str, int]:
+        """Create and queue a new job. Returns (job_id, position)."""
+        job_id = str(uuid.uuid4())
+
+        async with self._jobs_lock:
+            position = self.job_queue.qsize()
+            job = JobInfo(
+                job_id=job_id,
+                status=JobStatus.QUEUED,
+                created_at=datetime.now().isoformat(),
+                request=request,
+                position_in_queue=position,
+            )
+            self._jobs[job_id] = job
+            await self.job_queue.put(job_id)
+
+        return job_id, position
+
+    async def start_job(self, job_id: str) -> Optional[dict]:
+        """
+        Mark a job as running and return its config.
+        Returns None if job doesn't exist or is cancelled.
+        """
+        async with self._jobs_lock:
+            job = self._jobs.get(job_id)
+            if job is None or job.status == JobStatus.CANCELLED:
+                return None
+
+            self.current_job_id = job_id
+            job.status = JobStatus.RUNNING
+            job.started_at = datetime.now().isoformat()
+            return job.request.model_dump()
+
+    async def complete_job(self, job_id: str, result: Dict[str, Any]):
+        """Mark a job as completed with results."""
+        async with self._jobs_lock:
+            job = self._jobs.get(job_id)
+            if job:
+                job.status = JobStatus.COMPLETED
+                job.completed_at = datetime.now().isoformat()
+                job.result = result
+
+    async def fail_job(self, job_id: str, error: str):
+        """Mark a job as failed with error message."""
+        async with self._jobs_lock:
+            job = self._jobs.get(job_id)
+            if job:
+                job.status = JobStatus.FAILED
+                job.completed_at = datetime.now().isoformat()
+                job.error = error
+
+    async def cancel_job(self, job_id: str) -> tuple[bool, str]:
+        """
+        Cancel a queued job.
+        Returns (success, message) tuple.
+        """
+        async with self._jobs_lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return False, f"Job {job_id} not found"
+
+            if job.status == JobStatus.RUNNING:
+                return False, "Cannot cancel a running job"
+
+            if job.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
+                return False, "Job already finished or cancelled"
+
+            job.status = JobStatus.CANCELLED
+            job.completed_at = datetime.now().isoformat()
+            return True, f"Job {job_id} cancelled"
+
+    async def get_queue_stats(self) -> dict:
+        """Get queue statistics (thread-safe)."""
+        async with self._jobs_lock:
+            queued = [jid for jid, j in self._jobs.items() if j.status == JobStatus.QUEUED]
+            completed = sum(1 for j in self._jobs.values() if j.status == JobStatus.COMPLETED)
+            failed = sum(1 for j in self._jobs.values() if j.status == JobStatus.FAILED)
+
+            return {
+                "queued": queued,
+                "completed": completed,
+                "failed": failed,
+                "running_job": self.current_job_id,
+            }
 
 
 state = ServerState()
@@ -252,31 +361,20 @@ async def job_worker():
     while True:
         try:
             job_id = await state.job_queue.get()
-            job = state.jobs.get(job_id)
 
-            if job is None or job.status == JobStatus.CANCELLED:
+            # Start job and get config (returns None if cancelled/missing)
+            config = await state.start_job(job_id)
+            if config is None:
                 state.job_queue.task_done()
                 continue
 
-            # Update job status
-            state.current_job_id = job_id
-            job.status = JobStatus.RUNNING
-            job.started_at = datetime.now().isoformat()
-
             try:
-                # Run evaluation
-                config = job.request.model_dump()
+                # Run evaluation (outside lock to allow other operations)
                 result = await run_evaluation_subprocess(config)
-
-                # Update job with results
-                job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.now().isoformat()
-                job.result = result
+                await state.complete_job(job_id, result)
 
             except Exception as e:
-                job.status = JobStatus.FAILED
-                job.completed_at = datetime.now().isoformat()
-                job.error = str(e)
+                await state.fail_job(job_id, str(e))
 
             finally:
                 state.current_job_id = None
@@ -346,21 +444,7 @@ async def submit_evaluation(request: EvaluateRequest):
     The job will be queued and processed sequentially.
     Use GET /jobs/{job_id} to check status and retrieve results.
     """
-    job_id = str(uuid.uuid4())
-    position = state.job_queue.qsize()
-
-    # Create job info
-    job = JobInfo(
-        job_id=job_id,
-        status=JobStatus.QUEUED,
-        created_at=datetime.now().isoformat(),
-        request=request,
-        position_in_queue=position,
-    )
-    state.jobs[job_id] = job
-
-    # Add to queue
-    await state.job_queue.put(job_id)
+    job_id, position = await state.add_job(request)
 
     return JobSubmitResponse(
         job_id=job_id,
@@ -373,35 +457,23 @@ async def submit_evaluation(request: EvaluateRequest):
 @app.get("/jobs/{job_id}", response_model=JobInfo)
 async def get_job_status(job_id: str):
     """Get the status and results of a job."""
-    job = state.jobs.get(job_id)
+    job = await state.get_job_with_position(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-
-    # Update position in queue if still queued
-    if job.status == JobStatus.QUEUED:
-        # Count jobs ahead in queue
-        position = 0
-        for jid, j in state.jobs.items():
-            if j.status == JobStatus.QUEUED and j.created_at < job.created_at:
-                position += 1
-        job.position_in_queue = position
-
     return job
 
 
 @app.get("/queue", response_model=QueueStatusResponse)
 async def get_queue_status():
     """Get the current queue status."""
-    queued = [jid for jid, j in state.jobs.items() if j.status == JobStatus.QUEUED]
-    completed = sum(1 for j in state.jobs.values() if j.status == JobStatus.COMPLETED)
-    failed = sum(1 for j in state.jobs.values() if j.status == JobStatus.FAILED)
+    stats = await state.get_queue_stats()
 
     return QueueStatusResponse(
-        queue_size=len(queued),
-        running_job=state.current_job_id,
-        queued_jobs=queued,
-        completed_jobs=completed,
-        failed_jobs=failed,
+        queue_size=len(stats["queued"]),
+        running_job=stats["running_job"],
+        queued_jobs=stats["queued"],
+        completed_jobs=stats["completed"],
+        failed_jobs=stats["failed"],
     )
 
 
@@ -412,20 +484,15 @@ async def cancel_job(job_id: str):
 
     Note: Running jobs cannot be cancelled.
     """
-    job = state.jobs.get(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    success, message = await state.cancel_job(job_id)
 
-    if job.status == JobStatus.RUNNING:
-        raise HTTPException(status_code=400, detail="Cannot cancel a running job")
+    if not success:
+        # Determine appropriate status code based on message
+        if "not found" in message:
+            raise HTTPException(status_code=404, detail=message)
+        raise HTTPException(status_code=400, detail=message)
 
-    if job.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
-        raise HTTPException(status_code=400, detail="Job already finished or cancelled")
-
-    job.status = JobStatus.CANCELLED
-    job.completed_at = datetime.now().isoformat()
-
-    return {"message": f"Job {job_id} cancelled"}
+    return {"message": message}
 
 
 @app.get("/tasks")
