@@ -38,26 +38,16 @@ class EvaluateRequest(BaseModel):
 
     model: str = Field(..., description="Model name or path")
     tasks: List[str] = Field(..., description="List of task names to evaluate")
-    model_args: Optional[Dict[str, Any]] = Field(
-        default=None, description="Model arguments"
-    )
-    num_fewshot: Optional[int] = Field(
-        default=None, description="Number of few-shot examples"
-    )
-    batch_size: Optional[Union[int, str]] = Field(
-        default=None, description="Batch size"
-    )
+    model_args: Optional[Dict[str, Any]] = Field(default=None, description="Model arguments")
+    num_fewshot: Optional[int] = Field(default=None, description="Number of few-shot examples")
+    batch_size: Optional[Union[int, str]] = Field(default=None, description="Batch size")
     device: Optional[str] = Field(default=None, description="Device to run on")
-    limit: Optional[Union[int, float]] = Field(
-        default=None, description="Limit number of examples"
-    )
+    limit: Optional[Union[int, float]] = Field(default=None, description="Limit number of examples")
     gen_kwargs: Optional[str] = Field(default=None, description="Generation kwargs")
     log_samples: bool = Field(default=True, description="Whether to log samples")
     predict_only: bool = Field(default=False, description="Only generate predictions")
     num_gpus: int = Field(default=1, description="Number of GPUs to use")
-    output_dir: Optional[str] = Field(
-        default=None, description="Output directory for results"
-    )
+    output_dir: Optional[str] = Field(default=None, description="Output directory for results")
 
 
 class JobInfo(BaseModel):
@@ -190,11 +180,7 @@ class JobScheduler:
                 return None
 
             if job.status == JobStatus.QUEUED:
-                position = sum(
-                    1
-                    for j in self._jobs.values()
-                    if j.status == JobStatus.QUEUED and j.created_at < job.created_at
-                )
+                position = sum(1 for j in self._jobs.values() if j.status == JobStatus.QUEUED and j.created_at < job.created_at)
                 job.position_in_queue = position
 
             return job
@@ -257,12 +243,8 @@ class JobScheduler:
     async def get_queue_stats(self) -> dict:
         """Get queue statistics (thread-safe)."""
         async with self._jobs_lock:
-            queued = [
-                jid for jid, j in self._jobs.items() if j.status == JobStatus.QUEUED
-            ]
-            completed = sum(
-                1 for j in self._jobs.values() if j.status == JobStatus.COMPLETED
-            )
+            queued = [jid for jid, j in self._jobs.items() if j.status == JobStatus.QUEUED]
+            completed = sum(1 for j in self._jobs.values() if j.status == JobStatus.COMPLETED)
             failed = sum(1 for j in self._jobs.values() if j.status == JobStatus.FAILED)
 
             return {
@@ -287,11 +269,7 @@ class JobScheduler:
                 JobStatus.FAILED,
                 JobStatus.CANCELLED,
             }
-            finished_jobs = [
-                (jid, job)
-                for jid, job in self._jobs.items()
-                if job.status in terminal_statuses
-            ]
+            finished_jobs = [(jid, job) for jid, job in self._jobs.items() if job.status in terminal_statuses]
 
             if len(finished_jobs) <= self._max_completed_jobs:
                 return 0
@@ -397,9 +375,7 @@ class JobScheduler:
         This allows GPU-based evaluation to run in a separate process
         while the server remains responsive.
         """
-        output_path = config.get("output_dir") or tempfile.mkdtemp(
-            prefix=self._temp_dir_prefix
-        )
+        output_path = config.get("output_dir") or tempfile.mkdtemp(prefix=self._temp_dir_prefix)
 
         # Build command
         num_gpus = config.get("num_gpus", 1)
@@ -421,9 +397,7 @@ class JobScheduler:
         # Add optional arguments
         if config.get("model_args"):
             if isinstance(config["model_args"], dict):
-                model_args_str = ",".join(
-                    f"{k}={v}" for k, v in config["model_args"].items()
-                )
+                model_args_str = ",".join(f"{k}={v}" for k, v in config["model_args"].items())
             else:
                 model_args_str = str(config["model_args"])
             cmd.extend(["--model_args", model_args_str])
@@ -506,9 +480,7 @@ class JobScheduler:
             # Use latest timestamp
             sorted_ts = sorted(timestamps.keys(), reverse=True)
             if len(sorted_ts) > 1:
-                logger.warning(
-                    f"Multiple timestamps for '{model_name}': {sorted_ts}. Using latest."
-                )
+                logger.warning(f"Multiple timestamps for '{model_name}': {sorted_ts}. Using latest.")
 
             result[model_name] = timestamps[sorted_ts[0]]
 

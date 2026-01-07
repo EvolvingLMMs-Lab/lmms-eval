@@ -28,9 +28,7 @@ import httpx
 ExcInfo = tuple[type[BaseException], BaseException, Any] | tuple[None, None, None]
 
 
-def _process_job_status(
-    job: Dict[str, Any], job_id: str, verbose: bool
-) -> tuple[bool, Dict[str, Any] | None]:
+def _process_job_status(job: Dict[str, Any], job_id: str, verbose: bool) -> tuple[bool, Dict[str, Any] | None]:
     """
     Process job status and handle terminal states.
 
