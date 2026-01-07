@@ -1,4 +1,9 @@
 dataset_name: full
 test_split: test
 task: "vsibench"
+dataset_kwargs:
+  token: True
+  cache_dir: vsibench
+  video: True
 include: _default_template_yaml
+
