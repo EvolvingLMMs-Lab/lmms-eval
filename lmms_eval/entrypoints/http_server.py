@@ -42,26 +42,16 @@ class EvaluateRequest(BaseModel):
 
     model: str = Field(..., description="Model name or path")
     tasks: List[str] = Field(..., description="List of task names to evaluate")
-    model_args: Optional[Dict[str, Any]] = Field(
-        default=None, description="Model arguments"
-    )
-    num_fewshot: Optional[int] = Field(
-        default=None, description="Number of few-shot examples"
-    )
-    batch_size: Optional[Union[int, str]] = Field(
-        default=None, description="Batch size"
-    )
+    model_args: Optional[Dict[str, Any]] = Field(default=None, description="Model arguments")
+    num_fewshot: Optional[int] = Field(default=None, description="Number of few-shot examples")
+    batch_size: Optional[Union[int, str]] = Field(default=None, description="Batch size")
     device: Optional[str] = Field(default=None, description="Device to run on")
-    limit: Optional[Union[int, float]] = Field(
-        default=None, description="Limit number of examples"
-    )
+    limit: Optional[Union[int, float]] = Field(default=None, description="Limit number of examples")
     gen_kwargs: Optional[str] = Field(default=None, description="Generation kwargs")
     log_samples: bool = Field(default=True, description="Whether to log samples")
     predict_only: bool = Field(default=False, description="Only generate predictions")
     num_gpus: int = Field(default=1, description="Number of GPUs to use")
-    output_dir: Optional[str] = Field(
-        default=None, description="Output directory for results"
-    )
+    output_dir: Optional[str] = Field(default=None, description="Output directory for results")
 
 
 class JobInfo(BaseModel):
@@ -171,9 +161,7 @@ def parse_output_directory(output_path: str) -> Dict[str, Dict[str, Any]]:
         # Use latest timestamp
         sorted_ts = sorted(timestamps.keys(), reverse=True)
         if len(sorted_ts) > 1:
-            logger.warning(
-                f"Multiple timestamps for '{model_name}': {sorted_ts}. Using latest."
-            )
+            logger.warning(f"Multiple timestamps for '{model_name}': {sorted_ts}. Using latest.")
 
         result[model_name] = timestamps[sorted_ts[0]]
 
@@ -209,9 +197,7 @@ async def run_evaluation_subprocess(config: dict) -> dict:
     # Add optional arguments
     if config.get("model_args"):
         if isinstance(config["model_args"], dict):
-            model_args_str = ",".join(
-                f"{k}={v}" for k, v in config["model_args"].items()
-            )
+            model_args_str = ",".join(f"{k}={v}" for k, v in config["model_args"].items())
         else:
             model_args_str = str(config["model_args"])
         cmd.extend(["--model_args", model_args_str])

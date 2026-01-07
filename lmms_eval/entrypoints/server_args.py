@@ -10,9 +10,7 @@ class ServerArgs:
 
     def __post_init__(self):
         if not isinstance(self.port, int) or not (1 <= self.port <= 65535):
-            raise ValueError(
-                f"Port must be an integer between 1 and 65535, got {self.port}"
-            )
+            raise ValueError(f"Port must be an integer between 1 and 65535, got {self.port}")
 
     @classmethod
     def from_dict(cls, d: dict) -> "ServerArgs":
