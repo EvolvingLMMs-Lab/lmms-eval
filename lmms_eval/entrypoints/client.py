@@ -24,6 +24,41 @@ from typing import Any, Dict, List, Optional, Union
 
 import httpx
 
+# Type aliases for context manager exit args
+ExcInfo = tuple[type[BaseException], BaseException, Any] | tuple[None, None, None]
+
+
+def _process_job_status(
+    job: Dict[str, Any], job_id: str, verbose: bool
+) -> tuple[bool, Dict[str, Any] | None]:
+    """
+    Process job status and handle terminal states.
+
+    Returns:
+        Tuple of (should_continue, result_or_none).
+        If should_continue is False, result_or_none contains the job dict.
+        Raises RuntimeError if job failed.
+    """
+    status = job.get("status")
+
+    if verbose:
+        if status == "queued":
+            pos = job.get("position_in_queue", "?")
+            print(f"Job {job_id[:8]}... queued (position: {pos})")
+        elif status == "running":
+            print(f"Job {job_id[:8]}... running")
+
+    if status == "completed":
+        if verbose:
+            print(f"Job {job_id[:8]}... completed!")
+        return False, job
+
+    if status == "failed":
+        error = job.get("error", "Unknown error")
+        raise RuntimeError(f"Job failed: {error}")
+
+    return True, None
+
 
 class EvalClient:
     """
@@ -48,10 +83,15 @@ class EvalClient:
         self.base_url = base_url.rstrip("/")
         self.client = httpx.Client(timeout=timeout)
 
-    def __enter__(self):
+    def __enter__(self) -> "EvalClient":
         return self
 
-    def __exit__(self, *args):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         self.close()
 
     def close(self):
@@ -207,23 +247,9 @@ class EvalClient:
 
         while True:
             job = self.get_job(job_id)
-            status = job.get("status")
-
-            if verbose:
-                if status == "queued":
-                    pos = job.get("position_in_queue", "?")
-                    print(f"Job {job_id[:8]}... queued (position: {pos})")
-                elif status == "running":
-                    print(f"Job {job_id[:8]}... running")
-
-            if status == "completed":
-                if verbose:
-                    print(f"Job {job_id[:8]}... completed!")
-                return job
-
-            if status == "failed":
-                error = job.get("error", "Unknown error")
-                raise RuntimeError(f"Job failed: {error}")
+            should_continue, result = _process_job_status(job, job_id, verbose)
+            if not should_continue:
+                return result  # type: ignore[return-value]
 
             if timeout and (time.time() - start_time) > timeout:
                 raise TimeoutError(f"Timeout waiting for job {job_id}")
@@ -262,10 +288,15 @@ class AsyncEvalClient:
         self.base_url = base_url.rstrip("/")
         self.client = httpx.AsyncClient(timeout=timeout)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "AsyncEvalClient":
         return self
 
-    async def __aexit__(self, *args):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         await self.close()
 
     async def close(self):
@@ -322,23 +353,9 @@ class AsyncEvalClient:
 
         while True:
             job = await self.get_job(job_id)
-            status = job.get("status")
-
-            if verbose:
-                if status == "queued":
-                    pos = job.get("position_in_queue", "?")
-                    print(f"Job {job_id[:8]}... queued (position: {pos})")
-                elif status == "running":
-                    print(f"Job {job_id[:8]}... running")
-
-            if status == "completed":
-                if verbose:
-                    print(f"Job {job_id[:8]}... completed!")
-                return job
-
-            if status == "failed":
-                error = job.get("error", "Unknown error")
-                raise RuntimeError(f"Job failed: {error}")
+            should_continue, result = _process_job_status(job, job_id, verbose)
+            if not should_continue:
+                return result  # type: ignore[return-value]
 
             if timeout and (time.time() - start_time) > timeout:
                 raise TimeoutError(f"Timeout waiting for job {job_id}")
