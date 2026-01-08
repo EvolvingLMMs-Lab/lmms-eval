@@ -1,9 +1,8 @@
-dataset_name: full
+dataset_name: debiased
 test_split: test
-task: "vsibench"
+task: "vsibench_debiased"
 dataset_kwargs:
   token: True
   cache_dir: vsibench
   video: True
 include: _default_template_yaml
-
