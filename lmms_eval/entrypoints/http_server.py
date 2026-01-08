@@ -46,7 +46,15 @@ async def lifespan(app: FastAPI):
     access from route handlers.
     """
     # Startup: Initialize and start the job scheduler
-    scheduler = JobScheduler()
+    # Get scheduler config from app.state if available (set by launch_server)
+    server_args: ServerArgs = getattr(app.state, "server_args", None)
+    if server_args:
+        scheduler = JobScheduler(
+            max_completed_jobs=server_args.max_completed_jobs,
+            temp_dir_prefix=server_args.temp_dir_prefix,
+        )
+    else:
+        scheduler = JobScheduler()
     await scheduler.start()
     app.state.scheduler = scheduler
     logger.info("Evaluation server started")
@@ -178,15 +186,18 @@ def launch_server(args: ServerArgs):
     Launch the evaluation server with the given arguments.
 
     Args:
-        args: ServerArgs instance containing host and port configuration.
+        args: ServerArgs instance containing host, port, and scheduler configuration.
 
     Example:
         >>> from lmms_eval.entrypoints import ServerArgs, launch_server
-        >>> args = ServerArgs(host="0.0.0.0", port=8080)
+        >>> args = ServerArgs(host="0.0.0.0", port=8080, max_completed_jobs=200)
         >>> launch_server(args)
     """
     logger.info(f"Starting LMMS-Eval server at http://{args.host}:{args.port}")
     logger.info("API docs available at /docs")
+
+    # Store server args in app.state for the lifespan function to access
+    app.state.server_args = args
 
     uvicorn.run(
         app,
