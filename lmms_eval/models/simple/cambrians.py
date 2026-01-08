@@ -10,10 +10,20 @@ from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 
 try:
-    from cambrian.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+    from cambrian.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IMAGE_TOKEN_INDEX,
+    )
     from cambrian.conversation import conv_templates
+    from cambrian.mm_utils import (
+        expand2square,
+        get_model_name_from_path,
+        process_images,
+        tokenizer_image_token,
+    )
     from cambrian.model.builder import load_pretrained_model
-    from cambrian.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path, expand2square
 except ImportError:
     eval_logger.error("Cambrian is not installed. pip install git+https://github.com/cambrian-mllm/cambrian-s.git")
 
@@ -25,12 +35,14 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 
+
 def is_video_file(file_path: str) -> bool:
     if isinstance(file_path, Image.Image):
         return False
     video_extensions = {".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv", ".webm"}
     _, ext = os.path.splitext(file_path)
     return ext.lower() in video_extensions
+
 
 def is_image_file(file_path: str) -> bool:
     if isinstance(file_path, Image.Image):
@@ -39,7 +51,9 @@ def is_image_file(file_path: str) -> bool:
     _, ext = os.path.splitext(file_path)
     return ext.lower() in image_extensions
 
+
 from decord import VideoReader, cpu
+
 
 def process_video_with_decord(video_file, model_cfg, num_threads=-1):
 
@@ -51,13 +65,13 @@ def process_video_with_decord(video_file, model_cfg, num_threads=-1):
     video_time = total_frame_num / vr.get_avg_fps()
     avg_fps = round(vr.get_avg_fps() / model_cfg.video_fps)
     frame_idx = [i for i in range(0, total_frame_num, avg_fps)]
-    frame_time = [i/avg_fps for i in frame_idx]
+    frame_time = [i / avg_fps for i in frame_idx]
 
     if model_cfg.video_max_frames > 0:
         if len(frame_idx) > model_cfg.video_max_frames or model_cfg.video_force_sample:
             uniform_sampled_frames = np.linspace(0, total_frame_num - 1, model_cfg.video_max_frames, dtype=int)
             frame_idx = uniform_sampled_frames.tolist()
-            frame_time = [i/vr.get_avg_fps() for i in frame_idx]
+            frame_time = [i / vr.get_avg_fps() for i in frame_idx]
 
     video = vr.get_batch(frame_idx).asnumpy()
     frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
@@ -66,6 +80,7 @@ def process_video_with_decord(video_file, model_cfg, num_threads=-1):
     # https://github.com/dmlc/decord/issues/208
     vr.seek(0)
     return video, video_time, frame_time, num_frames_to_sample
+
 
 def process_videos(videos, image_processor, model_cfg, num_threads=-1):
 
@@ -76,14 +91,14 @@ def process_videos(videos, image_processor, model_cfg, num_threads=-1):
 
     for video in videos:
         video, video_time, frame_time, num_frames_to_sample = process_video_with_decord(video, model_cfg, num_threads=num_threads)
-        video_sizes.append((video.shape[2], video.shape[1], video.shape[0])) # W, H, T
-        video = [Image.fromarray(video[_], mode="RGB") for _ in range(video.shape[0])] # covert to PIL.Image.Image
+        video_sizes.append((video.shape[2], video.shape[1], video.shape[0]))  # W, H, T
+        video = [Image.fromarray(video[_], mode="RGB") for _ in range(video.shape[0])]  # covert to PIL.Image.Image
 
         video_aux_list = []
         for processor_aux in processor_aux_list:
             video_aux = video
-            video_aux = [expand2square(image, tuple(int(x*255) for x in processor_aux.image_mean)) for image in video_aux]
-            video_aux_list.append(processor_aux.preprocess(video_aux, return_tensors='pt')['pixel_values'])
+            video_aux = [expand2square(image, tuple(int(x * 255) for x in processor_aux.image_mean)) for image in video_aux]
+            video_aux_list.append(processor_aux.preprocess(video_aux, return_tensors="pt")["pixel_values"])
 
         new_videos_aux_list.append(video_aux_list)
 
@@ -91,6 +106,7 @@ def process_videos(videos, image_processor, model_cfg, num_threads=-1):
     new_videos_aux_list = [torch.stack(video_aux) for video_aux in new_videos_aux_list]
 
     return new_videos_aux_list, video_sizes, (video_time, frame_time, num_frames_to_sample)
+
 
 @register_model("cambrians")
 class CambrianS(lmms):
@@ -261,7 +277,7 @@ class CambrianS(lmms):
                             if is_image_file(visuals[0]):
                                 visual_tensors, visual_sizes = process_images(visuals, self.image_processor, self.model_config)
                             elif is_video_file(visuals[0]):
-                                num_threads = 1 if 'Ego4D' in visuals[0] or "video_mmmu" in visuals[0] else -1
+                                num_threads = 1 if "Ego4D" in visuals[0] or "video_mmmu" in visuals[0] else -1
                                 visual_tensors, visual_sizes, (_, _, _) = process_videos(visuals, self.image_processor, self.model_config, num_threads=num_threads)
                             else:
                                 raise NotImplementedError
@@ -275,7 +291,7 @@ class CambrianS(lmms):
                                 visual_sizes = []
                                 for visual in visuals:
                                     if is_video_file(visual):
-                                        num_threads = 1 if 'Ego4D' in visual else -1
+                                        num_threads = 1 if "Ego4D" in visual else -1
                                         visual_tensor, visual_size, (_, _, _) = process_videos([visual], self.image_processor, self.model_config, num_threads=num_threads)
                                         visual_tensors.append(visual_tensor[0])
                                         visual_sizes.append(visual_size[0])
