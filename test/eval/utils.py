@@ -177,7 +177,7 @@ class ServerProcess:
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            preexec_fn=os.setsid,  # Create new process group for clean shutdown
+            start_new_session=True,
         )
 
         # Start background thread to stream logs

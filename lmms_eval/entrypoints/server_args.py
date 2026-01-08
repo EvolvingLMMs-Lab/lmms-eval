@@ -8,7 +8,7 @@ class ServerArgs:
     host: str = field(default="localhost")
     port: int = field(default=8000)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate ServerArgs fields after initialization."""
         if not isinstance(self.port, int) or not (1 <= self.port <= 65535):
             raise ValueError(f"Port must be an integer between 1 and 65535, " f"got {self.port!r} (type: {type(self.port).__name__})")
