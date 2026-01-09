@@ -20,7 +20,7 @@ Example usage:
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import httpx
 
@@ -266,6 +266,33 @@ class EvalClient:
             Dict with queue_size, running_job, queued_jobs, etc.
         """
         return self._request("GET", "/queue")
+
+    def merge_checkpoint(
+        self,
+        checkpoint_path: str,
+        output_path: Optional[str] = None,
+        checkpoint_type: Literal["regular", "ema"] = "regular",
+    ) -> Dict[str, Any]:
+        """
+        Merge FSDP2 sharded checkpoint into a single consolidated checkpoint.
+
+        Args:
+            checkpoint_path: Path to sharded checkpoint directory
+            output_path: Where to save merged checkpoint. If None, saves to checkpoint_path
+            checkpoint_type: Type of checkpoint to merge ("regular" or "ema")
+
+        Returns:
+            Dict with success, message, and merged_path fields
+
+        Raises:
+            httpx.HTTPStatusError: If the merge operation fails
+        """
+        payload = {
+            "checkpoint_path": checkpoint_path,
+            "output_path": output_path,
+            "checkpoint_type": checkpoint_type,
+        }
+        return self._request("POST", "/merge", json=payload)
 
 
 class AsyncEvalClient:
