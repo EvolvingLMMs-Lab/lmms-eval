@@ -5,20 +5,24 @@ This module provides a FastAPI-based HTTP server for running lmms-eval evaluatio
 Jobs are managed through a JobScheduler that processes requests sequentially.
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from loguru import logger
 
-from lmms_eval.entrypoints.job_scheduler import (
+from lmms_eval.entrypoints.job_scheduler import JobScheduler
+from lmms_eval.entrypoints.protocol import (
     EvaluateRequest,
     HealthResponse,
     JobInfo,
-    JobScheduler,
     JobStatus,
     JobSubmitResponse,
+    MergeRequest,
+    MergeResponse,
     QueueStatusResponse,
 )
 from lmms_eval.entrypoints.server_args import ServerArgs
@@ -176,9 +180,63 @@ async def list_available_models():
         return {"models": [], "error": str(e)}
 
 
+@app.post("/merge", response_model=MergeResponse)
+async def merge_checkpoint(request: Request, merge_request: MergeRequest):
+    """
+    Merge FSDP2 sharded checkpoint into a single consolidated checkpoint.
+
+    This endpoint allows merging of distributed training checkpoints for use
+    in evaluation or inference. The merge operation runs synchronously.
+    """
+    checkpoint_path = Path(merge_request.checkpoint_path)
+    output_path = Path(merge_request.output_path) if merge_request.output_path else None
+
+    try:
+        merged_path = await asyncio.to_thread(
+            _perform_merge,
+            checkpoint_path,
+            output_path,
+            merge_request.checkpoint_type,
+        )
+        return MergeResponse(
+            success=True,
+            message="Checkpoint merged successfully",
+            merged_path=str(merged_path),
+        )
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"lmms_engine not available: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Merge failed: {e}")
+
+
 # =============================================================================
 # Server Launch
 # =============================================================================
+
+
+def _perform_merge(
+    checkpoint_path: Path,
+    output_path: Path | None,
+    checkpoint_type: str,
+) -> Path:
+    """
+    Perform the actual FSDP2 checkpoint merge.
+
+    This function runs in a thread pool to avoid blocking the async event loop.
+    It dynamically imports lmms_engine since it's not a dependency of lmms-eval.
+    """
+    try:
+        from lmms_engine.merger import FSDP2Merger
+    except ImportError as e:
+        raise ImportError("lmms_engine package not found. Please install lmms-engine to use checkpoint merging.") from e
+
+    merger = FSDP2Merger(checkpoint_type=checkpoint_type)
+    result_path = merger.merge(checkpoint_path, output_path=output_path)
+    return result_path
 
 
 def launch_server(args: ServerArgs):
