@@ -1,10 +1,15 @@
 from lmms_eval.entrypoints.client import AsyncEvalClient, EvalClient
 from lmms_eval.entrypoints.http_server import launch_server
-from lmms_eval.entrypoints.job_scheduler import (
+from lmms_eval.entrypoints.job_scheduler import JobScheduler
+from lmms_eval.entrypoints.protocol import (
     EvaluateRequest,
+    HealthResponse,
     JobInfo,
-    JobScheduler,
     JobStatus,
+    JobSubmitResponse,
+    MergeRequest,
+    MergeResponse,
+    QueueStatusResponse,
 )
 from lmms_eval.entrypoints.server_args import ServerArgs
 
@@ -17,4 +22,9 @@ __all__ = [
     "JobStatus",
     "JobInfo",
     "EvaluateRequest",
+    "JobSubmitResponse",
+    "QueueStatusResponse",
+    "HealthResponse",
+    "MergeRequest",
+    "MergeResponse",
 ]
