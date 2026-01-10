@@ -27,9 +27,7 @@ try:
     )
     from cambrian.model.builder import load_pretrained_model
 except ImportError:
-    eval_logger.error(
-        "Cambrian is not installed. pip install git+https://github.com/cambrian-mllm/cambrian-s.git"
-    )
+    eval_logger.error("Cambrian is not installed. pip install git+https://github.com/cambrian-mllm/cambrian-s.git")
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
@@ -69,9 +67,7 @@ def process_video_with_decord(video_file, model_cfg, num_threads=-1):
 
     if model_cfg.video_max_frames > 0:
         if len(frame_idx) > model_cfg.video_max_frames or model_cfg.video_force_sample:
-            uniform_sampled_frames = np.linspace(
-                0, total_frame_num - 1, model_cfg.video_max_frames, dtype=int
-            )
+            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, model_cfg.video_max_frames, dtype=int)
             frame_idx = uniform_sampled_frames.tolist()
             frame_time = [i / vr.get_avg_fps() for i in frame_idx]
 
@@ -91,32 +87,19 @@ def process_videos(videos, image_processor, model_cfg, num_threads=-1):
     video_sizes = []
 
     for video in videos:
-        video, video_time, frame_time, num_frames_to_sample = process_video_with_decord(
-            video, model_cfg, num_threads=num_threads
-        )
+        video, video_time, frame_time, num_frames_to_sample = process_video_with_decord(video, model_cfg, num_threads=num_threads)
         video_sizes.append((video.shape[2], video.shape[1], video.shape[0]))  # W, H, T
-        video = [
-            Image.fromarray(video[_], mode="RGB") for _ in range(video.shape[0])
-        ]  # covert to PIL.Image.Image
+        video = [Image.fromarray(video[_], mode="RGB") for _ in range(video.shape[0])]  # covert to PIL.Image.Image
 
         video_aux_list = []
         for processor_aux in processor_aux_list:
             video_aux = video
-            video_aux = [
-                expand2square(
-                    image, tuple(int(x * 255) for x in processor_aux.image_mean)
-                )
-                for image in video_aux
-            ]
-            video_aux_list.append(
-                processor_aux.preprocess(video_aux, return_tensors="pt")["pixel_values"]
-            )
+            video_aux = [expand2square(image, tuple(int(x * 255) for x in processor_aux.image_mean)) for image in video_aux]
+            video_aux_list.append(processor_aux.preprocess(video_aux, return_tensors="pt")["pixel_values"])
 
         new_videos_aux_list.append(video_aux_list)
 
-    new_videos_aux_list = [
-        list(batch_video_aux) for batch_video_aux in zip(*new_videos_aux_list)
-    ]
+    new_videos_aux_list = [list(batch_video_aux) for batch_video_aux in zip(*new_videos_aux_list)]
     new_videos_aux_list = [torch.stack(video_aux) for video_aux in new_videos_aux_list]
 
     return (
@@ -158,9 +141,7 @@ class CambrianS(lmms):
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
-        elif accelerator.num_processes == 1 and (
-            device_map == "auto" or device_map == "balanced_low_0"
-        ):
+        elif accelerator.num_processes == 1 and (device_map == "auto" or device_map == "balanced_low_0"):
             raise NotImplementedError("device_map == auto is not supported yet.")
         else:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
@@ -170,11 +151,7 @@ class CambrianS(lmms):
         self.model_name = get_model_name_from_path(pretrained)
 
         self.torch_dtype = torch_dtype
-        self._tokenizer, self._model, self._image_processor, self._max_length = (
-            load_pretrained_model(
-                pretrained, None, self.model_name, device_map=self.device_map
-            )
-        )
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map)
 
         self._model.config.video_max_frames = video_max_frames
         self._model.config.video_fps = video_fps
@@ -212,35 +189,21 @@ class CambrianS(lmms):
             if accelerator.distributed_type == DistributedType.DEEPSPEED:
                 kwargs = {
                     "train_micro_batch_size_per_gpu": self.batch_size_per_gpu,
-                    "train_batch_size": self.batch_size_per_gpu
-                    * accelerator.num_processes,
+                    "train_batch_size": self.batch_size_per_gpu * accelerator.num_processes,
                 }
-                AcceleratorState().deepspeed_plugin.deepspeed_config_process(
-                    must_match=True, **kwargs
-                )
-                eval_logger.info(
-                    "Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0"
-                )
-            if (
-                accelerator.distributed_type == DistributedType.FSDP
-                or accelerator.distributed_type == DistributedType.DEEPSPEED
-            ):
+                AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **kwargs)
+                eval_logger.info("Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0")
+            if accelerator.distributed_type == DistributedType.FSDP or accelerator.distributed_type == DistributedType.DEEPSPEED:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         elif accelerator.num_processes == 1 and device_map == "auto":
-            eval_logger.info(
-                f"Using {accelerator.num_processes} devices with tensor parallelism"
-            )
+            eval_logger.info(f"Using {accelerator.num_processes} devices with tensor parallelism")
             self._rank = 0
             self._world_size = 1
         else:
@@ -293,9 +256,7 @@ class CambrianS(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         class Dataset(torch.utils.data.Dataset):
             def __init__(
@@ -318,9 +279,7 @@ class CambrianS(lmms):
                 return len(self.requests)
 
             def __getitem__(self, idx):
-                contexts, gen_kwargs, doc_to_visual, doc_id, task, split = (
-                    self.requests[idx].args
-                )
+                contexts, gen_kwargs, doc_to_visual, doc_id, task, split = self.requests[idx].args
                 visuals = doc_to_visual(self.task_dict[task][split][doc_id])
 
                 if visuals is not None:
@@ -328,23 +287,14 @@ class CambrianS(lmms):
                     try:
                         if len(visuals) == 1:
                             if is_image_file(visuals[0]):
-                                visual_tensors, visual_sizes = process_images(
-                                    visuals, self.image_processor, self.model_config
-                                )
+                                visual_tensors, visual_sizes = process_images(visuals, self.image_processor, self.model_config)
                             elif is_video_file(visuals[0]):
-                                num_threads = (
-                                    1
-                                    if "Ego4D" in visuals[0]
-                                    or "video_mmmu" in visuals[0]
-                                    else -1
-                                )
-                                visual_tensors, visual_sizes, (_, _, _) = (
-                                    process_videos(
-                                        visuals,
-                                        self.image_processor,
-                                        self.model_config,
-                                        num_threads=num_threads,
-                                    )
+                                num_threads = 1 if "Ego4D" in visuals[0] or "video_mmmu" in visuals[0] else -1
+                                visual_tensors, visual_sizes, (_, _, _) = process_videos(
+                                    visuals,
+                                    self.image_processor,
+                                    self.model_config,
+                                    num_threads=num_threads,
                                 )
                             else:
                                 raise NotImplementedError
@@ -357,22 +307,18 @@ class CambrianS(lmms):
                                     use_pad=True,
                                 )
                             elif sum(is_video_file(_) for _ in visuals) > 1:
-                                raise NotImplementedError(
-                                    "Multiple videos are not supported yet."
-                                )
+                                raise NotImplementedError("Multiple videos are not supported yet.")
                             else:
                                 visual_tensors = []
                                 visual_sizes = []
                                 for visual in visuals:
                                     if is_video_file(visual):
                                         num_threads = 1 if "Ego4D" in visual else -1
-                                        visual_tensor, visual_size, (_, _, _) = (
-                                            process_videos(
-                                                [visual],
-                                                self.image_processor,
-                                                self.model_config,
-                                                num_threads=num_threads,
-                                            )
+                                        visual_tensor, visual_size, (_, _, _) = process_videos(
+                                            [visual],
+                                            self.image_processor,
+                                            self.model_config,
+                                            num_threads=num_threads,
                                         )
                                         visual_tensors.append(visual_tensor[0])
                                         visual_sizes.append(visual_size[0])
@@ -407,13 +353,7 @@ class CambrianS(lmms):
                         qs = real_qs
                     elif isinstance(qs, str):
                         if self.model_config.mm_use_im_start_end:
-                            qs = (
-                                DEFAULT_IM_START_TOKEN
-                                + DEFAULT_IMAGE_TOKEN
-                                + DEFAULT_IM_END_TOKEN
-                                + "\n"
-                                + qs
-                            )
+                            qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
                         else:
                             assert len(visual_tensors) == 1, "This should not happen."
                             qs = DEFAULT_IMAGE_TOKEN * len(visual_tensors) + "\n" + qs
@@ -431,9 +371,7 @@ class CambrianS(lmms):
                 conv.append_message(conv.roles[1], None)
                 prompt = conv.get_prompt()
 
-                input_ids = tokenizer_image_token(
-                    prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-                ).unsqueeze(0)
+                input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0)
                 return input_ids, visual_tensors, visual_sizes, prompt, gen_kwargs
 
         dataset = Dataset(
@@ -486,9 +424,7 @@ class CambrianS(lmms):
                     max_new_tokens=gen_kwargs["max_new_tokens"],
                 )
 
-            outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[
-                0
-            ].strip()
+            outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
             eval_logger.debug(f"Question: {cur_prompt}")
             eval_logger.debug(f"Answer: {outputs}")
             res.append(outputs)
