@@ -43,17 +43,11 @@ def parse_multi_choice_response(response):
 
 def parse_answer(raw_answer):
     if "final answer:" in raw_answer.lower():
-        answer = raw_answer[
-            raw_answer.lower().index("final answer:") + len("final answer:") :
-        ].strip()
+        answer = raw_answer[raw_answer.lower().index("final answer:") + len("final answer:") :].strip()
     elif "the answer is" in raw_answer.lower():
-        answer = raw_answer[
-            raw_answer.lower().index("the answer is") + len("the answer is") :
-        ].strip()
+        answer = raw_answer[raw_answer.lower().index("the answer is") + len("the answer is") :].strip()
     elif "answer:" in raw_answer.lower():
-        answer = raw_answer[
-            raw_answer.lower().index("answer:") + len("answer:") :
-        ].strip()
+        answer = raw_answer[raw_answer.lower().index("answer:") + len("answer:") :].strip()
     else:
         answer = raw_answer
     return answer
@@ -68,9 +62,7 @@ def get_option(final_answer):
     return None
 
 
-def get_prediction(
-    question_type: str, raw_answer: str, ref_answer: str, options: List[str]
-):
+def get_prediction(question_type: str, raw_answer: str, ref_answer: str, options: List[str]):
     answer = parse_answer(raw_answer)
     ref_answer = ref_answer.strip("()\n ")  # important for some datasets
     if question_type == "multi-choice":
@@ -79,9 +71,7 @@ def get_prediction(
                 if c.isalpha():
                     ref_answer = c
                     break
-        assert len(ref_answer) == 1, (
-            f"Ref answer is not a single character: {ref_answer}"
-        )
+        assert len(ref_answer) == 1, f"Ref answer is not a single character: {ref_answer}"
 
         selected_option = get_option(answer)
         if selected_option and (ord(selected_option) - ord("A") < len(options)):
@@ -95,20 +85,11 @@ def get_prediction(
             else:
                 ref_raw_answer = options[ref_option_idx]
                 if ref_raw_answer.startswith(ref_answer + "."):
-                    correct = (
-                        raw_answer.strip()
-                        == ref_raw_answer[len(ref_answer + ".") :].strip()
-                    )
+                    correct = raw_answer.strip() == ref_raw_answer[len(ref_answer + ".") :].strip()
                 elif ref_raw_answer.startswith(ref_answer + ":"):
-                    correct = (
-                        raw_answer.strip()
-                        == ref_raw_answer[len(ref_answer + ":") :].strip()
-                    )
+                    correct = raw_answer.strip() == ref_raw_answer[len(ref_answer + ":") :].strip()
                 elif ref_raw_answer.startswith("(" + ref_answer + ")"):
-                    correct = (
-                        raw_answer.strip()
-                        == ref_raw_answer[len(ref_answer) + 2 :].strip()
-                    )
+                    correct = raw_answer.strip() == ref_raw_answer[len(ref_answer) + 2 :].strip()
                 else:
                     correct = raw_answer.strip() == ref_raw_answer.strip()
             parsed_answer = raw_answer
