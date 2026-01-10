@@ -1,0 +1,40 @@
+dataset_path: Icey444/CoreCognition
+task: "corecognition_stage_sensorimotor"
+test_split: default
+output_type: generate_until
+
+doc_to_visual: !function utils.corecognition_doc_to_visual
+doc_to_text: !function utils.corecognition_doc_to_text
+doc_to_target: "answer"
+
+process_results: !function utils.corecognition_process_results
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+  - metric: accuracy_by_concept
+    aggregation: !function utils.corecognition_aggregate_by_concept
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+dataset_kwargs:
+  filter:
+    stage: "Stage Sensorimotor"
+
+metadata:
+  version: 1.0
+  description: "CoreCognition benchmark - Stage Sensorimotor subset"
+  paper_url: "https://arxiv.org/abs/2410.10855"
+  project_page: "https://williamium3000.github.io/core-knowledge/"
