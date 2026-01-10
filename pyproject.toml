@@ -79,6 +79,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+core = [
+    "lmms_eval[server]",
+    "lmms_eval[audio]",
+    "lmms_eval[metrics]",
+]
+server = [
+    "fastapi",
+    "uvicorn",
+]
 audio = [
     "more-itertools",
     "editdistance",
