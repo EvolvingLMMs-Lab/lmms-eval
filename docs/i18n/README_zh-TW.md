@@ -12,7 +12,7 @@
 [![issue resolution](https://img.shields.io/github/issues-closed-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
 [![open issues](https://img.shields.io/github/issues-raw/EvolvingLMMs-Lab/lmms-eval)](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
 
-> 使用 `lmms-eval` 加速大型多模態模型 (LMMs) 的開發。我們支援大多數文字、影像、視訊和音訊任務。
+> 使用 `lmms-eval` 加速大型多模態模型（LMM）的開發與評估，支援文字、影像、視訊、音訊等多種任務。
 
 🏠 [LMMs-Lab 首頁](https://www.lmms-lab.com/) | 🤗 [Huggingface 資料集](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
@@ -27,22 +27,22 @@
 
 ## 為什麼選擇 `lmms-eval`？
 
-我們正在走向創造通用人工智慧 (AGI) 的激動人心的旅程，就像1960年代登月的熱情一樣。這一旅程由先進的大型語言模型 (LLMs) 和大型多模態模型 (LMMs) 推動，這些複雜系統能夠理解、學習並執行各種人類任務。
+我們正踏上通往通用人工智慧（AGI）的征程，這份熱情不亞於 1960 年代的登月計畫。推動這一進程的，是大型語言模型（LLM）和大型多模態模型（LMM）——它們能夠理解、學習並完成各類人類任務。
 
-為了衡量這些模型的先進程度，我們使用各種評估基準。這些基準是幫助我們了解這些模型能力的工具，向我們展示距離實現 AGI 還有多遠。然而，找到和使用這些基準是一個巨大的挑戰。
+為了評估這些模型的能力，我們需要各種基準測試。然而現實是，這些基準和資料集散落在 Google Drive、Dropbox、各大學和實驗室的網站上，找起來就像尋寶一樣費勁。
 
-在語言模型領域，[lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) 的工作樹立了寶貴的先例。我們吸收了 lm-evaluation-harness 精湛高效的設計，推出了 **lmms-eval**，這是一個精心打造的評估框架，用於對 LMM 進行一致且高效的評估。
+在語言模型領域，[lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) 開創了先河。我們借鏡了它優雅高效的設計理念，打造了 **lmms-eval**——一個專為多模態模型設計的統一評估框架。
 
 ## 安裝
 
-### 使用 uv（推薦用於一致的環境）
+### 使用 uv（推薦）
 
-我們使用 `uv` 進行套件管理，以確保所有開發者使用完全相同的套件版本。首先，安裝 uv：
+我們使用 `uv` 進行套件管理，確保所有開發者的環境一致。首先安裝 uv：
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-用於具有一致環境的開發：
+複製儲存庫並安裝：
 ```bash
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
 cd lmms-eval
@@ -52,19 +52,19 @@ uv pip install -e ".[all]"
 # uv sync  # 這會從 uv.lock 建立/更新您的環境
 ```
 
-執行命令：
+執行指令：
 ```bash
-uv run python -m lmms_eval --help  # 使用 uv run 執行任何命令
+uv run python -m lmms_eval --help
 ```
 
 ### 替代安裝方式
 
-從 Git 直接使用：
+直接從 Git 安裝：
 ```bash
 uv venv eval
 uv venv --python 3.12
 source eval/bin/activate
-# 如果使用此安裝方式，您可能需要新增並包含自己的任務 yaml
+# 使用此方式安裝時，可能需要自行新增任務設定檔
 uv pip install git+https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 ```
 
@@ -103,7 +103,7 @@ python3 -m lmms_eval --help
 
 ## 致謝
 
-lmms_eval 是 [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness) 的分支。我們建議您閱讀 lm-eval-harness 的[文件](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs)以獲取相關資訊。
+lmms-eval 基於 [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness) 開發。建議閱讀其[文件](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs)了解更多背景。
 
 ## 引用
 
