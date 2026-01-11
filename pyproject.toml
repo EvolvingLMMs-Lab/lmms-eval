@@ -125,6 +125,13 @@ mmsearch = [
     "FlagEmbedding",
     "rouge",
 ]
+all = [
+    "lmms_eval[core]",
+    "lmms_eval[gemini]",
+    "lmms_eval[reka]",
+    "lmms_eval[qwen]",
+    "lmms_eval[mmsearch]",
+]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
