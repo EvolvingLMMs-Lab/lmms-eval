@@ -8,6 +8,10 @@ doc_to_text: !function utils.corecognition_doc_to_text
 doc_to_target: "answer"
 
 process_results: !function utils.corecognition_process_results
+filter_list:
+  - name: "stage_filter"
+    filter:
+      - function: !function utils.filter_stage_concrete_operational
 
 generation_kwargs:
   max_new_tokens: 16
@@ -28,10 +32,6 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""
-
-dataset_kwargs:
-  filter:
-    stage: "Stage Concrete Operational"
 
 metadata:
   version: 1.0

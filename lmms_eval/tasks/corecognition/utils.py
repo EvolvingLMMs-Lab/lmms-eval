@@ -34,6 +34,21 @@ def corecognition_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: Op
     return f"{pre_prompt}{prompt}{post_prompt}"
 
 
+def filter_stage_sensorimotor(doc: dict[str, Any]) -> bool:
+    """Filter for Stage Sensorimotor samples only."""
+    return doc.get("stage", "") == "Stage Sensorimotor"
+
+
+def filter_stage_concrete_operational(doc: dict[str, Any]) -> bool:
+    """Filter for Stage Concrete Operational samples only."""
+    return doc.get("stage", "") == "Stage Concrete Operational"
+
+
+def filter_stage_formal_operational(doc: dict[str, Any]) -> bool:
+    """Filter for Stage Formal Operational samples only."""
+    return doc.get("stage", "") == "Stage Formal Operational"
+
+
 def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, Any]:
     """Process model results and compute accuracy.
     Args:
