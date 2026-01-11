@@ -1,5 +1,6 @@
 """Utility functions for CoreCognition benchmark."""
 
+import re
 from collections import defaultdict
 from typing import Any, Dict, Optional
 
@@ -41,19 +42,53 @@ def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> di
     Returns:
         Dictionary with accuracy metric
     """
-    pred = results[0].strip()
-    ground_truth = str(doc["answer"]).strip()
+    pred = results[0] if isinstance(results[0], str) else str(results[0])
+    ground_truth = str(doc["answer"]).strip().upper()
     concept = doc.get("concept", "unknown")
 
-    pred_normalized = pred.upper().strip()
-    gt_normalized = ground_truth.upper().strip()
+    pred = pred.strip()
+    if not pred:
+        pred_normalized = ""
+    else:
+        pred_normalized = _extract_answer(pred)
 
-    is_correct = pred_normalized == gt_normalized
+    is_correct = pred_normalized == ground_truth
 
     return {
         "accuracy": float(is_correct),
         "accuracy_by_concept": {"concept": concept, "correct": is_correct},
     }
+
+
+def _extract_answer(pred: str) -> str:
+    """Extract answer from model prediction with aggressive cleanup.
+    Args:
+        pred: Raw model prediction
+    Returns:
+        Extracted answer in uppercase
+    """
+    pred = pred.strip()
+    
+    patterns = [
+        r'^(yes|no|[a-d])(\.|\,|\;| |\n|\*)',
+        r'[\n\*]+(yes|no|[a-d])(\.|\,|\;| |\n|\*)',
+        r'(yes|no|[a-d]) is the correct answer',
+        r'answer is[\:\;\*\n ]*(yes|no|[a-d])',
+        r'answer[\:\;\*\n ]*(yes|no|[a-d])',
+        r'option is[\:\;\*\n ]*(yes|no|[a-d])',
+        r'choice is[\:\;\*\n ]*(yes|no|[a-d])',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, pred, re.IGNORECASE)
+        if match:
+            return match.group(1).upper()
+    
+    cleaned = re.split(r'[,\.\:\;\n\s]+', pred)[0].strip()
+    if cleaned:
+        return cleaned.upper()
+    
+    return pred.upper()
 
 
 def corecognition_aggregate_by_concept(
