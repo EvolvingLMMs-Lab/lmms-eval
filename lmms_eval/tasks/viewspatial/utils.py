@@ -1,5 +1,6 @@
 import re
 from typing import Optional
+
 from loguru import logger as eval_logger
 
 
@@ -38,14 +39,14 @@ def viewspatial_doc_to_visual(doc):
     """
     return [visual.convert("RGB") for visual in doc["images"]]
 
+
 def extract_option(text):
     match = re.search(r"\b([A-D])\b", text, re.IGNORECASE)
     return match.group(1).upper() if match else None
 
-def viewspatial_process_results(doc, results):
-    """Processes the model's output for a single viewspatial document.
 
-    """
+def viewspatial_process_results(doc, results):
+    """Processes the model's output for a single viewspatial document."""
     # extract grounded answer
     grounded_output = doc["answer"]
     grounded_option = extract_option(grounded_output)
@@ -83,5 +84,3 @@ def viewspatial_aggregate_results(results):
     # --- Compute average score safely ---
     avg_score = total_score / len(results) if results else 0.0
     return avg_score
-
-
