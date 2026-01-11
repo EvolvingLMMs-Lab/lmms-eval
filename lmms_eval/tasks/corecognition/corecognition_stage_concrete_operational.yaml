@@ -2,16 +2,13 @@ dataset_path: Icey444/CoreCognition
 task: "corecognition_stage_concrete_operational"
 test_split: default
 output_type: generate_until
+process_docs: !function utils.process_docs_stage_concrete_operational
 
 doc_to_visual: !function utils.corecognition_doc_to_visual
 doc_to_text: !function utils.corecognition_doc_to_text
 doc_to_target: "answer"
 
 process_results: !function utils.corecognition_process_results
-filter_list:
-  - name: "stage_filter"
-    filter:
-      - function: !function utils.filter_stage_concrete_operational
 
 generation_kwargs:
   max_new_tokens: 16

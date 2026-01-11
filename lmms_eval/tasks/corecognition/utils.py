@@ -34,19 +34,19 @@ def corecognition_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: Op
     return f"{pre_prompt}{prompt}{post_prompt}"
 
 
-def filter_stage_sensorimotor(doc: dict[str, Any]) -> bool:
-    """Filter for Stage Sensorimotor samples only."""
-    return doc.get("stage", "") == "Stage Sensorimotor"
+def process_docs_stage_sensorimotor(dataset):
+    """Filter dataset to only include Stage Sensorimotor samples."""
+    return dataset.filter(lambda x: x["stage"] == "Stage Sensorimotor")
 
 
-def filter_stage_concrete_operational(doc: dict[str, Any]) -> bool:
-    """Filter for Stage Concrete Operational samples only."""
-    return doc.get("stage", "") == "Stage Concrete Operational"
+def process_docs_stage_concrete_operational(dataset):
+    """Filter dataset to only include Stage Concrete Operational samples."""
+    return dataset.filter(lambda x: x["stage"] == "Stage Concrete Operational")
 
 
-def filter_stage_formal_operational(doc: dict[str, Any]) -> bool:
-    """Filter for Stage Formal Operational samples only."""
-    return doc.get("stage", "") == "Stage Formal Operational"
+def process_docs_stage_formal_operational(dataset):
+    """Filter dataset to only include Stage Formal Operational samples."""
+    return dataset.filter(lambda x: x["stage"] == "Stage Formal Operational")
 
 
 def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, Any]:
