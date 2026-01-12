@@ -125,12 +125,16 @@ mmsearch = [
     "FlagEmbedding",
     "rouge",
 ]
+tui = [
+    "textual>=0.47.0",
+]
 all = [
     "lmms_eval[core]",
     "lmms_eval[gemini]",
     "lmms_eval[reka]",
     "lmms_eval[qwen]",
     "lmms_eval[mmsearch]",
+    "lmms_eval[tui]",
 ]
 
 [tool.setuptools.packages.find]
@@ -172,6 +176,7 @@ exclude = [
 
 [project.scripts]
 lmms-eval = "lmms_eval.__main__:cli_evaluate"
+lmms-eval-tui = "lmms_eval.tui.app:main"
 
 [project.urls]
 Homepage = "https://lmms-lab.github.io"
