@@ -16,9 +16,7 @@ pre-commit run --all-files
 ### Ask for review
 Once you feel comfortable for your PR, feel free to @ one of the contributors to review
 
-```
-# General: @Luodian @kcz358 @pufanyi
-# Audio: @pbcong @ngquangtrung57
-```
+General: @Luodian @kcz358 @pufanyi
+Audio: @pbcong @ngquangtrung57
 
 Thank you for your contributions!
