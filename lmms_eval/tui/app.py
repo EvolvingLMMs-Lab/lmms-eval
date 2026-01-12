@@ -111,18 +111,18 @@ POPULAR_TASKS = [
 # ASCII art logo for welcome screen
 LOGO = r"""
 [#87afd7]██╗      ███╗   ███╗███╗   ███╗ ███████╗[/#87afd7]
-[#87afd7]██║      ████╗ ████║████╗ ████║██╔════╝[/#87afd7]
-[#87afd7]██║      ██╔████╔██║██╔████╔██║███████╗[/#87afd7]
-[#87afd7]██║      ██║╚██╔╝██║██║╚██╔╝██║╚════██║[/#87afd7]
-[#87afd7]███████╗ ██║ ╚═╝ ██║██║ ╚═╝ ██║███████║[/#87afd7]
-[#5f87af]╚══════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝[/#5f87af]
+[#87afd7]██║      ████╗ ████║████╗ ████║██╔════╝ [/#87afd7]
+[#87afd7]██║      ██╔████╔██║██╔████╔██║███████╗ [/#87afd7]
+[#87afd7]██║      ██║╚██╔╝██║██║╚██╔╝██║╚════██║ [/#87afd7]
+[#87afd7]███████╗ ██║ ╚═╝ ██║██║ ╚═╝ ██║███████║ [/#87afd7]
+[#5f87af]╚══════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝ [/#5f87af]
 
-[#87afd7]███████╗ ██╗   ██╗  █████╗  ██╗      [/#87afd7]
-[#87afd7]██╔════╝ ██║   ██║ ██╔══██╗ ██║      [/#87afd7]
-[#87afd7]█████╗   ██║   ██║ ███████║ ██║      [/#87afd7]
-[#87afd7]██╔══╝   ╚██╗ ██╔╝ ██╔══██║ ██║      [/#87afd7]
-[#87afd7]███████╗  ╚████╔╝  ██║  ██║ ███████╗[/#87afd7]
-[#5f87af]╚══════╝   ╚═══╝   ╚═╝  ╚═╝ ╚══════╝[/#5f87af]
+[#87afd7]███████╗ ██╗   ██╗  █████╗  ██╗         [/#87afd7]
+[#87afd7]██╔════╝ ██║   ██║ ██╔══██╗ ██║         [/#87afd7]
+[#87afd7]█████╗   ██║   ██║ ███████║ ██║         [/#87afd7]
+[#87afd7]██╔══╝   ╚██╗ ██╔╝ ██╔══██║ ██║         [/#87afd7]
+[#87afd7]███████╗  ╚████╔╝  ██║  ██║ ███████╗    [/#87afd7]
+[#5f87af]╚══════╝   ╚═══╝   ╚═╝  ╚═╝ ╚══════╝    [/#5f87af]
 """
 
 
@@ -190,7 +190,7 @@ class ConfigScreen(Screen):
                 with Container(id="logo-container"):
                     yield LogoWidget(id="header-logo")
                 with Vertical(id="header-info"):
-                    yield Static(f"LMMs-EVAL SUPER SYSTEM", classes="blink")
+                    yield Static(f"LMMs-Eval SYSTEM", classes="blink")
                     yield Static(f"VER {version}")
                     yield Static(f"PY {sys.version.split()[0]}")
             with Vertical(id="header-right"):
@@ -198,28 +198,26 @@ class ConfigScreen(Screen):
                 yield Static("", id="command-preview")
         with Container(id="config-container"):
             with TabbedContent():
-                with TabPane("STAGE 1: MODEL", id="model-tab"):
+                with TabPane("MODEL", id="model-tab"):
                     with VerticalScroll():
-                        yield Static(
-                            "SELECT CHARACTER (MODEL)", classes="section-title"
-                        )
+                        yield Static("MODEL SELECTION", classes="section-title")
                         yield Select(
                             [(name, key) for key, name in POPULAR_MODELS],
-                            prompt="CHOOSE YOUR FIGHTER",
+                            prompt="Select Model",
                             id="model-select",
                         )
                         yield Rule()
-                        yield Static("POWER-UPS (ARGUMENTS)", classes="section-title")
+                        yield Static("MODEL ARGUMENTS", classes="section-title")
                         yield Static(
                             "[dim]e.g., model_version=gpt-4o,pretrained=path/to/model[/]"
                         )
                         yield Input(
-                            placeholder="INSERT CHEAT CODES (model_args)...",
+                            placeholder="Enter model_args (key=value,...)...",
                             id="model-args-input",
                         )
                         yield Rule()
                         yield Static(
-                            "SECRET KEY (API CONFIG)",
+                            "API CONFIGURATION",
                             classes="section-title",
                         )
                         yield Static(
@@ -228,12 +226,14 @@ class ConfigScreen(Screen):
                         yield Input(
                             placeholder="API BASE URL (OPTIONAL)", id="api-base-input"
                         )
-                with TabPane("STAGE 2: TASKS", id="tasks-tab"):
+                with TabPane("TASKS", id="tasks-tab"):
                     with VerticalScroll():
-                        yield Static("MISSION SELECT", classes="section-title")
-                        yield Input(placeholder="SEARCH MISSIONS...", id="task-search")
+                        yield Static("TASK SELECTION", classes="section-title")
+                        yield Input(
+                            placeholder="Search benchmarks...", id="task-search"
+                        )
                         yield Rule()
-                        yield Static("POPULAR MISSIONS", classes="section-title")
+                        yield Static("AVAILABLE BENCHMARKS", classes="section-title")
                         yield OptionList(
                             *[
                                 Option(f"{name} ({key})", id=key)
@@ -242,9 +242,9 @@ class ConfigScreen(Screen):
                             id="task-list",
                         )
                         yield Rule()
-                        yield Static("ACTIVE MISSIONS", classes="section-title")
-                        yield Static("NO MISSION SELECTED", id="selected-tasks-display")
-                with TabPane("STAGE 3: SETTINGS", id="settings-tab"):
+                        yield Static("SELECTED TASKS", classes="section-title")
+                        yield Static("None selected", id="selected-tasks-display")
+                with TabPane("SETTINGS", id="settings-tab"):
                     with VerticalScroll():
                         yield Static("SYSTEM CONFIGURATION", classes="section-title")
                         yield Horizontal(
@@ -284,7 +284,7 @@ class ConfigScreen(Screen):
                             classes="setting-row",
                         )
                         yield Rule()
-                        yield Static("GAME OPTIONS", classes="section-title")
+                        yield Static("LOGGING OPTIONS", classes="section-title")
                         yield Horizontal(
                             Static("LOG SAMPLES:", classes="setting-label"),
                             Switch(value=True, id="log-samples-switch"),
@@ -304,23 +304,21 @@ class ConfigScreen(Screen):
                             ),
                             classes="setting-row",
                         )
-                with TabPane("STAGE 4: RUN", id="run-tab"):
-                    # Command & Controls
-                    yield Static("FINAL CHECK", classes="section-title")
-                    yield Static("", id="run-command", classes="command-preview")
-                    with Horizontal(id="run-buttons"):
-                        yield Button("▶ START GAME", variant="success", id="start-btn")
-                        yield Button(
-                            "⏹ PAUSE", variant="error", id="stop-btn", disabled=True
-                        )
-                        yield Button("📋 SAVE CMD", variant="primary", id="copy-btn")
-                    # Status
-                    yield Static("PLAYER STATUS", classes="section-title")
-                    yield Static("READY PLAYER ONE", id="run-status")
-                    # Output
-                    yield Static("GAME LOG", classes="section-title")
-                    with VerticalScroll(id="output-scroll"):
-                        yield Static("", id="run-output")
+                with TabPane("RUN", id="run-tab"):
+                    with VerticalScroll(id="run-tab-scroll"):
+                        yield Static("FINAL CHECK", classes="section-title")
+                        yield Static("", id="run-command", classes="command-preview")
+                        with Horizontal(id="run-buttons"):
+                            yield Button("START", variant="success", id="start-btn")
+                            yield Button(
+                                "STOP", variant="error", id="stop-btn", disabled=True
+                            )
+                            yield Button("SAVE CMD", variant="primary", id="copy-btn")
+                        yield Static("EVALUATION STATUS", classes="section-title")
+                        yield Static("Ready to evaluate", id="run-status")
+                        yield Static("OUTPUT LOG", classes="section-title")
+                        with VerticalScroll(id="output-scroll"):
+                            yield Static("", id="run-output")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -417,19 +415,36 @@ class ConfigScreen(Screen):
             display.update("None selected")
 
     def _update_preview(self) -> None:
-        cmd = self._build_command()
-        # Update header preview
+        cmd = self._build_command_highlighted()
         try:
             preview = self.query_one("#command-preview", Static)
-            preview.update(f"[green]{cmd}[/]")
+            preview.update(cmd)
         except Exception:
             pass
-        # Update run tab command
         try:
             run_cmd = self.query_one("#run-command", Static)
-            run_cmd.update(f"[green]{cmd}[/]")
+            run_cmd.update(cmd)
         except Exception:
             pass
+
+    def _build_command_highlighted(self) -> str:
+        config = self.app.config
+        parts = ["[#87afd7]python -m[/] [bold white]lmms_eval[/]"]
+        parts.append(f"[#5f87af]--model[/] [white]{config.model}[/]")
+        if config.model_args:
+            parts.append(f"[#5f87af]--model_args[/] [white]{config.model_args}[/]")
+        if config.tasks:
+            parts.append(f"[#5f87af]--tasks[/] [white]{','.join(config.tasks)}[/]")
+        parts.append(f"[#5f87af]--batch_size[/] [white]{config.batch_size}[/]")
+        if config.limit:
+            parts.append(f"[#5f87af]--limit[/] [white]{config.limit}[/]")
+        parts.append(f"[#5f87af]--output_path[/] [white]{config.output_path}[/]")
+        if config.log_samples:
+            parts.append("[#5f87af]--log_samples[/]")
+        parts.append(f"[#5f87af]--verbosity[/] [white]{config.verbosity}[/]")
+        if config.device:
+            parts.append(f"[#5f87af]--device[/] [white]{config.device}[/]")
+        return " \\\n    ".join(parts)
 
     def _build_command(self) -> str:
         config = self.app.config
@@ -724,34 +739,53 @@ class RunScreen(Screen):
                 with Container(id="logo-container"):
                     yield LogoWidget(id="header-logo")
                 with Vertical(id="header-info"):
-                    yield Static(f"LMMs-EVAL SUPER SYSTEM", classes="blink")
+                    yield Static(f"LMMs-Eval SYSTEM", classes="blink")
                     yield Static(f"VER {version}")
                     yield Static(f"PY {sys.version.split()[0]}")
             with Vertical(id="header-right"):
                 yield Static("RUNNING COMMAND", id="preview-title")
                 yield Static("", id="header-command-preview")
         with Container(id="run-container"):
-            yield Static(">>> EXECUTION IN PROGRESS <<<", id="run-title")
+            yield Static(">>> EVALUATION EXECUTION <<<", id="run-title")
             yield Static("", id="run-status")
             yield Rule()
             yield Static("PERFORMANCE METRICS", classes="section-title")
             yield SpeedMetricsChart(id="metrics-container")
             yield Rule()
-            yield Static("ACTIVE COMMAND CODE", classes="section-title")
+            yield Static("COMMAND", classes="section-title")
             yield Static("", id="run-command")
             yield Rule()
-            yield Static("SYSTEM OUTPUT LOG", classes="section-title")
+            yield Static("OUTPUT LOG", classes="section-title")
             with VerticalScroll(id="output-scroll"):
                 yield Static("", id="run-output")
             with Horizontal():
-                yield Button("▶ EXECUTE", variant="success", id="execute-btn")
-                yield Button("◀ RETURN", variant="default", id="back-btn")
+                yield Button("START", variant="success", id="execute-btn")
+                yield Button("BACK", variant="default", id="back-btn")
         yield Footer()
 
     def on_mount(self) -> None:
-        cmd = self._build_command_list()
-        self.query_one("#run-command", Static).update(f"[cyan]{' '.join(cmd)}[/]")
+        cmd_highlighted = self._build_command_highlighted()
+        self.query_one("#run-command", Static).update(cmd_highlighted)
         self.query_one("#run-status", Static).update("[yellow]Ready to run[/]")
+
+    def _build_command_highlighted(self) -> str:
+        config = self.app.config
+        parts = ["[#87afd7]python -m[/] [bold white]lmms_eval[/]"]
+        parts.append(f"[#5f87af]--model[/] [white]{config.model}[/]")
+        if config.model_args:
+            parts.append(f"[#5f87af]--model_args[/] [white]{config.model_args}[/]")
+        if config.tasks:
+            parts.append(f"[#5f87af]--tasks[/] [white]{','.join(config.tasks)}[/]")
+        parts.append(f"[#5f87af]--batch_size[/] [white]{config.batch_size}[/]")
+        if config.limit:
+            parts.append(f"[#5f87af]--limit[/] [white]{config.limit}[/]")
+        parts.append(f"[#5f87af]--output_path[/] [white]{config.output_path}[/]")
+        if config.log_samples:
+            parts.append("[#5f87af]--log_samples[/]")
+        parts.append(f"[#5f87af]--verbosity[/] [white]{config.verbosity}[/]")
+        if config.device:
+            parts.append(f"[#5f87af]--device[/] [white]{config.device}[/]")
+        return " \\\n    ".join(parts)
 
     def _build_command_list(self) -> list[str]:
         config = self.app.config
@@ -1098,9 +1132,42 @@ class LmmsEvalTUI(App):
         border: solid $primary-dark;
     }
     
+    Switch {
+        background: $bg-dark;
+        border: solid $primary-dark;
+    }
+    
+    Switch > .switch--slider {
+        color: $primary;
+    }
+    
+    Switch.-on > .switch--slider {
+        color: $primary-light;
+    }
+    
+    /* Settings Tab Styling */
+    .setting-row {
+        height: 3;
+        margin-bottom: 1;
+    }
+    
+    .setting-label {
+        width: 20;
+        padding: 1 1 0 0;
+        color: $text-normal;
+    }
+    
+    .setting-input {
+        width: 1fr;
+    }
+
     /* Run Tab Styling */
     #run-tab {
         padding: 1 2;
+    }
+    
+    #run-tab-scroll {
+        height: 1fr;
     }
     
     #run-command {
@@ -1131,42 +1198,67 @@ class LmmsEvalTUI(App):
         min-height: 10;
     }
 
-    /* Buttons */
+    /* Buttons - Modern Professional Style */
     Button {
-        border: solid $primary-dark;
-        background: $bg-light;
-        color: $text-normal;
+        width: 18;
         height: 3;
-        min-width: 12;
+        border: tall $bg-medium;
+        background: $bg-dark;
+        color: $text-normal;
+        text-style: bold;
+        content-align: center middle;
     }
     
     Button:hover {
+        border: tall $primary-light;
+        color: $primary-light;
+    }
+    
+    /* Primary (Save) - Muted Blue Outline */
+    Button.-primary {
+        border: tall $primary-dark;
+        color: $primary-light;
+    }
+    
+    Button.-primary:hover {
         background: $primary-dark;
         color: $text-bright;
+        border: tall $primary-dark;
     }
     
-    Button.-primary {
-        background: $primary;
-        color: $text-bright;
-    }
-    
+    /* Success (Start) - Muted Green Outline */
     Button.-success {
-        background: $success;
-        color: $bg-dark;
+        border: tall #4e704e;
+        color: #87d787;
     }
     
-    Button.-error {
-        background: $error;
+    Button.-success:hover {
+        background: #4e704e;
         color: $text-bright;
+        border: tall #4e704e;
+    }
+    
+    /* Error (Stop) - Muted Red Outline */
+    Button.-error {
+        border: tall #8a4b4b;
+        color: #d75f5f;
+    }
+    
+    Button.-error:hover {
+        background: #8a4b4b;
+        color: $text-bright;
+        border: tall #8a4b4b;
     }
     
     #run-buttons {
         height: auto;
         padding: 1 0;
+        align: center middle;
+        layout: horizontal;
     }
     
     #run-buttons Button {
-        margin-right: 1;
+        margin: 0 1;
     }
 
     /* Charts (RunScreen) */
