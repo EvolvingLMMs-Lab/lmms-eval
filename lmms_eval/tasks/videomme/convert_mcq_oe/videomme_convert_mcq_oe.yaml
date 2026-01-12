@@ -1,0 +1,19 @@
+# VideoMME Convert MCQ to OE with LLM Match
+# Convert MCQ to open-ended, then use LLM to match answer to options
+
+task: videomme_convert_mcq_oe
+include: ../_default_template_yaml
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.process_results
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: llm_match_score
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nPlease answer the question with a short answer."
