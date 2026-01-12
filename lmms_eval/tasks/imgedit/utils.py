@@ -189,9 +189,9 @@ def _call_openai_for_evaluation(
     try:
         # Build message content
         content = [
+            {"type": "text", "text": full_prompt},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{original_b64}"}},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{edited_b64}"}},
-            {"type": "text", "text": full_prompt},
         ]
 
         response = client.chat.completions.create(
