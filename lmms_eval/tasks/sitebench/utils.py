@@ -1,14 +1,15 @@
 # taken directly from https://github.com/wenqi-wang20/SITE-Bench/blob/main/eval_scripts/sitebench/utils.py
-from PIL import Image
+import os
+import random
+import string
+from collections import defaultdict
+from pathlib import Path
+
 import numpy as np
 import torch
-import string
-import random
-from collections import defaultdict
-from loguru import logger as eval_logger
-import os
-from pathlib import Path
 import yaml
+from loguru import logger as eval_logger
+from PIL import Image
 
 UpperLetters = list(string.ascii_uppercase)
 Categories = {
@@ -34,6 +35,7 @@ with open(Path(__file__).parent / "site_image.yaml", "r") as f:
             safe_data.append(line)
 cache_name = yaml.safe_load("".join(safe_data))["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(base_cache_dir, cache_name)
+
 
 ##################
 # Helper functions adapted from MMMU's utils.py.
@@ -65,7 +67,7 @@ def parse_multi_choice_response(response, all_choices):
         for choice in all_choices:
             if f"{choice}." in response:
                 candidates.append(choice)
-                
+
     # Look for choices with periods, e.g., A:, B:, C:.
     if len(candidates) == 0:
         for choice in all_choices:
@@ -85,6 +87,7 @@ def parse_multi_choice_response(response, all_choices):
 
     return pred_index
 
+
 def spatial_doc_to_visual_image(doc):
     imgs = []
     for image_path in doc["visual"]:
@@ -92,94 +95,81 @@ def spatial_doc_to_visual_image(doc):
         imgs.append(Image.open(full_image_path).convert("RGB"))
     return imgs
 
+
 def spatial_doc_to_visual_video(doc):
     return [os.path.join(cache_dir, doc["visual"][0])]
+
 
 def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
     question = doc["question"].strip()
     options = doc["options"]
-    option_text = "\n".join(
-        f"{UpperLetters[i]}: {options[i]}" 
-        for i in range(len(options))
-    )
-    
+    option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+
     prompt = ""
     # check if '<image>' is in the question, interleaved format
     if not "<image>" in question and not "<image>" in option_text:
-        prompt += "<image>"*len(doc["visual"]) + "\n"
+        prompt += "<image>" * len(doc["visual"]) + "\n"
 
     prompt += "Question: " + question + "\n"
     prompt += "Options:\n" + option_text + "\n"
 
-    
     # check the post_prompt
     if "post_prompt" in lmmseval_specific_kwargs and lmmseval_specific_kwargs["post_prompt"] != "":
         prompt += lmmseval_specific_kwargs["post_prompt"]
-    
-    return prompt    
-  
+
+    return prompt
+
+
 def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
     pre_prompt = "Select the best answer to the following multiple-choice question based on the video. Respond with only the letter of the correct option."
-    
+
     question = doc["question"].strip()
     options = doc["options"]
-    option_text = "\n".join(
-        f"{UpperLetters[i]}: {options[i]}" 
-        for i in range(len(options))
-    )
-    
+    option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+
     prompt = pre_prompt + "\n"
     # check the pre_prompt
     if "pre_prompt" in lmmseval_specific_kwargs and lmmseval_specific_kwargs["pre_prompt"] != "":
         prompt += lmmseval_specific_kwargs["pre_prompt"]
-    
+
     prompt += "Question: " + question + "\n"
     prompt += "Options:\n" + option_text + "\n"
-    
+
     # check the post_prompt
     if "post_prompt" in lmmseval_specific_kwargs and lmmseval_specific_kwargs["post_prompt"] != "":
         prompt += lmmseval_specific_kwargs["post_prompt"]
-    
-    return prompt    
-  
+
+    return prompt
+
+
 def spatial_process_results(doc, results):
     response = results[0].strip()
-    all_choices = UpperLetters[:len(doc["options"])]
+    all_choices = UpperLetters[: len(doc["options"])]
     pred_index = parse_multi_choice_response(response, all_choices)
     gt_index = doc["answer"]
     score = 1.0 if pred_index == gt_index else 0.0
-    
+
     category = doc["category"]
     dataset = doc["dataset"]
-    accuracy_dict = {
-        "overall": score,
-        category: score,
-        dataset: score,
-        "total": 1
-    }
-    
+    accuracy_dict = {"overall": score, category: score, dataset: score, "total": 1}
+
     adjusted_score = score - 1.0 / len(all_choices)
-    chance_adjusted_accuracy_dict = {
-        "overall": adjusted_score,
-        category: adjusted_score,
-        dataset: adjusted_score,
-        "total": 1.0 - 1.0 / len(all_choices)
-    }
-    
-    return {"accuracy": accuracy_dict,
-            "chance_adjusted_acc": chance_adjusted_accuracy_dict}
+    chance_adjusted_accuracy_dict = {"overall": adjusted_score, category: adjusted_score, dataset: adjusted_score, "total": 1.0 - 1.0 / len(all_choices)}
+
+    return {"accuracy": accuracy_dict, "chance_adjusted_acc": chance_adjusted_accuracy_dict}
+
 
 def spatial_aggregate_results(results):
-    
+
     total_correct, total_examples = 0, 0
     category_correct, category_total = defaultdict(int), defaultdict(int)
     dataset_correct, dataset_total = defaultdict(int), defaultdict(int)
-    
+
     for result in results:
         # Overall accuracy
         total_correct += result["overall"]
         total_examples += result["total"]
-        
+
         # Category accuracy / Dataset accuracy
         for key, score in result.items():
             if key in Categories:
@@ -188,18 +178,18 @@ def spatial_aggregate_results(results):
             elif key != "overall":
                 dataset_correct[key] += score
                 dataset_total[key] += result["total"]
-                    
+
     overall_accuracy = (total_correct / total_examples) * 100 if total_examples > 0 else 0.0
     category_accuracy = {category: (category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0 for category in category_correct}
     dataset_accuracy = {dataset: (dataset_correct[dataset] / dataset_total[dataset]) * 100 if dataset_total[dataset] > 0 else 0.0 for dataset in dataset_correct}
-    
+
     # eval_logger.info("=" * 50)
     # eval_logger.info(f"Overall Accuracy: {overall_accuracy:.2f}%")
     # eval_logger.info("Category-wise Accuracy:")
     # for category, acc in category_accuracy.items():
     #     eval_logger.info(f"  {category}: {acc:.2f}")
     # eval_logger.info("=" * 50)
-    
+
     # # appending the results to the log file
     # with open('log_results.txt', 'a') as f:
     #     f.write("=" * 50 + "\n")
@@ -210,5 +200,4 @@ def spatial_aggregate_results(results):
     #         f.write(f"  {category}: {acc:.2f}\n")
     #     f.write("=" * 50 + "\n")
 
-    
     return round(overall_accuracy, 5)
