@@ -125,6 +125,8 @@ mmsearch = [
 ]
 tui = [
     "textual>=0.47.0",
+    "textual-plotext>=0.2.0",
+    "rich-pixels>=3.0.0",
 ]
 video = [
     "decord; platform_system != 'Darwin'",
@@ -139,6 +141,9 @@ all = [
     "lmms_eval[tui]",
     "lmms_eval[video]",
 ]
+
+[tool.setuptools.package-data]
+"lmms_eval.tui.assets" = ["*.png"]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
