@@ -69,8 +69,6 @@ dependencies = [
     "pre-commit",
     "pydantic",
     "packaging",
-    "decord; platform_system != 'Darwin'",
-    "eva-decord; platform_system == 'Darwin'",
     "zss",
     "protobuf",
     "sentence_transformers",
@@ -128,6 +126,10 @@ mmsearch = [
 tui = [
     "textual>=0.47.0",
 ]
+video = [
+    "decord; platform_system != 'Darwin'",
+    "eva-decord; platform_system == 'Darwin' and python_version < '3.12'",
+]
 all = [
     "lmms_eval[core]",
     "lmms_eval[gemini]",
@@ -135,6 +137,7 @@ all = [
     "lmms_eval[qwen]",
     "lmms_eval[mmsearch]",
     "lmms_eval[tui]",
+    "lmms_eval[video]",
 ]
 
 [tool.setuptools.packages.find]
