@@ -640,6 +640,7 @@ def evaluate(
         # aggregate results ; run bootstrap CIs
         for task_output in eval_tasks:
             task_output.calculate_aggregate_metric(bootstrap_iters=bootstrap_iters)
+            task_output.calculate_clt_aggregate_metric()
         (
             results,
             samples,
