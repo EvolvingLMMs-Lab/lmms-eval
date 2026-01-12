@@ -1,0 +1,22 @@
+dataset_path: oscarqjh/ViewSpatial_lmmseval
+dataset_name: default
+test_split: test
+task: "viewspatial"
+
+generation_kwargs:
+# max_new_tokens: 100
+#   temperature: 0.0
+#   top_p: 1.0
+#   do_sample: false
+#   repetition_penalty: 1.0
+
+output_type: generate_until
+doc_to_visual: !function utils.viewspatial_doc_to_visual
+doc_to_text: !function utils.viewspatial_doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.viewspatial_process_results
+
+metric_list:
+  - metric: overall_accuracy
+    aggregation: !function utils.viewspatial_aggregate_results
+    higher_is_better: true
