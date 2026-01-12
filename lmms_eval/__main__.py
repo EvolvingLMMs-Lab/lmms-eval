@@ -1,20 +1,55 @@
 import sys
 
 # Early TUI detection - before heavy imports
-if "--tui" in sys.argv or (len(sys.argv) == 1):
+if "--tui" in sys.argv:
     try:
         from lmms_eval.tui.app import main as tui_main
 
         tui_main()
         sys.exit(0)
     except ImportError as e:
-        if "--tui" in sys.argv:
-            print(
-                f"TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]"
-            )
-            print(f"Error: {e}")
-            sys.exit(1)
-        # Fall through to show usage message
+        print(
+            "TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]"
+        )
+        print(f"Error: {e}")
+        sys.exit(1)
+
+# Show quick help when no args provided (before heavy imports)
+if len(sys.argv) == 1:
+    print(
+        "┌───────────────────────────────────────────────────────────────────────────────┐"
+    )
+    print(
+        "│ LMMs-Eval: Evaluation framework for Large Multimodal Models                   │"
+    )
+    print(
+        "├───────────────────────────────────────────────────────────────────────────────┤"
+    )
+    print(
+        "│ Usage:                                                                        │"
+    )
+    print(
+        "│   lmms-eval --model MODEL --tasks TASKS [options]                             │"
+    )
+    print(
+        "│   lmms-eval --tui              # Interactive TUI mode                         │"
+    )
+    print(
+        "│   lmms-eval --help             # Full help                                    │"
+    )
+    print(
+        "├───────────────────────────────────────────────────────────────────────────────┤"
+    )
+    print(
+        "│ Example:                                                                      │"
+    )
+    print(
+        "│   lmms-eval --model llava --tasks mme --batch_size 1                          │"
+    )
+    print(
+        "└───────────────────────────────────────────────────────────────────────────────┘"
+    )
+    sys.exit(0)
 
 import argparse
 import datetime
