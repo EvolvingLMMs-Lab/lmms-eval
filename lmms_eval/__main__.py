@@ -1,9 +1,26 @@
+import sys
+
+# Early TUI detection - before heavy imports
+if "--tui" in sys.argv or (len(sys.argv) == 1):
+    try:
+        from lmms_eval.tui.app import main as tui_main
+
+        tui_main()
+        sys.exit(0)
+    except ImportError as e:
+        if "--tui" in sys.argv:
+            print(
+                f"TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]"
+            )
+            print(f"Error: {e}")
+            sys.exit(1)
+        # Fall through to show usage message
+
 import argparse
 import datetime
 import importlib
 import json
 import os
-import sys
 import traceback
 import warnings
 from functools import partial
@@ -313,38 +330,6 @@ def parse_eval_args() -> argparse.Namespace:
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     default_args = parse_eval_args()
-
-    if default_args.tui or (args is None and len(sys.argv) == 1):
-        try:
-            from lmms_eval.tui.app import main as tui_main
-
-            tui_main()
-            return
-        except ImportError:
-            if default_args.tui:
-                print(
-                    "TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]"
-                )
-                sys.exit(1)
-            print(
-                "┌───────────────────────────────────────────────────────────────────────────────┐"
-            )
-            print(
-                "│ Please provide arguments to evaluate the model. e.g.                          │"
-            )
-            print(
-                "│ `lmms-eval --model llava --model_path liuhaotian/llava-v1.6-7b --tasks okvqa` │"
-            )
-            print(
-                "│ Use `lmms-eval --help` for more information.                                  │"
-            )
-            print(
-                "│ Or use `lmms-eval --tui` for interactive mode (requires: pip install textual) │"
-            )
-            print(
-                "└───────────────────────────────────────────────────────────────────────────────┘"
-            )
-            sys.exit(1)
 
     # If args were provided, override the defaults
     if args:
