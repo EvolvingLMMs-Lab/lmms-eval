@@ -1,0 +1,32 @@
+# taken directly from https://github.com/wenqi-wang20/SITE-Bench/blob/main/eval_scripts/sitebench/site_image.yaml
+dataset_path: franky-veteran/SITE-Bench
+dataset_name: image_test
+dataset_kwargs:
+  cache_dir: sitebench
+  video: True # NOTE: Set to True to download all the required data(including images and videos)
+task: "site_bench_image"
+test_split: test
+output_type: generate_until
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+doc_to_visual: !function utils.spatial_doc_to_visual_image
+doc_to_text: !function utils.spatial_doc_to_text_image
+doc_to_target: "answer"
+process_results: !function utils.spatial_process_results
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.spatial_aggregate_results
+    higher_is_better: true
+  - metric: chance_adjusted_acc
+    aggregation: !function utils.spatial_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  - default:
+      pre_prompt: ""
+      post_prompt: "Give me the answer letter directly. The best answer is:"
+metadata:
+  - version: 0.0
