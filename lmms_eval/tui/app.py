@@ -52,7 +52,7 @@ except ImportError:
     HAS_TEXTUAL_IMAGE = False
 
 
-LOGO_IMAGE_PATH = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+LOGO_IMAGE_PATH = os.path.join(os.path.dirname(__file__), "assets", "logo.jpg")
 
 
 def get_version() -> str:
@@ -108,7 +108,6 @@ POPULAR_TASKS = [
 ]
 
 
-# ASCII art logo for welcome screen
 LOGO = r"""
 [#87afd7]██╗      ███╗   ███╗███╗   ███╗ ███████╗[/#87afd7]
 [#87afd7]██║      ████╗ ████║████╗ ████║██╔════╝ [/#87afd7]
@@ -125,16 +124,38 @@ LOGO = r"""
 [#5f87af]╚══════╝   ╚═══╝   ╚═╝  ╚═╝ ╚══════╝    [/#5f87af]
 """
 
+LOGO_SMALL = r"""[#87afd7]██╗     ███╗   ███╗███╗   ███╗███████╗[/#87afd7]
+[#87afd7]██║     ████╗ ████║████╗ ████║██╔════╝[/#87afd7]
+[#87afd7]██║     ██╔████╔██║██╔████╔██║███████╗[/#87afd7]
+[#87afd7]██║     ██║╚██╔╝██║██║╚██╔╝██║╚════██║[/#87afd7]
+[#87afd7]███████╗██║ ╚═╝ ██║██║ ╚═╝ ██║███████║[/#87afd7]
+[#5f87af]╚══════╝╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝[/#5f87af]"""
+
+
+def _terminal_supports_images() -> bool:
+    """Detect terminals with image protocol support (iTerm2/Kitty/WezTerm/Ghostty/Sixel)."""
+    term_program = os.environ.get("TERM_PROGRAM", "").lower()
+    term = os.environ.get("TERM", "").lower()
+
+    if term_program in ("iterm.app", "wezterm", "mintty", "ghostty"):
+        return True
+    if "kitty" in term or os.environ.get("KITTY_WINDOW_ID"):
+        return True
+    if "ghostty" in term or os.environ.get("GHOSTTY_RESOURCES_DIR"):
+        return True
+    if os.environ.get("SIXEL_SUPPORT") == "1":
+        return True
+    return False
+
 
 def LogoWidget(**kwargs):
-    """Factory function that returns the best available logo widget.
-
-    Uses textual_image (supports TGP/Sixel/Halfcell) if available,
-    returns empty widget on unsupported terminals to avoid ugly rendering.
-    """
-    if HAS_TEXTUAL_IMAGE and os.path.exists(LOGO_IMAGE_PATH):
+    """Return TextualImage if terminal supports it, otherwise empty widget."""
+    if (
+        HAS_TEXTUAL_IMAGE
+        and os.path.exists(LOGO_IMAGE_PATH)
+        and _terminal_supports_images()
+    ):
         return TextualImage(LOGO_IMAGE_PATH, **kwargs)
-    # Return empty widget on unsupported terminals
     return Static("", **kwargs)
 
 
@@ -186,13 +207,15 @@ class ConfigScreen(Screen):
         version = get_version()
         yield Header()
         with Horizontal(id="welcome-header"):
-            with Horizontal(id="header-left"):
-                with Container(id="logo-container"):
-                    yield LogoWidget(id="header-logo")
-                with Vertical(id="header-info"):
-                    yield Static(f"LMMs-Eval SYSTEM", classes="blink")
-                    yield Static(f"VER {version}")
-                    yield Static(f"PY {sys.version.split()[0]}")
+            with Vertical(id="header-left"):
+                yield Static("LMMs-Eval Terminal UI", id="header-left-title")
+                with Horizontal(id="header-left-content"):
+                    with Container(id="logo-container"):
+                        yield LogoWidget(id="header-logo")
+                    with Vertical(id="header-info"):
+                        yield Static(f"LMMs-Eval SYSTEM", classes="blink")
+                        yield Static(f"VER {version}")
+                        yield Static(f"PY {sys.version.split()[0]}")
             with Vertical(id="header-right"):
                 yield Static("COMMAND PREVIEW", id="preview-title")
                 yield Static("", id="command-preview")
@@ -248,7 +271,7 @@ class ConfigScreen(Screen):
                     with VerticalScroll():
                         yield Static("SYSTEM CONFIGURATION", classes="section-title")
                         yield Horizontal(
-                            Static("BATCH SIZE:", classes="setting-label"),
+                            Static("batch_size:", classes="setting-label"),
                             Input(
                                 value="1",
                                 id="batch-size-input",
@@ -257,7 +280,7 @@ class ConfigScreen(Screen):
                             classes="setting-row",
                         )
                         yield Horizontal(
-                            Static("LIMIT (SAMPLES):", classes="setting-label"),
+                            Static("limit:", classes="setting-label"),
                             Input(
                                 placeholder="ALL (NO LIMIT)",
                                 id="limit-input",
@@ -266,7 +289,7 @@ class ConfigScreen(Screen):
                             classes="setting-row",
                         )
                         yield Horizontal(
-                            Static("OUTPUT PATH:", classes="setting-label"),
+                            Static("output_path:", classes="setting-label"),
                             Input(
                                 value="./logs/",
                                 id="output-path-input",
@@ -275,7 +298,7 @@ class ConfigScreen(Screen):
                             classes="setting-row",
                         )
                         yield Horizontal(
-                            Static("DEVICE:", classes="setting-label"),
+                            Static("device:", classes="setting-label"),
                             Input(
                                 placeholder="AUTO (CUDA:0, CPU)",
                                 id="device-input",
@@ -735,13 +758,15 @@ class RunScreen(Screen):
         version = get_version()
         yield Header()
         with Horizontal(id="welcome-header"):
-            with Horizontal(id="header-left"):
-                with Container(id="logo-container"):
-                    yield LogoWidget(id="header-logo")
-                with Vertical(id="header-info"):
-                    yield Static(f"LMMs-Eval SYSTEM", classes="blink")
-                    yield Static(f"VER {version}")
-                    yield Static(f"PY {sys.version.split()[0]}")
+            with Vertical(id="header-left"):
+                yield Static("LMMs-Eval Terminal UI", id="header-left-title")
+                with Horizontal(id="header-left-content"):
+                    with Container(id="logo-container"):
+                        yield LogoWidget(id="header-logo")
+                    with Vertical(id="header-info"):
+                        yield Static(f"LMMs-Eval SYSTEM", classes="blink")
+                        yield Static(f"VER {version}")
+                        yield Static(f"PY {sys.version.split()[0]}")
             with Vertical(id="header-right"):
                 yield Static("RUNNING COMMAND", id="preview-title")
                 yield Static("", id="header-command-preview")
@@ -994,16 +1019,14 @@ class LmmsEvalTUI(App):
         margin-top: 1;
     }
     
-    /* Header */
     Header {
         background: $primary-dark;
         color: $text-bright;
-        height: 1;
         dock: top;
     }
 
     #welcome-header {
-        height: 10;
+        height: 12;
         dock: top;
         background: $bg-medium;
         border-bottom: solid $primary;
@@ -1012,10 +1035,21 @@ class LmmsEvalTUI(App):
     #header-left {
         width: 40%;
         height: 100%;
-        layout: horizontal;
-        padding: 1;
+        padding: 0;
         background: $bg-medium;
         border-right: solid $primary-dark;
+    }
+    
+    #header-left-title {
+        background: $primary;
+        color: $text-bright;
+        text-style: bold;
+        padding: 0 1;
+    }
+    
+    #header-left-content {
+        height: 1fr;
+        padding: 1;
     }
     
     #header-right {
@@ -1026,9 +1060,14 @@ class LmmsEvalTUI(App):
     }
     
     #logo-container {
-        width: auto;
+        width: 18;
         height: 100%;
-        margin-right: 2;
+        margin-right: 1;
+    }
+    
+    #header-logo {
+        width: 18;
+        height: 100%;
     }
 
     #header-info {
@@ -1093,15 +1132,23 @@ class LmmsEvalTUI(App):
         border-top: none;
     }
     
-    /* Section Titles */
     .section-title {
         color: $primary-light;
         text-style: bold;
-        margin: 1 0 0 0;
+        margin: 0;
     }
     
     Rule {
         color: $primary-dark;
+        margin: 0;
+    }
+    
+    Select {
+        margin: 0 0 1 0;
+    }
+    
+    Input {
+        margin: 0 0 1 0;
     }
     
     /* Inputs & Selects */
@@ -1148,7 +1195,7 @@ class LmmsEvalTUI(App):
     /* Settings Tab Styling */
     .setting-row {
         height: 3;
-        margin-bottom: 1;
+        margin: 0;
     }
     
     .setting-label {
@@ -1252,13 +1299,13 @@ class LmmsEvalTUI(App):
     
     #run-buttons {
         height: auto;
-        padding: 1 0;
-        align: center middle;
-        layout: horizontal;
+        padding: 0;
+        margin: 0 0 1 0;
+        align: left middle;
     }
     
     #run-buttons Button {
-        margin: 0 1;
+        margin: 0 1 0 0;
     }
 
     /* Charts (RunScreen) */
