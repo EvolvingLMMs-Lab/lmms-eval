@@ -126,7 +126,7 @@ mmsearch = [
 tui = [
     "textual>=0.47.0",
     "textual-plotext>=0.2.0",
-    "rich-pixels>=3.0.0",
+    "textual-image>=0.8.0",
 ]
 video = [
     "decord; platform_system != 'Darwin'",
