@@ -146,9 +146,7 @@ class TaskOutput:
                     cluster_ids.append(x.get(cluster_key) if cluster_key else None)
             n = len(numeric_items)
             # Naive CLT stderr: std / sqrt(n)
-            self.agg_metrics[f"{metric}_stderr_clt,{filter_key}"] = (
-                np.std(numeric_items, ddof=1) / np.sqrt(n) if n > 1 else "N/A"
-            )
+            self.agg_metrics[f"{metric}_stderr_clt,{filter_key}"] = np.std(numeric_items, ddof=1) / np.sqrt(n) if n > 1 else "N/A"
             # Clustered stderr: only if cluster_ids are available and have >1 unique clusters
             valid_clusters = [c for c in cluster_ids if c is not None]
             if valid_clusters and len(set(valid_clusters)) > 1 and n > 1:
