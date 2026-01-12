@@ -4,7 +4,7 @@ import random
 import re
 import string
 from collections.abc import Iterable
-from typing import List
+from typing import Any, List
 
 import numpy as np
 import sacrebleu
@@ -644,3 +644,42 @@ def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
     assert len(metrics) == len(sizes)
 
     return sum([metric * size for metric, size in zip(metrics, sizes)]) / sum(sizes)
+
+
+def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
+    """
+    Calculate clustered standard error for non-independent samples.
+    
+    When multiple questions share the same context (e.g., same image/video),
+    they are not independent. This function calculates SE by:
+    1. Grouping scores by cluster_id
+    2. Computing mean score per cluster
+    3. Calculating SE of cluster means
+    
+    Args:
+        scores: List of individual scores (e.g., 0/1 for correctness)
+        cluster_ids: List of cluster identifiers (e.g., video_id, image_id)
+    
+    Returns:
+        Clustered standard error, or NaN if insufficient clusters
+    """
+    import collections
+    
+    if len(scores) != len(cluster_ids):
+        raise ValueError("scores and cluster_ids must have the same length")
+    
+    # Group scores by cluster
+    cluster_scores = collections.defaultdict(list)
+    for score, cid in zip(scores, cluster_ids):
+        cluster_scores[cid].append(score)
+    
+    # Calculate cluster means
+    cluster_means = [sum(s) / len(s) for s in cluster_scores.values()]
+    
+    n_clusters = len(cluster_means)
+    if n_clusters < 2:
+        return float('nan')
+    
+    # Calculate SE of cluster means
+    import numpy as np
+    return np.std(cluster_means, ddof=1) / np.sqrt(n_clusters)

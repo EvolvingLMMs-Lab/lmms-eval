@@ -110,6 +110,9 @@ class TaskConfig(dict):
     should_decontaminate: bool = False
     doc_to_decontamination_query: str = None
 
+    # Statistical evaluation options
+    cluster_key: str = None  # Field name in process_results dict for clustering (e.g., "videoID")
+
     metadata: Union[str, list] = None  # by default, not used in the code. allows for users to pass arbitrary info to tasks
 
     lmms_eval_specific_kwargs: dict = None
