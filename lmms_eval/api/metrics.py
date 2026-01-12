@@ -284,7 +284,9 @@ def levenshtein_distance(s1, s2):
             if c1 == c2:
                 distances_.append(distances[i1])
             else:
-                distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
+                distances_.append(
+                    1 + min((distances[i1], distances[i1 + 1], distances_[-1]))
+                )
         distances = distances_
     return distances[-1]
 
@@ -338,7 +340,12 @@ def mean_stderr(arr):
 @register_metric(
     metric="bypass",
     higher_is_better=True,
-    output_type=["loglikelihood", "multiple_choice", "generate_until", "generate_until_multi_round"],
+    output_type=[
+        "loglikelihood",
+        "multiple_choice",
+        "generate_until",
+        "generate_until_multi_round",
+    ],
     aggregation="bypass",
 )
 def bypass(items):
@@ -549,19 +556,6 @@ def stderr_for_metric(metric, bootstrap_iters: int):
     if bootstrap_iters <= 0:
         # return no function (don't compute stderr) if bootstrap iters = 0
         return None
-    # for coco_cap_chair
-    # for amber_g
-    from lmms_eval.tasks.amber_g.utils import (
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cog,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-    )
-    from lmms_eval.tasks.coco_cap_chair.utils import (
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-    )
 
     bootstrappable = [
         median,
@@ -571,14 +565,44 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         bleu,
         chrf,
         ter,
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-        amber_g_aggregate_cog,
     ]
+
+    # Optional imports for tasks with extra dependencies (spacy, etc.)
+    try:
+        from lmms_eval.tasks.amber_g.utils import (
+            amber_g_aggregate_chair,
+            amber_g_aggregate_cog,
+            amber_g_aggregate_cover,
+            amber_g_aggregate_hal,
+        )
+
+        bootstrappable.extend(
+            [
+                amber_g_aggregate_chair,
+                amber_g_aggregate_cover,
+                amber_g_aggregate_hal,
+                amber_g_aggregate_cog,
+            ]
+        )
+    except ImportError:
+        pass
+
+    try:
+        from lmms_eval.tasks.coco_cap_chair.utils import (
+            coco_cap_chair_aggregate_results_chair_i,
+            coco_cap_chair_aggregate_results_chair_s,
+            coco_cap_chair_aggregate_results_recall,
+        )
+
+        bootstrappable.extend(
+            [
+                coco_cap_chair_aggregate_results_chair_i,
+                coco_cap_chair_aggregate_results_chair_s,
+                coco_cap_chair_aggregate_results_recall,
+            ]
+        )
+    except ImportError:
+        pass
 
     if metric in bootstrappable:
         return lambda x: bootstrap_stderr(metric, x, iters=bootstrap_iters)
@@ -605,13 +629,17 @@ def pooled_sample_stderr(stderrs: List[float], sizes: List[int]):
     # and: https://stats.stackexchange.com/a/4841331
     # this empirically seems to match running `stderr_for_metric` on all instances
     # from the subtasks concatenated with each other.
-    pooled_sample_var = (sum([(size - 1) * stderr**2 * size for size, stderr in zip(sizes, stderrs)])) / (sum(sizes) - len(sizes))
+    pooled_sample_var = (
+        sum([(size - 1) * stderr**2 * size for size, stderr in zip(sizes, stderrs)])
+    ) / (sum(sizes) - len(sizes))
 
     return np.sqrt(pooled_sample_var / sum(sizes))
 
 
 def combined_sample_stderr(stderrs: List[float], sizes: List[int], metrics=None):
-    assert metrics is not None, "Need to pass a list of each subtask's metric for this stderr aggregation"
+    assert metrics is not None, (
+        "Need to pass a list of each subtask's metric for this stderr aggregation"
+    )
     assert len(stderrs) == len(sizes) and len(sizes) == len(metrics)
 
     # See https://github.com/EleutherAI/lm-evaluation-harness/pull/1390 for more documentation.
@@ -627,9 +655,15 @@ def combined_sample_stderr(stderrs: List[float], sizes: List[int], metrics=None)
     curr_score = metrics[0]
 
     for stderr, size, score in zip(stderrs[1:], sizes[1:], metrics[1:]):
-        curr_score = ((curr_score * curr_size) + (score * size)) / (curr_size + size)  # NOTE: this assumes our aggregation fn is "mean"
+        curr_score = ((curr_score * curr_size) + (score * size)) / (
+            curr_size + size
+        )  # NOTE: this assumes our aggregation fn is "mean"
 
-        variance = ((curr_size - 1) * variance + (size - 1) * (stderr**2)) / (curr_size + size - 1) + curr_size * size / ((curr_size + size) * (curr_size + size - 1)) * (curr_score - score) ** 2
+        variance = ((curr_size - 1) * variance + (size - 1) * (stderr**2)) / (
+            curr_size + size - 1
+        ) + curr_size * size / ((curr_size + size) * (curr_size + size - 1)) * (
+            curr_score - score
+        ) ** 2
 
     return np.sqrt(variance)
 

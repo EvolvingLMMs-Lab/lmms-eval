@@ -11,29 +11,27 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from importlib.metadata import version as pkg_version
-from typing import ClassVar
 
-from textual import on
+from rich.markup import escape as rich_escape
+from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Grid, Horizontal, Vertical, VerticalScroll
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
+from textual.timer import Timer
 from textual.widgets import (
     Button,
     Footer,
     Header,
     Input,
-    Label,
-    ListItem,
-    ListView,
     OptionList,
-    Pretty,
     Rule,
     Select,
     Static,
     Switch,
     TabbedContent,
     TabPane,
+    TextArea,
 )
 from textual.widgets.option_list import Option
 
@@ -54,6 +52,72 @@ except ImportError:
 
 LOGO_IMAGE_PATH = os.path.join(os.path.dirname(__file__), "assets", "logo.jpg")
 
+_ANSI_ESCAPE_RE = None
+
+
+def _strip_ansi(text: str) -> str:
+    global _ANSI_ESCAPE_RE
+    if _ANSI_ESCAPE_RE is None:
+        import re
+
+        _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
+    return _ANSI_ESCAPE_RE.sub("", text)
+
+
+def _get_hostname() -> str:
+    import socket
+
+    try:
+        return socket.gethostname().split(".")[0]
+    except Exception:
+        return "unknown"
+
+
+def _get_git_branch() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _get_git_commit() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _detect_device() -> str:
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            count = torch.cuda.device_count()
+            if count == 1:
+                return "cuda:0"
+            return f"cuda:0 - cuda:{count - 1}"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+    except ImportError:
+        return "cpu"
+
 
 def get_version() -> str:
     """Get lmms-eval version from package metadata."""
@@ -72,15 +136,17 @@ LMMS_EVAL_PRS = f"{LMMS_EVAL_REPO}/pulls"
 @dataclass
 class EvalConfig:
     model: str = "openai_compatible"
-    model_args: str = ""
-    tasks: list[str] = field(default_factory=list)
+    model_args: str = "model_version=allenai/molmo-2-8b:free"
+    tasks: list[str] = field(default_factory=lambda: ["mme"])
     batch_size: int = 1
-    limit: int | None = None
+    limit: int | None = 10
     output_path: str = "./logs/"
     log_samples: bool = True
     verbosity: str = "INFO"
     device: str | None = None
     num_fewshot: int | None = None
+    api_env: str = 'export OPENAI_API_KEY="${OPENROUTER_API_KEY}"\nexport OPENAI_API_BASE="https://openrouter.ai/api/v1"'
+    activate_cmd: str = "source .venv/bin/activate"
 
 
 POPULAR_MODELS = [
@@ -161,9 +227,12 @@ def LogoWidget(**kwargs):
 
 class WelcomeScreen(Screen):
     BINDINGS = [
-        Binding("enter", "start", "Start Configuration"),
         Binding("q", "quit", "Quit"),
     ]
+
+    AUTO_START_SECONDS = 5
+    _auto_timer: Timer | None = None
+    _countdown: int = 5
 
     def compose(self) -> ComposeResult:
         version = get_version()
@@ -179,21 +248,54 @@ class WelcomeScreen(Screen):
                 f"v{version}",
                 id="version-info",
             ),
-            Static("Press Enter to continue", id="continue-msg"),
-            Static(f"\n{LMMS_EVAL_REPO}", classes="copyright"),
+            Static(
+                "Starting in 5s... [dim](click anywhere to skip)[/dim]",
+                id="continue-msg",
+            ),
+            Static(
+                f"[dim]★ Star us on GitHub:[/dim] {LMMS_EVAL_REPO}\n"
+                f"[dim]✎ Issues & Feedback:[/dim] {LMMS_EVAL_ISSUES}",
+                classes="copyright",
+            ),
             id="welcome-container",
         )
 
+    def on_mount(self) -> None:
+        self._countdown = self.AUTO_START_SECONDS
+        self._auto_timer = self.set_interval(1.0, self._tick_countdown)
+
+    def _tick_countdown(self) -> None:
+        self._countdown -= 1
+        if self._countdown <= 0:
+            self._stop_timer()
+            self.action_start()
+        else:
+            try:
+                msg = self.query_one("#continue-msg", Static)
+                msg.update(
+                    f"Starting in {self._countdown}s... [dim](click anywhere to skip)[/dim]"
+                )
+            except Exception:
+                pass
+
+    def _stop_timer(self) -> None:
+        if self._auto_timer is not None:
+            self._auto_timer.stop()
+            self._auto_timer = None
+
+    def on_click(self) -> None:
+        self.action_start()
+
     def action_start(self) -> None:
+        self._stop_timer()
         self.app.push_screen(ConfigScreen())
 
     def action_quit(self) -> None:
+        self._stop_timer()
         self.app.exit()
 
     def on_key(self, event) -> None:
-        if event.key == "enter":
-            self.action_start()
-        elif event.key == "q":
+        if event.key == "q":
             self.action_quit()
 
 
@@ -203,6 +305,16 @@ class ConfigScreen(Screen):
         Binding("ctrl+r", "run", "Run Evaluation"),
     ]
 
+    _preview_timer: Timer | None = None
+    PREVIEW_DEBOUNCE_MS = 300  # ms delay before updating preview
+
+    def _schedule_preview_update(self) -> None:
+        if self._preview_timer is not None:
+            self._preview_timer.stop()
+        self._preview_timer = self.set_timer(
+            self.PREVIEW_DEBOUNCE_MS / 1000.0, self._update_preview
+        )
+
     def compose(self) -> ComposeResult:
         version = get_version()
         yield Header()
@@ -211,11 +323,18 @@ class ConfigScreen(Screen):
                 yield Static("LMMs-Eval Terminal UI", id="header-left-title")
                 with Horizontal(id="header-left-content"):
                     with Container(id="logo-container"):
-                        yield LogoWidget(id="header-logo")
+                        yield Static(
+                            "[bold #5f87af]LMMS[/]\n[bold #87afd7]EVAL[/]",
+                            id="header-logo",
+                        )
                     with Vertical(id="header-info"):
-                        yield Static(f"LMMs-Eval SYSTEM", classes="blink")
-                        yield Static(f"VER {version}")
-                        yield Static(f"PY {sys.version.split()[0]}")
+                        hostname = _get_hostname()
+                        cwd = os.path.basename(os.getcwd())
+                        yield Static(f"[dim]host[/]   {hostname}")
+                        yield Static(f"[dim]dir[/]    {cwd}")
+                        yield Static("[dim]branch[/] ...", id="git-branch-info")
+                        yield Static("[dim]commit[/] ...", id="git-commit-info")
+                        yield Static(f"[dim]ver[/]    {version}")
             with Vertical(id="header-right"):
                 yield Static("COMMAND PREVIEW", id="preview-title")
                 yield Static("", id="command-preview")
@@ -226,7 +345,7 @@ class ConfigScreen(Screen):
                         yield Static("MODEL SELECTION", classes="section-title")
                         yield Select(
                             [(name, key) for key, name in POPULAR_MODELS],
-                            prompt="Select Model",
+                            value="openai_compatible",
                             id="model-select",
                         )
                         yield Rule()
@@ -235,8 +354,20 @@ class ConfigScreen(Screen):
                             "[dim]e.g., model_version=gpt-4o,pretrained=path/to/model[/]"
                         )
                         yield Input(
-                            placeholder="Enter model_args (key=value,...)...",
+                            value="model_version=allenai/molmo-2-8b:free",
                             id="model-args-input",
+                        )
+                        yield Rule()
+                        yield Static(
+                            "ACTIVATE ENVIRONMENT",
+                            classes="section-title",
+                        )
+                        yield Static(
+                            "[dim]Command to activate env (e.g., source .venv/bin/activate, conda activate myenv)[/]"
+                        )
+                        yield Input(
+                            value="source .venv/bin/activate",
+                            id="activate-cmd-input",
                         )
                         yield Rule()
                         yield Static(
@@ -244,10 +375,12 @@ class ConfigScreen(Screen):
                             classes="section-title",
                         )
                         yield Static(
-                            "[dim]Set OPENAI_API_KEY and OPENAI_API_BASE in environment[/]"
+                            "[dim]Environment variables for API access (edit below or set in shell)[/]"
                         )
-                        yield Input(
-                            placeholder="API BASE URL (OPTIONAL)", id="api-base-input"
+                        yield TextArea(
+                            'export OPENAI_API_KEY="${OPENROUTER_API_KEY}"\nexport OPENAI_API_BASE="https://openrouter.ai/api/v1"',
+                            id="api-env-input",
+                            classes="api-env-textarea",
                         )
                 with TabPane("TASKS", id="tasks-tab"):
                     with VerticalScroll():
@@ -266,7 +399,7 @@ class ConfigScreen(Screen):
                         )
                         yield Rule()
                         yield Static("SELECTED TASKS", classes="section-title")
-                        yield Static("None selected", id="selected-tasks-display")
+                        yield Horizontal(id="selected-tasks-container")
                 with TabPane("SETTINGS", id="settings-tab"):
                     with VerticalScroll():
                         yield Static("SYSTEM CONFIGURATION", classes="section-title")
@@ -282,6 +415,7 @@ class ConfigScreen(Screen):
                         yield Horizontal(
                             Static("limit:", classes="setting-label"),
                             Input(
+                                value="10",
                                 placeholder="ALL (NO LIMIT)",
                                 id="limit-input",
                                 classes="setting-input",
@@ -300,7 +434,7 @@ class ConfigScreen(Screen):
                         yield Horizontal(
                             Static("device:", classes="setting-label"),
                             Input(
-                                placeholder="AUTO (CUDA:0, CPU)",
+                                placeholder=f"auto ({_detect_device()})",
                                 id="device-input",
                                 classes="setting-input",
                             ),
@@ -345,8 +479,33 @@ class ConfigScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Initialize command preview on screen mount."""
+        self.set_timer(0.05, self._deferred_init)
+
+    def _deferred_init(self) -> None:
         self._update_preview()
+        self._update_selected_tasks()
+        self._load_git_info()
+
+    @work(thread=True)
+    def _load_git_info(self) -> None:
+        git_branch = _get_git_branch()
+        git_commit = _get_git_commit()
+        self.app.call_from_thread(self._apply_git_info, git_branch, git_commit)
+
+    def _apply_git_info(self, branch: str, commit: str) -> None:
+        try:
+            branch_widget = self.query_one("#git-branch-info", Static)
+            commit_widget = self.query_one("#git-commit-info", Static)
+            if branch:
+                branch_widget.update(f"[dim]branch[/] {branch}")
+            else:
+                branch_widget.display = False
+            if commit:
+                commit_widget.update(f"[dim]commit[/] {commit}")
+            else:
+                commit_widget.display = False
+        except Exception:
+            pass
 
     @on(Select.Changed, "#model-select")
     def on_model_changed(self, event: Select.Changed) -> None:
@@ -356,17 +515,28 @@ class ConfigScreen(Screen):
     @on(Input.Changed, "#model-args-input")
     def on_model_args_changed(self, event: Input.Changed) -> None:
         self.app.config.model_args = event.value
-        self._update_preview()
+        self._schedule_preview_update()
+
+    @on(Input.Changed, "#activate-cmd-input")
+    def on_activate_cmd_changed(self, event: Input.Changed) -> None:
+        self.app.config.activate_cmd = event.value or ""
+        self._schedule_preview_update()
 
     @on(OptionList.OptionSelected, "#task-list")
     def on_task_selected(self, event: OptionList.OptionSelected) -> None:
         task_id = str(event.option.id)
         if task_id not in self.app.config.tasks:
             self.app.config.tasks.append(task_id)
-        else:
-            self.app.config.tasks.remove(task_id)
         self._update_selected_tasks()
         self._update_preview()
+
+    @on(Button.Pressed, ".task-card")
+    def on_task_card_pressed(self, event: Button.Pressed) -> None:
+        task_id = getattr(event.button, "_task_id", None)
+        if task_id and task_id in self.app.config.tasks:
+            self.app.config.tasks.remove(task_id)
+            self._update_selected_tasks()
+            self._update_preview()
 
     @on(Input.Changed, "#batch-size-input")
     def on_batch_size_changed(self, event: Input.Changed) -> None:
@@ -374,7 +544,7 @@ class ConfigScreen(Screen):
             self.app.config.batch_size = int(event.value) if event.value else 1
         except ValueError:
             pass
-        self._update_preview()
+        self._schedule_preview_update()
 
     @on(Input.Changed, "#limit-input")
     def on_limit_changed(self, event: Input.Changed) -> None:
@@ -382,12 +552,12 @@ class ConfigScreen(Screen):
             self.app.config.limit = int(event.value) if event.value else None
         except ValueError:
             self.app.config.limit = None
-        self._update_preview()
+        self._schedule_preview_update()
 
     @on(Input.Changed, "#output-path-input")
     def on_output_path_changed(self, event: Input.Changed) -> None:
         self.app.config.output_path = event.value or "./logs/"
-        self._update_preview()
+        self._schedule_preview_update()
 
     @on(Switch.Changed, "#log-samples-switch")
     def on_log_samples_changed(self, event: Switch.Changed) -> None:
@@ -399,7 +569,39 @@ class ConfigScreen(Screen):
         self.app.config.verbosity = str(event.value) if event.value else "INFO"
         self._update_preview()
 
+    @on(TextArea.Changed, "#api-env-input")
+    def on_api_env_changed(self, event: TextArea.Changed) -> None:
+        self.app.config.api_env = event.text_area.text
+        self._schedule_preview_update()
+
     _process: subprocess.Popen | None = None
+    _loading_timer: Timer | None = None
+    _loading_frame: int = 0
+    _has_output: bool = False
+    LOADING_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+    def _start_loading_animation(self) -> None:
+        self._has_output = False
+        self._loading_frame = 0
+        self._loading_timer = self.set_interval(0.1, self._tick_loading)
+
+    def _tick_loading(self) -> None:
+        if self._has_output:
+            self._stop_loading_animation()
+            return
+        self._loading_frame = (self._loading_frame + 1) % len(self.LOADING_FRAMES)
+        spinner = self.LOADING_FRAMES[self._loading_frame]
+        try:
+            self.query_one("#run-output", Static).update(
+                f"[#87afd7]{spinner}[/] [dim]Initializing evaluation pipeline...[/dim]"
+            )
+        except Exception:
+            pass
+
+    def _stop_loading_animation(self) -> None:
+        if self._loading_timer is not None:
+            self._loading_timer.stop()
+            self._loading_timer = None
 
     @on(Button.Pressed, "#start-btn")
     def on_start_button(self) -> None:
@@ -410,10 +612,12 @@ class ConfigScreen(Screen):
         self.query_one("#stop-btn", Button).disabled = False
         self.query_one("#run-status", Static).update("[yellow]Running...[/yellow]")
         self.query_one("#run-output", Static).update("")
-        self.run_worker(self._run_evaluation())
+        self._start_loading_animation()
+        self._run_evaluation_worker()
 
     @on(Button.Pressed, "#stop-btn")
     def on_stop_button(self) -> None:
+        self._stop_loading_animation()
         if self._process:
             self._process.terminate()
             self._process = None
@@ -431,24 +635,50 @@ class ConfigScreen(Screen):
             self.notify("Failed to copy to clipboard", severity="error")
 
     def _update_selected_tasks(self) -> None:
-        display = self.query_one("#selected-tasks-display", Static)
-        if self.app.config.tasks:
-            display.update(", ".join(self.app.config.tasks))
-        else:
-            display.update("None selected")
+        container = self.query_one("#selected-tasks-container", Horizontal)
+        with self.app.batch_update():
+            for child in list(container.children):
+                child.remove()
+            if self.app.config.tasks:
+                for task_id in self.app.config.tasks:
+                    task_name = next(
+                        (name for key, name in POPULAR_TASKS if key == task_id),
+                        task_id,
+                    )
+                    card = Button(f"✕ {task_id}", classes="task-card")
+                    card.tooltip = task_name
+                    card._task_id = task_id
+                    container.mount(card)
+            else:
+                container.mount(Static("No tasks selected", classes="no-tasks-msg"))
 
     def _update_preview(self) -> None:
-        cmd = self._build_command_highlighted()
+        cmd_short = self._build_command_highlighted()
+        cmd_full = self._build_command_highlighted_full()
         try:
             preview = self.query_one("#command-preview", Static)
-            preview.update(cmd)
+            preview.update(cmd_short)
         except Exception:
             pass
         try:
             run_cmd = self.query_one("#run-command", Static)
-            run_cmd.update(cmd)
+            run_cmd.update(cmd_full)
         except Exception:
             pass
+
+    def _build_command_highlighted_full(self) -> str:
+        config = self.app.config
+        lines = []
+        if config.api_env and config.api_env.strip():
+            for env_line in config.api_env.strip().split("\n"):
+                if env_line.strip():
+                    lines.append(f"[dim]{env_line}[/dim]")
+            lines.append("")
+        if config.activate_cmd and config.activate_cmd.strip():
+            lines.append(f"[dim]{config.activate_cmd}[/dim]")
+            lines.append("")
+        lines.append(self._build_command_highlighted())
+        return "\n".join(lines)
 
     def _build_command_highlighted(self) -> str:
         config = self.app.config
@@ -471,6 +701,15 @@ class ConfigScreen(Screen):
 
     def _build_command(self) -> str:
         config = self.app.config
+        lines = []
+        if config.api_env and config.api_env.strip():
+            for env_line in config.api_env.strip().split("\n"):
+                if env_line.strip():
+                    lines.append(env_line)
+            lines.append("")
+        if config.activate_cmd and config.activate_cmd.strip():
+            lines.append(config.activate_cmd)
+            lines.append("")
         parts = ["python -m lmms_eval"]
         parts.append(f"--model {config.model}")
         if config.model_args:
@@ -486,31 +725,60 @@ class ConfigScreen(Screen):
         parts.append(f"--verbosity {config.verbosity}")
         if config.device:
             parts.append(f"--device {config.device}")
-        return " \\\n    ".join(parts)
+        lines.append(" \\\n    ".join(parts))
+        return "\n".join(lines)
 
-    def _build_command_list(self) -> list[str]:
+    def _build_shell_command(self) -> str:
         config = self.app.config
-        cmd = [sys.executable, "-m", "lmms_eval"]
-        cmd.extend(["--model", config.model])
+        parts = ["python -m lmms_eval"]
+        parts.append(f"--model {config.model}")
         if config.model_args:
-            cmd.extend(["--model_args", config.model_args])
+            parts.append(f"--model_args '{config.model_args}'")
         if config.tasks:
-            cmd.extend(["--tasks", ",".join(config.tasks)])
-        cmd.extend(["--batch_size", str(config.batch_size)])
+            parts.append(f"--tasks {','.join(config.tasks)}")
+        parts.append(f"--batch_size {config.batch_size}")
         if config.limit:
-            cmd.extend(["--limit", str(config.limit)])
-        cmd.extend(["--output_path", config.output_path])
+            parts.append(f"--limit {config.limit}")
+        parts.append(f"--output_path {config.output_path}")
         if config.log_samples:
-            cmd.append("--log_samples")
-        cmd.extend(["--verbosity", config.verbosity])
+            parts.append("--log_samples")
+        parts.append(f"--verbosity {config.verbosity}")
         if config.device:
-            cmd.extend(["--device", config.device])
+            parts.append(f"--device {config.device}")
+        cmd = " ".join(parts)
+        if config.activate_cmd and config.activate_cmd.strip():
+            cmd = f"{config.activate_cmd} && {cmd}"
         return cmd
 
-    async def _run_evaluation(self) -> None:
-        cmd = self._build_command_list()
-        output_widget = self.query_one("#run-output", Static)
-        status_widget = self.query_one("#run-status", Static)
+    def _parse_env_vars(self) -> dict[str, str]:
+        import re
+
+        env = os.environ.copy()
+        config = self.app.config
+        if not config.api_env:
+            return env
+        for line in config.api_env.strip().split("\n"):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("export "):
+                line = line[7:]
+            match = re.match(r"(\w+)=(.*)", line)
+            if match:
+                key = match.group(1)
+                value = match.group(2).strip()
+                if (value.startswith('"') and value.endswith('"')) or (
+                    value.startswith("'") and value.endswith("'")
+                ):
+                    value = value[1:-1]
+                expanded = os.path.expandvars(value)
+                env[key] = expanded
+        return env
+
+    @work(thread=True, exclusive=True)
+    def _run_evaluation_worker(self) -> None:
+        cmd = self._build_shell_command()
+        env = self._parse_env_vars()
 
         try:
             self._process = subprocess.Popen(
@@ -519,30 +787,60 @@ class ConfigScreen(Screen):
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                env=env,
+                shell=True,
             )
             output_lines: list[str] = []
             if self._process.stdout:
                 for line in iter(self._process.stdout.readline, ""):
                     if self._process is None:
                         break
-                    output_lines.append(line.rstrip())
+                    output_lines.append(_strip_ansi(line.rstrip()))
                     if len(output_lines) > 100:
                         output_lines = output_lines[-100:]
-                    output_widget.update("\n".join(output_lines))
+                    output_text = rich_escape("\n".join(output_lines))
+                    self.app.call_from_thread(self._update_output, output_text)
             if self._process:
                 self._process.wait()
-                if self._process.returncode == 0:
-                    status_widget.update("[bold green]Completed successfully![/]")
+                returncode = self._process.returncode
+                if returncode == 0:
+                    self.app.call_from_thread(
+                        self._update_status, "[bold green]Completed successfully![/]"
+                    )
                 else:
-                    status_widget.update(
-                        f"[bold red]Failed with code {self._process.returncode}[/]"
+                    self.app.call_from_thread(
+                        self._update_status,
+                        f"[bold red]Failed with code {returncode}[/]",
                     )
         except Exception as e:
-            status_widget.update(f"[bold red]Error: {e}[/]")
+            self.app.call_from_thread(
+                self._update_status, f"[bold red]Error: {rich_escape(str(e))}[/]"
+            )
         finally:
             self._process = None
+            self.app.call_from_thread(self._reset_buttons)
+
+    def _update_output(self, text: str) -> None:
+        self._has_output = True
+        self._stop_loading_animation()
+        try:
+            self.query_one("#run-output", Static).update(text)
+        except Exception:
+            pass
+
+    def _update_status(self, text: str) -> None:
+        try:
+            self.query_one("#run-status", Static).update(text)
+        except Exception:
+            pass
+
+    def _reset_buttons(self) -> None:
+        self._stop_loading_animation()
+        try:
             self.query_one("#start-btn", Button).disabled = False
             self.query_one("#stop-btn", Button).disabled = True
+        except Exception:
+            pass
 
     def action_back(self) -> None:
         self.app.pop_screen()
@@ -762,9 +1060,12 @@ class RunScreen(Screen):
                 yield Static("LMMs-Eval Terminal UI", id="header-left-title")
                 with Horizontal(id="header-left-content"):
                     with Container(id="logo-container"):
-                        yield LogoWidget(id="header-logo")
+                        yield Static(
+                            "[bold #5f87af]LMMS[/]\n[bold #87afd7]EVAL[/]",
+                            id="header-logo",
+                        )
                     with Vertical(id="header-info"):
-                        yield Static(f"LMMs-Eval SYSTEM", classes="blink")
+                        yield Static("LMMs-Eval SYSTEM", classes="blink")
                         yield Static(f"VER {version}")
                         yield Static(f"PY {sys.version.split()[0]}")
             with Vertical(id="header-right"):
@@ -902,12 +1203,11 @@ class RunScreen(Screen):
             )
             output_lines = []
             for line in iter(process.stdout.readline, ""):
-                output_lines.append(line.rstrip())
+                output_lines.append(_strip_ansi(line.rstrip()))
                 if len(output_lines) > 100:
                     output_lines = output_lines[-100:]
-                output_widget.update("\n".join(output_lines))
+                output_widget.update(rich_escape("\n".join(output_lines)))
 
-                # Parse metrics from output
                 metrics = self._parse_metrics_from_line(line)
                 if metrics:
                     metrics_chart.add_metrics(
@@ -927,7 +1227,7 @@ class RunScreen(Screen):
                     f"[bold red]Evaluation failed with code {process.returncode}[/]"
                 )
         except Exception as e:
-            status_widget.update(f"[bold red]Error: {e}[/]")
+            status_widget.update(f"[bold red]Error: {rich_escape(str(e))}[/]")
 
         self.query_one("#execute-btn", Button).disabled = False
 
@@ -984,6 +1284,11 @@ class LmmsEvalTUI(App):
         padding: 2 4;
         align: center middle;
     }
+
+    WelcomeScreen #welcome-container:hover {
+        border: round $primary-light;
+        background: $bg-light;
+    }
     
     WelcomeScreen #welcome-title {
         color: $primary-light;
@@ -1005,12 +1310,9 @@ class LmmsEvalTUI(App):
     }
     
     WelcomeScreen #continue-msg {
-        color: $text-bright;
-        text-style: bold;
+        color: $text-dim;
         content-align: center middle;
         margin-top: 1;
-        background: $primary;
-        padding: 0 2;
     }
 
     WelcomeScreen .copyright {
@@ -1162,6 +1464,19 @@ class LmmsEvalTUI(App):
         border: solid $primary;
     }
     
+    .api-env-textarea {
+        height: 5;
+        background: $bg-dark;
+        border: solid $primary-dark;
+        color: $text-dim;
+        margin: 0 0 1 0;
+    }
+    
+    .api-env-textarea:focus {
+        border: solid $primary;
+        color: $text-normal;
+    }
+    
     Select {
         background: $bg-dark;
         border: solid $primary-dark;
@@ -1177,6 +1492,36 @@ class LmmsEvalTUI(App):
     OptionList {
         background: $bg-dark;
         border: solid $primary-dark;
+    }
+    
+    /* Task Cards */
+    #selected-tasks-container {
+        height: auto;
+        min-height: 3;
+        padding: 1 0;
+        width: 100%;
+    }
+    
+    .task-card {
+        width: auto;
+        min-width: 10;
+        height: 3;
+        margin: 0 1 0 0;
+        border: solid $primary-dark;
+        background: $bg-dark;
+        color: $primary-light;
+        padding: 0 1;
+    }
+    
+    .task-card:hover {
+        border: solid $error;
+        color: $error;
+        background: $bg-medium;
+    }
+    
+    .no-tasks-msg {
+        color: $text-dim;
+        padding: 1 0;
     }
     
     Switch {
@@ -1259,6 +1604,11 @@ class LmmsEvalTUI(App):
     Button:hover {
         border: tall $primary-light;
         color: $primary-light;
+    }
+
+    Button:focus {
+        border: tall $accent;
+        color: $accent;
     }
     
     /* Primary (Save) - Muted Blue Outline */
