@@ -3,6 +3,7 @@ import math
 import random
 import re
 import string
+import collections
 from collections.abc import Iterable
 from typing import Any, List
 
@@ -651,36 +652,49 @@ def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
     Calculate clustered standard error for non-independent samples.
 
     When multiple questions share the same context (e.g., same image/video),
-    they are not independent. This function calculates SE by:
-    1. Grouping scores by cluster_id
-    2. Computing mean score per cluster
-    3. Calculating SE of cluster means
+    they are not independent. This implements Equation 4 from:
+    "Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations"
+    (https://arxiv.org/abs/2411.00640)
+
+    SE_clustered = sqrt(SE_CLT^2 + (1/n^2) * sum_c sum_i sum_{j!=i} (s_ic - s_bar)(s_jc - s_bar))
 
     Args:
         scores: List of individual scores (e.g., 0/1 for correctness)
         cluster_ids: List of cluster identifiers (e.g., video_id, image_id)
 
     Returns:
-        Clustered standard error, or NaN if insufficient clusters
+        Clustered standard error, or NaN if insufficient data
     """
-    import collections
+    n = len(scores)
+    if n < 2:
+        return float("nan")
 
     if len(scores) != len(cluster_ids):
         raise ValueError("scores and cluster_ids must have the same length")
 
-    # Group scores by cluster
-    cluster_scores = collections.defaultdict(list)
-    for score, cid in zip(scores, cluster_ids):
-        cluster_scores[cid].append(score)
+    # Global mean
+    s_bar = sum(scores) / n
 
-    # Calculate cluster means
-    cluster_means = [sum(s) / len(s) for s in cluster_scores.values()]
+    # SE_CLT^2 = Var(scores) / n = (1/(n-1)) * sum((s_i - s_bar)^2) / n
+    var_scores = sum((s - s_bar) ** 2 for s in scores) / (n - 1)
+    se_clt_squared = var_scores / n
 
-    n_clusters = len(cluster_means)
-    if n_clusters < 2:
-        return float("nan")
+    # Group scores by cluster with their indices
+    cluster_to_scores = collections.defaultdict(list)
+    for i, (score, cid) in enumerate(zip(scores, cluster_ids)):
+        cluster_to_scores[cid].append(score)
 
-    # Calculate SE of cluster means
-    import numpy as np
+    # Calculate within-cluster cross-terms: sum_c sum_i sum_{j!=i} (s_ic - s_bar)(s_jc - s_bar)
+    cross_term = 0.0
+    for cid, cluster_scores in cluster_to_scores.items():
+        # For each cluster, compute sum of (s_i - s_bar)(s_j - s_bar) for i != j
+        deviations = [s - s_bar for s in cluster_scores]
+        cluster_sum = sum(deviations)
+        # sum_{i!=j} d_i * d_j = (sum d_i)^2 - sum(d_i^2)
+        sum_of_squares = sum(d * d for d in deviations)
+        cross_term += cluster_sum * cluster_sum - sum_of_squares
 
-    return np.std(cluster_means, ddof=1) / np.sqrt(n_clusters)
+    cross_term /= n * n
+
+    # SE_clustered = sqrt(SE_CLT^2 + cross_term)
+    return math.sqrt(se_clt_squared + cross_term)
