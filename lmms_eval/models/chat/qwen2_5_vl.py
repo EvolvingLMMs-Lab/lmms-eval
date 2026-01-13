@@ -1,6 +1,7 @@
 import time
 from typing import List, Optional, Tuple, Union
 
+import decord
 import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
@@ -71,6 +72,8 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             visuals = self.flatten(visuals)
             videos = self.flatten(videos)
             gen_kwargs = all_gen_kwargs[0]
+            
+            eval_logger.info(f"DEBUG: videos extracted = {videos}")
 
             # Apply chat template
             video_kwargs = {
@@ -80,27 +83,48 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             if self.fps is not None:
                 video_kwargs["fps"] = self.fps
             else:
-                video_kwargs["nframes"] = self.max_num_frames
+                # Probe videos to get frame count and set nframes = min(max_num_frames, total_frames)
+                # This avoids the error when video has fewer frames than max_num_frames
+                if videos:
+                    video_path = videos[0]  # Assume batch size 1 for videos
+                    eval_logger.info(f"DEBUG: probing video_path = {video_path}")
+                    vr = decord.VideoReader(video_path)
+                    video_total_frames = len(vr)
+                    nframes = min(self.max_num_frames, video_total_frames)
+                    # qwen_vl_utils requires nframes to be a multiple of 2 (FRAME_FACTOR)
+                    # and rounds using round_by_factor, so we need to floor to even number
+                    # to avoid rounding up past total_frames
+                    nframes = (nframes // 2) * 2  # Floor to nearest even number
+                    nframes = max(2, nframes)  # At least 2 frames
+                    video_kwargs["nframes"] = nframes
+                    eval_logger.info(f"Video probe: total_frames={video_total_frames}, requesting nframes={nframes}, max_num_frames={self.max_num_frames}")
+                else:
+                    eval_logger.info(f"DEBUG: no videos found, using default nframes={self.max_num_frames}")
+                    video_kwargs["nframes"] = self.max_num_frames
+            eval_logger.info(f"DEBUG: final video_kwargs = {video_kwargs}")
             batched_messages = [
                 chat_message.to_hf_messages(video_kwargs=video_kwargs)
                 for chat_message in chat_messages
             ]
+            # Debug: print the actual video content in batched_messages
+            for i, msg_list in enumerate(batched_messages):
+                for msg in msg_list:
+                    for content in msg.get("content", []):
+                        if isinstance(content, dict) and content.get("type") == "video":
+                            eval_logger.info(f"DEBUG: batched_messages[{i}] video content = {content}")
             texts = self.processor.apply_chat_template(
                 batched_messages, tokenize=False, add_generation_prompt=True
             )
             image_inputs, video_inputs = process_vision_info(batched_messages)
+            # Debug: print the num of frames in video_inputs
             if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                # Only resample if we have more frames than needed
-                if total_frames > self.max_num_frames:
-                    indices = np.linspace(
-                        0, total_frames - 1, self.max_num_frames, dtype=int
-                    )
-                    # Append the last frame index if not already included
-                    if total_frames - 1 not in indices:
-                        indices = np.append(indices, total_frames - 1)
-                    indices = np.unique(indices)  # Ensure uniqueness
-                    video_inputs[0] = video_inputs[0][indices]
+                for i, video in enumerate(video_inputs):
+                    if video is not None:
+                        eval_logger.info(f"DEBUG: video_inputs[{i}] num_frames = {video.shape[0]}")
+                    else:
+                        eval_logger.info(f"DEBUG: video_inputs[{i}] is None")
+            else:
+                eval_logger.info(f"DEBUG: video_inputs is None (processing images only)")
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
