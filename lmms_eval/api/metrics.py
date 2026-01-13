@@ -1,9 +1,9 @@
 # the code is adapted from https://github.com/EleutherAI/lm-evaluation-harness
+import collections
 import math
 import random
 import re
 import string
-import collections
 from collections.abc import Iterable
 from typing import Any, List
 

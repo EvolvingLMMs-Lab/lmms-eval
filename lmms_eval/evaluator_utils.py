@@ -129,20 +129,21 @@ class TaskOutput:
         """Calculate CLT-based standard errors (naive and clustered)."""
         # Get cluster_key from task config (e.g., "videoID" for videomme)
         cluster_key = self.task_config.get("cluster_key") if self.task_config else None
+        score_key = self.task_config.get("score_key", "score") if self.task_config else "score"
 
         for (metric, filter_key), items in self.sample_metrics.items():
             if metric not in self.task.aggregation():
                 continue
             # Extract scores and cluster_ids from items
-            # Convention: dict items should have "score" (0/1) and optionally the field specified by cluster_key
+            # Convention: dict items should have the score_key field (0/1) and optionally the field specified by cluster_key
             numeric_items = []
             cluster_ids = []
             for x in items:
                 if isinstance(x, (int, float)):
                     numeric_items.append(x)
                     cluster_ids.append(None)
-                elif isinstance(x, dict) and "score" in x:
-                    numeric_items.append(x["score"])
+                elif isinstance(x, dict) and score_key in x:
+                    numeric_items.append(x[score_key])
                     cluster_ids.append(x.get(cluster_key) if cluster_key else None)
             n = len(numeric_items)
             # Naive CLT stderr: std / sqrt(n)
