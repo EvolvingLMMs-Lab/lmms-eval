@@ -344,4 +344,4 @@ def spatialtreebench_aggregate_results(results):
     print("----------------------------------------\n")
 
     # The framework returns the overall score, which is the root score
-    return {"overall_score": root_score, **avg_leaf_scores}
+    return root_score
