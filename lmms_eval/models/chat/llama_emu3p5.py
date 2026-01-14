@@ -47,10 +47,7 @@ class LlamaEmu3p5Chat(EMU3p5EncoderModel):
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(
-                f"attn_implementation must be one of {valid_attn_implementations}, "
-                f"got {attn_implementation}"
-            )
+            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, " f"got {attn_implementation}")
 
         # Store Llama-specific config before calling super
         self._max_length_override = max_length
@@ -87,24 +84,16 @@ class LlamaEmu3p5Chat(EMU3p5EncoderModel):
                 eval_logger.info(f"Using max_length from model config: {self._max_length}")
             except AttributeError:
                 self._max_length = 8192
-                eval_logger.warning(
-                    f"Could not infer max_length from model config, "
-                    f"using default: {self._max_length}"
-                )
+                eval_logger.warning(f"Could not infer max_length from model config, " f"using default: {self._max_length}")
 
         if self.ignore_max_length:
-            eval_logger.warning(
-                "ignore_max_length=True: Truncation disabled. "
-                "Long sequences may cause OOM or errors."
-            )
+            eval_logger.warning("ignore_max_length=True: Truncation disabled. " "Long sequences may cause OOM or errors.")
 
     def _load_tokenizer(self, tokenizer_path: str, **kwargs) -> AutoTokenizer:
         """Load Llama tokenizer and ensure pad token is set."""
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
         if tokenizer.pad_token is None:
-            eval_logger.warning(
-                "No pad_token found in tokenizer, setting pad_token to eos_token."
-            )
+            eval_logger.warning("No pad_token found in tokenizer, setting pad_token to eos_token.")
             tokenizer.pad_token = tokenizer.eos_token
         return tokenizer
 
@@ -118,17 +107,9 @@ class LlamaEmu3p5Chat(EMU3p5EncoderModel):
         try:
             from vision_tokenizer import build_vision_tokenizer
         except ImportError:
-            raise ImportError(
-                "vision_tokenizer package is required for EMU3.5 models. "
-                "Please install it from the EMU3.5 repository."
-            )
+            raise ImportError("vision_tokenizer package is required for EMU3.5 models. " "Please install it from the EMU3.5 repository.")
 
-        return build_vision_tokenizer(
-            type="ibq",
-            model_path=vq_hub,
-            device=device,
-            **kwargs
-        )
+        return build_vision_tokenizer(type="ibq", model_path=vq_hub, device=device, **kwargs)
 
     @property
     def image_placeholder(self) -> str:

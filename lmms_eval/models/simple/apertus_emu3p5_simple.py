@@ -105,14 +105,9 @@ class ApertusEmu3p5Simple(EMU3p5SimpleModel):
         try:
             from vision_tokenizer import build_vision_tokenizer
         except ImportError:
-            raise ImportError(
-                "vision_tokenizer package required for EMU3.5 models. "
-                "Install from EMU3.5 repository."
-            )
+            raise ImportError("vision_tokenizer package required for EMU3.5 models. " "Install from EMU3.5 repository.")
 
-        return build_vision_tokenizer(
-            type="ibq", model_path=vq_hub, device=device, **kwargs
-        )
+        return build_vision_tokenizer(type="ibq", model_path=vq_hub, device=device, **kwargs)
 
     @property
     def image_placeholder(self) -> str:

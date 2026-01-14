@@ -59,9 +59,7 @@ def smart_resize(height: int, width: int, factor: int = 8, min_pixels: int = 512
     if height < factor or width < factor:
         raise ValueError(f"height:{height} or width:{width} must be larger than factor:{factor}")
     elif check_aspect_ratio and (max(height, width) / min(height, width) > 5):
-         raise ValueError(
-             f"absolute aspect ratio must be smaller than 5, got {max(height, width) / min(height, width)}"
-         )
+        raise ValueError(f"absolute aspect ratio must be smaller than 5, got {max(height, width) / min(height, width)}")
 
     h_bar = round(height / factor) * factor
     w_bar = round(width / factor) * factor
@@ -199,10 +197,7 @@ class Emu3VisionVQImageProcessor(BaseImageProcessor):
         images = [to_numpy_array(image) for image in images]
 
         if is_scaled_image(images[0]) and do_rescale:
-            logger.warning_once(
-                "It looks like you are trying to rescale already rescaled images. If the input"
-                "pixel_values.append()images have pixel values between 0 and 1, set `do_rescale=False` to avoid rescaling them again."
-            )
+            logger.warning_once("It looks like you are trying to rescale already rescaled images. If the input" "pixel_values.append()images have pixel values between 0 and 1, set `do_rescale=False` to avoid rescaling them again.")
 
         if input_data_format is None:
             # We assume that all images have the same channel dimension format.
@@ -213,17 +208,8 @@ class Emu3VisionVQImageProcessor(BaseImageProcessor):
         processed_images = []
         for image in images:
             if do_resize:
-                resized_height, resized_width = smart_resize(
-                    height,
-                    width,
-                    factor=spatial_factor,
-                    min_pixels=self.min_pixels,
-                    max_pixels=self.max_pixels,
-                    check_aspect_ratio=self.do_check_aspect_ratio
-                )
-                image = resize(
-                    image, size=(resized_height, resized_width), resample=resample, input_data_format=input_data_format
-                )
+                resized_height, resized_width = smart_resize(height, width, factor=spatial_factor, min_pixels=self.min_pixels, max_pixels=self.max_pixels, check_aspect_ratio=self.do_check_aspect_ratio)
+                image = resize(image, size=(resized_height, resized_width), resample=resample, input_data_format=input_data_format)
 
             if do_rescale:
                 image = self.rescale(image, scale=rescale_factor, input_data_format=input_data_format)
@@ -306,10 +292,7 @@ class Emu3VisionVQImageProcessor(BaseImageProcessor):
 
         images = make_list_of_images(images)
         if images is None or not valid_images(images):
-            raise ValueError(
-                "Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, "
-                "torch.Tensor, tf.Tensor or jax.ndarray."
-            )
+            raise ValueError("Invalid image type. Must be of type PIL.Image.Image, numpy.ndarray, " "torch.Tensor, tf.Tensor or jax.ndarray.")
 
         validate_preprocess_arguments(
             rescale_factor=rescale_factor,

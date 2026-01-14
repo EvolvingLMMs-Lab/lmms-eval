@@ -62,15 +62,11 @@ def ensure_local_weights(
 
     # Check if path exists locally
     if expanded_path.exists() and expanded_path.is_dir():
-        eval_logger.info(
-            f"Found local weights at {expanded_path}, using them directly"
-        )
+        eval_logger.info(f"Found local weights at {expanded_path}, using them directly")
         return str(expanded_path)
 
     # Path doesn't exist, need to download
-    eval_logger.info(
-        f"Local path {expanded_path} not found, will download from HuggingFace"
-    )
+    eval_logger.info(f"Local path {expanded_path} not found, will download from HuggingFace")
 
     # Determine cache directory
     if cache_base_dir:
@@ -84,23 +80,17 @@ def ensure_local_weights(
 
     # Check if already in cache
     if repo_cache_path.exists() and repo_cache_path.is_dir():
-        eval_logger.info(
-            f"Found cached weights at {repo_cache_path}, using them"
-        )
+        eval_logger.info(f"Found cached weights at {repo_cache_path}, using them")
         return str(repo_cache_path)
 
     # Need to download - handle distributed training
     if accelerator and accelerator.num_processes > 1:
         # Distributed training: only main process downloads
         if accelerator.is_main_process:
-            eval_logger.info(
-                f"Main process downloading {hf_repo_id} to {repo_cache_path}"
-            )
+            eval_logger.info(f"Main process downloading {hf_repo_id} to {repo_cache_path}")
             _download_from_hf(hf_repo_id, repo_cache_path)
         else:
-            eval_logger.info(
-                f"Worker process waiting for main process to download {hf_repo_id}"
-            )
+            eval_logger.info(f"Worker process waiting for main process to download {hf_repo_id}")
 
         # All processes wait for main process to finish downloading
         accelerator.wait_for_everyone()
@@ -138,10 +128,6 @@ def _download_from_hf(hf_repo_id: str, local_dir: Path) -> None:
         eval_logger.info(f"Successfully downloaded {hf_repo_id} to {local_dir}")
 
     except Exception as e:
-        eval_logger.error(
-            f"Failed to download {hf_repo_id} from HuggingFace: {e}"
-        )
-        eval_logger.error(
-            "Please check your internet connection and verify the repository ID"
-        )
+        eval_logger.error(f"Failed to download {hf_repo_id} from HuggingFace: {e}")
+        eval_logger.error("Please check your internet connection and verify the repository ID")
         raise

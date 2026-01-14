@@ -80,11 +80,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             grouping=True,
         )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = (
-            len(requests) // self.batch_size
-            if len(requests) % self.batch_size == 0
-            else len(requests) // self.batch_size + 1
-        )
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         # Iterate through batches
@@ -92,13 +88,8 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
 
             # Get chat messages from dataset
-            chat_messages = [
-                doc_to_messages[idx](self.task_dict[task][split][ids])
-                for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))
-            ]
-            chat_messages: List[ChatMessages] = [
-                ChatMessages(**{"messages": message}) for message in chat_messages
-            ]
+            chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
+            chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
 
             # Extract media and prepare batch
             batch_data = []
@@ -115,16 +106,12 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                     if self.skip_text_only:
                         skipped_text_only += 1
                         res.append("")
-                        self.cache_hook.add_partial(
-                            "generate_until", (ctx[idx], all_gen_kwargs[idx]), ""
-                        )
+                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
                     else:
                         res.append("")
-                        self.cache_hook.add_partial(
-                            "generate_until", (ctx[idx], all_gen_kwargs[idx]), ""
-                        )
+                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
 
@@ -134,9 +121,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                     if self.skip_multi_image:
                         skipped_multi_image += 1
                         res.append("")
-                        self.cache_hook.add_partial(
-                            "generate_until", (ctx[idx], all_gen_kwargs[idx]), ""
-                        )
+                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
                     else:
@@ -172,12 +157,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
 
             # Apply chat template with image placeholder
             messages_list = [item["messages"] for item in batch_data]
-            texts = [
-                self.tokenizer.apply_chat_template(
-                    msgs, tokenize=False, add_generation_prompt=True
-                )
-                for msgs in messages_list
-            ]
+            texts = [self.tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True) for msgs in messages_list]
 
             # Prepare images list
             images_list = [item["images"] for item in batch_data]
@@ -218,44 +198,27 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             }
 
             with torch.inference_mode():
-                outputs = self.model.generate(
-                    **model_inputs, generation_config=generation_config
-                )
+                outputs = self.model.generate(**model_inputs, generation_config=generation_config)
 
             # Trim input_ids from outputs
             outputs_trimmed = outputs[:, model_inputs["input_ids"].shape[-1] :]
-            answers = self.processor.batch_decode(
-                outputs_trimmed, skip_special_tokens=True
-            )
+            answers = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=True)
 
             # Decode with special tokens for debugging
             if self.debug_samples:
-                prompts_with_tokens = self.processor.batch_decode(
-                    model_inputs["input_ids"], skip_special_tokens=False
-                )
-                answers_with_tokens = self.processor.batch_decode(
-                    outputs_trimmed, skip_special_tokens=False
-                )
+                prompts_with_tokens = self.processor.batch_decode(model_inputs["input_ids"], skip_special_tokens=False)
+                answers_with_tokens = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=False)
 
             for i, (ans, item, text) in enumerate(zip(answers, batch_data, texts)):
                 res.append(ans)
-                self.cache_hook.add_partial(
-                    "generate_until", (item["context"], gen_kwargs), ans
-                )
+                self.cache_hook.add_partial("generate_until", (item["context"], gen_kwargs), ans)
                 pbar.update(1)
 
                 # Debug sample output
-                if (
-                    self.debug_samples
-                    and self._debug_samples_printed < self.num_debug_samples
-                    and self.rank == 0
-                ):
+                if self.debug_samples and self._debug_samples_printed < self.num_debug_samples and self.rank == 0:
                     self._debug_samples_printed += 1
                     eval_logger.info("=" * 80)
-                    eval_logger.info(
-                        f"DEBUG SAMPLE {self._debug_samples_printed}/"
-                        f"{self.num_debug_samples}"
-                    )
+                    eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/" f"{self.num_debug_samples}")
                     eval_logger.info("=" * 80)
                     eval_logger.info(f"PROMPT (clean): {text}")
                     eval_logger.info(f"PROMPT (with tokens): {prompts_with_tokens[i]}")
@@ -272,23 +235,10 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
 
         # Print statistics
         if self.rank == 0:
-            eval_logger.warning(
-                f"EMU3.5 Statistics: Found {text_only_count}/{total_samples} "
-                f"text-only samples (no images). "
-                f"Skipped: {skipped_text_only} "
-                f"(skip_text_only={self.skip_text_only})"
-            )
-            eval_logger.warning(
-                f"EMU3.5 Statistics: Found {multi_image_count}/{total_samples} "
-                f"multi-image samples (>1 image). "
-                f"Skipped: {skipped_multi_image} "
-                f"(skip_multi_image={self.skip_multi_image})"
-            )
+            eval_logger.warning(f"EMU3.5 Statistics: Found {text_only_count}/{total_samples} " f"text-only samples (no images). " f"Skipped: {skipped_text_only} " f"(skip_text_only={self.skip_text_only})")
+            eval_logger.warning(f"EMU3.5 Statistics: Found {multi_image_count}/{total_samples} " f"multi-image samples (>1 image). " f"Skipped: {skipped_multi_image} " f"(skip_multi_image={self.skip_multi_image})")
             if text_only_count == 0 and multi_image_count == 0:
-                eval_logger.info(
-                    f"EMU3.5 Statistics: All {total_samples} samples had exactly 1 "
-                    "image. No text-only or multi-image samples encountered."
-                )
+                eval_logger.info(f"EMU3.5 Statistics: All {total_samples} samples had exactly 1 " "image. No text-only or multi-image samples encountered.")
 
         return res
 

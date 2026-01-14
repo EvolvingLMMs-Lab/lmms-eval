@@ -51,24 +51,16 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
             return -len(toks), x[0]
 
         # Group requests by generation_kwargs
-        re_ords = utils.Collator(
-            [req.args for req in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([req.args for req in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = (
-            len(requests) // self.batch_size
-            if len(requests) % self.batch_size == 0
-            else len(requests) // self.batch_size + 1
-        )
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
 
             # Extract visuals from dataset
-            visuals = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
 
             gen_kwargs = all_gen_kwargs[0]
 
@@ -85,17 +77,13 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                     text_only_count += 1
                     if self.skip_text_only:
                         res.append("")
-                        self.cache_hook.add_partial(
-                            "generate_until", (context, gen_kwargs), ""
-                        )
+                        self.cache_hook.add_partial("generate_until", (context, gen_kwargs), "")
                         pbar.update(1)
                         continue
                     else:
                         # Can't process without images
                         res.append("")
-                        self.cache_hook.add_partial(
-                            "generate_until", (context, gen_kwargs), ""
-                        )
+                        self.cache_hook.add_partial("generate_until", (context, gen_kwargs), "")
                         pbar.update(1)
                         continue
 
@@ -104,9 +92,7 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                     multi_image_count += 1
                     if self.skip_multi_image:
                         res.append("")
-                        self.cache_hook.add_partial(
-                            "generate_until", (context, gen_kwargs), ""
-                        )
+                        self.cache_hook.add_partial("generate_until", (context, gen_kwargs), "")
                         pbar.update(1)
                         continue
                     else:
@@ -166,24 +152,16 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
             }
 
             with torch.inference_mode():
-                outputs = self.model.generate(
-                    **model_inputs, generation_config=generation_config
-                )
+                outputs = self.model.generate(**model_inputs, generation_config=generation_config)
 
             # Trim input_ids from outputs
             outputs_trimmed = outputs[:, model_inputs["input_ids"].shape[-1] :]
-            text_outputs = self.processor.batch_decode(
-                outputs_trimmed, skip_special_tokens=True
-            )
+            text_outputs = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=True)
 
             # Decode with special tokens for debugging
             if self.debug_samples:
-                prompts_with_tokens = self.processor.batch_decode(
-                    model_inputs["input_ids"], skip_special_tokens=False
-                )
-                answers_with_tokens = self.processor.batch_decode(
-                    outputs_trimmed, skip_special_tokens=False
-                )
+                prompts_with_tokens = self.processor.batch_decode(model_inputs["input_ids"], skip_special_tokens=False)
+                answers_with_tokens = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=False)
 
             # Apply stopping sequences
             until = gen_kwargs.get("until", [])
@@ -195,23 +173,14 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
 
             for i, (ans, context) in enumerate(zip(text_outputs, batch_contexts)):
                 res.append(ans)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), ans
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
                 # Debug output
-                if (
-                    self.debug_samples
-                    and self._debug_samples_printed < self.num_debug_samples
-                    and self.rank == 0
-                ):
+                if self.debug_samples and self._debug_samples_printed < self.num_debug_samples and self.rank == 0:
                     self._debug_samples_printed += 1
                     eval_logger.info("=" * 80)
-                    eval_logger.info(
-                        f"DEBUG SAMPLE {self._debug_samples_printed}/"
-                        f"{self.num_debug_samples}"
-                    )
+                    eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/" f"{self.num_debug_samples}")
                     eval_logger.info("=" * 80)
                     eval_logger.info(f"PROMPT (clean): {prompts[i]}")
                     eval_logger.info(f"PROMPT (with tokens): {prompts_with_tokens[i]}")
@@ -225,16 +194,8 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
 
         # Print statistics
         if self.rank == 0:
-            eval_logger.warning(
-                f"EMU3 Simple Statistics: Found {text_only_count}/"
-                f"{total_samples} text-only samples (skipped: "
-                f"{text_only_count if self.skip_text_only else 0})"
-            )
-            eval_logger.warning(
-                f"EMU3 Simple Statistics: Found {multi_image_count}/"
-                f"{total_samples} multi-image samples (skipped: "
-                f"{multi_image_count if self.skip_multi_image else 0})"
-            )
+            eval_logger.warning(f"EMU3 Simple Statistics: Found {text_only_count}/" f"{total_samples} text-only samples (skipped: " f"{text_only_count if self.skip_text_only else 0})")
+            eval_logger.warning(f"EMU3 Simple Statistics: Found {multi_image_count}/" f"{total_samples} multi-image samples (skipped: " f"{multi_image_count if self.skip_multi_image else 0})")
 
         return res
 

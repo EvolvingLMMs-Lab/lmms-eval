@@ -39,14 +39,8 @@ def print_memory_stats(
         rank: Process rank for multi-GPU setups
     """
     # Unwrap models if wrapped by accelerator
-    unwrapped_main_model = (
-        accelerator.unwrap_model(main_model) if accelerator is not None else main_model
-    )
-    unwrapped_image_tokenizer = (
-        accelerator.unwrap_model(image_tokenizer)
-        if accelerator is not None
-        else image_tokenizer
-    )
+    unwrapped_main_model = accelerator.unwrap_model(main_model) if accelerator is not None else main_model
+    unwrapped_image_tokenizer = accelerator.unwrap_model(image_tokenizer) if accelerator is not None else image_tokenizer
 
     # Calculate model sizes
     main_model_size_gb = get_model_size_gb(unwrapped_main_model)
@@ -54,9 +48,7 @@ def print_memory_stats(
     total_model_size_gb = main_model_size_gb + image_tokenizer_size_gb
 
     eval_logger.info(f"[Rank {rank}] Main model size: {main_model_size_gb:.2f} GB")
-    eval_logger.info(
-        f"[Rank {rank}] Image tokenizer size: {image_tokenizer_size_gb:.2f} GB"
-    )
+    eval_logger.info(f"[Rank {rank}] Image tokenizer size: {image_tokenizer_size_gb:.2f} GB")
     eval_logger.info(f"[Rank {rank}] Total model size: {total_model_size_gb:.2f} GB")
 
     # Get GPU memory usage if available
@@ -70,15 +62,7 @@ def print_memory_stats(
         allocated_pct = (allocated_gb / total_gb) * 100
         reserved_pct = (reserved_gb / total_gb) * 100
 
-        eval_logger.info(
-            f"[Rank {rank}] GPU Memory Allocated: "
-            f"{allocated_gb:.2f} GB / {total_gb:.2f} GB ({allocated_pct:.1f}%)"
-        )
-        eval_logger.info(
-            f"[Rank {rank}] GPU Memory Reserved: "
-            f"{reserved_gb:.2f} GB / {total_gb:.2f} GB ({reserved_pct:.1f}%)"
-        )
+        eval_logger.info(f"[Rank {rank}] GPU Memory Allocated: " f"{allocated_gb:.2f} GB / {total_gb:.2f} GB ({allocated_pct:.1f}%)")
+        eval_logger.info(f"[Rank {rank}] GPU Memory Reserved: " f"{reserved_gb:.2f} GB / {total_gb:.2f} GB ({reserved_pct:.1f}%)")
     else:
-        eval_logger.warning(
-            f"[Rank {rank}] CUDA not available, cannot report GPU memory usage"
-        )
+        eval_logger.warning(f"[Rank {rank}] CUDA not available, cannot report GPU memory usage")

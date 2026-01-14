@@ -14,9 +14,7 @@ from loguru import logger as eval_logger
 from transformers import AutoTokenizer
 
 
-def load_emu3_tokenizer(
-    pretrained_path: str, trust_remote_code: bool = True, **kwargs
-):
+def load_emu3_tokenizer(pretrained_path: str, trust_remote_code: bool = True, **kwargs):
     """
     Load Emu3.5 tokenizer matching the official implementation.
 
@@ -37,10 +35,7 @@ def load_emu3_tokenizer(
         ValueError: If tokenizer cannot be loaded and no fallback is available
     """
     try:
-        eval_logger.info(
-            f"Loading Emu3.5 Text tokenizer from {pretrained_path} with "
-            f"trust_remote_code={trust_remote_code}"
-        )
+        eval_logger.info(f"Loading Emu3.5 Text tokenizer from {pretrained_path} with " f"trust_remote_code={trust_remote_code}")
 
         # Check if special_tokens_file exists at pretrained_path
         special_tokens_path = None
@@ -53,22 +48,12 @@ def load_emu3_tokenizer(
 
         # Load tokenizer (with special_tokens_file if available)
         if special_tokens_path:
-            tokenizer = AutoTokenizer.from_pretrained(
-                pretrained_path,
-                special_tokens_file=special_tokens_path,
-                trust_remote_code=trust_remote_code,
-                **kwargs
-            )
+            tokenizer = AutoTokenizer.from_pretrained(pretrained_path, special_tokens_file=special_tokens_path, trust_remote_code=trust_remote_code, **kwargs)
         else:
             # HF path or missing file - load without special_tokens_file
             # The file should be downloaded automatically from HF
-            eval_logger.info(
-                "Loading from HuggingFace - special_tokens_file should be "
-                "downloaded automatically"
-            )
-            tokenizer = AutoTokenizer.from_pretrained(
-                pretrained_path, trust_remote_code=trust_remote_code, **kwargs
-            )
+            eval_logger.info("Loading from HuggingFace - special_tokens_file should be " "downloaded automatically")
+            tokenizer = AutoTokenizer.from_pretrained(pretrained_path, trust_remote_code=trust_remote_code, **kwargs)
 
         # Set special tokens as done in official implementation
         # See external/Emu3.5/src/utils/model_utils.py lines 49-63
@@ -92,9 +77,7 @@ def load_emu3_tokenizer(
         return tokenizer
 
     except Exception as e:
-        eval_logger.warning(
-            f"Failed to load tokenizer from {pretrained_path}: {e}"
-        )
+        eval_logger.warning(f"Failed to load tokenizer from {pretrained_path}: {e}")
 
         # Check if we're loading from HF and the issue is missing tokenization file
         if "tokenization_emu3" in str(e) or "Emu3Tokenizer" in str(e):
@@ -116,9 +99,7 @@ def load_emu3_tokenizer(
                 "with the missing file."
             ) from e
         else:
-            raise ValueError(
-                f"Failed to load Emu3.5 tokenizer: {e}"
-            ) from e
+            raise ValueError(f"Failed to load Emu3.5 tokenizer: {e}") from e
 
 
 __all__ = ["load_emu3_tokenizer"]

@@ -5,6 +5,7 @@ This module contains all shared logic for models using the EMU3.5 IBQ vision
 tokenizer, including model loading, tokenizer setup, image processing,
 and distributed training configuration.
 """
+
 import abc
 from typing import Optional, Union
 
@@ -93,9 +94,7 @@ class EMU3p5EncoderBaseModel(lmms):
         if vision_tokenizer_dtype is not None:
             vision_tokenizer_kwargs["torch_dtype"] = vision_tokenizer_dtype
 
-        vision_tokenizer = self._load_vision_tokenizer(
-            vq_hub, device=self.device_map, **vision_tokenizer_kwargs
-        ).eval()
+        vision_tokenizer = self._load_vision_tokenizer(vq_hub, device=self.device_map, **vision_tokenizer_kwargs).eval()
 
         # Set instance variables
         self.batch_size_per_gpu = int(batch_size)
@@ -116,12 +115,8 @@ class EMU3p5EncoderBaseModel(lmms):
                 self._model = accelerator.prepare(self._model)
                 vision_tokenizer = accelerator.prepare(vision_tokenizer)
             else:
-                self._model = accelerator.prepare_model(
-                    self._model, evaluation_mode=True
-                )
-                vision_tokenizer = accelerator.prepare_model(
-                    vision_tokenizer, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self._model, evaluation_mode=True)
+                vision_tokenizer = accelerator.prepare_model(vision_tokenizer, evaluation_mode=True)
             self._rank = accelerator.local_process_index
             self._world_size = accelerator.num_processes
         else:
@@ -136,15 +131,9 @@ class EMU3p5EncoderBaseModel(lmms):
             max_pixels=emu3_max_pixels,
         )
 
-        eval_logger.info(
-            f"EMU3.5 model loaded successfully on rank {self.rank}/"
-            f"{self.world_size}"
-        )
+        eval_logger.info(f"EMU3.5 model loaded successfully on rank {self.rank}/" f"{self.world_size}")
         if self.debug_samples and self.rank == 0:
-            eval_logger.info(
-                f"Debug mode enabled: will print first {self.num_debug_samples} "
-                "samples"
-            )
+            eval_logger.info(f"Debug mode enabled: will print first {self.num_debug_samples} " "samples")
 
         # Report model sizes and GPU memory usage on each rank
         device_idx = self._device.index if self._device.type == "cuda" else None

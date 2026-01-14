@@ -21,12 +21,12 @@ JUST WITH GENERATION RELATED CODE REMOVED TO KEEP DEPENDENCIES MINIMAL
 from math import ceil
 from typing import List, Optional, Sequence
 
-from PIL import Image
 import torch
+from PIL import Image
 from torch.nn import functional as F
 from transformers.feature_extraction_utils import BatchFeature
 from transformers.processing_utils import ProcessorMixin
-from transformers.tokenization_utils_base import TextInput, PreTokenizedInput
+from transformers.tokenization_utils_base import PreTokenizedInput, TextInput
 from transformers.utils import logging
 
 logger = logging.get_logger(__name__)
@@ -156,7 +156,7 @@ class Emu3Processor(ProcessorMixin):
             - **input_ids** -- List of token ids to be fed to a model.
             - **image_size** -- List of image size of input images or generated images.
         """
-        assert mode in ('G', 'U'), "mode must be 'G' or 'U'."
+        assert mode in ("G", "U"), "mode must be 'G' or 'U'."
         if isinstance(text, str):
             text = [text]
 
@@ -167,7 +167,7 @@ class Emu3Processor(ProcessorMixin):
             raise ValueError("`text` must be string or list of string")
 
         image_tokens = None
-        if mode == 'G':
+        if mode == "G":
             raise NotImplementedError("Mode G is not implemented in this adapted Processor version")
         else:
             if image is None:
@@ -186,18 +186,10 @@ class Emu3Processor(ProcessorMixin):
         prompt_list, size_list = [], []
         for idx, text_prompt in enumerate(text):
             prompt = self.bos_token
-            if mode == 'U':
+            if mode == "U":
                 h, w = image_tokens[idx].shape
                 imgstr = self.to_imgstr(image_tokens[idx])
-                image_prompt = (
-                    self.boi_token +
-                    self.prefix_template.format(H=h, W=w) +
-                    self.img_token +
-                    imgstr +
-                    self.eol_token +
-                    self.eof_token +
-                    self.eoi_token
-                )
+                image_prompt = self.boi_token + self.prefix_template.format(H=h, W=w) + self.img_token + imgstr + self.eol_token + self.eof_token + self.eoi_token
                 prompt += self.chat_template.format(image_prompt=image_prompt, text_prompt=text_prompt)
             else:
                 raise NotImplementedError("Invalid Mode: generation mode not supported by this adapted processor")
@@ -231,13 +223,7 @@ class Emu3Processor(ProcessorMixin):
     def to_imgstr(self, image_tokens):
         """Convert vision tokens ids to image string (excluding several special tokens bit including eol)"""
         image_tokens = image_tokens.cpu().numpy().tolist()
-        image_token_str = [
-            [
-                self.visual_template[0].format(token_id=token_id)
-                for token_id in token_row
-            ]
-            for token_row in image_tokens
-        ]
+        image_token_str = [[self.visual_template[0].format(token_id=token_id) for token_id in token_row] for token_row in image_tokens]
         image_row_str = ["".join(token_row) for token_row in image_token_str]
         imgstr = self.eol_token.join(image_row_str)
         return imgstr
@@ -278,10 +264,7 @@ class Emu3Processor(ProcessorMixin):
             # Count expected placeholders
             num_placeholders = text.count(image_placeholder)
             if num_placeholders != len(img_list):
-                raise ValueError(
-                    f"Mismatch: {num_placeholders} placeholders in text "
-                    f"but {len(img_list)} images provided"
-                )
+                raise ValueError(f"Mismatch: {num_placeholders} placeholders in text " f"but {len(img_list)} images provided")
 
             # Encode all images for this text
             if len(img_list) > 0:
@@ -292,15 +275,7 @@ class Emu3Processor(ProcessorMixin):
                     h, w = tokens.shape
                     imgstr = self.to_imgstr(tokens)
                     # Wrap with EMU3 special tokens (same as in __call__ mode='U')
-                    image_prompt = (
-                        self.boi_token
-                        + self.prefix_template.format(H=h, W=w)
-                        + self.img_token
-                        + imgstr
-                        + self.eol_token
-                        + self.eof_token
-                        + self.eoi_token
-                    )
+                    image_prompt = self.boi_token + self.prefix_template.format(H=h, W=w) + self.img_token + imgstr + self.eol_token + self.eof_token + self.eoi_token
                     # Replace first occurrence only to maintain order
                     text = text.replace(image_placeholder, image_prompt, 1)
 
@@ -315,7 +290,7 @@ class Emu3Processor(ProcessorMixin):
         is_all_same_size, prev_size = True, None
         for im in image:
             if prev_size is not None:
-                is_all_same_size &= (prev_size == im.size)
+                is_all_same_size &= prev_size == im.size
             prev_size = im.size
 
         if is_all_same_size:
@@ -329,16 +304,10 @@ class Emu3Processor(ProcessorMixin):
                 max([im_shape[0] for im_shape in image_shapes]),
                 max([im_shape[1] for im_shape in image_shapes]),
             )
-            image_inputs = [
-                F.pad(im_inp, (0, max_shape[1] - im_shape[1], 0, max_shape[0] - im_shape[0]))
-                for im_inp, im_shape in zip(image_inputs, image_shapes)
-            ]
+            image_inputs = [F.pad(im_inp, (0, max_shape[1] - im_shape[1], 0, max_shape[0] - im_shape[0])) for im_inp, im_shape in zip(image_inputs, image_shapes)]
             image_inputs = torch.cat(image_inputs, dim=0).to(self.vision_tokenizer.device, self.vision_tokenizer.dtype)
             image_tokens = self.vision_tokenizer.encode(image_inputs)
-            image_tokens = [
-                im_tok[:ceil(im_shape[0] / self.vis_tok_spatial_factor), :ceil(im_shape[1] / self.vis_tok_spatial_factor)]
-                for im_tok, im_shape in zip(image_tokens, image_shapes)
-            ]
+            image_tokens = [im_tok[: ceil(im_shape[0] / self.vis_tok_spatial_factor), : ceil(im_shape[1] / self.vis_tok_spatial_factor)] for im_tok, im_shape in zip(image_tokens, image_shapes)]
         else:
             image_tokens = []
             for im in image:

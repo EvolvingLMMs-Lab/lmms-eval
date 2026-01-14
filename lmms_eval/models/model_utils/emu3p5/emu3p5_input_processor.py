@@ -5,12 +5,12 @@ Standalone implementation based on Emu3Processor but specifically for IBQ.
 
 from typing import List, Optional, Sequence
 
-from PIL import Image
-import torch
 import numpy as np
+import torch
+from PIL import Image
 from torch.nn import functional as F
 from transformers.feature_extraction_utils import BatchFeature
-from transformers.tokenization_utils_base import TextInput, PreTokenizedInput
+from transformers.tokenization_utils_base import PreTokenizedInput, TextInput
 from transformers.utils import logging
 
 logger = logging.get_logger(__name__)
@@ -22,8 +22,8 @@ def smart_resize(image: Image.Image, area: int = 512 * 512, ds_factor: int = 16)
     new_height = int((area / aspect_ratio) ** 0.5)
     new_width = int(new_height * aspect_ratio)
     # Round to nearest multiple of divisible_by
-    new_height = ((new_height + ds_factor//2) // ds_factor) * ds_factor
-    new_width = ((new_width + ds_factor//2) // ds_factor) * ds_factor
+    new_height = ((new_height + ds_factor // 2) // ds_factor) * ds_factor
+    new_width = ((new_width + ds_factor // 2) // ds_factor) * ds_factor
     return image.resize((new_width, new_height), Image.BICUBIC)
 
 
@@ -92,11 +92,9 @@ class Emu3p5Processor:
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
 
-
         # Cache device and dtype from vision tokenizer (required for accelerator-wrapped models)
         self._vt_device = next(self.vision_tokenizer.parameters()).device
         self._vt_dtype = next(self.vision_tokenizer.parameters()).dtype
-
 
     @torch.no_grad()
     def __call__(
@@ -139,7 +137,7 @@ class Emu3p5Processor:
 
         if isinstance(image, Sequence) and not isinstance(image[0], Image.Image):
             raise ValueError("Invalid input image. Please provide PIL.Image.Image or List[PIL.Image.Image].")
-        
+
         # Returns list of tokenized images (1 image per prompt)
         image_strings = self.tokenize_image(image)
         if len(text) != len(image_strings):
@@ -152,8 +150,8 @@ class Emu3p5Processor:
             prompt_list.append(prompt)
 
         # Prompt already contains special tokens
-        text_inputs = self.txt_tokenizer(prompt_list, padding='longest', return_tensors="pt", add_special_tokens=False) 
-        return text_inputs # contains input ids and attention mask
+        text_inputs = self.txt_tokenizer(prompt_list, padding="longest", return_tensors="pt", add_special_tokens=False)
+        return text_inputs  # contains input ids and attention mask
 
     @torch.no_grad()
     def batch_decode(self, *args, **kwargs):
@@ -195,15 +193,12 @@ class Emu3p5Processor:
         """
         processed_texts = []
 
-        #iterate through samples one by one and encode images
+        # iterate through samples one by one and encode images
         for text, img_list in zip(texts, images):
             # Count expected placeholders
             num_placeholders = text.count(image_placeholder)
             if num_placeholders != len(img_list):
-                raise ValueError(
-                    f"Mismatch: {num_placeholders} placeholders in text "
-                    f"but {len(img_list)} images provided"
-                )
+                raise ValueError(f"Mismatch: {num_placeholders} placeholders in text " f"but {len(img_list)} images provided")
 
             # Encode all images for this text
             if len(img_list) > 0:
@@ -215,9 +210,7 @@ class Emu3p5Processor:
                     target_area = max(min(self.max_pixels, curr_area), self.min_pixels)
 
                     # Build image via IBQ (returns formatted string with special tokens)
-                    image_string = build_image(
-                        img, target_area, self.txt_tokenizer, self.vision_tokenizer
-                    )
+                    image_string = build_image(img, target_area, self.txt_tokenizer, self.vision_tokenizer)
 
                     # Replace first occurrence only to maintain order
                     text = text.replace(image_placeholder, image_string, 1)
@@ -225,12 +218,8 @@ class Emu3p5Processor:
             processed_texts.append(text)
 
         # Tokenize the final texts (add_special_tokens=False since template already applied)
-        text_inputs = self.txt_tokenizer(
-            processed_texts, add_special_tokens=False, **kwargs
-        )
-        return BatchFeature(
-            data={**text_inputs}, tensor_type=kwargs.get("return_tensors")
-        )
+        text_inputs = self.txt_tokenizer(processed_texts, add_special_tokens=False, **kwargs)
+        return BatchFeature(data={**text_inputs}, tensor_type=kwargs.get("return_tensors"))
 
     def tokenize_image(self, image: List[Image.Image]):
         """
@@ -240,7 +229,7 @@ class Emu3p5Processor:
 
         Return list of image strings.
         """
-        image_strings=[]
+        image_strings = []
         for img in image:
             w, h = img.size
             curr_area = w * h

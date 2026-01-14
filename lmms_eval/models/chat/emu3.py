@@ -12,10 +12,12 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.protocol import ChatMessages
+from lmms_eval.models.model_utils.emu3.emu3_image_processor import (
+    Emu3VisionVQImageProcessor,
+)
 from lmms_eval.models.model_utils.emu3.emu3_input_processor import Emu3Processor
-from lmms_eval.models.model_utils.emu3.emu3_image_processor import Emu3VisionVQImageProcessor
 from lmms_eval.models.model_utils.memory_utils import print_memory_stats
+from lmms_eval.protocol import ChatMessages
 
 
 @register_model("emu3")
@@ -74,17 +76,11 @@ class EMU3(lmms):
 
         # Load tokenizer
         eval_logger.info(f"Loading EMU3 Text Tokenizer from {pretrained}")
-        self._tokenizer = AutoTokenizer.from_pretrained(pretrained,
-                                                        trust_remote_code=trust_remote_code,
-                                                        padding_side="left")
+        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code, padding_side="left")
 
         # Load image processor (local modified) and image tokenizer
         eval_logger.info(f"Loading EMU3 Vision Img Preprocessor from {vq_hub}")
-        image_processor = Emu3VisionVQImageProcessor.from_pretrained(vq_hub,
-                                                                     trust_remote_code=trust_remote_code,
-                                                                     min_pixels=emu3_min_pixels,
-                                                                     max_pixels=emu3_max_pixels,
-                                                                     do_check_aspect_ratio=do_check_aspect_ratio)
+        image_processor = Emu3VisionVQImageProcessor.from_pretrained(vq_hub, trust_remote_code=trust_remote_code, min_pixels=emu3_min_pixels, max_pixels=emu3_max_pixels, do_check_aspect_ratio=do_check_aspect_ratio)
         eval_logger.info(f"Loading EMU3 Vision Tokenizer from {vq_hub}")
         image_tokenizer_kwargs = {
             "device_map": self.device_map,
@@ -92,9 +88,7 @@ class EMU3(lmms):
         }
         if image_tokenizer_dtype is not None:
             image_tokenizer_kwargs["torch_dtype"] = image_tokenizer_dtype
-        image_tokenizer = AutoModel.from_pretrained(
-            vq_hub, **image_tokenizer_kwargs
-        ).eval()
+        image_tokenizer = AutoModel.from_pretrained(vq_hub, **image_tokenizer_kwargs).eval()
 
         # Set instance variables
         self.batch_size_per_gpu = int(batch_size)
@@ -304,12 +298,8 @@ class EMU3(lmms):
 
             # Decode with special tokens for debugging
             if self.debug_samples:
-                prompts_with_tokens = self.processor.batch_decode(
-                    model_inputs["input_ids"], skip_special_tokens=False
-                )
-                answers_with_tokens = self.processor.batch_decode(
-                    outputs_trimmed, skip_special_tokens=False
-                )
+                prompts_with_tokens = self.processor.batch_decode(model_inputs["input_ids"], skip_special_tokens=False)
+                answers_with_tokens = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=False)
 
             for i, (ans, item, text) in enumerate(zip(answers, batch_data, texts)):
                 res.append(ans)
@@ -337,23 +327,10 @@ class EMU3(lmms):
 
         # Print statistics at the end (warning mode)
         if self.rank == 0:  # Only print from main process
-            eval_logger.warning(
-                f"EMU3 Statistics: Found {text_only_count}/{total_samples} "
-                f"text-only samples (no images). "
-                f"Skipped: {skipped_text_only} "
-                f"(skip_text_only={self.skip_text_only})"
-            )
-            eval_logger.warning(
-                f"EMU3 Statistics: Found {multi_image_count}/{total_samples} "
-                f"multi-image samples (>1 image). "
-                f"Skipped: {skipped_multi_image} "
-                f"(skip_multi_image={self.skip_multi_image})"
-            )
+            eval_logger.warning(f"EMU3 Statistics: Found {text_only_count}/{total_samples} " f"text-only samples (no images). " f"Skipped: {skipped_text_only} " f"(skip_text_only={self.skip_text_only})")
+            eval_logger.warning(f"EMU3 Statistics: Found {multi_image_count}/{total_samples} " f"multi-image samples (>1 image). " f"Skipped: {skipped_multi_image} " f"(skip_multi_image={self.skip_multi_image})")
             if text_only_count == 0 and multi_image_count == 0:
-                eval_logger.info(
-                    f"EMU3 Statistics: All {total_samples} samples had exactly 1 image. "
-                    "No text-only or multi-image samples encountered."
-                )
+                eval_logger.info(f"EMU3 Statistics: All {total_samples} samples had exactly 1 image. " "No text-only or multi-image samples encountered.")
 
         return res
 

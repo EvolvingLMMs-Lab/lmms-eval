@@ -15,15 +15,15 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.protocol import ChatMessages
 from lmms_eval.models.model_utils.emu3p5.download_utils import (
     ensure_local_weights,
 )
 from lmms_eval.models.model_utils.emu3p5.emu3_tokenizer_loader import (
-    load_emu3_tokenizer
+    load_emu3_tokenizer,
 )
 from lmms_eval.models.model_utils.emu3p5.emu3p5_input_processor import Emu3p5Processor
 from lmms_eval.models.model_utils.memory_utils import print_memory_stats
+from lmms_eval.protocol import ChatMessages
 
 # Check if Emu3.5 submodule is initialized
 _current_file = Path(__file__).resolve()
@@ -32,11 +32,7 @@ _emu35_src_path = _repo_root / "external" / "Emu3.5" / "src"
 _emu35_modeling_file = _emu35_src_path / "emu3p5" / "modeling_emu3.py"
 
 if not _emu35_modeling_file.exists():
-    eval_logger.error(
-        "Emu3.5 submodule is not initialized. Please run the following commands:\n"
-        f"  cd {_repo_root}\n"
-        "  git submodule update --init --recursive external/Emu3.5\n"
-    )
+    eval_logger.error("Emu3.5 submodule is not initialized. Please run the following commands:\n" f"  cd {_repo_root}\n" "  git submodule update --init --recursive external/Emu3.5\n")
     sys.exit(1)
 
 # Add external Emu3.5 to path
@@ -46,7 +42,6 @@ if str(_emu35_src_path) not in sys.path:
 # Import Emu3 classes from external directory
 from emu3p5 import Emu3Config, Emu3ForCausalLM
 from vision_tokenizer import build_vision_tokenizer
-
 
 
 @register_model("emu3p5")
@@ -91,9 +86,7 @@ class EMU3_5(lmms):
             self.device_map = device_map if device_map else device
 
         # Ensure main model weights are available locally
-        pretrained = ensure_local_weights(
-            pretrained, "BAAI/Emu3.5", accelerator=accelerator
-        )
+        pretrained = ensure_local_weights(pretrained, "BAAI/Emu3.5", accelerator=accelerator)
 
         # Load main model using Emu3ForCausalLM directly
         eval_logger.info(f"Loading EMU3.5 model from {pretrained}")
@@ -112,14 +105,10 @@ class EMU3_5(lmms):
         # Load tokenizer (with fallback handling for missing tokenization file)
         txt_tok_path = _emu35_src_path / "tokenizer_emu3_ibq"
         eval_logger.info(f"Loading EMU3.5 Text Tokenizer from {txt_tok_path}")
-        self._txt_tokenizer = load_emu3_tokenizer(
-            str(txt_tok_path), trust_remote_code=trust_remote_code, padding_side="left"
-        )
+        self._txt_tokenizer = load_emu3_tokenizer(str(txt_tok_path), trust_remote_code=trust_remote_code, padding_side="left")
 
         # Ensure vision tokenizer weights are available locally
-        vq_hub = ensure_local_weights(
-            vq_hub, "BAAI/Emu3.5-VisionTokenizer", accelerator=accelerator
-        )
+        vq_hub = ensure_local_weights(vq_hub, "BAAI/Emu3.5-VisionTokenizer", accelerator=accelerator)
 
         eval_logger.info(f"Loading EMU3.5 Vision Tokenizer from {vq_hub}")
         # Use build_vision_tokenizer for loading the IBQ vision tokenizer
@@ -335,10 +324,7 @@ class EMU3_5(lmms):
             )
 
             # Filter inputs to only include keys accepted by model.generate()
-            model_inputs = {
-                "input_ids": inputs["input_ids"],
-                "attention_mask": inputs["attention_mask"]
-            }
+            model_inputs = {"input_ids": inputs["input_ids"], "attention_mask": inputs["attention_mask"]}
 
             with torch.inference_mode():
                 outputs = self.model.generate(**model_inputs, generation_config=generation_config)
@@ -349,12 +335,8 @@ class EMU3_5(lmms):
 
             # Decode with special tokens for debugging
             if self.debug_samples:
-                prompts_with_tokens = self.processor.batch_decode(
-                    model_inputs["input_ids"], skip_special_tokens=False
-                )
-                answers_with_tokens = self.processor.batch_decode(
-                    outputs_trimmed, skip_special_tokens=False
-                )
+                prompts_with_tokens = self.processor.batch_decode(model_inputs["input_ids"], skip_special_tokens=False)
+                answers_with_tokens = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=False)
 
             for i, (ans, item, text) in enumerate(zip(answers, sample_data, texts)):
                 res.append(ans)
@@ -382,23 +364,10 @@ class EMU3_5(lmms):
 
         # Print statistics at the end (warning mode)
         if self.rank == 0:  # Only print from main process
-            eval_logger.warning(
-                f"EMU3.5 Statistics: Found {text_only_count}/{total_samples} "
-                f"text-only samples (no images). "
-                f"Skipped: {skipped_text_only} "
-                f"(skip_text_only={self.skip_text_only})"
-            )
-            eval_logger.warning(
-                f"EMU3.5 Statistics: Found {multi_image_count}/{total_samples} "
-                f"multi-image samples (>1 image). "
-                f"Skipped: {skipped_multi_image} "
-                f"(skip_multi_image={self.skip_multi_image})"
-            )
+            eval_logger.warning(f"EMU3.5 Statistics: Found {text_only_count}/{total_samples} " f"text-only samples (no images). " f"Skipped: {skipped_text_only} " f"(skip_text_only={self.skip_text_only})")
+            eval_logger.warning(f"EMU3.5 Statistics: Found {multi_image_count}/{total_samples} " f"multi-image samples (>1 image). " f"Skipped: {skipped_multi_image} " f"(skip_multi_image={self.skip_multi_image})")
             if text_only_count == 0 and multi_image_count == 0:
-                eval_logger.info(
-                    f"EMU3.5 Statistics: All {total_samples} samples had exactly 1 image. "
-                    "No text-only or multi-image samples encountered."
-                )
+                eval_logger.info(f"EMU3.5 Statistics: All {total_samples} samples had exactly 1 image. " "No text-only or multi-image samples encountered.")
 
         return res
 
