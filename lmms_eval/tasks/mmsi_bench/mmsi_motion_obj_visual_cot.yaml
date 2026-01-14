@@ -1,0 +1,33 @@
+dataset_path: parquet
+
+task: "mmsi_motion_obj_visual_cot"
+dataset_kwargs:
+  data_files: /home/yifeishen/data/zimo/datasets/mmsi_bench_5tasks/motion_obj.parquet
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.msr_doc_to_visual
+doc_to_text: !function utils.msr_doc_to_text_with_gen_prompt
+doc_to_target: "answer"
+process_results: !function utils.msr_process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    # Stage 1: Image generation prompt
+    generation_prompt: "Create a visualization showing object motion tracking. Draw motion trails, arrows indicating direction of movement, and highlight moving objects with bounding boxes. Annotate relative speeds and trajectories of different objects."
+    # Stage 2: Question answering prompt
+    pre_prompt: "You are given consecutive images and a visualization of object motion. Use both to track objects, identify which are moving, their direction, and relative speeds.\n\n"
+    post_prompt: "\n\nBased on your analysis of object motion, answer with the option's letter from the given choices directly. Enclose the option's letter within ``."
+
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  do_sample: False
+
+metric_list:
+  - metric: Motion (Obj.)
+    aggregation: !function utils.msr_aggregate_results
+    higher_is_better: true
+
+metadata:
+  - version: 0.0
+  - description: "MMSI-Bench Motion (Object) task with visual CoT two-stage inference"

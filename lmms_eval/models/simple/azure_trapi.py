@@ -154,6 +154,10 @@ class AzureTRAPI(lmms):
 
     def encode_image(self, image: Image.Image) -> str:
         """Encode PIL Image to base64 string"""
+        # Convert to RGB if needed (JPEG only supports RGB and L modes)
+        if image.mode not in ("RGB", "L"):
+            image = image.convert("RGB")
+
         output_buffer = BytesIO()
         image.save(output_buffer, format="JPEG")
         byte_data = output_buffer.getvalue()
