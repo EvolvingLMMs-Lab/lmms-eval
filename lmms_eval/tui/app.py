@@ -93,6 +93,82 @@ def _highlight_bash_output(text: str) -> str:
     return "\n".join(highlighted)
 
 
+def _highlight_bash_syntax(line: str) -> str:
+    """Apply bash-style syntax highlighting to a single line."""
+    import re
+
+    if not line.strip():
+        return line
+
+    # Colors
+    KEYWORD = "#c586c0"  # purple - export, source, if, then, etc.
+    COMMAND = "#dcdcaa"  # yellow - python, pip, etc.
+    FLAG = "#9cdcfe"  # light blue - --flag, -f
+    STRING = "#ce9178"  # orange - "string", 'string'
+    VARIABLE = "#4ec9b0"  # teal - $VAR, ${VAR}
+    OPERATOR = "#d4d4d4"  # white - =, |, etc.
+    COMMENT = "#6a9955"  # green - # comment
+
+    # Comment
+    if line.strip().startswith("#"):
+        return f"[{COMMENT}]{line}[/]"
+
+    result = line
+
+    # Strings (must be done early to protect content)
+    # Double-quoted strings
+    result = re.sub(
+        r'"([^"]*)"',
+        lambda m: f'[{OPERATOR}]"[/][{STRING}]{m.group(1)}[/][{OPERATOR}]"[/]',
+        result,
+    )
+    # Single-quoted strings
+    result = re.sub(
+        r"'([^']*)'",
+        lambda m: f"[{OPERATOR}]'[/][{STRING}]{m.group(1)}[/][{OPERATOR}]'[/]",
+        result,
+    )
+
+    # Variables ${VAR} and $VAR
+    result = re.sub(
+        r"\$\{([^}]+)\}", lambda m: f"[{VARIABLE}]${{{m.group(1)}}}[/]", result
+    )
+    result = re.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)", f"[{VARIABLE}]$\\1[/]", result)
+
+    # Keywords at start of line
+    result = re.sub(
+        r"^(\s*)(export|source|eval|exec|set|unset|alias|cd|pushd|popd)(\s)",
+        f"\\1[{KEYWORD}]\\2[/]\\3",
+        result,
+    )
+
+    # Commands (python, pip, uv, etc.) - after keywords
+    result = re.sub(
+        r"^(\s*)(python|python3|pip|uv|conda|bash|sh|node|npm|cargo)(\s)",
+        f"\\1[{COMMAND}]\\2[/]\\3",
+        result,
+    )
+
+    # Long flags --flag
+    result = re.sub(r"(--[a-zA-Z_][a-zA-Z0-9_-]*)", f"[{FLAG}]\\1[/]", result)
+
+    # Short flags -f (but not negative numbers)
+    result = re.sub(r"(\s)(-[a-zA-Z])(\s|$)", f"\\1[{FLAG}]\\2[/]\\3", result)
+
+    return result
+
+
+def _add_line_numbers(text: str) -> str:
+    """Add line numbers to text, bash style."""
+    lines = text.split("\n")
+    width = len(str(len(lines)))
+    numbered = []
+    for i, line in enumerate(lines, 1):
+        num = f"[#6e7681]{i:>{width}}[/] [#3d444d]│[/] "
+        numbered.append(num + line)
+    return "\n".join(numbered)
+
+
 def _get_hostname() -> str:
     import socket
 
@@ -240,7 +316,7 @@ def LogoWidget(**kwargs):
 
 class WelcomeScreen(Screen):
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
+        Binding("ctrl+q", "quit", "Quit", key_display="ctrl+q"),
     ]
 
     AUTO_START_SECONDS = 5
@@ -316,8 +392,8 @@ class WelcomeScreen(Screen):
 
 class ConfigScreen(Screen):
     BINDINGS = [
-        Binding("escape", "back", "Back"),
-        Binding("ctrl+r", "reload", "Reload Tasks/Models"),
+        Binding("escape", "back", "Back", show=False),
+        Binding("ctrl+r", "reload", "Reload Tasks/Models", key_display="ctrl+r"),
     ]
 
     _preview_timer: Timer | None = None
@@ -383,19 +459,16 @@ class ConfigScreen(Screen):
                 with VerticalScroll(id="command-preview-scroll"):
                     yield Static("", id="run-command")
         with Container(id="config-container"):
-            with Horizontal(id="top-bar"):
-                with Horizontal(id="custom-tabs"):
-                    for i, label in enumerate(TAB_LABELS):
-                        classes = "custom-tab"
-                        if i == 0:
-                            classes += " custom-tab-active"
-                        yield Button(label, id=f"tab-btn-{TAB_IDS[i]}", classes=classes)
-                with Horizontal(id="run-buttons"):
-                    yield Button("START", variant="success", id="start-btn")
-                    yield Button("STOP", variant="error", id="stop-btn", disabled=True)
-                    yield Button("SAVE CMD", variant="primary", id="copy-btn")
             with Horizontal(id="main-split"):
                 with Vertical(id="left-panel"):
+                    with Horizontal(id="left-header"):
+                        for i, label in enumerate(TAB_LABELS):
+                            classes = "custom-tab"
+                            if i == 0:
+                                classes += " custom-tab-active"
+                            yield Button(
+                                label, id=f"tab-btn-{TAB_IDS[i]}", classes=classes
+                            )
                     with ContentSwitcher(initial="model-tab", id="tab-content"):
                         with Container(id="model-tab"):
                             with VerticalScroll(id="model-tab-content"):
@@ -454,6 +527,12 @@ class ConfigScreen(Screen):
                                 classes="tab-placeholder",
                             )
                 with Vertical(id="right-panel"):
+                    with Horizontal(id="right-header"):
+                        yield Button("START", variant="success", id="start-btn")
+                        yield Button(
+                            "STOP", variant="error", id="stop-btn", disabled=True
+                        )
+                        yield Button("SAVE CMD", variant="primary", id="copy-btn")
                     yield Static("OUTPUT LOG", classes="section-title-first")
                     yield Static("Ready to evaluate", id="run-status")
                     with VerticalScroll(id="output-scroll"):
@@ -738,23 +817,24 @@ class ConfigScreen(Screen):
     def on_stop_button(self) -> None:
         self._stop_loading_animation()
         self._stop_requested = True
+        process = self._process
         pid = None
-        if self._process:
-            pid = self._process.pid
+        if process:
+            pid = process.pid
             try:
-                if self._process.stdout:
-                    self._process.stdout.close()
+                if process.stdout:
+                    process.stdout.close()
             except Exception:
                 pass
             try:
-                os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
             except (ProcessLookupError, OSError):
                 try:
-                    self._process.terminate()
+                    process.terminate()
                 except Exception:
                     pass
             try:
-                self._process.kill()
+                process.kill()
             except Exception:
                 pass
 
@@ -821,36 +901,44 @@ class ConfigScreen(Screen):
 
     def _build_command_highlighted_full(self) -> str:
         config = self.app.config
-        lines = []
+        lines: list[str] = []
         if config.api_env and config.api_env.strip():
             for env_line in config.api_env.strip().split("\n"):
                 if env_line.strip():
-                    lines.append(f"[dim]{env_line}[/dim]")
+                    lines.append(_highlight_bash_syntax(env_line))
             lines.append("")
         if config.activate_cmd and config.activate_cmd.strip():
-            lines.append(f"[dim]{config.activate_cmd}[/dim]")
+            lines.append(_highlight_bash_syntax(config.activate_cmd))
             lines.append("")
-        lines.append(self._build_command_highlighted())
-        return "\n".join(lines)
+        lines.extend(self._build_command_lines())
+        return _add_line_numbers("\n".join(lines))
 
-    def _build_command_highlighted(self) -> str:
+    def _build_command_lines(self) -> list[str]:
         config = self.app.config
-        parts = ["[#87afd7]python -m[/] [bold white]lmms_eval[/]"]
-        parts.append(f"[#5f87af]--model[/] [white]{config.model}[/]")
+        lines: list[str] = []
+        cont = " \\"
+        lines.append(_highlight_bash_syntax("python -m lmms_eval") + cont)
+        parts = []
+        parts.append(f"--model {config.model}")
         if config.model_args:
-            parts.append(f"[#5f87af]--model_args[/] [white]{config.model_args}[/]")
+            parts.append(f"--model_args {config.model_args}")
         if config.tasks:
-            parts.append(f"[#5f87af]--tasks[/] [white]{','.join(config.tasks)}[/]")
-        parts.append(f"[#5f87af]--batch_size[/] [white]{config.batch_size}[/]")
+            parts.append(f"--tasks {','.join(config.tasks)}")
+        parts.append(f"--batch_size {config.batch_size}")
         if config.limit:
-            parts.append(f"[#5f87af]--limit[/] [white]{config.limit}[/]")
-        parts.append(f"[#5f87af]--output_path[/] [white]{config.output_path}[/]")
+            parts.append(f"--limit {config.limit}")
+        parts.append(f"--output_path {config.output_path}")
         if config.log_samples:
-            parts.append("[#5f87af]--log_samples[/]")
-        parts.append(f"[#5f87af]--verbosity[/] [white]{config.verbosity}[/]")
+            parts.append("--log_samples")
+        parts.append(f"--verbosity {config.verbosity}")
         if config.device:
-            parts.append(f"[#5f87af]--device[/] [white]{config.device}[/]")
-        return " \\\n    ".join(parts)
+            parts.append(f"--device {config.device}")
+        for i, part in enumerate(parts):
+            highlighted = _highlight_bash_syntax(f"    {part}")
+            if i < len(parts) - 1:
+                highlighted += cont
+            lines.append(highlighted)
+        return lines
 
     def _build_command(self) -> str:
         config = self.app.config
@@ -1214,7 +1302,7 @@ class SpeedMetricsChart(Container):
 class RunScreen(Screen):
     BINDINGS = [
         Binding("escape", "back", "Back"),
-        Binding("ctrl+c", "cancel", "Cancel"),
+        Binding("ctrl+c", "cancel", "Cancel", key_display="ctrl+c"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -1407,11 +1495,13 @@ class RunScreen(Screen):
 
 class LmmsEvalTUI(App):
     CSS_PATH = "app.tcss"
+    ENABLE_COMMAND_PALETTE = False
 
     TITLE = "LMMs-Eval TUI"
     BINDINGS = [
-        Binding("q", "quit", "Quit"),
-        Binding("?", "help", "Help"),
+        Binding("ctrl+q", "quit", "Quit", key_display="ctrl+q"),
+        Binding("?", "help", "Help", show=False),
+        Binding("alt+r", "refresh_css", "Reload CSS", show=False),
     ]
 
     def __init__(self):
@@ -1423,6 +1513,10 @@ class LmmsEvalTUI(App):
 
     def action_help(self) -> None:
         self.notify("Press Tab to navigate, Enter to select, Escape to go back")
+
+    def action_refresh_css(self) -> None:
+        self.refresh_css()
+        self.notify("CSS reloaded")
 
 
 def main():

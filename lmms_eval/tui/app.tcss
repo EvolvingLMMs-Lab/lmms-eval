@@ -2,7 +2,7 @@
 /* Hot-reload enabled: run with `textual run --dev` for live CSS updates */
 
 $primary: #4ec9b0;
-$primary-light: #6ed7c5;
+$primary-light: #8fe8da;
 $primary-dark: #3aa08a;
 $accent: #e5a84b;
 $accent-dim: #c9923f;
@@ -91,7 +91,7 @@ Header {
 #header-split {
     height: 14;
     dock: top;
-    background: $bg-medium;
+    background: $bg-dark;
     border-bottom: solid $bg-light;
 }
 
@@ -102,7 +102,7 @@ Header {
 }
 
 #header-title {
-    background: $bg-light;
+    background: $bg-dark;
     color: $text-bright;
     text-style: bold;
     padding: 0 1;
@@ -114,8 +114,8 @@ Header {
 }
 
 #logo-container {
-    width: 18;
-    height: 100%;
+    width: 20;
+    height: 10;
     margin-right: 1;
 }
 
@@ -132,10 +132,11 @@ Header {
     width: 50%;
     height: 100%;
     padding: 0;
+    background: $bg-dark;
 }
 
 #preview-title {
-    background: $bg-light;
+    background: $bg-dark;
     color: $text-bright;
     text-style: bold;
     padding: 0 1;
@@ -144,7 +145,8 @@ Header {
 #command-preview-scroll {
     height: 1fr;
     background: $bg-dark;
-    padding: 1;
+    padding: 1 1 0 1;
+    border: none;
 }
 
 #command-preview-scroll #run-command {
@@ -171,6 +173,7 @@ Header {
     width: 50%;
     height: 100%;
     padding: 0 1;
+    background: $bg-dark;
 }
 
 #right-panel .section-title-first {
@@ -186,52 +189,45 @@ Header {
 #right-panel #output-scroll {
     height: 1fr;
     border: none;
-    border-top: solid $bg-light;
     background: $bg-dark;
 }
 
-/* Top Bar - Tabs and Buttons */
-#top-bar {
-    height: 3;
+/* Panel Headers - Tabs and Buttons aligned */
+#left-header {
+    height: 4;
     background: $bg-medium;
     border-bottom: solid $bg-light;
+    padding: 0 1;
     dock: top;
+    align: left middle;
 }
 
-#top-bar #custom-tabs {
-    width: 50%;
-    height: 100%;
-    padding: 0 1;
-}
-
-#top-bar #run-buttons {
-    width: 50%;
-    height: 100%;
-    padding: 0 1;
-    align: right middle;
-}
-
-#top-bar #run-buttons Button {
-    height: 2;
-    margin: 0 0 0 1;
-}
-
-/* Custom Tab Navigation */
-#custom-tabs {
-    height: 3;
+#right-header {
+    height: 4;
     background: $bg-medium;
+    border-bottom: solid $bg-light;
     padding: 0 1;
+    dock: top;
+    align: left middle;
+}
+
+#right-header Button {
+    height: 3;
+    min-width: 10;
+    margin: 0 0 0 1;
+    content-align: center middle;
+    padding: 1 2;
 }
 
 .custom-tab {
-    background: transparent;
+    background: $bg-medium;
     color: $text-dim;
-    border: none;
+    border-top: solid transparent;
     border-bottom: solid transparent;
     margin-right: 1;
     padding: 0 2;
     min-width: 12;
-    height: 2;
+    height: 3;
     text-style: none;
     content-align: center middle;
 }
@@ -239,23 +235,30 @@ Header {
 .custom-tab:hover {
     color: $text-bright;
     background: $bg-light;
+    border-bottom: solid $text-bright;
+    border-top: solid transparent;
 }
 
 .custom-tab-active {
     background: $bg-light;
     color: $primary-light;
     text-style: bold;
-    border-bottom: solid $primary-light;
+    border-bottom: solid $text-bright;
+    border-top: solid transparent;
 }
 
 .custom-tab:focus {
     color: $primary-light;
     background: $bg-light;
+    border-bottom: solid $text-bright;
+    border-top: solid transparent;
 }
 
 .custom-tab-active:focus {
     color: $primary-light;
     background: $bg-light;
+    border-bottom: solid $text-bright;
+    border-top: solid transparent;
 }
 
 #tab-content {
@@ -528,7 +531,6 @@ Button:hover {
 
 Button:focus {
     border: none;
-    border-bottom: solid $accent;
     background: $bg-light;
     color: $accent;
 }
@@ -548,7 +550,6 @@ Button.-primary:hover {
 
 Button.-primary:focus {
     border: none;
-    border-bottom: solid $accent;
     background: $accent-dim;
     color: $text-bright;
 }
@@ -567,7 +568,6 @@ Button.-success:hover {
 
 Button.-success:focus {
     border: none;
-    border-bottom: solid $primary-light;
     background: $primary;
     color: $text-bright;
 }
@@ -587,7 +587,6 @@ Button.-error:hover {
 
 Button.-error:focus {
     border: none;
-    border-bottom: solid $error;
     background: #954040;
     color: $text-bright;
 }
