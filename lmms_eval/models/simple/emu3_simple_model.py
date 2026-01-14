@@ -176,6 +176,15 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                 outputs_trimmed, skip_special_tokens=True
             )
 
+            # Decode with special tokens for debugging
+            if self.debug_samples:
+                prompts_with_tokens = self.processor.batch_decode(
+                    model_inputs["input_ids"], skip_special_tokens=False
+                )
+                answers_with_tokens = self.processor.batch_decode(
+                    outputs_trimmed, skip_special_tokens=False
+                )
+
             # Apply stopping sequences
             until = gen_kwargs.get("until", [])
             for i, output in enumerate(text_outputs):
@@ -184,7 +193,7 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                         output = output.split(term)[0]
                 text_outputs[i] = output
 
-            for ans, context in zip(text_outputs, batch_contexts):
+            for i, (ans, context) in enumerate(zip(text_outputs, batch_contexts)):
                 res.append(ans)
                 self.cache_hook.add_partial(
                     "generate_until", (context, gen_kwargs), ans
@@ -204,8 +213,10 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                         f"{self.num_debug_samples}"
                     )
                     eval_logger.info("=" * 80)
-                    eval_logger.info(f"PROMPT: {prompts[i]}")
-                    eval_logger.info(f"ANSWER: {ans}")
+                    eval_logger.info(f"PROMPT (clean): {prompts[i]}")
+                    eval_logger.info(f"PROMPT (with tokens): {prompts_with_tokens[i]}")
+                    eval_logger.info(f"ANSWER (clean): {ans}")
+                    eval_logger.info(f"ANSWER (with tokens): {answers_with_tokens[i]}")
                     eval_logger.info("=" * 80)
 
         # Reorder results

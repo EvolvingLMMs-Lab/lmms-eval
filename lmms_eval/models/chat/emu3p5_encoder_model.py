@@ -8,6 +8,7 @@ Inheriting models overwrite:
 - _chat_transform:         Optional: Transform HF messages before chat template
 - image_placeholder:       Property defining image placeholder token
 """
+
 from typing import List, Tuple
 
 import torch
@@ -84,9 +85,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             if len(requests) % self.batch_size == 0
             else len(requests) // self.batch_size + 1
         )
-        pbar = tqdm(
-            total=num_iters, disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         # Iterate through batches
         for chunk in chunks:
@@ -229,7 +228,16 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                 outputs_trimmed, skip_special_tokens=True
             )
 
-            for ans, item, text in zip(answers, batch_data, texts):
+            # Decode with special tokens for debugging
+            if self.debug_samples:
+                prompts_with_tokens = self.processor.batch_decode(
+                    model_inputs["input_ids"], skip_special_tokens=False
+                )
+                answers_with_tokens = self.processor.batch_decode(
+                    outputs_trimmed, skip_special_tokens=False
+                )
+
+            for i, (ans, item, text) in enumerate(zip(answers, batch_data, texts)):
                 res.append(ans)
                 self.cache_hook.add_partial(
                     "generate_until", (item["context"], gen_kwargs), ans
@@ -249,8 +257,10 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                         f"{self.num_debug_samples}"
                     )
                     eval_logger.info("=" * 80)
-                    eval_logger.info(f"PROMPT: {text}")
-                    eval_logger.info(f"ANSWER: {ans}")
+                    eval_logger.info(f"PROMPT (clean): {text}")
+                    eval_logger.info(f"PROMPT (with tokens): {prompts_with_tokens[i]}")
+                    eval_logger.info(f"ANSWER (clean): {ans}")
+                    eval_logger.info(f"ANSWER (with tokens): {answers_with_tokens[i]}")
                     eval_logger.info("=" * 80)
 
                 eval_logger.debug(f"Question: {text}")
