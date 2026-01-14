@@ -5,10 +5,12 @@ LMMs-Eval TUI Application
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import sys
 import time
 from collections import deque
+from datetime import datetime
 from dataclasses import dataclass, field
 from importlib.metadata import version as pkg_version
 
@@ -21,6 +23,7 @@ from textual.screen import Screen
 from textual.timer import Timer
 from textual.widgets import (
     Button,
+    ContentSwitcher,
     Footer,
     Header,
     Input,
@@ -28,12 +31,14 @@ from textual.widgets import (
     Rule,
     Select,
     Static,
-    Switch,
-    TabbedContent,
-    TabPane,
     TextArea,
 )
 from textual.widgets.option_list import Option
+
+from lmms_eval.tui.discovery import get_discovery_cache
+
+TAB_IDS = ["model-tab", "tasks-tab", "settings-tab"]
+TAB_LABELS = ["MODEL", "TASKS", "SETTINGS"]
 
 try:
     from textual_plotext import PlotextPlot
@@ -62,6 +67,30 @@ def _strip_ansi(text: str) -> str:
 
         _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
     return _ANSI_ESCAPE_RE.sub("", text)
+
+
+def _highlight_bash_output(text: str) -> str:
+    import re
+
+    lines = text.split("\n")
+    highlighted = []
+    for line in lines:
+        if re.search(r"\b(error|Error|ERROR|failed|Failed|FAILED|exception)\b", line):
+            highlighted.append(f"[#f87171]{line}[/]")
+        elif re.search(r"\b(warning|Warning|WARNING|warn|Warn|WARN)\b", line):
+            highlighted.append(f"[#e5a84b]{line}[/]")
+        elif re.search(
+            r"\b(success|Success|SUCCESS|passed|Passed|PASSED|done|Done|DONE|completed|Completed)\b",
+            line,
+        ):
+            highlighted.append(f"[#4ec9b0]{line}[/]")
+        elif re.search(r"\b(INFO|DEBUG|info|debug)\b", line):
+            highlighted.append(f"[#7a9eb5]{line}[/]")
+        elif re.search(r"\d+%|\[\d+/\d+\]|━|█|▓|░", line):
+            highlighted.append(f"[#6ed7c5]{line}[/]")
+        else:
+            highlighted.append(f"[#d0d0d0]{line}[/]")
+    return "\n".join(highlighted)
 
 
 def _get_hostname() -> str:
@@ -103,20 +132,26 @@ def _get_git_commit() -> str:
     return ""
 
 
+_CACHED_DEVICE: str | None = None
+
+
 def _detect_device() -> str:
+    global _CACHED_DEVICE
+    if _CACHED_DEVICE is not None:
+        return _CACHED_DEVICE
     try:
         import torch
 
         if torch.cuda.is_available():
             count = torch.cuda.device_count()
-            if count == 1:
-                return "cuda:0"
-            return f"cuda:0 - cuda:{count - 1}"
+            _CACHED_DEVICE = "cuda:0" if count == 1 else f"cuda:0 - cuda:{count - 1}"
         elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            return "mps"
-        return "cpu"
+            _CACHED_DEVICE = "mps"
+        else:
+            _CACHED_DEVICE = "cpu"
     except ImportError:
-        return "cpu"
+        _CACHED_DEVICE = "cpu"
+    return _CACHED_DEVICE
 
 
 def get_version() -> str:
@@ -149,53 +184,36 @@ class EvalConfig:
     activate_cmd: str = "source .venv/bin/activate"
 
 
-POPULAR_MODELS = [
-    ("openai_compatible", "OpenAI Compatible API"),
-    ("qwen2_5_vl", "Qwen2.5-VL"),
-    ("qwen2_5_vl_chat", "Qwen2.5-VL Chat"),
-    ("llava_onevision", "LLaVA-OneVision"),
-    ("llava", "LLaVA"),
-    ("internvl2", "InternVL2"),
-    ("claude", "Claude API"),
-    ("gemini_api", "Gemini API"),
-]
+def _get_models() -> list[tuple[str, str]]:
+    return get_discovery_cache().get_models()
 
-POPULAR_TASKS = [
-    ("mme", "MME - Multimodal Evaluation"),
-    ("mmmu_val", "MMMU Validation"),
-    ("scienceqa_img", "ScienceQA (Image)"),
-    ("mathvista_testmini", "MathVista TestMini"),
-    ("ai2d", "AI2D"),
-    ("chartqa", "ChartQA"),
-    ("docvqa_val", "DocVQA Validation"),
-    ("textvqa_val", "TextVQA Validation"),
-    ("ocrbench", "OCRBench"),
-    ("realworldqa", "RealWorldQA"),
-]
+
+def _get_tasks() -> list[tuple[str, str]]:
+    return get_discovery_cache().get_tasks()
 
 
 LOGO = r"""
-[#87afd7]██╗      ███╗   ███╗███╗   ███╗ ███████╗[/#87afd7]
-[#87afd7]██║      ████╗ ████║████╗ ████║██╔════╝ [/#87afd7]
-[#87afd7]██║      ██╔████╔██║██╔████╔██║███████╗ [/#87afd7]
-[#87afd7]██║      ██║╚██╔╝██║██║╚██╔╝██║╚════██║ [/#87afd7]
-[#87afd7]███████╗ ██║ ╚═╝ ██║██║ ╚═╝ ██║███████║ [/#87afd7]
-[#5f87af]╚══════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝ [/#5f87af]
+[#4ec9b0]██╗      ███╗   ███╗███╗   ███╗ ███████╗[/#4ec9b0]
+[#4ec9b0]██║      ████╗ ████║████╗ ████║██╔════╝ [/#4ec9b0]
+[#4ec9b0]██║      ██╔████╔██║██╔████╔██║███████╗ [/#4ec9b0]
+[#4ec9b0]██║      ██║╚██╔╝██║██║╚██╔╝██║╚════██║ [/#4ec9b0]
+[#4ec9b0]███████╗ ██║ ╚═╝ ██║██║ ╚═╝ ██║███████╗ [/#4ec9b0]
+[#3aa08a]╚══════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝ [/#3aa08a]
 
-[#87afd7]███████╗ ██╗   ██╗  █████╗  ██╗         [/#87afd7]
-[#87afd7]██╔════╝ ██║   ██║ ██╔══██╗ ██║         [/#87afd7]
-[#87afd7]█████╗   ██║   ██║ ███████║ ██║         [/#87afd7]
-[#87afd7]██╔══╝   ╚██╗ ██╔╝ ██╔══██║ ██║         [/#87afd7]
-[#87afd7]███████╗  ╚████╔╝  ██║  ██║ ███████╗    [/#87afd7]
-[#5f87af]╚══════╝   ╚═══╝   ╚═╝  ╚═╝ ╚══════╝    [/#5f87af]
+[#4ec9b0]███████╗ ██╗   ██╗  █████╗  ██╗         [/#4ec9b0]
+[#4ec9b0]██╔════╝ ██║   ██║ ██╔══██╗ ██║         [/#4ec9b0]
+[#4ec9b0]█████╗   ██║   ██║ ███████║ ██║         [/#4ec9b0]
+[#4ec9b0]██╔══╝   ╚██╗ ██╔╝ ██╔══██║ ██║         [/#4ec9b0]
+[#4ec9b0]███████╗  ╚████╔╝  ██║  ██║ ███████╗    [/#4ec9b0]
+[#3aa08a]╚══════╝   ╚═══╝   ╚═╝  ╚═╝ ╚══════╝    [/#3aa08a]
 """
 
-LOGO_SMALL = r"""[#87afd7]██╗     ███╗   ███╗███╗   ███╗███████╗[/#87afd7]
-[#87afd7]██║     ████╗ ████║████╗ ████║██╔════╝[/#87afd7]
-[#87afd7]██║     ██╔████╔██║██╔████╔██║███████╗[/#87afd7]
-[#87afd7]██║     ██║╚██╔╝██║██║╚██╔╝██║╚════██║[/#87afd7]
-[#87afd7]███████╗██║ ╚═╝ ██║██║ ╚═╝ ██║███████║[/#87afd7]
-[#5f87af]╚══════╝╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝[/#5f87af]"""
+LOGO_SMALL = r"""[#4ec9b0]██╗     ███╗   ███╗███╗   ███╗███████╗[/#4ec9b0]
+[#4ec9b0]██║     ████╗ ████║████╗ ████║██╔════╝[/#4ec9b0]
+[#4ec9b0]██║     ██╔████╔██║██╔████╔██║███████╗[/#4ec9b0]
+[#4ec9b0]██║     ██║╚██╔╝██║██║╚██╔╝██║╚════██║[/#4ec9b0]
+[#4ec9b0]███████╗██║ ╚═╝ ██║██║ ╚═╝ ██║███████║[/#4ec9b0]
+[#3aa08a]╚══════╝╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝[/#3aa08a]"""
 
 
 def _terminal_supports_images() -> bool:
@@ -215,12 +233,7 @@ def _terminal_supports_images() -> bool:
 
 
 def LogoWidget(**kwargs):
-    """Return TextualImage if terminal supports it, otherwise empty widget."""
-    if (
-        HAS_TEXTUAL_IMAGE
-        and os.path.exists(LOGO_IMAGE_PATH)
-        and _terminal_supports_images()
-    ):
+    if HAS_TEXTUAL_IMAGE and os.path.exists(LOGO_IMAGE_PATH):
         return TextualImage(LOGO_IMAGE_PATH, **kwargs)
     return Static("", **kwargs)
 
@@ -249,7 +262,7 @@ class WelcomeScreen(Screen):
                 id="version-info",
             ),
             Static(
-                "Starting in 5s... [dim](click anywhere to skip)[/dim]",
+                "Starting in 5s... [dim](press any key to skip)[/dim]",
                 id="continue-msg",
             ),
             Static(
@@ -273,7 +286,7 @@ class WelcomeScreen(Screen):
             try:
                 msg = self.query_one("#continue-msg", Static)
                 msg.update(
-                    f"Starting in {self._countdown}s... [dim](click anywhere to skip)[/dim]"
+                    f"Starting in {self._countdown}s... [dim](press any key to skip)[/dim]"
                 )
             except Exception:
                 pass
@@ -297,16 +310,49 @@ class WelcomeScreen(Screen):
     def on_key(self, event) -> None:
         if event.key == "q":
             self.action_quit()
+        else:
+            self.action_start()
 
 
 class ConfigScreen(Screen):
     BINDINGS = [
         Binding("escape", "back", "Back"),
-        Binding("ctrl+r", "run", "Run Evaluation"),
+        Binding("ctrl+r", "reload", "Reload Tasks/Models"),
     ]
 
     _preview_timer: Timer | None = None
-    PREVIEW_DEBOUNCE_MS = 300  # ms delay before updating preview
+    PREVIEW_DEBOUNCE_MS = 50
+    _loaded_tabs: set[str]
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._loaded_tabs = {"model-tab"}
+
+    def action_reload(self) -> None:
+        cache = get_discovery_cache()
+        task_count, model_count = cache.reload()
+        self._refresh_model_select()
+        self._refresh_task_list()
+        self.notify(f"Reloaded {task_count} tasks, {model_count} models")
+
+    def _refresh_model_select(self) -> None:
+        try:
+            model_select = self.query_one("#model-select", Select)
+            current_value = model_select.value
+            model_select.set_options([(name, key) for key, name in _get_models()])
+            if current_value:
+                model_select.value = current_value
+        except Exception:
+            pass
+
+    def _refresh_task_list(self) -> None:
+        try:
+            task_list = self.query_one("#task-list", OptionList)
+            task_list.clear_options()
+            for key, name in _get_tasks():
+                task_list.add_option(Option(f"{name} ({key})", id=key))
+        except Exception:
+            pass
 
     def _schedule_preview_update(self) -> None:
         if self._preview_timer is not None:
@@ -318,15 +364,12 @@ class ConfigScreen(Screen):
     def compose(self) -> ComposeResult:
         version = get_version()
         yield Header()
-        with Horizontal(id="welcome-header"):
+        with Horizontal(id="header-split"):
             with Vertical(id="header-left"):
-                yield Static("LMMs-Eval Terminal UI", id="header-left-title")
+                yield Static("LMMs-Eval Terminal UI", id="header-title")
                 with Horizontal(id="header-left-content"):
                     with Container(id="logo-container"):
-                        yield Static(
-                            "[bold #5f87af]LMMS[/]\n[bold #87afd7]EVAL[/]",
-                            id="header-logo",
-                        )
+                        yield LogoWidget(id="header-image")
                     with Vertical(id="header-info"):
                         hostname = _get_hostname()
                         cwd = os.path.basename(os.getcwd())
@@ -337,145 +380,84 @@ class ConfigScreen(Screen):
                         yield Static(f"[dim]ver[/]    {version}")
             with Vertical(id="header-right"):
                 yield Static("COMMAND PREVIEW", id="preview-title")
-                yield Static("", id="command-preview")
+                with VerticalScroll(id="command-preview-scroll"):
+                    yield Static("", id="run-command")
         with Container(id="config-container"):
-            with TabbedContent():
-                with TabPane("MODEL", id="model-tab"):
-                    with VerticalScroll():
-                        yield Static("MODEL SELECTION", classes="section-title")
-                        yield Select(
-                            [(name, key) for key, name in POPULAR_MODELS],
-                            value="openai_compatible",
-                            id="model-select",
-                        )
-                        yield Rule()
-                        yield Static("MODEL ARGUMENTS", classes="section-title")
-                        yield Static(
-                            "[dim]e.g., model_version=gpt-4o,pretrained=path/to/model[/]"
-                        )
-                        yield Input(
-                            value="model_version=allenai/molmo-2-8b:free",
-                            id="model-args-input",
-                        )
-                        yield Rule()
-                        yield Static(
-                            "ACTIVATE ENVIRONMENT",
-                            classes="section-title",
-                        )
-                        yield Static(
-                            "[dim]Command to activate env (e.g., source .venv/bin/activate, conda activate myenv)[/]"
-                        )
-                        yield Input(
-                            value="source .venv/bin/activate",
-                            id="activate-cmd-input",
-                        )
-                        yield Rule()
-                        yield Static(
-                            "API CONFIGURATION",
-                            classes="section-title",
-                        )
-                        yield Static(
-                            "[dim]Environment variables for API access (edit below or set in shell)[/]"
-                        )
-                        yield TextArea(
-                            'export OPENAI_API_KEY="${OPENROUTER_API_KEY}"\nexport OPENAI_API_BASE="https://openrouter.ai/api/v1"',
-                            id="api-env-input",
-                            classes="api-env-textarea",
-                        )
-                with TabPane("TASKS", id="tasks-tab"):
-                    with VerticalScroll():
-                        yield Static("TASK SELECTION", classes="section-title")
-                        yield Input(
-                            placeholder="Search benchmarks...", id="task-search"
-                        )
-                        yield Rule()
-                        yield Static("AVAILABLE BENCHMARKS", classes="section-title")
-                        yield OptionList(
-                            *[
-                                Option(f"{name} ({key})", id=key)
-                                for key, name in POPULAR_TASKS
-                            ],
-                            id="task-list",
-                        )
-                        yield Rule()
-                        yield Static("SELECTED TASKS", classes="section-title")
-                        yield Horizontal(id="selected-tasks-container")
-                with TabPane("SETTINGS", id="settings-tab"):
-                    with VerticalScroll():
-                        yield Static("SYSTEM CONFIGURATION", classes="section-title")
-                        yield Horizontal(
-                            Static("batch_size:", classes="setting-label"),
-                            Input(
-                                value="1",
-                                id="batch-size-input",
-                                classes="setting-input",
-                            ),
-                            classes="setting-row",
-                        )
-                        yield Horizontal(
-                            Static("limit:", classes="setting-label"),
-                            Input(
-                                value="10",
-                                placeholder="ALL (NO LIMIT)",
-                                id="limit-input",
-                                classes="setting-input",
-                            ),
-                            classes="setting-row",
-                        )
-                        yield Horizontal(
-                            Static("output_path:", classes="setting-label"),
-                            Input(
-                                value="./logs/",
-                                id="output-path-input",
-                                classes="setting-input",
-                            ),
-                            classes="setting-row",
-                        )
-                        yield Horizontal(
-                            Static("device:", classes="setting-label"),
-                            Input(
-                                placeholder=f"auto ({_detect_device()})",
-                                id="device-input",
-                                classes="setting-input",
-                            ),
-                            classes="setting-row",
-                        )
-                        yield Rule()
-                        yield Static("LOGGING OPTIONS", classes="section-title")
-                        yield Horizontal(
-                            Static("LOG SAMPLES:", classes="setting-label"),
-                            Switch(value=True, id="log-samples-switch"),
-                            classes="setting-row",
-                        )
-                        yield Horizontal(
-                            Static("VERBOSITY:", classes="setting-label"),
-                            Select(
-                                [
-                                    ("DEBUG", "DEBUG"),
-                                    ("INFO", "INFO"),
-                                    ("WARNING", "WARNING"),
-                                    ("ERROR", "ERROR"),
-                                ],
-                                value="INFO",
-                                id="verbosity-select",
-                            ),
-                            classes="setting-row",
-                        )
-                with TabPane("RUN", id="run-tab"):
-                    with VerticalScroll(id="run-tab-scroll"):
-                        yield Static("FINAL CHECK", classes="section-title")
-                        yield Static("", id="run-command", classes="command-preview")
-                        with Horizontal(id="run-buttons"):
-                            yield Button("START", variant="success", id="start-btn")
-                            yield Button(
-                                "STOP", variant="error", id="stop-btn", disabled=True
+            with Horizontal(id="top-bar"):
+                with Horizontal(id="custom-tabs"):
+                    for i, label in enumerate(TAB_LABELS):
+                        classes = "custom-tab"
+                        if i == 0:
+                            classes += " custom-tab-active"
+                        yield Button(label, id=f"tab-btn-{TAB_IDS[i]}", classes=classes)
+                with Horizontal(id="run-buttons"):
+                    yield Button("START", variant="success", id="start-btn")
+                    yield Button("STOP", variant="error", id="stop-btn", disabled=True)
+                    yield Button("SAVE CMD", variant="primary", id="copy-btn")
+            with Horizontal(id="main-split"):
+                with Vertical(id="left-panel"):
+                    with ContentSwitcher(initial="model-tab", id="tab-content"):
+                        with Container(id="model-tab"):
+                            with VerticalScroll(id="model-tab-content"):
+                                yield Static(
+                                    "MODEL SELECTION", classes="section-title-first"
+                                )
+                                yield Select(
+                                    [(name, key) for key, name in _get_models()],
+                                    value="openai_compatible",
+                                    id="model-select",
+                                )
+                                yield Static("MODEL ARGUMENTS", classes="section-title")
+                                yield Static(
+                                    "[dim]> e.g., model_version=gpt-4o,pretrained=path/to/model[/]",
+                                    classes="hint-text",
+                                )
+                                yield Input(
+                                    value="model_version=allenai/molmo-2-8b:free",
+                                    id="model-args-input",
+                                )
+                                yield Static(
+                                    "ACTIVATE ENVIRONMENT",
+                                    classes="section-title",
+                                )
+                                yield Static(
+                                    "[dim]> Command to activate env (e.g., source .venv/bin/activate, conda activate myenv)[/]",
+                                    classes="hint-text",
+                                )
+                                yield Input(
+                                    value="source .venv/bin/activate",
+                                    id="activate-cmd-input",
+                                )
+                                yield Static(
+                                    "API CONFIGURATION",
+                                    classes="section-title",
+                                )
+                                yield Static(
+                                    "[dim]> Environment variables for API access (edit below or set in shell)[/]",
+                                    classes="hint-text",
+                                )
+                                yield TextArea(
+                                    'export OPENAI_API_KEY="${OPENROUTER_API_KEY}"\nexport OPENAI_API_BASE="https://openrouter.ai/api/v1"',
+                                    id="api-env-input",
+                                    classes="api-env-textarea",
+                                )
+                        with Container(id="tasks-tab"):
+                            yield Static(
+                                "[dim]Loading...[/dim]",
+                                id="tasks-tab-placeholder",
+                                classes="tab-placeholder",
                             )
-                            yield Button("SAVE CMD", variant="primary", id="copy-btn")
-                        yield Static("EVALUATION STATUS", classes="section-title")
-                        yield Static("Ready to evaluate", id="run-status")
-                        yield Static("OUTPUT LOG", classes="section-title")
-                        with VerticalScroll(id="output-scroll"):
-                            yield Static("", id="run-output")
+                        with Container(id="settings-tab"):
+                            yield Static(
+                                "[dim]Loading...[/dim]",
+                                id="settings-tab-placeholder",
+                                classes="tab-placeholder",
+                            )
+                with Vertical(id="right-panel"):
+                    yield Static("OUTPUT LOG", classes="section-title-first")
+                    yield Static("Ready to evaluate", id="run-status")
+                    with VerticalScroll(id="output-scroll"):
+                        yield Static("", id="run-output")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -483,14 +465,26 @@ class ConfigScreen(Screen):
 
     def _deferred_init(self) -> None:
         self._update_preview()
-        self._update_selected_tasks()
         self._load_git_info()
+        self._load_device_info()
 
     @work(thread=True)
     def _load_git_info(self) -> None:
         git_branch = _get_git_branch()
         git_commit = _get_git_commit()
         self.app.call_from_thread(self._apply_git_info, git_branch, git_commit)
+
+    @work(thread=True)
+    def _load_device_info(self) -> None:
+        device = _detect_device()
+        self.app.call_from_thread(self._apply_device_info, device)
+
+    def _apply_device_info(self, device: str) -> None:
+        try:
+            device_input = self.query_one("#device-input", Input)
+            device_input.placeholder = f"auto ({device})"
+        except Exception:
+            pass
 
     def _apply_git_info(self, branch: str, commit: str) -> None:
         try:
@@ -506,6 +500,130 @@ class ConfigScreen(Screen):
                 commit_widget.display = False
         except Exception:
             pass
+
+    @on(Button.Pressed, ".custom-tab")
+    def on_custom_tab_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        if not btn_id.startswith("tab-btn-"):
+            return
+        tab_id = btn_id.replace("tab-btn-", "")
+        switcher = self.query_one("#tab-content", ContentSwitcher)
+        switcher.current = tab_id
+        for btn in self.query(".custom-tab"):
+            btn.remove_class("custom-tab-active")
+        event.button.add_class("custom-tab-active")
+        if tab_id not in self._loaded_tabs:
+            self._loaded_tabs.add(tab_id)
+            self._populate_tab(tab_id)
+
+    def _populate_tab(self, tab_id: str) -> None:
+        tab_container = self.query_one(f"#{tab_id}", Container)
+
+        if tab_id == "tasks-tab":
+            self._populate_tasks_tab(tab_container)
+        elif tab_id == "settings-tab":
+            self._populate_settings_tab(tab_container)
+
+    def _populate_tasks_tab(self, tab_container: Container) -> None:
+        try:
+            placeholder = tab_container.query_one("#tasks-tab-placeholder")
+            placeholder.remove()
+        except Exception:
+            pass
+
+        scroll = VerticalScroll()
+        tab_container.mount(scroll)
+        scroll.mount(Static("TASK SELECTION", classes="section-title-first"))
+        scroll.mount(Input(placeholder="Search benchmarks...", id="task-search"))
+        scroll.mount(Static("AVAILABLE BENCHMARKS", classes="section-title"))
+        scroll.mount(
+            OptionList(
+                *[Option(f"{name} ({key})", id=key) for key, name in _get_tasks()],
+                id="task-list",
+            )
+        )
+        scroll.mount(Static("SELECTED TASKS", classes="section-title"))
+        scroll.mount(Horizontal(id="selected-tasks-container"))
+        self._update_selected_tasks()
+
+    def _populate_settings_tab(self, tab_container: Container) -> None:
+        try:
+            placeholder = tab_container.query_one("#settings-tab-placeholder")
+            placeholder.remove()
+        except Exception:
+            pass
+
+        scroll = VerticalScroll()
+        tab_container.mount(scroll)
+        scroll.mount(Static("SYSTEM CONFIGURATION", classes="section-title-first"))
+        scroll.mount(
+            Horizontal(
+                Static("batch_size:", classes="setting-label"),
+                Input(value="1", id="batch-size-input", classes="setting-input"),
+                classes="setting-row",
+            )
+        )
+        scroll.mount(
+            Horizontal(
+                Static("limit:", classes="setting-label"),
+                Input(
+                    value="10",
+                    placeholder="ALL (NO LIMIT)",
+                    id="limit-input",
+                    classes="setting-input",
+                ),
+                classes="setting-row",
+            )
+        )
+        scroll.mount(
+            Horizontal(
+                Static("output_path:", classes="setting-label"),
+                Input(value="./logs/", id="output-path-input", classes="setting-input"),
+                classes="setting-row",
+            )
+        )
+        device = _CACHED_DEVICE or "auto"
+        scroll.mount(
+            Horizontal(
+                Static("device:", classes="setting-label"),
+                Input(
+                    placeholder=f"auto ({device})",
+                    id="device-input",
+                    classes="setting-input",
+                ),
+                classes="setting-row setting-row-last",
+            )
+        )
+        scroll.mount(Static("LOGGING OPTIONS", classes="section-title"))
+        scroll.mount(
+            Horizontal(
+                Static("LOG SAMPLES:", classes="setting-label"),
+                Select(
+                    [("YES", True), ("NO", False)],
+                    value=True,
+                    id="log-samples-select",
+                    classes="setting-input",
+                ),
+                classes="setting-row",
+            )
+        )
+        scroll.mount(
+            Horizontal(
+                Static("VERBOSITY:", classes="setting-label"),
+                Select(
+                    [
+                        ("DEBUG", "DEBUG"),
+                        ("INFO", "INFO"),
+                        ("WARNING", "WARNING"),
+                        ("ERROR", "ERROR"),
+                    ],
+                    value="INFO",
+                    id="verbosity-select",
+                    classes="setting-input",
+                ),
+                classes="setting-row setting-row-last",
+            )
+        )
 
     @on(Select.Changed, "#model-select")
     def on_model_changed(self, event: Select.Changed) -> None:
@@ -559,9 +677,9 @@ class ConfigScreen(Screen):
         self.app.config.output_path = event.value or "./logs/"
         self._schedule_preview_update()
 
-    @on(Switch.Changed, "#log-samples-switch")
-    def on_log_samples_changed(self, event: Switch.Changed) -> None:
-        self.app.config.log_samples = event.value
+    @on(Select.Changed, "#log-samples-select")
+    def on_log_samples_changed(self, event: Select.Changed) -> None:
+        self.app.config.log_samples = bool(event.value)
         self._update_preview()
 
     @on(Select.Changed, "#verbosity-select")
@@ -575,6 +693,7 @@ class ConfigScreen(Screen):
         self._schedule_preview_update()
 
     _process: subprocess.Popen | None = None
+    _stop_requested: bool = False
     _loading_timer: Timer | None = None
     _loading_frame: int = 0
     _has_output: bool = False
@@ -618,12 +737,49 @@ class ConfigScreen(Screen):
     @on(Button.Pressed, "#stop-btn")
     def on_stop_button(self) -> None:
         self._stop_loading_animation()
+        self._stop_requested = True
+        pid = None
         if self._process:
-            self._process.terminate()
-            self._process = None
+            pid = self._process.pid
+            try:
+                if self._process.stdout:
+                    self._process.stdout.close()
+            except Exception:
+                pass
+            try:
+                os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
+            except (ProcessLookupError, OSError):
+                try:
+                    self._process.terminate()
+                except Exception:
+                    pass
+            try:
+                self._process.kill()
+            except Exception:
+                pass
+
+        self._append_termination_message(pid)
         self.query_one("#start-btn", Button).disabled = False
         self.query_one("#stop-btn", Button).disabled = True
-        self.query_one("#run-status", Static).update("[red]Stopped[/red]")
+        self.query_one("#run-status", Static).update("[bold red]⏹ Stopped[/]")
+
+    def _append_termination_message(self, pid: int | None) -> None:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        try:
+            output_widget = self.query_one("#run-output", Static)
+            current_output = output_widget.renderable
+            current_text = str(current_output) if current_output else ""
+
+            separator = "─" * 50
+            kill_msg = f"\n\n[bold red]{separator}[/]\n"
+            kill_msg += f"[bold red]⏹ TERMINATED[/] [dim]at {timestamp}[/]\n"
+            if pid:
+                kill_msg += f"[dim]Process PID: {pid} killed with SIGTERM[/]\n"
+            kill_msg += f"[bold red]{separator}[/]"
+
+            output_widget.update(current_text + kill_msg)
+        except Exception:
+            pass
 
     @on(Button.Pressed, "#copy-btn")
     def on_copy_button(self) -> None:
@@ -635,14 +791,17 @@ class ConfigScreen(Screen):
             self.notify("Failed to copy to clipboard", severity="error")
 
     def _update_selected_tasks(self) -> None:
-        container = self.query_one("#selected-tasks-container", Horizontal)
+        try:
+            container = self.query_one("#selected-tasks-container", Horizontal)
+        except Exception:
+            return
         with self.app.batch_update():
             for child in list(container.children):
                 child.remove()
             if self.app.config.tasks:
                 for task_id in self.app.config.tasks:
                     task_name = next(
-                        (name for key, name in POPULAR_TASKS if key == task_id),
+                        (name for key, name in _get_tasks() if key == task_id),
                         task_id,
                     )
                     card = Button(f"✕ {task_id}", classes="task-card")
@@ -653,13 +812,7 @@ class ConfigScreen(Screen):
                 container.mount(Static("No tasks selected", classes="no-tasks-msg"))
 
     def _update_preview(self) -> None:
-        cmd_short = self._build_command_highlighted()
         cmd_full = self._build_command_highlighted_full()
-        try:
-            preview = self.query_one("#command-preview", Static)
-            preview.update(cmd_short)
-        except Exception:
-            pass
         try:
             run_cmd = self.query_one("#run-command", Static)
             run_cmd.update(cmd_full)
@@ -777,6 +930,7 @@ class ConfigScreen(Screen):
 
     @work(thread=True, exclusive=True)
     def _run_evaluation_worker(self) -> None:
+        self._stop_requested = False
         cmd = self._build_shell_command()
         env = self._parse_env_vars()
 
@@ -789,19 +943,26 @@ class ConfigScreen(Screen):
                 bufsize=1,
                 env=env,
                 shell=True,
+                start_new_session=True,
             )
             output_lines: list[str] = []
             if self._process.stdout:
-                for line in iter(self._process.stdout.readline, ""):
-                    if self._process is None:
-                        break
-                    output_lines.append(_strip_ansi(line.rstrip()))
-                    if len(output_lines) > 100:
-                        output_lines = output_lines[-100:]
-                    output_text = rich_escape("\n".join(output_lines))
-                    self.app.call_from_thread(self._update_output, output_text)
+                try:
+                    for line in iter(self._process.stdout.readline, ""):
+                        if self._stop_requested:
+                            break
+                        output_lines.append(_strip_ansi(line.rstrip()))
+                        if len(output_lines) > 100:
+                            output_lines = output_lines[-100:]
+                        escaped_text = rich_escape("\n".join(output_lines))
+                        output_text = _highlight_bash_output(escaped_text)
+                        self.app.call_from_thread(self._update_output, output_text)
+                except (ValueError, OSError):
+                    pass
+            if self._stop_requested:
+                return
             if self._process:
-                self._process.wait()
+                self._process.wait(timeout=5)
                 returncode = self._process.returncode
                 if returncode == 0:
                     self.app.call_from_thread(
@@ -812,10 +973,14 @@ class ConfigScreen(Screen):
                         self._update_status,
                         f"[bold red]Failed with code {returncode}[/]",
                     )
+        except subprocess.TimeoutExpired:
+            if self._process:
+                self._process.kill()
         except Exception as e:
-            self.app.call_from_thread(
-                self._update_status, f"[bold red]Error: {rich_escape(str(e))}[/]"
-            )
+            if not self._stop_requested:
+                self.app.call_from_thread(
+                    self._update_status, f"[bold red]Error: {rich_escape(str(e))}[/]"
+                )
         finally:
             self._process = None
             self.app.call_from_thread(self._reset_buttons)
@@ -1060,6 +1225,7 @@ class RunScreen(Screen):
                 yield Static("LMMs-Eval Terminal UI", id="header-left-title")
                 with Horizontal(id="header-left-content"):
                     with Container(id="logo-container"):
+                        yield LogoWidget(id="header-image")
                         yield Static(
                             "[bold #5f87af]LMMS[/]\n[bold #87afd7]EVAL[/]",
                             id="header-logo",
@@ -1206,7 +1372,8 @@ class RunScreen(Screen):
                 output_lines.append(_strip_ansi(line.rstrip()))
                 if len(output_lines) > 100:
                     output_lines = output_lines[-100:]
-                output_widget.update(rich_escape("\n".join(output_lines)))
+                escaped = rich_escape("\n".join(output_lines))
+                output_widget.update(_highlight_bash_output(escaped))
 
                 metrics = self._parse_metrics_from_line(line)
                 if metrics:
@@ -1239,460 +1406,7 @@ class RunScreen(Screen):
 
 
 class LmmsEvalTUI(App):
-    CSS = """
-    /* Classic TUI Theme - Soft Blue & White */
-    $primary: #5f87af;
-    $primary-light: #87afd7;
-    $primary-dark: #3a5f7a;
-    $accent: #afd7ff;
-    $accent-dim: #5f87af;
-    $bg-dark: #1c1c1c;
-    $bg-medium: #262626;
-    $bg-light: #303030;
-    $text-bright: #ffffff;
-    $text-normal: #d0d0d0;
-    $text-dim: #808080;
-    $success: #87d787;
-    $warning: #d7af5f;
-    $error: #d75f5f;
-    $surface: #262626;
-    $background: #1c1c1c;
-
-    /* Global Screen Styles */
-    Screen {
-        background: $bg-dark;
-        color: $text-normal;
-    }
-
-    Tooltip {
-        background: $primary;
-        color: $text-bright;
-        border: solid $accent;
-    }
-
-    /* Welcome Screen */
-    WelcomeScreen {
-        align: center middle;
-        background: $bg-dark;
-    }
-    
-    WelcomeScreen #welcome-container {
-        width: 70;
-        height: auto;
-        border: round $primary;
-        background: $bg-medium;
-        padding: 2 4;
-        align: center middle;
-    }
-
-    WelcomeScreen #welcome-container:hover {
-        border: round $primary-light;
-        background: $bg-light;
-    }
-    
-    WelcomeScreen #welcome-title {
-        color: $primary-light;
-        text-style: bold;
-        content-align: center middle;
-        margin-bottom: 1;
-    }
-    
-    WelcomeScreen #logo {
-        margin: 1 0;
-        content-align: center middle;
-        color: $primary;
-    }
-    
-    WelcomeScreen #version-info {
-        color: $text-dim;
-        content-align: center middle;
-        margin-bottom: 2;
-    }
-    
-    WelcomeScreen #continue-msg {
-        color: $text-dim;
-        content-align: center middle;
-        margin-top: 1;
-    }
-
-    WelcomeScreen .copyright {
-        color: $text-dim;
-        content-align: center middle;
-        margin-top: 1;
-    }
-    
-    Header {
-        background: $primary-dark;
-        color: $text-bright;
-        dock: top;
-    }
-
-    #welcome-header {
-        height: 12;
-        dock: top;
-        background: $bg-medium;
-        border-bottom: solid $primary;
-    }
-    
-    #header-left {
-        width: 40%;
-        height: 100%;
-        padding: 0;
-        background: $bg-medium;
-        border-right: solid $primary-dark;
-    }
-    
-    #header-left-title {
-        background: $primary;
-        color: $text-bright;
-        text-style: bold;
-        padding: 0 1;
-    }
-    
-    #header-left-content {
-        height: 1fr;
-        padding: 1;
-    }
-    
-    #header-right {
-        width: 60%;
-        height: 100%;
-        padding: 0;
-        background: $bg-dark;
-    }
-    
-    #logo-container {
-        width: 18;
-        height: 100%;
-        margin-right: 1;
-    }
-    
-    #header-logo {
-        width: 18;
-        height: 100%;
-    }
-
-    #header-info {
-        padding-top: 1;
-        color: $text-normal;
-    }
-    
-    #preview-title {
-        background: $primary;
-        color: $text-bright;
-        text-style: bold;
-        padding: 0 1;
-    }
-    
-    #command-preview, #header-command-preview {
-        color: $accent;
-        background: $bg-dark;
-        padding: 1;
-        height: 1fr;
-    }
-    
-    /* Config Screen Main Area */
-    #config-container {
-        height: 1fr;
-        padding: 0 1;
-    }
-    
-    /* Tabs */
-    TabbedContent {
-        background: $bg-dark;
-    }
-    
-    TabbedContent > .tabs {
-        background: $bg-medium;
-        border-bottom: solid $primary;
-        padding: 0 1;
-    }
-    
-    Tab {
-        background: $bg-light;
-        color: $text-dim;
-        border: none;
-        margin-right: 1;
-        padding: 0 2;
-    }
-    
-    Tab:hover {
-        color: $text-bright;
-        background: $primary-dark;
-    }
-    
-    Tab.-active {
-        background: $primary;
-        color: $text-bright;
-        text-style: bold;
-    }
-    
-    TabPane {
-        padding: 1 2;
-        background: $bg-medium;
-        border: solid $primary-dark;
-        border-top: none;
-    }
-    
-    .section-title {
-        color: $primary-light;
-        text-style: bold;
-        margin: 0;
-    }
-    
-    Rule {
-        color: $primary-dark;
-        margin: 0;
-    }
-    
-    Select {
-        margin: 0 0 1 0;
-    }
-    
-    Input {
-        margin: 0 0 1 0;
-    }
-    
-    /* Inputs & Selects */
-    Input {
-        background: $bg-dark;
-        border: solid $primary-dark;
-        color: $text-normal;
-    }
-    
-    Input:focus {
-        border: solid $primary;
-    }
-    
-    .api-env-textarea {
-        height: 5;
-        background: $bg-dark;
-        border: solid $primary-dark;
-        color: $text-dim;
-        margin: 0 0 1 0;
-    }
-    
-    .api-env-textarea:focus {
-        border: solid $primary;
-        color: $text-normal;
-    }
-    
-    Select {
-        background: $bg-dark;
-        border: solid $primary-dark;
-        color: $text-normal;
-    }
-    
-    SelectCurrent {
-        background: $bg-dark;
-        color: $text-normal;
-        border: none;
-    }
-
-    OptionList {
-        background: $bg-dark;
-        border: solid $primary-dark;
-    }
-    
-    /* Task Cards */
-    #selected-tasks-container {
-        height: auto;
-        min-height: 3;
-        padding: 1 0;
-        width: 100%;
-    }
-    
-    .task-card {
-        width: auto;
-        min-width: 10;
-        height: 3;
-        margin: 0 1 0 0;
-        border: solid $primary-dark;
-        background: $bg-dark;
-        color: $primary-light;
-        padding: 0 1;
-    }
-    
-    .task-card:hover {
-        border: solid $error;
-        color: $error;
-        background: $bg-medium;
-    }
-    
-    .no-tasks-msg {
-        color: $text-dim;
-        padding: 1 0;
-    }
-    
-    Switch {
-        background: $bg-dark;
-        border: solid $primary-dark;
-    }
-    
-    Switch > .switch--slider {
-        color: $primary;
-    }
-    
-    Switch.-on > .switch--slider {
-        color: $primary-light;
-    }
-    
-    /* Settings Tab Styling */
-    .setting-row {
-        height: 3;
-        margin: 0;
-    }
-    
-    .setting-label {
-        width: 20;
-        padding: 1 1 0 0;
-        color: $text-normal;
-    }
-    
-    .setting-input {
-        width: 1fr;
-    }
-
-    /* Run Tab Styling */
-    #run-tab {
-        padding: 1 2;
-    }
-    
-    #run-tab-scroll {
-        height: 1fr;
-    }
-    
-    #run-command {
-        background: $bg-dark;
-        border: solid $primary-dark;
-        padding: 1;
-        margin-bottom: 1;
-    }
-    
-    #run-status {
-        background: $bg-dark;
-        border: solid $primary-dark;
-        padding: 0 1;
-        color: $text-normal;
-        margin-bottom: 1;
-    }
-    
-    #run-output {
-        color: $accent;
-        background: $bg-dark;
-        padding: 1;
-    }
-    
-    #output-scroll {
-        border: solid $primary-dark;
-        background: $bg-dark;
-        height: 1fr;
-        min-height: 10;
-    }
-
-    /* Buttons - Modern Professional Style */
-    Button {
-        width: 18;
-        height: 3;
-        border: tall $bg-medium;
-        background: $bg-dark;
-        color: $text-normal;
-        text-style: bold;
-        content-align: center middle;
-    }
-    
-    Button:hover {
-        border: tall $primary-light;
-        color: $primary-light;
-    }
-
-    Button:focus {
-        border: tall $accent;
-        color: $accent;
-    }
-    
-    /* Primary (Save) - Muted Blue Outline */
-    Button.-primary {
-        border: tall $primary-dark;
-        color: $primary-light;
-    }
-    
-    Button.-primary:hover {
-        background: $primary-dark;
-        color: $text-bright;
-        border: tall $primary-dark;
-    }
-    
-    /* Success (Start) - Muted Green Outline */
-    Button.-success {
-        border: tall #4e704e;
-        color: #87d787;
-    }
-    
-    Button.-success:hover {
-        background: #4e704e;
-        color: $text-bright;
-        border: tall #4e704e;
-    }
-    
-    /* Error (Stop) - Muted Red Outline */
-    Button.-error {
-        border: tall #8a4b4b;
-        color: #d75f5f;
-    }
-    
-    Button.-error:hover {
-        background: #8a4b4b;
-        color: $text-bright;
-        border: tall #8a4b4b;
-    }
-    
-    #run-buttons {
-        height: auto;
-        padding: 0;
-        margin: 0 0 1 0;
-        align: left middle;
-    }
-    
-    #run-buttons Button {
-        margin: 0 1 0 0;
-    }
-
-    /* Charts (RunScreen) */
-    #metrics-container {
-        height: auto;
-        min-height: 10;
-        background: $bg-dark;
-        border: solid $primary-dark;
-        padding: 1;
-    }
-    
-    #speed-chart, #latency-chart {
-        height: 10;
-        border: solid $primary-dark;
-        background: $bg-dark;
-        margin-bottom: 1;
-    }
-    
-    #speed-metrics, #latency-metrics {
-        height: auto;
-        border: solid $primary-dark;
-        background: $bg-dark;
-        padding: 1;
-        margin-bottom: 1;
-    }
-    
-    /* Footer */
-    Footer {
-        background: $bg-medium;
-        color: $text-dim;
-    }
-    
-    Footer > .footer--key {
-        background: $primary-dark;
-        color: $text-bright;
-    }
-    """
+    CSS_PATH = "app.tcss"
 
     TITLE = "LMMs-Eval TUI"
     BINDINGS = [

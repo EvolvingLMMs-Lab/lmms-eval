@@ -189,3 +189,9 @@ lmms-eval-tui = "lmms_eval.tui.app:main"
 [project.urls]
 Homepage = "https://lmms-lab.github.io"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+
+[dependency-groups]
+dev = [
+    "textual>=7.2.0",
+    "textual-dev>=1.8.0",
+]
