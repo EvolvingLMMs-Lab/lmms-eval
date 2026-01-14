@@ -302,7 +302,16 @@ class EMU3(lmms):
             outputs_trimmed = outputs[:, model_inputs["input_ids"].shape[-1] :]
             answers = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=True)
 
-            for ans, item in zip(answers, batch_data):
+            # Decode with special tokens for debugging
+            if self.debug_samples:
+                prompts_with_tokens = self.processor.batch_decode(
+                    model_inputs["input_ids"], skip_special_tokens=False
+                )
+                answers_with_tokens = self.processor.batch_decode(
+                    outputs_trimmed, skip_special_tokens=False
+                )
+
+            for i, (ans, item, text) in enumerate(zip(answers, batch_data, texts)):
                 res.append(ans)
                 self.cache_hook.add_partial("generate_until", (item["context"], gen_kwargs), ans)
                 pbar.update(1)
@@ -313,11 +322,13 @@ class EMU3(lmms):
                     eval_logger.info("=" * 80)
                     eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/{self.num_debug_samples}")
                     eval_logger.info("=" * 80)
-                    eval_logger.info(f"PROMPT: {item['text']}")
-                    eval_logger.info(f"ANSWER: {ans}")
+                    eval_logger.info(f"PROMPT (clean): {text}")
+                    eval_logger.info(f"PROMPT (with tokens): {prompts_with_tokens[i]}")
+                    eval_logger.info(f"ANSWER (clean): {ans}")
+                    eval_logger.info(f"ANSWER (with tokens): {answers_with_tokens[i]}")
                     eval_logger.info("=" * 80)
 
-                eval_logger.debug(f"Question: {item['text']}")
+                eval_logger.debug(f"Question: {text}")
                 eval_logger.debug(f"Model Response: {ans}")
 
         # Reorder results back to original unsorted form
