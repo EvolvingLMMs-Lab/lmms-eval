@@ -1,33 +1,35 @@
+"""
+EMU3 Chat Model using EMU3EncoderBaseModel.
+
+This implementation focuses on understanding tasks using direct mode="U" processing.
+Text only samples are skipped or an empty answer is added (arg: skip_text_only)
+If sample has multiple images: Either skipped or choose 1st image only (arg: skip_multi_image)
+-> EMU3 only supports combination of exactly one img for 1 txt
+"""
+
 from typing import List, Optional, Tuple, Union
 
 import torch
-from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.configuration_utils import GenerationConfig
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.emu3.emu3_image_processor import (
-    Emu3VisionVQImageProcessor,
-)
-from lmms_eval.models.model_utils.emu3.emu3_input_processor import Emu3Processor
-from lmms_eval.models.model_utils.memory_utils import print_memory_stats
+from lmms_eval.models.emu3_encoder_base_model import EMU3EncoderBaseModel
 from lmms_eval.protocol import ChatMessages
 
 
 @register_model("emu3")
-class EMU3(lmms):
+class EMU3(EMU3EncoderBaseModel):
     """
     EMU3 Chat Model, wrapper for https://github.com/baaivision/Emu3
-    This implementation focuses on understanding tasks.
-    Text only samples are skipped or an empty answer is added (arg: skip_text_only)
-    If sample has multiple images: Either skipped or choose 1st image only (arg: skip_multi_image)
-    -> EMU3 only supports combination of exactly one img for 1 txt
+
+    Uses direct mode="U" processing without chat templates.
+    Inherits infrastructure from EMU3EncoderBaseModel.
     """
 
     is_simple = False  # Chat model
@@ -53,115 +55,51 @@ class EMU3(lmms):
         num_debug_samples: int = 5,
         **kwargs,
     ):
-        super().__init__()
+        # Store trust_remote_code for use in abstract methods
+        self._trust_remote_code = trust_remote_code
 
-        accelerator = Accelerator()
-        self.accelerator = accelerator
-        if accelerator.num_processes > 1:
-            self._device = torch.device(f"cuda:{accelerator.local_process_index}")
-            self.device_map = f"cuda:{accelerator.local_process_index}"
-        else:
-            self._device = torch.device(device)
-            self.device_map = device_map if device_map else device
-
-        # Load main model
-        eval_logger.info(f"Loading EMU3 model from {pretrained}")
-        self._model = AutoModelForCausalLM.from_pretrained(
-            pretrained,
-            device_map=device_map if accelerator.num_processes == 1 else None,
-            torch_dtype=torch_dtype,
+        # Call parent constructor with mapped parameters
+        super().__init__(
+            model_descriptor=pretrained,
+            tokenizer_path=pretrained,
+            vq_hub=vq_hub,
+            device=device,
+            device_map=device_map,
+            batch_size=batch_size,
             attn_implementation=attn_implementation,
             trust_remote_code=trust_remote_code,
-        ).eval()
-
-        # Load tokenizer
-        eval_logger.info(f"Loading EMU3 Text Tokenizer from {pretrained}")
-        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code, padding_side="left")
-
-        # Load image processor (local modified) and image tokenizer
-        eval_logger.info(f"Loading EMU3 Vision Img Preprocessor from {vq_hub}")
-        image_processor = Emu3VisionVQImageProcessor.from_pretrained(vq_hub, trust_remote_code=trust_remote_code, min_pixels=emu3_min_pixels, max_pixels=emu3_max_pixels, do_check_aspect_ratio=do_check_aspect_ratio)
-        eval_logger.info(f"Loading EMU3 Vision Tokenizer from {vq_hub}")
-        image_tokenizer_kwargs = {
-            "device_map": self.device_map,
-            "trust_remote_code": trust_remote_code,
-        }
-        if image_tokenizer_dtype is not None:
-            image_tokenizer_kwargs["torch_dtype"] = image_tokenizer_dtype
-        image_tokenizer = AutoModel.from_pretrained(vq_hub, **image_tokenizer_kwargs).eval()
-
-        # Set instance variables
-        self.batch_size_per_gpu = int(batch_size)
-        self.use_cache = use_cache
-        self.skip_text_only = skip_text_only
-        self.skip_multi_image = skip_multi_image
-        self.debug_samples = debug_samples
-        self.num_debug_samples = num_debug_samples
-        self._debug_samples_printed = 0  # Counter for tracking printed samples
-
-        # Prepare models for distributed training if needed
-        if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [
-                DistributedType.FSDP,
-                DistributedType.MULTI_GPU,
-            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
-            if accelerator.distributed_type == DistributedType.FSDP:
-                self._model = accelerator.prepare(self._model)
-                image_tokenizer = accelerator.prepare(image_tokenizer)
-            else:
-                self._model = accelerator.prepare_model(self._model, evaluation_mode=True)
-                image_tokenizer = accelerator.prepare_model(image_tokenizer, evaluation_mode=True)
-            self._rank = accelerator.local_process_index
-            self._world_size = accelerator.num_processes
-        else:
-            self._rank = 0
-            self._world_size = 1
-
-        # Create EMU3 processor (after preparing image_tokenizer if multi-GPU)
-        self.processor = Emu3Processor(image_processor, image_tokenizer, self._tokenizer)
-
-        eval_logger.info(f"EMU3 model loaded successfully on rank {self.rank}/{self.world_size}")
-        if self.debug_samples and self.rank == 0:
-            eval_logger.info(f"Debug mode enabled: will print first {self.num_debug_samples} samples")
-
-        # Report model sizes and GPU memory usage on each rank
-        device_idx = self._device.index if self._device.type == "cuda" else None
-        print_memory_stats(
-            main_model=self._model,
-            image_tokenizer=image_tokenizer,
-            accelerator=self.accelerator,
-            device_idx=device_idx,
-            rank=self.rank,
+            torch_dtype=torch_dtype,
+            image_tokenizer_dtype=image_tokenizer_dtype,
+            use_cache=use_cache,
+            emu3_min_pixels=emu3_min_pixels,
+            emu3_max_pixels=emu3_max_pixels,
+            do_check_aspect_ratio=do_check_aspect_ratio,
+            skip_text_only=skip_text_only,
+            skip_multi_image=skip_multi_image,
+            debug_samples=debug_samples,
+            num_debug_samples=num_debug_samples,
+            **kwargs,
         )
 
-    @property
-    def model(self):
-        if hasattr(self, "accelerator"):
-            return self.accelerator.unwrap_model(self._model)
-        else:
-            return self._model
+    def _load_tokenizer(self, tokenizer_path: str, **kwargs) -> AutoTokenizer:
+        """Load EMU3 text tokenizer."""
+        return AutoTokenizer.from_pretrained(
+            tokenizer_path,
+            trust_remote_code=self._trust_remote_code,
+            padding_side="left",
+        )
+
+    def _load_llm(self, model_path: str, **kwargs) -> AutoModelForCausalLM:
+        """Load EMU3 causal language model."""
+        return AutoModelForCausalLM.from_pretrained(model_path, **kwargs)
 
     @property
-    def tokenizer(self):
-        return self._tokenizer
-
-    @property
-    def batch_size(self):
-        return self.batch_size_per_gpu
-
-    @property
-    def device(self):
-        return self._device
-
-    @property
-    def rank(self):
-        return self._rank
-
-    @property
-    def world_size(self):
-        return self._world_size
+    def image_placeholder(self) -> str:
+        """Image placeholder token (not used in direct mode="U" processing)."""
+        return "<|image|>"
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
+        """Generate responses using direct mode="U" processing."""
         res = []
 
         # Initialize statistics counters
@@ -176,7 +114,12 @@ class EMU3(lmms):
             return x[0], x[0]
 
         # Group requests by their generation_kwargs
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, group_fn=lambda x: x[2], grouping=True)
+        re_ords = utils.Collator(
+            [reg.args for reg in requests],
+            _collate,
+            group_fn=lambda x: x[2],
+            grouping=True,
+        )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
@@ -192,7 +135,7 @@ class EMU3(lmms):
             # EMU3 requires len(images) == len(texts) in understanding mode
             batch_data = []
 
-            # Iterate through samples in a batch (1 chat message = 1 sample) to prepare input to model
+            # Iterate through samples in a batch to prepare input to model
             for idx, chat_message in enumerate(chat_messages):
                 total_samples += 1
 
@@ -215,7 +158,7 @@ class EMU3(lmms):
                         pbar.update(1)
                         continue
                     else:
-                        # If not skipping, we still can't process it (EMU3 requires images) -> add empty answer
+                        # EMU3 requires images - add empty answer
                         res.append("")
                         self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
@@ -306,11 +249,11 @@ class EMU3(lmms):
                 self.cache_hook.add_partial("generate_until", (item["context"], gen_kwargs), ans)
                 pbar.update(1)
 
-                # Debug sample output (only on rank 0 to avoid duplicates in multi-GPU)
+                # Debug sample output (only on rank 0 to avoid duplicates)
                 if self.debug_samples and self._debug_samples_printed < self.num_debug_samples and self.rank == 0:
                     self._debug_samples_printed += 1
                     eval_logger.info("=" * 80)
-                    eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/{self.num_debug_samples}")
+                    eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/" f"{self.num_debug_samples}")
                     eval_logger.info("=" * 80)
                     eval_logger.info(f"PROMPT (clean): {text}")
                     eval_logger.info(f"PROMPT (with tokens): {prompts_with_tokens[i]}")
@@ -330,7 +273,7 @@ class EMU3(lmms):
             eval_logger.warning(f"EMU3 Statistics: Found {text_only_count}/{total_samples} " f"text-only samples (no images). " f"Skipped: {skipped_text_only} " f"(skip_text_only={self.skip_text_only})")
             eval_logger.warning(f"EMU3 Statistics: Found {multi_image_count}/{total_samples} " f"multi-image samples (>1 image). " f"Skipped: {skipped_multi_image} " f"(skip_multi_image={self.skip_multi_image})")
             if text_only_count == 0 and multi_image_count == 0:
-                eval_logger.info(f"EMU3 Statistics: All {total_samples} samples had exactly 1 image. " "No text-only or multi-image samples encountered.")
+                eval_logger.info(f"EMU3 Statistics: All {total_samples} samples had exactly 1 " "image. No text-only or multi-image samples encountered.")
 
         return res
 
