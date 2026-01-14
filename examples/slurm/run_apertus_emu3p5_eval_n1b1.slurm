@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=a-infra01
-#SBATCH --job-name=eval-llama-emu3_5
+#SBATCH --job-name=eval-apertus-emu3_5
 #SBATCH --environment=emu3
 #SBATCH --nodes=1
 #SBATCH --exclusive
@@ -8,15 +8,15 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
 #SBATCH --time=12:00:00
-#SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.out
-#SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.err
+#SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_apertus_emu3p5_%j.out
+#SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_apertus_emu3p5_%j.err
 
 TASKS="mmmu_val_group_img,vqav2_val" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
 BATCH_SIZE=1
-MODEL="llama_emu3p5"
+MODEL="apertus_emu3p5"
 #MODEL_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
 MODEL_ARGS=""
-RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/llama_emu3_results"
+RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/apertus_emu3p5_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
 
@@ -46,7 +46,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Automatically get number of available GPUS to configure accelerate properöy
+# Automatically get number of available GPUS to configure accelerate properly
 NUM_GPUS=$(echo "$CUDA_VISIBLE_DEVICES" | awk -F',' '{print NF}')
 echo "Number of GPUs available: $NUM_GPUS"
 echo "GPUS: $CUDA_VISIBLE_DEVICES"
