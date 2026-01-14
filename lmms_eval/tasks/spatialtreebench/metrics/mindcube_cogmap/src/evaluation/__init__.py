@@ -54,7 +54,8 @@ __all__ = [
 
 def quick_start_guide():
     """Print a quick start guide for using the evaluation framework."""
-    print("""
+    print(
+        """
 🚀 MindCube Evaluation Framework - Quick Start
 
 === BASIC USAGE ===
@@ -109,7 +110,8 @@ For cognitive map evaluation, additional metrics include:
 - results['results']['cogmap_similarity']: Spatial relationship metrics
 - Rotation-invariant isomorphism analysis
 - Position and facing similarity scores
-""")
+"""
+    )
 
 
 # For backwards compatibility with existing scripts

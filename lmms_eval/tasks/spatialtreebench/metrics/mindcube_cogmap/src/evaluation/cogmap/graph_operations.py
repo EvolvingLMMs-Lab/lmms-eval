@@ -473,9 +473,7 @@ def rotate_facing_y(facing: Optional[str]) -> Optional[str]:
     return direction_map.get(facing, facing)
 
 
-def get_extended_direction(
-    pos1: np.ndarray, pos2: np.ndarray, facing1: Optional[str] = None, facing2: Optional[str] = None
-) -> Optional[str]:
+def get_extended_direction(pos1: np.ndarray, pos2: np.ndarray, facing1: Optional[str] = None, facing2: Optional[str] = None) -> Optional[str]:
     """Determine the extended direction from pos1 to pos2.
     Includes: up, right, down, left, inner, outer.
 
@@ -528,9 +526,7 @@ def get_extended_direction(
         return "down" if dy > 0 else "up"
 
 
-def determine_inner_outer_relationship(
-    pos1: np.ndarray, pos2: np.ndarray, facing1: Optional[str], facing2: Optional[str]
-) -> Optional[str]:
+def determine_inner_outer_relationship(pos1: np.ndarray, pos2: np.ndarray, facing1: Optional[str], facing2: Optional[str]) -> Optional[str]:
     """Determine if relationship is inner/outer based on positions and facings.
 
     Args:

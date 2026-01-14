@@ -1,17 +1,19 @@
-import json
 import glob
+import json
 import os
 from functools import lru_cache, partial
 from pathlib import Path
 
+import cv2
 import datasets
 import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image
-import cv2
+
 from lmms_eval.tasks.spatialtreebench.metrics import rule_metrics
+
 
 class TreeNode:
     """
@@ -70,6 +72,7 @@ def load_spatree_hierarchy(file_path):
         data = json.load(f)
     return _dict_to_treenode(data)
 
+
 spatree_hierarchy = load_spatree_hierarchy(str(Path(__file__).parent / "spatree_hierarchy.json"))
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
@@ -119,9 +122,9 @@ def _ensure_local_media_path(path_or_url: str) -> str:
         return cached
 
     raise FileNotFoundError(
-        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. "
-        "Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
+        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. " "Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
     )
+
 
 # Define metric functions
 METRIC_REGISTRY = {
@@ -141,7 +144,7 @@ def spatialtreebench_doc_to_visual(doc):
     if doc.get("video") and len(doc["video"]) > 0:
         video_ref = doc["video"][0]  # relative path (videos/xxx.mp4) or URL
         video_path = _ensure_local_media_path(video_ref)
-        
+
         # Use video_info if available (it should be)
         if doc.get("video_info") and len(doc["video_info"]) > 0:
             video_info = doc["video_info"][0]
@@ -186,15 +189,15 @@ def spatialtreebench_doc_to_visual(doc):
 
 
 PE_TEMPLATES = {
-    "open_default": "{} ", # gravityeval, 
-    "cameramotion_open": "{}", # L2_Underst._MotionUnderstanding_gpteval
-    "humananno_open": "{} \n Options : {}\nSelect the option that contains the correct action and the indication of whether the task has been completed. Return only the letter of the correct option (e.g., A, B, C, etc.). Always return in this format: 'answer: X' ", # L4_Open-worldExploration_Self-Goaling_multichoiceeval
+    "open_default": "{} ",  # gravityeval,
+    "cameramotion_open": "{}",  # L2_Underst._MotionUnderstanding_gpteval
+    "humananno_open": "{} \n Options : {}\nSelect the option that contains the correct action and the indication of whether the task has been completed. Return only the letter of the correct option (e.g., A, B, C, etc.). Always return in this format: 'answer: X' ",  # L4_Open-worldExploration_Self-Goaling_multichoiceeval
     "mcq_default": "{}\nOptions : {}\nChoose the correct option. Return only the letter of the correct option (e.g., A, B, C, etc.). Always return in this format: 'answer: X'",
-    "dopp_judge": "{}", # L2_Underst._RelationUnderstanding_judge
-    "mcq_default2": "{}\n{}", 
-    "aff": "You will be given a textual description of a point of interest within an image. Your task is to locate this point and return its normalized coordinates.\nThe point to identify is: **{}**\n**Instructions for Coordinate Output:**\n1.  **Format**: The output must be a single JSON array in the format `[x, y]`.\n2.  **Coordinate System**: The origin `(0, 0)` is at the top-left corner of the image.\n3.  **Normalization**:\n- `x` is the horizontal coordinate, normalized by the image's width.\n- `y` is the vertical coordinate, normalized by the image's height.\n4.  **Value Range**: Both `x` and `y` must be float values strictly between 0 and 1 (i.e., `0 < x < 1` and `0 < y < 1`).\n5.  **Strict Output**: Do not provide any text or explanation other than the coordinate array itself.\n**Example:**\n- If the image is 1000px wide and 800px high, and the point is at pixel (500, 200), the output should be `[0.5, 0.25]`.\nNow, based on the image provided and the target description above, output the coordinates.", # L2_Underst._Affordance_affmask
-    "open_l4":"{}\nYou must ensure that the action intensity values represented by `step_nums` are within the range of 0 to 10, inclusive.\nPlease provide the action output formatted as a JSON object and enclosed within a ```json``` code block. Please do your best to move and try. This can help you get more rewards.",  #L4
-    "meanrelativeacc_open":"{} Do not response anything other than a single number! If you cannot determine the answer, please guess a value."
+    "dopp_judge": "{}",  # L2_Underst._RelationUnderstanding_judge
+    "mcq_default2": "{}\n{}",
+    "aff": "You will be given a textual description of a point of interest within an image. Your task is to locate this point and return its normalized coordinates.\nThe point to identify is: **{}**\n**Instructions for Coordinate Output:**\n1.  **Format**: The output must be a single JSON array in the format `[x, y]`.\n2.  **Coordinate System**: The origin `(0, 0)` is at the top-left corner of the image.\n3.  **Normalization**:\n- `x` is the horizontal coordinate, normalized by the image's width.\n- `y` is the vertical coordinate, normalized by the image's height.\n4.  **Value Range**: Both `x` and `y` must be float values strictly between 0 and 1 (i.e., `0 < x < 1` and `0 < y < 1`).\n5.  **Strict Output**: Do not provide any text or explanation other than the coordinate array itself.\n**Example:**\n- If the image is 1000px wide and 800px high, and the point is at pixel (500, 200), the output should be `[0.5, 0.25]`.\nNow, based on the image provided and the target description above, output the coordinates.",  # L2_Underst._Affordance_affmask
+    "open_l4": "{}\nYou must ensure that the action intensity values represented by `step_nums` are within the range of 0 to 10, inclusive.\nPlease provide the action output formatted as a JSON object and enclosed within a ```json``` code block. Please do your best to move and try. This can help you get more rewards.",  # L4
+    "meanrelativeacc_open": "{} Do not response anything other than a single number! If you cannot determine the answer, please guess a value.",
 }
 
 
@@ -267,7 +270,7 @@ def spatialtreebench_process_results(doc, results):
             metric_extra_info = json.loads(doc.get("hint", "{}"))
         else:
             metric_extra_info = {}
-        
+
         if metric_func_name == "multichoiceeval" and question_type != "open":
             metric_extra_info.update({"option": doc.get("option", [])})
         elif metric_func_name == "multichoiceeval" and question_type == "open":
@@ -329,8 +332,8 @@ def spatialtreebench_aggregate_results(results):
     # Print the hierarchical scores
     def print_tree(node, prefix=""):
         score = getattr(node, "score", 0)
-        score_str = f'{score:.4f}'
-        print(f'{prefix}{node.name} ({score_str})')
+        score_str = f"{score:.4f}"
+        print(f"{prefix}{node.name} ({score_str})")
 
         if node.children:
             children_list = list(node.children.values())

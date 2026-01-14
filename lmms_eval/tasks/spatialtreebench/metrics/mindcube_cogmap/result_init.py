@@ -101,9 +101,7 @@ def _initialize_similarity_accumulators() -> Dict:
     }
 
 
-def _update_similarity_metrics(
-    similarity: Dict, results: Dict, setting: str, total_metrics: Dict, include_in_overall: bool
-):
+def _update_similarity_metrics(similarity: Dict, results: Dict, setting: str, total_metrics: Dict, include_in_overall: bool):
     """Update similarity metrics in results structure."""
     if similarity.get("parsable_json", False):
         results["settings"][setting]["cogmap_similarity"]["parsable_json_count"] += 1
@@ -265,17 +263,11 @@ def _preserve_necessary_cogmap_fields(results: Dict) -> Dict:
     """Preserve necessary fields in the results dictionary."""
     new_cogmap_results = {
         "parsable_json_count": results["cogmap_similarity"]["parsable_json_count"],
-        "parsable_json_accuracy": round(results["cogmap_similarity"]["parsable_json_count"] / results["total"], 4)
-        if results["total"] > 0.0001
-        else 0.0,
+        "parsable_json_accuracy": round(results["cogmap_similarity"]["parsable_json_count"] / results["total"], 4) if results["total"] > 0.0001 else 0.0,
         "valid_count": results["cogmap_similarity"]["total_valid"],
-        "valid_accuracy": round(results["cogmap_similarity"]["total_valid"] / results["total"], 4)
-        if results["total"] > 0.0001
-        else 0.0,
+        "valid_accuracy": round(results["cogmap_similarity"]["total_valid"] / results["total"], 4) if results["total"] > 0.0001 else 0.0,
         "isomorphic_count": results["cogmap_similarity"]["isomorphic_count"],
-        "isomorphic_accuracy": round(results["cogmap_similarity"]["isomorphic_count"] / results["total"], 4)
-        if results["total"] > 0.0001
-        else 0.0,
+        "isomorphic_accuracy": round(results["cogmap_similarity"]["isomorphic_count"] / results["total"], 4) if results["total"] > 0.0001 else 0.0,
         "avg_overall_similarity": round(results["cogmap_similarity"]["avg_overall_similarity"], 4),
         "avg_facing_similarity": round(results["cogmap_similarity"]["avg_facing_similarity"], 4),
         "avg_directional_similarity": round(results["cogmap_similarity"]["avg_directional_similarity"], 4),

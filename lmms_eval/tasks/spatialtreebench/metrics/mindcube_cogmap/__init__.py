@@ -1,4 +1,9 @@
-from .parse_output import _extract_cognitive_map, _extract_grounded_cogmap, extract_answer, get_setting_from_id
+from .parse_output import (
+    _extract_cognitive_map,
+    _extract_grounded_cogmap,
+    extract_answer,
+    get_setting_from_id,
+)
 from .result_init import _initialize_cogmap_results_structure
 from .src.evaluation.cogmap.cogmap_metrics import calculate_cogmap_similarity
 
@@ -26,7 +31,7 @@ def mindcube_process_results(result: dict) -> dict:
     else:
         is_correct = extracted_answer == result["ground_truth"]
     correct = 1 if is_correct else 0
-    
+
     similarity = calculate_cogmap_similarity(generated_cogmap, grounded_cogmap)
 
     return_result = {

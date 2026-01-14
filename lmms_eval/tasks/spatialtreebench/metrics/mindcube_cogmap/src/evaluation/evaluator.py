@@ -7,7 +7,10 @@ evaluation mode (basic or cognitive map) based on the task type.
 from typing import Dict, Literal, Optional
 
 from .cogmap import CogMapEvaluator
-from .core.base_metrics import initialize_basic_results_structure, update_accuracy_metrics
+from .core.base_metrics import (
+    initialize_basic_results_structure,
+    update_accuracy_metrics,
+)
 from .core.extractors import extract_answer, get_setting_from_id
 from .core.io_utils import load_jsonl_data, print_basic_results, save_json_results
 
@@ -69,9 +72,7 @@ class BasicEvaluator:
 
             # Track cases where no answer could be extracted
             if not extracted_answer:
-                error_cases["gen_cogmap_error"].append(
-                    {"id": item_id, "question": item.get("question", ""), "gt_answer": gt_answer, "answer": answer_text}
-                )
+                error_cases["gen_cogmap_error"].append({"id": item_id, "question": item.get("question", ""), "gt_answer": gt_answer, "answer": answer_text})
 
             # Compare with ground truth
             is_correct = extracted_answer == gt_answer if extracted_answer else False

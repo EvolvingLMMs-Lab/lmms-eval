@@ -9,8 +9,16 @@ This module provides the CogMapEvaluator class that handles:
 from collections import defaultdict
 from typing import Dict, Optional
 
-from ..core.base_metrics import apply_filtering_to_results, initialize_basic_results_structure
-from ..core.extractors import determine_answer_fields, extract_answer, extract_json_from_text, get_setting_from_id
+from ..core.base_metrics import (
+    apply_filtering_to_results,
+    initialize_basic_results_structure,
+)
+from ..core.extractors import (
+    determine_answer_fields,
+    extract_answer,
+    extract_json_from_text,
+    get_setting_from_id,
+)
 from ..core.io_utils import load_jsonl_data, print_basic_results, save_json_results
 from .cogmap_metrics import calculate_cogmap_similarity
 
@@ -119,9 +127,7 @@ class CogMapEvaluator:
 
                 if generated_cogmap and grounded_cogmap:
                     similarity = calculate_cogmap_similarity(generated_cogmap, grounded_cogmap)
-                    self._update_similarity_metrics(
-                        similarity, results, setting, total_similarity_metrics, include_in_overall
-                    )
+                    self._update_similarity_metrics(similarity, results, setting, total_similarity_metrics, include_in_overall)
 
         # Apply filtering logic (exclude translation from overall metrics)
         results = apply_filtering_to_results(results)
@@ -198,9 +204,7 @@ class CogMapEvaluator:
             "total_overall_similarity": 0.0,
         }
 
-    def _extract_cognitive_map(
-        self, cogmap_answer: str, item: Dict, cogmap_field: str, item_id: str, error_cases: Dict
-    ) -> Optional[Dict]:
+    def _extract_cognitive_map(self, cogmap_answer: str, item: Dict, cogmap_field: str, item_id: str, error_cases: Dict) -> Optional[Dict]:
         """Extract cognitive map from response with error handling."""
         try:
             # First try direct extraction from the answer text
@@ -248,9 +252,7 @@ class CogMapEvaluator:
             grounded_cogmap = extract_json_from_text(grounded_cogmap)
         return grounded_cogmap
 
-    def _update_similarity_metrics(
-        self, similarity: Dict, results: Dict, setting: str, total_metrics: Dict, include_in_overall: bool
-    ):
+    def _update_similarity_metrics(self, similarity: Dict, results: Dict, setting: str, total_metrics: Dict, include_in_overall: bool):
         """Update similarity metrics in results structure."""
         if similarity.get("parsable_json", False):
             results["settings"][setting]["cogmap_similarity"]["parsable_json_count"] += 1
@@ -323,27 +325,15 @@ class CogMapEvaluator:
             results["cogmap_similarity"]["valid_format_count"] = total_metrics["valid_format_count"]
             results["cogmap_similarity"]["total_valid"] = filtered_valid_cogmap_count
             results["cogmap_similarity"]["valid_percent"] = (filtered_valid_cogmap_count / filtered_total) * 100
-            results["cogmap_similarity"]["isomorphic_count"] = total_metrics[
-                "isomorphic_count"
-            ]  # Backward compatibility
-            results["cogmap_similarity"]["rotation_invariant_isomorphic_count"] = total_metrics[
-                "rotation_invariant_isomorphic_count"
-            ]
+            results["cogmap_similarity"]["isomorphic_count"] = total_metrics["isomorphic_count"]  # Backward compatibility
+            results["cogmap_similarity"]["rotation_invariant_isomorphic_count"] = total_metrics["rotation_invariant_isomorphic_count"]
 
             # Calculate averages for overall metrics (using same logic as old version)
             if filtered_valid_cogmap_count > 0:
-                results["cogmap_similarity"]["avg_relative_position_accuracy"] = (
-                    total_metrics["total_relative_position_accuracy"] / filtered_valid_cogmap_count
-                )
-                results["cogmap_similarity"]["avg_facing_similarity"] = (
-                    total_metrics["total_facing_similarity"] / filtered_valid_cogmap_count
-                )
-                results["cogmap_similarity"]["avg_directional_similarity"] = (
-                    total_metrics["total_directional_similarity"] / filtered_valid_cogmap_count
-                )
-                results["cogmap_similarity"]["avg_overall_similarity"] = (
-                    total_metrics["total_overall_similarity"] / filtered_valid_cogmap_count
-                )
+                results["cogmap_similarity"]["avg_relative_position_accuracy"] = total_metrics["total_relative_position_accuracy"] / filtered_valid_cogmap_count
+                results["cogmap_similarity"]["avg_facing_similarity"] = total_metrics["total_facing_similarity"] / filtered_valid_cogmap_count
+                results["cogmap_similarity"]["avg_directional_similarity"] = total_metrics["total_directional_similarity"] / filtered_valid_cogmap_count
+                results["cogmap_similarity"]["avg_overall_similarity"] = total_metrics["total_overall_similarity"] / filtered_valid_cogmap_count
 
         # Setting-specific metrics (using same logic as old version)
         for setting, stats in results["settings"].items():
