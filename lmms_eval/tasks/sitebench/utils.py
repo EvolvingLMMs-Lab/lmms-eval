@@ -115,7 +115,7 @@ def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
 
     # Append post prompt if provided
     if lmmseval_specific_kwargs and isinstance(lmmseval_specific_kwargs, list):
-        prompt += lmmseval_specific_kwargs[0].get('default', {}).get("post_prompt", "")
+        prompt += lmmseval_specific_kwargs[0].get("default", {}).get("post_prompt", "")
     eval_logger.info(f"[sitebench image] Final prompt:\n{prompt}")
 
     return prompt
@@ -129,17 +129,17 @@ def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
     option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
 
     prompt = pre_prompt + "\n"
-    
+
     # check the pre_prompt
     if lmmseval_specific_kwargs and isinstance(lmmseval_specific_kwargs, list):
-        prompt += lmmseval_specific_kwargs[0].get('default', {}).get("pre_prompt", "")
+        prompt += lmmseval_specific_kwargs[0].get("default", {}).get("pre_prompt", "")
 
     prompt += "Question: " + question + "\n"
     prompt += "Options:\n" + option_text + "\n"
 
     # Append post prompt if provided
     if lmmseval_specific_kwargs and isinstance(lmmseval_specific_kwargs, list):
-        prompt += lmmseval_specific_kwargs[0].get('default', {}).get("post_prompt", "")
+        prompt += lmmseval_specific_kwargs[0].get("default", {}).get("post_prompt", "")
     eval_logger.info(f"[sitebench video] Final prompt:\n{prompt}")
 
     return prompt

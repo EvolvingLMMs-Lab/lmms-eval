@@ -37,7 +37,7 @@ def spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs=None):
     # Get number of frames from lmms_eval_specific_kwargs or default to 32
     num_frames = 32
     if lmms_eval_specific_kwargs:
-        num_frames = lmms_eval_specific_kwargs.get("num_frames", 32)
+        num_frames = lmms_eval_specific_kwargs[0].get("default", {}).get("num_frames", 32)
 
     # Load video and sample frames uniformly
     vr = VideoReader(video_path, ctx=cpu(0))
