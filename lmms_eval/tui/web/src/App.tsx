@@ -1,6 +1,65 @@
 import { useState, useEffect, useRef } from 'react'
 
-const API_BASE = '/api'
+const API_BASE = ''
+
+interface SelectProps {
+  value: string
+  onChange: (value: string) => void
+  options: { value: string; label: string }[]
+  placeholder?: string
+}
+
+function Select({ value, onChange, options, placeholder }: SelectProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const selectedOption = options.find(o => o.value === value)
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors text-left text-neutral-900 hover:border-neutral-300"
+      >
+        <span className={selectedOption ? 'text-neutral-900' : 'text-neutral-400'}>
+          {selectedOption?.label || placeholder || 'Select...'}
+        </span>
+        <span className={`text-[10px] text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+      {open && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-neutral-200 shadow-lg max-h-60 overflow-auto">
+          {options.map(option => (
+            <div
+              key={option.value}
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+              className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
+                option.value === value
+                  ? 'bg-black text-white'
+                  : 'text-neutral-900 hover:bg-neutral-50'
+              }`}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface ModelInfo {
   id: string
@@ -184,204 +243,209 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
-      <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="text-2xl font-bold text-cyan-400">LMMs-Eval</div>
-            <span className="text-sm text-gray-400">v{version}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-sm ${
-              status === 'ready' ? 'bg-gray-700 text-gray-300' :
-              status === 'running' ? 'bg-blue-900 text-blue-300' :
-              status === 'completed' ? 'bg-green-900 text-green-300' :
-              status === 'error' ? 'bg-red-900 text-red-300' :
-              'bg-yellow-900 text-yellow-300'
-            }`}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
+    <div className="flex flex-col h-screen bg-white text-neutral-900 font-light selection:bg-black selection:text-white">
+      <header className="h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-4">
+          <div className="text-lg font-bold tracking-tight text-neutral-900">LMMs-Eval</div>
+          <span className="text-xs text-neutral-400 font-mono">v{version}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className={`px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-medium border ${
+            status === 'ready' ? 'border-neutral-200 text-neutral-400' :
+            status === 'running' ? 'border-black text-black animate-pulse' :
+            status === 'completed' ? 'border-green-600 text-green-600' :
+            status === 'error' ? 'border-red-600 text-red-600' :
+            'border-neutral-200 text-neutral-400'
+          }`}>
+            {status}
           </div>
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-73px)]">
-        <div className="w-80 bg-gray-800 border-r border-gray-700 p-4 overflow-y-auto">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Configuration</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Model</label>
-              <select 
-                value={model} 
-                onChange={e => setModel(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              >
-                {models.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Model Arguments</label>
-              <textarea 
-                value={modelArgs}
-                onChange={e => setModelArgs(e.target.value)}
-                placeholder="model_version=gpt-4o,pretrained=..."
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm h-20 resize-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Batch Size</label>
-                <input 
-                  type="number"
-                  value={batchSize}
-                  onChange={e => setBatchSize(e.target.value)}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-96 bg-white border-r border-neutral-200 flex flex-col">
+          <div className="flex-shrink-0 p-6 border-b border-neutral-100 overflow-y-auto max-h-[50vh] scrollbar-thin">
+            <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-6">Configuration</h2>
+            
+            <div className="space-y-6">
+              <div className="group">
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">Model</label>
+                <Select
+                  value={model}
+                  onChange={setModel}
+                  options={models.map(m => ({ value: m.id, label: m.name }))}
+                  placeholder="Select model..."
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Limit</label>
-                <input 
-                  type="number"
-                  value={limit}
-                  onChange={e => setLimit(e.target.value)}
-                  placeholder="All"
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+
+              <div className="group">
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Arguments</label>
+                <textarea 
+                  value={modelArgs}
+                  onChange={e => setModelArgs(e.target.value)}
+                  placeholder="model_version=..."
+                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm h-20 resize-none focus:border-black focus:outline-none transition-colors placeholder-neutral-300 leading-relaxed text-neutral-900"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Device</label>
-              <input 
-                value={device}
-                onChange={e => setDevice(e.target.value)}
-                placeholder="cuda:0 (auto if empty)"
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="group">
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Batch Size</label>
+                  <input 
+                    type="number"
+                    value={batchSize}
+                    onChange={e => setBatchSize(e.target.value)}
+                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors text-neutral-900"
+                  />
+                </div>
+                <div className="group">
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Limit</label>
+                  <input 
+                    type="number"
+                    value={limit}
+                    onChange={e => setLimit(e.target.value)}
+                    placeholder="All"
+                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors placeholder-neutral-300 text-neutral-900"
+                  />
+                </div>
+              </div>
+              
+              <div className="group">
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Device</label>
+                  <input 
+                    value={device}
+                    onChange={e => setDevice(e.target.value)}
+                    placeholder="cuda:0"
+                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors placeholder-neutral-300 text-neutral-900"
+                  />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Verbosity</label>
-              <select 
-                value={verbosity}
-                onChange={e => setVerbosity(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              >
-                <option value="DEBUG">DEBUG</option>
-                <option value="INFO">INFO</option>
-                <option value="WARNING">WARNING</option>
-                <option value="ERROR">ERROR</option>
-              </select>
-            </div>
+              <div className="group">
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Output Path</label>
+                  <input 
+                    value={outputPath}
+                    onChange={e => setOutputPath(e.target.value)}
+                    placeholder="./logs/"
+                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors placeholder-neutral-300 text-neutral-900"
+                  />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Output Path</label>
-              <input 
-                value={outputPath}
-                onChange={e => setOutputPath(e.target.value)}
-                placeholder="./logs/"
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
+              <div className="group">
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">Verbosity</label>
+                <Select
+                  value={verbosity}
+                  onChange={setVerbosity}
+                  options={[
+                    { value: 'DEBUG', label: 'DEBUG' },
+                    { value: 'INFO', label: 'INFO' },
+                    { value: 'WARNING', label: 'WARNING' },
+                    { value: 'ERROR', label: 'ERROR' },
+                  ]}
+                />
+              </div>
             </div>
           </div>
+          
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="p-6 border-b border-neutral-100 bg-neutral-50/50 backdrop-blur">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                  Tasks <span className="text-neutral-900 ml-1">{selectedTasks.size}</span>
+                </h2>
+              </div>
+              <input
+                value={taskFilter}
+                onChange={e => setTaskFilter(e.target.value)}
+                placeholder="Search tasks..."
+                className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-900"
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              {filteredTasks.map(task => (
+                <div
+                  key={task.id}
+                  onClick={() => toggleTask(task.id)}
+                  className={`group flex items-center gap-3 px-6 py-3 border-b border-neutral-50 cursor-pointer transition-colors duration-200 ${
+                    selectedTasks.has(task.id)
+                      ? 'bg-neutral-50 text-neutral-900'
+                      : 'hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900'
+                  }`}
+                >
+                  <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
+                    selectedTasks.has(task.id) 
+                    ? 'border-black bg-black' 
+                    : 'border-neutral-300 group-hover:border-black'
+                  }`}>
+                    {selectedTasks.has(task.id) && <div className="w-1.5 h-1.5 bg-white" />}
+                  </div>
+                  <span className={`text-xs uppercase tracking-wider ${task.group ? 'font-bold' : 'font-normal'}`}>
+                    {task.group ? '+' : '-'}
+                  </span>
+                  <span className="text-xs font-medium truncate">{task.id}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
-          <div className="mt-6 flex gap-2">
+        <div className="flex-1 flex flex-col bg-neutral-50/30">
+          <div className="px-6 py-4 border-b border-neutral-200 bg-white flex gap-3">
             <button
               onClick={startEval}
               disabled={status === 'running'}
-              className={`flex-1 py-2.5 rounded-lg font-medium transition ${
+              className={`flex-1 py-3 px-4 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
                 status === 'running'
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-500 text-white'
+                  ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed border border-neutral-200'
+                  : 'bg-black text-white hover:bg-neutral-800 border border-black shadow-sm'
               }`}
             >
-              {status === 'running' ? 'Running...' : 'Start'}
+              {status === 'running' ? 'Running...' : 'Start Evaluation'}
             </button>
             <button
               onClick={stopEval}
               disabled={status !== 'running'}
-              className={`flex-1 py-2.5 rounded-lg font-medium transition ${
+              className={`px-4 py-3 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
                 status !== 'running'
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-red-600 hover:bg-red-500 text-white'
+                  ? 'bg-transparent text-neutral-300 border border-neutral-200 cursor-not-allowed'
+                  : 'bg-white text-neutral-900 border border-neutral-200 hover:border-black shadow-sm'
               }`}
             >
               Stop
             </button>
           </div>
-        </div>
 
-        <div className="w-96 border-r border-gray-700 flex flex-col">
-          <div className="p-4 border-b border-gray-700">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              Tasks ({selectedTasks.size} selected)
-            </h2>
-            <input
-              value={taskFilter}
-              onChange={e => setTaskFilter(e.target.value)}
-              placeholder="Filter tasks..."
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 scrollbar-thin">
-            {filteredTasks.map(task => (
-              <div
-                key={task.id}
-                onClick={() => toggleTask(task.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
-                  selectedTasks.has(task.id)
-                    ? 'bg-cyan-900/50 text-cyan-300'
-                    : 'hover:bg-gray-700/50 text-gray-300'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedTasks.has(task.id)}
-                  onChange={() => {}}
-                  className="rounded bg-gray-600 border-gray-500 text-cyan-500 focus:ring-cyan-500"
-                />
-                <span className="text-xs text-gray-500">{task.group ? '📁' : '📄'}</span>
-                <span className="text-sm truncate">{task.id}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col">
-          <div className="h-1/3 border-b border-gray-700 flex flex-col">
-            <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Command Preview</h2>
+          <div className="h-1/3 border-b border-neutral-200 flex flex-col bg-white">
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
+              <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Command</h2>
               <button 
                 onClick={() => navigator.clipboard.writeText(command)}
-                className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700"
+                className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
               >
                 Copy
               </button>
             </div>
-            <pre className="flex-1 overflow-auto p-4 text-sm text-yellow-300 bg-gray-800/50 font-mono scrollbar-thin">
-              {command}
-            </pre>
+            <div className="flex-1 overflow-auto p-6 font-mono text-xs text-neutral-600 bg-neutral-50/50 scrollbar-thin selection:bg-neutral-100">
+              <pre className="whitespace-pre-wrap leading-relaxed">{command}</pre>
+            </div>
           </div>
 
-          <div className="flex-1 flex flex-col">
-            <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Output</h2>
+          <div className="flex-1 flex flex-col bg-white">
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
+              <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Log Output</h2>
               <button 
                 onClick={() => setOutput([])}
-                className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-700"
+                className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
               >
                 Clear
               </button>
             </div>
-            <div ref={outputRef} className="flex-1 overflow-auto p-4 bg-black/30 font-mono text-sm scrollbar-thin">
+            <div ref={outputRef} className="flex-1 overflow-auto p-6 font-mono text-xs leading-relaxed bg-white text-neutral-600 scrollbar-thin">
               {output.map((line, i) => (
-                <div key={i} className="text-gray-300 whitespace-pre-wrap">{line}</div>
+                <div key={i} className="whitespace-pre-wrap mb-1 opacity-90">{line}</div>
               ))}
+              {output.length === 0 && (
+                <div className="text-neutral-400 italic">Waiting for process...</div>
+              )}
             </div>
           </div>
         </div>
