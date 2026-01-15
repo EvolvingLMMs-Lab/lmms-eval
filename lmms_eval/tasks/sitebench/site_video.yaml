@@ -25,9 +25,9 @@ metric_list:
     aggregation: !function utils.spatial_aggregate_results
     higher_is_better: true
 lmms_eval_specific_kwargs:
-  - default:
-      post_prompt: "Give me the answer letter directly. The best answer is:"
-  - gemini_api:
-      pre_prompt: "<video>"
+  default:
+    post_prompt: "Give me the answer letter directly. The best answer is:"
+  gemini_api:
+    pre_prompt: "<video>"
 metadata:
   - version: 0.0

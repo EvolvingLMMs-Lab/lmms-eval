@@ -131,15 +131,15 @@ def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
     prompt = pre_prompt + "\n"
 
     # check the pre_prompt
-    if lmmseval_specific_kwargs and isinstance(lmmseval_specific_kwargs, list):
-        prompt += lmmseval_specific_kwargs[0].get("default", {}).get("pre_prompt", "")
+    if lmmseval_specific_kwargs:
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("pre_prompt", "")
 
     prompt += "Question: " + question + "\n"
     prompt += "Options:\n" + option_text + "\n"
 
     # Append post prompt if provided
-    if lmmseval_specific_kwargs and isinstance(lmmseval_specific_kwargs, list):
-        prompt += lmmseval_specific_kwargs[0].get("default", {}).get("post_prompt", "")
+    if lmmseval_specific_kwargs:
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("post_prompt", "")
     eval_logger.debug(f"[sitebench video] lmmseval_specific_kwargs: {lmmseval_specific_kwargs}")
     eval_logger.debug(f"[sitebench video] Final prompt:\n{prompt}")
 
