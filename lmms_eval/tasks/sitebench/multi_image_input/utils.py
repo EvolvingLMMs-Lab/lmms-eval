@@ -6,12 +6,12 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 from lmms_eval.tasks.sitebench.utils import (
+    UpperLetters,
     base_cache_dir,
     cache_name,
     spatial_aggregate_results,
-    spatial_process_results,
     spatial_doc_to_text_video,
-    UpperLetters,
+    spatial_process_results,
 )
 
 

@@ -116,7 +116,7 @@ def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
     # Append post prompt if provided
     if lmmseval_specific_kwargs and isinstance(lmmseval_specific_kwargs, list):
         prompt += lmmseval_specific_kwargs[0].get("default", {}).get("post_prompt", "")
-    eval_logger.info(f"[sitebench image] Final prompt:\n{prompt}")
+    eval_logger.debug(f"[sitebench image] Final prompt:\n{prompt}")
 
     return prompt
 
@@ -140,7 +140,8 @@ def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
     # Append post prompt if provided
     if lmmseval_specific_kwargs and isinstance(lmmseval_specific_kwargs, list):
         prompt += lmmseval_specific_kwargs[0].get("default", {}).get("post_prompt", "")
-    eval_logger.info(f"[sitebench video] Final prompt:\n{prompt}")
+    eval_logger.debug(f"[sitebench video] lmmseval_specific_kwargs: {lmmseval_specific_kwargs}")
+    eval_logger.debug(f"[sitebench video] Final prompt:\n{prompt}")
 
     return prompt
 
@@ -186,12 +187,12 @@ def spatial_aggregate_results(results):
     category_accuracy = {category: (category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0 for category in category_correct}
     dataset_accuracy = {dataset: (dataset_correct[dataset] / dataset_total[dataset]) * 100 if dataset_total[dataset] > 0 else 0.0 for dataset in dataset_correct}
 
-    # eval_logger.info("=" * 50)
-    # eval_logger.info(f"Overall Accuracy: {overall_accuracy:.2f}%")
-    # eval_logger.info("Category-wise Accuracy:")
+    # eval_logger.debug("=" * 50)
+    # eval_logger.debug(f"Overall Accuracy: {overall_accuracy:.2f}%")
+    # eval_logger.debug("Category-wise Accuracy:")
     # for category, acc in category_accuracy.items():
-    #     eval_logger.info(f"  {category}: {acc:.2f}")
-    # eval_logger.info("=" * 50)
+    #     eval_logger.debug(f"  {category}: {acc:.2f}")
+    # eval_logger.debug("=" * 50)
 
     # # appending the results to the log file
     # with open('log_results.txt', 'a') as f:
