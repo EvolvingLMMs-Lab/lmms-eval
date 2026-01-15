@@ -86,8 +86,21 @@ interface Config {
 
 type Status = 'ready' | 'running' | 'stopped' | 'completed' | 'error'
 
+interface GitInfo {
+  branch: string
+  commit: string
+}
+
+interface SysInfo {
+  hostname: string
+  cwd: string
+  repo_root?: string
+}
+
 export default function App() {
   const [version, setVersion] = useState('...')
+  const [gitInfo, setGitInfo] = useState<GitInfo>({ branch: '', commit: '' })
+  const [sysInfo, setSysInfo] = useState<SysInfo>({ hostname: '', cwd: '' })
   const [models, setModels] = useState<ModelInfo[]>([])
   const [tasks, setTasks] = useState<TaskInfo[]>([])
   
@@ -111,7 +124,11 @@ export default function App() {
   useEffect(() => {
     fetch(`${API_BASE}/health`)
       .then(r => r.json())
-      .then(d => setVersion(d.version))
+      .then(d => {
+        setVersion(d.version)
+        if (d.git) setGitInfo(d.git)
+        if (d.system) setSysInfo(d.system)
+      })
       .catch(() => setVersion('error'))
     
     fetch(`${API_BASE}/models`)
@@ -247,7 +264,28 @@ export default function App() {
       <header className="h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
         <div className="flex items-center gap-4">
           <div className="text-lg font-bold tracking-tight text-neutral-900">LMMs-Eval</div>
-          <span className="text-xs text-neutral-400 font-mono">v{version}</span>
+          <div className="flex items-center gap-3 text-[10px] font-mono text-neutral-400">
+            <span className="bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-600">v{version}</span>
+            {(gitInfo.branch || gitInfo.commit) && (
+              <>
+                <span className="text-neutral-300">/</span>
+                <span className="flex items-center gap-1">
+                  {gitInfo.branch && <span>{gitInfo.branch}</span>}
+                  {gitInfo.branch && gitInfo.commit && <span className="text-neutral-300">@</span>}
+                  {gitInfo.commit && <span>{gitInfo.commit}</span>}
+                </span>
+              </>
+            )}
+            {(sysInfo.repo_root || sysInfo.cwd) && (
+              <>
+                <span className="text-neutral-300">/</span>
+                <span className="max-w-[200px] truncate" title={sysInfo.repo_root || sysInfo.cwd}>
+                  {sysInfo.repo_root || sysInfo.cwd}
+                </span>
+              </>
+            )}
+
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className={`px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-medium border ${
@@ -263,13 +301,13 @@ export default function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-96 bg-white border-r border-neutral-200 flex flex-col">
-          <div className="flex-shrink-0 p-6 border-b border-neutral-100 overflow-y-auto max-h-[50vh] scrollbar-thin">
-            <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-6">Configuration</h2>
+        <div className="w-[450px] bg-white border-r border-neutral-200 flex flex-col overflow-y-auto scrollbar-thin">
+          <div className="flex-shrink-0 p-6 border-b border-neutral-100">
+            <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">Configuration</h2>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="group">
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">Model</label>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Model</label>
                 <Select
                   value={model}
                   onChange={setModel}
@@ -279,18 +317,18 @@ export default function App() {
               </div>
 
               <div className="group">
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Arguments</label>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Arguments</label>
                 <textarea 
                   value={modelArgs}
                   onChange={e => setModelArgs(e.target.value)}
                   placeholder="model_version=..."
-                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm h-20 resize-none focus:border-black focus:outline-none transition-colors placeholder-neutral-300 leading-relaxed text-neutral-900"
+                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm h-16 resize-none focus:border-black focus:outline-none transition-colors placeholder-neutral-300 leading-relaxed text-neutral-900"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Batch Size</label>
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Batch Size</label>
                   <input 
                     type="number"
                     value={batchSize}
@@ -299,7 +337,7 @@ export default function App() {
                   />
                 </div>
                 <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Limit</label>
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Limit</label>
                   <input 
                     type="number"
                     value={limit}
@@ -311,7 +349,7 @@ export default function App() {
               </div>
               
               <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Device</label>
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Device</label>
                   <input 
                     value={device}
                     onChange={e => setDevice(e.target.value)}
@@ -321,7 +359,7 @@ export default function App() {
               </div>
 
               <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 group-focus-within:text-neutral-900 transition-colors">Output Path</label>
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Output Path</label>
                   <input 
                     value={outputPath}
                     onChange={e => setOutputPath(e.target.value)}
@@ -331,7 +369,7 @@ export default function App() {
               </div>
 
               <div className="group">
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">Verbosity</label>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Verbosity</label>
                 <Select
                   value={verbosity}
                   onChange={setVerbosity}
@@ -346,8 +384,8 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="p-6 border-b border-neutral-100 bg-neutral-50/50 backdrop-blur">
+          <div className="flex flex-col min-h-0">
+            <div className="p-6 border-b border-neutral-100 bg-white">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
                   Tasks <span className="text-neutral-900 ml-1">{selectedTasks.size}</span>
@@ -360,7 +398,7 @@ export default function App() {
                 className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-900"
               />
             </div>
-            <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <div className="">
               {filteredTasks.map(task => (
                 <div
                   key={task.id}
@@ -389,22 +427,22 @@ export default function App() {
         </div>
 
         <div className="flex-1 flex flex-col bg-neutral-50/30">
-          <div className="px-6 py-4 border-b border-neutral-200 bg-white flex gap-3">
+          <div className="px-6 py-4 border-b border-neutral-200 bg-white flex gap-3 justify-start">
             <button
               onClick={startEval}
               disabled={status === 'running'}
-              className={`flex-1 py-3 px-4 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
+              className={`w-40 py-2.5 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
                 status === 'running'
                   ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed border border-neutral-200'
                   : 'bg-black text-white hover:bg-neutral-800 border border-black shadow-sm'
               }`}
             >
-              {status === 'running' ? 'Running...' : 'Start Evaluation'}
+              {status === 'running' ? 'Running...' : 'Start'}
             </button>
             <button
               onClick={stopEval}
               disabled={status !== 'running'}
-              className={`px-4 py-3 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
+              className={`w-40 py-2.5 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
                 status !== 'running'
                   ? 'bg-transparent text-neutral-300 border border-neutral-200 cursor-not-allowed'
                   : 'bg-white text-neutral-900 border border-neutral-200 hover:border-black shadow-sm'

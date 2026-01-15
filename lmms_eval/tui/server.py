@@ -7,7 +7,10 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import platform
 import signal
+import socket
+import subprocess
 import uuid
 from importlib.metadata import version as pkg_version
 from pathlib import Path
@@ -44,6 +47,44 @@ def get_version() -> str:
         return pkg_version("lmms_eval")
     except Exception:
         return "0.5.0"
+
+
+def get_git_info() -> dict[str, str]:
+    try:
+        branch = (
+            subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+            .decode()
+            .strip()
+        )
+        commit = (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+            .decode()
+            .strip()
+        )
+        return {"branch": branch, "commit": commit}
+    except Exception:
+        return {"branch": "unknown", "commit": "unknown"}
+
+
+def get_repo_root() -> str:
+    try:
+        return (
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
+            .decode()
+            .strip()
+        )
+    except Exception:
+        return ""
+
+
+def get_system_info() -> dict[str, str]:
+    return {
+        "hostname": socket.gethostname(),
+        "platform": platform.platform(),
+        "python": platform.python_version(),
+        "cwd": os.getcwd(),
+        "repo_root": get_repo_root(),
+    }
 
 
 # --- Models ---
@@ -97,9 +138,13 @@ class PreviewResponse(BaseModel):
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    """Health check endpoint."""
-    return {"status": "ok", "version": get_version()}
+async def health() -> dict[str, Any]:
+    return {
+        "status": "ok",
+        "version": get_version(),
+        "git": get_git_info(),
+        "system": get_system_info(),
+    }
 
 
 @app.get("/models", response_model=list[ModelInfo])
