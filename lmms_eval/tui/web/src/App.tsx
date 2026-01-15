@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 
 const API_BASE = ''
 
@@ -76,6 +76,7 @@ interface Config {
   model: string
   model_args: string
   tasks: string[]
+  env_vars: string
   batch_size: number
   limit: number | null
   output_path: string
@@ -97,6 +98,10 @@ interface SysInfo {
   repo_root?: string
 }
 
+type TaskNode = 
+  | { type: 'group', id: string, label: string, children: TaskInfo[] }
+  | { type: 'leaf', task: TaskInfo }
+
 export default function App() {
   const [version, setVersion] = useState('...')
   const [gitInfo, setGitInfo] = useState<GitInfo>({ branch: '', commit: '' })
@@ -104,15 +109,21 @@ export default function App() {
   const [models, setModels] = useState<ModelInfo[]>([])
   const [tasks, setTasks] = useState<TaskInfo[]>([])
   
+
   const [model, setModel] = useState('openai_compatible')
   const [modelArgs, setModelArgs] = useState('model_version=allenai/molmo-2-8b:free')
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
+  const [envVars, setEnvVars] = useState(
+    'export HF_HOME=${HF_HOME:-~/.cache/huggingface}\n' +
+      'export OPENAI_API_KEY=${OPENROUTER_API_KEY}\n' +
+      'export OPENAI_API_BASE=https://openrouter.ai/api/v1'
+  )
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set(['mme']))
   const [taskFilter, setTaskFilter] = useState('')
   const [batchSize, setBatchSize] = useState('1')
-  const [limit, setLimit] = useState('')
+  const [limit, setLimit] = useState('5')
   const [device, setDevice] = useState('')
-  const [outputPath, setOutputPath] = useState('./logs/')
-  const [verbosity, setVerbosity] = useState('INFO')
+  const [outputPath, setOutputPath] = useState('./logs/openrouter_test/')
+  const [verbosity, setVerbosity] = useState('DEBUG')
   
   const [status, setStatus] = useState<Status>('ready')
   const [jobId, setJobId] = useState<string | null>(null)
@@ -147,6 +158,7 @@ export default function App() {
       model,
       model_args: modelArgs,
       tasks: Array.from(selectedTasks),
+      env_vars: envVars,
       batch_size: parseInt(batchSize) || 1,
       limit: limit ? parseInt(limit) : null,
       output_path: outputPath,
@@ -163,7 +175,7 @@ export default function App() {
       .then(r => r.json())
       .then(d => setCommand(d.command))
       .catch(() => setCommand('# Error generating command'))
-  }, [model, modelArgs, selectedTasks, batchSize, limit, device, outputPath, verbosity])
+  }, [model, modelArgs, selectedTasks, envVars, batchSize, limit, device, outputPath, verbosity])
 
   useEffect(() => {
     if (outputRef.current) {
@@ -171,10 +183,73 @@ export default function App() {
     }
   }, [output])
 
-  const filteredTasks = tasks.filter(t => 
-    t.id.toLowerCase().includes(taskFilter.toLowerCase()) ||
-    t.name.toLowerCase().includes(taskFilter.toLowerCase())
-  )
+  const visibleNodes = useMemo(() => {
+    const nodes: TaskNode[] = []
+    
+    const allGroups = tasks.filter(t => t.group)
+    const allLeaves = tasks.filter(t => !t.group)
+
+    const filteredLeaves = allLeaves.filter(t => 
+      t.id.toLowerCase().includes(taskFilter.toLowerCase()) ||
+      t.name.toLowerCase().includes(taskFilter.toLowerCase())
+    )
+
+    const groupChildrenMap = new Map<string, TaskInfo[]>()
+    const assignedLeafIds = new Set<string>()
+
+    for (const group of allGroups) {
+      const children = filteredLeaves.filter(leaf => 
+        leaf.id.startsWith(`${group.id}_`) || leaf.id.startsWith(`${group.id}-`)
+      )
+      
+      if (children.length > 0) {
+        groupChildrenMap.set(group.id, children)
+        children.forEach(c => assignedLeafIds.add(c.id))
+        nodes.push({
+          type: 'group',
+          id: group.id,
+          label: group.id, 
+          children: children
+        })
+      }
+    }
+
+    const topLevelLeaves = filteredLeaves.filter(leaf => !assignedLeafIds.has(leaf.id))
+    topLevelLeaves.forEach(leaf => {
+      nodes.push({ type: 'leaf', task: leaf })
+    })
+
+    nodes.sort((a, b) => {
+      const idA = a.type === 'group' ? a.id : a.task.id
+      const idB = b.type === 'group' ? b.id : b.task.id
+      return idA.localeCompare(idB)
+    })
+
+    return nodes
+  }, [tasks, taskFilter])
+
+  const invertSelection = () => {
+    const newSet = new Set(selectedTasks)
+    
+    const visibleLeafIds: string[] = []
+    visibleNodes.forEach(node => {
+      if (node.type === 'leaf') {
+        visibleLeafIds.push(node.task.id)
+      } else {
+        node.children.forEach(c => visibleLeafIds.push(c.id))
+      }
+    })
+
+    visibleLeafIds.forEach(id => {
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+    })
+    
+    setSelectedTasks(newSet)
+  }
 
   const toggleTask = (taskId: string) => {
     const newSet = new Set(selectedTasks)
@@ -182,6 +257,18 @@ export default function App() {
       newSet.delete(taskId)
     } else {
       newSet.add(taskId)
+    }
+    setSelectedTasks(newSet)
+  }
+
+  const toggleGroup = (children: TaskInfo[]) => {
+    const newSet = new Set(selectedTasks)
+    const allSelected = children.every(c => newSet.has(c.id))
+    
+    if (allSelected) {
+      children.forEach(c => newSet.delete(c.id))
+    } else {
+      children.forEach(c => newSet.add(c.id))
     }
     setSelectedTasks(newSet)
   }
@@ -199,6 +286,7 @@ export default function App() {
       model,
       model_args: modelArgs,
       tasks: Array.from(selectedTasks),
+      env_vars: envVars,
       batch_size: parseInt(batchSize) || 1,
       limit: limit ? parseInt(limit) : null,
       output_path: outputPath,
@@ -326,6 +414,16 @@ export default function App() {
                 />
               </div>
 
+              <div className="group">
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Environment Variables</label>
+                <textarea 
+                  value={envVars}
+                  onChange={e => setEnvVars(e.target.value)}
+                  placeholder="export KEY=VALUE..."
+                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm h-16 resize-none focus:border-black focus:outline-none transition-colors placeholder-neutral-300 leading-relaxed text-neutral-900 font-mono"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="group">
                   <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Batch Size</label>
@@ -391,37 +489,93 @@ export default function App() {
                   Tasks <span className="text-neutral-900 ml-1">{selectedTasks.size}</span>
                 </h2>
               </div>
-              <input
-                value={taskFilter}
-                onChange={e => setTaskFilter(e.target.value)}
-                placeholder="Search tasks..."
-                className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-900"
-              />
+              <div className="flex gap-2">
+                <input
+                  value={taskFilter}
+                  onChange={e => setTaskFilter(e.target.value)}
+                  placeholder="Search tasks..."
+                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-900"
+                />
+                <button
+                  onClick={invertSelection}
+                  className="px-3 py-2 text-xs font-medium uppercase tracking-wider bg-neutral-100 border border-neutral-200 hover:bg-neutral-200 hover:border-neutral-300 transition-colors text-neutral-900"
+                  title="Invert selection for filtered tasks"
+                >
+                  Invert
+                </button>
+              </div>
             </div>
             <div className="">
-              {filteredTasks.map(task => (
-                <div
-                  key={task.id}
-                  onClick={() => toggleTask(task.id)}
-                  className={`group flex items-center gap-3 px-6 py-3 border-b border-neutral-50 cursor-pointer transition-colors duration-200 ${
-                    selectedTasks.has(task.id)
-                      ? 'bg-neutral-50 text-neutral-900'
-                      : 'hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900'
-                  }`}
-                >
-                  <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
-                    selectedTasks.has(task.id) 
-                    ? 'border-black bg-black' 
-                    : 'border-neutral-300 group-hover:border-black'
-                  }`}>
-                    {selectedTasks.has(task.id) && <div className="w-1.5 h-1.5 bg-white" />}
-                  </div>
-                  <span className={`text-xs uppercase tracking-wider ${task.group ? 'font-bold' : 'font-normal'}`}>
-                    {task.group ? '+' : '-'}
-                  </span>
-                  <span className="text-xs font-medium truncate">{task.id}</span>
-                </div>
-              ))}
+              {visibleNodes.map((node) => {
+                if (node.type === 'group') {
+                  const allChildrenSelected = node.children.every(c => selectedTasks.has(c.id))
+                  const someChildrenSelected = node.children.some(c => selectedTasks.has(c.id))
+                  
+                  return (
+                    <div key={node.id} className="border-b border-neutral-50">
+                      <div 
+                        onClick={() => toggleGroup(node.children)}
+                        className="flex items-center gap-3 px-6 py-2 bg-neutral-50/50 cursor-pointer hover:bg-neutral-100 transition-colors"
+                      >
+                        <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
+                          allChildrenSelected 
+                          ? 'border-black bg-black' 
+                          : someChildrenSelected ? 'border-black' : 'border-neutral-300 hover:border-black'
+                        }`}>
+                          {allChildrenSelected && <div className="w-1.5 h-1.5 bg-white" />}
+                          {!allChildrenSelected && someChildrenSelected && <div className="w-1.5 h-1.5 bg-black" />}
+                        </div>
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500">Group</span>
+                        <span className="text-xs font-semibold text-neutral-800">{node.id}</span>
+                      </div>
+                      {node.children.map(child => (
+                        <div
+                          key={child.id}
+                          onClick={() => toggleTask(child.id)}
+                          className={`group flex items-center gap-3 pl-10 pr-6 py-2 border-l-4 border-l-transparent hover:border-l-neutral-200 cursor-pointer transition-colors ${
+                            selectedTasks.has(child.id)
+                              ? 'bg-neutral-50 text-neutral-900'
+                              : 'text-neutral-500 hover:bg-neutral-50/50 hover:text-neutral-900'
+                          }`}
+                        >
+                          <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
+                            selectedTasks.has(child.id) 
+                            ? 'border-black bg-black' 
+                            : 'border-neutral-300 group-hover:border-black'
+                          }`}>
+                            {selectedTasks.has(child.id) && <div className="w-1.5 h-1.5 bg-white" />}
+                          </div>
+                          <span className="text-[10px] uppercase tracking-wider text-neutral-400">Task</span>
+                          <span className="text-xs font-medium truncate">{child.id}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                } else {
+                  // Leaf node
+                  return (
+                    <div
+                      key={node.task.id}
+                      onClick={() => toggleTask(node.task.id)}
+                      className={`group flex items-center gap-3 px-6 py-3 border-b border-neutral-50 cursor-pointer transition-colors duration-200 ${
+                        selectedTasks.has(node.task.id)
+                          ? 'bg-neutral-50 text-neutral-900'
+                          : 'hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900'
+                      }`}
+                    >
+                      <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
+                        selectedTasks.has(node.task.id) 
+                        ? 'border-black bg-black' 
+                        : 'border-neutral-300 group-hover:border-black'
+                      }`}>
+                        {selectedTasks.has(node.task.id) && <div className="w-1.5 h-1.5 bg-white" />}
+                      </div>
+                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Task</span>
+                      <span className="text-xs font-medium truncate">{node.task.id}</span>
+                    </div>
+                  )
+                }
+              })}
             </div>
           </div>
         </div>

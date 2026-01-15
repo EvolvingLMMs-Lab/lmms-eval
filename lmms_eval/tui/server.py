@@ -105,6 +105,7 @@ class EvalRequest(BaseModel):
     model: str
     model_args: str = ""
     tasks: list[str]
+    env_vars: str = ""
     batch_size: int = 1
     limit: int | None = 10
     output_path: str = "./logs/"
@@ -122,6 +123,7 @@ class PreviewRequest(BaseModel):
     model: str
     model_args: str = ""
     tasks: list[str]
+    env_vars: str = ""
     batch_size: int = 1
     limit: int | None = 10
     output_path: str = "./logs/"
@@ -170,6 +172,26 @@ async def get_tasks() -> list[TaskInfo]:
     ]
 
 
+def _normalize_env_line(line: str) -> str | None:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+    if stripped.startswith("export "):
+        return stripped
+    if "=" in stripped:
+        return f"export {stripped}"
+    return None
+
+
+def _build_env_exports(env_vars: str) -> list[str]:
+    exports: list[str] = []
+    for line in env_vars.splitlines():
+        export_line = _normalize_env_line(line)
+        if export_line:
+            exports.append(export_line)
+    return exports
+
+
 def _build_command(request: EvalRequest | PreviewRequest) -> str:
     """Build the lmms_eval command string."""
     parts = ["python -m lmms_eval"]
@@ -187,7 +209,11 @@ def _build_command(request: EvalRequest | PreviewRequest) -> str:
     parts.append(f"--verbosity {request.verbosity}")
     if request.device:
         parts.append(f"--device {request.device}")
-    return " \\\n    ".join(parts)
+    command = " \\\n    ".join(parts)
+    env_exports = _build_env_exports(request.env_vars)
+    if env_exports:
+        return "\n".join([*env_exports, command])
+    return command
 
 
 def _build_shell_command(request: EvalRequest) -> str:
@@ -207,7 +233,12 @@ def _build_shell_command(request: EvalRequest) -> str:
     parts.extend(["--verbosity", request.verbosity])
     if request.device:
         parts.extend(["--device", request.device])
-    return " ".join(parts)
+    command = " ".join(parts)
+    env_exports = _build_env_exports(request.env_vars)
+    if env_exports:
+        export_prefix = " && ".join(env_exports)
+        return f"{export_prefix} && {command}"
+    return command
 
 
 @app.post("/eval/preview", response_model=PreviewResponse)
