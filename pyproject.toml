@@ -124,9 +124,8 @@ mmsearch = [
     "rouge",
 ]
 tui = [
-    "textual>=0.47.0",
-    "textual-plotext>=0.2.0",
-    "textual-image>=0.8.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
 ]
 video = [
     "decord; platform_system != 'Darwin'",
@@ -143,7 +142,8 @@ all = [
 ]
 
 [tool.setuptools.package-data]
-"lmms_eval.tui.assets" = ["*.jpg", "*.png"]
+"lmms_eval.tui.web.dist" = ["**/*"]
+"lmms_eval.tui.web.dist.assets" = ["**/*"]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
@@ -184,7 +184,7 @@ exclude = [
 
 [project.scripts]
 lmms-eval = "lmms_eval.__main__:cli_evaluate"
-lmms-eval-tui = "lmms_eval.tui.app:main"
+lmms-eval-ui = "lmms_eval.tui.cli:main"
 
 [project.urls]
 Homepage = "https://lmms-lab.github.io"
