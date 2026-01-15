@@ -588,7 +588,10 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
             # Helper to format stderr value
             def fmt_se(se_val):
-                if se_val is None or se_val == "N/A" or se_val == []:
+                if se_val is None or se_val == "N/A":
+                    return "N/A"
+                # Handle empty list/array safely (numpy array comparison is ambiguous)
+                if hasattr(se_val, "__len__") and len(se_val) == 0:
                     return "N/A"
                 try:
                     return "%.4f" % se_val
@@ -602,7 +605,9 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             # Clustered stderr
             se_clustered = fmt_se(dic.get(m + "_stderr_clustered," + f))
 
-            if v != []:
+            # Check if v is not empty (handle numpy array safely)
+            is_empty = hasattr(v, "__len__") and not isinstance(v, str) and len(v) == 0
+            if not is_empty:
                 values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered])
             # k = ""
             # version = ""
