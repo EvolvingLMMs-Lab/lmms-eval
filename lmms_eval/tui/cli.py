@@ -72,8 +72,8 @@ def main() -> int:
             "--port",
             str(port),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
     def cleanup():
