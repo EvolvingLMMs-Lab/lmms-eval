@@ -5,6 +5,7 @@ For base models without instruction tuning. Uses direct text prompts
 instead of chat templates.
 """
 
+import time
 from typing import List, Tuple
 
 import torch
@@ -16,6 +17,7 @@ from transformers.generation.configuration_utils import GenerationConfig
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.models.emu3_encoder_base_model import EMU3EncoderBaseModel
+from lmms_eval.models.model_utils.gen_metrics import log_metrics
 
 
 class EMU3SimpleModel(EMU3EncoderBaseModel):
@@ -55,6 +57,8 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+        e2e_latency = 0.0
+        total_tokens = 0
 
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
@@ -151,12 +155,18 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                 "attention_mask": inputs["attention_mask"],
             }
 
+            start_time = time.time()
             with torch.inference_mode():
                 outputs = self.model.generate(**model_inputs, generation_config=generation_config)
+            end_time = time.time()
 
             # Trim input_ids from outputs
             outputs_trimmed = outputs[:, model_inputs["input_ids"].shape[-1] :]
             text_outputs = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=True)
+
+            # Calculate timing metrics for batch
+            e2e_latency += end_time - start_time
+            total_tokens += sum(len(ids) for ids in outputs_trimmed)
 
             # Decode with special tokens for debugging
             if self.debug_samples:
@@ -196,6 +206,18 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
         if self.rank == 0:
             eval_logger.warning(f"EMU3 Simple Statistics: Found {text_only_count}/" f"{total_samples} text-only samples (skipped: " f"{text_only_count if self.skip_text_only else 0})")
             eval_logger.warning(f"EMU3 Simple Statistics: Found {multi_image_count}/" f"{total_samples} multi-image samples (skipped: " f"{multi_image_count if self.skip_multi_image else 0})")
+
+        # Log timing metrics
+        avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+        metric_dict = {
+            "total_tokens": total_tokens,
+            "e2e_latency": e2e_latency,
+            "avg_speed": avg_speed,
+            "additional_metrics": {
+                "rank": self.rank,
+            },
+        }
+        log_metrics(**metric_dict)
 
         return res
 
