@@ -98,9 +98,7 @@ def discover_models() -> list[tuple[str, str]]:
             models[model_id] = display_name
 
         for model_id, class_name in AVAILABLE_CHAT_TEMPLATE_MODELS.items():
-            display_name = _create_model_display_name(
-                model_id, class_name, is_chat=True
-            )
+            display_name = _create_model_display_name(model_id, class_name, is_chat=True)
             models[model_id] = display_name
 
         return sorted(models.items(), key=lambda x: x[0])
@@ -108,9 +106,7 @@ def discover_models() -> list[tuple[str, str]]:
         return []
 
 
-def _create_model_display_name(
-    model_id: str, class_name: str, is_chat: bool = False
-) -> str:
+def _create_model_display_name(model_id: str, class_name: str, is_chat: bool = False) -> str:
     name = class_name.replace("_", " ")
     return name
 

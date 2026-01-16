@@ -7,14 +7,14 @@ from apps.plm.generate import (
     PackedCausalTransformerGeneratorArgs,
     load_consolidated_model_and_tokenizer,
 )
-from core.args import dataclass_from_dict
-from core.transforms.image_transform import get_image_transform
-from core.transforms.video_transform import get_video_transform
 from loguru import logger as eval_logger
 from omegaconf import OmegaConf
 from PIL import Image
 from tqdm import tqdm
 
+from core.args import dataclass_from_dict
+from core.transforms.image_transform import get_image_transform
+from core.transforms.video_transform import get_video_transform
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms

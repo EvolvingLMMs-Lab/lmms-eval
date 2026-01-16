@@ -51,16 +51,8 @@ def get_version() -> str:
 
 def get_git_info() -> dict[str, str]:
     try:
-        branch = (
-            subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-            .decode()
-            .strip()
-        )
-        commit = (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
-            .decode()
-            .strip()
-        )
+        branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode().strip()
+        commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
         return {"branch": branch, "commit": commit}
     except Exception:
         return {"branch": "unknown", "commit": "unknown"}
@@ -68,11 +60,7 @@ def get_git_info() -> dict[str, str]:
 
 def get_repo_root() -> str:
     try:
-        return (
-            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-            .decode()
-            .strip()
-        )
+        return subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     except Exception:
         return ""
 

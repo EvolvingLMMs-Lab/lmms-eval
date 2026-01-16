@@ -284,9 +284,7 @@ def levenshtein_distance(s1, s2):
             if c1 == c2:
                 distances_.append(distances[i1])
             else:
-                distances_.append(
-                    1 + min((distances[i1], distances[i1 + 1], distances_[-1]))
-                )
+                distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
         distances = distances_
     return distances[-1]
 
@@ -629,17 +627,13 @@ def pooled_sample_stderr(stderrs: List[float], sizes: List[int]):
     # and: https://stats.stackexchange.com/a/4841331
     # this empirically seems to match running `stderr_for_metric` on all instances
     # from the subtasks concatenated with each other.
-    pooled_sample_var = (
-        sum([(size - 1) * stderr**2 * size for size, stderr in zip(sizes, stderrs)])
-    ) / (sum(sizes) - len(sizes))
+    pooled_sample_var = (sum([(size - 1) * stderr**2 * size for size, stderr in zip(sizes, stderrs)])) / (sum(sizes) - len(sizes))
 
     return np.sqrt(pooled_sample_var / sum(sizes))
 
 
 def combined_sample_stderr(stderrs: List[float], sizes: List[int], metrics=None):
-    assert metrics is not None, (
-        "Need to pass a list of each subtask's metric for this stderr aggregation"
-    )
+    assert metrics is not None, "Need to pass a list of each subtask's metric for this stderr aggregation"
     assert len(stderrs) == len(sizes) and len(sizes) == len(metrics)
 
     # See https://github.com/EleutherAI/lm-evaluation-harness/pull/1390 for more documentation.
@@ -655,15 +649,9 @@ def combined_sample_stderr(stderrs: List[float], sizes: List[int], metrics=None)
     curr_score = metrics[0]
 
     for stderr, size, score in zip(stderrs[1:], sizes[1:], metrics[1:]):
-        curr_score = ((curr_score * curr_size) + (score * size)) / (
-            curr_size + size
-        )  # NOTE: this assumes our aggregation fn is "mean"
+        curr_score = ((curr_score * curr_size) + (score * size)) / (curr_size + size)  # NOTE: this assumes our aggregation fn is "mean"
 
-        variance = ((curr_size - 1) * variance + (size - 1) * (stderr**2)) / (
-            curr_size + size - 1
-        ) + curr_size * size / ((curr_size + size) * (curr_size + size - 1)) * (
-            curr_score - score
-        ) ** 2
+        variance = ((curr_size - 1) * variance + (size - 1) * (stderr**2)) / (curr_size + size - 1) + curr_size * size / ((curr_size + size) * (curr_size + size - 1)) * (curr_score - score) ** 2
 
     return np.sqrt(variance)
 
