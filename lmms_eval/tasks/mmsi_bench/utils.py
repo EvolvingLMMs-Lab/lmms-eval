@@ -24,22 +24,28 @@ def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def msr_doc_to_text_with_gen_prompt(doc, lmms_eval_specific_kwargs=None):
     """
-    Version for visual CoT models that includes generation prompt in a parseable format
+    Version for visual CoT models that includes generation prompt in a parseable format.
+
+    Output format: [GEN_PROMPT]...[/GEN_PROMPT][QUESTION]...[/QUESTION]
+    - Stage 1 uses content inside [GEN_PROMPT] tags
+    - Stage 2 uses content inside [QUESTION] tags (includes pre_prompt and post_prompt)
     """
     question = doc["question"].strip()
+
+    # Build Stage 2 question with pre_prompt and post_prompt
+    stage2_question = question
+    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
+        stage2_question = f"{lmms_eval_specific_kwargs['pre_prompt']}{stage2_question}"
+    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
+        stage2_question = f"{stage2_question}{lmms_eval_specific_kwargs['post_prompt']}"
 
     # Add generation prompt as a special marker if provided
     if "generation_prompt" in lmms_eval_specific_kwargs:
         gen_prompt = lmms_eval_specific_kwargs["generation_prompt"]
         # Format: [GEN_PROMPT]...[/GEN_PROMPT][QUESTION]...[/QUESTION]
-        question = f"[GEN_PROMPT]{gen_prompt}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
+        return f"[GEN_PROMPT]{gen_prompt}[/GEN_PROMPT][QUESTION]{stage2_question}[/QUESTION]"
 
-    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
-        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
-        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
-
-    return question
+    return stage2_question
 
 
 def msr_doc_to_visual(doc):
@@ -48,6 +54,10 @@ def msr_doc_to_visual(doc):
         # Check if already a PIL Image object
         if isinstance(img_data, Image.Image):
             image = img_data.convert("RGB")
+        elif isinstance(img_data, dict):
+            # If dict (from HuggingFace datasets), extract bytes
+            image = Image.open(io.BytesIO(img_data["bytes"]))
+            image = image.convert("RGB")
         else:
             # If bytes data, decode it
             image = Image.open(io.BytesIO(img_data))

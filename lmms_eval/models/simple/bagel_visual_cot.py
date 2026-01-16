@@ -202,15 +202,16 @@ class BagelVisualCoT(lmms):
                 raise
 
     def _stage2_answer_with_image(
-        self, question: str, image_path: str, doc_id: str
+        self, question: str, image_path: str, doc_id: str, original_image: Optional[Image.Image] = None
     ) -> str:
         """
-        Stage 2: Answer question using generated image
+        Stage 2: Answer question using generated image (and optionally original image)
 
         Args:
             question: Original question text
-            image_path: Path to generated image
+            image_path: Path to generated auxiliary image
             doc_id: Document ID for logging
+            original_image: Original image (optional, used as primary reference)
 
         Returns:
             Answer text
@@ -219,21 +220,43 @@ class BagelVisualCoT(lmms):
         eval_logger.debug(f"Question: {question}")
 
         try:
-            # Load generated image
-            pil_image = Image.open(image_path).convert("RGB")
+            # Load generated auxiliary image
+            auxiliary_image = Image.open(image_path).convert("RGB")
 
-            # Call Bagel inferencer with image input for visual understanding
-            result = self.bagel.inferencer(
-                image=pil_image,  # Use 'image' not 'images'
-                text=question,
-                understanding_output=True,
-                think=False,
-                max_new_tokens=self.stage2_max_new_tokens,
-                do_sample=self.stage2_do_sample,
-                text_temperature=self.stage2_temperature,
-            )
+            # If original image is provided, use both images (original as primary, auxiliary as reference)
+            if original_image is not None:
+                eval_logger.debug("Stage 2 - Using both original and auxiliary images")
+                # Use interleave_inference to process multiple images
+                # Order: original image first (primary), then auxiliary image (reference), then question
+                input_list = [original_image, auxiliary_image, question]
+                output_list = self.bagel.inferencer.interleave_inference(
+                    input_lists=input_list,
+                    understanding_output=True,
+                    think=False,
+                    max_think_token_n=self.stage2_max_new_tokens,
+                    do_sample=self.stage2_do_sample,
+                    text_temperature=self.stage2_temperature,
+                )
+                # Extract text output
+                answer_text = ""
+                for output in output_list:
+                    if isinstance(output, str):
+                        answer_text = output
+                        break
+            else:
+                # Fallback to single image (auxiliary only)
+                eval_logger.debug("Stage 2 - Using auxiliary image only")
+                result = self.bagel.inferencer(
+                    image=auxiliary_image,
+                    text=question,
+                    understanding_output=True,
+                    think=False,
+                    max_think_token_n=self.stage2_max_new_tokens,
+                    do_sample=self.stage2_do_sample,
+                    text_temperature=self.stage2_temperature,
+                )
+                answer_text = result.get("text", "")
 
-            answer_text = result.get("text", "")
             eval_logger.debug(f"Stage 2 - Generated answer: {answer_text[:100]}...")
             return answer_text
 
@@ -295,6 +318,19 @@ class BagelVisualCoT(lmms):
         for request in requests:
             contexts, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
 
+            # Extract original image from document using task_dict
+            original_image = None
+            if doc_to_visual is not None:
+                try:
+                    # Get doc from task_dict
+                    doc = self.task_dict[task][split][doc_id]
+                    original_visuals = doc_to_visual(doc)
+                    if original_visuals and len(original_visuals) > 0:
+                        original_image = original_visuals[0]
+                        eval_logger.debug(f"Extracted original image for doc {doc_id}")
+                except Exception as e:
+                    eval_logger.warning(f"Failed to extract original image for doc {doc_id}: {e}")
+
             # Parse contexts to extract generation_prompt if provided
             import re
             gen_prompt_match = re.search(r'\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]', contexts, re.DOTALL)
@@ -331,9 +367,9 @@ class BagelVisualCoT(lmms):
                 pbar.update(1)
                 continue
 
-            # Stage 2: Answer question using generated image
+            # Stage 2: Answer question using generated image (and original image if available)
             final_answer = self._stage2_answer_with_image(
-                question=contexts, image_path=generated_images[0], doc_id=doc_id
+                question=contexts, image_path=generated_images[0], doc_id=doc_id, original_image=original_image
             )
 
             # Save intermediate artifacts if enabled
