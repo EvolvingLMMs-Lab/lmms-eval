@@ -7,17 +7,22 @@
 #SBATCH --partition=normal
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
-#SBATCH --time=12:00:00
+#SBATCH --time=01:00:00
 #SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3p5_%j.out
 #SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3p5_%j.err
 
 # Tasks for Math often need judge GPT: mathvista,mathvision. Tabmwp not implemented
 
-TASKS="mmmu_val_group_img,vqav2_val" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
+TASKS="ai2d" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
 BATCH_SIZE=1  # for now only sequential processing possible for Emu3.5
-MODEL="emu3p5" 
-MODEL_ARGS=""
-#MODEL_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
+MODEL="emu3p5"
+DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
+
+PRETRAINED="${PRETRAINED:-BAAI/Emu3.5}"
+TOKENIZER_PATH="${TOKENIZER_PATH:-$PRETRAINED}"
+EMU3_MIN_PIXELS="${EMU3_MIN_PIXELS:-262144}"     # 512*512
+EMU3_MAX_PIXELS="${EMU3_MAX_PIXELS:-1048576}"    # 1024*1024
+
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/emu3p5_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
@@ -53,6 +58,13 @@ NUM_GPUS=$(echo "$CUDA_VISIBLE_DEVICES" | awk -F',' '{print NF}')
 echo "Number of GPUs available: $NUM_GPUS"
 echo "GPUS: $CUDA_VISIBLE_DEVICES"
 
+# ========== Build model_args ==========
+MODEL_ARGS="pretrained=$PRETRAINED"
+MODEL_ARGS="$MODEL_ARGS,tokenizer_path=$TOKENIZER_PATH"
+MODEL_ARGS="$MODEL_ARGS,emu3_min_pixels=$EMU3_MIN_PIXELS"
+MODEL_ARGS="$MODEL_ARGS,emu3_max_pixels=$EMU3_MAX_PIXELS"
+MODEL_ARGS="$MODEL_ARGS,$DEBUG_ARGS"
+
 # Print configuration
 echo "========================================"
 echo "MLLM Evaluation Configuration"
@@ -64,6 +76,7 @@ echo "Offline datasets:     ${OFFLINE_DATASETS}"
 echo "Num GPU:              ${NUM_GPUS}"
 echo "Output-Path:          ${RES_PATH}"
 echo "Eval-Repo-Location:   ${EVAL_DIR}"
+echo "Model-Args:           ${MODEL_ARGS}"
 echo "========================================"
 echo ""
 

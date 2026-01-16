@@ -7,17 +7,17 @@
 #SBATCH --partition=normal
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
-#SBATCH --time=12:00:00
+#SBATCH --time=01:00:00
 #SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.out
 #SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.err
 
-TASKS="vqav2_val" #,pope,gqa,vqav2_val,mmmu_val_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
+TASKS="ai2d" #,pope,gqa,vqav2_val,mmmu_val_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
 BATCH_SIZE=1
 MODEL="llama_emu3"
 DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
 
-PRETRAINED="/users/rkreft/MLLM-infra01-folder/rkreft/Meg-Runs/image-extension/llama3-3b-SFT-15n-8192sl-240gbsz-0.9i-0.1t-stage2-base-ST-MASKED-PLW0.1-PACKED-eqsample-loss-SEED28/HF"
-TOKENIZER_PATH="/capstor/store/cscs/swissai/infra01/MLLM/llama3_vision_instruct_emu3_tokenizer"
+PRETRAINED="${PRETRAINED:-/users/rkreft/MLLM-infra01-folder/rkreft/Meg-Runs/image-extension/llama3-3b-SFT-15n-8192sl-240gbsz-0.9i-0.1t-stage2-base-ST-MASKED-PLW0.1-PACKED-eqsample-loss-SEED28/HF}"
+TOKENIZER_PATH="${TOKENIZER_PATH:-/capstor/store/cscs/swissai/infra01/MLLM/llama3_vision_instruct_emu3_tokenizer}"
 EMU3_MIN_PIXELS="${EMU3_MIN_PIXELS:-262144}"     # 512*512
 EMU3_MAX_PIXELS="${EMU3_MAX_PIXELS:-1048576}"    # 1024*1024
 

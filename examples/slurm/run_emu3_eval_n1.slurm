@@ -7,15 +7,20 @@
 #SBATCH --partition=normal
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
-#SBATCH --time=11:59:00
+#SBATCH --time=00:59:00
 #SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.out
 #SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_emu3_%j.err
 
-TASKS="vqav2_val,mmmu_val_group_img" #"pope,gqa,vqav2_val,mmmu_val_group_img,mme,ai2d,docvqa,infovqa,ocrbench_v2,chartqa"
+TASKS="ai2d" #"pope,gqa,vqav2_val,mmmu_val_group_img,mme,ai2d,docvqa,infovqa,ocrbench_v2,chartqa"
 BATCH_SIZE=1
 MODEL="emu3"
-MODEL_ARGS=""
-#MODEL_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
+DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
+
+PRETRAINED="${PRETRAINED:-BAAI/Emu3-Chat}"
+TOKENIZER_PATH="${TOKENIZER_PATH:-$PRETRAINED}"
+EMU3_MIN_PIXELS="${EMU3_MIN_PIXELS:-262144}"     # 512*512
+EMU3_MAX_PIXELS="${EMU3_MAX_PIXELS:-1048576}"    # 1024*1024
+
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/emu3_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
@@ -51,6 +56,13 @@ NUM_GPUS=$(echo "$CUDA_VISIBLE_DEVICES" | awk -F',' '{print NF}')
 echo "Number of GPUs available: $NUM_GPUS"
 echo "GPUS: $CUDA_VISIBLE_DEVICES"
 
+# ========== Build model_args ==========
+MODEL_ARGS="pretrained=$PRETRAINED"
+MODEL_ARGS="$MODEL_ARGS,tokenizer_path=$TOKENIZER_PATH"
+MODEL_ARGS="$MODEL_ARGS,emu3_min_pixels=$EMU3_MIN_PIXELS"
+MODEL_ARGS="$MODEL_ARGS,emu3_max_pixels=$EMU3_MAX_PIXELS"
+MODEL_ARGS="$MODEL_ARGS,$DEBUG_ARGS"
+
 # Print configuration
 echo "========================================"
 echo "MLLM Evaluation Configuration"
@@ -62,6 +74,7 @@ echo "Offline datasets:     ${OFFLINE_DATASETS}"
 echo "Num GPU:              ${NUM_GPUS}"
 echo "Output-Path:          ${RES_PATH}"
 echo "Eval-Repo-Location:   ${EVAL_DIR}"
+echo "Model-Args:           ${MODEL_ARGS}"
 echo "========================================"
 echo ""
 
