@@ -15,6 +15,7 @@ generation_kwargs:
   do_sample: false
 doc_to_visual: !function utils.spatial_doc_to_visual_video
 doc_to_text: !function utils.spatial_doc_to_text_video
+doc_to_messages: !function utils.spatial_doc_to_messages_video
 doc_to_target: "answer"
 process_results: !function utils.spatial_process_results
 metric_list:

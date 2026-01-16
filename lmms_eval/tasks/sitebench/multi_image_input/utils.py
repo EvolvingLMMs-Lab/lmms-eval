@@ -37,7 +37,6 @@ def spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs=None):
     # Get number of frames from lmms_eval_specific_kwargs or default to 32
     num_frames = 32
     if lmms_eval_specific_kwargs:
-        eval_logger.debug(f"lmms_eval_specific_kwargs: {lmms_eval_specific_kwargs}")
         num_frames = lmms_eval_specific_kwargs.get("default", {}).get("num_frames", 32)
 
     # Load video and sample frames uniformly
@@ -53,6 +52,30 @@ def spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs=None):
     # Convert to PIL Images
     pil_images = [Image.fromarray(frame) for frame in frames]
 
-    eval_logger.info(f"Loaded {len(pil_images)} frames from video as images (total_frames={total_frames})")
-
     return pil_images
+
+
+def spatial_doc_to_messages_video_as_images(doc, lmms_eval_specific_kwargs=None):
+    """
+    Convert a sitebench video document to chat messages format using multi-image input.
+    Puts all image frames at the front, then the question text.
+
+    Args:
+        doc: Document containing video metadata
+        lmms_eval_specific_kwargs: Optional kwargs containing 'num_frames' (default: 32)
+
+    Returns:
+        List containing a single message dict with role and content
+    """
+    question = spatial_doc_to_text_video(doc, lmms_eval_specific_kwargs)
+    visuals = spatial_doc_to_visual_video_as_images(doc, lmms_eval_specific_kwargs)
+
+    # Build content as a list with all images first, then text
+    content = []
+    for visual in visuals:
+        content.append({"type": "image", "url": visual})
+    content.append({"type": "text", "text": question})
+
+    messages = [{"role": "user", "content": content}]
+
+    return messages
