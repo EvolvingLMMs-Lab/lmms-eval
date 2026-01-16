@@ -1,7 +1,7 @@
 dataset_path: parquet
 dataset_kwargs:
   data_files:
-    Illusion_ICON: /data1/zwb/hf/datasets/arshia_illusionbench_test100/illusionbench_Illusion_ICON_test100.parquet
+    Illusion_ICON: /home/yifeishen/data/zimo/datasets/illusionbench/illusion_icon_test100.parquet
 process_docs: !function arshia_utils.illusionbench_arshia_process_docs
 task: illusionbench_arshia_icon_scene_test
 test_split: Illusion_ICON

@@ -1,7 +1,7 @@
-dataset_path: arrow
+dataset_path: parquet
 dataset_kwargs:
   data_files:
-    Illusion_LOGO: /data1/zwb/hf/datasets/arshia_illusionbench/arshiahemmat___illusion_bench/default/0.0.0/5e4c87c393a28cd0ede1a2b0b7f15afcb8c4e294/illusion_bench-Illusion_LOGO-*.arrow
+    Illusion_LOGO: /home/yifeishen/data/zimo/datasets/illusionbench/illusion_logo_test100.parquet
 process_docs: !function arshia_utils.illusionbench_arshia_process_docs
 task: illusionbench_arshia_logo
 test_split: Illusion_LOGO
