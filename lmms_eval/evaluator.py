@@ -84,6 +84,7 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
+    num_samples: int = 1,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -242,6 +243,12 @@ def simple_evaluate(
                 # fewshot_random_seed set for tasks, even with a default num_fewshot (e.g. in the YAML file)
                 task_obj.set_fewshot_seed(seed=fewshot_random_seed)
                 # eval_logger.info(f"Setting fewshot random generator seed to {fewshot_random_seed}")
+
+                # Handle num_samples for model stability measurement (k-samples mode)
+                if num_samples > 1:
+                    default_repeats = task_obj.get_config("repeats") or 1
+                    eval_logger.info(f"[Model Stability] Setting repeats={num_samples} for {task_name} (was: {default_repeats})")
+                    task_obj.set_config(key="repeats", value=num_samples)
 
                 adjusted_task_dict[task_name] = task_obj
 
@@ -641,6 +648,7 @@ def evaluate(
         for task_output in eval_tasks:
             task_output.calculate_aggregate_metric(bootstrap_iters=bootstrap_iters)
             task_output.calculate_clt_aggregate_metric()
+            task_output.calculate_stability_metrics()
         (
             results,
             samples,
