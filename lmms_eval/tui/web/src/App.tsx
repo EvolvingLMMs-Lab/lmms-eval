@@ -607,7 +607,7 @@ export default function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-[450px] bg-white border-r border-neutral-200 flex flex-col overflow-y-auto scrollbar-thin">
+        <div className="w-full md:w-[400px] lg:w-[450px] xl:w-[500px] 2xl:w-[550px] min-w-[320px] max-w-[600px] bg-white border-r border-neutral-200 flex flex-col overflow-y-auto scrollbar-thin flex-shrink-0">
           <div className="flex-shrink-0 border-b border-neutral-100">
             <div 
               className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
@@ -833,7 +833,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-neutral-50/30">
+        <div className="flex-1 flex flex-col bg-neutral-50/30 min-w-0">
           <div className="px-6 py-4 border-b border-neutral-200 bg-white flex gap-3 justify-start">
             <button
               onClick={startEval}
