@@ -12,6 +12,10 @@ from lmms_eval.api.group import ConfigurableGroup
 from lmms_eval.api.metrics import (
     aggregate_subtask_metrics,
     clustered_stderr,
+    consistency_rate,
+    expected_accuracy,
+    internal_variance,
+    consensus_accuracy,
     pooled_sample_stderr,
     stderr_for_metric,
 )
@@ -154,6 +158,47 @@ class TaskOutput:
                 self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = clustered_stderr(numeric_items, cluster_ids)
             else:
                 self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = "N/A"
+
+    def calculate_stability_metrics(self) -> None:
+        """Calculate model stability metrics (EA, CA, IV, CR) when num_samples > 1.
+
+        These metrics measure model consistency across multiple samples per question.
+        Only computed when repeats > 1 (k-samples mode).
+        """
+        repeats = self.task_config.get("repeats", 1) if self.task_config else 1
+        if repeats <= 1:
+            return  # Skip if not in k-samples mode
+
+        score_key = self.task_config.get("score_key", "score") if self.task_config else "score"
+
+        for (metric, filter_key), items in self.sample_metrics.items():
+            if metric not in self.task.aggregation():
+                continue
+
+            # Group scores by question (doc_id)
+            # items should be in order: [q1_s1, q1_s2, ..., q1_sk, q2_s1, ...]
+            # where k = repeats
+            scores_per_question = []
+            for i in range(0, len(items), repeats):
+                question_scores = []
+                for j in range(repeats):
+                    if i + j < len(items):
+                        x = items[i + j]
+                        if isinstance(x, (int, float)):
+                            question_scores.append(float(x))
+                        elif isinstance(x, dict) and score_key in x:
+                            question_scores.append(float(x[score_key]))
+                if question_scores:
+                    scores_per_question.append(question_scores)
+
+            if not scores_per_question:
+                continue
+
+            # Calculate stability metrics
+            self.agg_metrics[f"{metric}_expected_accuracy,{filter_key}"] = expected_accuracy(scores_per_question)
+            self.agg_metrics[f"{metric}_consensus_accuracy,{filter_key}"] = consensus_accuracy(scores_per_question)
+            self.agg_metrics[f"{metric}_internal_variance,{filter_key}"] = internal_variance(scores_per_question)
+            self.agg_metrics[f"{metric}_consistency_rate,{filter_key}"] = consistency_rate(scores_per_question)
 
     def __repr__(self):
         return f"TaskOutput(task_name={self.task_name}, " f"group_name={self.group_name}, " f"version={self.version}, " f"n_shot={self.n_shot}, " f"task_alias={self.task_alias}, " f"group_alias={self.group_alias})"
@@ -387,6 +432,11 @@ def consolidate_results(
             clustered_key = f"{metric}_stderr_clustered,{filter_key}"
             if clustered_key in task_output.agg_metrics:
                 results[task_output.task_name][clustered_key] = task_output.agg_metrics[clustered_key]
+            # Output stability metrics (EA, CA, IV, CR) when in k-samples mode
+            for stat_suffix in ["expected_accuracy", "consensus_accuracy", "internal_variance", "consistency_rate"]:
+                stat_key = f"{metric}_{stat_suffix},{filter_key}"
+                if stat_key in task_output.agg_metrics:
+                    results[task_output.task_name][stat_key] = task_output.agg_metrics[stat_key]
     return results, samples, configs, versions, num_fewshot, higher_is_better
 
 
