@@ -6,9 +6,12 @@ import pathlib
 import sys
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
+
 from lmms_eval.api.group import ConfigurableGroup
 from lmms_eval.api.metrics import (
     aggregate_subtask_metrics,
+    clustered_stderr,
     pooled_sample_stderr,
     stderr_for_metric,
 )
@@ -121,6 +124,36 @@ class TaskOutput:
                     self.agg_metrics[f"{metric}_stderr,{filter_key}"] = stderr_fn(items) if (stderr_fn and len(items) > 1) else "N/A"
                 else:
                     raise ValueError(f"Received bootstrap_iters '{bootstrap_iters}' but expected an integer. Set to 0 to turn off stderr calculations.")
+
+    def calculate_clt_aggregate_metric(self) -> None:
+        """Calculate CLT-based standard errors (naive and clustered)."""
+        # Get cluster_key from task config (e.g., "videoID" for videomme)
+        cluster_key = self.task_config.get("cluster_key") if self.task_config else None
+        score_key = self.task_config.get("score_key", "score") if self.task_config else "score"
+
+        for (metric, filter_key), items in self.sample_metrics.items():
+            if metric not in self.task.aggregation():
+                continue
+            # Extract scores and cluster_ids from items
+            # Convention: dict items should have the score_key field (0/1) and optionally the field specified by cluster_key
+            numeric_items = []
+            cluster_ids = []
+            for x in items:
+                if isinstance(x, (int, float)):
+                    numeric_items.append(x)
+                    cluster_ids.append(None)
+                elif isinstance(x, dict) and score_key in x:
+                    numeric_items.append(x[score_key])
+                    cluster_ids.append(x.get(cluster_key) if cluster_key else None)
+            n = len(numeric_items)
+            # Naive CLT stderr: std / sqrt(n)
+            self.agg_metrics[f"{metric}_stderr_clt,{filter_key}"] = np.std(numeric_items, ddof=1) / np.sqrt(n) if n > 1 else "N/A"
+            # Clustered stderr: only if cluster_ids are available and have >1 unique clusters
+            valid_clusters = [c for c in cluster_ids if c is not None]
+            if valid_clusters and len(set(valid_clusters)) > 1 and n > 1:
+                self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = clustered_stderr(numeric_items, cluster_ids)
+            else:
+                self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = "N/A"
 
     def __repr__(self):
         return f"TaskOutput(task_name={self.task_name}, " f"group_name={self.group_name}, " f"version={self.version}, " f"n_shot={self.n_shot}, " f"task_alias={self.task_alias}, " f"group_alias={self.group_alias})"
@@ -346,6 +379,14 @@ def consolidate_results(
             results[task_output.task_name][metric_key] = task_output.agg_metrics[metric_key]
             results[task_output.task_name]["samples"] = task_output.sample_len
             results[task_output.task_name][f"{metric}_stderr,{filter_key}"] = task_output.agg_metrics[f"{metric}_stderr,{filter_key}"]
+            # Output CLT stderr
+            clt_key = f"{metric}_stderr_clt,{filter_key}"
+            if clt_key in task_output.agg_metrics:
+                results[task_output.task_name][clt_key] = task_output.agg_metrics[clt_key]
+            # Output clustered stderr
+            clustered_key = f"{metric}_stderr_clustered,{filter_key}"
+            if clustered_key in task_output.agg_metrics:
+                results[task_output.task_name][clustered_key] = task_output.agg_metrics[clustered_key]
     return results, samples, configs, versions, num_fewshot, higher_is_better
 
 
