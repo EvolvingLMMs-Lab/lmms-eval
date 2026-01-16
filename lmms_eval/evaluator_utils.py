@@ -12,10 +12,10 @@ from lmms_eval.api.group import ConfigurableGroup
 from lmms_eval.api.metrics import (
     aggregate_subtask_metrics,
     clustered_stderr,
+    consensus_accuracy,
     consistency_rate,
     expected_accuracy,
     internal_variance,
-    consensus_accuracy,
     pooled_sample_stderr,
     stderr_for_metric,
 )

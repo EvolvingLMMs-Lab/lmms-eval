@@ -603,7 +603,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
                     return "N/A"
                 try:
                     return "%.4f" % se_val
-                except:
+                except Exception:
                     return "N/A"
 
             # Bootstrap stderr (original)

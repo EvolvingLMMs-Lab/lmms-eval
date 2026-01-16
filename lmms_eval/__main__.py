@@ -279,8 +279,7 @@ def parse_eval_args() -> argparse.Namespace:
         "--num_samples",
         type=int,
         default=1,
-        help="Number of samples per question for model stability measurement. "
-        "When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.",
+        help="Number of samples per question for model stability measurement. " "When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.",
     )
     args = parser.parse_args()
     return args
