@@ -2,6 +2,184 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 
 const API_BASE = ''
 
+const SHELL_KEYWORDS = new Set([
+  'export', 'python', 'python3', 'uv', 'pip', 'node', 'npm', 'git', 
+  'cd', 'ls', 'echo', 'rm', 'mkdir', 'touch', 'alias', 'source', 'env'
+])
+
+const ANSI_COLORS: Record<string, string> = {
+  '30': 'text-neutral-900',
+  '31': 'text-red-600',
+  '32': 'text-green-600',
+  '33': 'text-yellow-600',
+  '34': 'text-blue-600',
+  '35': 'text-purple-600',
+  '36': 'text-cyan-600',
+  '37': 'text-neutral-400',
+  '90': 'text-neutral-500',
+  '91': 'text-red-500',
+  '92': 'text-green-500',
+  '93': 'text-yellow-500',
+  '94': 'text-blue-500',
+  '95': 'text-purple-500',
+  '96': 'text-cyan-500',
+  '97': 'text-neutral-300',
+}
+
+function highlightLog(line: string) {
+  const ansiRegex = /(?:\x1b)?\[([0-9;]+)m/g
+  
+  const parts: any[] = []
+  let lastIndex = 0
+  let currentStyle = 'text-neutral-600'
+  let isBold = false
+  let i = 0
+  
+  let match
+  while ((match = ansiRegex.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      const text = line.slice(lastIndex, match.index)
+      const className = `${currentStyle}${isBold ? ' font-semibold' : ''}`
+      parts.push(<span key={i++} className={className}>{text}</span>)
+    }
+    
+    const codes = match[1].split(';')
+    for (const code of codes) {
+      if (code === '0') {
+        currentStyle = 'text-neutral-600'
+        isBold = false
+      } else if (code === '1') {
+        isBold = true
+      } else if (ANSI_COLORS[code]) {
+        currentStyle = ANSI_COLORS[code]
+      }
+    }
+    
+    lastIndex = ansiRegex.lastIndex
+  }
+  
+  if (lastIndex < line.length) {
+    const text = line.slice(lastIndex)
+    const className = `${currentStyle}${isBold ? ' font-semibold' : ''}`
+    parts.push(<span key={i++} className={className}>{text}</span>)
+  }
+  
+  return parts.length > 0 ? parts : line
+}
+
+function highlightShell(code: string) {
+  const tokens: any[] = []
+  let remaining = code
+  let i = 0
+
+  while (remaining.length > 0) {
+    let match = remaining.match(/^#.*/)
+    if (match) {
+      tokens.push(<span key={i++} className="text-neutral-400 italic">{match[0]}</span>)
+      remaining = remaining.slice(match[0].length)
+      continue
+    }
+
+    match = remaining.match(/^(['"])(?:(?!\1)[^\\]|\\.)*\1/)
+    if (match) {
+      tokens.push(<span key={i++} className="text-neutral-900 bg-neutral-100/50 rounded-[1px]">{match[0]}</span>)
+      remaining = remaining.slice(match[0].length)
+      continue
+    }
+
+    match = remaining.match(/^(\$[a-zA-Z_][a-zA-Z0-9_]*|\$\{[^}]+\})/)
+    if (match) {
+      tokens.push(<span key={i++} className="text-neutral-800 font-medium">{match[0]}</span>)
+      remaining = remaining.slice(match[0].length)
+      continue
+    }
+
+    match = remaining.match(/^(-+[a-zA-Z0-9_-]+)/)
+    if (match) {
+      tokens.push(<span key={i++} className="text-neutral-500 font-medium">{match[0]}</span>)
+      remaining = remaining.slice(match[0].length)
+      continue
+    }
+
+    match = remaining.match(/^[=&|;>]/)
+    if (match) {
+      tokens.push(<span key={i++} className="text-neutral-400 font-bold px-[1px]">{match[0]}</span>)
+      remaining = remaining.slice(match[0].length)
+      continue
+    }
+
+    match = remaining.match(/^\s+/)
+    if (match) {
+      tokens.push(<span key={i++}>{match[0]}</span>)
+      remaining = remaining.slice(match[0].length)
+      continue
+    }
+
+    match = remaining.match(/^[^\s#$'"=&|;>-]+/)
+    if (match) {
+      const word = match[0]
+      if (SHELL_KEYWORDS.has(word)) {
+        tokens.push(<span key={i++} className="text-neutral-700 font-bold">{word}</span>)
+      } else {
+        tokens.push(<span key={i++} className="text-neutral-600">{word}</span>)
+      }
+      remaining = remaining.slice(word.length)
+      continue
+    }
+
+    tokens.push(<span key={i++}>{remaining[0]}</span>)
+    remaining = remaining.slice(1)
+  }
+  
+  return tokens
+}
+
+interface ShellEditorProps {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  className?: string
+}
+
+function ShellEditor({ value, onChange, placeholder, className = '' }: ShellEditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const preRef = useRef<HTMLPreElement>(null)
+
+  const handleScroll = () => {
+    if (textareaRef.current && preRef.current) {
+      preRef.current.scrollTop = textareaRef.current.scrollTop
+      preRef.current.scrollLeft = textareaRef.current.scrollLeft
+    }
+  }
+
+  return (
+    <div className={`relative group bg-white border border-neutral-200 transition-colors focus-within:border-black overflow-hidden ${className}`}>
+      <pre
+        ref={preRef}
+        className="absolute inset-0 px-3 py-2 text-xs font-mono leading-relaxed whitespace-pre pointer-events-none overflow-hidden text-transparent"
+        style={{ fontFamily: 'monospace' }} 
+        aria-hidden="true"
+      >
+        {value ? highlightShell(value) : <span className="text-neutral-300 italic">{placeholder}</span>}
+        <br />
+      </pre>
+      
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onScroll={handleScroll}
+        placeholder={placeholder}
+        className="relative z-10 w-full h-full bg-transparent text-transparent caret-black px-3 py-2 text-xs font-mono leading-relaxed resize-none focus:outline-none whitespace-pre overflow-auto scrollbar-thin scrollbar-thumb-neutral-200 scrollbar-track-transparent"
+        style={{ fontFamily: 'monospace' }} 
+        spellCheck={false}
+        autoCapitalize="off"
+        autoComplete="off"
+      />
+    </div>
+  )
+}
+
 interface SelectProps {
   value: string
   onChange: (value: string) => void
@@ -11,6 +189,7 @@ interface SelectProps {
 
 function Select({ value, onChange, options, placeholder }: SelectProps) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -23,41 +202,82 @@ function Select({ value, onChange, options, placeholder }: SelectProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (open) {
+      setSearch('')
+    }
+  }, [open])
+
   const selectedOption = options.find(o => o.value === value)
+  
+  const filteredOptions = options.filter(o => 
+    o.label.toLowerCase().includes(search.toLowerCase()) || 
+    o.value.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors text-left text-neutral-900 hover:border-neutral-300"
+        className="w-full flex items-center justify-between bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors text-left text-neutral-600 hover:border-neutral-300"
       >
-        <span className={selectedOption ? 'text-neutral-900' : 'text-neutral-400'}>
+        <span className={selectedOption ? 'text-neutral-600' : 'text-neutral-400'}>
           {selectedOption?.label || placeholder || 'Select...'}
         </span>
         <span className={`text-[10px] text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`}>▼</span>
       </button>
       {open && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-neutral-200 shadow-lg max-h-60 overflow-auto">
-          {options.map(option => (
-            <div
-              key={option.value}
-              onClick={() => {
-                onChange(option.value)
-                setOpen(false)
-              }}
-              className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
-                option.value === value
-                  ? 'bg-black text-white'
-                  : 'text-neutral-900 hover:bg-neutral-50'
-              }`}
-            >
-              {option.label}
-            </div>
-          ))}
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-neutral-200 shadow-lg max-h-60 overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-neutral-100">
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onClick={e => e.stopPropagation()}
+              placeholder="Search..."
+              className="w-full text-xs font-mono px-2 py-1 bg-neutral-50 border border-neutral-200 text-neutral-600 focus:border-black focus:outline-none"
+            />
+          </div>
+          <div className="overflow-auto">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(option => (
+                <div
+                  key={option.value}
+                  onClick={() => {
+                    onChange(option.value)
+                    setOpen(false)
+                  }}
+                  className={`px-3 py-2 text-xs font-mono cursor-pointer transition-colors ${
+                    option.value === value
+                      ? 'bg-black text-white'
+                      : 'text-neutral-600 hover:bg-neutral-50'
+                  }`}
+                >
+                  {option.label}
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-xs text-neutral-400 italic">No matches found</div>
+            )}
+          </div>
         </div>
       )}
     </div>
+  )
+}
+
+function HighlightMatch({ text, match }: { text: string; match: string }) {
+  if (!match || !text) return <>{text}</>
+  const parts = text.split(new RegExp(`(${match})`, 'gi'))
+  return (
+    <>
+      {parts.map((part, i) => 
+        part.toLowerCase() === match.toLowerCase() 
+          ? <span key={i} className="bg-yellow-200 text-black">{part}</span> 
+          : part
+      )}
+    </>
   )
 }
 
@@ -109,7 +329,6 @@ export default function App() {
   const [models, setModels] = useState<ModelInfo[]>([])
   const [tasks, setTasks] = useState<TaskInfo[]>([])
   
-
   const [model, setModel] = useState('openai_compatible')
   const [modelArgs, setModelArgs] = useState('model_version=allenai/molmo-2-8b:free')
   const [envVars, setEnvVars] = useState(
@@ -129,6 +348,12 @@ export default function App() {
   const [jobId, setJobId] = useState<string | null>(null)
   const [output, setOutput] = useState<string[]>(['Ready to evaluate'])
   const [command, setCommand] = useState('')
+  
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [configExpanded, setConfigExpanded] = useState(true)
+  const [tasksExpanded, setTasksExpanded] = useState(true)
+  const [envVarsExpanded, setEnvVarsExpanded] = useState(true)
+  const [logsMaximized, setLogsMaximized] = useState(false)
   
   const outputRef = useRef<HTMLDivElement>(null)
 
@@ -228,29 +453,6 @@ export default function App() {
     return nodes
   }, [tasks, taskFilter])
 
-  const invertSelection = () => {
-    const newSet = new Set(selectedTasks)
-    
-    const visibleLeafIds: string[] = []
-    visibleNodes.forEach(node => {
-      if (node.type === 'leaf') {
-        visibleLeafIds.push(node.task.id)
-      } else {
-        node.children.forEach(c => visibleLeafIds.push(c.id))
-      }
-    })
-
-    visibleLeafIds.forEach(id => {
-      if (newSet.has(id)) {
-        newSet.delete(id)
-      } else {
-        newSet.add(id)
-      }
-    })
-    
-    setSelectedTasks(newSet)
-  }
-
   const toggleTask = (taskId: string) => {
     const newSet = new Set(selectedTasks)
     if (newSet.has(taskId)) {
@@ -271,6 +473,17 @@ export default function App() {
       children.forEach(c => newSet.add(c.id))
     }
     setSelectedTasks(newSet)
+  }
+  
+  const toggleGroupCollapse = (groupId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newSet = new Set(collapsedGroups)
+    if (newSet.has(groupId)) {
+      newSet.delete(groupId)
+    } else {
+      newSet.add(groupId)
+    }
+    setCollapsedGroups(newSet)
   }
 
   const startEval = async () => {
@@ -349,7 +562,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-white text-neutral-900 font-light selection:bg-black selection:text-white">
-      <header className="h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
+      <header className="relative h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
         <div className="flex items-center gap-4">
           <div className="text-lg font-bold tracking-tight text-neutral-900">LMMs-Eval</div>
           <div className="flex items-center gap-3 text-[10px] font-mono text-neutral-400">
@@ -386,197 +599,237 @@ export default function App() {
             {status}
           </div>
         </div>
+        {status === 'running' && (
+          <div className="absolute bottom-0 left-0 w-full h-0.5 bg-neutral-100 overflow-hidden">
+            <div className="h-full bg-black animate-pulse w-full" />
+          </div>
+        )}
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-[450px] bg-white border-r border-neutral-200 flex flex-col overflow-y-auto scrollbar-thin">
-          <div className="flex-shrink-0 p-6 border-b border-neutral-100">
-            <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">Configuration</h2>
+          <div className="flex-shrink-0 border-b border-neutral-100">
+            <div 
+              className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
+              onClick={() => setConfigExpanded(!configExpanded)}
+            >
+              <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Configuration</h2>
+              <span className={`text-neutral-400 transform transition-transform ${configExpanded ? 'rotate-0' : '-rotate-90'}`}>▼</span>
+            </div>
             
-            <div className="space-y-4">
-              <div className="group">
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Model</label>
-                <Select
-                  value={model}
-                  onChange={setModel}
-                  options={models.map(m => ({ value: m.id, label: m.name }))}
-                  placeholder="Select model..."
-                />
-              </div>
-
-              <div className="group">
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Arguments</label>
-                <textarea 
-                  value={modelArgs}
-                  onChange={e => setModelArgs(e.target.value)}
-                  placeholder="model_version=..."
-                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm h-16 resize-none focus:border-black focus:outline-none transition-colors placeholder-neutral-300 leading-relaxed text-neutral-900"
-                />
-              </div>
-
-              <div className="group">
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Environment Variables</label>
-                <textarea 
-                  value={envVars}
-                  onChange={e => setEnvVars(e.target.value)}
-                  placeholder="export KEY=VALUE..."
-                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm h-16 resize-none focus:border-black focus:outline-none transition-colors placeholder-neutral-300 leading-relaxed text-neutral-900 font-mono"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            {configExpanded && (
+              <div className="p-6 pt-0 space-y-4">
                 <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Batch Size</label>
-                  <input 
-                    type="number"
-                    value={batchSize}
-                    onChange={e => setBatchSize(e.target.value)}
-                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors text-neutral-900"
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Model</label>
+                  <Select
+                    value={model}
+                    onChange={setModel}
+                    options={models.map(m => ({ value: m.id, label: m.name }))}
+                    placeholder="Select model..."
                   />
                 </div>
+
                 <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Limit</label>
-                  <input 
-                    type="number"
-                    value={limit}
-                    onChange={e => setLimit(e.target.value)}
-                    placeholder="All"
-                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors placeholder-neutral-300 text-neutral-900"
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Arguments</label>
+                  <textarea 
+                    value={modelArgs}
+                    onChange={e => setModelArgs(e.target.value)}
+                    placeholder="model_version=..."
+                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs h-32 resize-y focus:border-black focus:outline-none transition-colors placeholder-neutral-400 leading-relaxed text-neutral-600 font-mono"
                   />
                 </div>
-              </div>
-              
-              <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Device</label>
-                  <input 
-                    value={device}
-                    onChange={e => setDevice(e.target.value)}
-                    placeholder="cuda:0"
-                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors placeholder-neutral-300 text-neutral-900"
-                  />
-              </div>
 
-              <div className="group">
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Output Path</label>
-                  <input 
-                    value={outputPath}
-                    onChange={e => setOutputPath(e.target.value)}
-                    placeholder="./logs/"
-                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none transition-colors placeholder-neutral-300 text-neutral-900"
-                  />
-              </div>
-
-              <div className="group">
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Verbosity</label>
-                <Select
-                  value={verbosity}
-                  onChange={setVerbosity}
-                  options={[
-                    { value: 'DEBUG', label: 'DEBUG' },
-                    { value: 'INFO', label: 'INFO' },
-                    { value: 'WARNING', label: 'WARNING' },
-                    { value: 'ERROR', label: 'ERROR' },
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col min-h-0">
-            <div className="p-6 border-b border-neutral-100 bg-white">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                  Tasks <span className="text-neutral-900 ml-1">{selectedTasks.size}</span>
-                </h2>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={taskFilter}
-                  onChange={e => setTaskFilter(e.target.value)}
-                  placeholder="Search tasks..."
-                  className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-900"
-                />
-                <button
-                  onClick={invertSelection}
-                  className="px-3 py-2 text-xs font-medium uppercase tracking-wider bg-neutral-100 border border-neutral-200 hover:bg-neutral-200 hover:border-neutral-300 transition-colors text-neutral-900"
-                  title="Invert selection for filtered tasks"
-                >
-                  Invert
-                </button>
-              </div>
-            </div>
-            <div className="">
-              {visibleNodes.map((node) => {
-                if (node.type === 'group') {
-                  const allChildrenSelected = node.children.every(c => selectedTasks.has(c.id))
-                  const someChildrenSelected = node.children.some(c => selectedTasks.has(c.id))
-                  
-                  return (
-                    <div key={node.id} className="border-b border-neutral-50">
-                      <div 
-                        onClick={() => toggleGroup(node.children)}
-                        className="flex items-center gap-3 px-6 py-2 bg-neutral-50/50 cursor-pointer hover:bg-neutral-100 transition-colors"
-                      >
-                        <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
-                          allChildrenSelected 
-                          ? 'border-black bg-black' 
-                          : someChildrenSelected ? 'border-black' : 'border-neutral-300 hover:border-black'
-                        }`}>
-                          {allChildrenSelected && <div className="w-1.5 h-1.5 bg-white" />}
-                          {!allChildrenSelected && someChildrenSelected && <div className="w-1.5 h-1.5 bg-black" />}
-                        </div>
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500">Group</span>
-                        <span className="text-xs font-semibold text-neutral-800">{node.id}</span>
-                      </div>
-                      {node.children.map(child => (
-                        <div
-                          key={child.id}
-                          onClick={() => toggleTask(child.id)}
-                          className={`group flex items-center gap-3 pl-10 pr-6 py-2 border-l-4 border-l-transparent hover:border-l-neutral-200 cursor-pointer transition-colors ${
-                            selectedTasks.has(child.id)
-                              ? 'bg-neutral-50 text-neutral-900'
-                              : 'text-neutral-500 hover:bg-neutral-50/50 hover:text-neutral-900'
-                          }`}
-                        >
-                          <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
-                            selectedTasks.has(child.id) 
-                            ? 'border-black bg-black' 
-                            : 'border-neutral-300 group-hover:border-black'
-                          }`}>
-                            {selectedTasks.has(child.id) && <div className="w-1.5 h-1.5 bg-white" />}
-                          </div>
-                          <span className="text-[10px] uppercase tracking-wider text-neutral-400">Task</span>
-                          <span className="text-xs font-medium truncate">{child.id}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                } else {
-                  // Leaf node
-                  return (
-                    <div
-                      key={node.task.id}
-                      onClick={() => toggleTask(node.task.id)}
-                      className={`group flex items-center gap-3 px-6 py-3 border-b border-neutral-50 cursor-pointer transition-colors duration-200 ${
-                        selectedTasks.has(node.task.id)
-                          ? 'bg-neutral-50 text-neutral-900'
-                          : 'hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900'
-                      }`}
+                <div className="group">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label 
+                      className="flex items-center gap-2 text-[10px] font-bold text-neutral-400 uppercase tracking-wider cursor-pointer"
+                      onClick={() => setTasksExpanded(!tasksExpanded)}
                     >
-                      <div className={`w-3.5 h-3.5 flex items-center justify-center border transition-colors ${
-                        selectedTasks.has(node.task.id) 
-                        ? 'border-black bg-black' 
-                        : 'border-neutral-300 group-hover:border-black'
-                      }`}>
-                        {selectedTasks.has(node.task.id) && <div className="w-1.5 h-1.5 bg-white" />}
+                      <span className={`transform transition-transform ${tasksExpanded ? 'rotate-0' : '-rotate-90'}`}>▼</span>
+                      Tasks <span className="text-neutral-900 ml-1">{selectedTasks.size}</span>
+                    </label>
+                    <button
+                      onClick={() => setSelectedTasks(new Set())}
+                      className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-400 hover:text-neutral-600 transition-colors"
+                      title="Clear all selected tasks"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  
+                  {tasksExpanded && (
+                    <div className="w-full bg-white border border-neutral-200 text-xs h-40 resize-y overflow-hidden min-h-[80px] max-h-[400px] flex flex-col">
+                      <div className="p-2 border-b border-neutral-100 flex-shrink-0">
+                        <input
+                          value={taskFilter}
+                          onChange={e => setTaskFilter(e.target.value)}
+                          placeholder="Search tasks..."
+                          className="w-full bg-neutral-50 border border-neutral-200 px-2 py-1 text-xs font-mono focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-600"
+                        />
                       </div>
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-400">Task</span>
-                      <span className="text-xs font-medium truncate">{node.task.id}</span>
+                      <div className="flex-1 overflow-y-auto scrollbar-thin">
+                        {visibleNodes.map((node) => {
+                          if (node.type === 'group') {
+                            const allChildrenSelected = node.children.every(c => selectedTasks.has(c.id))
+                            const someChildrenSelected = node.children.some(c => selectedTasks.has(c.id))
+                            const isCollapsed = collapsedGroups.has(node.id)
+                            
+                            return (
+                              <div key={node.id} className="border-b border-neutral-50 last:border-b-0">
+                                <div 
+                                  onClick={() => toggleGroup(node.children)}
+                                  className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50/50 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                >
+                                  <div
+                                    onClick={(e) => toggleGroupCollapse(node.id, e)}
+                                    className="text-neutral-400 hover:text-neutral-900 cursor-pointer w-3 flex justify-center"
+                                  >
+                                    <span className={`transform transition-transform text-[10px] ${isCollapsed ? '-rotate-90' : 'rotate-0'}`}>▼</span>
+                                  </div>
+
+                                  <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
+                                    allChildrenSelected 
+                                    ? 'border-black bg-black' 
+                                    : someChildrenSelected ? 'border-black' : 'border-neutral-300 hover:border-black'
+                                  }`}>
+                                    {allChildrenSelected && <div className="w-1 h-1 bg-white" />}
+                                    {!allChildrenSelected && someChildrenSelected && <div className="w-1 h-1 bg-black" />}
+                                  </div>
+                                  <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-500">Group</span>
+                                  <span className="text-xs font-medium text-neutral-700 truncate">
+                                    <HighlightMatch text={node.id} match={taskFilter} />
+                                  </span>
+                                </div>
+                                {!isCollapsed && node.children.map(child => (
+                                  <div
+                                    key={child.id}
+                                    onClick={() => toggleTask(child.id)}
+                                    className={`group flex items-center gap-2 pl-8 pr-3 py-1.5 cursor-pointer transition-colors ${
+                                      selectedTasks.has(child.id)
+                                        ? 'bg-neutral-100 text-neutral-900'
+                                        : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
+                                    }`}
+                                  >
+                                    <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
+                                      selectedTasks.has(child.id) 
+                                      ? 'border-black bg-black' 
+                                      : 'border-neutral-300 group-hover:border-black'
+                                    }`}>
+                                      {selectedTasks.has(child.id) && <div className="w-1 h-1 bg-white" />}
+                                    </div>
+                                    <span className="text-xs font-mono truncate">
+                                      <HighlightMatch text={child.id} match={taskFilter} />
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          } else {
+                            return (
+                              <div
+                                key={node.task.id}
+                                onClick={() => toggleTask(node.task.id)}
+                                className={`group flex items-center gap-2 px-3 py-1.5 border-b border-neutral-50 last:border-b-0 cursor-pointer transition-colors ${
+                                  selectedTasks.has(node.task.id)
+                                    ? 'bg-neutral-100 text-neutral-900'
+                                    : 'hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900'
+                                }`}
+                              >
+                                <div className="w-3"></div>
+                                <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
+                                  selectedTasks.has(node.task.id) 
+                                  ? 'border-black bg-black' 
+                                  : 'border-neutral-300 group-hover:border-black'
+                                }`}>
+                                  {selectedTasks.has(node.task.id) && <div className="w-1 h-1 bg-white" />}
+                                </div>
+                                <span className="text-xs font-mono truncate">
+                                  <HighlightMatch text={node.task.id} match={taskFilter} />
+                                </span>
+                              </div>
+                            )
+                          }
+                        })}
+                      </div>
                     </div>
-                  )
-                }
-              })}
-            </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="group">
+                    <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Batch Size</label>
+                    <input 
+                      type="number"
+                      value={batchSize}
+                      onChange={e => setBatchSize(e.target.value)}
+                      className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors text-neutral-600"
+                    />
+                  </div>
+                  <div className="group">
+                    <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Limit</label>
+                    <input 
+                      type="number"
+                      value={limit}
+                      onChange={e => setLimit(e.target.value)}
+                      placeholder="All"
+                      className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-600"
+                    />
+                  </div>
+                </div>
+                
+                <div className="group">
+                    <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Device</label>
+                    <input 
+                      value={device}
+                      onChange={e => setDevice(e.target.value)}
+                      placeholder="cuda:0"
+                      className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-600"
+                    />
+                </div>
+
+                <div className="group">
+                    <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Output Path</label>
+                    <input 
+                      value={outputPath}
+                      onChange={e => setOutputPath(e.target.value)}
+                      placeholder="./logs/"
+                      className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-600"
+                    />
+                </div>
+
+                <div className="group">
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Verbosity</label>
+                  <Select
+                    value={verbosity}
+                    onChange={setVerbosity}
+                    options={[
+                      { value: 'DEBUG', label: 'DEBUG' },
+                      { value: 'INFO', label: 'INFO' },
+                      { value: 'WARNING', label: 'WARNING' },
+                      { value: 'ERROR', label: 'ERROR' },
+                    ]}
+                  />
+                </div>
+
+                <div className="group">
+                  <label 
+                    className="flex items-center gap-2 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 cursor-pointer"
+                    onClick={() => setEnvVarsExpanded(!envVarsExpanded)}
+                  >
+                    <span className={`transform transition-transform ${envVarsExpanded ? 'rotate-0' : '-rotate-90'}`}>▼</span>
+                    Environment Variables
+                  </label>
+                  {envVarsExpanded && (
+                    <ShellEditor 
+                      value={envVars}
+                      onChange={setEnvVars}
+                      placeholder="export KEY=VALUE..."
+                      className="h-32 w-full resize-y min-h-[80px] max-h-[400px]"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -606,34 +859,47 @@ export default function App() {
             </button>
           </div>
 
-          <div className="h-1/3 border-b border-neutral-200 flex flex-col bg-white">
-            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
-              <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Command</h2>
-              <button 
-                onClick={() => navigator.clipboard.writeText(command)}
-                className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
-              >
-                Copy
-              </button>
+          {!logsMaximized && (
+            <div className="h-1/3 border-b border-neutral-200 flex flex-col bg-white transition-all duration-300">
+              <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
+                <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Command</h2>
+                <button 
+                  onClick={() => navigator.clipboard.writeText(command)}
+                  className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
+                >
+                  Copy
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-6 font-mono text-xs text-neutral-600 bg-neutral-50/50 scrollbar-thin selection:bg-black selection:text-white">
+                <div className="whitespace-pre-wrap leading-relaxed break-all">
+                  {highlightShell(command)}
+                </div>
+              </div>
             </div>
-            <div className="flex-1 overflow-auto p-6 font-mono text-xs text-neutral-600 bg-neutral-50/50 scrollbar-thin selection:bg-neutral-100">
-              <pre className="whitespace-pre-wrap leading-relaxed">{command}</pre>
-            </div>
-          </div>
+          )}
 
-          <div className="flex-1 flex flex-col bg-white">
+          <div className="flex-1 flex flex-col bg-white transition-all duration-300">
             <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
               <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Log Output</h2>
-              <button 
-                onClick={() => setOutput([])}
-                className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
-              >
-                Clear
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setLogsMaximized(!logsMaximized)}
+                  className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
+                >
+                  {logsMaximized ? 'Restore View' : 'Maximize Logs'}
+                </button>
+                <div className="w-px h-3 bg-neutral-200"></div>
+                <button 
+                  onClick={() => setOutput([])}
+                  className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
-            <div ref={outputRef} className="flex-1 overflow-auto p-6 font-mono text-xs leading-relaxed bg-white text-neutral-600 scrollbar-thin">
+            <div ref={outputRef} className="flex-1 overflow-auto p-6 font-mono text-xs leading-relaxed bg-white scrollbar-thin selection:bg-black selection:text-white">
               {output.map((line, i) => (
-                <div key={i} className="whitespace-pre-wrap mb-1 opacity-90">{line}</div>
+                <div key={i} className="whitespace-pre-wrap mb-1">{highlightLog(line)}</div>
               ))}
               {output.length === 0 && (
                 <div className="text-neutral-400 italic">Waiting for process...</div>
