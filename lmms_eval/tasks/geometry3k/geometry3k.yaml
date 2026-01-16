@@ -1,0 +1,20 @@
+task: geometry3k
+dataset_path: hiyouga/geometry3k
+dataset_name: null
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.geometry3k_doc_to_visual
+doc_to_text: !function utils.geometry3k_doc_to_text
+doc_to_target: !function utils.geometry3k_doc_to_target
+process_results: !function utils.geometry3k_process_results
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0.0
+  do_sample: false
+metric_list:
+  - metric: geometry3k_accuracy
+    aggregation: !function utils.geometry3k_aggregate
+    higher_is_better: true
+metadata:
+  version: 1.0
+  description: "Geometry3K plane geometry dataset with 3,002 problems. Evaluation uses GPT-5.1 Judge for answer equivalence checking."
