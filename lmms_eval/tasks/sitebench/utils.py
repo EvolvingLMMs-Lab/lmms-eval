@@ -115,7 +115,7 @@ def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
 
     # Append post prompt if provided
     if lmmseval_specific_kwargs:
-        prompt += lmmseval_specific_kwargs.get('default', {}).get("post_prompt", "")
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("post_prompt", "")
 
     return prompt
 
@@ -128,19 +128,20 @@ def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
     option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
 
     prompt = pre_prompt + "\n"
-    
+
     # check the pre_prompt
     if lmmseval_specific_kwargs:
-        prompt += lmmseval_specific_kwargs.get('default', {}).get("pre_prompt", "")
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("pre_prompt", "")
 
     prompt += "Question: " + question + "\n"
     prompt += "Options:\n" + option_text + "\n"
 
     # Append post prompt if provided
     if lmmseval_specific_kwargs:
-        prompt += lmmseval_specific_kwargs.get('default', {}).get("post_prompt", "")
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("post_prompt", "")
 
     return prompt
+
 
 def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
     """
@@ -152,7 +153,7 @@ def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
         If 'interleave_visuals' is set to False in the 'default' section,
         the function will generate non-interleaved messages.
     """
-    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get('default', {}).get("interleave_visuals", True) is False:
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("default", {}).get("interleave_visuals", True) is False:
         # Fallback to non-interleaved format - content must be a list for ChatMessages
         question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
         visuals = spatial_doc_to_visual_image(doc)
@@ -164,7 +165,7 @@ def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
         messages = [{"role": "user", "content": content}]
         eval_logger.debug(f"[sitebench image] Generated messages (non-interleaved): {messages}")
         return messages
-    
+
     question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
     visuals = spatial_doc_to_visual_image(doc)
 
@@ -199,11 +200,11 @@ def spatial_doc_to_messages_video(doc, lmms_eval_specific_kwargs=None):
 
     # Video uses a simpler format - video first, then the question text
     messages = [{"role": "user", "content": []}]
-    
+
     # Add video(s)
     for video_path in visuals:
         messages[0]["content"].append({"type": "video", "url": video_path})
-    
+
     # Add the question text
     messages[0]["content"].append({"type": "text", "text": question})
 
