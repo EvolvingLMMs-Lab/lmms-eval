@@ -10,6 +10,7 @@ from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from accelerate.utils import InitProcessGroupKwargs
 from decord import VideoReader, cpu
+from loguru import logger as eval_logger
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
 from tqdm import tqdm
@@ -18,8 +19,6 @@ from transformers import AutoModel, AutoTokenizer
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-
-eval_logger = logging.getLogger("eval_logger")
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -381,6 +380,15 @@ class InternVL3(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+            # DEBUG: Log input before processing
+            eval_logger.debug(f"[InternVL3] ===== Processing doc_id={doc_id}, task={task}, split={split} =====")
+            
+            # Get the raw document for debugging
+            doc = self.task_dict[task][split][doc_id]
+            eval_logger.debug(f"[InternVL3] Raw document (this is input to doc_to_messages): {doc}")
+            eval_logger.debug(f"[InternVL3] Original contexts (from doc_to_text): {contexts}")
+            eval_logger.debug(f"[InternVL3] Original gen_kwargs: {gen_kwargs}")
+            
             if "until" in gen_kwargs:
                 gen_kwargs.pop("until")
             for k, v in DEFAULT_GEN_KWARGS.items():
@@ -397,16 +405,55 @@ class InternVL3(lmms):
 
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
+            
+            # DEBUG: Log doc_to_visual output
+            eval_logger.debug(f"[InternVL3] doc_to_visual returned {len(visuals)} visuals: {[type(v).__name__ for v in visuals]}")
+            for idx, v in enumerate(visuals):
+                if hasattr(v, 'size'):
+                    eval_logger.debug(f"[InternVL3]   Visual {idx}: size={v.size}, mode={getattr(v, 'mode', 'N/A')}")
+                elif isinstance(v, str):
+                    eval_logger.debug(f"[InternVL3]   Visual {idx}: path={v}")
+            
             if self.modality == "image":
                 if visuals:
                     processed_visuals = [load_image(visual, max_num=self.max_num).to(torch.bfloat16).to(self._device) for visual in visuals]
                     pixel_values = torch.cat(processed_visuals, dim=0)
                     num_patches_list = [v.size(0) for v in processed_visuals]
-                    image_tokens = " ".join(["<image>"] * len(processed_visuals))
-                    contexts = image_tokens + "\n" + contexts
+                    # count how many <image> tags are already in the text
+                    existing_tags = contexts.count("<image>")
+                    
+                    if existing_tags == 0:
+                        # Case 1: Plain text prompt (e.g., "Describe the image"). 
+                        # We must prepend the image tokens so the model "sees" them.
+                        image_tokens = " ".join(["<image>"] * len(processed_visuals))
+                        contexts = image_tokens + "\n" + contexts
+                        
+                    elif existing_tags == len(processed_visuals):
+                        # Case 2: Perfectly interleaved (e.g., "Image A <image> vs Image B <image>").
+                        # Do NOTHING. The tags are already where they need to be.
+                        pass
+                        
+                    else:
+                        # Case 3: Mismatch (Data error).
+                        # e.g., We have 3 images but text only has 1 <image> tag.
+                        # InternVL handles this poorly. You might want to fallback to prepending 
+                        # or raising an error depending on your strictness.
+                        eval_logger.warning(f"[InternVL3] Token mismatch! Text has {existing_tags} tags but {len(processed_visuals)} images provided.")
+                        # Optional: Fallback to prepending if you suspect the tags in text are garbage
+                        eval_logger.warning(f"[InternVL3] Fallback: Prepending image tokens to the context.")
+                        image_tokens = " ".join(["<image>"] * len(processed_visuals))
+                        contexts = image_tokens + "\n" + contexts
                 else:
                     pixel_values = None
                     num_patches_list = None
+                
+                # DEBUG: Log input before model.chat for image modality
+                eval_logger.debug(f"[InternVL3] ===== INPUT BEFORE INFERENCE (image modality) =====")
+                eval_logger.debug(f"[InternVL3] Final contexts (with image tokens): {contexts}")
+                eval_logger.debug(f"[InternVL3] pixel_values shape: {pixel_values.shape if pixel_values is not None else None}")
+                eval_logger.debug(f"[InternVL3] num_patches_list: {num_patches_list}")
+                eval_logger.debug(f"[InternVL3] gen_kwargs: {gen_kwargs}")
+                
                 response, _ = self.model.chat(
                     self.tokenizer,
                     pixel_values,
@@ -416,6 +463,11 @@ class InternVL3(lmms):
                     history=None,
                     return_history=True,
                 )
+                
+                # DEBUG: Log response after model.chat
+                eval_logger.debug(f"[InternVL3] ===== RESPONSE AFTER INFERENCE =====")
+                eval_logger.debug(f"[InternVL3] Response: {response}")
+                
             elif self.modality == "video":
                 assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."
                 video_path = visuals[0]
@@ -423,6 +475,14 @@ class InternVL3(lmms):
                 pixel_values = pixel_values.to(torch.bfloat16).to(self._device)
                 video_prefix = "".join([f"Frame{i + 1}: <image>\n" for i in range(len(num_patches_list))])
                 question = video_prefix + contexts
+                
+                # DEBUG: Log input before model.chat for video modality
+                eval_logger.debug(f"[InternVL3] ===== INPUT BEFORE INFERENCE (video modality) =====")
+                eval_logger.debug(f"[InternVL3] Final question (with video prefix): {question}")
+                eval_logger.debug(f"[InternVL3] pixel_values shape: {pixel_values.shape}")
+                eval_logger.debug(f"[InternVL3] num_patches_list: {num_patches_list}")
+                eval_logger.debug(f"[InternVL3] gen_kwargs: {gen_kwargs}")
+                
                 response, _ = self.model.chat(
                     self.tokenizer,
                     pixel_values,
@@ -432,6 +492,10 @@ class InternVL3(lmms):
                     history=None,
                     return_history=True,
                 )
+                
+                # DEBUG: Log response after model.chat
+                eval_logger.debug(f"[InternVL3] ===== RESPONSE AFTER INFERENCE =====")
+                eval_logger.debug(f"[InternVL3] Response: {response}")
             res.append(response)
             pbar.update(1)
         pbar.close()
