@@ -300,15 +300,27 @@ def videomme_process_results(doc, results):
     """
     pred = results[0]
     pred_ans = extract_characters_regex(pred)
-    # gt_ans = doc["answer"].lower().strip().replace(".", "")
+    gt_ans = doc["answer"]
 
     category = doc["domain"]
     sub_category = doc["sub_category"]
     task_category = doc["task_type"]
-    data_dict = {"question_id": doc["question_id"], "duration": doc["duration"], "category": category, "sub_category": sub_category, "task_category": task_category, "pred_answer": pred_ans, "answer": doc["answer"]}
+    # score: 0/1 correctness for stderr calculation
+    # videoID: for clustered stderr (questions from same video are correlated)
+    score = 1.0 if pred_ans.lower() == gt_ans.lower() else 0.0
+    data_dict = {
+        "question_id": doc["question_id"],
+        "duration": doc["duration"],
+        "category": category,
+        "sub_category": sub_category,
+        "task_category": task_category,
+        "pred_answer": pred_ans,
+        "answer": gt_ans,
+        "score": score,
+        "videoID": doc["videoID"],
+    }
 
-    # return {f"videomme_perception_score": data_dict for metric in matrices}
-    return {f"videomme_perception_score": data_dict}
+    return {"videomme_perception_score": data_dict}
 
 
 def videomme_aggregate_results(results):

@@ -545,6 +545,8 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
         "Value",
         "",
         "Stderr",
+        "Stderr_CLT",
+        "Stderr_Clustered",
     ]
 
     md_writer = MarkdownTableWriter()
@@ -574,7 +576,8 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
         for (mf), v in metric_items:
             m, _, f = mf.partition(",")
-            if m.endswith("_stderr"):
+            # Skip stderr variants - they'll be shown as columns
+            if m.endswith("_stderr") or m.endswith("_stderr_clt") or m.endswith("_stderr_clustered"):
                 continue
 
             hib = HIGHER_IS_BETTER_SYMBOLS.get(higher_is_better.get(m), "")
@@ -583,17 +586,29 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             if v == "" or v is None:
                 v = "N/A"
 
-            if m + "_stderr" + "," + f in dic:
-                # if dic[m + "_stderr" + "," + f] != []:
-                se = dic[m + "_stderr" + "," + f]
+            # Helper to format stderr value
+            def fmt_se(se_val):
+                if se_val is None or se_val == "N/A":
+                    return "N/A"
+                # Handle empty list/array safely (numpy array comparison is ambiguous)
+                if hasattr(se_val, "__len__") and len(se_val) == 0:
+                    return "N/A"
                 try:
-                    se = "   N/A" if se == "N/A" or se == [] else "%.4f" % se
+                    return "%.4f" % se_val
                 except:
-                    se = "N/A"
-                if v != []:
-                    values.append([k, version, f, n, m, hib, v, "±", se])
-            else:
-                values.append([k, version, f, n, m, hib, v, "", ""])
+                    return "N/A"
+
+            # Bootstrap stderr (original)
+            se = fmt_se(dic.get(m + "_stderr," + f))
+            # CLT stderr
+            se_clt = fmt_se(dic.get(m + "_stderr_clt," + f))
+            # Clustered stderr
+            se_clustered = fmt_se(dic.get(m + "_stderr_clustered," + f))
+
+            # Check if v is not empty (handle numpy array safely)
+            is_empty = hasattr(v, "__len__") and not isinstance(v, str) and len(v) == 0
+            if not is_empty:
+                values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered])
             # k = ""
             # version = ""
     md_writer.value_matrix = values
