@@ -1,6 +1,0 @@
-task: "captionqa_document"
-test_split: document
-include: _default_template_yaml
-
-
-

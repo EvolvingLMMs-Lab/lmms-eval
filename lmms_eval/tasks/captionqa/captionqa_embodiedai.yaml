@@ -1,6 +1,0 @@
-task: "captionqa_embodiedai"
-test_split: embodiedai
-include: _default_template_yaml
-
-
-
