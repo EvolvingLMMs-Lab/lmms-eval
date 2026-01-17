@@ -6,7 +6,6 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import torch
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image
@@ -71,7 +70,11 @@ def parse_multi_choice_response(response, all_choices):
     # Look for choices with periods, e.g., A:, B:, C:.
     if len(candidates) == 0:
         for choice in all_choices:
-            if f"{choice}:" in response or f":{choice}" in response or f": {choice}" in response:
+            if (
+                f"{choice}:" in response
+                or f":{choice}" in response
+                or f": {choice}" in response
+            ):
                 candidates.append(choice)
 
     # If no candidates, randomly choose one
@@ -103,11 +106,13 @@ def spatial_doc_to_visual_video(doc):
 def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
     question = doc["question"].strip()
     options = doc["options"]
-    option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+    option_text = "\n".join(
+        f"{UpperLetters[i]}: {options[i]}" for i in range(len(options))
+    )
 
     prompt = ""
     # check if '<image>' is in the question, interleaved format
-    if not "<image>" in question and not "<image>" in option_text:
+    if "<image>" not in question and "<image>" not in option_text:
         prompt += "<image>" * len(doc["visual"]) + "\n"
 
     prompt += "Question: " + question + "\n"
@@ -125,7 +130,9 @@ def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
 
     question = doc["question"].strip()
     options = doc["options"]
-    option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
+    option_text = "\n".join(
+        f"{UpperLetters[i]}: {options[i]}" for i in range(len(options))
+    )
 
     prompt = pre_prompt + "\n"
 
@@ -153,7 +160,11 @@ def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
         If 'interleave_visuals' is set to False in the 'default' section,
         the function will generate non-interleaved messages.
     """
-    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("default", {}).get("interleave_visuals", True) is False:
+    if (
+        lmms_eval_specific_kwargs
+        and lmms_eval_specific_kwargs.get("default", {}).get("interleave_visuals", True)
+        is False
+    ):
         # Fallback to non-interleaved format - content must be a list for ChatMessages
         question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
         visuals = spatial_doc_to_visual_image(doc)
@@ -163,7 +174,9 @@ def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
             content.append({"type": "image", "url": visual})
         content.append({"type": "text", "text": question})
         messages = [{"role": "user", "content": content}]
-        eval_logger.debug(f"[sitebench image] Generated messages (non-interleaved): {messages}")
+        eval_logger.debug(
+            f"[sitebench image] Generated messages (non-interleaved): {messages}"
+        )
         return messages
 
     question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
@@ -223,13 +236,20 @@ def spatial_process_results(doc, results):
     accuracy_dict = {"overall": score, category: score, dataset: score, "total": 1}
 
     adjusted_score = score - 1.0 / len(all_choices)
-    chance_adjusted_accuracy_dict = {"overall": adjusted_score, category: adjusted_score, dataset: adjusted_score, "total": 1.0 - 1.0 / len(all_choices)}
+    chance_adjusted_accuracy_dict = {
+        "overall": adjusted_score,
+        category: adjusted_score,
+        dataset: adjusted_score,
+        "total": 1.0 - 1.0 / len(all_choices),
+    }
 
-    return {"accuracy": accuracy_dict, "chance_adjusted_acc": chance_adjusted_accuracy_dict}
+    return {
+        "accuracy": accuracy_dict,
+        "chance_adjusted_acc": chance_adjusted_accuracy_dict,
+    }
 
 
 def spatial_aggregate_results(results):
-
     total_correct, total_examples = 0, 0
     category_correct, category_total = defaultdict(int), defaultdict(int)
     dataset_correct, dataset_total = defaultdict(int), defaultdict(int)
@@ -248,9 +268,21 @@ def spatial_aggregate_results(results):
                 dataset_correct[key] += score
                 dataset_total[key] += result["total"]
 
-    overall_accuracy = (total_correct / total_examples) * 100 if total_examples > 0 else 0.0
-    category_accuracy = {category: (category_correct[category] / category_total[category]) * 100 if category_total[category] > 0 else 0.0 for category in category_correct}
-    dataset_accuracy = {dataset: (dataset_correct[dataset] / dataset_total[dataset]) * 100 if dataset_total[dataset] > 0 else 0.0 for dataset in dataset_correct}
+    overall_accuracy = (
+        (total_correct / total_examples) * 100 if total_examples > 0 else 0.0
+    )
+    category_accuracy = {
+        category: (category_correct[category] / category_total[category]) * 100
+        if category_total[category] > 0
+        else 0.0
+        for category in category_correct
+    }
+    dataset_accuracy = {
+        dataset: (dataset_correct[dataset] / dataset_total[dataset]) * 100
+        if dataset_total[dataset] > 0
+        else 0.0
+        for dataset in dataset_correct
+    }
 
     # eval_logger.info("=" * 50)
     # eval_logger.info(f"Overall Accuracy: {overall_accuracy:.2f}%")
