@@ -1,0 +1,12 @@
+group: captionqa
+task:
+  - captionqa_natural
+  - captionqa_document
+  - captionqa_ecommerce
+  - captionqa_embodiedai
+metadata:
+  version: 0.0
+  description: "CaptionQA evaluation across all domains. Running this will execute all domain tasks and aggregate results."
+
+
+
