@@ -15,6 +15,7 @@ generation_kwargs:
   do_sample: false
 doc_to_visual: !function utils.spatial_doc_to_visual_image
 doc_to_text: !function utils.spatial_doc_to_text_image
+doc_to_messages: !function utils.spatial_doc_to_messages_image
 doc_to_target: "answer"
 process_results: !function utils.spatial_process_results
 metric_list:
@@ -25,8 +26,9 @@ metric_list:
     aggregation: !function utils.spatial_aggregate_results
     higher_is_better: true
 lmms_eval_specific_kwargs:
-  - default:
-      pre_prompt: ""
-      post_prompt: "Give me the answer letter directly. The best answer is:"
+  default:
+    pre_prompt: ""
+    post_prompt: "Give me the answer letter directly. The best answer is:"
+    interleave_visuals: true
 metadata:
   - version: 0.0
