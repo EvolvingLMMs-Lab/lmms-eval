@@ -24,9 +24,7 @@ def mindcube_process_results(result: dict) -> dict:
     cogmap_results = _initialize_cogmap_results_structure()
     setting = get_setting_from_id(result["id_type"])
     cogmap_results["settings"][setting]["total"] += 1
-    include_in_overall = cogmap_results["settings"][setting].get(
-        "include_in_overall", True
-    )
+    include_in_overall = cogmap_results["settings"][setting].get("include_in_overall", True)
 
     if not extracted_answer:
         is_correct = False

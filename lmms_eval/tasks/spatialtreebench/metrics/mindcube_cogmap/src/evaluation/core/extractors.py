@@ -162,9 +162,7 @@ def clean_and_parse_json(json_str: str) -> Optional[Dict]:
                         # Parse the value part
                         value_str = "{" + value + "}"
                         # Fix unquoted keys
-                        value_str = re.sub(
-                            r"(\s*?)(\w+)(\s*?):", r'\1"\2"\3:', value_str
-                        )
+                        value_str = re.sub(r"(\s*?)(\w+)(\s*?):", r'\1"\2"\3:', value_str)
                         # Fix trailing commas
                         value_str = re.sub(r",\s*}", "}", value_str)
                         value_str = re.sub(r",\s*]", "]", value_str)

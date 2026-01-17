@@ -48,25 +48,13 @@ class CogMapEvaluator:
                 4,
             ),
             "valid_count": results["cogmap_similarity"]["total_valid"],
-            "valid_accuracy": round(
-                results["cogmap_similarity"]["total_valid"] / results["total"], 4
-            ),
+            "valid_accuracy": round(results["cogmap_similarity"]["total_valid"] / results["total"], 4),
             "isomorphic_count": results["cogmap_similarity"]["isomorphic_count"],
-            "isomorphic_accuracy": round(
-                results["cogmap_similarity"]["isomorphic_count"] / results["total"], 4
-            ),
-            "avg_overall_similarity": round(
-                results["cogmap_similarity"]["avg_overall_similarity"], 4
-            ),
-            "avg_facing_similarity": round(
-                results["cogmap_similarity"]["avg_facing_similarity"], 4
-            ),
-            "avg_directional_similarity": round(
-                results["cogmap_similarity"]["avg_directional_similarity"], 4
-            ),
-            "rotation_distribution": results["cogmap_similarity"][
-                "rotation_distribution"
-            ],
+            "isomorphic_accuracy": round(results["cogmap_similarity"]["isomorphic_count"] / results["total"], 4),
+            "avg_overall_similarity": round(results["cogmap_similarity"]["avg_overall_similarity"], 4),
+            "avg_facing_similarity": round(results["cogmap_similarity"]["avg_facing_similarity"], 4),
+            "avg_directional_similarity": round(results["cogmap_similarity"]["avg_directional_similarity"], 4),
+            "rotation_distribution": results["cogmap_similarity"]["rotation_distribution"],
         }
         results["cogmap_similarity"] = new_cogmap_results
         results["gen_cogmap_accuracy"] = round(results["gen_cogmap_accuracy"], 4)
@@ -108,9 +96,7 @@ class CogMapEvaluator:
             results["settings"][setting]["total"] += 1
 
             # Check if this setting should be included in overall metrics
-            include_in_overall = results["settings"][setting].get(
-                "include_in_overall", True
-            )
+            include_in_overall = results["settings"][setting].get("include_in_overall", True)
 
             # Determine which fields contain the answers
             cogmap_field, plain_field = determine_answer_fields(item)
@@ -139,15 +125,11 @@ class CogMapEvaluator:
 
             # Process cognitive maps if detailed metrics are enabled
             if self.include_detailed_metrics:
-                generated_cogmap = self._extract_cognitive_map(
-                    cogmap_answer, item, cogmap_field, item_id, error_cases
-                )
+                generated_cogmap = self._extract_cognitive_map(cogmap_answer, item, cogmap_field, item_id, error_cases)
                 grounded_cogmap = self._extract_grounded_cogmap(item)
 
                 if generated_cogmap and grounded_cogmap:
-                    similarity = calculate_cogmap_similarity(
-                        generated_cogmap, grounded_cogmap
-                    )
+                    similarity = calculate_cogmap_similarity(generated_cogmap, grounded_cogmap)
                     self._update_similarity_metrics(
                         similarity,
                         results,
@@ -259,9 +241,7 @@ class CogMapEvaluator:
                     else:
                         generated_cogmap = cognitive_map
                 elif "grounded_cogmap" in item and item["grounded_cogmap"] is not None:
-                    if cogmap_field.startswith("gen") or cogmap_field.startswith(
-                        "cogmap_gen"
-                    ):
+                    if cogmap_field.startswith("gen") or cogmap_field.startswith("cogmap_gen"):
                         cognitive_map = item.get("grounded_cogmap")
                         if isinstance(cognitive_map, str):
                             generated_cogmap = extract_json_from_text(cognitive_map)
@@ -298,39 +278,29 @@ class CogMapEvaluator:
     ):
         """Update similarity metrics in results structure."""
         if similarity.get("parsable_json", False):
-            results["settings"][setting]["cogmap_similarity"][
-                "parsable_json_count"
-            ] += 1
+            results["settings"][setting]["cogmap_similarity"]["parsable_json_count"] += 1
             if include_in_overall:
                 total_metrics["parsable_json_count"] += 1
 
             if similarity.get("valid_format", False):
-                results["settings"][setting]["cogmap_similarity"][
-                    "valid_format_count"
-                ] += 1
+                results["settings"][setting]["cogmap_similarity"]["valid_format_count"] += 1
                 if include_in_overall:
                     total_metrics["valid_format_count"] += 1
 
                 if similarity.get("valid_graph", False):
-                    results["settings"][setting]["cogmap_similarity"][
-                        "total_valid"
-                    ] += 1
+                    results["settings"][setting]["cogmap_similarity"]["total_valid"] += 1
                     if include_in_overall:
                         total_metrics["valid_graph_count"] += 1
 
                     # Update isomorphic counts (backward compatibility)
                     if similarity.get("isomorphic", False):
-                        results["settings"][setting]["cogmap_similarity"][
-                            "isomorphic_count"
-                        ] += 1
+                        results["settings"][setting]["cogmap_similarity"]["isomorphic_count"] += 1
                         if include_in_overall:
                             total_metrics["isomorphic_count"] += 1
 
                     # Update new rotation-invariant isomorphic count
                     if similarity.get("rotation_invariant_isomorphic", False):
-                        results["settings"][setting]["cogmap_similarity"][
-                            "rotation_invariant_isomorphic_count"
-                        ] += 1
+                        results["settings"][setting]["cogmap_similarity"]["rotation_invariant_isomorphic_count"] += 1
                         if include_in_overall:
                             total_metrics["rotation_invariant_isomorphic_count"] += 1
 
@@ -340,18 +310,10 @@ class CogMapEvaluator:
                     dir_sim = similarity.get("directional_similarity", 0.0)
                     overall_sim = similarity.get("overall_similarity", 0.0)
 
-                    results["settings"][setting]["cogmap_similarity"][
-                        "avg_relative_position_accuracy"
-                    ] += rel_pos_acc
-                    results["settings"][setting]["cogmap_similarity"][
-                        "avg_facing_similarity"
-                    ] += facing_sim
-                    results["settings"][setting]["cogmap_similarity"][
-                        "avg_directional_similarity"
-                    ] += dir_sim
-                    results["settings"][setting]["cogmap_similarity"][
-                        "avg_overall_similarity"
-                    ] += overall_sim
+                    results["settings"][setting]["cogmap_similarity"]["avg_relative_position_accuracy"] += rel_pos_acc
+                    results["settings"][setting]["cogmap_similarity"]["avg_facing_similarity"] += facing_sim
+                    results["settings"][setting]["cogmap_similarity"]["avg_directional_similarity"] += dir_sim
+                    results["settings"][setting]["cogmap_similarity"]["avg_overall_similarity"] += overall_sim
 
                     # Accumulate similarities for filtered metrics
                     if include_in_overall:
@@ -368,21 +330,12 @@ class CogMapEvaluator:
 
                     # Update global rotation distribution only if included in overall
                     if include_in_overall:
-                        results["cogmap_similarity"]["rotation_distribution"][
-                            rotation_name
-                        ] += 1
+                        results["cogmap_similarity"]["rotation_distribution"][rotation_name] += 1
 
                     # Update setting-specific rotation distribution
-                    if (
-                        "rotation_distribution"
-                        not in results["settings"][setting]["cogmap_similarity"]
-                    ):
-                        results["settings"][setting]["cogmap_similarity"][
-                            "rotation_distribution"
-                        ] = defaultdict(int)
-                    results["settings"][setting]["cogmap_similarity"][
-                        "rotation_distribution"
-                    ][rotation_name] += 1
+                    if "rotation_distribution" not in results["settings"][setting]["cogmap_similarity"]:
+                        results["settings"][setting]["cogmap_similarity"]["rotation_distribution"] = defaultdict(int)
+                    results["settings"][setting]["cogmap_similarity"]["rotation_distribution"][rotation_name] += 1
 
     def _finalize_cogmap_metrics(self, results: Dict, total_metrics: Dict):
         """Finalize cognitive map metrics by calculating averages and percentages."""
@@ -391,41 +344,19 @@ class CogMapEvaluator:
 
         if filtered_total > 0:
             # Overall metrics
-            results["cogmap_similarity"]["parsable_json_count"] = total_metrics[
-                "parsable_json_count"
-            ]
-            results["cogmap_similarity"]["valid_format_count"] = total_metrics[
-                "valid_format_count"
-            ]
+            results["cogmap_similarity"]["parsable_json_count"] = total_metrics["parsable_json_count"]
+            results["cogmap_similarity"]["valid_format_count"] = total_metrics["valid_format_count"]
             results["cogmap_similarity"]["total_valid"] = filtered_valid_cogmap_count
-            results["cogmap_similarity"]["valid_percent"] = (
-                filtered_valid_cogmap_count / filtered_total
-            ) * 100
-            results["cogmap_similarity"]["isomorphic_count"] = total_metrics[
-                "isomorphic_count"
-            ]  # Backward compatibility
-            results["cogmap_similarity"]["rotation_invariant_isomorphic_count"] = (
-                total_metrics["rotation_invariant_isomorphic_count"]
-            )
+            results["cogmap_similarity"]["valid_percent"] = (filtered_valid_cogmap_count / filtered_total) * 100
+            results["cogmap_similarity"]["isomorphic_count"] = total_metrics["isomorphic_count"]  # Backward compatibility
+            results["cogmap_similarity"]["rotation_invariant_isomorphic_count"] = total_metrics["rotation_invariant_isomorphic_count"]
 
             # Calculate averages for overall metrics (using same logic as old version)
             if filtered_valid_cogmap_count > 0:
-                results["cogmap_similarity"]["avg_relative_position_accuracy"] = (
-                    total_metrics["total_relative_position_accuracy"]
-                    / filtered_valid_cogmap_count
-                )
-                results["cogmap_similarity"]["avg_facing_similarity"] = (
-                    total_metrics["total_facing_similarity"]
-                    / filtered_valid_cogmap_count
-                )
-                results["cogmap_similarity"]["avg_directional_similarity"] = (
-                    total_metrics["total_directional_similarity"]
-                    / filtered_valid_cogmap_count
-                )
-                results["cogmap_similarity"]["avg_overall_similarity"] = (
-                    total_metrics["total_overall_similarity"]
-                    / filtered_valid_cogmap_count
-                )
+                results["cogmap_similarity"]["avg_relative_position_accuracy"] = total_metrics["total_relative_position_accuracy"] / filtered_valid_cogmap_count
+                results["cogmap_similarity"]["avg_facing_similarity"] = total_metrics["total_facing_similarity"] / filtered_valid_cogmap_count
+                results["cogmap_similarity"]["avg_directional_similarity"] = total_metrics["total_directional_similarity"] / filtered_valid_cogmap_count
+                results["cogmap_similarity"]["avg_overall_similarity"] = total_metrics["total_overall_similarity"] / filtered_valid_cogmap_count
 
         # Setting-specific metrics (using same logic as old version)
         for setting, stats in results["settings"].items():
@@ -433,18 +364,12 @@ class CogMapEvaluator:
             setting_valid = stats["cogmap_similarity"]["total_valid"]
 
             if setting_total > 0:
-                stats["cogmap_similarity"]["valid_percent"] = (
-                    setting_valid / setting_total
-                ) * 100
+                stats["cogmap_similarity"]["valid_percent"] = (setting_valid / setting_total) * 100
 
             if setting_valid > 0:
-                stats["cogmap_similarity"]["avg_relative_position_accuracy"] /= (
-                    setting_valid
-                )
+                stats["cogmap_similarity"]["avg_relative_position_accuracy"] /= setting_valid
                 stats["cogmap_similarity"]["avg_facing_similarity"] /= setting_valid
-                stats["cogmap_similarity"]["avg_directional_similarity"] /= (
-                    setting_valid
-                )
+                stats["cogmap_similarity"]["avg_directional_similarity"] /= setting_valid
                 stats["cogmap_similarity"]["avg_overall_similarity"] /= setting_valid
 
     def _print_results(self, results: Dict):
@@ -461,42 +386,28 @@ class CogMapEvaluator:
         unfiltered_total = results.get("unfiltered_total", total)
 
         print("\n=== COGNITIVE MAP METRICS ===")
-        print(
-            f"Total examples: {unfiltered_total} (Evaluated: {total}, excluding translation)"
-        )
+        print(f"Total examples: {unfiltered_total} (Evaluated: {total}, excluding translation)")
 
         # Validation metrics
         parsable_count = cogmap_sim.get("parsable_json_count", 0)
         valid_format_count = cogmap_sim.get("valid_format_count", 0)
         valid_graph_count = cogmap_sim.get("total_valid", 0)
 
-        print(
-            f"Parsable JSON: {parsable_count}/{total} ({100 * parsable_count / total:.1f}%)"
-        )
-        print(
-            f"Valid format: {valid_format_count}/{total} ({100 * valid_format_count / total:.1f}%)"
-        )
-        print(
-            f"Valid graphs: {valid_graph_count}/{total} ({cogmap_sim.get('valid_percent', 0):.1f}%)"
-        )
+        print(f"Parsable JSON: {parsable_count}/{total} ({100 * parsable_count / total:.1f}%)")
+        print(f"Valid format: {valid_format_count}/{total} ({100 * valid_format_count / total:.1f}%)")
+        print(f"Valid graphs: {valid_graph_count}/{total} ({cogmap_sim.get('valid_percent', 0):.1f}%)")
 
         # Similarity metrics (only if we have valid graphs)
         if valid_graph_count > 0:
             # Use isomorphic_count for consistency with old version
             iso_count = cogmap_sim.get("isomorphic_count", 0)
-            print(
-                f"Isomorphic graphs: {iso_count}/{total} ({100 * iso_count / total:.2f}%)"
-            )
+            print(f"Isomorphic graphs: {iso_count}/{total} ({100 * iso_count / total:.2f}%)")
 
             print("\nAverage similarities:")
             # Convert from decimal to percentage for display (matching old version)
-            print(
-                f"  Directional: {cogmap_sim.get('avg_directional_similarity', 0) * 100:.2f}%"
-            )
+            print(f"  Directional: {cogmap_sim.get('avg_directional_similarity', 0) * 100:.2f}%")
             print(f"  Facing: {cogmap_sim.get('avg_facing_similarity', 0) * 100:.2f}%")
-            print(
-                f"  Overall: {cogmap_sim.get('avg_overall_similarity', 0) * 100:.2f}%"
-            )
+            print(f"  Overall: {cogmap_sim.get('avg_overall_similarity', 0) * 100:.2f}%")
 
             # Print rotation distribution
             rotation_dist = cogmap_sim.get("rotation_distribution", {})

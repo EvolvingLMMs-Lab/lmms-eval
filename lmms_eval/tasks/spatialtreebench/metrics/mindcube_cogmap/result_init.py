@@ -33,9 +33,7 @@ def initialize_basic_results_structure() -> Dict:
                 "total": 0,
                 "gen_cogmap_correct": 0,
                 "gen_cogmap_accuracy": 0.0,
-                "include_in_overall": settings_to_include.get(
-                    setting, True
-                ),  # Flag for filtering
+                "include_in_overall": settings_to_include.get(setting, True),  # Flag for filtering
             }
             for setting in settings
         },
@@ -128,17 +126,13 @@ def _update_similarity_metrics(
 
                 # Update isomorphic counts (backward compatibility)
                 if similarity.get("isomorphic", False):
-                    results["settings"][setting]["cogmap_similarity"][
-                        "isomorphic_count"
-                    ] += 1
+                    results["settings"][setting]["cogmap_similarity"]["isomorphic_count"] += 1
                     if include_in_overall:
                         total_metrics["isomorphic_count"] += 1
 
                 # Update new rotation-invariant isomorphic count
                 if similarity.get("rotation_invariant_isomorphic", False):
-                    results["settings"][setting]["cogmap_similarity"][
-                        "rotation_invariant_isomorphic_count"
-                    ] += 1
+                    results["settings"][setting]["cogmap_similarity"]["rotation_invariant_isomorphic_count"] += 1
                     if include_in_overall:
                         total_metrics["rotation_invariant_isomorphic_count"] += 1
 
@@ -148,18 +142,10 @@ def _update_similarity_metrics(
                 dir_sim = similarity.get("directional_similarity", 0.0)
                 overall_sim = similarity.get("overall_similarity", 0.0)
 
-                results["settings"][setting]["cogmap_similarity"][
-                    "avg_relative_position_accuracy"
-                ] += rel_pos_acc
-                results["settings"][setting]["cogmap_similarity"][
-                    "avg_facing_similarity"
-                ] += facing_sim
-                results["settings"][setting]["cogmap_similarity"][
-                    "avg_directional_similarity"
-                ] += dir_sim
-                results["settings"][setting]["cogmap_similarity"][
-                    "avg_overall_similarity"
-                ] += overall_sim
+                results["settings"][setting]["cogmap_similarity"]["avg_relative_position_accuracy"] += rel_pos_acc
+                results["settings"][setting]["cogmap_similarity"]["avg_facing_similarity"] += facing_sim
+                results["settings"][setting]["cogmap_similarity"]["avg_directional_similarity"] += dir_sim
+                results["settings"][setting]["cogmap_similarity"]["avg_overall_similarity"] += overall_sim
 
                 # Accumulate similarities for filtered metrics
                 if include_in_overall:
@@ -176,21 +162,12 @@ def _update_similarity_metrics(
 
                 # Update global rotation distribution only if included in overall
                 if include_in_overall:
-                    results["cogmap_similarity"]["rotation_distribution"][
-                        rotation_name
-                    ] += 1
+                    results["cogmap_similarity"]["rotation_distribution"][rotation_name] += 1
 
                 # Update setting-specific rotation distribution
-                if (
-                    "rotation_distribution"
-                    not in results["settings"][setting]["cogmap_similarity"]
-                ):
-                    results["settings"][setting]["cogmap_similarity"][
-                        "rotation_distribution"
-                    ] = defaultdict(int)
-                results["settings"][setting]["cogmap_similarity"][
-                    "rotation_distribution"
-                ][rotation_name] += 1
+                if "rotation_distribution" not in results["settings"][setting]["cogmap_similarity"]:
+                    results["settings"][setting]["cogmap_similarity"]["rotation_distribution"] = defaultdict(int)
+                results["settings"][setting]["cogmap_similarity"]["rotation_distribution"][rotation_name] += 1
 
 
 def get_unfiltered_totals(results: Dict) -> tuple:
@@ -227,9 +204,7 @@ def get_filtered_totals(results: Dict) -> tuple:
     filtered_correct = 0
 
     for setting, stats in results["settings"].items():
-        if stats.get(
-            "include_in_overall", True
-        ):  # Only include if explicitly marked as True
+        if stats.get("include_in_overall", True):  # Only include if explicitly marked as True
             filtered_total += stats["total"]
             filtered_correct += stats["gen_cogmap_correct"]
 
@@ -283,9 +258,7 @@ def update_accuracy_metrics(results: Dict) -> Dict:
 
     # Calculate overall accuracy using filtered total
     if results["total"] > 0:
-        results["gen_cogmap_accuracy"] = (
-            results["gen_cogmap_correct"] / results["total"]
-        )
+        results["gen_cogmap_accuracy"] = results["gen_cogmap_correct"] / results["total"]
     else:
         results["gen_cogmap_accuracy"] = 0.0
 
@@ -296,32 +269,14 @@ def _preserve_necessary_cogmap_fields(results: Dict) -> Dict:
     """Preserve necessary fields in the results dictionary."""
     new_cogmap_results = {
         "parsable_json_count": results["cogmap_similarity"]["parsable_json_count"],
-        "parsable_json_accuracy": round(
-            results["cogmap_similarity"]["parsable_json_count"] / results["total"], 4
-        )
-        if results["total"] > 0.0001
-        else 0.0,
+        "parsable_json_accuracy": round(results["cogmap_similarity"]["parsable_json_count"] / results["total"], 4) if results["total"] > 0.0001 else 0.0,
         "valid_count": results["cogmap_similarity"]["total_valid"],
-        "valid_accuracy": round(
-            results["cogmap_similarity"]["total_valid"] / results["total"], 4
-        )
-        if results["total"] > 0.0001
-        else 0.0,
+        "valid_accuracy": round(results["cogmap_similarity"]["total_valid"] / results["total"], 4) if results["total"] > 0.0001 else 0.0,
         "isomorphic_count": results["cogmap_similarity"]["isomorphic_count"],
-        "isomorphic_accuracy": round(
-            results["cogmap_similarity"]["isomorphic_count"] / results["total"], 4
-        )
-        if results["total"] > 0.0001
-        else 0.0,
-        "avg_overall_similarity": round(
-            results["cogmap_similarity"]["avg_overall_similarity"], 4
-        ),
-        "avg_facing_similarity": round(
-            results["cogmap_similarity"]["avg_facing_similarity"], 4
-        ),
-        "avg_directional_similarity": round(
-            results["cogmap_similarity"]["avg_directional_similarity"], 4
-        ),
+        "isomorphic_accuracy": round(results["cogmap_similarity"]["isomorphic_count"] / results["total"], 4) if results["total"] > 0.0001 else 0.0,
+        "avg_overall_similarity": round(results["cogmap_similarity"]["avg_overall_similarity"], 4),
+        "avg_facing_similarity": round(results["cogmap_similarity"]["avg_facing_similarity"], 4),
+        "avg_directional_similarity": round(results["cogmap_similarity"]["avg_directional_similarity"], 4),
         "rotation_distribution": results["cogmap_similarity"]["rotation_distribution"],
     }
     results["cogmap_similarity"] = new_cogmap_results

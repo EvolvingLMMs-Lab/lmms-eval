@@ -51,9 +51,7 @@ def initialize_basic_results_structure() -> Dict:
                 "total": 0,
                 "gen_cogmap_correct": 0,
                 "gen_cogmap_accuracy": 0.0,
-                "include_in_overall": settings_to_include.get(
-                    setting, True
-                ),  # Flag for filtering
+                "include_in_overall": settings_to_include.get(setting, True),  # Flag for filtering
             }
             for setting in settings
         },
@@ -81,9 +79,7 @@ def update_accuracy_metrics(results: Dict) -> Dict:
 
     # Calculate overall accuracy using filtered total
     if results["total"] > 0:
-        results["gen_cogmap_accuracy"] = (
-            results["gen_cogmap_correct"] / results["total"]
-        )
+        results["gen_cogmap_accuracy"] = results["gen_cogmap_correct"] / results["total"]
     else:
         results["gen_cogmap_accuracy"] = 0.0
 

@@ -62,9 +62,7 @@ class BasicEvaluator:
             results["settings"][setting]["total"] += 1
 
             # Check if this setting should be included in overall metrics
-            include_in_overall = results["settings"][setting].get(
-                "include_in_overall", True
-            )
+            include_in_overall = results["settings"][setting].get("include_in_overall", True)
             if include_in_overall:
                 filtered_total += 1
 
@@ -153,9 +151,7 @@ def evaluate(
         return evaluator.evaluate(jsonl_path, output_path)
 
     else:
-        raise ValueError(
-            f"Unknown task type: {task_type}. Use 'basic', 'cogmap', or 'cognitive_map'"
-        )
+        raise ValueError(f"Unknown task type: {task_type}. Use 'basic', 'cogmap', or 'cognitive_map'")
 
 
 def auto_evaluate(jsonl_path: str, output_path: Optional[str] = None) -> Dict:

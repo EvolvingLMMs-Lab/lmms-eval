@@ -32,23 +32,15 @@ def gravityeval(response, answer, extra_info):
             if start != -1 and end != -1 and start < end:
                 response_str = response[start : end + 1]
             else:
-                roll_match = re.search(
-                    r'["\']?roll["\']?\s*[:=]\s*(-?\d+\.?\d*)', response, re.IGNORECASE
-                )
-                pitch_match = re.search(
-                    r'["\']?pitch["\']?\s*[:=]\s*(-?\d+\.?\d*)', response, re.IGNORECASE
-                )
-                vfov_match = re.search(
-                    r'["\']?vfov["\']?\s*[:=]\s*(-?\d+\.?\d*)', response, re.IGNORECASE
-                )
+                roll_match = re.search(r'["\']?roll["\']?\s*[:=]\s*(-?\d+\.?\d*)', response, re.IGNORECASE)
+                pitch_match = re.search(r'["\']?pitch["\']?\s*[:=]\s*(-?\d+\.?\d*)', response, re.IGNORECASE)
+                vfov_match = re.search(r'["\']?vfov["\']?\s*[:=]\s*(-?\d+\.?\d*)', response, re.IGNORECASE)
 
                 if roll_match and pitch_match and vfov_match:
                     roll = roll_match.group(1)
                     pitch = pitch_match.group(1)
                     vfov = vfov_match.group(1)
-                    response_str = (
-                        f'{{"roll": {roll}, "pitch": {pitch}, "vfov": {vfov}}}'
-                    )
+                    response_str = f'{{"roll": {roll}, "pitch": {pitch}, "vfov": {vfov}}}'
                 else:
                     response_str = response
 
@@ -88,31 +80,19 @@ def gravityeval(response, answer, extra_info):
     # Score roll with continuous Gaussian-based rating
     roll_diff = abs(roll_pred - roll_gt)
     roll_uncertainty = 1 * roll_unc
-    roll_score = (
-        np.exp(-(roll_diff**2) / (2 * (roll_uncertainty**2)))
-        if roll_uncertainty > 0
-        else 0
-    )
+    roll_score = np.exp(-(roll_diff**2) / (2 * (roll_uncertainty**2))) if roll_uncertainty > 0 else 0
     roll_score = max(0, min(roll_score, 1))
 
     # Score pitch with continuous Gaussian-based rating
     pitch_diff = abs(pitch_pred - pitch_gt)
     pitch_uncertainty = 1 * pitch_unc
-    pitch_score = (
-        np.exp(-(pitch_diff**2) / (2 * (pitch_uncertainty**2)))
-        if pitch_uncertainty > 0
-        else 0
-    )
+    pitch_score = np.exp(-(pitch_diff**2) / (2 * (pitch_uncertainty**2))) if pitch_uncertainty > 0 else 0
     pitch_score = max(0, min(pitch_score, 1))
 
     # Score vfov with continuous Gaussian-based rating
     vfov_diff = abs(vfov_pred - vfov_gt)
     vfov_uncertainty = 1 * vfov_unc
-    vfov_score = (
-        np.exp(-(vfov_diff**2) / (2 * (vfov_uncertainty**2)))
-        if vfov_uncertainty > 0
-        else 0
-    )
+    vfov_score = np.exp(-(vfov_diff**2) / (2 * (vfov_uncertainty**2))) if vfov_uncertainty > 0 else 0
     vfov_score = max(0, min(vfov_score, 1))
 
     total_score = (roll_score + pitch_score + vfov_score) / 3.0
@@ -162,8 +142,7 @@ def multichoiceeval(response, answer, extra_info):
             r"Hence, the correct answer is ([A-Z])",
             r"The correct choice is ([A-Z])",
             r"Accordingly, the answer is ([A-Z])",
-            r"Consequently, the correct option is ([A-Z])"
-            r"The correct option is ([A-Z])",
+            r"Consequently, the correct option is ([A-Z])" r"The correct option is ([A-Z])",
             r"The answer is ([A-Z])",
             r"The correct answer is ([A-Z])",
             r"Option ([A-Z]) is correct",
@@ -186,18 +165,14 @@ def multichoiceeval(response, answer, extra_info):
         last_answer_pos = response.rfind("Answer:")
         if last_answer_pos != -1:
             answer_str = response[last_answer_pos + len("Answer:") :].strip()
-            matching_options = [
-                option for option in all_choices if option in answer_str
-            ]
+            matching_options = [option for option in all_choices if option in answer_str]
             if len(matching_options) == 1:
                 return matching_options[0]
 
         last_answer_pos = response.rfind("Answer:")
         if last_answer_pos != -1:
             answer_str = response[last_answer_pos + len("Answer:") :].strip()
-            matching_options = [
-                option for option in all_choices if option in answer_str
-            ]
+            matching_options = [option for option in all_choices if option in answer_str]
             if len(matching_options) == 1:
                 return matching_options[0]
 
@@ -353,15 +328,9 @@ def cogmapeval(response, answer, extra_info):
         "coverage": float(result["coverage"]),
         "position_similarity": float(result["position_similarity"]),
         "facing_similarity": float(result["facing_similarity"]),
-        "best_rotation": result["best_rotation"]["name"]
-        if result["best_rotation"]
-        else None,
+        "best_rotation": result["best_rotation"]["name"] if result["best_rotation"] else None,
     }
-    score = (
-        0.2 * float(result["answer_correct"])
-        + 0.6 * extra_result["overall_similarity"]
-        + 0.2 * extra_result["rotation_invariant_isomorphic"]
-    )
+    score = 0.2 * float(result["answer_correct"]) + 0.6 * extra_result["overall_similarity"] + 0.2 * extra_result["rotation_invariant_isomorphic"]
     return {"score": score, "details": extra_result}
 
 
@@ -379,9 +348,7 @@ def gpteval(response, answer, extra_info):
 
     GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "YOUR_MODEL_VERSION")
     API_TYPE = os.getenv("API_TYPE", "azure")
-    server_config = ServerConfig(
-        model_name=GPT_EVAL_MODEL_NAME, temperature=0.5, max_tokens=32000
-    )
+    server_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.5, max_tokens=32000)
     server = get_server(server_name=API_TYPE, config=server_config)
 
     judge_system_prompt = """**[角色]** 
@@ -424,9 +391,7 @@ def gpteval(response, answer, extra_info):
             {"role": "user", "content": user_prompt},
         ]
 
-        custom_config = ServerConfig(
-            model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=max_tokens
-        )
+        custom_config = ServerConfig(model_name=GPT_EVAL_MODEL_NAME, temperature=0.2, max_tokens=max_tokens)
 
         for attempt in range(retries):
             request = Request(messages=messages, config=custom_config)
@@ -489,9 +454,7 @@ def gpteval(response, answer, extra_info):
     except (json.JSONDecodeError, AttributeError):
         prompt_text = ""
 
-    user_prompt = judge_prompt_template.format(
-        prompt=prompt_text, response_reference=answer, response=response
-    )
+    user_prompt = judge_prompt_template.format(prompt=prompt_text, response_reference=answer, response=response)
 
     review, model_used = get_eval(user_prompt, 32000)
     if not review:
@@ -590,27 +553,19 @@ def aff_mask_metric(response: str, answer: str, extra_info: str = None):
         # Patterns to capture (x, y) in various forms; choose the one closest to the end
         patterns = [
             (
-                re.compile(
-                    r"(?i)x\s*[:=]\s*([-+]?\d+(?:\.\d+)?)\D+?y\s*[:=]\s*([-+]?\d+(?:\.\d+)?)"
-                ),
+                re.compile(r"(?i)x\s*[:=]\s*([-+]?\d+(?:\.\d+)?)\D+?y\s*[:=]\s*([-+]?\d+(?:\.\d+)?)"),
                 "xy",
             ),
             (
-                re.compile(
-                    r"(?i)y\s*[:=]\s*([-+]?\d+(?:\.\d+)?)\D+?x\s*[:=]\s*([-+]?\d+(?:\.\d+)?)"
-                ),
+                re.compile(r"(?i)y\s*[:=]\s*([-+]?\d+(?:\.\d+)?)\D+?x\s*[:=]\s*([-+]?\d+(?:\.\d+)?)"),
                 "yx",
             ),
             (
-                re.compile(
-                    r"\(\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*\)"
-                ),
+                re.compile(r"\(\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*\)"),
                 "xy",
             ),
             (
-                re.compile(
-                    r"\[\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*\]"
-                ),
+                re.compile(r"\[\s*([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)\s*\]"),
                 "xy",
             ),
             (re.compile(r"([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)"), "xy"),
@@ -697,24 +652,18 @@ def actions2cam_response(instructions, initial_pose, extra_info):
     predicted_poses_list = [initial_pose.copy()]
     current_pose = initial_pose.copy()
 
-    action_keys = sorted(
-        [k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0])
-    )
+    action_keys = sorted([k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0]))
 
     # Handle cases where response keys might not be perfectly ordered or named
     try:
-        predicted_keys = sorted(
-            instructions.keys(), key=lambda x: int(re.search(r"\d+", x).group())
-        )
+        predicted_keys = sorted(instructions.keys(), key=lambda x: int(re.search(r"\d+", x).group()))
     except (AttributeError, ValueError):
         # Fallback to alphabetical sort if no numbers are found in keys
         predicted_keys = sorted(instructions.keys())
 
     for i, pred_key in enumerate(predicted_keys):
         if i >= len(action_keys):
-            print(
-                f"Warning: Model produced more steps ({len(predicted_keys)}) than ground truth ({len(action_keys)}). Truncating."
-            )
+            print(f"Warning: Model produced more steps ({len(predicted_keys)}) than ground truth ({len(action_keys)}). Truncating.")
             break
 
         gt_key = action_keys[i]
@@ -724,9 +673,7 @@ def actions2cam_response(instructions, initial_pose, extra_info):
 
         segment_data = instructions[pred_key]
         if not isinstance(segment_data, dict):
-            print(
-                f"Warning: Segment data for '{pred_key}' is not a dictionary. Skipping."
-            )
+            print(f"Warning: Segment data for '{pred_key}' is not a dictionary. Skipping.")
             continue
 
         actions = segment_data.get("actions", [])
@@ -741,9 +688,7 @@ def actions2cam_response(instructions, initial_pose, extra_info):
         for j, action_symbol in enumerate(actions):
             action_name = SYMBOL_TO_ACTION.get(action_symbol)
             if not action_name:
-                print(
-                    f"Warning: Unknown action symbol '{action_symbol}' in step {pred_key}. Skipping."
-                )
+                print(f"Warning: Unknown action symbol '{action_symbol}' in step {pred_key}. Skipping.")
                 continue
 
             action_step_nums = step_nums[j] if j < len(step_nums) else 1
@@ -834,20 +779,14 @@ def manipulateeval(response, answer, extra_info):
 
     optimal_poses = np.array(extra_info["optimal_rel_pose"])
     initial_pose = optimal_poses[0]
-    predicted_poses = actions2cam_response(
-        predicted_instructions, initial_pose, extra_info
-    )
+    predicted_poses = actions2cam_response(predicted_instructions, initial_pose, extra_info)
 
     if len(predicted_poses) == 0:
         return {"score": 0, "error": "Predicted trajectory is empty"}
 
-    action_keys = sorted(
-        [k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0])
-    )
+    action_keys = sorted([k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0]))
     num_predicted_segments = len(predicted_poses) - 1
-    gt_poses_for_comparison = optimal_poses[
-        : num_predicted_segments + 1
-    ]  # Ground truth poses to compare against
+    gt_poses_for_comparison = optimal_poses[: num_predicted_segments + 1]  # Ground truth poses to compare against
     predicted_final_pose = predicted_poses[-1]
     gt_final_pose = gt_poses_for_comparison[-1]
     num_total_segments = len(action_keys)
@@ -862,9 +801,7 @@ def manipulateeval(response, answer, extra_info):
             prev_rot = R.from_quat(optimal_poses[i - 1][3:])
             curr_rot = R.from_quat(optimal_poses[i][3:])
             rot_diff = (prev_rot.inv() * curr_rot).magnitude()
-            if rot_diff > np.deg2rad(
-                5
-            ):  # If more than 5 degrees rotation between steps
+            if rot_diff > np.deg2rad(5):  # If more than 5 degrees rotation between steps
                 required_rotation = True
                 break
 
@@ -882,9 +819,7 @@ def manipulateeval(response, answer, extra_info):
     elif norm_gt > 1e-6 and norm_pred > 1e-6:
         # Use cosine similarity for direction comparison
         cosine_sim = np.dot(gt_traj_vec, pred_traj_vec) / (norm_gt * norm_pred)
-        direction_score = max(
-            0, cosine_sim
-        )  # Score is 0 if directions are > 90 degrees apart.
+        direction_score = max(0, cosine_sim)  # Score is 0 if directions are > 90 degrees apart.
     # If one moved and the other didn't, the score remains 0.
 
     # --- Component 2: Final Position Score (Weight: 0.25) ---
@@ -906,12 +841,8 @@ def manipulateeval(response, answer, extra_info):
     relevance_penalty = 1.0
 
     # --- Component 1: Movement Penalty ---
-    gt_movement_magnitude = np.linalg.norm(
-        gt_final_pose[:3] - initial_pose[:3]
-    )  # Calculate ground truth movement magnitude
-    pred_movement_magnitude = np.linalg.norm(
-        predicted_final_pose[:3] - initial_pose[:3]
-    )  # Calculate predicted movement magnitude
+    gt_movement_magnitude = np.linalg.norm(gt_final_pose[:3] - initial_pose[:3])  # Calculate ground truth movement magnitude
+    pred_movement_magnitude = np.linalg.norm(predicted_final_pose[:3] - initial_pose[:3])  # Calculate predicted movement magnitude
 
     # If ground truth required significant movement (>10cm) but model moved little (<5cm)
     if gt_movement_magnitude > 0.1 and pred_movement_magnitude < 0.03:
@@ -968,9 +899,7 @@ def manipulateeval(response, answer, extra_info):
     # --- Final Combined Score ---
     # Combine all components and apply relevance penalty
     # Adjusted weights to include distance ratio score
-    final_score = (
-        0.4 * direction_score + 0.35 * position_score + 0.25 * rotation_score
-    ) * relevance_penalty
+    final_score = (0.4 * direction_score + 0.35 * position_score + 0.25 * rotation_score) * relevance_penalty
 
     # Ensure score is within valid range
     final_score = max(0.0, min(1.0, final_score))
@@ -978,11 +907,7 @@ def manipulateeval(response, answer, extra_info):
     # For binary success, we still check against the original strict thresholds
     POS_SUCCESS_THRESHOLD = 0.2  # meters
     ROT_SUCCESS_THRESHOLD = 10  # degrees
-    is_successful_binary = (
-        (num_predicted_segments == num_total_segments)
-        and (final_position_error < POS_SUCCESS_THRESHOLD)
-        and (final_rotation_error_deg < ROT_SUCCESS_THRESHOLD)
-    )
+    is_successful_binary = (num_predicted_segments == num_total_segments) and (final_position_error < POS_SUCCESS_THRESHOLD) and (final_rotation_error_deg < ROT_SUCCESS_THRESHOLD)
 
     result = {
         "score": float(final_score),
@@ -1022,9 +947,7 @@ def action2cam_response(instructions, initial_pose, extra_info):
     predicted_poses_list = [initial_pose.copy()]
     current_pose = initial_pose.copy()
 
-    action_keys = sorted(
-        [k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0])
-    )
+    action_keys = sorted([k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0]))
 
     gt_key = action_keys[-1]
     segment_info = extra_info[gt_key]
@@ -1141,21 +1064,15 @@ def agenticnaveval(response, answer, extra_info):
     initial_pose = optimal_poses[-2]
 
     # Reconstruct the full predicted trajectory using the model's response
-    predicted_poses = action2cam_response(
-        predicted_instructions, initial_pose, extra_info
-    )
+    predicted_poses = action2cam_response(predicted_instructions, initial_pose, extra_info)
 
     if len(predicted_poses) == 0:
         return {"score": 0, "error": "Predicted trajectory is empty"}
 
-    action_keys = sorted(
-        [k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0])
-    )
+    action_keys = sorted([k for k in extra_info if "->" in k], key=lambda x: int(x.split("->")[0]))
     num_predicted_segments = len(predicted_poses) - 1
 
-    gt_poses_for_comparison = optimal_poses[
-        : num_predicted_segments + 1
-    ]  # Ground truth poses to compare against
+    gt_poses_for_comparison = optimal_poses[: num_predicted_segments + 1]  # Ground truth poses to compare against
 
     predicted_final_pose = predicted_poses
     gt_final_pose = gt_poses_for_comparison[-1]
@@ -1168,9 +1085,7 @@ def agenticnaveval(response, answer, extra_info):
             prev_rot = R.from_quat(optimal_poses[i - 1][3:])
             curr_rot = R.from_quat(optimal_poses[i][3:])
             rot_diff = (prev_rot.inv() * curr_rot).magnitude()
-            if rot_diff > np.deg2rad(
-                5
-            ):  # If more than 5 degrees rotation between steps
+            if rot_diff > np.deg2rad(5):  # If more than 5 degrees rotation between steps
                 required_rotation = True
                 break
 
@@ -1186,9 +1101,7 @@ def agenticnaveval(response, answer, extra_info):
     elif norm_gt > 1e-6 and norm_pred > 1e-6:
         # Use cosine similarity for direction comparison
         cosine_sim = np.dot(gt_traj_vec, pred_traj_vec) / (norm_gt * norm_pred)
-        direction_score = max(
-            0, cosine_sim
-        )  # Score is 0 if directions are > 90 degrees apart.
+        direction_score = max(0, cosine_sim)  # Score is 0 if directions are > 90 degrees apart.
 
     final_position_error = np.linalg.norm(predicted_final_pose[:3] - gt_final_pose[:3])
     position_score = np.exp(-13.863 * final_position_error)

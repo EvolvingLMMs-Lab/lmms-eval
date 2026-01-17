@@ -71,9 +71,7 @@ def load_spatree_hierarchy(file_path):
     return _dict_to_treenode(data)
 
 
-spatree_hierarchy = load_spatree_hierarchy(
-    str(Path(__file__).parent / "spatree_hierarchy.json")
-)
+spatree_hierarchy = load_spatree_hierarchy(str(Path(__file__).parent / "spatree_hierarchy.json"))
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
 base_cache_dir = os.path.expanduser(os.getenv("SPATREEBENCH_MEDIA_ROOT", hf_home))
@@ -122,8 +120,7 @@ def _ensure_local_media_path(path_or_url: str) -> str:
         return cached
 
     raise FileNotFoundError(
-        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. "
-        "Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
+        f"Media file not found for '{path_or_url}'. Tried: {candidate} and HF datasets cache under {hf_datasets_cache_dir}. " "Set SPATREEBENCH_MEDIA_ROOT to a folder containing images/ and videos/ if your media is stored elsewhere."
     )
 
 
@@ -158,9 +155,7 @@ def spatialtreebench_doc_to_visual(doc):
         if source_indices:
             num_frames_to_sample = 32
             if len(source_indices) > num_frames_to_sample:
-                sampled_indices_of_source = np.linspace(
-                    0, len(source_indices) - 1, num_frames_to_sample, dtype=int
-                )
+                sampled_indices_of_source = np.linspace(0, len(source_indices) - 1, num_frames_to_sample, dtype=int)
                 indices = [source_indices[i] for i in sampled_indices_of_source]
             else:
                 indices = source_indices
@@ -261,9 +256,7 @@ def spatialtreebench_process_results(doc, results):
     metric_func = METRIC_REGISTRY.get(metric_func_name)
 
     if not metric_func:
-        eval_logger.warning(
-            f"No metric function found for {metric_func_name}. Returning 0."
-        )
+        eval_logger.warning(f"No metric function found for {metric_func_name}. Returning 0.")
         score = 0
     else:
         prediction = results[0]
@@ -282,14 +275,10 @@ def spatialtreebench_process_results(doc, results):
             metric_func = METRIC_REGISTRY.get("meanrelativeacc")
 
         try:
-            result = metric_func(
-                response=prediction, answer=answer, extra_info=metric_extra_info
-            )
+            result = metric_func(response=prediction, answer=answer, extra_info=metric_extra_info)
             score = result.get("score", 0)
         except Exception as e:
-            eval_logger.error(
-                f"Error calculating metric {metric_func_name} for doc {doc.get('session_id', 'N/A')}: {e}"
-            )
+            eval_logger.error(f"Error calculating metric {metric_func_name} for doc {doc.get('session_id', 'N/A')}: {e}")
             score = 0
 
     # Extract spatree hierarchy tags
