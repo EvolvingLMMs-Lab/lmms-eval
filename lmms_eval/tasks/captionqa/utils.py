@@ -20,6 +20,17 @@ Environment Variables:
     API_TYPE: API backend type (default: openai)
     CAPTIONQA_JUDGE_PARALLELISM: Number of concurrent API calls (default: 10)
 
+Note on vLLM Compatibility:
+    This implementation uses the OpenAI-compatible API standard for the judge model.
+    To use a local vLLM instance as the judge:
+    1. Launch vLLM server:
+       python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen2.5-72B-Instruct --port 8000
+    2. Set environment variables:
+       export API_TYPE="openai"
+       export OPENAI_API_KEY="EMPTY"
+       export OPENAI_API_BASE="http://localhost:8000/v1"
+       export CAPTIONQA_JUDGE_MODEL="Qwen/Qwen2.5-72B-Instruct"
+
 Paper: https://arxiv.org/abs/2511.21025
 Dataset: https://huggingface.co/datasets/Borise/CaptionQA
 """
