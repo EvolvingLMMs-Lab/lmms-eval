@@ -66,7 +66,7 @@ class ChatMessages(BaseModel):
     def to_hf_messages(self, video_kwargs: Dict[str, str] = None):
         if video_kwargs is None:
             video_kwargs = {}
-        num_frames = video_kwargs.get("nframes", 32)
+        _num_frames = video_kwargs.get("nframes", 32)  # noqa: F841
         hf_messages = []
         for message in self.messages:
             hf_message = {"role": message.role, "content": []}
