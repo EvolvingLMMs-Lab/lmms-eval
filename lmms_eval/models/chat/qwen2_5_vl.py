@@ -1,11 +1,13 @@
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List
 
-import decord
-import numpy as np
 from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
+
+try:
+    import decord
+except ImportError:
+    decord = None
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -20,7 +22,9 @@ from lmms_eval.protocol import ChatMessages
 try:
     from qwen_vl_utils import process_vision_info
 except ImportError:
-    eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
+    eval_logger.warning(
+        "Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`"
+    )
 
 
 @register_model("qwen2_5_vl_chat")
@@ -44,14 +48,23 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             grouping=True,
         )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
+        num_iters = (
+            len(requests) // self.batch_size
+            if len(requests) % self.batch_size == 0
+            else len(requests) // self.batch_size + 1
+        )
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         e2e_latency = 0
         total_tokens = 0
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
-            chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
-            chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
+            chat_messages = [
+                doc_to_messages[idx](self.task_dict[task][split][ids])
+                for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))
+            ]
+            chat_messages: List[ChatMessages] = [
+                ChatMessages(**{"messages": message}) for message in chat_messages
+            ]
             visuals = []
             videos = []
             for messages in chat_messages:
@@ -61,8 +74,6 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             visuals = self.flatten(visuals)
             videos = self.flatten(videos)
             gen_kwargs = all_gen_kwargs[0]
-
-            eval_logger.info(f"DEBUG: videos extracted = {videos}")
 
             # Apply chat template
             video_kwargs = {
@@ -74,41 +85,33 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             else:
                 # Probe videos to get frame count and set nframes = min(max_num_frames, total_frames)
                 # This avoids the error when video has fewer frames than max_num_frames
-                if videos:
-                    video_path = videos[0]  # Assume batch size 1 for videos
-                    eval_logger.info(f"DEBUG: probing video_path = {video_path}")
-                    vr = decord.VideoReader(video_path)
-                    video_total_frames = len(vr)
-                    nframes = min(self.max_num_frames, video_total_frames)
-                    # qwen_vl_utils requires nframes to be a multiple of 2 (FRAME_FACTOR)
-                    # and rounds using round_by_factor, so we need to floor to even number
-                    # to avoid rounding up past total_frames
-                    nframes = (nframes // 2) * 2  # Floor to nearest even number
-                    nframes = max(2, nframes)  # At least 2 frames
-                    video_kwargs["nframes"] = nframes
-                    eval_logger.info(f"Video probe: total_frames={video_total_frames}, requesting nframes={nframes}, max_num_frames={self.max_num_frames}")
+                if videos and decord is not None:
+                    try:
+                        video_path = videos[0]  # Assume batch size 1 for videos
+                        vr = decord.VideoReader(video_path)
+                        video_total_frames = len(vr)
+                        nframes = min(self.max_num_frames, video_total_frames)
+                        # qwen_vl_utils requires nframes to be a multiple of 2 (FRAME_FACTOR)
+                        # and rounds using round_by_factor, so we need to floor to even number
+                        # to avoid rounding up past total_frames
+                        nframes = (nframes // 2) * 2  # Floor to nearest even number
+                        nframes = max(2, nframes)  # At least 2 frames
+                        video_kwargs["nframes"] = nframes
+                    except Exception as e:
+                        eval_logger.warning(
+                            f"Failed to probe video {videos[0]}: {e}, using default nframes"
+                        )
+                        video_kwargs["nframes"] = self.max_num_frames
                 else:
-                    eval_logger.info(f"DEBUG: no videos found, using default nframes={self.max_num_frames}")
                     video_kwargs["nframes"] = self.max_num_frames
-            eval_logger.info(f"DEBUG: final video_kwargs = {video_kwargs}")
-            batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
-            # Debug: print the actual video content in batched_messages
-            for i, msg_list in enumerate(batched_messages):
-                for msg in msg_list:
-                    for content in msg.get("content", []):
-                        if isinstance(content, dict) and content.get("type") == "video":
-                            eval_logger.info(f"DEBUG: batched_messages[{i}] video content = {content}")
-            texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
+            batched_messages = [
+                chat_message.to_hf_messages(video_kwargs=video_kwargs)
+                for chat_message in chat_messages
+            ]
+            texts = self.processor.apply_chat_template(
+                batched_messages, tokenize=False, add_generation_prompt=True
+            )
             image_inputs, video_inputs = process_vision_info(batched_messages)
-            # Debug: print the num of frames in video_inputs
-            if video_inputs is not None:
-                for i, video in enumerate(video_inputs):
-                    if video is not None:
-                        eval_logger.info(f"DEBUG: video_inputs[{i}] num_frames = {video.shape[0]}")
-                    else:
-                        eval_logger.info(f"DEBUG: video_inputs[{i}] is None")
-            else:
-                eval_logger.info(f"DEBUG: video_inputs is None (processing images only)")
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
@@ -158,7 +161,10 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             )
             end_time = time.time()
 
-            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
+            generated_ids_trimmed = [
+                out_ids[len(in_ids) :]
+                for in_ids, out_ids in zip(inputs.input_ids, cont)
+            ]
             answers = self.processor.batch_decode(
                 generated_ids_trimmed,
                 skip_special_tokens=True,
@@ -172,7 +178,9 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             for ans, context in zip(answers, texts):
                 clean_ans = parse_reasoning_model_answer(ans)
                 res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+                self.cache_hook.add_partial(
+                    "generate_until", (context, gen_kwargs), clean_ans
+                )
 
                 eval_logger.debug(f"Question: {context}")
                 eval_logger.debug(f"Model Raw Response: {ans}")
