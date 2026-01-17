@@ -57,6 +57,8 @@ AVAILABLE_SIMPLE_MODELS = {
     "openai_compatible": "OpenAICompatible",
     "oryx": "Oryx",
     "ovis2_5": "Ovis2_5",
+    "ovis_u1": "OvisU1",
+    "ovis_u1_visual_cot": "OvisU1VisualCoT",
     "phi3v": "Phi3v",
     "phi4_multimodal": "Phi4",
     "qwen3_vl": "Qwen3_VL",
@@ -87,6 +89,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "whisper": "Whisper",
     "whisper_vllm": "WhisperVllm",
     "vora": "VoRA",
+    "unipic2": "UniPic2",
 }
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
