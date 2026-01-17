@@ -7,11 +7,10 @@ Two-stage inference using Azure OpenAI:
 2. Stage 2: Answer question using gpt-4o with original + generated images
 
 Environment:
-  TRAPI_INSTANCE           e.g., "gcr/shared" (default)
-  TRAPI_DEPLOYMENT         e.g., "gpt-4o_2024-11-20" (default) - for Stage 2
-  TRAPI_IMAGE_DEPLOYMENT   e.g., "gpt-image-1" (default) - for Stage 1
-  TRAPI_API_VERSION        e.g., "2024-10-21" (default)
-  TRAPI_SCOPE              e.g., "api://trapi/.default" (default)
+  AZURE_OPENAI_ENDPOINT    e.g., "https://mcg-vision-flow-oai-eus2.openai.azure.com/"
+  AZURE_OPENAI_API_KEY     Your API key (or use Azure CLI credential)
+  AZURE_CHAT_DEPLOYMENT    e.g., "gpt-4o" (default) - for Stage 2
+  AZURE_IMAGE_DEPLOYMENT   e.g., "gpt-image-1" (default) - for Stage 1
 
 Usage:
     python -m lmms_eval \
@@ -30,12 +29,7 @@ from io import BytesIO
 from typing import List, Optional, Tuple
 
 import requests
-from azure.identity import (
-    AzureCliCredential,
-    ChainedTokenCredential,
-    ManagedIdentityCredential,
-    get_bearer_token_provider,
-)
+from azure.identity import AzureCliCredential, get_bearer_token_provider
 from loguru import logger as eval_logger
 from openai import AzureOpenAI
 from PIL import Image
@@ -50,22 +44,31 @@ NUM_SECONDS_TO_SLEEP = 5
 
 def build_client():
     """Build Azure OpenAI client"""
-    scope = os.getenv("TRAPI_SCOPE", "api://trapi/.default")
-    api_version = os.getenv("TRAPI_API_VERSION", "2024-10-21")
-    instance = os.getenv("TRAPI_INSTANCE", "gcr/shared")
-    endpoint = f"https://trapi.research.microsoft.com/{instance}"
-
-    chained = ChainedTokenCredential(
-        AzureCliCredential(),
-        ManagedIdentityCredential(),
+    endpoint = os.getenv(
+        "AZURE_OPENAI_ENDPOINT",
+        "https://mcg-vision-flow-oai-eus2.openai.azure.com/",
     )
-    credential_provider = get_bearer_token_provider(chained, scope)
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
 
-    client = AzureOpenAI(
-        azure_endpoint=endpoint,
-        azure_ad_token_provider=credential_provider,
-        api_version=api_version,
-    )
+    # Try API key first, fall back to Azure CLI credential
+    api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    if api_key:
+        client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            api_key=api_key,
+            api_version=api_version,
+        )
+    else:
+        # Use Azure CLI credential
+        scope = os.getenv(
+            "AZURE_OPENAI_SCOPE", "https://cognitiveservices.azure.com/.default"
+        )
+        token_provider = get_bearer_token_provider(AzureCliCredential(), scope)
+        client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            azure_ad_token_provider=token_provider,
+            api_version=api_version,
+        )
     return client
 
 
@@ -106,10 +109,10 @@ class AzureTRAPIVisualCoT(lmms):
 
         # Deployment names
         self.chat_deployment = chat_deployment or os.getenv(
-            "TRAPI_DEPLOYMENT", "gpt-4o_2024-11-20"
+            "AZURE_CHAT_DEPLOYMENT", "gpt-4o"
         )
         self.image_deployment = image_deployment or os.getenv(
-            "TRAPI_IMAGE_DEPLOYMENT", "gpt-image-1"
+            "AZURE_IMAGE_DEPLOYMENT", "gpt-image-1"
         )
 
         # Stage 1 parameters
@@ -122,12 +125,16 @@ class AzureTRAPIVisualCoT(lmms):
         # Output directories
         self.output_dir = output_dir or "./logs/azure_trapi_visual_cot"
         self.save_intermediate = save_intermediate
+        eval_logger.info(f"save_intermediate: {save_intermediate}, output_dir: {self.output_dir}")
         if save_intermediate:
-            self.intermediate_dir = os.path.join(self.output_dir, "generated_images")
+            # Structure: {output_dir}/{task_name}/
+            # No need to add model name again since output_dir already contains it
+            self.intermediate_dir = self.output_dir
             os.makedirs(self.intermediate_dir, exist_ok=True)
+            eval_logger.info(f"Intermediate artifacts will be saved under: {self.intermediate_dir}")
 
         # Build client
-        eval_logger.info("Building Azure TRAPI client...")
+        eval_logger.info("Building Azure OpenAI client...")
         self.client = build_client()
         eval_logger.info(f"Chat deployment: {self.chat_deployment}")
         eval_logger.info(f"Image deployment: {self.image_deployment}")
@@ -215,9 +222,10 @@ class AzureTRAPIVisualCoT(lmms):
 
                 # Save if enabled
                 if self.save_intermediate:
-                    save_path = os.path.join(
-                        self.intermediate_dir, f"{task}_{doc_id}_stage1.png"
-                    )
+                    # Create task-specific directory
+                    task_dir = os.path.join(self.intermediate_dir, task)
+                    os.makedirs(task_dir, exist_ok=True)
+                    save_path = os.path.join(task_dir, f"{doc_id}_stage1.png")
                     generated_image.save(save_path)
                     eval_logger.debug(f"Saved generated image to {save_path}")
 
@@ -303,7 +311,7 @@ class AzureTRAPIVisualCoT(lmms):
         pbar = tqdm(
             total=len(requests),
             disable=(self.rank != 0),
-            desc="Azure TRAPI Visual CoT",
+            desc="Azure OpenAI Visual CoT",
         )
 
         for request in requests:

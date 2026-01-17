@@ -180,3 +180,254 @@ def VisualPuzzles_aggregate_results(results):
     avg_score = sum(all_scores) / len(all_scores) if all_scores else 0.0
 
     return avg_score
+
+
+def VisualPuzzles_process_result_simple(doc, results):
+    """
+    Simplified process results for single-category tasks.
+
+    Args:
+        doc: a instance of the eval dataset
+        results: [pred]
+    Returns:
+        a dictionary with accuracy score
+    """
+    pred = results[0].strip()
+    all_choices = ["A", "B", "C", "D"]
+    if doc["options"] == None:
+        index2ans = None
+    else:
+        index2ans = {all_choices[i]: doc["options"][i] for i in range(4)}
+    pred = parse_response(pred, all_choices, index2ans)
+    target = doc["answer"]
+
+    # Calculate score
+    score = 1.0 if pred.lower() == target.lower() else 0.0
+
+    return {"accuracy": score}
+
+
+def VisualPuzzles_aggregate_simple(results):
+    """
+    Simple aggregation for single-category tasks.
+
+    Args:
+        results: a list of score values
+    Returns:
+        Average accuracy
+    """
+    if not results:
+        return 0.0
+    return sum(results) / len(results)
+
+
+# ============================================================
+# Visual CoT Prompt Functions (Category-Specific)
+# ============================================================
+
+def VisualPuzzles_doc_to_text_visual_cot_algorithmic(doc, lmms_eval_specific_kwargs=None):
+    """
+    Visual CoT prompt for ALGORITHMIC reasoning puzzles.
+    Stage 1: Identify numerical/symbolic patterns and computation rules.
+    """
+    question = "Question: " + doc["question"].strip()
+    options = doc["options"]
+    if options is not None:
+        question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
+    else:
+        question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
+
+    # Stage 1: Generate auxiliary visualization for algorithmic reasoning
+    generation_prompt = f"""You are given an algorithmic reasoning puzzle. Analyze the puzzle and create a helpful visualization.
+
+{question}
+
+Your task:
+1. Identify any numerical sequences, patterns, or computational rules in the puzzle
+2. Create a diagram that clearly shows:
+   - The step-by-step computation or transformation process
+   - Arrows or annotations showing how numbers/symbols change
+   - The mathematical relationship or formula discovered
+   - Highlighted patterns (e.g., +2, ×3, alternating, etc.)
+3. Label each step of the algorithm clearly
+
+Generate a clear diagram that reveals the underlying algorithmic pattern."""
+
+    # Stage 2: Solve using both images
+    question_prompt = f"""{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The algorithmic reasoning puzzle
+2) AUXILIARY DIAGRAM: A visualization showing the computational pattern and steps
+
+Use the auxiliary diagram to understand the algorithm, then select the correct answer.
+Answer with the option letter (A, B, C, or D) directly."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"
+
+
+def VisualPuzzles_doc_to_text_visual_cot_analogical(doc, lmms_eval_specific_kwargs=None):
+    """
+    Visual CoT prompt for ANALOGICAL reasoning puzzles.
+    Stage 1: Identify transformation relationships between elements.
+    """
+    question = "Question: " + doc["question"].strip()
+    options = doc["options"]
+    if options is not None:
+        question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
+    else:
+        question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
+
+    # Stage 1: Generate auxiliary visualization for analogical reasoning
+    generation_prompt = f"""You are given an analogical reasoning puzzle (A is to B as C is to ?).
+
+{question}
+
+Your task:
+1. Identify the transformation relationship between the first pair of elements
+2. Create a diagram that clearly shows:
+   - What changes occur (rotation, reflection, color change, size change, addition/removal of elements)
+   - Arrows indicating the direction and type of transformation
+   - Labels describing each transformation (e.g., "rotate 90°", "invert colors", "add dot")
+   - Apply the same transformation to show what the answer should look like
+3. Make the analogy relationship visually explicit
+
+Generate a diagram that reveals the transformation pattern between pairs."""
+
+    # Stage 2: Solve using both images
+    question_prompt = f"""{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The analogical reasoning puzzle
+2) AUXILIARY DIAGRAM: A visualization showing the transformation relationship
+
+Use the auxiliary diagram to understand how A transforms to B, apply the same rule to C, then select the correct answer.
+Answer with the option letter (A, B, C, or D) directly."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"
+
+
+def VisualPuzzles_doc_to_text_visual_cot_deductive(doc, lmms_eval_specific_kwargs=None):
+    """
+    Visual CoT prompt for DEDUCTIVE reasoning puzzles.
+    Stage 1: Map out logical rules and inference chains.
+    """
+    question = "Question: " + doc["question"].strip()
+    options = doc["options"]
+    if options is not None:
+        question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
+    else:
+        question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
+
+    # Stage 1: Generate auxiliary visualization for deductive reasoning
+    generation_prompt = f"""You are given a deductive reasoning puzzle that requires logical inference.
+
+{question}
+
+Your task:
+1. Identify the given premises, rules, or constraints in the puzzle
+2. Create a diagram that clearly shows:
+   - All given conditions/rules listed clearly
+   - A logical flowchart or inference chain
+   - Step-by-step deduction from premises to conclusion
+   - Elimination of incorrect possibilities
+   - The logical path leading to the answer
+3. Use arrows to show the deduction flow
+
+Generate a logical inference diagram that traces the reasoning path."""
+
+    # Stage 2: Solve using both images
+    question_prompt = f"""{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The deductive reasoning puzzle
+2) AUXILIARY DIAGRAM: A logical inference diagram showing the deduction steps
+
+Follow the logical chain in the auxiliary diagram to reach the conclusion, then select the correct answer.
+Answer with the option letter (A, B, C, or D) directly."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"
+
+
+def VisualPuzzles_doc_to_text_visual_cot_inductive(doc, lmms_eval_specific_kwargs=None):
+    """
+    Visual CoT prompt for INDUCTIVE reasoning puzzles.
+    Stage 1: Identify repeating patterns and generalize rules from examples.
+    """
+    question = "Question: " + doc["question"].strip()
+    options = doc["options"]
+    if options is not None:
+        question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
+    else:
+        question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
+
+    # Stage 1: Generate auxiliary visualization for inductive reasoning
+    generation_prompt = f"""You are given an inductive reasoning puzzle that requires pattern recognition.
+
+{question}
+
+Your task:
+1. Observe the sequence of examples and identify the underlying pattern
+2. Create a diagram that clearly shows:
+   - The repeating elements or motifs highlighted/circled
+   - The progression rule (what changes from one step to the next)
+   - Annotations showing the pattern cycle or growth rule
+   - A prediction of what comes next based on the pattern
+   - Color-coding or numbering to show pattern repetition
+3. Make the inductive pattern visually obvious
+
+Generate a diagram that highlights the repeating pattern and predicts the next element."""
+
+    # Stage 2: Solve using both images
+    question_prompt = f"""{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The inductive reasoning puzzle
+2) AUXILIARY DIAGRAM: A visualization highlighting the pattern and its progression
+
+Use the auxiliary diagram to understand the pattern rule, then select the answer that continues the pattern correctly.
+Answer with the option letter (A, B, C, or D) directly."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"
+
+
+def VisualPuzzles_doc_to_text_visual_cot_spatial(doc, lmms_eval_specific_kwargs=None):
+    """
+    Visual CoT prompt for SPATIAL reasoning puzzles.
+    Stage 1: Visualize rotations, folding, or 3D transformations.
+    """
+    question = "Question: " + doc["question"].strip()
+    options = doc["options"]
+    if options is not None:
+        question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
+    else:
+        question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
+
+    # Stage 1: Generate auxiliary visualization for spatial reasoning
+    generation_prompt = f"""You are given a spatial reasoning puzzle involving 3D visualization or transformations.
+
+{question}
+
+Your task:
+1. Analyze the spatial transformation required (rotation, folding, unfolding, different viewpoint)
+2. Create a diagram that clearly shows:
+   - The object from multiple angles if rotation is involved
+   - Step-by-step folding/unfolding process if applicable
+   - Arrows indicating rotation direction and degree
+   - Reference points or markers to track orientation
+   - The resulting shape after transformation
+3. Add axis lines or reference frames to clarify spatial orientation
+
+Generate a multi-view or step-by-step transformation diagram."""
+
+    # Stage 2: Solve using both images
+    question_prompt = f"""{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The spatial reasoning puzzle
+2) AUXILIARY DIAGRAM: A visualization showing the spatial transformation from multiple views
+
+Use the auxiliary diagram to mentally trace the transformation, then select the correct answer.
+Answer with the option letter (A, B, C, or D) directly."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"

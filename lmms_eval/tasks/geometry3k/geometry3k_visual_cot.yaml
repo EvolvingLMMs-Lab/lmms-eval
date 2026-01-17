@@ -1,0 +1,38 @@
+task: geometry3k_visual_cot
+dataset_path: hiyouga/geometry3k
+dataset_name: null
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.geometry3k_doc_to_visual
+doc_to_text: !function utils.geometry3k_doc_to_text_visual_cot
+doc_to_target: !function utils.geometry3k_doc_to_target
+process_results: !function utils.geometry3k_process_results
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0.0
+  do_sample: false
+metric_list:
+  - metric: geometry3k_accuracy
+    aggregation: !function utils.geometry3k_aggregate
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  azure_trapi_visual_cot:
+    save_intermediate: true
+  bagel_visual_cot:
+    stage1_cfg_text_scale: 4.0
+    stage1_cfg_interval: 0.4
+    stage1_timestep_shift: 3.0
+    stage1_num_timesteps: 50
+    stage1_cfg_renorm_min: 0.0
+    stage1_cfg_renorm_type: "global"
+    stage1_image_ratio: "1:1"
+    stage2_max_new_tokens: 2048
+    stage2_temperature: 0.0
+    stage2_do_sample: false
+    save_intermediate: true
+
+metadata:
+  version: 1.0
+  prompt_type: visual_cot
+  description: "Geometry3K with Visual Chain-of-Thought: Stage 1 generates auxiliary constructions on the diagram, Stage 2 solves using both original and auxiliary diagrams."

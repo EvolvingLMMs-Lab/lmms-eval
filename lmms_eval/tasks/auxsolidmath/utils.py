@@ -20,32 +20,36 @@ def _get_judge_client():
     global _JUDGE_CLIENT, _JUDGE_DEPLOYMENT
     if _JUDGE_CLIENT is None:
         import os
-        from azure.identity import (
-            AzureCliCredential,
-            ChainedTokenCredential,
-            ManagedIdentityCredential,
-            get_bearer_token_provider,
-        )
+
+        from azure.identity import AzureCliCredential, get_bearer_token_provider
         from openai import AzureOpenAI
 
-        scope = os.getenv("TRAPI_SCOPE", "api://trapi/.default")
-        api_version = os.getenv("TRAPI_API_VERSION", "2024-10-21")
-        instance = os.getenv("TRAPI_INSTANCE", "gcr/shared")
-        endpoint = f"https://trapi.research.microsoft.com/{instance}"
-
-        chained = ChainedTokenCredential(
-            AzureCliCredential(),
-            ManagedIdentityCredential(),
+        endpoint = os.getenv(
+            "AZURE_OPENAI_ENDPOINT",
+            "https://mcg-vision-flow-oai-eus2.openai.azure.com/",
         )
-        credential_provider = get_bearer_token_provider(chained, scope)
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
 
-        _JUDGE_CLIENT = AzureOpenAI(
-            azure_endpoint=endpoint,
-            azure_ad_token_provider=credential_provider,
-            api_version=api_version,
-        )
-        # Use GPT-5.1 as Judge (stronger than GPT-4o)
-        _JUDGE_DEPLOYMENT = os.getenv("JUDGE_DEPLOYMENT", "gpt-5.1_2025-11-13")
+        # Try API key first, fall back to Azure CLI credential
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        if api_key:
+            _JUDGE_CLIENT = AzureOpenAI(
+                azure_endpoint=endpoint,
+                api_key=api_key,
+                api_version=api_version,
+            )
+        else:
+            # Use Azure CLI credential
+            scope = os.getenv(
+                "AZURE_OPENAI_SCOPE", "https://cognitiveservices.azure.com/.default"
+            )
+            token_provider = get_bearer_token_provider(AzureCliCredential(), scope)
+            _JUDGE_CLIENT = AzureOpenAI(
+                azure_endpoint=endpoint,
+                azure_ad_token_provider=token_provider,
+                api_version=api_version,
+            )
+        _JUDGE_DEPLOYMENT = os.getenv("JUDGE_DEPLOYMENT", "gpt-5.1")
     return _JUDGE_CLIENT, _JUDGE_DEPLOYMENT
 
 
@@ -121,6 +125,59 @@ def auxsolidmath_doc_to_target(doc: Dict) -> str:
     return doc.get("answer", "")
 
 
+def auxsolidmath_doc_to_text_visual_cot(
+    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
+) -> str:
+    """
+    Get two-stage Visual Chain-of-Thought prompt for auxsolidmath task.
+
+    Stage 1: Analyze the problem and draw auxiliary lines on the 3D diagram
+    Stage 2: Solve the problem using both original diagram and the auxiliary diagram
+    """
+    question = doc.get("question", "")
+
+    # Stage 1: Analyze problem and generate diagram with auxiliary constructions
+    generation_prompt = f"""You are given a solid geometry problem with a 3D diagram. Analyze the problem and create an enhanced version of the SAME diagram with auxiliary constructions added.
+
+Problem: {question}
+
+Instructions:
+1. KEEP all original elements exactly as they are (all points, edges, faces, labels)
+2. Analyze what auxiliary constructions would help solve this problem
+3. ADD auxiliary lines in a different color (e.g., red or dashed lines). Common auxiliary constructions include:
+   - Perpendiculars from a point to a plane or line
+   - Line segments connecting specific points
+   - Midpoints of edges with connections
+   - Extended lines to find intersections
+   - Parallel lines through specific points
+   - Cross-sections of the solid
+4. Label any new points you add (use letters not already in the diagram)
+5. The final diagram should look like the original 3D figure with extra auxiliary lines drawn on top
+
+Generate an enhanced 3D diagram that preserves the original and adds helpful auxiliary constructions."""
+
+    # Stage 2: Solve using both original and auxiliary diagram
+    question_prompt = f"""You are given a solid geometry problem.
+
+Problem: {question}
+
+You are given TWO images:
+1) ORIGINAL DIAGRAM: The 3D solid geometry figure as given
+2) AUXILIARY DIAGRAM: The same figure with auxiliary constructions (extra lines) added to help solve the problem
+
+Instructions:
+1. Look at the auxiliary diagram to see what constructions were added (perpendiculars, connecting segments, midpoints, etc.)
+2. Identify the geometric relationships established by these auxiliary lines
+3. Use these constructions to set up your solution approach
+4. Apply relevant theorems (Pythagorean theorem in 3D, properties of perpendiculars, volume formulas, etc.)
+5. Show your step-by-step solution with clear calculations
+6. State the final numerical answer
+
+Solve this problem step by step using the auxiliary constructions."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"
+
+
 def auxsolidmath_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """
     Process auxsolidmath results with LLM Judge evaluation using Azure TRAPI.
@@ -186,7 +243,7 @@ Evaluate the candidate. Output JSON only."""
                         {"role": "user", "content": text_user},
                     ],
                     temperature=0.0,
-                    max_completion_tokens=512,
+                    max_tokens=512,
                 )
                 response_text = response.choices[0].message.content
                 result_json = _find_first_json_substring(response_text)

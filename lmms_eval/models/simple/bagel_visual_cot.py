@@ -114,15 +114,15 @@ class BagelVisualCoT(lmms):
             self.output_dir = output_dir
 
         if intermediate_dir is None:
-            self.intermediate_dir = os.path.join(
-                self.output_dir, "intermediate_artifacts"
-            )
+            # Structure: {output_dir}/{task_name}/
+            # No need to add model name again since output_dir already contains it
+            self.intermediate_dir = self.output_dir
         else:
             self.intermediate_dir = intermediate_dir
 
         if save_intermediate:
             os.makedirs(self.intermediate_dir, exist_ok=True)
-            eval_logger.info(f"Intermediate artifacts will be saved to: {self.intermediate_dir}")
+            eval_logger.info(f"Intermediate artifacts will be saved under: {self.intermediate_dir}")
 
         # Import and initialize Bagel model
         eval_logger.info(f"Loading Bagel model from {pretrained}")
@@ -140,7 +140,7 @@ class BagelVisualCoT(lmms):
             pretrained=self.pretrained,
             load_in_4bit=load_in_4bit,
             load_in_8bit=load_in_8bit,
-            output_image_dir=os.path.join(self.output_dir, "generated_images"),
+            output_image_dir=self.intermediate_dir,  # Use intermediate_dir which includes model name
             show_thinking=False,
             cfg_text_scale=self.stage1_cfg_text_scale,
             cfg_interval=self.stage1_cfg_interval,
