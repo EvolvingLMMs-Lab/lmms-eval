@@ -1,10 +1,11 @@
 # the code is adapted from https://github.com/EleutherAI/lm-evaluation-harness
+import collections
 import math
 import random
 import re
 import string
 from collections.abc import Iterable
-from typing import List
+from typing import Any, List
 
 import numpy as np
 import sacrebleu
@@ -644,3 +645,56 @@ def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
     assert len(metrics) == len(sizes)
 
     return sum([metric * size for metric, size in zip(metrics, sizes)]) / sum(sizes)
+
+
+def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
+    """
+    Calculate clustered standard error for non-independent samples.
+
+    When multiple questions share the same context (e.g., same image/video),
+    they are not independent. This implements Equation 4 from:
+    "Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations"
+    (https://arxiv.org/abs/2411.00640)
+
+    SE_clustered = sqrt(SE_CLT^2 + (1/n^2) * sum_c sum_i sum_{j!=i} (s_ic - s_bar)(s_jc - s_bar))
+
+    Args:
+        scores: List of individual scores (e.g., 0/1 for correctness)
+        cluster_ids: List of cluster identifiers (e.g., video_id, image_id)
+
+    Returns:
+        Clustered standard error, or NaN if insufficient data
+    """
+    n = len(scores)
+    if n < 2:
+        return float("nan")
+
+    if len(scores) != len(cluster_ids):
+        raise ValueError("scores and cluster_ids must have the same length")
+
+    # Global mean
+    s_bar = sum(scores) / n
+
+    # SE_CLT^2 = Var(scores) / n = (1/(n-1)) * sum((s_i - s_bar)^2) / n
+    var_scores = sum((s - s_bar) ** 2 for s in scores) / (n - 1)
+    se_clt_squared = var_scores / n
+
+    # Group scores by cluster with their indices
+    cluster_to_scores = collections.defaultdict(list)
+    for i, (score, cid) in enumerate(zip(scores, cluster_ids)):
+        cluster_to_scores[cid].append(score)
+
+    # Calculate within-cluster cross-terms: sum_c sum_i sum_{j!=i} (s_ic - s_bar)(s_jc - s_bar)
+    cross_term = 0.0
+    for cid, cluster_scores in cluster_to_scores.items():
+        # For each cluster, compute sum of (s_i - s_bar)(s_j - s_bar) for i != j
+        deviations = [s - s_bar for s in cluster_scores]
+        cluster_sum = sum(deviations)
+        # sum_{i!=j} d_i * d_j = (sum d_i)^2 - sum(d_i^2)
+        sum_of_squares = sum(d * d for d in deviations)
+        cross_term += cluster_sum * cluster_sum - sum_of_squares
+
+    cross_term /= n * n
+
+    # SE_clustered = sqrt(SE_CLT^2 + cross_term)
+    return math.sqrt(se_clt_squared + cross_term)

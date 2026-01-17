@@ -1,0 +1,30 @@
+# LongVT No Visual Setting
+# Test model ability to answer without video content
+
+dataset_path: longvideotool/VideoSIAH-Eval
+dataset_kwargs:
+  token: True
+  cache_dir: longvt_benchmark
+  video: True
+test_split: test
+task: longvt_no_visual
+output_type: generate_until
+doc_to_visual: !function utils.longvt_doc_to_visual_empty
+doc_to_text: !function utils.longvt_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 4096
+process_results: !function utils.longvt_process_results
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: format_score
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0
