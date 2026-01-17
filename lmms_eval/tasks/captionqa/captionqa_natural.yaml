@@ -1,6 +1,0 @@
-task: "captionqa_natural"
-test_split: natural
-include: _default_template_yaml
-
-
-
