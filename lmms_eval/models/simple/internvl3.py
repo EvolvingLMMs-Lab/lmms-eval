@@ -1,4 +1,3 @@
-import logging
 from datetime import timedelta
 from typing import List, Optional, Set, Tuple
 
@@ -107,10 +106,18 @@ def dynamic_preprocess(
     orig_width, orig_height = image.size
     aspect_ratio = orig_width / orig_height
 
-    target_ratios: Set[Tuple[int, int]] = set((i, j) for n in range(min_num, max_num + 1) for i in range(1, n + 1) for j in range(1, n + 1) if min_num <= i * j <= max_num)
+    target_ratios: Set[Tuple[int, int]] = set(
+        (i, j)
+        for n in range(min_num, max_num + 1)
+        for i in range(1, n + 1)
+        for j in range(1, n + 1)
+        if min_num <= i * j <= max_num
+    )
     sorted_ratios = sorted(target_ratios, key=lambda x: x[0] * x[1])
 
-    target_aspect_ratio = find_closest_aspect_ratio(aspect_ratio, set(sorted_ratios), orig_width, orig_height, image_size)
+    target_aspect_ratio = find_closest_aspect_ratio(
+        aspect_ratio, set(sorted_ratios), orig_width, orig_height, image_size
+    )
 
     target_width = image_size * target_aspect_ratio[0]
     target_height = image_size * target_aspect_ratio[1]
@@ -134,7 +141,9 @@ def dynamic_preprocess(
     return processed_images
 
 
-def load_image(image: Image.Image, input_size: int = 448, max_num: int = 12) -> torch.Tensor:
+def load_image(
+    image: Image.Image, input_size: int = 448, max_num: int = 12
+) -> torch.Tensor:
     """Load and preprocess an image into pixel values.
 
     Args:
@@ -146,7 +155,9 @@ def load_image(image: Image.Image, input_size: int = 448, max_num: int = 12) -> 
         Stacked tensor of preprocessed image tiles.
     """
     transform = build_transform(input_size=input_size)
-    images = dynamic_preprocess(image, image_size=input_size, use_thumbnail=True, max_num=max_num)
+    images = dynamic_preprocess(
+        image, image_size=input_size, use_thumbnail=True, max_num=max_num
+    )
     pixel_values = [transform(img) for img in images]
     pixel_values_tensor = torch.stack(pixel_values)
     return pixel_values_tensor
@@ -178,7 +189,12 @@ def get_index(
     start_idx = max(first_idx, round(start * fps))
     end_idx = min(round(end * fps), max_frame)
     seg_size = float(end_idx - start_idx) / num_segments
-    frame_indices = np.array([int(start_idx + (seg_size / 2) + np.round(seg_size * idx)) for idx in range(num_segments)])
+    frame_indices = np.array(
+        [
+            int(start_idx + (seg_size / 2) + np.round(seg_size * idx))
+            for idx in range(num_segments)
+        ]
+    )
     return frame_indices
 
 
@@ -208,10 +224,14 @@ def load_video(
     pixel_values_list: List[torch.Tensor] = []
     num_patches_list: List[int] = []
     transform = build_transform(input_size=input_size)
-    frame_indices = get_index(bound, fps, max_frame, first_idx=0, num_segments=num_segments)
+    frame_indices = get_index(
+        bound, fps, max_frame, first_idx=0, num_segments=num_segments
+    )
     for frame_index in frame_indices:
         img = Image.fromarray(vr[frame_index].asnumpy()).convert("RGB")
-        tiles = dynamic_preprocess(img, image_size=input_size, use_thumbnail=True, max_num=max_num)
+        tiles = dynamic_preprocess(
+            img, image_size=input_size, use_thumbnail=True, max_num=max_num
+        )
         pixel_values = torch.stack([transform(tile) for tile in tiles])
         num_patches_list.append(pixel_values.shape[0])
         pixel_values_list.append(pixel_values)
@@ -256,7 +276,9 @@ class InternVL3(lmms):
         self.max_num = max_num
 
         batch_size_int = int(batch_size)
-        assert batch_size_int == 1, f"Batch size should be 1 for InternVL3, but got {batch_size_int}."
+        assert (
+            batch_size_int == 1
+        ), f"Batch size should be 1 for InternVL3, but got {batch_size_int}."
         self.batch_size_per_gpu = batch_size_int
 
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
@@ -284,7 +306,9 @@ class InternVL3(lmms):
             device_map=self.device_map,
         ).eval()
         self._config = self._model.config
-        self._tokenizer = AutoTokenizer.from_pretrained(self.path, trust_remote_code=True, use_fast=False)
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self.path, trust_remote_code=True, use_fast=False
+        )
 
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
@@ -295,18 +319,30 @@ class InternVL3(lmms):
             if accelerator.distributed_type == DistributedType.DEEPSPEED:
                 kwargs = {
                     "train_micro_batch_size_per_gpu": self.batch_size_per_gpu,
-                    "train_batch_size": self.batch_size_per_gpu * accelerator.num_processes,
+                    "train_batch_size": self.batch_size_per_gpu
+                    * accelerator.num_processes,
                 }
-                AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **kwargs)
-                eval_logger.info("Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0")
+                AcceleratorState().deepspeed_plugin.deepspeed_config_process(
+                    must_match=True, **kwargs
+                )
+                eval_logger.info(
+                    "Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0"
+                )
 
-            if accelerator.distributed_type == DistributedType.FSDP or accelerator.distributed_type == DistributedType.DEEPSPEED:
+            if (
+                accelerator.distributed_type == DistributedType.FSDP
+                or accelerator.distributed_type == DistributedType.DEEPSPEED
+            ):
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
+                self._model = accelerator.prepare_model(
+                    self.model, evaluation_mode=True
+                )
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+                eval_logger.info(
+                    f"Using {accelerator.num_processes} devices with data parallelism"
+                )
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         elif self._use_auto_device_map:
@@ -377,18 +413,13 @@ class InternVL3(lmms):
             List of generated response strings.
         """
         res: List[str] = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
+        )
 
-        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            # DEBUG: Log input before processing
-            eval_logger.debug(f"[InternVL3] ===== Processing doc_id={doc_id}, task={task}, split={split} =====")
-
-            # Get the raw document for debugging
-            doc = self.task_dict[task][split][doc_id]
-            eval_logger.debug(f"[InternVL3] Raw document (this is input to doc_to_messages): {doc}")
-            eval_logger.debug(f"[InternVL3] Original contexts (from doc_to_text): {contexts}")
-            eval_logger.debug(f"[InternVL3] Original gen_kwargs: {gen_kwargs}")
-
+        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [
+            reg.args for reg in requests
+        ]:
             if "until" in gen_kwargs:
                 gen_kwargs.pop("until")
             for k, v in DEFAULT_GEN_KWARGS.items():
@@ -406,17 +437,14 @@ class InternVL3(lmms):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
 
-            # DEBUG: Log doc_to_visual output
-            eval_logger.debug(f"[InternVL3] doc_to_visual returned {len(visuals)} visuals: {[type(v).__name__ for v in visuals]}")
-            for idx, v in enumerate(visuals):
-                if hasattr(v, "size"):
-                    eval_logger.debug(f"[InternVL3]   Visual {idx}: size={v.size}, mode={getattr(v, 'mode', 'N/A')}")
-                elif isinstance(v, str):
-                    eval_logger.debug(f"[InternVL3]   Visual {idx}: path={v}")
-
             if self.modality == "image":
                 if visuals:
-                    processed_visuals = [load_image(visual, max_num=self.max_num).to(torch.bfloat16).to(self._device) for visual in visuals]
+                    processed_visuals = [
+                        load_image(visual, max_num=self.max_num)
+                        .to(torch.bfloat16)
+                        .to(self._device)
+                        for visual in visuals
+                    ]
                     pixel_values = torch.cat(processed_visuals, dim=0)
                     num_patches_list = [v.size(0) for v in processed_visuals]
                     # count how many <image> tags are already in the text
@@ -438,21 +466,18 @@ class InternVL3(lmms):
                         # e.g., We have 3 images but text only has 1 <image> tag.
                         # InternVL handles this poorly. You might want to fallback to prepending
                         # or raising an error depending on your strictness.
-                        eval_logger.warning(f"[InternVL3] Token mismatch! Text has {existing_tags} tags but {len(processed_visuals)} images provided.")
+                        eval_logger.warning(
+                            f"[InternVL3] Token mismatch! Text has {existing_tags} tags but {len(processed_visuals)} images provided."
+                        )
                         # Optional: Fallback to prepending if you suspect the tags in text are garbage
-                        eval_logger.warning(f"[InternVL3] Fallback: Prepending image tokens to the context.")
+                        eval_logger.warning(
+                            "[InternVL3] Fallback: Prepending image tokens to the context."
+                        )
                         image_tokens = " ".join(["<image>"] * len(processed_visuals))
                         contexts = image_tokens + "\n" + contexts
                 else:
                     pixel_values = None
                     num_patches_list = None
-
-                # DEBUG: Log input before model.chat for image modality
-                eval_logger.debug(f"[InternVL3] ===== INPUT BEFORE INFERENCE (image modality) =====")
-                eval_logger.debug(f"[InternVL3] Final contexts (with image tokens): {contexts}")
-                eval_logger.debug(f"[InternVL3] pixel_values shape: {pixel_values.shape if pixel_values is not None else None}")
-                eval_logger.debug(f"[InternVL3] num_patches_list: {num_patches_list}")
-                eval_logger.debug(f"[InternVL3] gen_kwargs: {gen_kwargs}")
 
                 response, _ = self.model.chat(
                     self.tokenizer,
@@ -464,24 +489,19 @@ class InternVL3(lmms):
                     return_history=True,
                 )
 
-                # DEBUG: Log response after model.chat
-                eval_logger.debug(f"[InternVL3] ===== RESPONSE AFTER INFERENCE =====")
-                eval_logger.debug(f"[InternVL3] Response: {response}")
-
             elif self.modality == "video":
-                assert len(visuals) == 1, f"Only one video is supported, but got {len(visuals)} videos."
+                assert (
+                    len(visuals) == 1
+                ), f"Only one video is supported, but got {len(visuals)} videos."
                 video_path = visuals[0]
-                pixel_values, num_patches_list = load_video(video_path, num_segments=self.num_frame, max_num=1)
+                pixel_values, num_patches_list = load_video(
+                    video_path, num_segments=self.num_frame, max_num=1
+                )
                 pixel_values = pixel_values.to(torch.bfloat16).to(self._device)
-                video_prefix = "".join([f"Frame{i + 1}: <image>\n" for i in range(len(num_patches_list))])
+                video_prefix = "".join(
+                    [f"Frame{i + 1}: <image>\n" for i in range(len(num_patches_list))]
+                )
                 question = video_prefix + contexts
-
-                # DEBUG: Log input before model.chat for video modality
-                eval_logger.debug(f"[InternVL3] ===== INPUT BEFORE INFERENCE (video modality) =====")
-                eval_logger.debug(f"[InternVL3] Final question (with video prefix): {question}")
-                eval_logger.debug(f"[InternVL3] pixel_values shape: {pixel_values.shape}")
-                eval_logger.debug(f"[InternVL3] num_patches_list: {num_patches_list}")
-                eval_logger.debug(f"[InternVL3] gen_kwargs: {gen_kwargs}")
 
                 response, _ = self.model.chat(
                     self.tokenizer,
@@ -493,9 +513,6 @@ class InternVL3(lmms):
                     return_history=True,
                 )
 
-                # DEBUG: Log response after model.chat
-                eval_logger.debug(f"[InternVL3] ===== RESPONSE AFTER INFERENCE =====")
-                eval_logger.debug(f"[InternVL3] Response: {response}")
             res.append(response)
             pbar.update(1)
         pbar.close()
@@ -507,4 +524,6 @@ class InternVL3(lmms):
 
     def generate_until_multi_round(self, requests: List[Instance]) -> List[str]:
         """Generate multi-round responses. Not implemented for InternVL3."""
-        raise NotImplementedError("Multi-round generation is not implemented for InternVL3.")
+        raise NotImplementedError(
+            "Multi-round generation is not implemented for InternVL3."
+        )
