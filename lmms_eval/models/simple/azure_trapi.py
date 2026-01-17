@@ -2,13 +2,10 @@
 """
 Azure OpenAI model with Azure AD authentication for lmms-eval
 
-Directly adapted from api.py - uses same authentication and client setup.
-
-Environment (optional):
-  TRAPI_INSTANCE           e.g., "gcr/shared" (default)
-  TRAPI_DEPLOYMENT         e.g., "gpt-4o_2024-11-20" (default)
-  TRAPI_API_VERSION        e.g., "2024-10-21" (default)
-  TRAPI_SCOPE              e.g., "api://trapi/.default" (default)
+Environment:
+  AZURE_OPENAI_ENDPOINT    e.g., "https://mcg-vision-flow-oai-eus2.openai.azure.com/"
+  AZURE_OPENAI_API_KEY     Your API key (or use Azure CLI credential)
+  AZURE_CHAT_DEPLOYMENT    e.g., "gpt-4o" (default)
 
 Usage:
     python -m lmms_eval \
@@ -25,12 +22,7 @@ import time
 from io import BytesIO
 from typing import List, Tuple
 
-from azure.identity import (
-    AzureCliCredential,
-    ChainedTokenCredential,
-    ManagedIdentityCredential,
-    get_bearer_token_provider,
-)
+from azure.identity import AzureCliCredential, get_bearer_token_provider
 from loguru import logger as eval_logger
 from openai import AzureOpenAI
 from PIL import Image
@@ -45,36 +37,43 @@ NUM_SECONDS_TO_SLEEP = 5
 
 def build_client():
     """
-    Build Azure OpenAI client - EXACTLY as in api.py
+    Build Azure OpenAI client
 
     Returns:
         tuple: (client, deployment_name)
     """
-    # Config with env overrides
-    scope = os.getenv("TRAPI_SCOPE", "api://trapi/.default")
-    api_version = os.getenv("TRAPI_API_VERSION", "2024-10-21")
-    deployment_name = os.getenv("TRAPI_DEPLOYMENT", "gpt-4o_2024-11-20")
-    instance = os.getenv("TRAPI_INSTANCE", "gcr/shared")
-    endpoint = f"https://trapi.research.microsoft.com/{instance}"
-
-    # Prepare chained credential: Azure CLI -> Managed Identity
-    chained = ChainedTokenCredential(
-        AzureCliCredential(),
-        ManagedIdentityCredential(),
+    endpoint = os.getenv(
+        "AZURE_OPENAI_ENDPOINT",
+        "https://mcg-vision-flow-oai-eus2.openai.azure.com/",
     )
-    credential_provider = get_bearer_token_provider(chained, scope)
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    deployment_name = os.getenv("AZURE_CHAT_DEPLOYMENT", "gpt-4o")
 
-    client = AzureOpenAI(
-        azure_endpoint=endpoint,
-        azure_ad_token_provider=credential_provider,
-        api_version=api_version,
-    )
+    # Try API key first, fall back to Azure CLI credential
+    api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    if api_key:
+        client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            api_key=api_key,
+            api_version=api_version,
+        )
+    else:
+        # Use Azure CLI credential
+        scope = os.getenv(
+            "AZURE_OPENAI_SCOPE", "https://cognitiveservices.azure.com/.default"
+        )
+        token_provider = get_bearer_token_provider(AzureCliCredential(), scope)
+        client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            azure_ad_token_provider=token_provider,
+            api_version=api_version,
+        )
     return client, deployment_name
 
 
 def chat_once(client: AzureOpenAI, model: str, messages: List[dict]) -> str:
     """
-    Single chat completion - adapted from api.py
+    Single chat completion
 
     Args:
         client: AzureOpenAI client
@@ -113,7 +112,7 @@ class AzureTRAPI(lmms):
         self.max_retries = max_retries
 
         # Build client using the exact same function as api.py
-        eval_logger.info("Building Azure TRAPI client...")
+        eval_logger.info("Building Azure OpenAI client...")
         self.client, self.deployment_name = build_client()
         eval_logger.info(f"Connected to deployment: {self.deployment_name}")
 
@@ -170,7 +169,7 @@ class AzureTRAPI(lmms):
         pbar = tqdm(
             total=len(requests),
             disable=(self.rank != 0),
-            desc=f"Azure TRAPI ({self.deployment_name})",
+            desc=f"Azure OpenAI ({self.deployment_name})",
         )
 
         for request in requests:

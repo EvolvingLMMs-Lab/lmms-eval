@@ -20,32 +20,36 @@ def _get_judge_client():
     global _JUDGE_CLIENT, _JUDGE_DEPLOYMENT
     if _JUDGE_CLIENT is None:
         import os
-        from azure.identity import (
-            AzureCliCredential,
-            ChainedTokenCredential,
-            ManagedIdentityCredential,
-            get_bearer_token_provider,
-        )
+
+        from azure.identity import AzureCliCredential, get_bearer_token_provider
         from openai import AzureOpenAI
 
-        scope = os.getenv("TRAPI_SCOPE", "api://trapi/.default")
-        api_version = os.getenv("TRAPI_API_VERSION", "2024-10-21")
-        instance = os.getenv("TRAPI_INSTANCE", "gcr/shared")
-        endpoint = f"https://trapi.research.microsoft.com/{instance}"
-
-        chained = ChainedTokenCredential(
-            AzureCliCredential(),
-            ManagedIdentityCredential(),
+        endpoint = os.getenv(
+            "AZURE_OPENAI_ENDPOINT",
+            "https://mcg-vision-flow-oai-eus2.openai.azure.com/",
         )
-        credential_provider = get_bearer_token_provider(chained, scope)
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
 
-        _JUDGE_CLIENT = AzureOpenAI(
-            azure_endpoint=endpoint,
-            azure_ad_token_provider=credential_provider,
-            api_version=api_version,
-        )
-        # Use GPT-5.1 as Judge (stronger than GPT-4o)
-        _JUDGE_DEPLOYMENT = os.getenv("JUDGE_DEPLOYMENT", "gpt-5.1_2025-11-13")
+        # Try API key first, fall back to Azure CLI credential
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        if api_key:
+            _JUDGE_CLIENT = AzureOpenAI(
+                azure_endpoint=endpoint,
+                api_key=api_key,
+                api_version=api_version,
+            )
+        else:
+            # Use Azure CLI credential
+            scope = os.getenv(
+                "AZURE_OPENAI_SCOPE", "https://cognitiveservices.azure.com/.default"
+            )
+            token_provider = get_bearer_token_provider(AzureCliCredential(), scope)
+            _JUDGE_CLIENT = AzureOpenAI(
+                azure_endpoint=endpoint,
+                azure_ad_token_provider=token_provider,
+                api_version=api_version,
+            )
+        _JUDGE_DEPLOYMENT = os.getenv("JUDGE_DEPLOYMENT", "gpt-5.1")
     return _JUDGE_CLIENT, _JUDGE_DEPLOYMENT
 
 
@@ -239,7 +243,7 @@ Evaluate the candidate. Output JSON only."""
                         {"role": "user", "content": text_user},
                     ],
                     temperature=0.0,
-                    max_completion_tokens=512,
+                    max_tokens=512,
                 )
                 response_text = response.choices[0].message.content
                 result_json = _find_first_json_substring(response_text)
