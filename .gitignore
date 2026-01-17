@@ -52,5 +52,6 @@ span.log
 uv.lock
 workspace/*
 .claude/*
+.opencode/
 remote_code/*
 docs/plans/
