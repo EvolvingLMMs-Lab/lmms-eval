@@ -24,7 +24,9 @@ __all__ = [
 ]
 
 
-def evaluate_cogmap_responses(jsonl_path: str, output_path: str = None, include_detailed_metrics: bool = True) -> dict:
+def evaluate_cogmap_responses(
+    jsonl_path: str, output_path: str = None, include_detailed_metrics: bool = True
+) -> dict:
     """High-level interface for cognitive map evaluation.
 
     Args:

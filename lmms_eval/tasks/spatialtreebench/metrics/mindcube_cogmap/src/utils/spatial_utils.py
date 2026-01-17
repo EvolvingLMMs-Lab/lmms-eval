@@ -31,7 +31,9 @@ def calculate_position_similarity(pos1: List[float], pos2: List[float]) -> float
     return similarity
 
 
-def normalize_coordinates(coordinates: List[List[float]], grid_size: Tuple[int, int] = (10, 10)) -> List[List[float]]:
+def normalize_coordinates(
+    coordinates: List[List[float]], grid_size: Tuple[int, int] = (10, 10)
+) -> List[List[float]]:
     """Normalize coordinates to fit within a specified grid.
 
     Args:

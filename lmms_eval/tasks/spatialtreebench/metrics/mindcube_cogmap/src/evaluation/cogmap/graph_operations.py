@@ -207,7 +207,10 @@ def extract_objects_with_extended_info(cog_map: Dict) -> Dict:
                 if "position" in obj and obj["position"] is not None:
                     if isinstance(obj["position"], list) and len(obj["position"]) >= 2:
                         # Convert position values to float
-                        position = [float(obj["position"][0]), float(obj["position"][1])]
+                        position = [
+                            float(obj["position"][0]),
+                            float(obj["position"][1]),
+                        ]
                     else:
                         position = [0.0, 0.0]
                 else:
@@ -217,7 +220,10 @@ def extract_objects_with_extended_info(cog_map: Dict) -> Dict:
 
             facing = normalize_facing(obj.get("facing", None))
 
-            objects_info[name] = {"position": np.array(position, dtype=float), "facing": facing}
+            objects_info[name] = {
+                "position": np.array(position, dtype=float),
+                "facing": facing,
+            }
 
         # Add view info if available (views are important too)
         for view in cog_map.get("views", []):
@@ -228,8 +234,14 @@ def extract_objects_with_extended_info(cog_map: Dict) -> Dict:
 
             try:
                 if "position" in view and view["position"] is not None:
-                    if isinstance(view["position"], list) and len(view["position"]) >= 2:
-                        position = [float(view["position"][0]), float(view["position"][1])]
+                    if (
+                        isinstance(view["position"], list)
+                        and len(view["position"]) >= 2
+                    ):
+                        position = [
+                            float(view["position"][0]),
+                            float(view["position"][1]),
+                        ]
                     else:
                         position = [0.0, 0.0]
                 else:
@@ -239,7 +251,10 @@ def extract_objects_with_extended_info(cog_map: Dict) -> Dict:
 
             facing = normalize_facing(view.get("facing", None))
 
-            objects_info[name] = {"position": np.array(position, dtype=float), "facing": facing}
+            objects_info[name] = {
+                "position": np.array(position, dtype=float),
+                "facing": facing,
+            }
 
     # Handle simple format (object categories with positions)
     elif isinstance(cog_map, dict):
@@ -251,9 +266,15 @@ def extract_objects_with_extended_info(cog_map: Dict) -> Dict:
             # Safely extract position
             try:
                 if "position" in obj_data and obj_data["position"] is not None:
-                    if isinstance(obj_data["position"], list) and len(obj_data["position"]) >= 2:
+                    if (
+                        isinstance(obj_data["position"], list)
+                        and len(obj_data["position"]) >= 2
+                    ):
                         # Convert position values to float
-                        position = [float(obj_data["position"][0]), float(obj_data["position"][1])]
+                        position = [
+                            float(obj_data["position"][0]),
+                            float(obj_data["position"][1]),
+                        ]
                     else:
                         position = [0.0, 0.0]
                 else:
@@ -263,7 +284,10 @@ def extract_objects_with_extended_info(cog_map: Dict) -> Dict:
 
             facing = normalize_facing(obj_data.get("facing", None))
 
-            objects_info[obj_name] = {"position": np.array(position, dtype=float), "facing": facing}
+            objects_info[obj_name] = {
+                "position": np.array(position, dtype=float),
+                "facing": facing,
+            }
 
     return objects_info
 
@@ -438,7 +462,14 @@ def rotate_facing_x(facing: Optional[str]) -> Optional[str]:
         return facing
 
     # This is a simplified mapping
-    direction_map = {"up": "inner", "down": "outer", "inner": "down", "outer": "up", "left": "left", "right": "right"}
+    direction_map = {
+        "up": "inner",
+        "down": "outer",
+        "inner": "down",
+        "outer": "up",
+        "left": "left",
+        "right": "right",
+    }
 
     return direction_map.get(facing, facing)
 
@@ -468,12 +499,24 @@ def rotate_facing_y(facing: Optional[str]) -> Optional[str]:
         return facing
 
     # This is a simplified mapping
-    direction_map = {"left": "inner", "right": "outer", "inner": "right", "outer": "left", "up": "up", "down": "down"}
+    direction_map = {
+        "left": "inner",
+        "right": "outer",
+        "inner": "right",
+        "outer": "left",
+        "up": "up",
+        "down": "down",
+    }
 
     return direction_map.get(facing, facing)
 
 
-def get_extended_direction(pos1: np.ndarray, pos2: np.ndarray, facing1: Optional[str] = None, facing2: Optional[str] = None) -> Optional[str]:
+def get_extended_direction(
+    pos1: np.ndarray,
+    pos2: np.ndarray,
+    facing1: Optional[str] = None,
+    facing2: Optional[str] = None,
+) -> Optional[str]:
     """Determine the extended direction from pos1 to pos2.
     Includes: up, right, down, left, inner, outer.
 
@@ -526,7 +569,9 @@ def get_extended_direction(pos1: np.ndarray, pos2: np.ndarray, facing1: Optional
         return "down" if dy > 0 else "up"
 
 
-def determine_inner_outer_relationship(pos1: np.ndarray, pos2: np.ndarray, facing1: Optional[str], facing2: Optional[str]) -> Optional[str]:
+def determine_inner_outer_relationship(
+    pos1: np.ndarray, pos2: np.ndarray, facing1: Optional[str], facing2: Optional[str]
+) -> Optional[str]:
     """Determine if relationship is inner/outer based on positions and facings.
 
     Args:
@@ -552,7 +597,9 @@ def determine_inner_outer_relationship(pos1: np.ndarray, pos2: np.ndarray, facin
     return None
 
 
-def build_comprehensive_relation_matrix(objects_data: Dict, object_names: List[str]) -> Dict:
+def build_comprehensive_relation_matrix(
+    objects_data: Dict, object_names: List[str]
+) -> Dict:
     """Build a relationship matrix including inner/outer relationships.
 
     Args:
@@ -576,7 +623,9 @@ def build_comprehensive_relation_matrix(objects_data: Dict, object_names: List[s
                     facing2 = objects_data[obj2]["facing"]
 
                     # Get extended direction including inner/outer
-                    relations[obj1][obj2] = get_extended_direction(pos1, pos2, facing1, facing2)
+                    relations[obj1][obj2] = get_extended_direction(
+                        pos1, pos2, facing1, facing2
+                    )
                 else:
                     # If either object is missing, set relation to None
                     relations[obj1][obj2] = None

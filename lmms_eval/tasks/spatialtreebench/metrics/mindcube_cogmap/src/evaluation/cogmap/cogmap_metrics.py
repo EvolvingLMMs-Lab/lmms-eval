@@ -147,7 +147,9 @@ def validate_cogmap_format(cogmap: Dict) -> Tuple[bool, List[str]]:
                     if "position" not in obj:
                         errors.append(f"Object {i} missing 'position' field")
                     elif not is_valid_position(obj["position"]):
-                        errors.append(f"Object {i} has invalid position: {obj['position']}")
+                        errors.append(
+                            f"Object {i} has invalid position: {obj['position']}"
+                        )
 
                     if "facing" in obj and not is_valid_facing(obj["facing"]):
                         errors.append(f"Object {i} has invalid facing: {obj['facing']}")
@@ -169,7 +171,9 @@ def validate_cogmap_format(cogmap: Dict) -> Tuple[bool, List[str]]:
                     if "position" not in view:
                         errors.append(f"View {i} missing 'position' field")
                     elif not is_valid_position(view["position"]):
-                        errors.append(f"View {i} has invalid position: {view['position']}")
+                        errors.append(
+                            f"View {i} has invalid position: {view['position']}"
+                        )
 
                     if "facing" in view and not is_valid_facing(view["facing"]):
                         errors.append(f"View {i} has invalid facing: {view['facing']}")
@@ -183,7 +187,9 @@ def validate_cogmap_format(cogmap: Dict) -> Tuple[bool, List[str]]:
             if "position" not in value:
                 errors.append(f"Object '{key}' missing 'position' field")
             elif not is_valid_position(value["position"]):
-                errors.append(f"Object '{key}' has invalid position: {value['position']}")
+                errors.append(
+                    f"Object '{key}' has invalid position: {value['position']}"
+                )
 
             if "facing" in value and not is_valid_facing(value["facing"]):
                 errors.append(f"Object '{key}' has invalid facing: {value['facing']}")
@@ -227,7 +233,9 @@ def calculate_cogmap_similarity(generated_map: Dict, grounded_map: Dict) -> Dict
     # Map results to the original metric names for backward compatibility
     result = {
         "isomorphic": extended_result["rotation_invariant_isomorphic"],
-        "rotation_invariant_isomorphic": extended_result["rotation_invariant_isomorphic"],
+        "rotation_invariant_isomorphic": extended_result[
+            "rotation_invariant_isomorphic"
+        ],
         "position_similarity": extended_result["directional_similarity"],
         "facing_similarity": extended_result["facing_similarity"],
         "directional_similarity": extended_result["directional_similarity"],
@@ -266,7 +274,9 @@ def _empty_similarity_result() -> Dict:
     }
 
 
-def calculate_extended_cogmap_similarity(generated_map: Dict, grounded_map: Dict) -> Dict:
+def calculate_extended_cogmap_similarity(
+    generated_map: Dict, grounded_map: Dict
+) -> Dict:
     """Calculate similarity between generated and grounded cognitive maps.
     Supports inner/outer relationships and 3D rotation invariance.
     Handles both simple format (only objects) and complex format (objects and views).
@@ -322,20 +332,30 @@ def calculate_extended_cogmap_similarity(generated_map: Dict, grounded_map: Dict
     result["valid_graph"] = True
 
     # Determine if generated map is simple or complex format
-    is_gen_complex = "views" in generated_map if isinstance(generated_map, dict) else False
+    is_gen_complex = (
+        "views" in generated_map if isinstance(generated_map, dict) else False
+    )
 
     # For complex format grounded map, filter objects based on generated map format
     ground_objects_set = set(ground_data.keys())
     gen_objects_set = set(gen_data.keys())
 
     # If generated map is simple format, only consider objects in grounded map (exclude views)
-    if not is_gen_complex and isinstance(grounded_map, dict) and "objects" in grounded_map:
-        ground_object_names = {obj["name"] for obj in grounded_map.get("objects", []) if "name" in obj}
+    if (
+        not is_gen_complex
+        and isinstance(grounded_map, dict)
+        and "objects" in grounded_map
+    ):
+        ground_object_names = {
+            obj["name"] for obj in grounded_map.get("objects", []) if "name" in obj
+        }
         ground_objects_set = ground_object_names
 
     # Calculate coverage of ground truth objects in generated map
     common_objects = ground_objects_set & gen_objects_set
-    coverage = len(common_objects) / len(ground_objects_set) if ground_objects_set else 0
+    coverage = (
+        len(common_objects) / len(ground_objects_set) if ground_objects_set else 0
+    )
     result["coverage"] = coverage
     result["common_objects"] = list(common_objects)
 
@@ -344,7 +364,9 @@ def calculate_extended_cogmap_similarity(generated_map: Dict, grounded_map: Dict
         return result
 
     # Build ground truth relation matrix
-    ground_relations = build_comprehensive_relation_matrix(ground_data, list(ground_objects_set))
+    ground_relations = build_comprehensive_relation_matrix(
+        ground_data, list(ground_objects_set)
+    )
 
     # Try different rotations to find best match
     best_similarity = 0.0
@@ -363,10 +385,14 @@ def calculate_extended_cogmap_similarity(generated_map: Dict, grounded_map: Dict
             rotated_gen_data = apply_rotation_to_map(gen_data, rotation)
 
             # Build relation matrix for rotated data using all gen objects
-            gen_relations = build_comprehensive_relation_matrix(rotated_gen_data, list(gen_objects_set))
+            gen_relations = build_comprehensive_relation_matrix(
+                rotated_gen_data, list(gen_objects_set)
+            )
 
             # Check isomorphism - generated map must contain all ground truth relations
-            is_isomorphic = check_rotation_invariant_isomorphism(gen_relations, ground_relations)
+            is_isomorphic = check_rotation_invariant_isomorphism(
+                gen_relations, ground_relations
+            )
 
             # Calculate directional similarity - how many ground truth relations are correctly represented in generated map
             total_ground_relations = 0
@@ -388,7 +414,11 @@ def calculate_extended_cogmap_similarity(generated_map: Dict, grounded_map: Dict
                         if gen_rel == ground_rel:
                             matching_relations += 1
 
-            directional_sim = matching_relations / total_ground_relations if total_ground_relations > 0 else 0
+            directional_sim = (
+                matching_relations / total_ground_relations
+                if total_ground_relations > 0
+                else 0
+            )
 
             # Calculate facing similarity (use same logic as old version)
             total_facings = 0
@@ -454,7 +484,9 @@ def _empty_extended_similarity_result() -> Dict:
     }
 
 
-def check_rotation_invariant_isomorphism(gen_relations: Dict, ground_relations: Dict) -> bool:
+def check_rotation_invariant_isomorphism(
+    gen_relations: Dict, ground_relations: Dict
+) -> bool:
     """Check if generated relations are isomorphic to ground truth relations.
 
     Args:

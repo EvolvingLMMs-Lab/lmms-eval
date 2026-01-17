@@ -148,7 +148,7 @@ def clean_and_parse_json(json_str: str) -> Optional[Dict]:
         clean_json = re.sub(r",\s*]", "]", clean_json)
 
         return json.loads(clean_json)
-    except:
+    except Exception:
         # As a final attempt, try to extract in "key-value" format
         try:
             # Extract pairs like "object_name": { "position": [...], "facing": ... }
@@ -162,19 +162,21 @@ def clean_and_parse_json(json_str: str) -> Optional[Dict]:
                         # Parse the value part
                         value_str = "{" + value + "}"
                         # Fix unquoted keys
-                        value_str = re.sub(r"(\s*?)(\w+)(\s*?):", r'\1"\2"\3:', value_str)
+                        value_str = re.sub(
+                            r"(\s*?)(\w+)(\s*?):", r'\1"\2"\3:', value_str
+                        )
                         # Fix trailing commas
                         value_str = re.sub(r",\s*}", "}", value_str)
                         value_str = re.sub(r",\s*]", "]", value_str)
 
                         value_obj = json.loads(value_str)
                         result[key] = value_obj
-                    except:
+                    except Exception:
                         continue
 
                 if result:
                     return result
-        except:
+        except Exception:
             pass
 
         return None

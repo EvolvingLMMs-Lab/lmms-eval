@@ -100,7 +100,9 @@ def print_basic_results(results: Dict) -> None:
     accuracy = results.get("gen_cogmap_accuracy", 0.0)
 
     print("\n=== EVALUATION RESULTS ===")
-    print(f"Total examples: {unfiltered_total} (Evaluated: {total}, excluding translation)")
+    print(
+        f"Total examples: {unfiltered_total} (Evaluated: {total}, excluding translation)"
+    )
     print(f"Answer accuracy: {accuracy * 100:.2f}% ({correct}/{total})")
 
     # Print results by setting
@@ -112,7 +114,9 @@ def print_basic_results(results: Dict) -> None:
         include_in_overall = stats.get("include_in_overall", True)
 
         status = "" if include_in_overall else " (excluded from overall)"
-        print(f"{setting.capitalize()}: {setting_accuracy * 100:.2f}% ({setting_correct}/{setting_total}){status}")
+        print(
+            f"{setting.capitalize()}: {setting_accuracy * 100:.2f}% ({setting_correct}/{setting_total}){status}"
+        )
 
 
 def print_summary_line(results: Dict, model_name: str = "") -> None:

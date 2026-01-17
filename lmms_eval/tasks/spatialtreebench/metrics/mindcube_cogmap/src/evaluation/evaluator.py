@@ -62,7 +62,9 @@ class BasicEvaluator:
             results["settings"][setting]["total"] += 1
 
             # Check if this setting should be included in overall metrics
-            include_in_overall = results["settings"][setting].get("include_in_overall", True)
+            include_in_overall = results["settings"][setting].get(
+                "include_in_overall", True
+            )
             if include_in_overall:
                 filtered_total += 1
 
@@ -72,7 +74,14 @@ class BasicEvaluator:
 
             # Track cases where no answer could be extracted
             if not extracted_answer:
-                error_cases["gen_cogmap_error"].append({"id": item_id, "question": item.get("question", ""), "gt_answer": gt_answer, "answer": answer_text})
+                error_cases["gen_cogmap_error"].append(
+                    {
+                        "id": item_id,
+                        "question": item.get("question", ""),
+                        "gt_answer": gt_answer,
+                        "answer": answer_text,
+                    }
+                )
 
             # Compare with ground truth
             is_correct = extracted_answer == gt_answer if extracted_answer else False
@@ -103,7 +112,12 @@ class BasicEvaluator:
         return final_results
 
 
-def evaluate(jsonl_path: str, task_type: TaskType = "basic", output_path: Optional[str] = None, **kwargs) -> Dict:
+def evaluate(
+    jsonl_path: str,
+    task_type: TaskType = "basic",
+    output_path: Optional[str] = None,
+    **kwargs,
+) -> Dict:
     """Unified evaluation interface with automatic mode selection.
 
     Args:
@@ -139,7 +153,9 @@ def evaluate(jsonl_path: str, task_type: TaskType = "basic", output_path: Option
         return evaluator.evaluate(jsonl_path, output_path)
 
     else:
-        raise ValueError(f"Unknown task type: {task_type}. Use 'basic', 'cogmap', or 'cognitive_map'")
+        raise ValueError(
+            f"Unknown task type: {task_type}. Use 'basic', 'cogmap', or 'cognitive_map'"
+        )
 
 
 def auto_evaluate(jsonl_path: str, output_path: Optional[str] = None) -> Dict:
