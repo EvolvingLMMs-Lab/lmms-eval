@@ -56,12 +56,8 @@ _global_shuffle_initialized = False
 # The 72B judge model requires at least 2 GPUs with tensor parallelism
 JUDGE_BACKEND = os.getenv("CAPTIONQA_JUDGE_BACKEND", "vllm")  # "vllm" or "api"
 JUDGE_MODEL = os.getenv("CAPTIONQA_JUDGE_MODEL", "Qwen/Qwen2.5-72B-Instruct")
-JUDGE_TP_SIZE = int(
-    os.getenv("CAPTIONQA_JUDGE_TP_SIZE", "2")
-)  # Default 2 for 72B model
-JUDGE_GPU_MEMORY_UTILIZATION = float(
-    os.getenv("CAPTIONQA_JUDGE_GPU_UTIL", "0.8")
-)  # GPU memory for judge
+JUDGE_TP_SIZE = int(os.getenv("CAPTIONQA_JUDGE_TP_SIZE", "2"))  # Default 2 for 72B model
+JUDGE_GPU_MEMORY_UTILIZATION = float(os.getenv("CAPTIONQA_JUDGE_GPU_UTIL", "0.8"))  # GPU memory for judge
 
 # System prompt for QA evaluation (matching original)
 QA_SYSTEM_PROMPT = "You are given a caption describing an image, and a question about the image. Answer with a SINGLE LETTER (A, B, C, ...), no explanation."
@@ -120,9 +116,7 @@ def _initialize_global_shuffle_cache():
     try:
         from datasets import load_dataset
 
-        eval_logger.info(
-            "Initializing global shuffle cache from 'all' split (matching original RNG order)..."
-        )
+        eval_logger.info("Initializing global shuffle cache from 'all' split (matching original RNG order)...")
         dataset = load_dataset("Borise/CaptionQA", split="all")
 
         # Use the exact same RNG setup as the original
@@ -184,9 +178,7 @@ def _initialize_global_shuffle_cache():
                 question_count += 1
 
         _global_shuffle_initialized = True
-        eval_logger.info(
-            f"Global shuffle cache initialized: {question_count} questions cached"
-        )
+        eval_logger.info(f"Global shuffle cache initialized: {question_count} questions cached")
 
     except Exception as e:
         eval_logger.warning(f"Failed to initialize global shuffle cache: {e}")
@@ -223,15 +215,10 @@ def get_shuffle_permutation(image_id: str, q_idx: int, n_choices: int) -> List[i
         if len(cached_perm) == n_choices:
             return cached_perm.copy()
         else:
-            eval_logger.warning(
-                f"Cached permutation length mismatch for ({image_id}, {q_idx}): "
-                f"cached={len(cached_perm)}, expected={n_choices}. Using fallback."
-            )
+            eval_logger.warning(f"Cached permutation length mismatch for ({image_id}, {q_idx}): " f"cached={len(cached_perm)}, expected={n_choices}. Using fallback.")
 
     # Fallback to hash-based seed if not in cache
-    eval_logger.debug(
-        f"Question ({image_id}, {q_idx}) not in shuffle cache, using hash-based seed"
-    )
+    eval_logger.debug(f"Question ({image_id}, {q_idx}) not in shuffle cache, using hash-based seed")
     question_seed = hash((image_id, q_idx, SHUFFLE_SEED)) % (2**32)
     rng = random.Random(question_seed)
     perm = list(range(n_choices))
@@ -249,9 +236,7 @@ def _get_vllm_judge():
         import vllm
         from transformers import AutoTokenizer
 
-        eval_logger.info(
-            f"Initializing vLLM judge with model: {JUDGE_MODEL}, tp_size: {JUDGE_TP_SIZE}"
-        )
+        eval_logger.info(f"Initializing vLLM judge with model: {JUDGE_MODEL}, tp_size: {JUDGE_TP_SIZE}")
 
         tokenizer = AutoTokenizer.from_pretrained(JUDGE_MODEL, trust_remote_code=True)
         llm = vllm.LLM(
@@ -272,13 +257,9 @@ def _get_vllm_judge():
         error_msg = str(e)
         if "memory" in error_msg.lower() or "oom" in error_msg.lower():
             eval_logger.error(f"Failed to initialize vLLM judge due to GPU memory: {e}")
-            eval_logger.error(
-                "Try reducing CAPTIONQA_JUDGE_GPU_UTIL or increasing CAPTIONQA_JUDGE_TP_SIZE"
-            )
+            eval_logger.error("Try reducing CAPTIONQA_JUDGE_GPU_UTIL or increasing CAPTIONQA_JUDGE_TP_SIZE")
         else:
-            eval_logger.error(
-                f"Failed to initialize vLLM judge: {e}. Falling back to API backend."
-            )
+            eval_logger.error(f"Failed to initialize vLLM judge: {e}. Falling back to API backend.")
         return _get_api_judge()
 
 
@@ -292,9 +273,7 @@ def _get_api_judge():
 
     API_TYPE = os.getenv("API_TYPE", "openai")
 
-    eval_logger.info(
-        f"Initializing API judge with model: {JUDGE_MODEL}, API type: {API_TYPE}"
-    )
+    eval_logger.info(f"Initializing API judge with model: {JUDGE_MODEL}, API type: {API_TYPE}")
 
     server_config = ServerConfig(
         model_name=JUDGE_MODEL,
@@ -339,9 +318,7 @@ def captionqa_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
-    caption_prompt = lmms_eval_specific_kwargs.get(
-        "caption_prompt", "Describe this image in detail."
-    )
+    caption_prompt = lmms_eval_specific_kwargs.get("caption_prompt", "Describe this image in detail.")
 
     return f"{pre_prompt}{caption_prompt}{post_prompt}"
 
@@ -465,18 +442,14 @@ def _build_chat_prompt(prompt: str, tokenizer) -> str:
         {"role": "user", "content": prompt},
     ]
     try:
-        return tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     except TypeError:
         # Fallback for different tokenizer formats
         messages = [
             {"role": "system", "content": QA_SYSTEM_PROMPT},
             {"role": "user", "content": [{"type": "text", "text": prompt}]},
         ]
-        return tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
 
 def call_llm_judge(prompt: str) -> str:
@@ -712,9 +685,7 @@ def _cleanup_gpu_memory():
             # Get memory info
             for i in range(torch.cuda.device_count()):
                 free, total = torch.cuda.mem_get_info(i)
-                eval_logger.info(
-                    f"  GPU {i}: {free / 1024**3:.2f} GB free / {total / 1024**3:.2f} GB total"
-                )
+                eval_logger.info(f"  GPU {i}: {free / 1024**3:.2f} GB free / {total / 1024**3:.2f} GB total")
     except Exception as e:
         eval_logger.debug(f"GPU cleanup info: {e}")
 
@@ -757,9 +728,7 @@ def _run_deferred_evaluation(results):
         return {}
 
     eval_logger.info(f"\n{'=' * 60}")
-    eval_logger.info(
-        f"Running deferred judge evaluation on {pending_count} questions..."
-    )
+    eval_logger.info(f"Running deferred judge evaluation on {pending_count} questions...")
     eval_logger.info("Using subprocess isolation for GPU memory.")
     eval_logger.info(f"{'=' * 60}\n")
 
@@ -809,9 +778,7 @@ def _run_deferred_evaluation(results):
             os.unlink(output_path)
 
     _deferred_eval_done = True
-    eval_logger.info(
-        f"\nDeferred evaluation complete. Evaluated {len(_evaluated_results_cache)} questions.\n"
-    )
+    eval_logger.info(f"\nDeferred evaluation complete. Evaluated {len(_evaluated_results_cache)} questions.\n")
 
     return _evaluated_results_cache
 
@@ -910,17 +877,9 @@ def captionqa_aggregate_accuracy(results):
     eval_logger.info("=" * 60)
     eval_logger.info("CaptionQA Accuracy by Category:")
     for category in sorted(category_total.keys()):
-        cat_acc = (
-            category_correct[category] / category_total[category]
-            if category_total[category]
-            else 0.0
-        )
-        eval_logger.info(
-            f"  {category}: {cat_acc:.2%} ({category_correct[category]}/{category_total[category]})"
-        )
-    eval_logger.info(
-        f"Overall Accuracy: {accuracy:.2%} ({total_correct}/{total_questions})"
-    )
+        cat_acc = category_correct[category] / category_total[category] if category_total[category] else 0.0
+        eval_logger.info(f"  {category}: {cat_acc:.2%} ({category_correct[category]}/{category_total[category]})")
+    eval_logger.info(f"Overall Accuracy: {accuracy:.2%} ({total_correct}/{total_questions})")
     eval_logger.info("=" * 60)
 
     return round(accuracy, 4)
@@ -948,8 +907,6 @@ def captionqa_aggregate_cannot_answer(results):
         return 0.0
 
     rate = total_cannot_answer / total_questions
-    eval_logger.info(
-        f"'Cannot answer' rate: {rate:.2%} ({total_cannot_answer}/{total_questions})"
-    )
+    eval_logger.info(f"'Cannot answer' rate: {rate:.2%} ({total_cannot_answer}/{total_questions})")
 
     return round(rate, 4)
