@@ -4,7 +4,7 @@ import os
 import time
 from copy import deepcopy
 from io import BytesIO
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 from accelerate import Accelerator, DistributedType
 from PIL import Image

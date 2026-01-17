@@ -1,12 +1,11 @@
 import time
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import List
 
 from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
-from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.protocol import ChatMessages
@@ -15,7 +14,6 @@ warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
 
-from lmms_eval.api.registry import register_model
 from lmms_eval.models.simple.llava_hf import LlavaHf as LlavaHfSimple
 
 DEFAULT_IMAGE_TOKEN = "<image>"

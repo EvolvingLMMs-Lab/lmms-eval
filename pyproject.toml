@@ -69,8 +69,6 @@ dependencies = [
     "pre-commit",
     "pydantic",
     "packaging",
-    "decord; platform_system != 'Darwin'",
-    "eva-decord; platform_system == 'Darwin'",
     "zss",
     "protobuf",
     "sentence_transformers",
@@ -125,13 +123,27 @@ mmsearch = [
     "FlagEmbedding",
     "rouge",
 ]
+tui = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+]
+video = [
+    "decord; platform_system != 'Darwin'",
+    "eva-decord; platform_system == 'Darwin' and python_version < '3.12'",
+]
 all = [
     "lmms_eval[core]",
     "lmms_eval[gemini]",
     "lmms_eval[reka]",
     "lmms_eval[qwen]",
     "lmms_eval[mmsearch]",
+    "lmms_eval[tui]",
+    "lmms_eval[video]",
 ]
+
+[tool.setuptools.package-data]
+"lmms_eval.tui.web.dist" = ["**/*"]
+"lmms_eval.tui.web.dist.assets" = ["**/*"]
 
 [tool.setuptools.packages.find]
 include = ["lmms_eval*"]
@@ -172,7 +184,14 @@ exclude = [
 
 [project.scripts]
 lmms-eval = "lmms_eval.__main__:cli_evaluate"
+lmms-eval-ui = "lmms_eval.tui.cli:main"
 
 [project.urls]
 Homepage = "https://lmms-lab.github.io"
 Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+
+[dependency-groups]
+dev = [
+    "textual>=7.2.0",
+    "textual-dev>=1.8.0",
+]

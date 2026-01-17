@@ -1,7 +1,6 @@
 import time
 from typing import Any, Callable, Dict, List
 
-import torch
 from loguru import logger as eval_logger
 
 

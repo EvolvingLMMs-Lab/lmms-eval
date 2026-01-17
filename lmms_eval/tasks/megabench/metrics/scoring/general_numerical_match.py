@@ -50,7 +50,7 @@ def eval_with_timeout(expression, timeout=5):
     # Get result from the queue
     try:
         return output.get_nowait()
-    except Exception as e:
+    except Exception:
         return "Error retrieving result"
 
 

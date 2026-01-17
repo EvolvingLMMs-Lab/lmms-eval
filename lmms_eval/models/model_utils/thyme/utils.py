@@ -1,5 +1,3 @@
-from typing import List
-
 from PIL import Image
 
 REASONING_SYS_PROMPT = (

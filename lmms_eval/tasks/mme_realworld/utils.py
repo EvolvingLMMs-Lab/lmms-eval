@@ -1,18 +1,6 @@
-import datetime
-import json
-import os
 import re
-import sys
-from collections import defaultdict
-from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-import cv2
-import numpy as np
-import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 TASKS = [
     "Reasoning",
@@ -135,7 +123,7 @@ def mme_realworld_process_results(doc, results):
     data_dict = {"question_id": doc["index"], "category": category, "sub_category": sub_category, "task_category": task_category, "pred_answer": pred_ans, "answer": doc["answer"]}
 
     # return {f"mme_realworld_perception_score": data_dict for metric in matrices}
-    return {f"mme_realworld_score": data_dict}
+    return {"mme_realworld_score": data_dict}
 
 
 def get_correct_answer(sample):
@@ -164,7 +152,7 @@ def mme_realworld_exact_match(doc, results):
     task_category = doc["l2-category"]
     data_dict = {"question_id": doc["index"], "category": category, "sub_category": sub_category, "task_category": task_category, "pred_answer": pred_ans, "answer": answer}
 
-    return {f"mme_realworld_exact_match": data_dict}
+    return {"mme_realworld_exact_match": data_dict}
 
 
 def mme_realworld_aggregate_results(results):
@@ -198,24 +186,24 @@ def mme_realworld_aggregate_results(results):
 
     sum_all, succ_all = 0, 0
     for task, tasks_values in metrics.items():
-        eval_logger.info(f"*" * 32 + f"{task} (Task Start)")
+        eval_logger.info("*" * 32 + f"{task} (Task Start)")
         cnt_task, cnt_E, sum_task = 0, 0, 0
         for substask, subtask_value in tasks_values.items():
-            eval_logger.info(f"+" * 16 + f"{substask} (Subtask Start)")
+            eval_logger.info("+" * 16 + f"{substask} (Subtask Start)")
             cnt_subtask, sum_subtask, e_subtask = 0, 0, 0
             for category, category_dict in subtask_value.items():
                 cnt_subtask += category_dict["true"]
                 sum_subtask += category_dict["false"] + category_dict["true"]
                 e_subtask += category_dict["is_E"]
                 acc = category_dict["true"] / (category_dict["false"] + category_dict["true"])
-                eval_logger.info(f"-" * 4 + f"\t" + "Acc " + "{:.4f}".format(acc) + f"\t{category.capitalize()} ({category_dict['false'] + category_dict['true']} items)")
+                eval_logger.info("-" * 4 + "\t" + "Acc " + "{:.4f}".format(acc) + f"\t{category.capitalize()} ({category_dict['false'] + category_dict['true']} items)")
 
             if sum_subtask == 0:
                 acc_subtasks = 0
                 e_subtask = 0
             else:
                 acc_subtasks = cnt_subtask / sum_subtask
-            eval_logger.info(f"+" * 16 + f"\t Acc " + "{:.4f}".format(acc_subtasks) + f"\t E choice {e_subtask} \t{substask} ({sum_subtask} items)")
+            eval_logger.info("+" * 16 + "\t Acc " + "{:.4f}".format(acc_subtasks) + f"\t E choice {e_subtask} \t{substask} ({sum_subtask} items)")
             cnt_task += cnt_subtask
             sum_task += sum_subtask
             cnt_E += e_subtask
@@ -226,6 +214,6 @@ def mme_realworld_aggregate_results(results):
             acc_task = cnt_task / sum_task
         succ_all += cnt_task
         sum_all += sum_task
-        eval_logger.info(f"*" * 32 + f"Acc " + "{:.4f}".format(acc_task) + f"\t E choice {cnt_E} \t{task} ({sum_task} items)\n")
-    eval_logger.info(f"*" * 32 + f"Overall Acc " + "{:.4f}".format(succ_all / sum_all))
+        eval_logger.info("*" * 32 + "Acc " + "{:.4f}".format(acc_task) + f"\t E choice {cnt_E} \t{task} ({sum_task} items)\n")
+    eval_logger.info("*" * 32 + "Overall Acc " + "{:.4f}".format(succ_all / sum_all))
     return succ_all / sum_all

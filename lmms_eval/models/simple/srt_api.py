@@ -3,7 +3,6 @@ import base64
 import json
 import os
 import time
-from copy import deepcopy
 from io import BytesIO
 from multiprocessing import cpu_count
 from typing import List, Tuple

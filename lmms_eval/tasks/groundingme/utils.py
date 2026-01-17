@@ -2,7 +2,7 @@ import json
 import logging
 import math
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List
 
 eval_logger = logging.getLogger("lmms-eval")
 

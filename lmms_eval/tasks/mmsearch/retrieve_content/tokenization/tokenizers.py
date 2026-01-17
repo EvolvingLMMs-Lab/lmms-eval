@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 import unicodedata
-from typing import Any, Dict, List
+from typing import Any, List
 
 import nltk
 from nltk.corpus import stopwords

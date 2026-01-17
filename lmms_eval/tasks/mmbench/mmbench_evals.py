@@ -1,16 +1,12 @@
 import math
 import os
-import os.path as osp
 import random as rd
 import string
 import time
-from collections import defaultdict
 
-import numpy as np
 import pandas as pd
 import requests
 from loguru import logger as eval_logger
-from tqdm import tqdm
 
 
 class MMBench_Evaluator:
@@ -308,7 +304,7 @@ class MMBench_Evaluator:
         overall_hit_rate, category_hit_rate, l2_category_hit_rate = self.calculate_hit_rates(data_main)
 
         if "category" in data_main.columns:
-            print(f"Category Acc. (dev):")
+            print("Category Acc. (dev):")
             for category_key in category_hit_rate:
                 if category_key == "split":
                     continue
@@ -317,7 +313,7 @@ class MMBench_Evaluator:
                 print(f"\t{category_key}: {category_percentage:.3f}")
 
         if "l2-category" in data_main.columns:
-            print(f"L2-category Acc. (dev):")
+            print("L2-category Acc. (dev):")
             for l2_category_key in l2_category_hit_rate:
                 if l2_category_key == "split":
                     continue

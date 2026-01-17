@@ -39,7 +39,7 @@ try:
     from transformers import LlavaOnevisionForConditionalGeneration
 
     model_map["llava_onevision"] = LlavaOnevisionForConditionalGeneration
-except Exception as e:
+except Exception:
     eval_logger.debug("Transformers version does not support llava-onevision. Skipping.")
 
 

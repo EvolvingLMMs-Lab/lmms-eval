@@ -105,7 +105,7 @@ class MathVerseEvaluator:
 
         except Exception as e:
             print(e)
-            print(f"Error in matching answer")
+            print("Error in matching answer")
 
         return 0
 

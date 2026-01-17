@@ -2,7 +2,6 @@ import logging
 import os
 
 import anthropic
-import openai
 import requests
 from bs4 import BeautifulSoup
 from live_bench.data_generator.response import Response

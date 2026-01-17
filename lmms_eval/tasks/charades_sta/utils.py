@@ -1,13 +1,10 @@
 import datetime
 import json
 import os
-import random
 import sys
 from pathlib import Path
 
-import numpy as np
 import yaml
-from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils

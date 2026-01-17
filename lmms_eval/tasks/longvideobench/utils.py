@@ -2,16 +2,12 @@ import json
 import os
 import random
 import re
-import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-import decord
-import numpy as np
 import torch
 import yaml
-from decord import VideoReader, cpu
+from decord import cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
@@ -27,7 +23,6 @@ def timestamp_to_seconds(timestamp):
 
 
 def load_video(video_file, duration, max_num_frames=16):
-    from decord import VideoReader
 
     vr = VideoReader(video_file, ctx=cpu(0), num_threads=1)
     fps = vr.get_avg_fps()

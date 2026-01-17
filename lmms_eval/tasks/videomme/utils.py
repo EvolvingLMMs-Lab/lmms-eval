@@ -1,20 +1,14 @@
-import datetime
-import json
 import os
 import re
 import sys
-from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 import cv2
 import datasets
 import numpy as np
 import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 VIDEO_TYPE = ["short", "medium", "long"]
 CATEGORIES = ["Knowledge", "Film & Television", "Sports Competition", "Artistic Performance", "Life Record", "Multilingual"]

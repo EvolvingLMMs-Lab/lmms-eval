@@ -15,7 +15,6 @@
 
 import io
 import json
-from uuid import uuid4
 
 import datasets
 import pandas as pd
@@ -38,9 +37,9 @@ def image2byte(image):
 def get_builder_config(VERSION):
     builder_config = [
         datasets.BuilderConfig(
-            name=f"ocrbench",
+            name="ocrbench",
             version=VERSION,
-            description=f"ocrbench",
+            description="ocrbench",
         )
     ]
     return builder_config

@@ -1,28 +1,6 @@
-import json
 import logging
-import os
-import random
 from abc import ABC, abstractmethod
-from distutils.dir_util import copy_tree
-from glob import glob
-from typing import Dict, List, Union
-
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-from numpy.polynomial.polynomial import polyfit
-from sklearn.metrics import mean_squared_error
-
-import lmms_eval
-from lmms_eval.api.registry import ALL_TASKS
-from lmms_eval.evaluator import evaluate
-from lmms_eval.tasks import (
-    ConfigurableTask,
-    get_task_dict,
-    include_path,
-    initialize_tasks,
-)
-from lmms_eval.utils import simple_parse_args_string
+from typing import Union
 
 eval_logger = logging.getLogger("lmms-eval")
 

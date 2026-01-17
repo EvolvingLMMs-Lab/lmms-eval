@@ -1,10 +1,8 @@
 # Code mostly from: https://github.com/EleutherAI/lm-evaluation-harness/pull/1339, credit to: https://github.com/ayulockin
 import copy
-import glob
 import json
 import os
 import re
-from datetime import datetime
 from typing import Any, Dict, List, Literal, Tuple, Union
 
 import numpy as np

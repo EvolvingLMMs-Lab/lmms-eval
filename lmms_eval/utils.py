@@ -21,7 +21,6 @@ from typing import (
     Literal,
     Optional,
     Tuple,
-    Type,
     Union,
 )
 
@@ -270,7 +269,7 @@ class MultiChoice:
     def __contains__(self, values) -> bool:
         for value in values.split(","):
             if len(fnmatch.filter(self.choices, value)) == 0:
-                eval_logger.info(f"Available tasks to choose:")
+                eval_logger.info("Available tasks to choose:")
                 for choice in self.choices:
                     eval_logger.info(f"  - {choice}")
                 raise ValueError("'{}' is not in task list".format(value))
@@ -547,6 +546,10 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
         "Stderr",
         "Stderr_CLT",
         "Stderr_Clustered",
+        "EA",
+        "CA",
+        "IV",
+        "CR",
     ]
 
     md_writer = MarkdownTableWriter()
@@ -576,8 +579,12 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
         for (mf), v in metric_items:
             m, _, f = mf.partition(",")
-            # Skip stderr variants - they'll be shown as columns
+            # Skip stderr and stability metric variants - they'll be shown as columns
             if m.endswith("_stderr") or m.endswith("_stderr_clt") or m.endswith("_stderr_clustered"):
+                continue
+            if m.endswith("_expected_accuracy") or m.endswith("_consensus_accuracy"):
+                continue
+            if m.endswith("_internal_variance") or m.endswith("_consistency_rate"):
                 continue
 
             hib = HIGHER_IS_BETTER_SYMBOLS.get(higher_is_better.get(m), "")
@@ -595,7 +602,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
                     return "N/A"
                 try:
                     return "%.4f" % se_val
-                except:
+                except Exception:
                     return "N/A"
 
             # Bootstrap stderr (original)
@@ -604,11 +611,16 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             se_clt = fmt_se(dic.get(m + "_stderr_clt," + f))
             # Clustered stderr
             se_clustered = fmt_se(dic.get(m + "_stderr_clustered," + f))
+            # Stability metrics (EA, CA, IV, CR)
+            ea = fmt_se(dic.get(m + "_expected_accuracy," + f))
+            ca = fmt_se(dic.get(m + "_consensus_accuracy," + f))
+            iv = fmt_se(dic.get(m + "_internal_variance," + f))
+            cr = fmt_se(dic.get(m + "_consistency_rate," + f))
 
             # Check if v is not empty (handle numpy array safely)
             is_empty = hasattr(v, "__len__") and not isinstance(v, str) and len(v) == 0
             if not is_empty:
-                values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered])
+                values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered, ea, ca, iv, cr])
             # k = ""
             # version = ""
     md_writer.value_matrix = values

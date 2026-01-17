@@ -1,6 +1,5 @@
 import ast
 import os
-import zipfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Optional
@@ -8,7 +7,6 @@ from typing import Any, Optional
 import cv2
 import numpy as np
 import yaml
-from huggingface_hub import hf_hub_download
 from PIL import Image
 
 with open(Path(__file__).parent / "lemonade.yaml", "r") as f:

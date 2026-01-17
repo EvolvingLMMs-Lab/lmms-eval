@@ -1,8 +1,5 @@
-import base64
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
-import decord
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger

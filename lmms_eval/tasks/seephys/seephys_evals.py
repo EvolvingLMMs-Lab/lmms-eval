@@ -1,11 +1,10 @@
 # seephys_evals.py
-import ast
 import json
 import os
 import re
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import yaml
 from loguru import logger as eval_logger

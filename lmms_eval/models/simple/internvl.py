@@ -1,25 +1,18 @@
-import math
 import os
-import subprocess
 from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
-import requests
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from huggingface_hub import snapshot_download
-from PIL import Image
 from tqdm import tqdm
-from transformers import AutoConfig
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.utils import stop_sequences_criteria
 
 wd = Path(__file__).parent.parent.parent.resolve()
 import sys
@@ -46,22 +39,13 @@ except ImportError:
 
 import re
 import warnings
-from typing import Any, List, Optional, Tuple, Union
 
 import torch.utils.checkpoint
-from huggingface_hub import snapshot_download
 from peft import LoraConfig, get_peft_model
-from torch import nn
-from torch.nn import CrossEntropyLoss
 from transformers import (
-    AutoModel,
     AutoTokenizer,
     GenerationConfig,
-    LlamaForCausalLM,
-    LlamaTokenizer,
 )
-from transformers.modeling_outputs import CausalLMOutputWithPast
-from transformers.modeling_utils import PreTrainedModel
 
 
 @register_model("internvl")

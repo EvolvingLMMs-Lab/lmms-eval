@@ -1,37 +1,27 @@
 import asyncio
-import base64
-import json
 import os
 import shutil
 import tempfile
 import uuid
 from multiprocessing import cpu_count
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
-import numpy as np
-import requests as url_requests
 from accelerate import Accelerator, DistributedType
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from decord import VideoReader, cpu
-except ImportError:
-    pass
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 from loguru import logger as eval_logger
 from openai import AsyncOpenAI
-from PIL import Image
 
-from lmms_eval.api.model import lmms
 from lmms_eval.mcp import MCPClient
-from lmms_eval.models.simple.openai_compatible import (
-    OpenAICompatible as OpenAICompatibleSimple,
-)
 from lmms_eval.protocol import ChatMessages
 
 load_dotenv(verbose=True)
@@ -88,7 +78,11 @@ class AsyncOpenAIChat(lmms):
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
@@ -152,9 +146,19 @@ class AsyncOpenAIChat(lmms):
             for image_idx, image in enumerate(images):
                 image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
                 image.save(image_path)
-                messages[-1]["content"].append({"type": "text", "text": f"\nImage {image_idx} has image path: {image_path}"})
+                messages[-1]["content"].append(
+                    {
+                        "type": "text",
+                        "text": f"\nImage {image_idx} has image path: {image_path}",
+                    }
+                )
             for video_idx, video in enumerate(videos):
-                messages[-1]["content"].append({"type": "text", "text": f"\nVideo {video_idx} has video path: {video}"})
+                messages[-1]["content"].append(
+                    {
+                        "type": "text",
+                        "text": f"\nVideo {video_idx} has video path: {video}",
+                    }
+                )
 
         payload = {"messages": messages}
         payload["model"] = self.model_version
@@ -188,7 +192,12 @@ class AsyncOpenAIChat(lmms):
 
         while response.choices[0].finish_reason == "tool_calls":
             messages.append({"role": "assistant", "content": last_response})
-            messages.append({"role": "assistant", "tool_calls": response.choices[0].message.tool_calls})
+            messages.append(
+                {
+                    "role": "assistant",
+                    "tool_calls": response.choices[0].message.tool_calls,
+                }
+            )
             message = response.choices[0].message
             tool_messages = []
             if message.tool_calls:

@@ -5,10 +5,6 @@ import logging
 import os
 import re
 
-from lmms_eval.tasks.videomme.utils import (
-    videomme_doc_to_visual,
-)
-
 eval_logger = logging.getLogger("lmms-eval")
 
 LLM_MATCH_PROMPT = """Given a model's answer to a video question and the available options, determine which option matches the answer.

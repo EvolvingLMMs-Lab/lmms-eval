@@ -8,7 +8,6 @@ import numpy as np
 import requests
 import yaml
 from loguru import logger as eval_logger
-from openai import OpenAI
 from PIL import Image
 from tqdm import tqdm
 
@@ -471,7 +470,7 @@ class Evaluator:
                 response_message = response_message.split("```")[1].strip()
             response = ast.literal_eval(response_message)
             return response
-        except (SyntaxError, ValueError) as e:
+        except (SyntaxError, ValueError):
             eval_logger.info(f"Invalid response format for {file}: {response_message}")
             return None
 

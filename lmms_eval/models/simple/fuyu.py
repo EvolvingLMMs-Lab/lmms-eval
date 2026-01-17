@@ -9,7 +9,6 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
 from transformers import (
     AutoTokenizer,

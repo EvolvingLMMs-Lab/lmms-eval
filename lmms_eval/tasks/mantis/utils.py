@@ -116,7 +116,7 @@ def mantis_process_results(doc, results):
         "correct": parsed_pred["correct"],
     }
 
-    return {f"mantis_score": data_dict}
+    return {"mantis_score": data_dict}
 
 
 def eval_multi_choice(gold_i, pred_i):

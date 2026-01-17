@@ -1,7 +1,4 @@
-import copy
-import json
 import logging
-import os
 import os.path as osp
 from typing import List, Optional, Tuple, Union
 
@@ -11,14 +8,12 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from huggingface_hub import snapshot_download
-from peft import PeftModel
 from PIL import Image
 from tqdm import tqdm
 from transformers import (
     AutoModel,
     AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     CLIPImageProcessor,
 )
 
@@ -27,7 +22,6 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
-from lmms_eval.utils import stop_sequences_criteria
 
 try:
     from lmms_eval.models.aurora_xtuner.model.aurora import (

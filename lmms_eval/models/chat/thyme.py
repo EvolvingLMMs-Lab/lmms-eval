@@ -4,7 +4,7 @@ import re
 import tempfile
 import time
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List, Tuple
+from typing import Any, Dict, Generator, List
 
 from loguru import logger as eval_logger
 from tqdm import tqdm

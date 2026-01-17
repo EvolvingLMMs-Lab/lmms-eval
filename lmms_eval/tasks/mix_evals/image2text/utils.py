@@ -4,7 +4,6 @@ import json
 import os
 import random
 import re
-import sys
 import time
 from pathlib import Path
 
@@ -46,7 +45,7 @@ elif API_TYPE == "azure":
 
 
 image2text_gpt_judge_for_closeended_freeform = lambda prompt, gold_ans, response: [
-    {"role": "system", "content": f"In this task, I want you to act as a judge."},
+    {"role": "system", "content": "In this task, I want you to act as a judge."},
     {
         "role": "user",
         "content": f"""You will be provided with a question, its golden answer(s), and the model's answer, while the context of the question, which is one or more images, is not given here. Your task is to judge how correct the model's answer is based on the golden answer(s), without seeing the input images of the question, and then give a correctness score. The correctness score should be one of the below numbers: 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Your should first briefly give your reasoning process regarding how the model's answer conforms to or contradicts the golden answer(s), and then give the correctness score. The correctness score must strictly follow this format: \"[[score]]\", e.g., \"The correctness score: [[0.5]]\". Below are some examples. 
@@ -80,7 +79,7 @@ Your Judgment:
 ]
 
 image2text_gpt_judge_for_closeended_multiplechoice = lambda prompt, options, response: [
-    {"role": "system", "content": f"In this task, I want you to act as an option extractor."},
+    {"role": "system", "content": "In this task, I want you to act as an option extractor."},
     {
         "role": "user",
         "content": f"""You will be provided with a multiple-choice question, its options, and the model's answer, while the context of the question, which is one or more images, is not given here. Your task is to extract or judge which option is chosen by the model based on its response, without seeing the context of the question. The extracted option should be one of the provided option letters. Your should first briefly give your reasoning process, and then give the extracted option letter. The extracted option must strictly follow this format: \"[[option letter]]\", e.g., \"The option chosen by the model: [[A]]\".

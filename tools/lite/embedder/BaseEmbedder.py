@@ -1,14 +1,11 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Union
+from typing import List, Union
 
 import torch.distributed as dist
 
-from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.tasks import (
-    ConfigurableTask,
     get_task_dict,
-    include_path,
     initialize_tasks,
 )
 

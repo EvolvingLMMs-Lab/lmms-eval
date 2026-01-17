@@ -67,8 +67,8 @@ def charxiv_descriptive_process_docs(dataset: Dataset) -> Dataset:
             subplot_col = example["subplot_col"]
             subplot_loc = [subplot_row, subplot_col]
         descriptive_q = descriptive_query_helper(descriptive_q, subplot_loc)
-        example[f"descriptive_q"] = descriptive_q
-        example[f"descriptive_a"] = example[f"descriptive_a{q_number}"]
+        example["descriptive_q"] = descriptive_q
+        example["descriptive_a"] = example[f"descriptive_a{q_number}"]
         return example
 
     dataset = dataset.map(_process_row, with_indices=True, num_proc=4)

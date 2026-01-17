@@ -1,32 +1,19 @@
-import copy
-import json
 import logging
-import math
 import os
 import os.path as osp
-import queue
-import re
 import warnings
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
-import av
-import einops
-import numpy as np
 import PIL
 import torch
-import transformers
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
-from decord import VideoReader, cpu
 from huggingface_hub import snapshot_download
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from packaging import version
 from PIL import Image
-from scipy.spatial.distance import cosine
-from skimage import transform
 from torchvision import transforms
-from torchvision.transforms.functional import InterpolationMode
 from tqdm import tqdm
 from transformers import StoppingCriteria, StoppingCriteriaList
 
@@ -47,9 +34,9 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # Import LLaVA modules
 try:
     from MovieChat.common.registry import registry
-except ImportError as e:
+except ImportError:
     eval_logger.debug(
-        f"MovieChat is not installed. First, install MovieChat by 'https://github.com/rese1f/MovieChat.git' and 'cd MovieChat'. Change the torch version with `python -m pip install torch==2.0.1 torchvision==0.15.2 --extra-index-url https://download.pytorch.org/whl/cu118`"
+        "MovieChat is not installed. First, install MovieChat by 'https://github.com/rese1f/MovieChat.git' and 'cd MovieChat'. Change the torch version with `python -m pip install torch==2.0.1 torchvision==0.15.2 --extra-index-url https://download.pytorch.org/whl/cu118`"
     )
 
 

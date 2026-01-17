@@ -1,14 +1,14 @@
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List
 
 import numpy as np
 from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.reasoning_model_utils import (
     parse_reasoning_model_answer,
@@ -16,9 +16,8 @@ from lmms_eval.models.model_utils.reasoning_model_utils import (
 from lmms_eval.models.simple.qwen2_5_vl import Qwen2_5_VL as Qwen2_5_VLSimple
 from lmms_eval.protocol import ChatMessages
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 

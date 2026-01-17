@@ -1,20 +1,12 @@
 import ast
-import datetime
-import json
 import os
 import sys
 import time
 from pathlib import Path
 
-import numpy as np
-import openai
 import requests
 import yaml
 from loguru import logger as eval_logger
-from openai import OpenAI
-from tqdm import tqdm
-
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()

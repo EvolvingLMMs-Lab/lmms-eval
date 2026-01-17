@@ -6,11 +6,10 @@ from typing import List
 from tqdm import tqdm
 
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from decord import VideoReader, cpu
-except ImportError:
-    pass
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 from dotenv import load_dotenv
 from loguru import logger as eval_logger
@@ -33,7 +32,11 @@ class OpenAICompatible(OpenAICompatibleSimple):
 
         batch_size = getattr(self, "batch_size_per_gpu", 1)
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
-        pbar = tqdm(total=len(batched_requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=len(batched_requests),
+            disable=(self.rank != 0),
+            desc="Model Responding",
+        )
 
         e2e_latency = 0
         total_tokens = 0

@@ -1,9 +1,7 @@
-import copy
 import warnings
 from typing import List, Optional, Tuple, Union
 
 import torch
-import transformers
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from tqdm import tqdm
@@ -14,7 +12,6 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.tasks.mmmu.utils_group_img import process_images
-from lmms_eval.utils import stop_sequences_criteria
 
 warnings.filterwarnings("ignore")
 

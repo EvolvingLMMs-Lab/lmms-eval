@@ -1,12 +1,4 @@
-import base64
-import os
-import time
-from io import BytesIO
-from typing import Dict, List, Optional, Union
-
-import requests
-from loguru import logger as eval_logger
-from PIL import Image
+from typing import Optional
 
 from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig

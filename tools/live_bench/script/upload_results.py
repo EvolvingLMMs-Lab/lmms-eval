@@ -1,12 +1,12 @@
 import argparse
 import json
 import os
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import datasets
 import numpy as np
 import pandas as pd
-from datasets import Dataset, load_dataset
+from datasets import Dataset
 from PIL import Image
 from tqdm import tqdm
 

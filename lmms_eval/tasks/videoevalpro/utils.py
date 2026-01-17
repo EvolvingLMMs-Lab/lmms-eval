@@ -1,20 +1,11 @@
-import datetime
-import json
 import os
-import re
 import sys
 import time
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-import cv2
-import numpy as np
 import openai
 import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
@@ -113,7 +104,7 @@ def videoevalpro_process_results(doc, results):
 
     # print(f"---------------------->>>>data_dict: {data_dict}")
 
-    return {f"videoevalpro_score": data_dict}
+    return {"videoevalpro_score": data_dict}
 
 
 def videoevalpro_aggregate_results(results):

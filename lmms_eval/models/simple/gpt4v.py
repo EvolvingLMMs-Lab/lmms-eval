@@ -2,12 +2,10 @@ import base64
 import json
 import os
 import time
-from copy import deepcopy
 from io import BytesIO
 from typing import List, Tuple, Union
 
 import numpy as np
-import requests as url_requests
 from accelerate import Accelerator, DistributedType
 from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm
@@ -15,11 +13,10 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from decord import VideoReader, cpu
-except ImportError:
-    pass
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 from loguru import logger as eval_logger
 from PIL import Image
@@ -83,7 +80,11 @@ class GPT4V(lmms):
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
@@ -190,7 +191,12 @@ class GPT4V(lmms):
             payload["messages"].append({"role": "user", "content": []})
             payload["messages"][0]["content"].append({"type": "text", "text": contexts})
             for img in imgs:
-                payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+                payload["messages"][0]["content"].append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{img}"},
+                    }
+                )
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024

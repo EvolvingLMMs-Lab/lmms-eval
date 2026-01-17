@@ -4,7 +4,6 @@ import os
 import re
 import sys
 import time
-from calendar import c
 from pathlib import Path
 
 import numpy as np
@@ -17,12 +16,11 @@ from bleurt_pytorch import (
     BleurtTokenizer,
 )
 from loguru import logger as eval_logger
-from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.eval import Bleu, Rouge
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from tqdm import tqdm
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
-from lmms_eval.filters.extraction import ExtendedRegexFilter
 
 # import nltk
 # nltk.download('punkt')
@@ -276,7 +274,7 @@ def funqa_aggregate_results_bleurt(results, args):
     tokenizer = BleurtTokenizer.from_pretrained(bleurt_version)
 
     scores_dict = {"H2": [], "H3": [], "H4": [], "C2": [], "C3": [], "C4": [], "M2": [], "M3": []}
-    eval_logger.info(f"Calculating BLEURT score")
+    eval_logger.info("Calculating BLEURT score")
     for result in tqdm(results):
         gt = result["answer"]
         pred = result["pred"]

@@ -1,9 +1,7 @@
 import json
-import os
 
 import pandas as pd
-from datasets import Dataset, Features, Image, Sequence, Value
-from tqdm import tqdm
+from datasets import Dataset, Features, Sequence, Value
 
 # Define the features for the dataset
 features = Features(

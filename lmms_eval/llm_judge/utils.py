@@ -74,7 +74,7 @@ class ResponseParser:
                 if score_range:
                     score = max(score_range[0], min(score, score_range[1]))
                 return score
-        except Exception as e:
+        except Exception:
             pass
 
         # Return minimum score as default
@@ -94,7 +94,7 @@ class ResponseParser:
 
                 if len(scores) >= 2:
                     return float(scores[0]), float(scores[1])
-        except Exception as e:
+        except Exception:
             pass
 
         return -1.0, -1.0
@@ -109,7 +109,7 @@ class ResponseParser:
                 import json
 
                 return json.loads(json_match.group())
-        except Exception as e:
+        except Exception:
             pass
 
         return {}

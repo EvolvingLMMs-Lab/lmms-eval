@@ -1,15 +1,7 @@
 # VideoMME Random Choice Setting Utils
 import random
-from typing import Dict, List
 
 import datasets
-
-from lmms_eval.tasks.videomme.utils import (
-    videomme_aggregate_results,
-    videomme_doc_to_text,
-    videomme_doc_to_visual,
-    videomme_process_results,
-)
 
 
 def videomme_process_docs_random_choice(dataset: datasets.Dataset) -> datasets.Dataset:

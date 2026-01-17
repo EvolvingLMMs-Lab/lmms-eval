@@ -1,6 +1,4 @@
-import base64
 import re
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import decord
@@ -21,13 +19,13 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.reasoning_model_utils import (
     parse_reasoning_model_answer,
 )
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
@@ -246,9 +244,23 @@ class Qwen3_VL(lmms):
                             first_frame = vr[0].asnumpy()
                             height, width = first_frame.shape[:2]
                             # max_pixels = height * width
-                            processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            processed_visuals.append(
+                                {
+                                    "type": "video",
+                                    "video": visual,
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                            )
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                            processed_visuals.append({"type": "image", "image": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            processed_visuals.append(
+                                {
+                                    "type": "image",
+                                    "image": visual,
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                            )
 
                 if self.interleave_visuals is False:
                     message.append(
@@ -282,7 +294,12 @@ class Qwen3_VL(lmms):
                 batched_messages.append(message)
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
             # TODO: refactor code to allow return_video_kwargs and return_video_metadata
-            image_inputs, video_inputs = process_vision_info(batched_messages, return_video_kwargs=False, image_patch_size=16, return_video_metadata=False)
+            image_inputs, video_inputs = process_vision_info(
+                batched_messages,
+                return_video_kwargs=False,
+                image_patch_size=16,
+                return_video_metadata=False,
+            )
             if video_inputs is not None:
                 total_frames = video_inputs[0].shape[0]
                 indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
@@ -294,9 +311,23 @@ class Qwen3_VL(lmms):
                     indices = np.unique(indices)  # Ensure uniqueness again
                 video_inputs[0] = video_inputs[0][indices]
             if self.batch_size > 1:
-                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, do_resize=False, padding=True, padding_side="left", return_tensors="pt")
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    do_resize=False,
+                    padding=True,
+                    padding_side="left",
+                    return_tensors="pt",
+                )
             else:
-                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, do_resize=False, return_tensors="pt")
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    do_resize=False,
+                    return_tensors="pt",
+                )
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
@@ -333,7 +364,11 @@ class Qwen3_VL(lmms):
             )
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
             for i, ans in enumerate(answers):
                 for term in until:
                     if len(term) > 0:

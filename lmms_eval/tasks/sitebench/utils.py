@@ -6,9 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import torch
 import yaml
-from loguru import logger as eval_logger
 from PIL import Image
 
 UpperLetters = list(string.ascii_uppercase)
@@ -107,7 +105,7 @@ def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
 
     prompt = ""
     # check if '<image>' is in the question, interleaved format
-    if not "<image>" in question and not "<image>" in option_text:
+    if "<image>" not in question and "<image>" not in option_text:
         prompt += "<image>" * len(doc["visual"]) + "\n"
 
     prompt += "Question: " + question + "\n"

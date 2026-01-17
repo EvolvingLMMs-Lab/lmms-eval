@@ -33,7 +33,7 @@ def seed_process_result(doc, result):
     data_type = doc["data_type"].split(" ")
     data_type = "_".join(data_type)
 
-    return {f"seed_{data_type}": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}, f"seed_all": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}}
+    return {f"seed_{data_type}": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}, "seed_all": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}}
 
 
 def seed_aggregation_result(results):

@@ -1,9 +1,8 @@
-import datetime
 import json
 import os
 
 from loguru import logger as eval_logger
-from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocotools.coco import COCO
 
@@ -20,7 +19,7 @@ def flickr_doc_to_visual(doc):
 
 def flickr_doc_to_text(doc):
     # question = "Please carefully observe the image and come up with a caption for the image"
-    return f"Provide a one-sentence caption for the provided image."
+    return "Provide a one-sentence caption for the provided image."
 
 
 def flickr_process_result(doc, result):

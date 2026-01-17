@@ -1,23 +1,22 @@
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from tqdm import tqdm
 from transformers import AutoProcessor
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.chat.vllm import VLLM as VLLMChat
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.protocol import ChatMessages
 
-try:
-    from vllm import LLM, SamplingParams
-except ImportError:
-    vllm = None
-
-from qwen_vl_utils import fetch_video, process_vision_info
+LLM, _ = optional_import("vllm", "LLM")
+SamplingParams, _ = optional_import("vllm", "SamplingParams")
+fetch_video, _ = optional_import("qwen_vl_utils", "fetch_video")
+process_vision_info, _ = optional_import("qwen_vl_utils", "process_vision_info")
 
 WORKERS = int(os.getenv("WORKERS", "32"))
 
@@ -55,7 +54,21 @@ class VLLMGenerate(VLLMChat):
         nframes: Optional[int] = 32,
         **kwargs,
     ):
-        super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, max_pixels, min_image_pixels, fps, nframes, **kwargs)
+        super().__init__(
+            model,
+            tensor_parallel_size,
+            data_parallel_size,
+            gpu_memory_utilization,
+            batch_size,
+            max_frame_num,
+            trust_remote_code,
+            chat_template,
+            max_pixels,
+            min_image_pixels,
+            fps,
+            nframes,
+            **kwargs,
+        )
         self.processor = AutoProcessor.from_pretrained(model)
         if self.chat_template is not None:
             with open(self.chat_template, "r") as f:

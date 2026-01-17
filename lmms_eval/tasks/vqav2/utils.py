@@ -1,7 +1,5 @@
 import datetime
 import json
-import os
-import re
 import statistics
 
 from loguru import logger as eval_logger

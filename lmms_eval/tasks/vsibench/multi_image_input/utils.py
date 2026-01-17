@@ -8,9 +8,6 @@ from PIL import Image
 from lmms_eval.tasks.vsibench.utils import (
     base_cache_dir,
     cache_name,
-    vsibench_aggregate_results,
-    vsibench_doc_to_text,
-    vsibench_process_results,
 )
 
 

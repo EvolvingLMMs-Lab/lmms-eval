@@ -2,7 +2,6 @@ import json
 import os
 from pathlib import Path
 
-import numpy as np
 import yaml
 from loguru import logger as eval_logger
 

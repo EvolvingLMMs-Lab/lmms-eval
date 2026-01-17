@@ -1,7 +1,5 @@
-import json
 import logging
 import os
-from pathlib import Path
 
 eval_logger = logging.getLogger(__name__)
 

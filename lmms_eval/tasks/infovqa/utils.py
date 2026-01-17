@@ -1,5 +1,4 @@
 import json
-import os
 
 from loguru import logger as eval_logger
 

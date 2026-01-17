@@ -3,13 +3,6 @@
 
 import datasets
 
-from lmms_eval.tasks.videomme.utils import (
-    videomme_aggregate_results,
-    videomme_doc_to_text,
-    videomme_doc_to_visual,
-    videomme_process_results,
-)
-
 
 def videomme_process_docs_gt_none(dataset: datasets.Dataset) -> datasets.Dataset:
     """

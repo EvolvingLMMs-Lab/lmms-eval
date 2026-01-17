@@ -1,18 +1,9 @@
-import datetime
-import json
 import os
-import re
 import sys
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-import cv2
-import numpy as np
 import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 hf_home = os.getenv("HF_HOME", "./~/.cache/huggingface")
 # hf_home="/share/junjie/shuyan/lmms-eval/~/.cache/huggingface"
@@ -96,7 +87,7 @@ def mlvu_process_results(doc, results):
     task_type = doc["task_type"]
     data_dict = {"question_id": doc["question"], "task_type": task_type, "pred_answer": pred_ans, "answer": doc["answer"]}
 
-    return {f"mlvu_percetion_score": data_dict}
+    return {"mlvu_percetion_score": data_dict}
 
 
 def mlvu_aggregate_results_dev(results):

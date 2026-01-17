@@ -1,20 +1,11 @@
-import ast
-import datetime
-import json
 import os
-import random
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import torch
 import yaml
-from decord import VideoReader, cpu
-from PIL import Image
-
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -32,9 +23,6 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
-
-
-from loguru import logger as eval_logger
 
 
 # Define the mapping for subjects to their respective directories

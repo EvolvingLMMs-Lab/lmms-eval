@@ -81,7 +81,7 @@ class FromLog(lmms):
                             if task not in self.logs or (self.logs[task]["time"] == "unknown" or datetime.strptime(log_time, "%m%d_%H%M") > datetime.strptime(self.logs[task]["time"], "%m%d_%H%M")):
                                 self.logs[task] = {"time": log_time, "logs": logs}
 
-                        except Exception as e:
+                        except Exception:
                             pass
 
         accelerator = Accelerator()

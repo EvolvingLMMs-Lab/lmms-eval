@@ -19,7 +19,6 @@ from live_bench.data_generator.score_getter import (
     get_score_getter,
 )
 from live_bench.data_generator.utils.extract_information import (
-    ImageInfomation,
     InfomationExtractor,
 )
 from live_bench.driver import load_driver

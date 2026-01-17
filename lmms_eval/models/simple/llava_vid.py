@@ -13,7 +13,6 @@ from llava.constants import (
     DEFAULT_IM_END_TOKEN,
     DEFAULT_IM_START_TOKEN,
     DEFAULT_IMAGE_TOKEN,
-    IGNORE_INDEX,
     IMAGE_TOKEN_INDEX,
 )
 from llava.conversation import SeparatorStyle, conv_templates
@@ -31,7 +30,7 @@ from llava.model.language_model.llava_qwen import LlavaQwenConfig
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModelForCausalLM
+from transformers import AutoConfig
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
