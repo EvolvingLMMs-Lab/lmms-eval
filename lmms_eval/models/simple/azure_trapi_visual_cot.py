@@ -122,9 +122,13 @@ class AzureTRAPIVisualCoT(lmms):
         # Output directories
         self.output_dir = output_dir or "./logs/azure_trapi_visual_cot"
         self.save_intermediate = save_intermediate
+        eval_logger.info(f"save_intermediate: {save_intermediate}, output_dir: {self.output_dir}")
         if save_intermediate:
-            self.intermediate_dir = os.path.join(self.output_dir, "generated_images")
+            # Structure: {output_dir}/{task_name}/
+            # No need to add model name again since output_dir already contains it
+            self.intermediate_dir = self.output_dir
             os.makedirs(self.intermediate_dir, exist_ok=True)
+            eval_logger.info(f"Intermediate artifacts will be saved under: {self.intermediate_dir}")
 
         # Build client
         eval_logger.info("Building Azure TRAPI client...")
@@ -215,9 +219,10 @@ class AzureTRAPIVisualCoT(lmms):
 
                 # Save if enabled
                 if self.save_intermediate:
-                    save_path = os.path.join(
-                        self.intermediate_dir, f"{task}_{doc_id}_stage1.png"
-                    )
+                    # Create task-specific directory
+                    task_dir = os.path.join(self.intermediate_dir, task)
+                    os.makedirs(task_dir, exist_ok=True)
+                    save_path = os.path.join(task_dir, f"{doc_id}_stage1.png")
                     generated_image.save(save_path)
                     eval_logger.debug(f"Saved generated image to {save_path}")
 

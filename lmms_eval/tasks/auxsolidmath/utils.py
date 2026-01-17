@@ -121,6 +121,59 @@ def auxsolidmath_doc_to_target(doc: Dict) -> str:
     return doc.get("answer", "")
 
 
+def auxsolidmath_doc_to_text_visual_cot(
+    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
+) -> str:
+    """
+    Get two-stage Visual Chain-of-Thought prompt for auxsolidmath task.
+
+    Stage 1: Analyze the problem and draw auxiliary lines on the 3D diagram
+    Stage 2: Solve the problem using both original diagram and the auxiliary diagram
+    """
+    question = doc.get("question", "")
+
+    # Stage 1: Analyze problem and generate diagram with auxiliary constructions
+    generation_prompt = f"""You are given a solid geometry problem with a 3D diagram. Analyze the problem and create an enhanced version of the SAME diagram with auxiliary constructions added.
+
+Problem: {question}
+
+Instructions:
+1. KEEP all original elements exactly as they are (all points, edges, faces, labels)
+2. Analyze what auxiliary constructions would help solve this problem
+3. ADD auxiliary lines in a different color (e.g., red or dashed lines). Common auxiliary constructions include:
+   - Perpendiculars from a point to a plane or line
+   - Line segments connecting specific points
+   - Midpoints of edges with connections
+   - Extended lines to find intersections
+   - Parallel lines through specific points
+   - Cross-sections of the solid
+4. Label any new points you add (use letters not already in the diagram)
+5. The final diagram should look like the original 3D figure with extra auxiliary lines drawn on top
+
+Generate an enhanced 3D diagram that preserves the original and adds helpful auxiliary constructions."""
+
+    # Stage 2: Solve using both original and auxiliary diagram
+    question_prompt = f"""You are given a solid geometry problem.
+
+Problem: {question}
+
+You are given TWO images:
+1) ORIGINAL DIAGRAM: The 3D solid geometry figure as given
+2) AUXILIARY DIAGRAM: The same figure with auxiliary constructions (extra lines) added to help solve the problem
+
+Instructions:
+1. Look at the auxiliary diagram to see what constructions were added (perpendiculars, connecting segments, midpoints, etc.)
+2. Identify the geometric relationships established by these auxiliary lines
+3. Use these constructions to set up your solution approach
+4. Apply relevant theorems (Pythagorean theorem in 3D, properties of perpendiculars, volume formulas, etc.)
+5. Show your step-by-step solution with clear calculations
+6. State the final numerical answer
+
+Solve this problem step by step using the auxiliary constructions."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"
+
+
 def auxsolidmath_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """
     Process auxsolidmath results with LLM Judge evaluation using Azure TRAPI.

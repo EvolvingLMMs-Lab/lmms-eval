@@ -16,6 +16,7 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
     "azure_trapi": "AzureTRAPI",
+    "azure_trapi_visual_cot": "AzureTRAPIVisualCoT",
     "plm": "PerceptionLM",
     "aria": "Aria",
     "auroracap": "AuroraCap",

@@ -1,7 +1,8 @@
-dataset_path: neulab/VisualPuzzles
+task: "VisualPuzzles_deductive"
+dataset_path: parquet
 dataset_kwargs:
-  token: True
-task: "VisualPuzzles_direct"
+  data_files:
+    test: /home/yifeishen/data/zimo/datasets/visualpuzzles/deductive.parquet
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.VisualPuzzles_doc_to_visual
@@ -13,17 +14,16 @@ generation_kwargs:
   top_p: 1.0
   num_beams: 1
   do_sample: false
+process_results: !function utils.VisualPuzzles_process_result_simple
 metric_list:
-  - metric: exact_match
-    aggregation: mean
+  - metric: accuracy
+    aggregation: !function utils.VisualPuzzles_aggregate_simple
     higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
-process_results: !function utils.VisualPuzzles_process_result
 metadata:
-  - version: 0.0
-  
+  version: 1.0
+  category: deductive
+  description: "VisualPuzzles Deductive reasoning - 100 samples stratified by difficulty"
+
 lmms_eval_specific_kwargs:
   default:
     prompt: "MULTI_CHOICE_DIRECT_PROMPT"
-    
