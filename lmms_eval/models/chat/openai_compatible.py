@@ -6,11 +6,10 @@ from typing import List
 from tqdm import tqdm
 
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from decord import VideoReader, cpu
-except ImportError:
-    pass
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 from dotenv import load_dotenv
 from loguru import logger as eval_logger
@@ -32,8 +31,14 @@ class OpenAICompatible(OpenAICompatibleSimple):
         res = []
 
         batch_size = getattr(self, "batch_size_per_gpu", 1)
-        batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
-        pbar = tqdm(total=len(batched_requests), disable=(self.rank != 0), desc="Model Responding")
+        batched_requests = [
+            requests[i : i + batch_size] for i in range(0, len(requests), batch_size)
+        ]
+        pbar = tqdm(
+            total=len(batched_requests),
+            disable=(self.rank != 0),
+            desc="Model Responding",
+        )
 
         e2e_latency = 0
         total_tokens = 0
@@ -56,7 +61,9 @@ class OpenAICompatible(OpenAICompatibleSimple):
                             continue
 
                 chat_messages_raw = doc_to_messages(self.task_dict[task][split][doc_id])
-                chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages_raw})
+                chat_messages: ChatMessages = ChatMessages(
+                    **{"messages": chat_messages_raw}
+                )
 
                 payload = {"messages": chat_messages.to_openai_messages()}
                 payload["model"] = self.model_version
@@ -75,7 +82,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 payload["max_tokens"] = gen_kwargs["max_new_tokens"]
                 payload["temperature"] = gen_kwargs["temperature"]
 
-                if "o1" in self.model_version or "o3" in self.model_version or "o4" in self.model_version or "gpt-5" in self.model_version:
+                if (
+                    "o1" in self.model_version
+                    or "o3" in self.model_version
+                    or "o4" in self.model_version
+                    or "gpt-5" in self.model_version
+                ):
                     del payload["temperature"]
                     payload.pop("max_tokens")
                     # payload["reasoning_effort"] = "medium"
@@ -108,22 +120,33 @@ class OpenAICompatible(OpenAICompatibleSimple):
 
                     except Exception as e:
                         error_msg = str(e)
-                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
+                        eval_logger.info(
+                            f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}"
+                        )
 
                         if attempt == self.max_retries - 1:
-                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
+                            eval_logger.error(
+                                f"All {self.max_retries} attempts failed. Last error: {error_msg}"
+                            )
                             return "", i, 0, 0
                         else:
                             time.sleep(self.timeout)
 
                 return "", i, 0, 0
 
-            tasks_to_run = [(payload, i) for i, payload in enumerate(batch_payloads) if batch_responses[i] is None]
+            tasks_to_run = [
+                (payload, i)
+                for i, payload in enumerate(batch_payloads)
+                if batch_responses[i] is None
+            ]
 
             if tasks_to_run:
                 max_workers = min(len(tasks_to_run), 32)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_index = {executor.submit(process_single_request, payload, i): i for payload, i in tasks_to_run}
+                    future_to_index = {
+                        executor.submit(process_single_request, payload, i): i
+                        for payload, i in tasks_to_run
+                    }
 
                     for future in as_completed(future_to_index):
                         response_text, i, latency, tokens = future.result()
