@@ -193,6 +193,16 @@ def illusionbench_arshia_doc_to_text_shape_in(doc):
     return _build_shape_prompt(SHAPE_CANDIDATES_IN)
 
 
+def _build_scene_prompt(candidates: List[str]) -> str:
+    options = ", ".join(candidates)
+    return (
+        "You are given an image depicting a SCENE.\n"
+        "Task: Identify what scene is shown in this image.\n\n"
+        f"Options: [{options}]\n\n"
+        "Reply with ONLY ONE word from the options above.\n"
+    )
+
+
 def illusionbench_arshia_doc_to_text_scene(doc):
     return (
         "You are given an image depicting a SCENE.\n"
@@ -263,238 +273,131 @@ def illusionbench_arshia_doc_to_target(doc):
     return ""
 
 
-def illusionbench_arshia_doc_to_text_visual_cot_icon(doc, lmms_eval_specific_kwargs=None):
-    """Visual CoT prompt for Illusion-ICON subset (abstract category icons)"""
-    generation_prompt = (
-        "This image shows a scene where elements are carefully arranged to form a hidden abstract icon or category shape. "
-        "The hidden shape represents a category like: animal, vehicle, sports equipment, musical instrument, face emoji, or stationary item. "
-        "Your task: Extract and visualize this hidden icon/category shape. "
-        "Generate a clear image that highlights the icon's outline, contours, and structure. "
-        "Make the hidden icon prominent and easily recognizable as a specific category."
-    )
-
-    # Stage 2: Use fixed candidate list, emphasize using both images
-    shape_options = ", ".join(SHAPE_CANDIDATES_ICON)
-    scene_options = ", ".join(SCENE_CANDIDATES)
-    question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the complete scene where elements form a hidden icon\n"
-        "2) AUXILIARY IMAGE - extracts and highlights only the hidden icon outline\n\n"
-        "Your task:\n"
-        "1) Identify the hidden ICON/SHAPE by looking at the auxiliary visualization\n"
-        f"   Shape options: [{shape_options}]\n"
-        "2) Identify the SCENE by looking at the ORIGINAL IMAGE (the first image shown)\n"
-        f"   Scene options: [{scene_options}]\n\n"
-        "IMPORTANT: The auxiliary image only shows the shape outline. "
-        "You MUST look at the ORIGINAL image to identify the scene.\n\n"
-        "Reply in exactly TWO lines:\n"
-        "Shape: <select one from shape options>\n"
-        "Scene: <select one from scene options>\n"
-    )
-    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
-
-
-def illusionbench_arshia_doc_to_text_visual_cot_logo(doc, lmms_eval_specific_kwargs=None):
-    """Visual CoT prompt for Illusion-LOGO subset (brand logos)"""
-    generation_prompt = (
-        "This image shows a scene where elements are carefully arranged to form a hidden brand logo or trademark. "
-        "The hidden shape represents a well-known brand logo like: Tesla, Nike, Starbucks, McDonald's, Apple, Google, BMW, etc. "
-        "Your task: Extract and visualize this hidden brand logo. "
-        "Generate a clear image that highlights the logo's distinctive outline, contours, and iconic design elements. "
-        "Make the hidden brand logo prominent and easily recognizable."
-    )
-
-    # Stage 2: Use fixed candidate list, emphasize using both images
-    shape_options = ", ".join(SHAPE_CANDIDATES_LOGO)
-    scene_options = ", ".join(SCENE_CANDIDATES)
-    question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the complete scene where elements form a hidden brand logo\n"
-        "2) AUXILIARY IMAGE - extracts and highlights only the hidden logo outline\n\n"
-        "Your task:\n"
-        "1) Identify the hidden BRAND LOGO by looking at the auxiliary visualization\n"
-        f"   Shape options: [{shape_options}]\n"
-        "2) Identify the SCENE by looking at the ORIGINAL IMAGE (the first image shown)\n"
-        f"   Scene options: [{scene_options}]\n\n"
-        "IMPORTANT: The auxiliary image only shows the logo outline. "
-        "You MUST look at the ORIGINAL image to identify the scene.\n\n"
-        "Reply in exactly TWO lines:\n"
-        "Shape: <select one from shape options>\n"
-        "Scene: <select one from scene options>\n"
-    )
-    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
-
-
-def illusionbench_arshia_doc_to_text_visual_cot_in(doc, lmms_eval_specific_kwargs=None):
-    """Visual CoT prompt for Illusion-IN subset (ImageNet objects)"""
-    generation_prompt = (
-        "This image shows a scene where elements are carefully arranged to form a hidden object or thing. "
-        "The hidden shape represents a concrete object like: guitar, cat, bird, bicycle, bottle, airplane, dog, teapot, etc. "
-        "Your task: Extract and visualize this hidden object. "
-        "Generate a clear image that highlights the object's outline, contours, and recognizable features. "
-        "Make the hidden object prominent and easily identifiable."
-    )
-
-    # Stage 2: Use fixed candidate list, emphasize using both images
-    shape_options = ", ".join(SHAPE_CANDIDATES_IN)
-    scene_options = ", ".join(SCENE_CANDIDATES)
-    question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the complete scene where elements form a hidden object\n"
-        "2) AUXILIARY IMAGE - extracts and highlights only the hidden object outline\n\n"
-        "Your task:\n"
-        "1) Identify the hidden OBJECT by looking at the auxiliary visualization\n"
-        f"   Shape options: [{shape_options}]\n"
-        "2) Identify the SCENE by looking at the ORIGINAL IMAGE (the first image shown)\n"
-        f"   Scene options: [{scene_options}]\n\n"
-        "IMPORTANT: The auxiliary image only shows the object outline. "
-        "You MUST look at the ORIGINAL image to identify the scene.\n\n"
-        "Reply in exactly TWO lines:\n"
-        "Shape: <select one from shape options>\n"
-        "Scene: <select one from scene options>\n"
-    )
-    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
-
-
 # ============ Split shape/scene visual_cot prompts (for separate tasks) ============
 
 def illusionbench_arshia_doc_to_text_visual_cot_icon_shape(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-ICON subset - SHAPE task only"""
+    # generation_prompt: NO candidate leakage - only describe the task
     generation_prompt = (
-        "This image shows a scene where elements are carefully arranged to form a hidden abstract icon or category shape. "
-        "The hidden shape represents a category like: animal, vehicle, sports equipment, musical instrument, face emoji, or stationary item. "
-        "Your task: Extract and visualize this hidden icon/category shape. "
-        "Generate a clear image that highlights the icon's outline, contours, and structure. "
-        "Make the hidden icon prominent and easily recognizable as a specific category."
+        "This image shows a scene where elements are carefully arranged to form a hidden shape. "
+        "Your task: Extract and visualize this hidden shape. "
+        "Generate a clear image that highlights the shape's outline, contours, and structure. "
+        "Make the hidden shape prominent and easily recognizable."
     )
 
+    # question_prompt: Aligned with direct generation version + explain two images
     shape_options = ", ".join(SHAPE_CANDIDATES_ICON)
     question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the complete scene where elements form a hidden icon\n"
-        "2) AUXILIARY IMAGE - extracts and highlights only the hidden icon outline\n\n"
-        "Your task: Identify the hidden ICON/SHAPE by looking at BOTH images.\n"
-        f"Shape options: [{shape_options}]\n\n"
-        "Reply in ONE line using this format:\n"
-        "Shape: <select one from shape options>\n"
+        "You are given TWO images: the original image and an auxiliary visualization.\n"
+        "The image shows scene elements forming an abstract SHAPE.\n"
+        "Task: Identify what shape is hidden in this image.\n\n"
+        f"Options: [{shape_options}]\n\n"
+        "Reply with ONLY ONE word from the options above.\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
 
 def illusionbench_arshia_doc_to_text_visual_cot_icon_scene(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-ICON subset - SCENE task only"""
+    # generation_prompt: NO candidate leakage
     generation_prompt = (
         "This image depicts a specific scene or environment. "
         "Your task: Analyze and enhance the scene characteristics. "
-        "Generate a clear visualization that emphasizes the environmental features, atmospheric elements, "
-        "architectural details, landscape patterns, and overall setting. "
-        "Make the scene type clearly recognizable by highlighting key environmental indicators."
+        "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
+    # question_prompt: Aligned with direct generation version + explain two images
     scene_options = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the scene/environment\n"
-        "2) AUXILIARY IMAGE - emphasizes and enhances the scene characteristics\n\n"
-        "Your task: Identify the SCENE by analyzing BOTH images.\n"
-        "The auxiliary image helps you recognize environmental features.\n"
-        f"Scene options: [{scene_options}]\n\n"
-        "Reply in ONE line using this format:\n"
-        "Scene: <select one from scene options>\n"
+        "You are given TWO images: the original image and an auxiliary visualization.\n"
+        "The image depicts a SCENE.\n"
+        "Task: Identify what scene is shown in this image.\n\n"
+        f"Options: [{scene_options}]\n\n"
+        "Reply with ONLY ONE word from the options above.\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
 
 def illusionbench_arshia_doc_to_text_visual_cot_logo_shape(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-LOGO subset - SHAPE task only"""
+    # generation_prompt: NO candidate leakage
     generation_prompt = (
-        "This image shows a scene where elements are carefully arranged to form a hidden brand logo or trademark. "
-        "The hidden shape represents a well-known brand logo like: Tesla, Nike, Starbucks, McDonald's, Apple, Google, BMW, etc. "
-        "Your task: Extract and visualize this hidden brand logo. "
-        "Generate a clear image that highlights the logo's distinctive outline, contours, and iconic design elements. "
-        "Make the hidden brand logo prominent and easily recognizable."
+        "This image shows a scene where elements are carefully arranged to form a hidden shape. "
+        "Your task: Extract and visualize this hidden shape. "
+        "Generate a clear image that highlights the shape's distinctive outline and design elements."
     )
 
+    # question_prompt: Aligned with direct generation version + explain two images
     shape_options = ", ".join(SHAPE_CANDIDATES_LOGO)
     question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the complete scene where elements form a hidden brand logo\n"
-        "2) AUXILIARY IMAGE - extracts and highlights only the hidden logo outline\n\n"
-        "Your task: Identify the hidden BRAND LOGO by looking at BOTH images.\n"
-        f"Shape options: [{shape_options}]\n\n"
-        "Reply in ONE line using this format:\n"
-        "Shape: <select one from shape options>\n"
+        "You are given TWO images: the original image and an auxiliary visualization.\n"
+        "The image shows scene elements forming an abstract SHAPE.\n"
+        "Task: Identify what shape is hidden in this image.\n\n"
+        f"Options: [{shape_options}]\n\n"
+        "Reply with ONLY ONE word from the options above.\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
 
 def illusionbench_arshia_doc_to_text_visual_cot_logo_scene(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-LOGO subset - SCENE task only"""
+    # generation_prompt: NO candidate leakage
     generation_prompt = (
         "This image depicts a specific scene or environment. "
         "Your task: Analyze and enhance the scene characteristics. "
-        "Generate a clear visualization that emphasizes the environmental features, atmospheric elements, "
-        "architectural details, landscape patterns, and overall setting. "
-        "Make the scene type clearly recognizable by highlighting key environmental indicators."
+        "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
+    # question_prompt: Aligned with direct generation version + explain two images
     scene_options = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the scene/environment\n"
-        "2) AUXILIARY IMAGE - emphasizes and enhances the scene characteristics\n\n"
-        "Your task: Identify the SCENE by analyzing BOTH images.\n"
-        "The auxiliary image helps you recognize environmental features.\n"
-        f"Scene options: [{scene_options}]\n\n"
-        "Reply in ONE line using this format:\n"
-        "Scene: <select one from scene options>\n"
+        "You are given TWO images: the original image and an auxiliary visualization.\n"
+        "The image depicts a SCENE.\n"
+        "Task: Identify what scene is shown in this image.\n\n"
+        f"Options: [{scene_options}]\n\n"
+        "Reply with ONLY ONE word from the options above.\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
 
 def illusionbench_arshia_doc_to_text_visual_cot_in_shape(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-IN subset - SHAPE task only"""
+    # generation_prompt: NO candidate leakage
     generation_prompt = (
-        "This image shows a scene where elements are carefully arranged to form a hidden object or thing. "
-        "The hidden shape represents a concrete object like: guitar, cat, bird, bicycle, bottle, airplane, dog, teapot, etc. "
-        "Your task: Extract and visualize this hidden object. "
-        "Generate a clear image that highlights the object's outline, contours, and recognizable features. "
-        "Make the hidden object prominent and easily identifiable."
+        "This image shows a scene where elements are carefully arranged to form a hidden shape. "
+        "Your task: Extract and visualize this hidden shape. "
+        "Generate a clear image that highlights the shape's outline and recognizable features."
     )
 
+    # question_prompt: Aligned with direct generation version + explain two images
     shape_options = ", ".join(SHAPE_CANDIDATES_IN)
     question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the complete scene where elements form a hidden object\n"
-        "2) AUXILIARY IMAGE - extracts and highlights only the hidden object outline\n\n"
-        "Your task: Identify the hidden OBJECT by looking at BOTH images.\n"
-        f"Shape options: [{shape_options}]\n\n"
-        "Reply in ONE line using this format:\n"
-        "Shape: <select one from shape options>\n"
+        "You are given TWO images: the original image and an auxiliary visualization.\n"
+        "The image shows scene elements forming an abstract SHAPE.\n"
+        "Task: Identify what shape is hidden in this image.\n\n"
+        f"Options: [{shape_options}]\n\n"
+        "Reply with ONLY ONE word from the options above.\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
 
 def illusionbench_arshia_doc_to_text_visual_cot_in_scene(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-IN subset - SCENE task only"""
+    # generation_prompt: NO candidate leakage
     generation_prompt = (
         "This image depicts a specific scene or environment. "
         "Your task: Analyze and enhance the scene characteristics. "
-        "Generate a clear visualization that emphasizes the environmental features, atmospheric elements, "
-        "architectural details, landscape patterns, and overall setting. "
-        "Make the scene type clearly recognizable by highlighting key environmental indicators."
+        "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
+    # question_prompt: Aligned with direct generation version + explain two images
     scene_options = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images in sequence:\n"
-        "1) ORIGINAL IMAGE - shows the scene/environment\n"
-        "2) AUXILIARY IMAGE - emphasizes and enhances the scene characteristics\n\n"
-        "Your task: Identify the SCENE by analyzing BOTH images.\n"
-        "The auxiliary image helps you recognize environmental features.\n"
-        f"Scene options: [{scene_options}]\n\n"
-        "Reply in ONE line using this format:\n"
-        "Scene: <select one from scene options>\n"
+        "You are given TWO images: the original image and an auxiliary visualization.\n"
+        "The image depicts a SCENE.\n"
+        "Task: Identify what scene is shown in this image.\n\n"
+        f"Options: [{scene_options}]\n\n"
+        "Reply with ONLY ONE word from the options above.\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 

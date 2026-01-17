@@ -357,3 +357,206 @@ python -m lmms_eval \
 - Hugging Face 数据集: https://huggingface.co/datasets/arshiahemmat/IllusionBench
 - lmms-eval 框架: https://github.com/EvolvingLMMs-Lab/lmms-eval
 
+---
+
+## 9. Prompt 设计文档
+
+本节总结了 IllusionBench 任务的所有 Prompt 设计，包括直接生成和两阶段 (Visual CoT) 版本。
+
+### 9.1 候选类别
+
+**Shape 候选：**
+
+| 子集 | 候选列表 |
+|------|----------|
+| ICON | animal, vehicle, stationary, sport, music, face_emoji |
+| LOGO | tesla, starbucks, mcdonalds, adidas, reebok, bmw, ubuntu, benz, telegram, nike, apple, puma, facebook, playstation, instagram, audi, olympics, google, spotify, amazon, nasa |
+| IN | guitar, teapot, cat, paper_clip, bird, dolphin, mug, bicycle, bottle, panda, dog, sailboat, car, fork, scooter, airplane |
+
+**Scene 候选（所有子集通用）：**
+- Underwater_ruins, Time_square, Medieval_Village, City, Museum, Cloud, Ocean, Sand_dune, Bazaar_market, Forest, Origami
+
+---
+
+### 9.2 直接生成版本
+
+#### 9.2.1 通用 Prompt（无选项，同时识别 Shape + Scene）
+
+**函数：** `illusionbench_arshia_doc_to_text`
+
+```
+You are given an image where scene elements form an abstract SHAPE.
+Task:
+1) Identify the abstract shape.
+2) Identify the scene.
+
+Reply in exactly TWO lines using this format:
+Shape: <shape>
+Scene: <scene>
+```
+
+#### 9.2.2 Shape Only（无选项）
+
+**函数：** `illusionbench_arshia_doc_to_text_shape`
+
+```
+You are given an image where scene elements form an abstract SHAPE.
+Task: Identify the abstract shape.
+
+Reply in ONE line using this format:
+Shape: <shape>
+```
+
+#### 9.2.3 Shape（带选项）
+
+**函数：** `illusionbench_arshia_doc_to_text_shape_icon/logo/in`
+
+```
+You are given an image where scene elements form an abstract SHAPE.
+Task: Identify what shape is hidden in this image.
+
+Options: [{shape_options}]
+
+Reply with ONLY ONE word from the options above.
+```
+
+#### 9.2.4 Scene Only（无选项）
+
+**函数：** `illusionbench_arshia_doc_to_text_scene`
+
+```
+You are given an image depicting a SCENE.
+Task: Identify the scene.
+
+Reply in ONE line using this format:
+Scene: <scene>
+```
+
+#### 9.2.5 Scene（带选项）
+
+**函数：** `_build_scene_prompt`
+
+```
+You are given an image depicting a SCENE.
+Task: Identify what scene is shown in this image.
+
+Options: [{scene_options}]
+
+Reply with ONLY ONE word from the options above.
+```
+
+---
+
+### 9.3 两阶段 Visual CoT 版本
+
+两阶段版本使用 `[GEN_PROMPT]...[/GEN_PROMPT][QUESTION]...[/QUESTION]` 格式：
+- **Stage 1 (GEN_PROMPT):** 生成辅助图像的提示（传入原图）
+- **Stage 2 (QUESTION):** 结合原图和辅助图回答问题
+
+**任务组:** `illusionbench_arshia_visual_cot_split` 包含 6 个子任务（3类别 × 2任务类型）
+
+#### 9.3.1 Shape 任务
+
+**函数：** `illusionbench_arshia_doc_to_text_visual_cot_{icon/logo/in}_shape`
+
+**Stage 1 - Generation Prompt (通用):**
+```
+This image shows a scene where elements are carefully arranged to form a hidden shape. Your task: Extract and visualize this hidden shape. Generate a clear image that highlights the shape's outline, contours, and structure. Make the hidden shape prominent and easily recognizable.
+```
+
+**Stage 2 - Question Prompt (与直接生成版本对齐):**
+```
+You are given TWO images: the original image and an auxiliary visualization.
+The image shows scene elements forming an abstract SHAPE.
+Task: Identify what shape is hidden in this image.
+
+Options: [{shape_options}]
+
+Reply with ONLY ONE word from the options above.
+```
+
+#### 9.3.2 Scene 任务
+
+**函数：** `illusionbench_arshia_doc_to_text_visual_cot_{icon/logo/in}_scene`
+
+**Stage 1 - Generation Prompt (通用):**
+```
+This image depicts a specific scene or environment. Your task: Analyze and enhance the scene characteristics. Generate a clear visualization that emphasizes the environmental features and setting.
+```
+
+**Stage 2 - Question Prompt (与直接生成版本对齐):**
+```
+You are given TWO images: the original image and an auxiliary visualization.
+The image depicts a SCENE.
+Task: Identify what scene is shown in this image.
+
+Options: [{scene_options}]
+
+Reply with ONLY ONE word from the options above.
+```
+
+---
+
+### 9.4 Prompt 设计原则
+
+#### 9.4.1 防止信息泄漏
+
+**Generation Prompt 不包含任何候选信息**，避免模型在 Stage 1 就知道答案选项。
+
+❌ 错误示例：
+```
+The hidden shape represents a category like: animal, vehicle, sports equipment...
+```
+
+✅ 正确示例：
+```
+This image shows a scene where elements are carefully arranged to form a hidden shape.
+```
+
+#### 9.4.2 Stage 2 与直接生成对齐
+
+Visual CoT 的 Stage 2 Question Prompt 应与直接生成版本的 Prompt 保持一致，仅增加说明有两张图像。
+
+**直接生成版本：**
+```
+You are given an image where scene elements form an abstract SHAPE.
+Task: Identify what shape is hidden in this image.
+Options: [...]
+Reply with ONLY ONE word from the options above.
+```
+
+**Visual CoT Stage 2：**
+```
+You are given TWO images: the original image and an auxiliary visualization.
+The image shows scene elements forming an abstract SHAPE.
+Task: Identify what shape is hidden in this image.
+Options: [...]
+Reply with ONLY ONE word from the options above.
+```
+
+---
+
+### 9.5 任务文件对照表
+
+**直接生成任务组:** `illusionbench_arshia_test`
+
+| 子任务 | YAML 文件 | doc_to_text 函数 |
+|--------|-----------|------------------|
+| ICON Shape | `illusionbench_arshia_icon_shape_test.yaml` | `doc_to_text_shape_icon` |
+| ICON Scene | `illusionbench_arshia_icon_scene_test.yaml` | `doc_to_text_scene` |
+| LOGO Shape | `illusionbench_arshia_logo_shape_test.yaml` | `doc_to_text_shape_logo` |
+| LOGO Scene | `illusionbench_arshia_logo_scene_test.yaml` | `doc_to_text_scene` |
+| IN Shape | `illusionbench_arshia_in_shape_test.yaml` | `doc_to_text_shape_in` |
+| IN Scene | `illusionbench_arshia_in_scene_test.yaml` | `doc_to_text_scene` |
+
+**Visual CoT 任务组:** `illusionbench_arshia_visual_cot_split`
+
+| 子任务 | YAML 文件 | doc_to_text 函数 |
+|--------|-----------|------------------|
+| ICON Shape | `illusionbench_arshia_icon_shape_visual_cot.yaml` | `visual_cot_icon_shape` |
+| ICON Scene | `illusionbench_arshia_icon_scene_visual_cot.yaml` | `visual_cot_icon_scene` |
+| LOGO Shape | `illusionbench_arshia_logo_shape_visual_cot.yaml` | `visual_cot_logo_shape` |
+| LOGO Scene | `illusionbench_arshia_logo_scene_visual_cot.yaml` | `visual_cot_logo_scene` |
+| IN Shape | `illusionbench_arshia_in_shape_visual_cot.yaml` | `visual_cot_in_shape` |
+| IN Scene | `illusionbench_arshia_in_scene_visual_cot.yaml` | `visual_cot_in_scene` |
+

@@ -172,25 +172,31 @@ class BagelVisualCoT(lmms):
         return self.bagel.tokenizer
 
     def _stage1_generate_image(
-        self, generation_prompt: str, doc_id: str, task: str
+        self, generation_prompt: str, doc_id: str, task: str, original_image=None
     ) -> Tuple[str, List[str]]:
         """
-        Stage 1: Generate visualization image from prompt
+        Stage 1: Generate visualization image from prompt (conditioned on original image)
 
         Args:
             generation_prompt: Text prompt for image generation
             doc_id: Document ID for file naming
             task: Task name for file naming
+            original_image: Original image to condition on (required for proper visual CoT)
 
         Returns:
             Tuple of (generated_text, list_of_image_paths)
         """
         eval_logger.debug(f"Stage 1 - Generating image for doc {doc_id}")
         eval_logger.debug(f"Generation prompt: {generation_prompt}")
+        if original_image is not None:
+            eval_logger.debug("Stage 1 - Using original image as conditioning input")
 
         try:
             text, images = self.bagel.generate_text_and_image(
-                prompt=generation_prompt, doc_id=f"{doc_id}_stage1", task=task
+                prompt=generation_prompt,
+                doc_id=f"{doc_id}_stage1",
+                task=task,
+                image=original_image,
             )
             eval_logger.debug(f"Stage 1 - Generated {len(images)} image(s)")
             return text, images
@@ -353,9 +359,12 @@ class BagelVisualCoT(lmms):
             eval_logger.info(f"Processing doc {doc_id} from task {task}")
             eval_logger.info(f"{'='*60}")
 
-            # Stage 1: Generate visualization image
+            # Stage 1: Generate visualization image (with original image as input)
             stage1_text, generated_images = self._stage1_generate_image(
-                generation_prompt=generation_prompt, doc_id=doc_id, task=task
+                generation_prompt=generation_prompt,
+                doc_id=doc_id,
+                task=task,
+                original_image=original_image,
             )
 
             # Check if image was generated
