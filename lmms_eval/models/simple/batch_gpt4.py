@@ -21,11 +21,12 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
 # Conditional imports
-try:
-    from decord import VideoReader, cpu
-except ImportError:
+VideoReader, _has_decord = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
+if not _has_decord:
     eval_logger.warning("Decord is not installed. Video input will not be supported.")
 
 # Constants and global configurations
@@ -40,7 +41,9 @@ if API_TYPE == "openai":
         "Content-Type": "application/json",
     }
 elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_URL = os.getenv(
+        "AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken"
+    )
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     headers = {
         "api-key": API_KEY,
@@ -78,8 +81,12 @@ class BatchGPT4(lmms):
         self.client = OpenAI(api_key=api_key)
 
         accelerator = Accelerator()
-        assert accelerator.state.local_process_index == 0, "BatchGPT4 does not support distributed inference."
-        assert accelerator.state.num_processes == 1, "BatchGPT4 does not support distributed inference."
+        assert (
+            accelerator.state.local_process_index == 0
+        ), "BatchGPT4 does not support distributed inference."
+        assert (
+            accelerator.state.num_processes == 1
+        ), "BatchGPT4 does not support distributed inference."
 
     # Function to encode the image
     def encode_image(self, image: Image):
@@ -93,7 +100,9 @@ class BatchGPT4(lmms):
     def encode_video(self, video_path, for_get_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+        uniform_sampled_frames = np.linspace(
+            0, total_frame_num - 1, for_get_frames_num, dtype=int
+        )
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
@@ -118,8 +127,17 @@ class BatchGPT4(lmms):
     def generate_until(self, requests):
         # Prepare the batch requests data
         requests_data = {}
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Batch Preparing")
-        for idx, (contexts, gen_kwargs, doc_to_visual, doc_id, task, split) in enumerate([reg.args for reg in requests]):
+        pbar = tqdm(
+            total=len(requests), disable=(self.rank != 0), desc="Batch Preparing"
+        )
+        for idx, (
+            contexts,
+            gen_kwargs,
+            doc_to_visual,
+            doc_id,
+            task,
+            split,
+        ) in enumerate([reg.args for reg in requests]):
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             imgs = []
@@ -135,38 +153,59 @@ class BatchGPT4(lmms):
             if self.image_token not in contexts:
                 messages.append({"role": "user", "content": contexts})
                 for img in imgs:
-                    messages.append({"role": "user", "content": f"data:image/jpeg;base64,{img}"})
+                    messages.append(
+                        {"role": "user", "content": f"data:image/jpeg;base64,{img}"}
+                    )
             else:
                 contexts_split = contexts.split(self.image_token)
                 for idx, context in enumerate(contexts_split):
                     if idx < len(imgs):
                         messages.append({"role": "user", "content": context})
-                        messages.append({"role": "user", "content": f"data:image/jpeg;base64,{imgs[idx]}"})
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": f"data:image/jpeg;base64,{imgs[idx]}",
+                            }
+                        )
                 if len(contexts_split) > len(imgs):
                     messages.append({"role": "user", "content": contexts_split[-1]})
 
-            requests_data[f"request-{idx}"] = {"model": self.model_version, "messages": messages, "max_tokens": gen_kwargs.get("max_new_tokens", 1024)}
+            requests_data[f"request-{idx}"] = {
+                "model": self.model_version,
+                "messages": messages,
+                "max_tokens": gen_kwargs.get("max_new_tokens", 1024),
+            }
             pbar.update(1)
 
-        file_path = os.getenv("HF_HOME", "~/.cache/huggingface") + f"/batchinput_{len(requests_data)}.jsonl"
+        file_path = (
+            os.getenv("HF_HOME", "~/.cache/huggingface")
+            + f"/batchinput_{len(requests_data)}.jsonl"
+        )
         file_path = self.create_batch_input_file(requests_data, file_path)
         file_id = self.upload_input_file(file_path)
 
-        batch_response = self.create_batch(file_id, metadata={"description": "Batch Processing for GPT-4"})
+        batch_response = self.create_batch(
+            file_id, metadata={"description": "Batch Processing for GPT-4"}
+        )
         batch_status = self.check_batch_status(batch_response.id)
         while True:
             batch_status = self.check_batch_status(batch_response.id)
             if batch_status.status == "completed":
                 eval_logger.info("Batch processing completed.")
                 batch_results = self.retrieve_batch_results(batch_status.output_file_id)
-                res = [result["response"]["choices"][0]["message"]["content"] for result in json.loads(batch_results)]
+                res = [
+                    result["response"]["choices"][0]["message"]["content"]
+                    for result in json.loads(batch_results)
+                ]
                 return res
             elif batch_status.status == "failed":
                 eval_logger.info("Batch processing failed.")
                 res = ["Batch failed"] * len(requests)
                 return res
             else:
-                eval_logger.info(f"Batch status: {batch_status.status}. Retrying in {NUM_SECONDS_TO_SLEEP} seconds.")
+                eval_logger.info(
+                    f"Batch status: {batch_status.status}. Retrying in {NUM_SECONDS_TO_SLEEP} seconds."
+                )
                 time.sleep(NUM_SECONDS_TO_SLEEP)
 
     def loglikelihood(self, requests):
@@ -176,7 +215,14 @@ class BatchGPT4(lmms):
     def create_batch_input_file(self, requests_data, file_path="batchinput.jsonl"):
         with open(file_path, "w") as file:
             for request_id, data in requests_data.items():
-                json_record = json.dumps({"custom_id": request_id, "method": "POST", "url": "/v1/chat/completions", "body": data})
+                json_record = json.dumps(
+                    {
+                        "custom_id": request_id,
+                        "method": "POST",
+                        "url": "/v1/chat/completions",
+                        "body": data,
+                    }
+                )
                 file.write(json_record + "\n")
         return file_path
 
@@ -188,7 +234,12 @@ class BatchGPT4(lmms):
     def create_batch(self, file_id, metadata=None):
         if metadata is None:
             metadata = {}
-        response = self.client.batches.create(input_file_id=file_id, endpoint="/v1/chat/completions", completion_window="24h", metadata=metadata)
+        response = self.client.batches.create(
+            input_file_id=file_id,
+            endpoint="/v1/chat/completions",
+            completion_window="24h",
+            metadata=metadata,
+        )
         return response
 
     def check_batch_status(self, batch_id):
@@ -204,4 +255,6 @@ class BatchGPT4(lmms):
         return self.client.batches.list(limit=limit)
 
     def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError("TODO: Implement multi-round generation for BatchGPT4")
+        raise NotImplementedError(
+            "TODO: Implement multi-round generation for BatchGPT4"
+        )

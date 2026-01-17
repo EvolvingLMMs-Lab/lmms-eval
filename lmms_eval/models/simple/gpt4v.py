@@ -15,11 +15,10 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from decord import VideoReader, cpu
-except ImportError:
-    pass
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 from loguru import logger as eval_logger
 from PIL import Image
@@ -31,7 +30,9 @@ if API_TYPE == "openai":
     API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
 
 elif API_TYPE == "azure":
-    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
+    API_URL = os.getenv(
+        "AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken"
+    )
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     API_VERSION = os.getenv("AZURE_API_VERSION", "2023-07-01-preview")
 
@@ -61,11 +62,15 @@ class GPT4V(lmms):
         self.continual_mode = continual_mode
         if self.continual_mode:
             if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
+                raise ValueError(
+                    "Continual mode requires a persistent path for the response. Please provide a valid path."
+                )
 
             os.makedirs(response_persistent_folder, exist_ok=True)
             self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
+            self.response_persistent_file = os.path.join(
+                self.response_persistent_folder, f"{self.model_version}_response.json"
+            )
 
             if os.path.exists(self.response_persistent_file):
                 with open(self.response_persistent_file, "r") as f:
@@ -78,15 +83,23 @@ class GPT4V(lmms):
         if API_TYPE == "openai":
             self.client = OpenAI(api_key=API_KEY)
         elif API_TYPE == "azure":
-            self.client = AzureOpenAI(api_key=API_KEY, azure_endpoint=API_URL, api_version=API_VERSION)
+            self.client = AzureOpenAI(
+                api_key=API_KEY, azure_endpoint=API_URL, api_version=API_VERSION
+            )
 
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+                eval_logger.info(
+                    f"Using {accelerator.num_processes} devices with data parallelism"
+                )
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -125,11 +138,15 @@ class GPT4V(lmms):
     def encode_video(self, video_path, for_get_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+        uniform_sampled_frames = np.linspace(
+            0, total_frame_num - 1, for_get_frames_num, dtype=int
+        )
 
         # Ensure the last frame is included
         if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
+            uniform_sampled_frames = np.append(
+                uniform_sampled_frames, total_frame_num - 1
+            )
 
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
@@ -154,9 +171,13 @@ class GPT4V(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
+        )
 
-        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [
+            reg.args for reg in requests
+        ]:
             if self.continual_mode is True and self.cache_mode == "resume":
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 if doc_uuid in self.response_cache:
@@ -174,10 +195,24 @@ class GPT4V(lmms):
                 visuals = self.flatten(visuals)
                 imgs = []  # multiple images or frames for video
                 for visual in visuals:
-                    if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
+                    if isinstance(visual, str) and (
+                        ".mp4" in visual
+                        or ".avi" in visual
+                        or ".mov" in visual
+                        or ".flv" in visual
+                        or ".wmv" in visual
+                    ):
                         frames = self.encode_video(visual, self.max_frames_num)
                         imgs.extend(frames)
-                    elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
+                    elif isinstance(visual, str) and (
+                        ".jpg" in visual
+                        or ".jpeg" in visual
+                        or ".png" in visual
+                        or ".gif" in visual
+                        or ".bmp" in visual
+                        or ".tiff" in visual
+                        or ".webp" in visual
+                    ):
                         img = self.encode_image(visual)
                         imgs.append(img)
                     elif isinstance(visual, Image.Image):
@@ -190,7 +225,12 @@ class GPT4V(lmms):
             payload["messages"].append({"role": "user", "content": []})
             payload["messages"][0]["content"].append({"type": "text", "text": contexts})
             for img in imgs:
-                payload["messages"][0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+                payload["messages"][0]["content"].append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{img}"},
+                    }
+                )
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -215,11 +255,15 @@ class GPT4V(lmms):
 
                 except Exception as e:
                     error_msg = str(e)
-                    eval_logger.info(f"Attempt {attempt + 1}/{MAX_RETRIES} failed with error: {error_msg}")
+                    eval_logger.info(
+                        f"Attempt {attempt + 1}/{MAX_RETRIES} failed with error: {error_msg}"
+                    )
 
                     # On last attempt, log error and set empty response
                     if attempt == MAX_RETRIES - 1:
-                        eval_logger.error(f"All {MAX_RETRIES} attempts failed. Last error: {error_msg}")
+                        eval_logger.error(
+                            f"All {MAX_RETRIES} attempts failed. Last error: {error_msg}"
+                        )
                         response_text = ""
                     else:
                         time.sleep(NUM_SECONDS_TO_SLEEP)

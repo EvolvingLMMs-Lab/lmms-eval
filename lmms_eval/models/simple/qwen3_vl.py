@@ -21,14 +21,18 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.reasoning_model_utils import (
     parse_reasoning_model_answer,
 )
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
-    eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
+process_vision_info, _has_qwen_vl = optional_import(
+    "qwen_vl_utils", "process_vision_info"
+)
+if not _has_qwen_vl:
+    eval_logger.warning(
+        "Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`"
+    )
 
 
 @register_model("qwen3_vl")
@@ -50,8 +54,12 @@ class Qwen3_VL(lmms):
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
         use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
-        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
+        fps: Optional[
+            float
+        ] = None,  # Only applicable if use_custom_video_loader is True
+        max_image_size: Optional[
+            int
+        ] = None,  # Only applicable if use_custom_video_loader is True
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
@@ -64,7 +72,9 @@ class Qwen3_VL(lmms):
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
+            raise ValueError(
+                f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}"
+            )
 
         self.use_custom_video_loader = use_custom_video_loader
         self.fps = fps
@@ -72,7 +82,9 @@ class Qwen3_VL(lmms):
         #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
         self.max_image_size = max_image_size
         if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
+            raise ValueError(
+                "max_image_size is only applicable if use_custom_video_loader is True"
+            )
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -95,7 +107,11 @@ class Qwen3_VL(lmms):
 
         # check whether its an MoE model
         match = re.search(r"A\d+B", pretrained)
-        model_fn = Qwen3VLMoeForConditionalGeneration if match else Qwen3VLForConditionalGeneration
+        model_fn = (
+            Qwen3VLMoeForConditionalGeneration
+            if match
+            else Qwen3VLForConditionalGeneration
+        )
         self._model = model_fn.from_pretrained(pretrained, **model_kwargs).eval()
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
@@ -105,7 +121,9 @@ class Qwen3_VL(lmms):
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
         else:
             self.reasoning_prompt = None
-        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
+        self.processor = AutoProcessor.from_pretrained(
+            pretrained, max_pixels=max_pixels, min_pixels=min_pixels
+        )
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
@@ -123,10 +141,14 @@ class Qwen3_VL(lmms):
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
+                self._model = accelerator.prepare_model(
+                    self.model, evaluation_mode=True
+                )
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+                eval_logger.info(
+                    f"Using {accelerator.num_processes} devices with data parallelism"
+                )
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -197,17 +219,23 @@ class Qwen3_VL(lmms):
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
+        )
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
+        re_ords = utils.Collator(
+            [reg.args for reg in requests], _collate, grouping=True
+        )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
+            visual_list = [
+                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
+            ]
             gen_kwargs = all_gen_kwargs[0]
 
             # Set default until or update values from gen_kwargs if present
@@ -216,7 +244,9 @@ class Qwen3_VL(lmms):
             if isinstance(until, str):
                 until = [until]
             elif not isinstance(until, list):
-                raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
+                raise ValueError(
+                    f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}"
+                )
 
             # Avoid using '\n\n' as a stopper for Qwen2.5VL to prevent truncation, which can lead to incorrect results
             until = [item for item in until if item != "\n\n"]
@@ -241,20 +271,39 @@ class Qwen3_VL(lmms):
                 processed_visuals = []
                 if visual_list[i] is not None:
                     for visual in visual_list[i]:
-                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                        if isinstance(visual, str) and visual.endswith(
+                            (".mp4", ".avi", ".mov")
+                        ):  # Video file
                             vr = decord.VideoReader(visual)
                             first_frame = vr[0].asnumpy()
                             height, width = first_frame.shape[:2]
                             # max_pixels = height * width
-                            processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
-                        elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                            processed_visuals.append({"type": "image", "image": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            processed_visuals.append(
+                                {
+                                    "type": "video",
+                                    "video": visual,
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                            )
+                        elif isinstance(
+                            visual, Image.Image
+                        ):  # Handle both single and multiple images
+                            processed_visuals.append(
+                                {
+                                    "type": "image",
+                                    "image": visual,
+                                    "max_pixels": self.max_pixels,
+                                    "min_pixels": self.min_pixels,
+                                }
+                            )
 
                 if self.interleave_visuals is False:
                     message.append(
                         {
                             "role": "user",
-                            "content": processed_visuals + [{"type": "text", "text": context}],
+                            "content": processed_visuals
+                            + [{"type": "text", "text": context}],
                         }
                     )
                 else:  # currently support find <image x> in the context
@@ -265,12 +314,20 @@ class Qwen3_VL(lmms):
                         content_parts.append({"type": "text", "text": text_parts[0]})
 
                     for i, placeholder in enumerate(image_placeholders):
-                        img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
-                        image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
+                        img_idx = (
+                            int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
+                        )
+                        image_idx = (
+                            min(img_idx, len(processed_visuals) - 1)
+                            if processed_visuals
+                            else 0
+                        )
                         if processed_visuals and image_idx < len(processed_visuals):
                             content_parts.append(processed_visuals[image_idx])
                         if i + 1 < len(text_parts) and text_parts[i + 1]:
-                            content_parts.append({"type": "text", "text": text_parts[i + 1]})
+                            content_parts.append(
+                                {"type": "text", "text": text_parts[i + 1]}
+                            )
 
                     message.append(
                         {
@@ -280,12 +337,21 @@ class Qwen3_VL(lmms):
                     )
 
                 batched_messages.append(message)
-            texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
+            texts = self.processor.apply_chat_template(
+                batched_messages, tokenize=False, add_generation_prompt=True
+            )
             # TODO: refactor code to allow return_video_kwargs and return_video_metadata
-            image_inputs, video_inputs = process_vision_info(batched_messages, return_video_kwargs=False, image_patch_size=16, return_video_metadata=False)
+            image_inputs, video_inputs = process_vision_info(
+                batched_messages,
+                return_video_kwargs=False,
+                image_patch_size=16,
+                return_video_metadata=False,
+            )
             if video_inputs is not None:
                 total_frames = video_inputs[0].shape[0]
-                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
+                indices = np.linspace(
+                    0, total_frames - 1, self.max_num_frames, dtype=int
+                )
                 # Ensure unique indices if linspace produces duplicates for few frames
                 indices = np.unique(indices)
                 # Append the last frame index if not already included
@@ -294,9 +360,23 @@ class Qwen3_VL(lmms):
                     indices = np.unique(indices)  # Ensure uniqueness again
                 video_inputs[0] = video_inputs[0][indices]
             if self.batch_size > 1:
-                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, do_resize=False, padding=True, padding_side="left", return_tensors="pt")
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    do_resize=False,
+                    padding=True,
+                    padding_side="left",
+                    return_tensors="pt",
+                )
             else:
-                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, do_resize=False, return_tensors="pt")
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    do_resize=False,
+                    return_tensors="pt",
+                )
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
             else:
@@ -332,8 +412,15 @@ class Qwen3_VL(lmms):
                 use_cache=self.use_cache,
             )
 
-            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            generated_ids_trimmed = [
+                out_ids[len(in_ids) :]
+                for in_ids, out_ids in zip(inputs.input_ids, cont)
+            ]
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
             for i, ans in enumerate(answers):
                 for term in until:
                     if len(term) > 0:
@@ -343,7 +430,9 @@ class Qwen3_VL(lmms):
             for ans, context in zip(answers, contexts):
                 clean_ans = parse_reasoning_model_answer(ans)
                 res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+                self.cache_hook.add_partial(
+                    "generate_until", (context, gen_kwargs), clean_ans
+                )
                 pbar.update(1)
 
                 # eval_logger.debug(f"Question: {context}")

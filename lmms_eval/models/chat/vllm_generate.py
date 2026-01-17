@@ -8,16 +8,15 @@ from transformers import AutoProcessor
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.chat.vllm import VLLM as VLLMChat
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.protocol import ChatMessages
 
-try:
-    from vllm import LLM, SamplingParams
-except ImportError:
-    vllm = None
-
-from qwen_vl_utils import fetch_video, process_vision_info
+LLM, _ = optional_import("vllm", "LLM")
+SamplingParams, _ = optional_import("vllm", "SamplingParams")
+fetch_video, _ = optional_import("qwen_vl_utils", "fetch_video")
+process_vision_info, _ = optional_import("qwen_vl_utils", "process_vision_info")
 
 WORKERS = int(os.getenv("WORKERS", "32"))
 
@@ -55,7 +54,21 @@ class VLLMGenerate(VLLMChat):
         nframes: Optional[int] = 32,
         **kwargs,
     ):
-        super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, max_pixels, min_image_pixels, fps, nframes, **kwargs)
+        super().__init__(
+            model,
+            tensor_parallel_size,
+            data_parallel_size,
+            gpu_memory_utilization,
+            batch_size,
+            max_frame_num,
+            trust_remote_code,
+            chat_template,
+            max_pixels,
+            min_image_pixels,
+            fps,
+            nframes,
+            **kwargs,
+        )
         self.processor = AutoProcessor.from_pretrained(model)
         if self.chat_template is not None:
             with open(self.chat_template, "r") as f:
@@ -102,7 +115,9 @@ class VLLMGenerate(VLLMChat):
                 "video": video,
                 **video_kwargs,
             }
-            final_video, fps = fetch_video(video_dict, return_video_metadata=True, return_video_sample_fps=True)
+            final_video, fps = fetch_video(
+                video_dict, return_video_metadata=True, return_video_sample_fps=True
+            )
             frames, video_metadata = final_video
             video_inputs.append(frames)
             video_metadatas.append(video_metadata)
@@ -143,15 +158,22 @@ class VLLMGenerate(VLLMChat):
         res = []
         self.load_cache()
         res, requests = self.get_response_from_cache(requests)
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
+        )
 
         batch_size = self.batch_size_per_gpu
-        batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
+        batched_requests = [
+            requests[i : i + batch_size] for i in range(0, len(requests), batch_size)
+        ]
         e2e_latency = 0
         for batch_requests in batched_requests:
             batched_vllm_inputs = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-                futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
+                futures = [
+                    executor.submit(self.make_one_request, request)
+                    for request in batch_requests
+                ]
                 for future in futures:
                     vllm_inputs, sampling_params = future.result()
                     batched_vllm_inputs.append(vllm_inputs)
