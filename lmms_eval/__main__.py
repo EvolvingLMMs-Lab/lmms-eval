@@ -66,8 +66,6 @@ import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
-import hashlib
-from pathlib import Path
 from typing import Union
 
 from accelerate import Accelerator
@@ -75,12 +73,10 @@ from accelerate.utils import InitProcessGroupKwargs
 from loguru import logger as eval_logger
 
 from lmms_eval import evaluator, utils
-from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
-    handle_non_serializable,
     make_table,
     simple_parse_args_string,
 )
@@ -109,7 +105,7 @@ def _int_or_none_list_arg_type(
             f"Argument requires {max_len} integers or None, separated by '{split_char}'"
         )
     elif num_items != max_len:
-        logging.warning(
+        eval_logger.warning(
             f"Argument requires {max_len} integers or None, separated by '{split_char}'. "
             "Missing values will be filled with defaults."
         )
@@ -557,7 +553,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     elif args.tasks == "list":
         eval_logger.info(
             "Available Tasks:\n - {}".format(
-                f"\n - ".join(sorted(task_manager.all_tasks))
+                "\n - ".join(sorted(task_manager.all_tasks))
             )
         )
         sys.exit()

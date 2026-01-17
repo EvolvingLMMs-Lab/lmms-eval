@@ -2,12 +2,9 @@ import copy as cp
 import os
 import string
 import time
-from concurrent.futures import ThreadPoolExecutor
 
-import pandas as pd
 import requests
 from loguru import logger as eval_logger
-from tqdm import tqdm
 
 
 class HRBenchEval:

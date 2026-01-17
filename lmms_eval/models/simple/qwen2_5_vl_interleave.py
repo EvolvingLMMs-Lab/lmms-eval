@@ -1,12 +1,9 @@
 import base64
 import json
-import os
 from io import BytesIO
-from re import I
 from typing import List, Optional, Tuple, Union
 
 import decord
-import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger

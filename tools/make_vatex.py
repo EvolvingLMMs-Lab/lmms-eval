@@ -1,6 +1,6 @@
 import json
 
-from datasets import Dataset, load_dataset
+from datasets import Dataset
 
 with open("data/vatex_public_test_english_v1.1.json", "r") as f:
     data = json.load(f)

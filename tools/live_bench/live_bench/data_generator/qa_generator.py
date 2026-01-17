@@ -1,17 +1,13 @@
-import base64
-import io
 import json
 import logging
 import os
 import random
 import re
 from abc import ABC, abstractmethod
-from time import sleep
 from typing import List
 
 import anthropic
 import google.generativeai as genai
-import openai
 from live_bench.data_generator.response import Response
 from live_bench.data_generator.utils.claude import (
     claude_generate_response,
@@ -19,7 +15,6 @@ from live_bench.data_generator.utils.claude import (
 )
 from live_bench.data_generator.utils.extract_information import (
     ImageInfomation,
-    InfomationExtractor,
 )
 from live_bench.data_generator.utils.gemini import gemini_generate_response
 from live_bench.data_generator.utils.gpt4v import (

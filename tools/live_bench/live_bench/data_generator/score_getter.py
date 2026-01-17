@@ -5,8 +5,6 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import anthropic
-import openai
-from live_bench.data_generator.qa_generator import Response
 from live_bench.data_generator.utils.claude import (
     claude_generate_response,
     format_claude_images,

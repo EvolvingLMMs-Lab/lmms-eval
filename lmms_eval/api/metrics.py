@@ -9,7 +9,6 @@ from typing import Any, List
 
 import numpy as np
 import sacrebleu
-from loguru import logger as eval_logger
 
 from lmms_eval.api.registry import register_aggregation, register_metric
 

@@ -1,7 +1,7 @@
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from tqdm import tqdm
 

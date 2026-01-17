@@ -1,15 +1,8 @@
-import math
-import os.path as osp
-import random as rd
 import string
 import time
-from collections import defaultdict
 
-import numpy as np
-import pandas as pd
 import requests
 from loguru import logger as eval_logger
-from tqdm import tqdm
 
 
 class WorldQA_MC_Evaluator:

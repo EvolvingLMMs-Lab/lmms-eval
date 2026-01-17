@@ -1,5 +1,3 @@
-import json
-import os
 
 
 def options_to_str(options_prompt):

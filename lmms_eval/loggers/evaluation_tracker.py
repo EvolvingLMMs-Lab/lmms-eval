@@ -15,7 +15,6 @@ from huggingface_hub.utils import build_hf_headers, get_session, hf_raise_for_st
 
 from lmms_eval.utils import (
     eval_logger,
-    get_datetime_str,
     get_file_datetime,
     get_file_task_name,
     get_results_filenames,

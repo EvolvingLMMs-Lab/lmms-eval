@@ -2,12 +2,10 @@ import base64
 import json
 import os
 import time
-from copy import deepcopy
 from io import BytesIO
 from typing import List, Tuple, Union
 
 import numpy as np
-import requests as url_requests
 from accelerate import Accelerator, DistributedType
 from openai import AzureOpenAI, OpenAI
 from tqdm import tqdm

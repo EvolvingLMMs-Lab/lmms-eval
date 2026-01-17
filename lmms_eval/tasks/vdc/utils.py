@@ -1,16 +1,11 @@
 import ast
-import datetime
-import json
 import os
 import random
 import sys
-import time
 from pathlib import Path
 
-import requests
 import yaml
 
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 try:
     import sglang as sgl

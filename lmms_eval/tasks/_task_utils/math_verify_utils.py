@@ -3,7 +3,6 @@
 
 import functools
 import importlib
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 
@@ -62,7 +61,6 @@ patch_target_module("math_verify.parser.timeout", timeout_adapter)
 patch_target_module("math_verify.grader.timeout", timeout_adapter)
 
 
-import os
 
 from latex2sympy2_extended.latex2sympy2 import NormalizationConfig
 from math_verify import *

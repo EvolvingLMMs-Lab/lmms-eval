@@ -1,10 +1,8 @@
 import base64
-import json
 import os
 import re
 import time
 from collections import defaultdict
-from copy import deepcopy
 from io import BytesIO
 from pathlib import Path
 
@@ -12,7 +10,6 @@ import numpy as np
 import requests
 import yaml
 from loguru import logger as eval_logger
-from scipy import stats
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -226,7 +223,6 @@ def wild_vision_process_results(doc, results):
 
 import math
 
-import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 

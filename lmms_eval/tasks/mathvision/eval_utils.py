@@ -1,11 +1,8 @@
 import json
-import os
 import re
 import time  # 引入time模块
-from copy import deepcopy
 from math import *
 
-import numpy as np
 from latex2sympy2 import latex2sympy
 from tqdm import tqdm
 

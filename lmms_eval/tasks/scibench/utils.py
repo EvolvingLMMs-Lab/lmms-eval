@@ -1,6 +1,6 @@
 import re
 from math import isclose
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 def parse_math_answer(raw_string):

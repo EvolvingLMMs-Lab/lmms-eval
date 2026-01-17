@@ -63,7 +63,7 @@ class MEGABenchEvaluator:
         for existing_task in self.eval_results["data"]:
             if task.get("task_name") == existing_task.get("task_name"):
                 task_in_results = True
-                if not "mean_task_score" in existing_task or not "task_score" in existing_task:
+                if "mean_task_score" not in existing_task or "task_score" not in existing_task:
                     return True
 
                 if len(task["query_response"]) != len(existing_task["query_response"]):

@@ -29,7 +29,7 @@ def seed_process_result(doc, result):
     answer = doc["answer"]
     data_type = doc["question_image_type"].capitalize()
 
-    return {f"seedbench_2_plus_{data_type}": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}, f"seedbench_2_plus_all": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}}
+    return {f"seedbench_2_plus_{data_type}": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}, "seedbench_2_plus_all": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}}
 
 
 def seed_aggregation_result(results):

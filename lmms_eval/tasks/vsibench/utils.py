@@ -1,5 +1,4 @@
 import os
-from functools import partial
 from pathlib import Path
 
 import datasets
@@ -72,7 +71,7 @@ def vsibench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 def process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
     if os.getenv("LMMS_EVAL_SHUFFLE_DOCS", None):
-        eval_logger.info(f"Environment variable LMMS_EVAL_SHUFFLE_DOCS detected, dataset will be shuffled.")
+        eval_logger.info("Environment variable LMMS_EVAL_SHUFFLE_DOCS detected, dataset will be shuffled.")
         return dataset.shuffle(seed=42)
     return dataset
 
@@ -105,7 +104,7 @@ WORST_CASE_FOR_METRICS = {
 def to_float(pred):
     try:
         pred = float(pred)
-    except BaseException as e:
+    except BaseException:
         pred = None
     return pred
 

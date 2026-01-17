@@ -21,7 +21,6 @@ from typing import (
     Literal,
     Optional,
     Tuple,
-    Type,
     Union,
 )
 
@@ -270,7 +269,7 @@ class MultiChoice:
     def __contains__(self, values) -> bool:
         for value in values.split(","):
             if len(fnmatch.filter(self.choices, value)) == 0:
-                eval_logger.info(f"Available tasks to choose:")
+                eval_logger.info("Available tasks to choose:")
                 for choice in self.choices:
                     eval_logger.info(f"  - {choice}")
                 raise ValueError("'{}' is not in task list".format(value))

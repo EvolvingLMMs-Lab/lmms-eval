@@ -1,15 +1,11 @@
 import asyncio
-import base64
-import json
 import os
 import shutil
 import tempfile
 import uuid
 from multiprocessing import cpu_count
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
-import numpy as np
-import requests as url_requests
 from accelerate import Accelerator, DistributedType
 from tqdm import tqdm
 
@@ -21,16 +17,11 @@ from lmms_eval.imports import optional_import
 VideoReader, _ = optional_import("decord", "VideoReader")
 cpu, _ = optional_import("decord", "cpu")
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 from loguru import logger as eval_logger
 from openai import AsyncOpenAI
-from PIL import Image
 
-from lmms_eval.api.model import lmms
 from lmms_eval.mcp import MCPClient
-from lmms_eval.models.simple.openai_compatible import (
-    OpenAICompatible as OpenAICompatibleSimple,
-)
 from lmms_eval.protocol import ChatMessages
 
 load_dotenv(verbose=True)

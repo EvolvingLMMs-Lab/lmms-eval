@@ -10,11 +10,11 @@ import uuid
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecodeError
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
 from accelerate import Accelerator, DistributedType
-from mcp.types import AudioContent, ImageContent, TextContent
+from mcp.types import ImageContent, TextContent
 from PIL import Image
 from sglang import Engine
 from tqdm import tqdm
@@ -25,7 +25,6 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.mcp import MCPClient
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.model_utils.load_video import load_video_decord
 from lmms_eval.protocol import ChatMessages
 
 warnings.filterwarnings("ignore")

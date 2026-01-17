@@ -1,20 +1,14 @@
 import collections
-import inspect
 import itertools
 import json
 import os
 import random
-import sys
-import time
-from collections import defaultdict
-from dataclasses import dataclass
 from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
 import torch.distributed as dist
 from accelerate import Accelerator
-from datasets import Image, Sequence
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
@@ -33,7 +27,6 @@ from lmms_eval.evaluator_utils import (
 )
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
-from lmms_eval.models import get_model
 from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
@@ -42,7 +35,6 @@ from lmms_eval.utils import (
     handle_non_serializable,
     hash_string,
     is_multimodal_content,
-    make_table,
     positional_deprecated,
     run_task_tests,
     simple_parse_args_string,
@@ -173,7 +165,7 @@ def simple_evaluate(
     if gen_kwargs:
         gen_kwargs = simple_parse_args_string(gen_kwargs)
         eval_logger.warning(
-            f"generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks."
+            "generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks."
         )
         if gen_kwargs == "":
             gen_kwargs = None
@@ -620,7 +612,7 @@ def evaluate(
                 )
             )
             total_docs = sum(1 for _ in doc_iterator_for_counting)
-            pbar = tqdm(total=total_docs, desc=f"Postprocessing", disable=(RANK != 0))
+            pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
             for doc_id, doc in doc_iterator:
                 requests = instances_by_doc_id[doc_id]
                 metrics = task.process_results(

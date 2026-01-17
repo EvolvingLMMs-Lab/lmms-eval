@@ -121,7 +121,7 @@ class MMRefineEvaluator:
                     solution_correctness = 0
             except Exception as e:
                 eval_logger.error(e)
-                eval_logger.error(f"Error in evaluating answer for problem")
+                eval_logger.error("Error in evaluating answer for problem")
 
             return {
                 "error_detection": error_detection,

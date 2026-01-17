@@ -1,8 +1,6 @@
 import os
-import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from tqdm import tqdm
 from transformers import AutoModel
@@ -10,7 +8,6 @@ from transformers import AutoModel
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
-from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
@@ -162,7 +159,7 @@ class LongVila(VLLMSimple):
             inputs_embeds, _, _ = self.model_encoder._embed(
                 input_ids, media, {"video": {}}, None, None
             )
-        except Exception as e:
+        except Exception:
             # 128 runs no problem, but other may have some issue, if encounter error, try to set to 128, then set back
             self.max_frame_num = 128
             old_fps = self.fps

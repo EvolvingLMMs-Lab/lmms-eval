@@ -1,7 +1,5 @@
 import re
-from typing import Optional
 
-from loguru import logger as eval_logger
 
 
 def viewspatial_doc_to_text(doc):

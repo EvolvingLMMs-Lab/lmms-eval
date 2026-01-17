@@ -1,9 +1,4 @@
-import argparse
-import json
 import logging
-import math
-import os
-import signal
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
@@ -13,7 +8,6 @@ from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from PIL import Image
-from torchvision.transforms import Resize
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance

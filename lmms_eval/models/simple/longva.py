@@ -1,4 +1,3 @@
-import math
 
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
@@ -31,10 +30,7 @@ from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 try:
     from longva.constants import (
-        DEFAULT_IM_END_TOKEN,
-        DEFAULT_IM_START_TOKEN,
         DEFAULT_IMAGE_TOKEN,
-        IGNORE_INDEX,
         IMAGE_TOKEN_INDEX,
     )
     from longva.conversation import SeparatorStyle, conv_templates

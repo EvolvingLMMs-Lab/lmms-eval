@@ -1,22 +1,13 @@
-import ast
-import datetime
 import json
 import os
 import random
-import re
 import sys
 import time
 from pathlib import Path
 
-import numpy as np
-import openai
 import requests
 import yaml
-from decord import VideoReader, cpu
-from openai import OpenAI
-from tqdm import tqdm
 
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -47,7 +38,6 @@ cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
 
-from loguru import logger as eval_logger
 
 
 # Pass in video path here
@@ -378,9 +368,9 @@ def parse_llm_output_for_captioning(llm_output, gt_answer):
         if "Answer" in line:
             eval_result["chatgpt-answer"] = line.replace("Answer:", "").strip()
 
-    if not "chatgpt-answer" in eval_result:
+    if "chatgpt-answer" not in eval_result:
         eval_result["chatgpt-answer"] = llm_output
-    if not "chatgpt-reasoning" in eval_result:
+    if "chatgpt-reasoning" not in eval_result:
         eval_result["chatgpt-reasoning"] = None
 
     # Check if the chatgpt answer is the ground-truth answer

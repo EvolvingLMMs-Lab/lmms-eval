@@ -1,9 +1,7 @@
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List
 
-import numpy as np
 from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval import utils

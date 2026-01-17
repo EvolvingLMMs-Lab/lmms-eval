@@ -1,10 +1,9 @@
 import json
 
 import av
-from av.codec.context import CodecContext
 from tqdm import tqdm
 
-from lmms_eval.tasks import get_task_dict, include_path, initialize_tasks
+from lmms_eval.tasks import get_task_dict, initialize_tasks
 
 tasks = ["worldqa_gen", "activitynetqa", "nextqa_oe_val", "nextqa_oe_test", "videochatgpt_gen", "egoschema"]
 # tasks = ["nextqa_oe_val"]

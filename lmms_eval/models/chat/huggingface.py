@@ -1,10 +1,6 @@
-import base64
-import re
 import time
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import torch
 
 try:
@@ -13,7 +9,6 @@ except ImportError:
     decord = None
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
 from transformers import (
     AutoConfig,

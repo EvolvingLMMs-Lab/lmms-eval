@@ -2,7 +2,7 @@ import ast
 import json
 import os
 import random
-from typing import List, Optional, Union
+from typing import Union
 
 import regex as re
 

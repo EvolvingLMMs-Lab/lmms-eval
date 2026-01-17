@@ -1,15 +1,11 @@
-import json
 import os
-from copy import deepcopy
 from datetime import timedelta
-from typing import Dict, List, Optional, Sequence, Union
+from typing import List, Union
 
 import numpy as np
 import torch
-from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
-from accelerate.state import AcceleratorState
+from accelerate import Accelerator, InitProcessGroupKwargs
 from accelerate.utils import gather_object
-from PIL import Image
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 from transformers import CLIPModel, CLIPProcessor

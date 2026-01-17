@@ -5,8 +5,6 @@ from typing import List
 
 import anthropic
 import google.generativeai as genai
-import openai
-from live_bench.data_generator.qa_generator import QAData
 from live_bench.data_generator.utils.claude import (
     claude_generate_response,
     format_claude_images,

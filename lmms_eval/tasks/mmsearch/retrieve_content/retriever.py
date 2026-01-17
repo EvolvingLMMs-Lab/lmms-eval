@@ -1,8 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from FlagEmbedding import BGEM3FlagModel
-from tqdm import tqdm
 
 from lmms_eval.tasks.mmsearch.retrieve_content.tokenization.tokenizers import (
     LexicalAnalyzer,
