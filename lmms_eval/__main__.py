@@ -359,6 +359,14 @@ def parse_eval_args() -> argparse.Namespace:
         action="store_true",
         help="Launch interactive TUI mode for configuration",
     )
+    parser.add_argument(
+        "-n",
+        "--num_samples",
+        type=int,
+        default=1,
+        help="Number of samples per question for model stability measurement. "
+        "When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.",
+    )
     args = parser.parse_args()
     return args
 
@@ -636,6 +644,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         else "accelerate",
         force_simple=args.force_simple,
         launcher_args=args.launcher_args,
+        num_samples=args.num_samples,
         **request_caching_args,
     )
 

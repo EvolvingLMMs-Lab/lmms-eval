@@ -12,6 +12,10 @@ from lmms_eval.api.group import ConfigurableGroup
 from lmms_eval.api.metrics import (
     aggregate_subtask_metrics,
     clustered_stderr,
+    consensus_accuracy,
+    consistency_rate,
+    expected_accuracy,
+    internal_variance,
     pooled_sample_stderr,
     stderr_for_metric,
 )
@@ -70,6 +74,9 @@ class TaskOutput:
         self.logged_samples = []
         self.sample_len = None
         self.sample_metrics = collections.defaultdict(list)
+        self.per_sample_metrics = collections.defaultdict(
+            list
+        )  # Per-sample scores for stability metrics
         self.agg_metrics = collections.defaultdict(list)
         self.args = None
 
@@ -83,7 +90,9 @@ class TaskOutput:
             # these gets filtered out in get_task_list
             # once they are added to group hierarchy
             is_group = True
-            return cls(task=task, task_name=task_name, is_group=is_group, group_name=group_name)
+            return cls(
+                task=task, task_name=task_name, is_group=is_group, group_name=group_name
+            )
         version = task.VERSION
         task_config = dict(task.dump_config())
         if (n_shot := task_config.get("num_fewshot")) == 0:
@@ -91,7 +100,9 @@ class TaskOutput:
             if isinstance(meta_config, dict):
                 n_shot = meta_config.get("num_fewshot", 0)
             else:
-                eval_logger.info(f"No metadata found in task config for {task_name}, using default n_shot=0")
+                eval_logger.info(
+                    f"No metadata found in task config for {task_name}, using default n_shot=0"
+                )
                 n_shot = 0
         task_alias = task_config.get("alias")
         group_alias = task_config.get("group_alias")
@@ -119,17 +130,25 @@ class TaskOutput:
                 if isinstance(bootstrap_iters, int):
                     stderr_fn = stderr_for_metric(
                         metric=agg_fn,
-                        bootstrap_iters=min(bootstrap_iters, 100) if metric in ["bleu", "chrf", "ter"] else bootstrap_iters,
+                        bootstrap_iters=min(bootstrap_iters, 100)
+                        if metric in ["bleu", "chrf", "ter"]
+                        else bootstrap_iters,
                     )
-                    self.agg_metrics[f"{metric}_stderr,{filter_key}"] = stderr_fn(items) if (stderr_fn and len(items) > 1) else "N/A"
+                    self.agg_metrics[f"{metric}_stderr,{filter_key}"] = (
+                        stderr_fn(items) if (stderr_fn and len(items) > 1) else "N/A"
+                    )
                 else:
-                    raise ValueError(f"Received bootstrap_iters '{bootstrap_iters}' but expected an integer. Set to 0 to turn off stderr calculations.")
+                    raise ValueError(
+                        f"Received bootstrap_iters '{bootstrap_iters}' but expected an integer. Set to 0 to turn off stderr calculations."
+                    )
 
     def calculate_clt_aggregate_metric(self) -> None:
         """Calculate CLT-based standard errors (naive and clustered)."""
         # Get cluster_key from task config (e.g., "videoID" for videomme)
         cluster_key = self.task_config.get("cluster_key") if self.task_config else None
-        score_key = self.task_config.get("score_key", "score") if self.task_config else "score"
+        score_key = (
+            self.task_config.get("score_key", "score") if self.task_config else "score"
+        )
 
         for (metric, filter_key), items in self.sample_metrics.items():
             if metric not in self.task.aggregation():
@@ -147,16 +166,95 @@ class TaskOutput:
                     cluster_ids.append(x.get(cluster_key) if cluster_key else None)
             n = len(numeric_items)
             # Naive CLT stderr: std / sqrt(n)
-            self.agg_metrics[f"{metric}_stderr_clt,{filter_key}"] = np.std(numeric_items, ddof=1) / np.sqrt(n) if n > 1 else "N/A"
+            self.agg_metrics[f"{metric}_stderr_clt,{filter_key}"] = (
+                np.std(numeric_items, ddof=1) / np.sqrt(n) if n > 1 else "N/A"
+            )
             # Clustered stderr: only if cluster_ids are available and have >1 unique clusters
             valid_clusters = [c for c in cluster_ids if c is not None]
             if valid_clusters and len(set(valid_clusters)) > 1 and n > 1:
-                self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = clustered_stderr(numeric_items, cluster_ids)
+                self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = (
+                    clustered_stderr(numeric_items, cluster_ids)
+                )
             else:
                 self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = "N/A"
 
+    def calculate_stability_metrics(self) -> None:
+        """Calculate model stability metrics (EA, CA, IV, CR) when num_samples > 1.
+
+        These metrics measure model consistency across multiple samples per question.
+        Only computed when repeats > 1 (k-samples mode).
+
+        Uses per_sample_metrics which contains per-sample scores grouped by doc_id.
+        Each entry in per_sample_metrics is a list of k scores for one question.
+        """
+        repeats = self.task_config.get("repeats", 1) if self.task_config else 1
+        if repeats <= 1:
+            return  # Skip if not in k-samples mode
+
+        score_key = (
+            self.task_config.get("score_key", "score") if self.task_config else "score"
+        )
+
+        for (metric, filter_key), items in self.per_sample_metrics.items():
+            if metric not in self.task.aggregation():
+                continue
+
+            # items is already grouped by doc_id, each element is a list of k scores
+            scores_per_question = []
+            for sample_scores in items:
+                if not isinstance(sample_scores, list):
+                    # Fallback: if not a list, skip with warning
+                    eval_logger.warning(
+                        f"Stability metrics: expected list of scores per question, "
+                        f"got {type(sample_scores)}. Skipping."
+                    )
+                    continue
+
+                question_scores = []
+                for x in sample_scores:
+                    if isinstance(x, (int, float)):
+                        question_scores.append(float(x))
+                    elif isinstance(x, dict) and score_key in x:
+                        question_scores.append(float(x[score_key]))
+                    else:
+                        eval_logger.debug(
+                            f"Stability metrics: cannot extract score from "
+                            f"{type(x)}: {x}"
+                        )
+
+                if question_scores:
+                    scores_per_question.append(question_scores)
+
+            if not scores_per_question:
+                eval_logger.warning(
+                    f"Stability metrics: no valid scores found for metric {metric}. "
+                    "Skipping."
+                )
+                continue
+
+            # Calculate stability metrics
+            self.agg_metrics[f"{metric}_expected_accuracy,{filter_key}"] = (
+                expected_accuracy(scores_per_question)
+            )
+            self.agg_metrics[f"{metric}_consensus_accuracy,{filter_key}"] = (
+                consensus_accuracy(scores_per_question)
+            )
+            self.agg_metrics[f"{metric}_internal_variance,{filter_key}"] = (
+                internal_variance(scores_per_question)
+            )
+            self.agg_metrics[f"{metric}_consistency_rate,{filter_key}"] = (
+                consistency_rate(scores_per_question)
+            )
+
     def __repr__(self):
-        return f"TaskOutput(task_name={self.task_name}, " f"group_name={self.group_name}, " f"version={self.version}, " f"n_shot={self.n_shot}, " f"task_alias={self.task_alias}, " f"group_alias={self.group_alias})"
+        return (
+            f"TaskOutput(task_name={self.task_name}, "
+            f"group_name={self.group_name}, "
+            f"version={self.version}, "
+            f"n_shot={self.n_shot}, "
+            f"task_alias={self.task_alias}, "
+            f"group_alias={self.group_alias})"
+        )
 
 
 def get_task_list(task_dict: dict) -> List[TaskOutput]:
@@ -181,9 +279,17 @@ def get_subtask_list(task_dict, task_root=None, depth=0):
         else:
             group_name = group_obj
         if isinstance(task_obj, dict):
-            _subtask_list = get_subtask_list(task_obj, task_root=group_name, depth=depth + 1)
+            _subtask_list = get_subtask_list(
+                task_obj, task_root=group_name, depth=depth + 1
+            )
             if task_root:
-                subtask_list.setdefault((task_root, depth), []).extend([_task for (_task, _depth) in _subtask_list.keys() if (_depth - 1) == depth])
+                subtask_list.setdefault((task_root, depth), []).extend(
+                    [
+                        _task
+                        for (_task, _depth) in _subtask_list.keys()
+                        if (_depth - 1) == depth
+                    ]
+                )
 
             subtask_list = {**subtask_list, **_subtask_list}
         else:
@@ -197,7 +303,9 @@ def get_subtask_list(task_dict, task_root=None, depth=0):
             if task_root is None:
                 subtask_list.setdefault((group_or_task_name, depth), [])
             else:
-                subtask_list.setdefault((task_root, depth), []).append(group_or_task_name)
+                subtask_list.setdefault((task_root, depth), []).append(
+                    group_or_task_name
+                )
 
     if depth == 0:
         _subtask_list = {}
@@ -222,7 +330,11 @@ def print_writeout(task) -> None:
         # print the prompt for the first few documents
         if inst.doc_id < 1:
             # Handle cases where inst.doc might be None (e.g., when using log_samples)
-            target = "N/A (document is None)" if inst.doc is None else task.doc_to_target(inst.doc)
+            target = (
+                "N/A (document is None)"
+                if inst.doc is None
+                else task.doc_to_target(inst.doc)
+            )
             eval_logger.info(
                 f"Task: {task}; document {inst.doc_id}; context prompt (starting on next line):\
     \n{inst.args[0]}\n(end of prompt on previous line)\ntarget string or answer choice index (starting on next line):\n{target}\n(end of target on previous line)"
@@ -232,7 +344,9 @@ def print_writeout(task) -> None:
 
 def get_sample_size(task, limit: Optional[int]) -> Union[int, None]:
     if limit is not None:
-        limit = int(math.ceil(len(task.eval_docs) * limit)) if limit < 1.0 else int(limit)
+        limit = (
+            int(math.ceil(len(task.eval_docs) * limit)) if limit < 1.0 else int(limit)
+        )
     return limit
 
 
@@ -266,7 +380,9 @@ def prepare_print_tasks(
         return dict(
             sorted(
                 task_dict.items(),
-                key=lambda item: item[0].group_name if isinstance(item[0], ConfigurableGroup) else item[0],
+                key=lambda item: item[0].group_name
+                if isinstance(item[0], ConfigurableGroup)
+                else item[0],
             )
         )
 
@@ -313,7 +429,9 @@ def prepare_print_tasks(
         if isinstance(task_or_group_obj, dict):
             task_depth += 1
             group_depth += 1
-            _task_agg, _group_agg = prepare_print_tasks(task_or_group_obj, results, task_depth, group_depth)
+            _task_agg, _group_agg = prepare_print_tasks(
+                task_or_group_obj, results, task_depth, group_depth
+            )
             task_agg = {
                 **task_agg,
                 **_task_agg,
@@ -376,17 +494,37 @@ def consolidate_results(
         higher_is_better[task_output.task_name] = task_output.task.higher_is_better()
         for (metric, filter_key), items in task_output.sample_metrics.items():
             metric_key = f"{metric},{filter_key}"
-            results[task_output.task_name][metric_key] = task_output.agg_metrics[metric_key]
+            results[task_output.task_name][metric_key] = task_output.agg_metrics[
+                metric_key
+            ]
             results[task_output.task_name]["samples"] = task_output.sample_len
-            results[task_output.task_name][f"{metric}_stderr,{filter_key}"] = task_output.agg_metrics[f"{metric}_stderr,{filter_key}"]
+            results[task_output.task_name][f"{metric}_stderr,{filter_key}"] = (
+                task_output.agg_metrics[f"{metric}_stderr,{filter_key}"]
+            )
             # Output CLT stderr
             clt_key = f"{metric}_stderr_clt,{filter_key}"
             if clt_key in task_output.agg_metrics:
-                results[task_output.task_name][clt_key] = task_output.agg_metrics[clt_key]
+                results[task_output.task_name][clt_key] = task_output.agg_metrics[
+                    clt_key
+                ]
             # Output clustered stderr
             clustered_key = f"{metric}_stderr_clustered,{filter_key}"
             if clustered_key in task_output.agg_metrics:
-                results[task_output.task_name][clustered_key] = task_output.agg_metrics[clustered_key]
+                results[task_output.task_name][clustered_key] = task_output.agg_metrics[
+                    clustered_key
+                ]
+            # Output stability metrics (EA, CA, IV, CR) when in k-samples mode
+            for stat_suffix in [
+                "expected_accuracy",
+                "consensus_accuracy",
+                "internal_variance",
+                "consistency_rate",
+            ]:
+                stat_key = f"{metric}_{stat_suffix},{filter_key}"
+                if stat_key in task_output.agg_metrics:
+                    results[task_output.task_name][stat_key] = task_output.agg_metrics[
+                        stat_key
+                    ]
     return results, samples, configs, versions, num_fewshot, higher_is_better
 
 
@@ -429,7 +567,9 @@ def consolidate_group_results(
 
         if isinstance(group_or_task_info, Task):
             if task_root:
-                task_aggregation_list.setdefault(task_root, []).append(group_or_task_info.task_name)
+                task_aggregation_list.setdefault(task_root, []).append(
+                    group_or_task_info.task_name
+                )
         else:
             (
                 results,
@@ -445,27 +585,52 @@ def consolidate_group_results(
                 task_aggregation_list,
             )
             if task_root:
-                task_aggregation_list.setdefault(task_root, []).extend(task_aggregation_list.get(group_or_task, []))
+                task_aggregation_list.setdefault(task_root, []).extend(
+                    task_aggregation_list.get(group_or_task, [])
+                )
 
-            if (group_config is None) or (group_config["aggregate_metric_list"] is None):
+            if (group_config is None) or (
+                group_config["aggregate_metric_list"] is None
+            ):
                 results[group_or_task][" "] = " "
                 continue
 
             if "aggregate_metric_list" in group_config:
                 agg_metric_list = group_config["aggregate_metric_list"]
 
-            show_group_table = show_group_table | bool(group_config["aggregate_metric_list"])
+            show_group_table = show_group_table | bool(
+                group_config["aggregate_metric_list"]
+            )
 
             task_list = _task_aggregation_list[group_or_task]
 
-            metric_list = list({key for task in task_list for key in results[task].keys() if "_stderr" not in key and key not in ["task", "alias", "samples"]})
+            metric_list = list(
+                {
+                    key
+                    for task in task_list
+                    for key in results[task].keys()
+                    if "_stderr" not in key and key not in ["task", "alias", "samples"]
+                }
+            )
             for metric in metric_list:
                 stderr = "_stderr,".join(metric.split(","))
 
                 # gather metrics, sizes, and stderrs from subtasks
-                metrics = [results[task][metric] for task in task_list if metric in results[task]]  # TODO: copy?
-                stderrs = [results[task][stderr] for task in task_list if stderr in results[task]]
-                sizes = [results[task]["samples"] for task in task_list if metric in results[task]]
+                metrics = [
+                    results[task][metric]
+                    for task in task_list
+                    if metric in results[task]
+                ]  # TODO: copy?
+                stderrs = [
+                    results[task][stderr]
+                    for task in task_list
+                    if stderr in results[task]
+                ]
+                sizes = [
+                    results[task]["samples"]
+                    for task in task_list
+                    if metric in results[task]
+                ]
 
                 for metric_config in agg_metric_list:
                     for filter_name in metric_config["filter_list"]:
@@ -480,7 +645,9 @@ def consolidate_group_results(
                         elif callable(metric_config["aggregation"]):
                             aggregate_fn = metric_config["aggregation"]
                         else:
-                            raise ValueError(f"Currently, only 'mean' is supported for automatically aggregating scores across groups' subtasks. Got '{metric_config['aggregation']}' for group '{group_or_task}'")
+                            raise ValueError(
+                                f"Currently, only 'mean' is supported for automatically aggregating scores across groups' subtasks. Got '{metric_config['aggregation']}' for group '{group_or_task}'"
+                            )
 
                         results[group_or_task][metric] = aggregate_fn(
                             metrics,
@@ -492,7 +659,9 @@ def consolidate_group_results(
                             results[group_or_task][stderr] = "N/A"
                         else:
                             # NOTE: this assumes we are using the mean to aggregate. There are warnings about this elsewhere
-                            results[group_or_task][stderr] = pooled_sample_stderr(stderrs, sizes)
+                            results[group_or_task][stderr] = pooled_sample_stderr(
+                                stderrs, sizes
+                            )
 
                 results[group_or_task]["samples"] = sum(sizes)
                 group_metadata = group_config.get("metadata", None)
@@ -515,7 +684,9 @@ def find_test_root(start_path: pathlib.Path) -> pathlib.Path:
             return cur_path
         else:
             cur_path = cur_path.parent.resolve()
-    raise FileNotFoundError(f"Unable to find package root within {max_layers} upwards" + f"of {start_path}")
+    raise FileNotFoundError(
+        f"Unable to find package root within {max_layers} upwards" + f"of {start_path}"
+    )
 
 
 @positional_deprecated
@@ -536,4 +707,6 @@ def run_task_tests(task_list: List[str]):
     sys.path.append(str(package_root))
     pytest_return_val = pytest.main(args)
     if pytest_return_val:
-        raise ValueError(f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}")
+        raise ValueError(
+            f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}"
+        )
