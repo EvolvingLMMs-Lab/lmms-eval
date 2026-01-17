@@ -1,10 +1,13 @@
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List
 
-import numpy as np
 from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
+
+try:
+    import decord
+except ImportError:
+    decord = None
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -69,20 +72,28 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             if self.fps is not None:
                 video_kwargs["fps"] = self.fps
             else:
-                video_kwargs["nframes"] = self.max_num_frames
+                # Probe videos to get frame count and set nframes = min(max_num_frames, total_frames)
+                # This avoids the error when video has fewer frames than max_num_frames
+                if videos and decord is not None:
+                    try:
+                        video_path = videos[0]  # Assume batch size 1 for videos
+                        vr = decord.VideoReader(video_path)
+                        video_total_frames = len(vr)
+                        nframes = min(self.max_num_frames, video_total_frames)
+                        # qwen_vl_utils requires nframes to be a multiple of 2 (FRAME_FACTOR)
+                        # and rounds using round_by_factor, so we need to floor to even number
+                        # to avoid rounding up past total_frames
+                        nframes = (nframes // 2) * 2  # Floor to nearest even number
+                        nframes = max(2, nframes)  # At least 2 frames
+                        video_kwargs["nframes"] = nframes
+                    except Exception as e:
+                        eval_logger.warning(f"Failed to probe video {videos[0]}: {e}, using default nframes")
+                        video_kwargs["nframes"] = self.max_num_frames
+                else:
+                    video_kwargs["nframes"] = self.max_num_frames
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
             image_inputs, video_inputs = process_vision_info(batched_messages)
-            if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                # Only resample if we have more frames than needed
-                if total_frames > self.max_num_frames:
-                    indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                    # Append the last frame index if not already included
-                    if total_frames - 1 not in indices:
-                        indices = np.append(indices, total_frames - 1)
-                    indices = np.unique(indices)  # Ensure uniqueness
-                    video_inputs[0] = video_inputs[0][indices]
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
