@@ -2,7 +2,6 @@ import re
 import sys
 import unicodedata
 
-
 from lmms_eval.api.filter import Filter
 
 

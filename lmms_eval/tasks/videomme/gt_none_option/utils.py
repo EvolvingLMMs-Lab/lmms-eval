@@ -4,7 +4,6 @@
 import datasets
 
 
-
 def videomme_process_docs_gt_none(dataset: datasets.Dataset) -> datasets.Dataset:
     """
     Replace the content of the correct answer option with "None".

@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-
 MULTI_CHOICE_PROMPT = "与えられた選択肢の中から最も適切な回答のアルファベットを直接記入してください。"
 OPEN_ENDED_PROMPT = "質問に対する回答を単語や短いフレーズで記入してください。"
 

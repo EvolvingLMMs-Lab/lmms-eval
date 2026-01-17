@@ -3,7 +3,6 @@ from collections import defaultdict
 
 from loguru import logger as eval_logger
 
-
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 eval_type_dict = {

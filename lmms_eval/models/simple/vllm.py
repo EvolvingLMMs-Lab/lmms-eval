@@ -171,14 +171,10 @@ class VLLM(lmms):
         self.chat_template = None
         if chat_template is not None:
             # Check if it looks like a file path (contains path separators or has common template extensions)
-            if os.path.sep in chat_template or chat_template.endswith(
-                (".jinja", ".jinja2", ".j2")
-            ):
+            if os.path.sep in chat_template or chat_template.endswith((".jinja", ".jinja2", ".j2")):
                 # It appears to be a file path, so it must exist
                 if not os.path.isfile(chat_template):
-                    raise FileNotFoundError(
-                        f"Chat template file not found: {chat_template}"
-                    )
+                    raise FileNotFoundError(f"Chat template file not found: {chat_template}")
                 with open(chat_template, "r") as f:
                     self.chat_template = f.read()
             else:
@@ -187,17 +183,11 @@ class VLLM(lmms):
 
         # Convert any string arguments that start with { and end with } to dictionaries
         for key, value in kwargs.items():
-            if (
-                isinstance(value, str)
-                and value.strip().startswith("{")
-                and value.strip().endswith("}")
-            ):
+            if isinstance(value, str) and value.strip().startswith("{") and value.strip().endswith("}"):
                 try:
                     kwargs[key] = json.loads(value)
                 except json.JSONDecodeError:
-                    eval_logger.warning(
-                        f"Failed to parse JSON-like string for argument '{key}': {value}"
-                    )
+                    eval_logger.warning(f"Failed to parse JSON-like string for argument '{key}': {value}")
 
         # Set up vllm client
         os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
@@ -211,9 +201,7 @@ class VLLM(lmms):
             ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -222,9 +210,7 @@ class VLLM(lmms):
             self._world_size = self.accelerator.num_processes
         # TODO: Support tensor parallelism in the future for flexible vllm parallel
         if data_parallel_size > 1:
-            assert (
-                tensor_parallel_size == 1
-            ), "Data parallelism is not supported with tensor parallelism. For current vllm version"
+            assert tensor_parallel_size == 1, "Data parallelism is not supported with tensor parallelism. For current vllm version"
         if accelerator.num_processes > 1:
             kwargs["distributed_executor_backend"] = "external_launcher"
         self.client = LLM(
@@ -278,15 +264,11 @@ class VLLM(lmms):
     def encode_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(
-            0, total_frame_num - 1, self.max_frame_num, dtype=int
-        )
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frame_num, dtype=int)
 
         # Ensure the last frame is included
         if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(
-                uniform_sampled_frames, total_frame_num - 1
-            )
+            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
 
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
@@ -314,20 +296,14 @@ class VLLM(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
-        batched_requests = [
-            requests[i : i + batch_size] for i in range(0, len(requests), batch_size)
-        ]
+        batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         for batch_requests in batched_requests:
             batched_messages = []
             for idx in range(len(batch_requests)):
-                contexts, gen_kwargs, doc_to_visual, doc_id, task, split = (
-                    batch_requests[idx].arguments
-                )
+                contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
                 if "max_new_tokens" not in gen_kwargs:
                     gen_kwargs["max_new_tokens"] = 1024
                 if "temperature" not in gen_kwargs:
@@ -352,32 +328,12 @@ class VLLM(lmms):
                     all_tasks = []
                     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
                         for visual in visuals:
-                            if isinstance(visual, str) and (
-                                ".mp4" in visual
-                                or ".avi" in visual
-                                or ".mov" in visual
-                                or ".flv" in visual
-                                or ".wmv" in visual
-                            ):
-                                all_tasks.append(
-                                    executor.submit(self.encode_video, visual)
-                                )
-                            elif isinstance(visual, str) and (
-                                ".jpg" in visual
-                                or ".jpeg" in visual
-                                or ".png" in visual
-                                or ".gif" in visual
-                                or ".bmp" in visual
-                                or ".tiff" in visual
-                                or ".webp" in visual
-                            ):
-                                all_tasks.append(
-                                    executor.submit(self.encode_image, visual)
-                                )
+                            if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
+                                all_tasks.append(executor.submit(self.encode_video, visual))
+                            elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
+                                all_tasks.append(executor.submit(self.encode_image, visual))
                             elif isinstance(visual, Image.Image):
-                                all_tasks.append(
-                                    executor.submit(self.encode_image, visual)
-                                )
+                                all_tasks.append(executor.submit(self.encode_image, visual))
 
                         for task in all_tasks:
                             imgs.append(task.result())
@@ -417,9 +373,7 @@ class VLLM(lmms):
                     chat_template=self.chat_template,
                 )
             else:
-                response = self.client.chat(
-                    sampling_params=sampling_params, messages=batched_messages
-                )
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             response_text = [o.outputs[0].text for o in response]
 
             assert len(response_text) == len(batch_requests)

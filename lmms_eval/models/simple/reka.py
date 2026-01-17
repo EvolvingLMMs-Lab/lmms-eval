@@ -49,15 +49,11 @@ class Reka(lmms):
         self.continual_mode = continual_mode
         if self.continual_mode:
             if response_persistent_folder is None:
-                raise ValueError(
-                    "Continual mode requires a persistent path for the response. Please provide a valid path."
-                )
+                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
 
             os.makedirs(response_persistent_folder, exist_ok=True)
             self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(
-                self.response_persistent_folder, f"{self.model_version}_response.json"
-            )
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
 
             if os.path.exists(self.response_persistent_file):
                 with open(self.response_persistent_file, "r") as f:
@@ -78,9 +74,7 @@ class Reka(lmms):
             ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -111,9 +105,7 @@ class Reka(lmms):
     def encode_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(
-            0, total_frame_num - 1, self.max_frames_num, dtype=int
-        )
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, self.max_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
@@ -130,13 +122,9 @@ class Reka(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for context, gen_kwargs, doc_to_visual, doc_id, task, split in [
-            reg.args for reg in requests
-        ]:
+        for context, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if self.continual_mode is True and self.cache_mode == "resume":
                 doc_uuid = f"{task}___{split}___{doc_id}"
                 if doc_uuid in self.response_cache:
@@ -154,20 +142,14 @@ class Reka(lmms):
                 media_urls = self.encode_image(visual)
                 message_content.append({"type": "text", "text": context})
                 for media_url in media_urls:
-                    message_content.append(
-                        {"type": "image_url", "image_url": media_url}
-                    )
+                    message_content.append({"type": "image_url", "image_url": media_url})
             elif self.modality == "video":
                 message_content.append({"type": "text", "text": context})
                 assert len(visual) == 1, "Reka only supports one video per request"
                 media_urls = self.encode_video(visual[0])
-                assert (
-                    len(media_urls) == self.max_frames_num
-                ), f"Reka only supports {self.max_frames_num} frames per request"
+                assert len(media_urls) == self.max_frames_num, f"Reka only supports {self.max_frames_num} frames per request"
                 for media_url in media_urls:
-                    message_content.append(
-                        {"type": "image_url", "image_url": media_url}
-                    )
+                    message_content.append({"type": "image_url", "image_url": media_url})
 
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -193,17 +175,11 @@ class Reka(lmms):
                     break  # If successful, break out of the loop
 
                 except Exception as e:
-                    eval_logger.info(
-                        f"Attempt {attempt + 1} failed with error: {str(e)}"
-                    )
-                    if (
-                        attempt < 5 - 1
-                    ):  # If we have retries left, sleep and then continue to next attempt
+                    eval_logger.info(f"Attempt {attempt + 1} failed with error: {str(e)}")
+                    if attempt < 5 - 1:  # If we have retries left, sleep and then continue to next attempt
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
-                        eval_logger.error(
-                            f"All 5 attempts failed. Last error message: {str(e)}"
-                        )
+                        eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
                         response_text = ""
 
             res.append(response_text)

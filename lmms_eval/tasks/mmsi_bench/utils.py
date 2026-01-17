@@ -5,7 +5,6 @@ from collections import defaultdict
 
 from PIL import Image
 
-
 eval_logger = logging.getLogger("lmms-eval")
 
 

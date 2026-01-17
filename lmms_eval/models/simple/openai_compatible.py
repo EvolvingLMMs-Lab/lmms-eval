@@ -56,22 +56,16 @@ class OpenAICompatible(lmms):
         self.model_version = model_version
         self.timeout = timeout
         self.max_retries = max_retries
-        self.max_size_in_mb = (
-            max_size_in_mb  # some models have a limit on the size of the image
-        )
+        self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         self.continual_mode = continual_mode
         self.max_frames_num = max_frames_num
         if self.continual_mode:
             if response_persistent_folder is None:
-                raise ValueError(
-                    "Continual mode requires a persistent path for the response. Please provide a valid path."
-                )
+                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
 
             os.makedirs(response_persistent_folder, exist_ok=True)
             self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(
-                self.response_persistent_folder, f"{self.model_version}_response.json"
-            )
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
 
             if os.path.exists(self.response_persistent_file):
                 with open(self.response_persistent_file, "r") as f:
@@ -86,11 +80,7 @@ class OpenAICompatible(lmms):
         # settings. openai-python uses a httpx.Client with trust_env set to True. Such a
         # httpx.Client uses macOS proxy server settings. Adding httpx_trust_env option
         # allows httpx to ignore proxy server settings set by VPN clients.
-        http_client = (
-            DefaultHttpxClient(trust_env=httpx_trust_env)
-            if not httpx_trust_env
-            else None
-        )
+        http_client = DefaultHttpxClient(trust_env=httpx_trust_env) if not httpx_trust_env else None
 
         # Use provided parameters or fall back to environment variables
         api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -125,9 +115,7 @@ class OpenAICompatible(lmms):
             ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -184,15 +172,11 @@ class OpenAICompatible(lmms):
     def encode_video(self, video_path, for_get_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(
-            0, total_frame_num - 1, for_get_frames_num, dtype=int
-        )
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
 
         # Ensure the last frame is included
         if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(
-                uniform_sampled_frames, total_frame_num - 1
-            )
+            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
 
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
@@ -224,15 +208,9 @@ class OpenAICompatible(lmms):
 
         from lmms_eval import utils
 
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = (
-            len(requests) // self.batch_size
-            if len(requests) % self.batch_size == 0
-            else len(requests) // self.batch_size + 1
-        )
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         for chunk in chunks:
@@ -264,24 +242,10 @@ class OpenAICompatible(lmms):
                     visuals = self.flatten(visuals)
                     imgs = []
                     for visual in visuals:
-                        if isinstance(visual, str) and (
-                            ".mp4" in visual
-                            or ".avi" in visual
-                            or ".mov" in visual
-                            or ".flv" in visual
-                            or ".wmv" in visual
-                        ):
+                        if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
                             frames = self.encode_video(visual, self.max_frames_num)
                             imgs.extend(frames)
-                        elif isinstance(visual, str) and (
-                            ".jpg" in visual
-                            or ".jpeg" in visual
-                            or ".png" in visual
-                            or ".gif" in visual
-                            or ".bmp" in visual
-                            or ".tiff" in visual
-                            or ".webp" in visual
-                        ):
+                        elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
                             img = self.encode_image(visual)
                             imgs.append(img)
                         elif isinstance(visual, Image.Image):
@@ -292,9 +256,7 @@ class OpenAICompatible(lmms):
                 payload["model"] = self.model_version
 
                 payload["messages"].append({"role": "user", "content": []})
-                payload["messages"][0]["content"].append(
-                    {"type": "text", "text": context}
-                )
+                payload["messages"][0]["content"].append({"type": "text", "text": context})
                 for img in imgs:
                     payload["messages"][0]["content"].append(
                         {
@@ -339,33 +301,22 @@ class OpenAICompatible(lmms):
 
                     except Exception as e:
                         error_msg = str(e)
-                        eval_logger.info(
-                            f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}"
-                        )
+                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
 
                         if attempt == self.max_retries - 1:
-                            eval_logger.error(
-                                f"All {self.max_retries} attempts failed. Last error: {error_msg}"
-                            )
+                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                             return "", i
                         else:
                             time.sleep(self.timeout)
 
                 return "", i
 
-            tasks_to_run = [
-                (payload, i)
-                for i, payload in enumerate(batch_payloads)
-                if batch_responses[i] is None
-            ]
+            tasks_to_run = [(payload, i) for i, payload in enumerate(batch_payloads) if batch_responses[i] is None]
 
             if tasks_to_run:
                 max_workers = min(len(tasks_to_run), 32)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_index = {
-                        executor.submit(process_single_request, payload, i): i
-                        for payload, i in tasks_to_run
-                    }
+                    future_to_index = {executor.submit(process_single_request, payload, i): i for payload, i in tasks_to_run}
 
                     for future in as_completed(future_to_index):
                         response_text, i = future.result()
@@ -386,11 +337,7 @@ class OpenAICompatible(lmms):
         return res
 
     def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError(
-            "TODO: Implement multi-round generation for OpenAI compatible models"
-        )
+        raise NotImplementedError("TODO: Implement multi-round generation for OpenAI compatible models")
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        raise NotImplementedError(
-            "TODO: Implement loglikelihood for OpenAI compatible models"
-        )
+        raise NotImplementedError("TODO: Implement loglikelihood for OpenAI compatible models")

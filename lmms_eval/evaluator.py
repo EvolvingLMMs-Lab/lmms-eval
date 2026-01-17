@@ -154,19 +154,13 @@ def simple_evaluate(
     if seed_message:
         eval_logger.info(" | ".join(seed_message))
 
-    assert tasks != [], (
-        "No tasks specified, or no tasks found. Please verify the task names."
-    )
+    assert tasks != [], "No tasks specified, or no tasks found. Please verify the task names."
 
-    assert distributed_executor_backend in {"accelerate", "torchrun"}, (
-        f"Invalid distributed executor backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'."
-    )
+    assert distributed_executor_backend in {"accelerate", "torchrun"}, f"Invalid distributed executor backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'."
 
     if gen_kwargs:
         gen_kwargs = simple_parse_args_string(gen_kwargs)
-        eval_logger.warning(
-            "generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks."
-        )
+        eval_logger.warning("generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks.")
         if gen_kwargs == "":
             gen_kwargs = None
 
@@ -219,14 +213,10 @@ def simple_evaluate(
                 lm.task_dict[task_name] = task_obj.dataset
                 if "generate_until" in task_obj.get_config("output_type"):
                     if gen_kwargs is not None:
-                        task_obj.set_config(
-                            key="generation_kwargs", value=gen_kwargs, update=True
-                        )
+                        task_obj.set_config(key="generation_kwargs", value=gen_kwargs, update=True)
 
                 if predict_only:
-                    eval_logger.info(
-                        f"Processing {task_name} in output-only mode. Metrics will not be calculated!"
-                    )
+                    eval_logger.info(f"Processing {task_name} in output-only mode. Metrics will not be calculated!")
                     # we have to change the class properties post-hoc. This is pretty hacky.
                     task_obj.override_metric(metric_name="bypass")
 
@@ -234,19 +224,13 @@ def simple_evaluate(
                 # except if tasks have it set to 0 manually in their configs--then we should never overwrite that
                 if num_fewshot is not None:
                     if (default_num_fewshot := task_obj.get_config("num_fewshot")) == 0:
-                        eval_logger.info(
-                            f"num_fewshot has been set to 0 for {task_name} in its config. Manual configuration will be ignored."
-                        )
+                        eval_logger.info(f"num_fewshot has been set to 0 for {task_name} in its config. Manual configuration will be ignored.")
                     else:
-                        eval_logger.warning(
-                            f"Overwriting default num_fewshot of {task_name} from {default_num_fewshot} to {num_fewshot}"
-                        )
+                        eval_logger.warning(f"Overwriting default num_fewshot of {task_name} from {default_num_fewshot} to {num_fewshot}")
                         task_obj.set_config(key="num_fewshot", value=num_fewshot)
                 else:
                     # if num_fewshot not provided, and the task does not define a default one, default to 0
-                    if (
-                        default_num_fewshot := task_obj.get_config("num_fewshot")
-                    ) is None:
+                    if (default_num_fewshot := task_obj.get_config("num_fewshot")) is None:
                         task_obj.set_config(key="num_fewshot", value=0)
                 # fewshot_random_seed set for tasks, even with a default num_fewshot (e.g. in the YAML file)
                 task_obj.set_fewshot_seed(seed=fewshot_random_seed)
@@ -255,9 +239,7 @@ def simple_evaluate(
                 # Handle num_samples for model stability measurement (k-samples mode)
                 if num_samples > 1:
                     default_repeats = task_obj.get_config("repeats") or 1
-                    eval_logger.info(
-                        f"[Model Stability] Setting repeats={num_samples} for {task_name} (was: {default_repeats})"
-                    )
+                    eval_logger.info(f"[Model Stability] Setting repeats={num_samples} for {task_name} (was: {default_repeats})")
                     task_obj.set_config(key="repeats", value=num_samples)
 
                 adjusted_task_dict[task_name] = task_obj
@@ -321,9 +303,7 @@ def simple_evaluate(
         results["config"].update(
             {
                 "batch_size": batch_size,
-                "batch_sizes": (
-                    list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else []
-                ),
+                "batch_sizes": (list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else []),
                 "device": device,
                 "use_cache": use_cache,
                 "limit": limit,
@@ -425,10 +405,7 @@ def evaluate(
     eval_tasks = get_task_list(task_dict)
     name_to_task = {}
     if not log_samples:
-        if not all(
-            "bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys()
-            for task_output in eval_tasks
-        ):
+        if not all("bypass" not in getattr(task_output.task, "_metric_fn_list", {}).keys() for task_output in eval_tasks):
             raise ValueError("log_samples must be True for 'bypass' metric-only tasks")
 
     if distributed_executor_backend == "accelerate" and not hasattr(lm, "accelerator"):
@@ -464,11 +441,7 @@ def evaluate(
         if "task_alias" in configs[task_name]:
             task_group_alias[task_name] = configs[task_name]["task_alias"]
 
-        if (
-            ("group_alias" in configs[task_name])
-            and (group_name not in task_group_alias)
-            and (group_name is not None)
-        ):
+        if ("group_alias" in configs[task_name]) and (group_name not in task_group_alias) and (group_name is not None):
             task_group_alias[group_name] = configs[task_name]["group_alias"]
 
         limit = get_sample_size(task, limit)
@@ -481,16 +454,10 @@ def evaluate(
             system_instruction=system_instruction,
             apply_chat_template=apply_chat_template,
             fewshot_as_multiturn=fewshot_as_multiturn,
-            chat_template=getattr(lm, "apply_chat_template")
-            if apply_chat_template
-            else None,
-            tokenizer_name=getattr(lm, "tokenizer_name", "")
-            if apply_chat_template
-            else "",
+            chat_template=getattr(lm, "apply_chat_template") if apply_chat_template else None,
+            tokenizer_name=getattr(lm, "tokenizer_name", "") if apply_chat_template else "",
         )
-        eval_logger.debug(
-            f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}"
-        )
+        eval_logger.debug(f"Task: {task_output.task_name}; number of requests on this rank: {len(task._instances)}")
         if write_out:
             eval_logger.warning(
                 "DEPRECATION WARNING: --write_out is deprecated and will be removed in v0.5.0. "
@@ -506,27 +473,17 @@ def evaluate(
         if world_size > 1:
             if distributed_executor_backend == "accelerate":
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-                gathered_item = (
-                    lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
-                )
+                gathered_item = lm.accelerator.gather(instances_rnk).cpu().detach().numpy().tolist()
             elif distributed_executor_backend == "torchrun":
                 instances_rnk = torch.tensor(len(task._instances), device=lm.device)
-                gathered_item = torch.zeros(
-                    world_size * 1, dtype=instances_rnk.dtype, device=lm.device
-                )
+                gathered_item = torch.zeros(world_size * 1, dtype=instances_rnk.dtype, device=lm.device)
                 dist.all_gather_into_tensor(gathered_item, instances_rnk)
                 gathered_item = gathered_item.cpu().detach().numpy().tolist()
             else:
-                raise ValueError(
-                    f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'."
-                )
+                raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
             # "multiple_choice" task types dispatch (several) "loglikelihood" request types
-            reqtype = (
-                "loglikelihood"
-                if task.OUTPUT_TYPE == "multiple_choice"
-                else task.OUTPUT_TYPE
-            )
+            reqtype = "loglikelihood" if task.OUTPUT_TYPE == "multiple_choice" else task.OUTPUT_TYPE
             # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
             numpad = max(gathered_item) - gathered_item[lm.rank]
             # todo: may not account for padding in cases like SquadV2 which has multiple req types
@@ -558,9 +515,7 @@ def evaluate(
             elif distributed_executor_backend == "torchrun":
                 dist.barrier()
             else:
-                raise ValueError(
-                    f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'."
-                )
+                raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
     # Cleaning lm's cuda memory if you are launching llm as judge in local
     lm.clean()
@@ -601,46 +556,28 @@ def evaluate(
                     world_size=WORLD_SIZE,
                 )
             else:
-                doc_iterator = task.doc_iterator(
-                    rank=RANK, limit=limit, world_size=WORLD_SIZE
-                )
-            doc_iterator_for_counting = (
-                itertools.islice(range(len(task.test_docs())), RANK, limit, WORLD_SIZE)
-                if task.has_test_docs()
-                else itertools.islice(
-                    range(len(task.validation_docs())), RANK, limit, WORLD_SIZE
-                )
-            )
+                doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
+            doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), RANK, limit, WORLD_SIZE) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), RANK, limit, WORLD_SIZE)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
             pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
             for doc_id, doc in doc_iterator:
                 requests = instances_by_doc_id[doc_id]
-                metrics = task.process_results(
-                    doc, [req.filtered_resps[filter_key] for req in requests]
-                )
+                metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
 
                 # For stability metrics: compute per-sample scores when repeats > 1
-                repeats = (
-                    task.config.repeats
-                    if hasattr(task, "config") and hasattr(task.config, "repeats")
-                    else 1
-                )
+                repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
                 if repeats > 1 and len(requests) == repeats:
                     # Compute per-sample scores by calling process_results for each sample individually
                     per_sample_scores = {}
                     for req in requests:
-                        sample_metrics = task.process_results(
-                            doc, [req.filtered_resps[filter_key]]
-                        )
+                        sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
                         for metric_name, value in sample_metrics.items():
                             if metric_name not in per_sample_scores:
                                 per_sample_scores[metric_name] = []
                             per_sample_scores[metric_name].append(value)
                     # Store per-sample scores grouped by doc_id
                     for metric_name, scores in per_sample_scores.items():
-                        task_output.per_sample_metrics[
-                            (metric_name, filter_key)
-                        ].append(scores)
+                        task_output.per_sample_metrics[(metric_name, filter_key)].append(scores)
 
                 if log_samples:
                     target = task.doc_to_target(doc)
@@ -652,9 +589,7 @@ def evaluate(
                     for req in requests:
                         # check if req.args is a list of tuples, and each item in the list is a serializable object
                         for value in req.args:
-                            if isinstance(
-                                value, (str, int, float, bool, list, dict, type(None))
-                            ):
+                            if isinstance(value, (str, int, float, bool, list, dict, type(None))):
                                 filtered_arguments.append(value)
                             # else:
                             #     filtered_arguments.append(_handle_non_serializable(value))
@@ -666,9 +601,7 @@ def evaluate(
                         # "pred": metrics['coco_cap_chair_i']['pred'],
                         "arguments": filtered_arguments,
                         "resps": [req.resps for req in requests],
-                        "filtered_resps": [
-                            req.filtered_resps[filter_key] for req in requests
-                        ],
+                        "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
                         "doc_hash": hash_string(
                             json.dumps(
                                 requests[0].doc,
@@ -705,9 +638,7 @@ def evaluate(
                 )
 
                 if RANK == 0:
-                    task_output.logged_samples = list(
-                        itertools.chain.from_iterable(full_samples)
-                    )
+                    task_output.logged_samples = list(itertools.chain.from_iterable(full_samples))
 
             # then collect metrics across all ranks
             for metrics in task_output.sample_metrics:
@@ -718,9 +649,7 @@ def evaluate(
                     dst=0,
                 )
                 if RANK == 0:
-                    task_output.sample_metrics[metrics] = list(
-                        itertools.chain.from_iterable(metric_list)
-                    )
+                    task_output.sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
 
             # gather per_sample_metrics for stability metrics
             for metrics in task_output.per_sample_metrics:
@@ -731,9 +660,7 @@ def evaluate(
                     dst=0,
                 )
                 if RANK == 0:
-                    task_output.per_sample_metrics[metrics] = list(
-                        itertools.chain.from_iterable(metric_list)
-                    )
+                    task_output.per_sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
 
         dist.barrier()  # Ensure all processes are synced before proceeding
 
@@ -757,9 +684,7 @@ def evaluate(
 
         ### Calculate group metrics ###
         if bool(results):
-            results, versions, show_group_table, *_ = consolidate_group_results(
-                results, versions, task_dict
-            )
+            results, versions, show_group_table, *_ = consolidate_group_results(results, versions, task_dict)
 
         results_agg, group_agg = prepare_print_tasks(task_dict, results)
         subtask_list = get_subtask_list(task_dict)
@@ -769,32 +694,20 @@ def evaluate(
         # TODO: clean this up ; unify with the below metric_list loop?
         _higher_is_better = {}
         for group, task_list in subtask_list.items():
-            if (
-                len(task_list) != 0
-            ):  # subtask list will list "task_name": [] for solo tasks
+            if len(task_list) != 0:  # subtask list will list "task_name": [] for solo tasks
                 for task in task_list:
                     for m, h in higher_is_better[task].items():
                         if m not in _higher_is_better.keys():
                             _higher_is_better[m] = h
 
-                        if (
-                            m in _higher_is_better
-                            and _higher_is_better[m] is not None
-                            and _higher_is_better[m] != h
-                        ):
-                            eval_logger.warning(
-                                f"Higher_is_better values for metric {m} in group {group} are not consistent. Defaulting to None."
-                            )
+                        if m in _higher_is_better and _higher_is_better[m] is not None and _higher_is_better[m] != h:
+                            eval_logger.warning(f"Higher_is_better values for metric {m} in group {group} are not consistent. Defaulting to None.")
                             _higher_is_better[m] = None
                 higher_is_better[group] = _higher_is_better
 
         results_dict = {
             "results": dict(results_agg.items()),
-            **(
-                {"groups": dict(group_agg.items())}
-                if (bool(group_agg) & show_group_table)
-                else {}
-            ),
+            **({"groups": dict(group_agg.items())} if (bool(group_agg) & show_group_table) else {}),
             "group_subtasks": dict(reversed(subtask_list.items())),
             "configs": dict(sorted(configs.items())),
             "versions": dict(sorted(versions.items())),
@@ -824,9 +737,7 @@ def evaluate(
         elif distributed_executor_backend == "torchrun":
             dist.barrier()
         else:
-            raise ValueError(
-                f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'."
-            )
+            raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
     return results_dict
 

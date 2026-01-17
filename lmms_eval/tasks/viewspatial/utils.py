@@ -1,7 +1,6 @@
 import re
 
 
-
 def viewspatial_doc_to_text(doc):
     """Extracts the text prompt from a viewspatial dataset sample.
 

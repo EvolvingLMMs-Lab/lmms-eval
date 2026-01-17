@@ -3,7 +3,6 @@ import json
 import re
 
 
-
 # read json files
 def read_json(path):
     with open(path, "r") as fin:

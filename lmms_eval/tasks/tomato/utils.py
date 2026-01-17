@@ -15,7 +15,6 @@ from openai import AzureOpenAI, OpenAI
 random.seed(42)
 
 
-
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 

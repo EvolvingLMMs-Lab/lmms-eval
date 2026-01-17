@@ -1,6 +1,5 @@
 import re
 
-
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 
 

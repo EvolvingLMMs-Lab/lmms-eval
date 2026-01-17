@@ -3,7 +3,6 @@ from collections import defaultdict
 from loguru import logger as eval_logger
 
 
-
 def doc_to_audio(doc):
     return [doc["audio"]]
 

@@ -5,7 +5,6 @@ from typing import Dict, List, Optional
 
 import datasets
 
-
 if os.getenv("PROMPTSTEP") is not None:
     QUERY_TEMPLATE = "{Question}\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
 elif os.getenv("PROMPTTOKEN") is not None:

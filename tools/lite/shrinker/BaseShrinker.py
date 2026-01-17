@@ -2,8 +2,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Union
 
-
-
 eval_logger = logging.getLogger("lmms-eval")
 
 

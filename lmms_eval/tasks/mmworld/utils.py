@@ -7,7 +7,6 @@ from pathlib import Path
 import yaml
 from loguru import logger as eval_logger
 
-
 DISCIPLINES = ["Tech & Engineering", "Science", "Health & Medicine", "Sports & Arts", "Game", "Business", "Embodied Tasks"]
 
 

@@ -14,22 +14,14 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 
 PeftModel, _has_peft = optional_import("peft", "PeftModel")
-Qwen2_5_VLForConditionalGeneration, _ = optional_import(
-    "transformers", "Qwen2_5_VLForConditionalGeneration"
-)
+Qwen2_5_VLForConditionalGeneration, _ = optional_import("transformers", "Qwen2_5_VLForConditionalGeneration")
 Qwen2_5_VLProcessor, _ = optional_import("transformers", "Qwen2_5_VLProcessor")
 if not _has_peft:
-    eval_logger.warning(
-        "Failed to import transformers or peft; Please install via `pip install transformers peft`"
-    )
+    eval_logger.warning("Failed to import transformers or peft; Please install via `pip install transformers peft`")
 
-process_vision_info, _has_qwen_vl = optional_import(
-    "qwen_vl_utils", "process_vision_info"
-)
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
-    eval_logger.warning(
-        "Failed to import qwen_vl_utils; Please install via `pip install qwen-vl-utils`"
-    )
+    eval_logger.warning("Failed to import qwen_vl_utils; Please install via `pip install qwen-vl-utils`")
 
 
 @register_model("video_salmonn_2")
@@ -76,15 +68,9 @@ class VideoSALMONN2(lmms):
         if attn_implementation:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        base_model_instance = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            base_model, **model_kwargs
-        )
-        self._model = PeftModel.from_pretrained(
-            base_model_instance, pretrained, device_map=self.device_map
-        ).eval()
-        self.processor = Qwen2_5_VLProcessor.from_pretrained(
-            base_model, max_pixels=max_pixels, min_pixels=min_pixels
-        )
+        base_model_instance = Qwen2_5_VLForConditionalGeneration.from_pretrained(base_model, **model_kwargs)
+        self._model = PeftModel.from_pretrained(base_model_instance, pretrained, device_map=self.device_map).eval()
+        self.processor = Qwen2_5_VLProcessor.from_pretrained(base_model, max_pixels=max_pixels, min_pixels=min_pixels)
 
         self.max_num_frames = max_num_frames
         self.max_pixels = max_pixels
@@ -104,14 +90,10 @@ class VideoSALMONN2(lmms):
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -174,30 +156,22 @@ class VideoSALMONN2(lmms):
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visual_list = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             gen_kwargs = all_gen_kwargs[0]
 
             until = gen_kwargs.get("until", [self.tokenizer.decode(self.eot_token_id)])
             if isinstance(until, str):
                 until = [until]
             elif not isinstance(until, list):
-                raise ValueError(
-                    f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}"
-                )
+                raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
 
             until = [item for item in until if item != "\n\n"]
 
@@ -215,9 +189,7 @@ class VideoSALMONN2(lmms):
 
                 if visual_list[i] is not None:
                     for visual in visual_list[i]:
-                        if isinstance(visual, str) and visual.endswith(
-                            (".mp4", ".avi", ".mov", ".mkv", ".webm")
-                        ):
+                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
                             processed_visuals.append(
                                 {
                                     "type": "video",
@@ -243,24 +215,19 @@ class VideoSALMONN2(lmms):
                 message.append(
                     {
                         "role": "user",
-                        "content": processed_visuals
-                        + [{"type": "text", "text": context}],
+                        "content": processed_visuals + [{"type": "text", "text": context}],
                     }
                 )
 
                 batched_messages.append(message)
 
-            texts = self.processor.apply_chat_template(
-                batched_messages, tokenize=False, add_generation_prompt=True
-            )
+            texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
             image_inputs, video_inputs = process_vision_info(batched_messages)
 
             if video_inputs is not None:
                 total_frames = video_inputs[0].shape[0]
                 num_frames = min(self.max_num_frames, total_frames)
-                indices = np.linspace(
-                    0, total_frames - 1, num_frames, dtype=int, endpoint=True
-                )
+                indices = np.linspace(0, total_frames - 1, num_frames, dtype=int, endpoint=True)
                 indices = np.unique(indices)
                 video_inputs[0] = video_inputs[0][indices]
 
@@ -312,15 +279,10 @@ class VideoSALMONN2(lmms):
                 answer = ""
                 res.append(answer)
                 pbar.update(1)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), answer
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 continue
 
-            generated_ids_trimmed = [
-                out_ids[len(in_ids) :]
-                for in_ids, out_ids in zip(inputs.input_ids, cont)
-            ]
+            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(
                 generated_ids_trimmed,
                 skip_special_tokens=True,
@@ -335,9 +297,7 @@ class VideoSALMONN2(lmms):
 
             for ans, context in zip(answers, contexts):
                 res.append(ans)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), ans
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
         res = re_ords.get_original(res)

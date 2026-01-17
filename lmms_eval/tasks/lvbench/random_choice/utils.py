@@ -4,7 +4,6 @@ import random
 import datasets
 
 
-
 def lvbench_process_docs_random_choice(dataset: datasets.Dataset) -> datasets.Dataset:
     """Shuffle options and update answer accordingly."""
 

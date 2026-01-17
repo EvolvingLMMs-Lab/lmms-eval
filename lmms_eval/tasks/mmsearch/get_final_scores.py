@@ -3,7 +3,6 @@ import json
 
 import datasets
 
-
 task_path_dict = dict(
     end2end="end2end_path",
     requery="requery_path",

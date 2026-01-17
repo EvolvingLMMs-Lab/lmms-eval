@@ -1,7 +1,6 @@
 import random
 import re
 
-
 MULTI_CHOICE_DIRECT_PROMPT = "Answer the question with the option's letter from the given choices directly."
 COT_PROMPT = "Solve the multiple-choice question and then answer with the option letter from the given choices. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of options. Think step by step before answering."
 PROMPTS = {"MULTI_CHOICE_DIRECT_PROMPT": MULTI_CHOICE_DIRECT_PROMPT, "COT_PROMPT": COT_PROMPT}

@@ -5,7 +5,6 @@ import re
 
 import datasets
 
-
 LETTER_TO_NUMBER = {"A": "1", "B": "2", "C": "3", "D": "4"}
 NUMBER_TO_LETTER = {"1": "A", "2": "B", "3": "C", "4": "D"}
 

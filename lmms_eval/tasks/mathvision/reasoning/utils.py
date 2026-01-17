@@ -1,5 +1,3 @@
-
-
 from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
 
 SYSTEM_PROMPT = (

@@ -37,9 +37,7 @@ if API_TYPE == "openai":
         "Content-Type": "application/json",
     }
 elif API_TYPE == "azure":
-    API_URL = os.getenv(
-        "AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken"
-    )
+    API_URL = os.getenv("AZURE_ENDPOINT", "https://api.cognitive.microsoft.com/sts/v1.0/issueToken")
     API_KEY = os.getenv("AZURE_API_KEY", "YOUR_API_KEY")
     headers = {
         "api-key": API_KEY,
@@ -77,12 +75,8 @@ class BatchGPT4(lmms):
         self.client = OpenAI(api_key=api_key)
 
         accelerator = Accelerator()
-        assert (
-            accelerator.state.local_process_index == 0
-        ), "BatchGPT4 does not support distributed inference."
-        assert (
-            accelerator.state.num_processes == 1
-        ), "BatchGPT4 does not support distributed inference."
+        assert accelerator.state.local_process_index == 0, "BatchGPT4 does not support distributed inference."
+        assert accelerator.state.num_processes == 1, "BatchGPT4 does not support distributed inference."
 
     # Function to encode the image
     def encode_image(self, image: Image):
@@ -96,9 +90,7 @@ class BatchGPT4(lmms):
     def encode_video(self, video_path, for_get_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(
-            0, total_frame_num - 1, for_get_frames_num, dtype=int
-        )
+        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
         frame_idx = uniform_sampled_frames.tolist()
         frames = vr.get_batch(frame_idx).asnumpy()
 
@@ -123,9 +115,7 @@ class BatchGPT4(lmms):
     def generate_until(self, requests):
         # Prepare the batch requests data
         requests_data = {}
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Batch Preparing"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Batch Preparing")
         for idx, (
             contexts,
             gen_kwargs,
@@ -149,9 +139,7 @@ class BatchGPT4(lmms):
             if self.image_token not in contexts:
                 messages.append({"role": "user", "content": contexts})
                 for img in imgs:
-                    messages.append(
-                        {"role": "user", "content": f"data:image/jpeg;base64,{img}"}
-                    )
+                    messages.append({"role": "user", "content": f"data:image/jpeg;base64,{img}"})
             else:
                 contexts_split = contexts.split(self.image_token)
                 for idx, context in enumerate(contexts_split):
@@ -173,35 +161,25 @@ class BatchGPT4(lmms):
             }
             pbar.update(1)
 
-        file_path = (
-            os.getenv("HF_HOME", "~/.cache/huggingface")
-            + f"/batchinput_{len(requests_data)}.jsonl"
-        )
+        file_path = os.getenv("HF_HOME", "~/.cache/huggingface") + f"/batchinput_{len(requests_data)}.jsonl"
         file_path = self.create_batch_input_file(requests_data, file_path)
         file_id = self.upload_input_file(file_path)
 
-        batch_response = self.create_batch(
-            file_id, metadata={"description": "Batch Processing for GPT-4"}
-        )
+        batch_response = self.create_batch(file_id, metadata={"description": "Batch Processing for GPT-4"})
         batch_status = self.check_batch_status(batch_response.id)
         while True:
             batch_status = self.check_batch_status(batch_response.id)
             if batch_status.status == "completed":
                 eval_logger.info("Batch processing completed.")
                 batch_results = self.retrieve_batch_results(batch_status.output_file_id)
-                res = [
-                    result["response"]["choices"][0]["message"]["content"]
-                    for result in json.loads(batch_results)
-                ]
+                res = [result["response"]["choices"][0]["message"]["content"] for result in json.loads(batch_results)]
                 return res
             elif batch_status.status == "failed":
                 eval_logger.info("Batch processing failed.")
                 res = ["Batch failed"] * len(requests)
                 return res
             else:
-                eval_logger.info(
-                    f"Batch status: {batch_status.status}. Retrying in {NUM_SECONDS_TO_SLEEP} seconds."
-                )
+                eval_logger.info(f"Batch status: {batch_status.status}. Retrying in {NUM_SECONDS_TO_SLEEP} seconds.")
                 time.sleep(NUM_SECONDS_TO_SLEEP)
 
     def loglikelihood(self, requests):
@@ -251,6 +229,4 @@ class BatchGPT4(lmms):
         return self.client.batches.list(limit=limit)
 
     def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError(
-            "TODO: Implement multi-round generation for BatchGPT4"
-        )
+        raise NotImplementedError("TODO: Implement multi-round generation for BatchGPT4")

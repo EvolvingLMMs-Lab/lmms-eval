@@ -4,7 +4,6 @@ from collections import defaultdict
 from loguru import logger as eval_logger
 
 
-
 def vstar_doc_to_visual(doc):
     """Convert document to visual input."""
     return [doc["image"].convert("RGB")]

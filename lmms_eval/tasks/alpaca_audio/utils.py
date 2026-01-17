@@ -8,7 +8,6 @@ import yaml
 from loguru import logger as eval_logger
 
 
-
 def doc_to_audio(doc):
     return [doc["context"]]
 

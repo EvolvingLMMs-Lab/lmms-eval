@@ -7,7 +7,6 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 TASK_CATEGORIES = [

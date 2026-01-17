@@ -7,7 +7,6 @@ import PIL
 import yaml
 from loguru import logger as eval_logger
 
-
 DATA_LIST = {
     "object_interaction": "star/Charades_segment",
     "action_sequence": "star/Charades_segment",

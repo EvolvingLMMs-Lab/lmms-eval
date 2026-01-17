@@ -3,7 +3,6 @@ import random
 import numpy as np
 
 
-
 def muchomusic_doc_to_audio(doc):
     return [doc["context"]]
 

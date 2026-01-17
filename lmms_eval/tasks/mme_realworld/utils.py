@@ -2,7 +2,6 @@ import re
 
 from loguru import logger as eval_logger
 
-
 TASKS = [
     "Reasoning",
     "Perception",

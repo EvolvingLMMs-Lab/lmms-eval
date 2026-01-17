@@ -6,7 +6,6 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 eval_type_dict = {

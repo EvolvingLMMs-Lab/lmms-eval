@@ -2,7 +2,6 @@ import random
 from collections import defaultdict
 
 
-
 def q_bench_doc_to_text(doc, lmms_eval_specific_kwargs):
     candidates = []
     for i in range(4):

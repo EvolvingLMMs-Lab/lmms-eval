@@ -1,5 +1,3 @@
-
-
 def options_to_str(options_prompt):
     option_prompt_str = ""
     for i, option in enumerate(options_prompt):

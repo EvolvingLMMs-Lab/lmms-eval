@@ -2,7 +2,6 @@
 import datasets
 
 
-
 def videommmu_process_docs_number_option(dataset: datasets.Dataset) -> datasets.Dataset:
     """Change option labels from A.B.C.D to 1.2.3.4 for MCQ questions."""
 

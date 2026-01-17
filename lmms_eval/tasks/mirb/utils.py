@@ -3,7 +3,6 @@ import re
 
 import numpy as np
 
-
 eval_logger = logging.getLogger("lmms-eval")
 
 

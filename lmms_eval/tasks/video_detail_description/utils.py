@@ -8,7 +8,6 @@ from pathlib import Path
 import requests
 import yaml
 
-
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []

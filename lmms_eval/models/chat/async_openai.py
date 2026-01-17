@@ -54,9 +54,7 @@ class AsyncOpenAIChat(lmms):
         self.model_version = model_version
         self.timeout = timeout
         self.max_retries = max_retries
-        self.max_size_in_mb = (
-            max_size_in_mb  # some models have a limit on the size of the image
-        )
+        self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         if num_cpus is None:
             self.num_cpus = cpu_count() // 2
         else:
@@ -64,13 +62,9 @@ class AsyncOpenAIChat(lmms):
         self.work_dir = work_dir if work_dir is not None else tempfile.mkdtemp()
         self.fps = fps
         self.nframes = nframes
-        self.base_url = (
-            base_url if base_url is not None else os.getenv("OPENAI_API_BASE")
-        )
+        self.base_url = base_url if base_url is not None else os.getenv("OPENAI_API_BASE")
         self.api_key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
-        self.client = AsyncOpenAI(
-            api_key=self.api_key, base_url=self.base_url, timeout=timeout
-        )
+        self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url, timeout=timeout)
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_frames = max_frames
@@ -91,9 +85,7 @@ class AsyncOpenAIChat(lmms):
             ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -212,17 +204,11 @@ class AsyncOpenAIChat(lmms):
                 eval_logger.debug("Calling tool with MCP client")
                 for call in message.tool_calls:
                     eval_logger.debug(f"Calling {call.function.name}...")
-                    result = await self.mcp_client.run_tool(
-                        call.function.name, eval(call.function.arguments)
-                    )
+                    result = await self.mcp_client.run_tool(call.function.name, eval(call.function.arguments))
                     all_response += f"<tool_call>{call.function.name} {call.function.arguments}</tool_call></tool_response>"
-                    tool_messages.append(
-                        {"role": "tool", "name": call.function.name, "content": []}
-                    )
+                    tool_messages.append({"role": "tool", "name": call.function.name, "content": []})
                     for content in result.content:
-                        tool_message = self.mcp_client.convert_result_to_openai_format(
-                            content
-                        )
+                        tool_message = self.mcp_client.convert_result_to_openai_format(content)
                         for content in tool_message:
                             if content["type"] == "image_url":
                                 all_response += "<image_url>"
@@ -253,19 +239,14 @@ class AsyncOpenAIChat(lmms):
 
         async def run():
             res = []
-            pbar = tqdm(
-                total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-            )
+            pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
             sem = asyncio.Semaphore(self.num_cpus)
 
             async def _process(req, idx):
                 async with sem:
                     return await self.maybe_forward_with_tool(req, idx)
 
-            tasks = [
-                asyncio.create_task(_process(req, idx))
-                for idx, req in enumerate(requests)
-            ]
+            tasks = [asyncio.create_task(_process(req, idx)) for idx, req in enumerate(requests)]
             for task in asyncio.as_completed(tasks):
                 content, idx = await task
                 res.append((content, idx))

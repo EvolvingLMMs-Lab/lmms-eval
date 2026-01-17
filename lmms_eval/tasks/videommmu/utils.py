@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
     safe_data = []
@@ -24,8 +23,6 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 HF_HOME = os.environ["HF_HOME"]
 cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
-
-
 
 
 # Define the mapping for subjects to their respective directories

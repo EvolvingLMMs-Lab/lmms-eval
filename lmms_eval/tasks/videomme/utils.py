@@ -10,7 +10,6 @@ import numpy as np
 import yaml
 from loguru import logger as eval_logger
 
-
 VIDEO_TYPE = ["short", "medium", "long"]
 CATEGORIES = ["Knowledge", "Film & Television", "Sports Competition", "Artistic Performance", "Life Record", "Multilingual"]
 

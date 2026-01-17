@@ -2,7 +2,6 @@
 import datasets
 
 
-
 def videommmu_process_docs_gt_none(dataset: datasets.Dataset) -> datasets.Dataset:
     """Replace correct answer content with 'None' for MCQ questions."""
 

@@ -1,4 +1,3 @@
-
 from PIL import Image
 
 REASONING_SYS_PROMPT = (

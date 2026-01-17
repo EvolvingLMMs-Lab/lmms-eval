@@ -6,7 +6,6 @@ from pathlib import Path
 import yaml
 from loguru import logger as eval_logger
 
-
 TASK_CATEGORIES = ["QA", "OCR", "temporal"]
 
 

@@ -8,7 +8,6 @@ import requests
 import yaml
 from loguru import logger as eval_logger
 
-
 dir_name = os.path.dirname(os.path.abspath(__file__))
 
 one_score_pattern = re.compile("\[\[(\d+\.?\d*)\]\]")

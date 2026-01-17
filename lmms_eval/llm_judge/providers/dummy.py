@@ -1,6 +1,5 @@
 from typing import Optional
 
-
 from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig
 

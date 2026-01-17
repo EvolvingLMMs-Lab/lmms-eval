@@ -33,9 +33,7 @@ try:
     from qwen_vl_utils import process_vision_info
 except ImportError:
     process_vision_info = None
-    eval_logger.warning(
-        "Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`"
-    )
+    eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
 @register_model("huggingface")
@@ -56,12 +54,8 @@ class Huggingface(lmms):
         attn_implementation: Optional[str] = None,
         max_num_frames: int = 32,
         use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[
-            float
-        ] = None,  # Only applicable if use_custom_video_loader is True
-        max_image_size: Optional[
-            int
-        ] = None,  # Only applicable if use_custom_video_loader is True
+        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
+        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
@@ -74,9 +68,7 @@ class Huggingface(lmms):
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(
-                f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}"
-            )
+            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
 
         self.use_custom_video_loader = use_custom_video_loader
         self.fps = fps
@@ -84,9 +76,7 @@ class Huggingface(lmms):
         #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
         self.max_image_size = max_image_size
         if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError(
-                "max_image_size is only applicable if use_custom_video_loader is True"
-            )
+            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -140,14 +130,10 @@ class Huggingface(lmms):
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -222,23 +208,14 @@ class Huggingface(lmms):
             grouping=True,
         )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = (
-            len(requests) // self.batch_size
-            if len(requests) % self.batch_size == 0
-            else len(requests) // self.batch_size + 1
-        )
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         e2e_latency = 0
         total_tokens = 0
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
-            chat_messages = [
-                doc_to_messages[0](self.task_dict[task][split][ids])
-                for ids, task, split in zip(doc_id, task, split)
-            ]
-            chat_messages: List[ChatMessages] = [
-                ChatMessages(**{"messages": message}) for message in chat_messages
-            ]
+            chat_messages = [doc_to_messages[0](self.task_dict[task][split][ids]) for ids, task, split in zip(doc_id, task, split)]
+            chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
             visuals = []
             videos = []
             for messages in chat_messages:
@@ -250,15 +227,8 @@ class Huggingface(lmms):
             gen_kwargs = all_gen_kwargs[0]
 
             # Apply chat template
-            batched_messages = [
-                chat_message.to_hf_messages() for chat_message in chat_messages
-            ]
-            texts = [
-                self.processor.apply_chat_template(
-                    msg, tokenize=False, add_generation_prompt=True
-                )
-                for msg in batched_messages
-            ]
+            batched_messages = [chat_message.to_hf_messages() for chat_message in chat_messages]
+            texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
             images = []
             videos = []
             audios = []
@@ -271,9 +241,7 @@ class Huggingface(lmms):
             videos = self.flatten(videos)
             audios = self.flatten(audios)
             kwargs = {"images": images, "videos": videos, "audios": audios}
-            inputs = self.processor(
-                text=texts, padding=True, return_tensors="pt", **kwargs
-            )
+            inputs = self.processor(text=texts, padding=True, return_tensors="pt", **kwargs)
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -312,10 +280,7 @@ class Huggingface(lmms):
             )
             end_time = time.time()
 
-            generated_ids_trimmed = [
-                out_ids[len(in_ids) :]
-                for in_ids, out_ids in zip(inputs.input_ids, cont)
-            ]
+            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
             answers = self.processor.batch_decode(
                 generated_ids_trimmed,
                 skip_special_tokens=True,
@@ -329,9 +294,7 @@ class Huggingface(lmms):
             for ans, context in zip(answers, texts):
                 clean_ans = parse_reasoning_model_answer(ans)
                 res.append(clean_ans)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), clean_ans
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
                 pbar.update(1)
 
                 eval_logger.debug(f"Question: {context}")

@@ -90,22 +90,15 @@ class VLLM(VLLMSimple):
         res = []
         self.load_cache()
         res, requests = self.get_response_from_cache(requests)
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
-        batched_requests = [
-            requests[i : i + batch_size] for i in range(0, len(requests), batch_size)
-        ]
+        batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         e2e_latency = 0
         for batch_requests in batched_requests:
             batched_messages = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-                futures = [
-                    executor.submit(self.make_one_request, request)
-                    for request in batch_requests
-                ]
+                futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
                 for future in futures:
                     messages, sampling_params = future.result()
                     batched_messages.append(messages)
@@ -121,9 +114,7 @@ class VLLM(VLLMSimple):
                     chat_template=chat_template,
                 )
             else:
-                response = self.client.chat(
-                    sampling_params=sampling_params, messages=batched_messages
-                )
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]

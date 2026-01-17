@@ -99,7 +99,6 @@ cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
 
 
-
 # Pass in video path here
 # Can only work correctly with video llm
 def cuva_doc_to_visual(doc):

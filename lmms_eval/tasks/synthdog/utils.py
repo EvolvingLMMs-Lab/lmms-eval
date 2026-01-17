@@ -1,6 +1,5 @@
 import json
 
-
 from lmms_eval.tasks.synthdog.donut_evaluator import JSONParseEvaluator
 
 evaluator = JSONParseEvaluator()

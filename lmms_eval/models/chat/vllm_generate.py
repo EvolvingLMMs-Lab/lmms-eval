@@ -115,9 +115,7 @@ class VLLMGenerate(VLLMChat):
                 "video": video,
                 **video_kwargs,
             }
-            final_video, fps = fetch_video(
-                video_dict, return_video_metadata=True, return_video_sample_fps=True
-            )
+            final_video, fps = fetch_video(video_dict, return_video_metadata=True, return_video_sample_fps=True)
             frames, video_metadata = final_video
             video_inputs.append(frames)
             video_metadatas.append(video_metadata)
@@ -158,22 +156,15 @@ class VLLMGenerate(VLLMChat):
         res = []
         self.load_cache()
         res, requests = self.get_response_from_cache(requests)
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
-        batched_requests = [
-            requests[i : i + batch_size] for i in range(0, len(requests), batch_size)
-        ]
+        batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         e2e_latency = 0
         for batch_requests in batched_requests:
             batched_vllm_inputs = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-                futures = [
-                    executor.submit(self.make_one_request, request)
-                    for request in batch_requests
-                ]
+                futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
                 for future in futures:
                     vllm_inputs, sampling_params = future.result()
                     batched_vllm_inputs.append(vllm_inputs)

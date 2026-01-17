@@ -6,7 +6,6 @@ from pathlib import Path
 import cv2
 import yaml
 
-
 # with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 #     raw_data = f.readlines()
 #     safe_data = []

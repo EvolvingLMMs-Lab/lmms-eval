@@ -7,7 +7,6 @@ import yaml
 from loguru import logger as eval_logger
 
 
-
 def mia_bench_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 

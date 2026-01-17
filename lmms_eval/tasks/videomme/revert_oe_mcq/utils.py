@@ -4,7 +4,6 @@
 import re
 
 
-
 def doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """Build open-ended question text (without options)."""
     if lmms_eval_specific_kwargs is None:
