@@ -189,9 +189,11 @@ class NanoBananaVisualCoT(lmms):
         original_image: Optional[Image.Image],
         doc_id: str,
         task: str,
-    ) -> Optional[Image.Image]:
+    ) -> Tuple[Optional[Image.Image], Optional[str]]:
         """
         Stage 1: Generate auxiliary image using Nano Banana
+
+        Uses images.edit API when original_image is provided for image-to-image generation.
 
         Args:
             prompt: Generation prompt
@@ -200,7 +202,7 @@ class NanoBananaVisualCoT(lmms):
             task: Task name
 
         Returns:
-            Generated PIL Image or None if failed
+            Tuple of (Generated PIL Image, save_path) or (None, None) if failed
         """
         eval_logger.debug(f"Stage 1 - Generating image for doc {doc_id}")
 
@@ -209,13 +211,36 @@ class NanoBananaVisualCoT(lmms):
                 generated_image = None
 
                 if self.api_type == "dmxapi":
-                    # DMXAPI uses OpenAI-compatible images.generate endpoint
-                    response = self.client.images.generate(
-                        model=self.image_model_name,
-                        prompt=prompt,
-                        size="1024x1024",
-                        n=1,
-                    )
+                    if original_image is not None:
+                        # Use images.edit API for image-to-image generation
+                        eval_logger.debug("Stage 1 - Using images.edit with original image")
+
+                        # Convert PIL Image to bytes for the API
+                        img_buffer = BytesIO()
+                        if original_image.mode not in ("RGB", "RGBA"):
+                            original_image = original_image.convert("RGB")
+                        original_image.save(img_buffer, format="PNG")
+                        img_buffer.seek(0)
+                        # Set name attribute so API can detect MIME type
+                        img_buffer.name = "image.png"
+
+                        response = self.client.images.edit(
+                            model=self.image_model_name,
+                            image=img_buffer,
+                            prompt=prompt,
+                            size="1024x1024",
+                            n=1,
+                        )
+                    else:
+                        # Fall back to images.generate when no original image
+                        eval_logger.debug("Stage 1 - Using images.generate (no original image)")
+                        response = self.client.images.generate(
+                            model=self.image_model_name,
+                            prompt=prompt,
+                            size="1024x1024",
+                            n=1,
+                        )
+
                     # Get image from response
                     image_data = response.data[0]
                     if hasattr(image_data, "url") and image_data.url:
@@ -263,6 +288,7 @@ class NanoBananaVisualCoT(lmms):
                     continue
 
                 # Save if enabled
+                save_path = None
                 if self.save_intermediate:
                     task_dir = os.path.join(self.intermediate_dir, task)
                     os.makedirs(task_dir, exist_ok=True)
@@ -270,7 +296,7 @@ class NanoBananaVisualCoT(lmms):
                     generated_image.save(save_path)
                     eval_logger.debug(f"Saved generated image to {save_path}")
 
-                return generated_image
+                return generated_image, save_path
 
             except Exception as e:
                 eval_logger.warning(
@@ -280,7 +306,7 @@ class NanoBananaVisualCoT(lmms):
                     time.sleep(NUM_SECONDS_TO_SLEEP)
 
         eval_logger.error(f"Stage 1 failed for doc {doc_id}")
-        return None
+        return None, None
 
     def _stage2_answer(
         self,
@@ -417,7 +443,7 @@ class NanoBananaVisualCoT(lmms):
             eval_logger.info(f"Processing doc {doc_id} from task {task}")
 
             # Stage 1: Generate auxiliary image
-            auxiliary_image = self._stage1_generate_image(
+            auxiliary_image, stage1_image_path = self._stage1_generate_image(
                 prompt=generation_prompt,
                 original_image=original_image,
                 doc_id=doc_id,
@@ -431,6 +457,23 @@ class NanoBananaVisualCoT(lmms):
                 auxiliary_image=auxiliary_image,
                 doc_id=doc_id,
             )
+
+            # Save metadata if intermediate saving is enabled
+            if self.save_intermediate:
+                task_dir = os.path.join(self.intermediate_dir, task)
+                os.makedirs(task_dir, exist_ok=True)
+                metadata = {
+                    "doc_id": doc_id,
+                    "task": task,
+                    "generation_prompt": generation_prompt,
+                    "generated_images": [stage1_image_path] if stage1_image_path else [],
+                    "question": question,
+                    "stage2_answer": answer,
+                }
+                metadata_path = os.path.join(task_dir, f"{doc_id}_metadata.json")
+                with open(metadata_path, "w", encoding="utf-8") as f:
+                    json.dump(metadata, f, ensure_ascii=False, indent=2)
+                eval_logger.debug(f"Saved metadata to {metadata_path}")
 
             res.append(answer)
             pbar.update(1)

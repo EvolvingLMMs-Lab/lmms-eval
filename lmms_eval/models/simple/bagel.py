@@ -419,14 +419,17 @@ class Bagel(lmms):
         output_text = result.get("text", "")
         return output_text
 
-    def generate_text_and_image(self, prompt: str, doc_id: str, task: str) -> Tuple[str, List[str]]:
+    def generate_text_and_image(
+        self, prompt: str, doc_id: str, task: str, image=None
+    ) -> Tuple[str, List[str]]:
         """
-        Generate text and image from prompt
+        Generate text and image from prompt (optionally conditioned on input image)
 
         Args:
             prompt: Input text prompt
             doc_id: Document ID for file naming
             task: Task name for file naming
+            image: Optional input image for image-to-image generation
 
         Returns:
             Tuple of (generated_text, list_of_image_paths)
@@ -447,8 +450,13 @@ class Bagel(lmms):
             "image_shapes": self.image_shapes,
         }
 
-        # Generate
-        result = self.inferencer(text=prompt, think=self.show_thinking, **inference_hyper)
+        # Generate with optional input image
+        if image is not None:
+            result = self.inferencer(
+                image=image, text=prompt, think=self.show_thinking, **inference_hyper
+            )
+        else:
+            result = self.inferencer(text=prompt, think=self.show_thinking, **inference_hyper)
 
         # Extract text
         output_text = result.get("text", "")

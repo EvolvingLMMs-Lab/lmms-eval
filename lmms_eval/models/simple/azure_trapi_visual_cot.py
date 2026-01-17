@@ -42,13 +42,14 @@ from lmms_eval.api.registry import register_model
 NUM_SECONDS_TO_SLEEP = 5
 
 
-def build_client():
-    """Build Azure OpenAI client"""
+def build_client(api_version: str = None):
+    """Build Azure OpenAI client with specified API version"""
     endpoint = os.getenv(
         "AZURE_OPENAI_ENDPOINT",
         "https://mcg-vision-flow-oai-eus2.openai.azure.com/",
     )
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    if api_version is None:
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
 
     # Try API key first, fall back to Azure CLI credential
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
@@ -133,11 +134,15 @@ class AzureTRAPIVisualCoT(lmms):
             os.makedirs(self.intermediate_dir, exist_ok=True)
             eval_logger.info(f"Intermediate artifacts will be saved under: {self.intermediate_dir}")
 
-        # Build client
-        eval_logger.info("Building Azure OpenAI client...")
-        self.client = build_client()
+        # Build clients - separate clients for chat and image APIs due to different API versions
+        eval_logger.info("Building Azure OpenAI clients...")
+        # Chat client uses default API version
+        self.chat_client = build_client()
+        # Image client uses newer API version required by gpt-image-1
+        image_api_version = os.getenv("AZURE_IMAGE_API_VERSION", "2025-04-01-preview")
+        self.image_client = build_client(api_version=image_api_version)
         eval_logger.info(f"Chat deployment: {self.chat_deployment}")
-        eval_logger.info(f"Image deployment: {self.image_deployment}")
+        eval_logger.info(f"Image deployment: {self.image_deployment} (API version: {image_api_version})")
 
         # Caching
         self.continual_mode = continual_mode
@@ -182,31 +187,57 @@ class AzureTRAPIVisualCoT(lmms):
 
     def _stage1_generate_image(
         self, prompt: str, original_image: Optional[Image.Image], doc_id: str, task: str
-    ) -> Optional[Image.Image]:
+    ) -> Tuple[Optional[Image.Image], Optional[str]]:
         """
         Stage 1: Generate auxiliary image using gpt-image-1
 
+        Uses images.edit API when original_image is provided for image-to-image generation.
+        Falls back to images.generate when no original image is available.
+
         Args:
             prompt: Generation prompt
-            original_image: Original image (for context, if model supports it)
+            original_image: Original image for image-to-image editing
             doc_id: Document ID for naming
             task: Task name
 
         Returns:
-            Generated PIL Image or None if failed
+            Tuple of (Generated PIL Image, save_path) or (None, None) if failed
         """
         eval_logger.debug(f"Stage 1 - Generating image for doc {doc_id}")
 
         for attempt in range(self.max_retries):
             try:
-                # Call image generation API
-                response = self.client.images.generate(
-                    model=self.image_deployment,
-                    prompt=prompt,
-                    size=self.stage1_image_size,
-                    quality=self.stage1_quality,
-                    n=1,
-                )
+                if original_image is not None:
+                    # Use images.edit API for image-to-image generation
+                    eval_logger.debug("Stage 1 - Using images.edit with original image")
+
+                    # Convert PIL Image to bytes for the API
+                    img_buffer = BytesIO()
+                    # Ensure RGB mode for PNG
+                    if original_image.mode not in ("RGB", "RGBA"):
+                        original_image = original_image.convert("RGB")
+                    original_image.save(img_buffer, format="PNG")
+                    img_buffer.seek(0)
+                    # Set name attribute so API can detect MIME type
+                    img_buffer.name = "image.png"
+
+                    response = self.image_client.images.edit(
+                        model=self.image_deployment,
+                        image=img_buffer,
+                        prompt=prompt,
+                        size=self.stage1_image_size,
+                        n=1,
+                    )
+                else:
+                    # Fall back to images.generate when no original image
+                    eval_logger.debug("Stage 1 - Using images.generate (no original image)")
+                    response = self.image_client.images.generate(
+                        model=self.image_deployment,
+                        prompt=prompt,
+                        size=self.stage1_image_size,
+                        quality=self.stage1_quality,
+                        n=1,
+                    )
 
                 # Get image - try URL first, then base64
                 image_data = response.data[0]
@@ -221,6 +252,7 @@ class AzureTRAPIVisualCoT(lmms):
                     raise ValueError("No image URL or base64 data in response")
 
                 # Save if enabled
+                save_path = None
                 if self.save_intermediate:
                     # Create task-specific directory
                     task_dir = os.path.join(self.intermediate_dir, task)
@@ -229,7 +261,7 @@ class AzureTRAPIVisualCoT(lmms):
                     generated_image.save(save_path)
                     eval_logger.debug(f"Saved generated image to {save_path}")
 
-                return generated_image
+                return generated_image, save_path
 
             except Exception as e:
                 eval_logger.warning(
@@ -239,7 +271,7 @@ class AzureTRAPIVisualCoT(lmms):
                     time.sleep(NUM_SECONDS_TO_SLEEP)
 
         eval_logger.error(f"Stage 1 failed for doc {doc_id}")
-        return None
+        return None, None
 
     def _stage2_answer(
         self,
@@ -289,7 +321,7 @@ class AzureTRAPIVisualCoT(lmms):
 
         for attempt in range(self.max_retries):
             try:
-                response = self.client.chat.completions.create(
+                response = self.chat_client.chat.completions.create(
                     model=self.chat_deployment,
                     messages=messages,
                     max_tokens=self.stage2_max_tokens,
@@ -350,7 +382,7 @@ class AzureTRAPIVisualCoT(lmms):
             eval_logger.info(f"Processing doc {doc_id} from task {task}")
 
             # Stage 1: Generate auxiliary image
-            auxiliary_image = self._stage1_generate_image(
+            auxiliary_image, stage1_image_path = self._stage1_generate_image(
                 prompt=generation_prompt,
                 original_image=original_image,
                 doc_id=doc_id,
@@ -364,6 +396,23 @@ class AzureTRAPIVisualCoT(lmms):
                 auxiliary_image=auxiliary_image,
                 doc_id=doc_id,
             )
+
+            # Save metadata if intermediate saving is enabled
+            if self.save_intermediate:
+                task_dir = os.path.join(self.intermediate_dir, task)
+                os.makedirs(task_dir, exist_ok=True)
+                metadata = {
+                    "doc_id": doc_id,
+                    "task": task,
+                    "generation_prompt": generation_prompt,
+                    "generated_images": [stage1_image_path] if stage1_image_path else [],
+                    "question": question,
+                    "stage2_answer": answer,
+                }
+                metadata_path = os.path.join(task_dir, f"{doc_id}_metadata.json")
+                with open(metadata_path, "w", encoding="utf-8") as f:
+                    json.dump(metadata, f, ensure_ascii=False, indent=2)
+                eval_logger.debug(f"Saved metadata to {metadata_path}")
 
             res.append(answer)
             pbar.update(1)
