@@ -249,7 +249,7 @@ Evaluate the candidate. Output JSON only."""
                         {"role": "user", "content": text_user},
                     ],
                     temperature=0.0,
-                    max_tokens=512,
+                    max_completion_tokens=512,
                 )
                 response_text = response.choices[0].message.content
                 result_json = _find_first_json_substring(response_text)
