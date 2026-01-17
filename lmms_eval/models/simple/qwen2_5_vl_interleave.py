@@ -22,12 +22,16 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
-    eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
+process_vision_info, _has_qwen_vl = optional_import(
+    "qwen_vl_utils", "process_vision_info"
+)
+if not _has_qwen_vl:
+    eval_logger.warning(
+        "Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`"
+    )
 
 
 @register_model("qwen2_5_vl_interleave")
@@ -49,8 +53,12 @@ class Qwen2_5_VL_Interleave(lmms):
         max_pixels: int = 256 * 28 * 28,
         max_num_frames: int = 32,
         use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
-        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
+        fps: Optional[
+            float
+        ] = None,  # Only applicable if use_custom_video_loader is True
+        max_image_size: Optional[
+            int
+        ] = None,  # Only applicable if use_custom_video_loader is True
         **kwargs,
     ) -> None:
         super().__init__()
@@ -84,11 +92,15 @@ class Qwen2_5_VL_Interleave(lmms):
                 attn_implementation="flash_attention_2",
             ).eval()
         else:
-            self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
+            self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                pretrained, torch_dtype="auto", device_map=self.device_map
+            ).eval()
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
-        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
+        self.processor = AutoProcessor.from_pretrained(
+            pretrained, max_pixels=max_pixels, min_pixels=min_pixels
+        )
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
 
         self._config = self.model.config
@@ -103,10 +115,14 @@ class Qwen2_5_VL_Interleave(lmms):
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
+                self._model = accelerator.prepare_model(
+                    self.model, evaluation_mode=True
+                )
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
+                eval_logger.info(
+                    f"Using {accelerator.num_processes} devices with data parallelism"
+                )
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -198,11 +214,15 @@ class Qwen2_5_VL_Interleave(lmms):
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
+        )
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
+        re_ords = utils.Collator(
+            [reg.args for reg in requests], _collate, grouping=True
+        )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
@@ -218,7 +238,10 @@ class Qwen2_5_VL_Interleave(lmms):
             #             res.extend(content)
             #             pbar.update(1)
             #             continue
-            visuals = [doc_to_visual[i](self.task_dict[task][split][ids]) for i, ids in enumerate(doc_id)]
+            visuals = [
+                doc_to_visual[i](self.task_dict[task][split][ids])
+                for i, ids in enumerate(doc_id)
+            ]
 
             gen_kwargs = all_gen_kwargs[0]
 
@@ -231,7 +254,9 @@ class Qwen2_5_VL_Interleave(lmms):
                 if isinstance(until, str):
                     until = [until]
                 elif not isinstance(until, list):
-                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}")
+                    raise ValueError(
+                        f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until)}"
+                    )
 
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
@@ -259,7 +284,9 @@ class Qwen2_5_VL_Interleave(lmms):
                 else:
                     context = [context]
 
-                message = [{"role": "system", "content": "You are a helpful assistant."}]
+                message = [
+                    {"role": "system", "content": "You are a helpful assistant."}
+                ]
 
                 if len(visuals) > 0:
                     visual = visuals[i] if i < len(visuals) else None
@@ -267,9 +294,13 @@ class Qwen2_5_VL_Interleave(lmms):
                     if isinstance(visual, Image.Image):
                         visual = [visual]
                     if isinstance(visual, (list, tuple)) and isinstance(visual[0], str):
-                        assert len(visual) == 1, f"Expected a single video file but got {len(visual)} files"
+                        assert (
+                            len(visual) == 1
+                        ), f"Expected a single video file but got {len(visual)} files"
                         visual = visual[0]
-                    if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                    if isinstance(visual, str) and visual.endswith(
+                        (".mp4", ".avi", ".mov")
+                    ):  # Video file
                         if self.use_custom_video_loader:
                             try:
                                 visual = read_video_pyav_base64(
@@ -280,22 +311,57 @@ class Qwen2_5_VL_Interleave(lmms):
                                     max_image_size=self.max_image_size,
                                 )
                             except Exception as e:
-                                eval_logger.error(f"Failed to load video: {visual}. Error: {e}")
+                                eval_logger.error(
+                                    f"Failed to load video: {visual}. Error: {e}"
+                                )
                                 continue
 
-                            image_contents = list(map(lambda x: f"data:image/jpeg;base64,{x}", visual))
+                            image_contents = list(
+                                map(lambda x: f"data:image/jpeg;base64,{x}", visual)
+                            )
                             if len(context) == 2:
                                 if len(image_contents) == 1:
                                     message.append(
                                         {
                                             "role": "user",
-                                            "content": [{"type": "video", "video": image_contents[:-1]}, {"type": "text", "text": context[0]}, {"type": "image", "image": image_contents[-1]}, {"type": "text", "text": context[1]}],
+                                            "content": [
+                                                {
+                                                    "type": "video",
+                                                    "video": image_contents[:-1],
+                                                },
+                                                {"type": "text", "text": context[0]},
+                                                {
+                                                    "type": "image",
+                                                    "image": image_contents[-1],
+                                                },
+                                                {"type": "text", "text": context[1]},
+                                            ],
                                         }
                                     )
                                 else:
-                                    message.append({"role": "user", "content": [{"type": "text", "text": context[0]}, {"type": "image", "image": image_contents[-1]}, {"type": "text", "text": context[1]}]})
+                                    message.append(
+                                        {
+                                            "role": "user",
+                                            "content": [
+                                                {"type": "text", "text": context[0]},
+                                                {
+                                                    "type": "image",
+                                                    "image": image_contents[-1],
+                                                },
+                                                {"type": "text", "text": context[1]},
+                                            ],
+                                        }
+                                    )
                             else:
-                                message.append({"role": "user", "content": [{"type": "video", "video": image_contents}, {"type": "text", "text": context}]})
+                                message.append(
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {"type": "video", "video": image_contents},
+                                            {"type": "text", "text": context},
+                                        ],
+                                    }
+                                )
                             # with open("alb.json", "w") as f:
                             #     json.dump(message, f, indent=4)
                         else:
@@ -303,15 +369,40 @@ class Qwen2_5_VL_Interleave(lmms):
                             first_frame = vr[0].asnumpy()
                             height, width = first_frame.shape[:2]
                             # max_pixels = height * width
-                            message.append({"role": "user", "content": [{"type": "video", "video": visual, "max_pixels": self.max_pixels}, {"type": "text", "text": context}]})
+                            message.append(
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "video",
+                                            "video": visual,
+                                            "max_pixels": self.max_pixels,
+                                        },
+                                        {"type": "text", "text": context},
+                                    ],
+                                }
+                            )
                     elif isinstance(visual, Image.Image):  # Single image
                         base64_image = visual.convert("RGB")
                         buffer = BytesIO()
                         base64_image.save(buffer, format="JPEG")
                         base64_bytes = base64.b64encode(buffer.getvalue())
                         base64_string = base64_bytes.decode("utf-8")
-                        message.append({"role": "user", "content": [{"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"}, {"type": "text", "text": context}]})
-                    elif isinstance(visual, (list, tuple)) and all(isinstance(v, Image.Image) for v in visual):  # Multiple images
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "image",
+                                        "image": f"data:image/jpeg;base64,{base64_string}",
+                                    },
+                                    {"type": "text", "text": context},
+                                ],
+                            }
+                        )
+                    elif isinstance(visual, (list, tuple)) and all(
+                        isinstance(v, Image.Image) for v in visual
+                    ):  # Multiple images
                         image_content = []
                         i = 0
                         for v in visual:
@@ -320,11 +411,18 @@ class Qwen2_5_VL_Interleave(lmms):
                             base64_image.save(buffer, format="JPEG")
                             base64_bytes = base64.b64encode(buffer.getvalue())
                             base64_string = base64_bytes.decode("utf-8")
-                            image_content.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}"})
+                            image_content.append(
+                                {
+                                    "type": "image",
+                                    "image": f"data:image/jpeg;base64,{base64_string}",
+                                }
+                            )
                             v.save(f"test_{i}.jpg")
                             i += 1
                         # message.append({"role": "user", "content": image_content + [{"type": "text", "text": context}]})
-                        assert len(image_content) + 1 == len(context), f"Number of images and context do not match, {len(image_content)} images and {len(context)} context\n{json.dumps(context)}"
+                        assert (
+                            len(image_content) + 1 == len(context)
+                        ), f"Number of images and context do not match, {len(image_content)} images and {len(context)} context\n{json.dumps(context)}"
                         content = []
                         for i in range(len(image_content)):
                             content.append({"type": "text", "text": context[i]})
@@ -332,14 +430,26 @@ class Qwen2_5_VL_Interleave(lmms):
                         content.append({"type": "text", "text": context[-1]})
                         # print("content", content)
                     else:
-                        message.append({"role": "user", "content": [{"type": "text", "text": context}]})
+                        message.append(
+                            {
+                                "role": "user",
+                                "content": [{"type": "text", "text": context}],
+                            }
+                        )
                 else:
-                    message.append({"role": "user", "content": [{"type": "text", "text": context}]})
+                    message.append(
+                        {"role": "user", "content": [{"type": "text", "text": context}]}
+                    )
 
                 messages.append(message)
             # print(messages)
 
-            texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
+            texts = [
+                self.processor.apply_chat_template(
+                    msg, tokenize=False, add_generation_prompt=True
+                )
+                for msg in messages
+            ]
             image_inputs, video_inputs = process_vision_info(messages)
 
             inputs = self.processor(
@@ -380,8 +490,15 @@ class Qwen2_5_VL_Interleave(lmms):
             )
             # cont = self.model.generate(**inputs, max_new_tokens=1024)
 
-            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            generated_ids_trimmed = [
+                out_ids[len(in_ids) :]
+                for in_ids, out_ids in zip(inputs.input_ids, cont)
+            ]
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
             for i, ans in enumerate(answers):
                 answers[i] = ans
 
@@ -389,7 +506,9 @@ class Qwen2_5_VL_Interleave(lmms):
             for ans, context in zip(answers, contexts):
                 res.append(ans)
                 content.append(ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
+                self.cache_hook.add_partial(
+                    "generate_until", (context, gen_kwargs), ans
+                )
                 pbar.update(1)
             # reorder this group of results back to original unsorted form
 
