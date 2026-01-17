@@ -1,9 +1,61 @@
+import sys
+
+# Early TUI detection - before heavy imports
+if "--tui" in sys.argv:
+    try:
+        from lmms_eval.tui.cli import main as tui_main
+
+        tui_main()
+        sys.exit(0)
+    except ImportError as e:
+        print(
+            "TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]"
+        )
+        print(f"Error: {e}")
+        sys.exit(1)
+
+# Show quick help when no args provided (before heavy imports)
+if len(sys.argv) == 1:
+    print(
+        "┌───────────────────────────────────────────────────────────────────────────────┐"
+    )
+    print(
+        "│ LMMs-Eval: Evaluation framework for Large Multimodal Models                   │"
+    )
+    print(
+        "├───────────────────────────────────────────────────────────────────────────────┤"
+    )
+    print(
+        "│ Usage:                                                                        │"
+    )
+    print(
+        "│   lmms-eval --model MODEL --tasks TASKS [options]                             │"
+    )
+    print(
+        "│   lmms-eval --tui              # Interactive TUI mode                         │"
+    )
+    print(
+        "│   lmms-eval --help             # Full help                                    │"
+    )
+    print(
+        "├───────────────────────────────────────────────────────────────────────────────┤"
+    )
+    print(
+        "│ Example:                                                                      │"
+    )
+    print(
+        "│   lmms-eval --model llava --tasks mme --batch_size 1                          │"
+    )
+    print(
+        "└───────────────────────────────────────────────────────────────────────────────┘"
+    )
+    sys.exit(0)
+
 import argparse
 import datetime
 import importlib
 import json
 import os
-import sys
 import traceback
 import warnings
 from functools import partial
@@ -34,7 +86,9 @@ from lmms_eval.utils import (
 )
 
 
-def _int_or_none_list_arg_type(min_len: int, max_len: int, defaults: str, value: str, split_char: str = ","):
+def _int_or_none_list_arg_type(
+    min_len: int, max_len: int, defaults: str, value: str, split_char: str = ","
+):
     def parse_value(item):
         item = item.strip().lower()
         if item == "none":
@@ -51,11 +105,18 @@ def _int_or_none_list_arg_type(min_len: int, max_len: int, defaults: str, value:
         # Makes downstream handling the same for single and multiple values
         items = items * max_len
     elif num_items < min_len or num_items > max_len:
-        raise argparse.ArgumentTypeError(f"Argument requires {max_len} integers or None, separated by '{split_char}'")
+        raise argparse.ArgumentTypeError(
+            f"Argument requires {max_len} integers or None, separated by '{split_char}'"
+        )
     elif num_items != max_len:
-        logging.warning(f"Argument requires {max_len} integers or None, separated by '{split_char}'. " "Missing values will be filled with defaults.")
+        logging.warning(
+            f"Argument requires {max_len} integers or None, separated by '{split_char}'. "
+            "Missing values will be filled with defaults."
+        )
         default_items = [parse_value(v) for v in defaults.split(split_char)]
-        items.extend(default_items[num_items:])  # extend items list with missing defaults
+        items.extend(
+            default_items[num_items:]
+        )  # extend items list with missing defaults
 
     return items
 
@@ -67,7 +128,9 @@ def check_argument_types(parser: argparse.ArgumentParser):
     for action in parser._actions:
         if action.dest != "help" and not action.const:
             if action.type is None:
-                raise ValueError(f"Argument '{action.dest}' doesn't have a type specified.")
+                raise ValueError(
+                    f"Argument '{action.dest}' doesn't have a type specified."
+                )
             else:
                 continue
 
@@ -83,7 +146,11 @@ def _handle_non_serializable(o):
 
 def parse_eval_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--config", default="", help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified")
+    parser.add_argument(
+        "--config",
+        default="",
+        help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified",
+    )
     parser.add_argument("--model", default="hf", help="Name of model e.g. `hf`")
     parser.add_argument(
         "--tasks",
@@ -138,7 +205,8 @@ def parse_eval_args() -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help="Limit the number of examples per task. " "If <1, limit is a percentage of the total number of examples.",
+        help="Limit the number of examples per task. "
+        "If <1, limit is a percentage of the total number of examples.",
     )
     parser.add_argument(
         "--use_cache",
@@ -220,7 +288,10 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "--gen_kwargs",
         default="",
-        help=("String arguments for model generation on greedy_until tasks," " e.g. `temperature=0,top_k=0,top_p=0`"),
+        help=(
+            "String arguments for model generation on greedy_until tasks,"
+            " e.g. `temperature=0,top_k=0,top_p=0`"
+        ),
     )
     parser.add_argument(
         "--verbosity",
@@ -272,22 +343,28 @@ def parse_eval_args() -> argparse.Namespace:
         action="store_true",
         help="Sets trust_remote_code to True to execute code to create HF Datasets from the Hub",
     )
-    parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
-    parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
+    parser.add_argument(
+        "--process_with_media",
+        action="store_true",
+        help="Whether you will process you dataset with audio, image. By default set to False"
+        "In case some benchmarks need to be processed with media, set this flag to True.",
+    )
+    parser.add_argument(
+        "--force_simple",
+        action="store_true",
+        help="Force the evaluation to use the simple mode of the models",
+    )
+    parser.add_argument(
+        "--tui",
+        action="store_true",
+        help="Launch interactive TUI mode for configuration",
+    )
     args = parser.parse_args()
     return args
 
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     default_args = parse_eval_args()
-
-    if args is None and len(sys.argv) == 1:
-        print("┌───────────────────────────────────────────────────────────────────────────────┐")
-        print("│ Please provide arguments to evaluate the model. e.g.                          │")
-        print("│ `lmms-eval --model llava --model_path liuhaotian/llava-v1.6-7b --tasks okvqa` │")
-        print("│ Use `lmms-eval --help` for more information.                                  │")
-        print("└───────────────────────────────────────────────────────────────────────────────┘")
-        sys.exit(1)
 
     # If args were provided, override the defaults
     if args:
@@ -306,7 +383,12 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     # reset logger
     eval_logger.remove()
     # Configure logger with detailed format including file path, function name, and line number
-    log_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | " "<level>{level: <8}</level> | " "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - " "<level>{message}</level>"
+    log_format = (
+        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+        "<level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+        "<level>{message}</level>"
+    )
     eval_logger.add(sys.stdout, colorize=True, level=args.verbosity, format=log_format)
     eval_logger.info(f"Verbosity set to {args.verbosity}")
     os.environ["VERBOSITY"] = args.verbosity
@@ -334,7 +416,9 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         accelerator = None
         is_main_process = torch.distributed.get_rank() == 0
     else:
-        kwargs_handler = InitProcessGroupKwargs(timeout=datetime.timedelta(seconds=60000))
+        kwargs_handler = InitProcessGroupKwargs(
+            timeout=datetime.timedelta(seconds=60000)
+        )
         accelerator = Accelerator(kwargs_handlers=[kwargs_handler])
         if accelerator.is_main_process:
             is_main_process = True
@@ -351,7 +435,9 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
 
             if accelerator:
                 accelerator.wait_for_everyone()
-            elif torch.distributed.is_available() and torch.distributed.is_initialized():
+            elif (
+                torch.distributed.is_available() and torch.distributed.is_initialized()
+            ):
                 torch.distributed.barrier()
             if is_main_process and args.wandb_args:
                 try:
@@ -368,13 +454,18 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                 raise e
             else:
                 traceback.print_exc()
-                eval_logger.error(f"Error during evaluation: {e}. Please set `--verbosity=DEBUG` to get more information.")
+                eval_logger.error(
+                    f"Error during evaluation: {e}. Please set `--verbosity=DEBUG` to get more information."
+                )
                 results_list.append(None)
 
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
-            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(
+                f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, "
+                f"batch_size: {args.batch_size}"
+            )
             print(make_table(results))
             if "groups" in results:
                 print(make_table(results, "groups"))
@@ -388,7 +479,9 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
     if args.include_path is not None:
         eval_logger.info(f"Including path: {args.include_path}")
-    task_manager = TaskManager(args.verbosity, include_path=args.include_path, model_name=args.model)
+    task_manager = TaskManager(
+        args.verbosity, include_path=args.include_path, model_name=args.model
+    )
 
     # update the evaluation tracker args with the output path and the HF token
     if args.output_path:
@@ -412,43 +505,68 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     if args.predict_only:
         args.log_samples = True
     if (args.log_samples or args.predict_only) and not args.output_path:
-        raise ValueError("Specify --output_path if providing --log_samples or --predict_only")
+        raise ValueError(
+            "Specify --output_path if providing --log_samples or --predict_only"
+        )
 
     if args.fewshot_as_multiturn and args.apply_chat_template is False:
-        raise ValueError("If fewshot_as_multiturn is set, apply_chat_template must be set to True.")
+        raise ValueError(
+            "If fewshot_as_multiturn is set, apply_chat_template must be set to True."
+        )
 
-    if (args.num_fewshot is None or args.num_fewshot == 0) and args.fewshot_as_multiturn:
-        raise ValueError("If fewshot_as_multiturn is set, num_fewshot must be greater than 0.")
+    if (
+        args.num_fewshot is None or args.num_fewshot == 0
+    ) and args.fewshot_as_multiturn:
+        raise ValueError(
+            "If fewshot_as_multiturn is set, num_fewshot must be greater than 0."
+        )
 
     if args.include_path is not None:
         eval_logger.info(f"Including path: {args.include_path}")
 
     if "push_samples_to_hub" in evaluation_tracker_args and not args.log_samples:
-        eval_logger.warning("Pushing samples to the Hub requires --log_samples to be set. Samples will not be pushed to the Hub.")
+        eval_logger.warning(
+            "Pushing samples to the Hub requires --log_samples to be set. Samples will not be pushed to the Hub."
+        )
 
     if args.limit:
-        eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
+        eval_logger.warning(
+            " --limit SHOULD ONLY BE USED FOR TESTING."
+            "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT."
+        )
 
     if os.environ.get("LMMS_EVAL_PLUGINS", None):
         args.include_path = [args.include_path] if args.include_path else []
         for plugin in os.environ["LMMS_EVAL_PLUGINS"].split(","):
-            package_tasks_location = importlib.util.find_spec(f"{plugin}.tasks").submodule_search_locations[0]
+            package_tasks_location = importlib.util.find_spec(
+                f"{plugin}.tasks"
+            ).submodule_search_locations[0]
             args.include_path.append(package_tasks_location)
 
     if args.tasks is None:
         eval_logger.error("Need to specify task to evaluate.")
         sys.exit()
     elif args.tasks == "list":
-        eval_logger.info("Available Tasks:\n - {}".format(f"\n - ".join(sorted(task_manager.all_tasks))))
+        eval_logger.info(
+            "Available Tasks:\n - {}".format(
+                f"\n - ".join(sorted(task_manager.all_tasks))
+            )
+        )
         sys.exit()
     elif args.tasks == "list_groups":
-        eval_logger.info(task_manager.list_all_tasks(list_subtasks=False, list_tags=False))
+        eval_logger.info(
+            task_manager.list_all_tasks(list_subtasks=False, list_tags=False)
+        )
         sys.exit()
     elif args.tasks == "list_tags":
-        eval_logger.info(task_manager.list_all_tasks(list_groups=False, list_subtasks=False))
+        eval_logger.info(
+            task_manager.list_all_tasks(list_groups=False, list_subtasks=False)
+        )
         sys.exit()
     elif args.tasks == "list_subtasks":
-        eval_logger.info(task_manager.list_all_tasks(list_groups=False, list_tags=False))
+        eval_logger.info(
+            task_manager.list_all_tasks(list_groups=False, list_tags=False)
+        )
         sys.exit()
     else:
         if os.path.isdir(args.tasks):
@@ -466,19 +584,24 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
                 if os.path.isfile(task):
                     config = utils.load_yaml_config(task)
                     task_names.append(config)
-            task_missing = [task for task in task_list if task not in task_names and "*" not in task]  # we don't want errors if a wildcard ("*") task name was used
+            task_missing = [
+                task for task in task_list if task not in task_names and "*" not in task
+            ]  # we don't want errors if a wildcard ("*") task name was used
 
             if task_missing:
                 missing = ", ".join(task_missing)
                 eval_logger.error(
-                    f"Tasks were not found: {missing}\n" f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
+                    f"Tasks were not found: {missing}\n"
+                    f"{utils.SPACING}Try `lmms-eval --tasks list` for list of available tasks",
                 )
                 raise ValueError(
                     f"Tasks not found: {missing}. Try `lmms-eval --tasks {{list_groups,list_subtasks,list_tags,list}}` to list out all available names for task groupings; only (sub)tasks; tags; or all of the above, or pass '--verbosity DEBUG' to troubleshoot task registration issues."
                 )
 
     eval_logger.info(f"Selected Tasks: {task_names}")
-    request_caching_args = request_caching_arg_to_dict(cache_requests=args.cache_requests)
+    request_caching_args = request_caching_arg_to_dict(
+        cache_requests=args.cache_requests
+    )
     datetime_str = utils.get_datetime_str(timezone=args.timezone)
 
     results = evaluator.simple_evaluate(
@@ -508,7 +631,9 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         fewshot_random_seed=args.seed[3],
         cli_args=args,
         datetime_str=datetime_str,
-        distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
+        distributed_executor_backend="torchrun"
+        if (torch.distributed.is_available() and torch.distributed.is_initialized())
+        else "accelerate",
         force_simple=args.force_simple,
         launcher_args=args.launcher_args,
         **request_caching_args,
@@ -525,13 +650,22 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
         batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
 
-        evaluation_tracker.save_results_aggregated(results=results, samples=samples if args.log_samples else None, datetime_str=datetime_str)
+        evaluation_tracker.save_results_aggregated(
+            results=results,
+            samples=samples if args.log_samples else None,
+            datetime_str=datetime_str,
+        )
 
         if args.log_samples:
             for task_name, config in results["configs"].items():
-                evaluation_tracker.save_results_samples(task_name=task_name, samples=samples[task_name])
+                evaluation_tracker.save_results_samples(
+                    task_name=task_name, samples=samples[task_name]
+                )
 
-        if evaluation_tracker.push_results_to_hub or evaluation_tracker.push_samples_to_hub:
+        if (
+            evaluation_tracker.push_results_to_hub
+            or evaluation_tracker.push_samples_to_hub
+        ):
             evaluation_tracker.recreate_metadata_card()
 
         return results, samples
@@ -539,7 +673,9 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def print_results(args, results):
-    print(f"{args.model} ({args.model_args}),\ngen_kwargs: ({args.gen_kwargs}),\nlimit: {args.limit},\nnum_fewshot: {args.num_fewshot},\nbatch_size: {args.batch_size}")
+    print(
+        f"{args.model} ({args.model_args}),\ngen_kwargs: ({args.gen_kwargs}),\nlimit: {args.limit},\nnum_fewshot: {args.num_fewshot},\nbatch_size: {args.batch_size}"
+    )
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))

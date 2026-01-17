@@ -7,7 +7,9 @@ lm_cache
 .idea
 build
 dist
+!lmms_eval/tui/web/dist
 *.egg-info
+node_modules/
 venv
 .vscode/
 temp
@@ -51,3 +53,4 @@ uv.lock
 workspace/*
 .claude/*
 remote_code/*
+docs/plans/

@@ -339,7 +339,12 @@ def mean_stderr(arr):
 @register_metric(
     metric="bypass",
     higher_is_better=True,
-    output_type=["loglikelihood", "multiple_choice", "generate_until", "generate_until_multi_round"],
+    output_type=[
+        "loglikelihood",
+        "multiple_choice",
+        "generate_until",
+        "generate_until_multi_round",
+    ],
     aggregation="bypass",
 )
 def bypass(items):
@@ -550,19 +555,6 @@ def stderr_for_metric(metric, bootstrap_iters: int):
     if bootstrap_iters <= 0:
         # return no function (don't compute stderr) if bootstrap iters = 0
         return None
-    # for coco_cap_chair
-    # for amber_g
-    from lmms_eval.tasks.amber_g.utils import (
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cog,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-    )
-    from lmms_eval.tasks.coco_cap_chair.utils import (
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-    )
 
     bootstrappable = [
         median,
@@ -572,14 +564,44 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         bleu,
         chrf,
         ter,
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-        amber_g_aggregate_cog,
     ]
+
+    # Optional imports for tasks with extra dependencies (spacy, etc.)
+    try:
+        from lmms_eval.tasks.amber_g.utils import (
+            amber_g_aggregate_chair,
+            amber_g_aggregate_cog,
+            amber_g_aggregate_cover,
+            amber_g_aggregate_hal,
+        )
+
+        bootstrappable.extend(
+            [
+                amber_g_aggregate_chair,
+                amber_g_aggregate_cover,
+                amber_g_aggregate_hal,
+                amber_g_aggregate_cog,
+            ]
+        )
+    except ImportError:
+        pass
+
+    try:
+        from lmms_eval.tasks.coco_cap_chair.utils import (
+            coco_cap_chair_aggregate_results_chair_i,
+            coco_cap_chair_aggregate_results_chair_s,
+            coco_cap_chair_aggregate_results_recall,
+        )
+
+        bootstrappable.extend(
+            [
+                coco_cap_chair_aggregate_results_chair_i,
+                coco_cap_chair_aggregate_results_chair_s,
+                coco_cap_chair_aggregate_results_recall,
+            ]
+        )
+    except ImportError:
+        pass
 
     if metric in bootstrappable:
         return lambda x: bootstrap_stderr(metric, x, iters=bootstrap_iters)
