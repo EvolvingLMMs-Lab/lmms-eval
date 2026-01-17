@@ -51,6 +51,8 @@ AVAILABLE_SIMPLE_MODELS = {
     "minimonkey": "MiniMonkey",
     "moviechat": "MovieChat",
     "mplug_owl_video": "mplug_Owl",
+    "nano_banana": "NanoBanana",
+    "nano_banana_visual_cot": "NanoBananaVisualCoT",
     "ola": "Ola",
     "openai_compatible": "OpenAICompatible",
     "oryx": "Oryx",

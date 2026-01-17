@@ -186,6 +186,12 @@ def auxsolidmath_process_results(doc: Dict, results: List[str]) -> Dict[str, flo
     """
     result_text = results[0] if results else ""
 
+    # Truncate to last 50000 characters to avoid token limit issues
+    # Keep the end since answers are usually at the end
+    MAX_RESULT_CHARS = 50000
+    if len(result_text) > MAX_RESULT_CHARS:
+        result_text = "...[truncated]...\n" + result_text[-MAX_RESULT_CHARS:]
+
     # Default scores
     text_acc = 0.0
 
