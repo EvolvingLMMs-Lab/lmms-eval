@@ -15,8 +15,8 @@ from lmms_eval.protocol import ChatMessages
 
 LLM, _ = optional_import("vllm", "LLM")
 SamplingParams, _ = optional_import("vllm", "SamplingParams")
-
-from qwen_vl_utils import fetch_video, process_vision_info
+fetch_video, _ = optional_import("qwen_vl_utils", "fetch_video")
+process_vision_info, _ = optional_import("qwen_vl_utils", "process_vision_info")
 
 WORKERS = int(os.getenv("WORKERS", "32"))
 
