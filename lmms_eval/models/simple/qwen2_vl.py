@@ -17,16 +17,12 @@ from transformers import AutoProcessor, AutoTokenizer, Qwen2VLForConditionalGene
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.load_video import load_video_decord
 
-process_vision_info, _has_qwen_vl = optional_import(
-    "qwen_vl_utils", "process_vision_info"
-)
-if not _has_qwen_vl:
-    eval_logger.warning(
-        "Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`"
-    )
+try:
+    from qwen_vl_utils import process_vision_info
+except ImportError:
+    eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
 @register_model("qwen2_vl")
@@ -75,12 +71,8 @@ class Qwen2_VL(lmms):
                 attn_implementation="flash_attention_2",
             ).eval()
         else:
-            self._model = Qwen2VLForConditionalGeneration.from_pretrained(
-                pretrained, torch_dtype="auto", device_map=self.device_map
-            ).eval()
-        self.processor = AutoProcessor.from_pretrained(
-            pretrained, max_pixels=max_pixels, min_pixels=min_pixels
-        )
+            self._model = Qwen2VLForConditionalGeneration.from_pretrained(pretrained, torch_dtype="auto", device_map=self.device_map).eval()
+        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_num_frames = max_num_frames
@@ -110,14 +102,10 @@ class Qwen2_VL(lmms):
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -154,9 +142,7 @@ class Qwen2_VL(lmms):
             try:
                 self._max_length = self.model.config.max_position_embeddings
             except AttributeError:
-                raise AttributeError(
-                    "'_max_length' was not initialized and could not be inferred from model config."
-                )
+                raise AttributeError("'_max_length' was not initialized and could not be inferred from model config.")
         return self._max_length
 
     @property
@@ -212,15 +198,11 @@ class Qwen2_VL(lmms):
                 return v
             return [v]
 
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
@@ -248,9 +230,7 @@ class Qwen2_VL(lmms):
                 elif isinstance(until_from_kwargs, list):
                     until = until_from_kwargs
                 else:
-                    raise ValueError(
-                        f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until_from_kwargs)}"
-                    )
+                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] but got {type(until_from_kwargs)}")
 
             if isinstance(contexts, tuple):
                 contexts = list(contexts)
@@ -276,28 +256,17 @@ class Qwen2_VL(lmms):
                 # Needs careful review based on doc_to_visual output structure
                 # For simplicity, assuming visual_list contains all visuals for the batch for now
                 # A more robust approach might map visuals back to their original context index.
-                relevant_visuals = visuals_per_doc[
-                    i
-                ]  # Placeholder: needs logic to get visuals for context 'i'
+                relevant_visuals = visuals_per_doc[i]  # Placeholder: needs logic to get visuals for context 'i'
 
                 for visual in relevant_visuals:
-                    if isinstance(visual, str) and visual.endswith(
-                        (".mp4", ".avi", ".mov")
-                    ):  # Video file
+                    if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                         try:
                             vr = decord.VideoReader(visual)
                             if len(vr) > 0:
                                 first_frame = vr[0].asnumpy()
                                 height, width = first_frame.shape[:2]
                                 # max_pixels = height * width # This seems incorrect, should use instance config
-                                processed_visuals.append(
-                                    {
-                                        "type": "video",
-                                        "video": visual,
-                                        "max_pixels": self.max_pixels,
-                                        "min_pixels": self.min_pixels,
-                                    }
-                                )
+                                processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                             else:
                                 eval_logger.warning(f"Skipping empty video: {visual}")
                         except Exception as e:
@@ -309,23 +278,14 @@ class Qwen2_VL(lmms):
                             base64_image.save(buffer, format="JPEG")
                             base64_bytes = base64.b64encode(buffer.getvalue())
                             base64_string = base64_bytes.decode("utf-8")
-                            processed_visuals.append(
-                                {
-                                    "type": "image",
-                                    "image": f"data:image/jpeg;base64,{base64_string}",
-                                    "max_pixels": self.max_pixels,
-                                    "min_pixels": self.min_pixels,
-                                }
-                            )
+                            processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                         except Exception as e:
                             eval_logger.error(f"Failed to process PIL image: {e}")
                     # Add handling for other potential visual types if necessary
 
                 if not self.interleave_visuals:
                     # Add all visuals first, then the text
-                    content_payload = processed_visuals + [
-                        {"type": "text", "text": current_context}
-                    ]
+                    content_payload = processed_visuals + [{"type": "text", "text": current_context}]
                     message.append(
                         {
                             "role": "user",
@@ -343,30 +303,20 @@ class Qwen2_VL(lmms):
                         try:
                             img_idx_match = re.search(r"<image (\d+)>", placeholder)
                             if img_idx_match:
-                                img_idx = (
-                                    int(img_idx_match.group(1)) - 1
-                                )  # 1-based index in text
+                                img_idx = int(img_idx_match.group(1)) - 1  # 1-based index in text
                                 # Map text index to available processed visuals
                                 if 0 <= img_idx < len(processed_visuals):
                                     content_parts.append(processed_visuals[img_idx])
                                 else:
-                                    eval_logger.warning(
-                                        f"Image index {img_idx + 1} out of range for available visuals ({len(processed_visuals)}) in context."
-                                    )
+                                    eval_logger.warning(f"Image index {img_idx + 1} out of range for available visuals ({len(processed_visuals)}) in context.")
                             else:
-                                eval_logger.warning(
-                                    f"Could not parse index from placeholder: {placeholder}"
-                                )
+                                eval_logger.warning(f"Could not parse index from placeholder: {placeholder}")
                         except Exception as e:
-                            eval_logger.error(
-                                f"Error processing placeholder {placeholder}: {e}"
-                            )
+                            eval_logger.error(f"Error processing placeholder {placeholder}: {e}")
 
                         # Add the text part following this placeholder
                         if idx + 1 < len(text_parts) and text_parts[idx + 1]:
-                            content_parts.append(
-                                {"type": "text", "text": text_parts[idx + 1]}
-                            )
+                            content_parts.append({"type": "text", "text": text_parts[idx + 1]})
 
                     message.append(
                         {
@@ -377,34 +327,15 @@ class Qwen2_VL(lmms):
 
                 batched_messages.append(message)
 
-            texts = [
-                self.processor.apply_chat_template(
-                    msg, tokenize=False, add_generation_prompt=True
-                )
-                for msg in batched_messages
-            ]
+            texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
             # TODO: Consider moving video frame sampling logic into process_vision_info or a helper.
             image_inputs, video_inputs = process_vision_info(batched_messages)
-            if (
-                video_inputs is not None
-                and len(video_inputs) > 0
-                and video_inputs[0] is not None
-            ):
+            if video_inputs is not None and len(video_inputs) > 0 and video_inputs[0] is not None:
                 # Assuming video_inputs is a list where the first element holds the tensor
                 video_tensor = video_inputs[0]
-                if (
-                    isinstance(video_tensor, torch.Tensor)
-                    and video_tensor.ndim > 0
-                    and video_tensor.shape[0] > 0
-                ):
+                if isinstance(video_tensor, torch.Tensor) and video_tensor.ndim > 0 and video_tensor.shape[0] > 0:
                     total_frames = video_tensor.shape[0]
-                    indices = np.linspace(
-                        0,
-                        total_frames - 1,
-                        self.max_num_frames,
-                        dtype=int,
-                        endpoint=True,
-                    )  # Ensure endpoint=True
+                    indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int, endpoint=True)  # Ensure endpoint=True
                     # Ensure unique indices if linspace produces duplicates for few frames
                     indices = np.unique(indices)
                     # Append the last frame index if not already included and needed
@@ -416,33 +347,17 @@ class Qwen2_VL(lmms):
                     if len(indices) > self.max_num_frames:
                         # This might happen if linspace already picked close indices including the end
                         # Or if max_num_frames is very small. Prioritize evenly spaced.
-                        indices = np.linspace(
-                            0,
-                            total_frames - 1,
-                            self.max_num_frames,
-                            dtype=int,
-                            endpoint=True,
-                        )
+                        indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int, endpoint=True)
                         indices = np.unique(indices)
 
                     video_inputs[0] = video_tensor[indices]
                 else:
-                    eval_logger.warning(
-                        f"Unexpected video_inputs format or empty tensor: {type(video_tensor)}"
-                    )
+                    eval_logger.warning(f"Unexpected video_inputs format or empty tensor: {type(video_tensor)}")
 
-            inputs = self.processor(
-                text=texts,
-                images=image_inputs,
-                videos=video_inputs,
-                padding=True,
-                return_tensors="pt",
-            )
+            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
             if self.device_map == "auto":
-                inputs = inputs.to(
-                    "cuda"
-                )  # Assuming 'cuda' is the target for 'auto' on single GPU
+                inputs = inputs.to("cuda")  # Assuming 'cuda' is the target for 'auto' on single GPU
             else:
                 inputs = inputs.to(self.device)
 
@@ -453,16 +368,9 @@ class Qwen2_VL(lmms):
                 "top_p": None,
                 "num_beams": 1,
             }
-            current_gen_kwargs = {
-                **default_gen_kwargs,
-                **gen_kwargs,
-            }  # Provided gen_kwargs override defaults
+            current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}  # Provided gen_kwargs override defaults
 
-            pad_token_id = (
-                self.tokenizer.pad_token_id
-                if self.tokenizer.pad_token_id is not None
-                else self.tokenizer.eos_token_id
-            )
+            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
 
             cont = self.model.generate(
                 **inputs,
@@ -484,27 +392,17 @@ class Qwen2_VL(lmms):
                 # Handle potential padding in output; eos might appear before max length
                 try:
                     # Find first eos token in the generated part
-                    eos_pos = (
-                        out_ids[input_len:] == self.tokenizer.eos_token_id
-                    ).nonzero(as_tuple=True)[0]
+                    eos_pos = (out_ids[input_len:] == self.tokenizer.eos_token_id).nonzero(as_tuple=True)[0]
                     if len(eos_pos) > 0:
                         # Slice generated part up to (but not including) the first EOS token
-                        generated_ids_trimmed.append(
-                            out_ids[input_len : input_len + eos_pos[0]]
-                        )
+                        generated_ids_trimmed.append(out_ids[input_len : input_len + eos_pos[0]])
                     else:
                         # No EOS found, take the whole generated part
                         generated_ids_trimmed.append(out_ids[input_len:])
                 except IndexError:  # Handle cases where output is shorter than input (shouldn't happen with generate)
-                    generated_ids_trimmed.append(
-                        torch.tensor([], dtype=torch.long, device=out_ids.device)
-                    )
+                    generated_ids_trimmed.append(torch.tensor([], dtype=torch.long, device=out_ids.device))
 
-            answers = self.processor.batch_decode(
-                generated_ids_trimmed,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False,
-            )
+            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
             # Process answers to remove text after stop tokens
             for i, ans in enumerate(answers):
@@ -517,9 +415,7 @@ class Qwen2_VL(lmms):
             for ans, context in zip(answers, contexts):
                 res.append(ans)
                 # Use original gen_kwargs for caching, not the merged one
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), ans
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
         # reorder this group of results back to original unsorted form
@@ -538,41 +434,21 @@ class Qwen2_VL(lmms):
         import lmms_eval.utils as utils
 
         metadata = requests[0].metadata
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = (
-            len(requests) // self.batch_size
-            if len(requests) % self.batch_size == 0
-            else len(requests) // self.batch_size + 1
-        )
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         for chunk in chunks:
-            (
-                batched_contexts,
-                all_gen_kwargs,
-                batched_doc_to_visual,
-                batched_doc_to_text,
-                batched_doc_id,
-                batched_task,
-                batched_split,
-            ) = zip(*chunk)
+            batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_to_text, batched_doc_id, batched_task, batched_split = zip(*chunk)
             task = batched_task[0]
             split = batched_split[0]
 
-            batched_visuals = [
-                batched_doc_to_visual[0](self.task_dict[task][split][ids])
-                for ids in batched_doc_id
-            ]
+            batched_visuals = [batched_doc_to_visual[0](self.task_dict[task][split][ids]) for ids in batched_doc_id]
             if None in batched_visuals:
                 batched_visuals = [None] * len(batched_visuals)
             else:
-                batched_visuals = [
-                    self.flatten([visuals]) if visuals is not None else []
-                    for visuals in batched_visuals
-                ]
+                batched_visuals = [self.flatten([visuals]) if visuals is not None else [] for visuals in batched_visuals]
 
             gen_kwargs = all_gen_kwargs[0]
             if "until" in gen_kwargs:
@@ -588,27 +464,14 @@ class Qwen2_VL(lmms):
                 visuals_list = []
 
                 if round_idx != 0:
-                    (
-                        visuals_list,
-                        contexts,
-                        batched_terminal_signal,
-                        batched_round_res,
-                        batched_previous_round_info,
-                    ) = list(
+                    visuals_list, contexts, batched_terminal_signal, batched_round_res, batched_previous_round_info = list(
                         zip(
                             *[
                                 batched_doc_to_text[0](
                                     self.task_dict[task][split][ids],
-                                    previous_output=[
-                                        round_res[ids_idx]
-                                        for round_res in batched_round_res
-                                    ],
+                                    previous_output=[round_res[ids_idx] for round_res in batched_round_res],
                                     round_idx=round_idx,
-                                    previous_round_info=batched_previous_round_info[
-                                        ids_idx
-                                    ]
-                                    if batched_previous_round_info is not None
-                                    else None,
+                                    previous_round_info=batched_previous_round_info[ids_idx] if batched_previous_round_info is not None else None,
                                 )
                                 for ids_idx, ids in enumerate(batched_doc_id)
                             ]
@@ -629,42 +492,23 @@ class Qwen2_VL(lmms):
                     current_context = context
 
                     if self.reasoning_prompt:
-                        current_context = (
-                            current_context.strip() + self.reasoning_prompt
-                        )
+                        current_context = current_context.strip() + self.reasoning_prompt
 
                     processed_visuals = []
-                    relevant_visuals = (
-                        visuals_list[i]
-                        if i < len(visuals_list) and visuals_list[i] is not None
-                        else []
-                    )
+                    relevant_visuals = visuals_list[i] if i < len(visuals_list) and visuals_list[i] is not None else []
 
                     for visual in relevant_visuals:
-                        if isinstance(visual, str) and visual.endswith(
-                            (".mp4", ".avi", ".mov")
-                        ):  # Video file
+                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                             try:
                                 vr = decord.VideoReader(visual)
                                 if len(vr) > 0:
                                     first_frame = vr[0].asnumpy()
                                     height, width = first_frame.shape[:2]
-                                    processed_visuals.append(
-                                        {
-                                            "type": "video",
-                                            "video": visual,
-                                            "max_pixels": self.max_pixels,
-                                            "min_pixels": self.min_pixels,
-                                        }
-                                    )
+                                    processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                                 else:
-                                    eval_logger.warning(
-                                        f"Skipping empty video: {visual}"
-                                    )
+                                    eval_logger.warning(f"Skipping empty video: {visual}")
                             except Exception as e:
-                                eval_logger.error(
-                                    f"Failed to process video {visual}: {e}"
-                                )
+                                eval_logger.error(f"Failed to process video {visual}: {e}")
                         elif isinstance(visual, Image.Image):
                             try:
                                 base64_image = visual.convert("RGB")
@@ -672,26 +516,15 @@ class Qwen2_VL(lmms):
                                 base64_image.save(buffer, format="JPEG")
                                 base64_bytes = base64.b64encode(buffer.getvalue())
                                 base64_string = base64_bytes.decode("utf-8")
-                                processed_visuals.append(
-                                    {
-                                        "type": "image",
-                                        "image": f"data:image/jpeg;base64,{base64_string}",
-                                        "max_pixels": self.max_pixels,
-                                        "min_pixels": self.min_pixels,
-                                    }
-                                )
+                                processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                             except Exception as e:
                                 eval_logger.error(f"Failed to process PIL image: {e}")
 
                     if not self.interleave_visuals:
                         if processed_visuals:
-                            content_payload = processed_visuals + [
-                                {"type": "text", "text": current_context}
-                            ]
+                            content_payload = processed_visuals + [{"type": "text", "text": current_context}]
                         else:
-                            content_payload = [
-                                {"type": "text", "text": current_context}
-                            ]
+                            content_payload = [{"type": "text", "text": current_context}]
                         message.append(
                             {
                                 "role": "user",
@@ -703,9 +536,7 @@ class Qwen2_VL(lmms):
                         content_parts = []
                         text_parts = re.split(r"<image \d+>", current_context)
                         if text_parts[0]:
-                            content_parts.append(
-                                {"type": "text", "text": text_parts[0]}
-                            )
+                            content_parts.append({"type": "text", "text": text_parts[0]})
 
                         for idx, placeholder in enumerate(image_placeholders):
                             try:
@@ -715,22 +546,14 @@ class Qwen2_VL(lmms):
                                     if 0 <= img_idx < len(processed_visuals):
                                         content_parts.append(processed_visuals[img_idx])
                                     else:
-                                        eval_logger.warning(
-                                            f"Image index {img_idx + 1} out of range for available visuals ({len(processed_visuals)}) in context."
-                                        )
+                                        eval_logger.warning(f"Image index {img_idx + 1} out of range for available visuals ({len(processed_visuals)}) in context.")
                                 else:
-                                    eval_logger.warning(
-                                        f"Could not parse index from placeholder: {placeholder}"
-                                    )
+                                    eval_logger.warning(f"Could not parse index from placeholder: {placeholder}")
                             except Exception as e:
-                                eval_logger.error(
-                                    f"Error processing placeholder {placeholder}: {e}"
-                                )
+                                eval_logger.error(f"Error processing placeholder {placeholder}: {e}")
 
                             if idx + 1 < len(text_parts) and text_parts[idx + 1]:
-                                content_parts.append(
-                                    {"type": "text", "text": text_parts[idx + 1]}
-                                )
+                                content_parts.append({"type": "text", "text": text_parts[idx + 1]})
 
                         message.append(
                             {
@@ -741,56 +564,23 @@ class Qwen2_VL(lmms):
 
                     batched_messages.append(message)
 
-                texts = [
-                    self.processor.apply_chat_template(
-                        msg, tokenize=False, add_generation_prompt=True
-                    )
-                    for msg in batched_messages
-                ]
+                texts = [self.processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in batched_messages]
                 image_inputs, video_inputs = process_vision_info(batched_messages)
 
-                if (
-                    video_inputs is not None
-                    and len(video_inputs) > 0
-                    and video_inputs[0] is not None
-                ):
+                if video_inputs is not None and len(video_inputs) > 0 and video_inputs[0] is not None:
                     video_tensor = video_inputs[0]
-                    if (
-                        isinstance(video_tensor, torch.Tensor)
-                        and video_tensor.ndim > 0
-                        and video_tensor.shape[0] > 0
-                    ):
+                    if isinstance(video_tensor, torch.Tensor) and video_tensor.ndim > 0 and video_tensor.shape[0] > 0:
                         total_frames = video_tensor.shape[0]
-                        indices = np.linspace(
-                            0,
-                            total_frames - 1,
-                            self.max_num_frames,
-                            dtype=int,
-                            endpoint=True,
-                        )
+                        indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int, endpoint=True)
                         if len(indices) > self.max_num_frames:
-                            indices = np.linspace(
-                                0,
-                                total_frames - 1,
-                                self.max_num_frames,
-                                dtype=int,
-                                endpoint=True,
-                            )
+                            indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int, endpoint=True)
                             indices = np.unique(indices)
 
                         video_inputs[0] = video_tensor[indices]
                     else:
-                        eval_logger.warning(
-                            f"Unexpected video_inputs format or empty tensor: {type(video_tensor)}"
-                        )
+                        eval_logger.warning(f"Unexpected video_inputs format or empty tensor: {type(video_tensor)}")
 
-                inputs = self.processor(
-                    text=texts,
-                    images=image_inputs,
-                    videos=video_inputs,
-                    padding=True,
-                    return_tensors="pt",
-                )
+                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
 
                 if self.device_map == "auto":
                     inputs = inputs.to("cuda")
@@ -805,11 +595,7 @@ class Qwen2_VL(lmms):
                 }
                 current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
 
-                pad_token_id = (
-                    self.tokenizer.pad_token_id
-                    if self.tokenizer.pad_token_id is not None
-                    else self.tokenizer.eos_token_id
-                )
+                pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
 
                 cont = self.model.generate(
                     **inputs,
@@ -827,25 +613,15 @@ class Qwen2_VL(lmms):
                 for in_ids, out_ids in zip(inputs.input_ids, cont):
                     input_len = len(in_ids)
                     try:
-                        eos_pos = (
-                            out_ids[input_len:] == self.tokenizer.eos_token_id
-                        ).nonzero(as_tuple=True)[0]
+                        eos_pos = (out_ids[input_len:] == self.tokenizer.eos_token_id).nonzero(as_tuple=True)[0]
                         if len(eos_pos) > 0:
-                            generated_ids_trimmed.append(
-                                out_ids[input_len : input_len + eos_pos[0]]
-                            )
+                            generated_ids_trimmed.append(out_ids[input_len : input_len + eos_pos[0]])
                         else:
                             generated_ids_trimmed.append(out_ids[input_len:])
                     except IndexError:
-                        generated_ids_trimmed.append(
-                            torch.tensor([], dtype=torch.long, device=out_ids.device)
-                        )
+                        generated_ids_trimmed.append(torch.tensor([], dtype=torch.long, device=out_ids.device))
 
-                answers = self.processor.batch_decode(
-                    generated_ids_trimmed,
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False,
-                )
+                answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
                 clean_answers = []
                 for ans in answers:
@@ -862,11 +638,7 @@ class Qwen2_VL(lmms):
             transposed_res = list(zip(*batched_round_res))
             res.extend(transposed_res)
 
-            self.cache_hook.add_partial(
-                "generate_until_multi_round",
-                (batched_contexts[0], gen_kwargs),
-                batched_round_res,
-            )
+            self.cache_hook.add_partial("generate_until_multi_round", (batched_contexts[0], gen_kwargs), batched_round_res)
             pbar.update(1)
 
         res = re_ords.get_original(res)

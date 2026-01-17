@@ -9,13 +9,14 @@ from transformers import AutoModel
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
-from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
-LLM, _ = optional_import("vllm", "LLM")
-SamplingParams, _ = optional_import("vllm", "SamplingParams")
+try:
+    from vllm import LLM, SamplingParams
+except ImportError:
+    vllm = None
 
 WORKERS = int(os.getenv("WORKERS", "32"))
 
@@ -57,9 +58,7 @@ class LongVila(VLLMSimple):
                 tokenize_conversation as _tokenize_conversation,
             )
         except Exception as e:
-            raise ImportError(
-                f"Failed to import LongVILA remote_code utilities from '{model_root}'. Ensure the model path contains remote_code. Original error: {e}"
-            )
+            raise ImportError(f"Failed to import LongVILA remote_code utilities from '{model_root}'. Ensure the model path contains remote_code. Original error: {e}")
 
         self.extract_media = _extract_media
         self.process_images = _process_images
@@ -73,18 +72,7 @@ class LongVila(VLLMSimple):
             device_map=device_map,
             llm_only_need_embed=True,
         )
-        super().__init__(
-            llm_path,
-            tensor_parallel_size,
-            data_parallel_size,
-            gpu_memory_utilization,
-            batch_size,
-            max_frame_num,
-            trust_remote_code,
-            chat_template,
-            min_image_pixels,
-            **kwargs,
-        )
+        super().__init__(llm_path, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, min_image_pixels, **kwargs)
 
     def _to_remote_conversation(self, chat_messages: ChatMessages) -> list:
         """
@@ -139,29 +127,14 @@ class LongVila(VLLMSimple):
             self.model_encoder.config.fps = 0
         media = self.extract_media(conversation, self.model_encoder.config)
         if "video" in media and media["video"] is not None:
-            media["video"] = [
-                self.process_images(
-                    images,
-                    self.model_encoder.vision_tower.image_processor,
-                    self.model_encoder.config,
-                ).half()
-                for images in media["video"]
-            ]
+            media["video"] = [self.process_images(images, self.model_encoder.vision_tower.image_processor, self.model_encoder.config).half() for images in media["video"]]
 
         # Tokenize conversation and move to CUDA for embedding
-        input_ids = (
-            self.tokenize_conversation(
-                conversation, self.model_encoder.tokenizer, add_generation_prompt=True
-            )
-            .unsqueeze(0)
-            .cuda()
-        )
+        input_ids = self.tokenize_conversation(conversation, self.model_encoder.tokenizer, add_generation_prompt=True).unsqueeze(0).cuda()
 
         # Create prompt embeddings using the model encoder
         try:
-            inputs_embeds, _, _ = self.model_encoder._embed(
-                input_ids, media, {"video": {}}, None, None
-            )
+            inputs_embeds, _, _ = self.model_encoder._embed(input_ids, media, {"video": {}}, None, None)
         except Exception as e:
             # 128 runs no problem, but other may have some issue, if encounter error, try to set to 128, then set back
             self.max_frame_num = 128
@@ -177,22 +150,16 @@ class LongVila(VLLMSimple):
         res = []
         self.load_cache()
         res, requests = self.get_response_from_cache(requests)
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
-        batched_requests = [
-            requests[i : i + batch_size] for i in range(0, len(requests), batch_size)
-        ]
+        batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         e2e_latency = 0
         for batch_requests in batched_requests:
             prompt_embeds_list = []
             params_list = []
             # Build embeddings sequentially to avoid GPU contention in the encoder
-            for req in tqdm(
-                batch_requests, disable=(self.rank != 0), desc="Building embeddings"
-            ):
+            for req in tqdm(batch_requests, disable=(self.rank != 0), desc="Building embeddings"):
                 inputs_embeds, params = self.make_one_request(req)
                 prompt_embeds_list.append({"prompt_embeds": inputs_embeds.squeeze(0)})
                 params_list.append(params)
@@ -201,9 +168,7 @@ class LongVila(VLLMSimple):
             sampling_params = SamplingParams(**params_list[-1])
 
             start_time = time.time()
-            response = self.client.generate(
-                prompts=prompt_embeds_list, sampling_params=sampling_params
-            )
+            response = self.client.generate(prompts=prompt_embeds_list, sampling_params=sampling_params)
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]

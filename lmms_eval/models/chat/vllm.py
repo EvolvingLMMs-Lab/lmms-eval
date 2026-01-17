@@ -7,13 +7,14 @@ from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
-from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
-LLM, _ = optional_import("vllm", "LLM")
-SamplingParams, _ = optional_import("vllm", "SamplingParams")
+try:
+    from vllm import LLM, SamplingParams
+except ImportError:
+    vllm = None
 
 WORKERS = int(os.getenv("WORKERS", "32"))
 
@@ -38,18 +39,7 @@ class VLLM(VLLMSimple):
         nframes: Optional[int] = 32,
         **kwargs,
     ):
-        super().__init__(
-            model,
-            tensor_parallel_size,
-            data_parallel_size,
-            gpu_memory_utilization,
-            batch_size,
-            max_frame_num,
-            trust_remote_code,
-            chat_template,
-            min_image_pixels,
-            **kwargs,
-        )
+        super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, min_image_pixels, **kwargs)
         self.fps = fps
         self.max_pixels = max_pixels
         self.nframes = nframes
@@ -90,22 +80,15 @@ class VLLM(VLLMSimple):
         res = []
         self.load_cache()
         res, requests = self.get_response_from_cache(requests)
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
-        batched_requests = [
-            requests[i : i + batch_size] for i in range(0, len(requests), batch_size)
-        ]
+        batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         e2e_latency = 0
         for batch_requests in batched_requests:
             batched_messages = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-                futures = [
-                    executor.submit(self.make_one_request, request)
-                    for request in batch_requests
-                ]
+                futures = [executor.submit(self.make_one_request, request) for request in batch_requests]
                 for future in futures:
                     messages, sampling_params = future.result()
                     batched_messages.append(messages)
@@ -115,15 +98,9 @@ class VLLM(VLLMSimple):
             if self.chat_template is not None:
                 with open(self.chat_template, "r") as f:
                     chat_template = f.read()
-                response = self.client.chat(
-                    sampling_params=sampling_params,
-                    messages=batched_messages,
-                    chat_template=chat_template,
-                )
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
             else:
-                response = self.client.chat(
-                    sampling_params=sampling_params, messages=batched_messages
-                )
+                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]
