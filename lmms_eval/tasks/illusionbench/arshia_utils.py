@@ -204,12 +204,7 @@ def _build_scene_prompt(candidates: List[str]) -> str:
 
 
 def illusionbench_arshia_doc_to_text_scene(doc):
-    return (
-        "You are given an image depicting a SCENE.\n"
-        "Task: Identify the scene.\n\n"
-        "Reply in ONE line using this format:\n"
-        "Scene: <scene>\n"
-    )
+    return _build_scene_prompt(SCENE_CANDIDATES)
 
 
 _LINE_SHAPE = re.compile(r"^\s*shape\s*:\s*(?P<v>.+?)\s*$", re.IGNORECASE)

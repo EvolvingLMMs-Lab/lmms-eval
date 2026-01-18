@@ -94,7 +94,7 @@ class AzureTRAPIVisualCoT(lmms):
         stage1_image_size: str = "1024x1024",
         stage1_quality: str = "auto",
         # Stage 2 parameters
-        stage2_max_tokens: int = 512,
+        stage2_max_tokens: int = 4096,
         # Output
         output_dir: str = None,
         save_intermediate: bool = False,
@@ -173,6 +173,23 @@ class AzureTRAPIVisualCoT(lmms):
     @property
     def world_size(self):
         return self._world_size
+
+    def _decode_image(self, image_field) -> Optional[Image.Image]:
+        """
+        Decode image field to PIL Image.
+        Supports: PIL.Image, dict with {'bytes': ...}, dict with {'path': ...}
+        """
+        if image_field is None:
+            return None
+        if isinstance(image_field, Image.Image):
+            return image_field.convert("RGB")
+        if isinstance(image_field, dict):
+            # HuggingFace datasets format
+            if "bytes" in image_field and image_field["bytes"]:
+                return Image.open(BytesIO(image_field["bytes"])).convert("RGB")
+            if "path" in image_field and image_field["path"]:
+                return Image.open(image_field["path"]).convert("RGB")
+        raise TypeError(f"Unsupported image field type: {type(image_field)}")
 
     def encode_image(self, image: Image.Image) -> str:
         """Encode PIL Image to base64 string"""
@@ -254,10 +271,8 @@ class AzureTRAPIVisualCoT(lmms):
                 # Save if enabled
                 save_path = None
                 if self.save_intermediate:
-                    # Create task-specific directory
-                    task_dir = os.path.join(self.intermediate_dir, task)
-                    os.makedirs(task_dir, exist_ok=True)
-                    save_path = os.path.join(task_dir, f"{doc_id}_stage1.png")
+                    # Save image in root directory with format: {task}_{doc_id}_stage1.png
+                    save_path = os.path.join(self.intermediate_dir, f"{task}_{doc_id}_stage1.png")
                     generated_image.save(save_path)
                     eval_logger.debug(f"Saved generated image to {save_path}")
 
@@ -361,7 +376,7 @@ class AzureTRAPIVisualCoT(lmms):
             original_image = None
             visuals = doc_to_visual(self.task_dict[task][split][doc_id])
             if visuals and len(visuals) > 0:
-                original_image = visuals[0]
+                original_image = self._decode_image(visuals[0])
 
             # Parse prompt to extract generation prompt and question
             gen_prompt_match = re.search(
