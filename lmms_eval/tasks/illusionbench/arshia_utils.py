@@ -62,6 +62,30 @@ def _recall_match(pred: str, gt: str) -> int:
     return int(g in p)
 
 
+def _extract_answer(pred: str) -> str:
+    """
+    Extract answer from 'Answer: XX' format.
+    Returns the extracted answer or empty string if not found.
+    """
+    # Try to match "Answer: XX" pattern (case insensitive)
+    match = re.search(r"answer\s*:\s*([^\n,\.]+)", pred, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    # No match found, return empty string (will result in 0 score)
+    return ""
+
+
+def _strict_match(pred: str, gt: str) -> int:
+    """
+    Strict match: extracted answer must equal ground truth (after normalization).
+    """
+    p = _normalize_text(pred)
+    g = _normalize_text(gt)
+    if not g:
+        return 0
+    return int(p == g)
+
+
 def _strip_trailing_index(shape_raw: str) -> str:
     """
     Many filenames look like 'animal-1-...'. We treat 'animal' as the shape label and
@@ -177,7 +201,7 @@ def _build_shape_prompt(candidates: List[str]) -> str:
         "You are given an image where scene elements form an abstract SHAPE.\n"
         "Task: Identify what shape is hidden in this image.\n\n"
         f"Options: [{options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
 
 
@@ -199,7 +223,7 @@ def _build_scene_prompt(candidates: List[str]) -> str:
         "You are given an image depicting a SCENE.\n"
         "Task: Identify what scene is shown in this image.\n\n"
         f"Options: [{options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
 
 
@@ -242,17 +266,17 @@ def illusionbench_arshia_process_results(doc, results):
 
 def illusionbench_arshia_process_results_shape(doc, results):
     pred = str(results[0]) if results else ""
-    shape_pred, _ = _extract_fields(pred)
+    answer = _extract_answer(pred)
     return {
-        "shape_recall": _recall_match(shape_pred, doc.get("shape_gt", "")),
+        "shape_recall": _strict_match(answer, doc.get("shape_gt", "")),
     }
 
 
 def illusionbench_arshia_process_results_scene(doc, results):
     pred = str(results[0]) if results else ""
-    _, scene_pred = _extract_fields(pred)
+    answer = _extract_answer(pred)
     return {
-        "scene_recall": _recall_match(scene_pred, doc.get("scene_gt", "")),
+        "scene_recall": _strict_match(answer, doc.get("scene_gt", "")),
     }
 
 
@@ -287,7 +311,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_icon_shape(doc, lmms_eval_specif
         "The image shows scene elements forming an abstract SHAPE.\n"
         "Task: Identify what shape is hidden in this image.\n\n"
         f"Options: [{shape_options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -308,7 +332,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_icon_scene(doc, lmms_eval_specif
         "The image depicts a SCENE.\n"
         "Task: Identify what scene is shown in this image.\n\n"
         f"Options: [{scene_options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -329,7 +353,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_logo_shape(doc, lmms_eval_specif
         "The image shows scene elements forming an abstract SHAPE.\n"
         "Task: Identify what shape is hidden in this image.\n\n"
         f"Options: [{shape_options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -350,7 +374,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_logo_scene(doc, lmms_eval_specif
         "The image depicts a SCENE.\n"
         "Task: Identify what scene is shown in this image.\n\n"
         f"Options: [{scene_options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -371,7 +395,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_shape(doc, lmms_eval_specific
         "The image shows scene elements forming an abstract SHAPE.\n"
         "Task: Identify what shape is hidden in this image.\n\n"
         f"Options: [{shape_options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -392,7 +416,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_scene(doc, lmms_eval_specific
         "The image depicts a SCENE.\n"
         "Task: Identify what scene is shown in this image.\n\n"
         f"Options: [{scene_options}]\n\n"
-        "Reply with ONLY ONE word from the options above.\n"
+        "Reply in this exact format:\nAnswer: <your choice>\n"
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
