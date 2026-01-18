@@ -51,7 +51,7 @@ class BagelVisualCoT(lmms):
         stage1_cfg_renorm_type: str = "global",
         stage1_image_ratio: str = "1:1",
         # Stage 2: Visual understanding parameters
-        stage2_max_new_tokens: int = 8192,
+        stage2_max_new_tokens: int = 16384,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
         # Generation prompt template
