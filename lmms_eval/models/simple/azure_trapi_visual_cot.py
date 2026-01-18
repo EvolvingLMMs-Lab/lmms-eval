@@ -94,7 +94,7 @@ class AzureTRAPIVisualCoT(lmms):
         stage1_image_size: str = "1024x1024",
         stage1_quality: str = "auto",
         # Stage 2 parameters
-        stage2_max_tokens: int = 4096,
+        stage2_max_tokens: int = 8192,
         # Output
         output_dir: str = None,
         save_intermediate: bool = False,

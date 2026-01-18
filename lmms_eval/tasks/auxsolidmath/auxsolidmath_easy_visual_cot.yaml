@@ -31,7 +31,7 @@ lmms_eval_specific_kwargs:
     stage1_cfg_renorm_min: 0.0
     stage1_cfg_renorm_type: "global"
     stage1_image_ratio: "1:1"
-    stage2_max_new_tokens: 4096
+    stage2_max_new_tokens: 8192
     stage2_temperature: 0.0
     stage2_do_sample: false
     save_intermediate: true
