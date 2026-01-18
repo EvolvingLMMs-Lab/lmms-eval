@@ -4,7 +4,7 @@
 
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /home/yifeishen/blob/mount/lmms-eval-dataset/chartqa100.parquet
+  data_files: /blob/lmms-eval-dataset/chartqa100.parquet
 task: "chartqa100"
 test_split: train
 output_type: generate_until
