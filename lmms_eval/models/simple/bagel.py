@@ -473,6 +473,232 @@ class Bagel(lmms):
 
         return output_text, output_images
 
+    def generate_uni_mmmu_interleaved(
+        self,
+        input_images: List,
+        prompt: str,
+        doc_id: str,
+        task: str,
+        interleaved_config: dict,
+        doc: dict = None,
+    ) -> Tuple[str, List[str]]:
+        """
+        Uni-MMMU interleaved generation aligned with original benchmark.
+
+        This implements the exact generation flow from the original Uni-MMMU:
+        - Jigsaw: gen_image(cand0) → gen_image(cand1) → gen_text(answer)
+        - Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
+
+        Args:
+            input_images: List of input images
+            prompt: Base prompt text
+            doc_id: Document ID for file naming
+            task: Task name for file naming
+            interleaved_config: Configuration dict from yaml
+            doc: Document data for dynamic num_images extraction
+
+        Returns:
+            Tuple of (final_text_answer, list_of_generated_image_paths)
+        """
+        self.set_seed(self.seed)
+
+        from copy import deepcopy
+        import json as json_module
+
+        task_type = interleaved_config.get("task_type", "jigsaw")
+
+        # Get num_images dynamically from doc if available
+        num_images = interleaved_config.get("num_images", 2)
+        if doc is not None:
+            if task_type == "maze":
+                # Get step count from ground truth
+                steps_str = doc.get("steps", "[]")
+                steps = json_module.loads(steps_str) if isinstance(steps_str, str) else steps_str
+                if steps:
+                    num_images = len(steps)
+            elif task_type == "sliding":
+                # Get step count from ground truth
+                steps_str = doc.get("steps_words", "[]")
+                steps = json_module.loads(steps_str) if isinstance(steps_str, str) else steps_str
+                if steps:
+                    num_images = len(steps)
+
+        # Override generation params if specified
+        cfg_text_scale = interleaved_config.get("cfg_text_scale", self.cfg_text_scale)
+        cfg_interval = interleaved_config.get("cfg_interval", self.cfg_interval)
+        timestep_shift = interleaved_config.get("timestep_shift", self.timestep_shift)
+        num_timesteps = interleaved_config.get("num_timesteps", self.num_timesteps)
+
+        # Initialize context
+        gen_context = self.inferencer.init_gen_context()
+        cfg_text_context = deepcopy(gen_context)
+        cfg_img_context = deepcopy(gen_context)
+
+        generated_images = []
+
+        with torch.autocast(device_type="cuda", enabled=True, dtype=torch.bfloat16):
+            # Add input images to context first
+            for img in input_images:
+                if img is not None:
+                    img_transformed = self.inferencer.vae_transform.resize_transform(
+                        self.pil_img2rgb(img)
+                    )
+                    gen_context = self.inferencer.update_context_image(
+                        img_transformed, gen_context, vae=False, vit=True
+                    )
+
+            # Add initial prompt to context
+            cfg_text_context = deepcopy(gen_context)
+            gen_context = self.inferencer.update_context_text(prompt, gen_context)
+            cfg_img_context = self.inferencer.update_context_text(prompt, cfg_img_context)
+
+            if task_type == "jigsaw":
+                # Jigsaw: Generate 2 completed images then final answer
+                # Image 1: Candidate 0 completion
+                suffix1 = "Output ONLY a single image with Candidate 0 placed in the bottom-right cell. No text."
+                cfg_text_context = deepcopy(gen_context)
+                gen_context = self.inferencer.update_context_text(suffix1, gen_context)
+                cfg_img_context = self.inferencer.update_context_text(suffix1, cfg_img_context)
+
+                img0 = self.inferencer.gen_image(
+                    self.image_shapes,
+                    gen_context,
+                    cfg_text_precontext=cfg_text_context,
+                    cfg_img_precontext=cfg_img_context,
+                    cfg_text_scale=cfg_text_scale,
+                    cfg_img_scale=1.5,
+                    cfg_interval=[cfg_interval, 1.0],
+                    timestep_shift=timestep_shift,
+                    num_timesteps=num_timesteps,
+                    cfg_renorm_min=self.cfg_renorm_min,
+                    cfg_renorm_type=self.cfg_renorm_type,
+                )
+                img0_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_cand0.png")
+                img0.save(img0_path)
+                generated_images.append(img0_path)
+                eval_logger.info(f"Saved jigsaw image 0: {img0_path}")
+
+                # Add to context
+                img0_transformed = self.inferencer.vae_transform.resize_transform(
+                    self.pil_img2rgb(img0)
+                )
+                gen_context = self.inferencer.update_context_image(
+                    img0_transformed, gen_context, vae=True, vit=True
+                )
+                gen_context = self.inferencer.update_context_text(
+                    "COMPLETED WITH CANDIDATE 0:", gen_context
+                )
+
+                # Image 2: Candidate 1 completion
+                suffix2 = "Output ONLY a single image with Candidate 1 placed in the bottom-right cell. No text."
+                cfg_text_context = deepcopy(gen_context)
+                gen_context = self.inferencer.update_context_text(suffix2, gen_context)
+                cfg_img_context = self.inferencer.update_context_text(suffix2, cfg_img_context)
+
+                img1 = self.inferencer.gen_image(
+                    self.image_shapes,
+                    gen_context,
+                    cfg_text_precontext=cfg_text_context,
+                    cfg_img_precontext=cfg_img_context,
+                    cfg_text_scale=cfg_text_scale,
+                    cfg_img_scale=1.5,
+                    cfg_interval=[cfg_interval, 1.0],
+                    timestep_shift=timestep_shift,
+                    num_timesteps=num_timesteps,
+                    cfg_renorm_min=self.cfg_renorm_min,
+                    cfg_renorm_type=self.cfg_renorm_type,
+                )
+                img1_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_cand1.png")
+                img1.save(img1_path)
+                generated_images.append(img1_path)
+                eval_logger.info(f"Saved jigsaw image 1: {img1_path}")
+
+                # Add to context
+                img1_transformed = self.inferencer.vae_transform.resize_transform(
+                    self.pil_img2rgb(img1)
+                )
+                gen_context = self.inferencer.update_context_image(
+                    img1_transformed, gen_context, vae=True, vit=True
+                )
+                gen_context = self.inferencer.update_context_text(
+                    "COMPLETED WITH CANDIDATE 1:", gen_context
+                )
+
+                # Final answer
+                final_suffix = (
+                    'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n'
+                    "Do not output any additional images."
+                )
+                gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
+
+            else:
+                # Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
+                for i in range(1, num_images + 1):
+                    # Generate planning text
+                    if task_type == "maze":
+                        plan_suffix = f'Now planning for step {i}, Please output a sentence in the form: "Next, move one step up/down/left/right."'
+                    else:  # sliding
+                        plan_suffix = f'Now planning for step {i}, Please output a sentence describing which tile to move and in which direction.'
+
+                    plan_text = self.inferencer.gen_text(
+                        gen_context,
+                        max_length=128,
+                        do_sample=self.do_sample,
+                        temperature=self.text_temperature,
+                        prompt_suffix=plan_suffix,
+                    )
+                    eval_logger.info(f"Step {i} plan: {plan_text}")
+                    gen_context = self.inferencer.update_context_text(plan_text, gen_context)
+
+                    # Generate step image
+                    img_suffix = f"Now, generate the image for step {i}."
+                    cfg_text_context = deepcopy(gen_context)
+                    gen_context = self.inferencer.update_context_text(img_suffix, gen_context)
+                    cfg_img_context = self.inferencer.update_context_text(img_suffix, cfg_img_context)
+
+                    img = self.inferencer.gen_image(
+                        self.image_shapes,
+                        gen_context,
+                        cfg_text_precontext=cfg_text_context,
+                        cfg_img_precontext=cfg_img_context,
+                        cfg_text_scale=cfg_text_scale,
+                        cfg_img_scale=1.5,
+                        cfg_interval=[cfg_interval, 1.0],
+                        timestep_shift=timestep_shift,
+                        num_timesteps=num_timesteps,
+                        cfg_renorm_min=self.cfg_renorm_min,
+                        cfg_renorm_type=self.cfg_renorm_type,
+                    )
+                    img_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_step_{i:04d}.png")
+                    img.save(img_path)
+                    generated_images.append(img_path)
+                    eval_logger.info(f"Saved step {i} image: {img_path}")
+
+                    # Add to context
+                    img_transformed = self.inferencer.vae_transform.resize_transform(
+                        self.pil_img2rgb(img)
+                    )
+                    gen_context = self.inferencer.update_context_image(
+                        img_transformed, gen_context, vae=True, vit=True
+                    )
+
+                # Final answer
+                final_suffix = (
+                    "After the images, emit EXACTLY ONE LINE containing ONLY the final move list "
+                    "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
+                )
+                gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
+
+            # Generate final text answer
+            final_text = self.inferencer.gen_text(
+                gen_context,
+                max_length=self.max_new_tokens,
+                do_sample=self.do_sample,
+                temperature=self.text_temperature,
+            )
+
+        return final_text, generated_images
+
     def format_output(self, text: str, images: List[str]) -> str:
         """Format output as JSON string"""
         output_dict = {"text": text, "images": images}
@@ -510,8 +736,25 @@ class Bagel(lmms):
 
             prompt = contexts
 
-            # Choose mode: understanding or generation
-            if self.mode == "understanding":
+            # Check if this is Uni-MMMU interleaved generation mode
+            # Specified via lmms_eval_specific_kwargs in yaml
+            bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
+
+            if bagel_interleaved is not None:
+                # Uni-MMMU interleaved generation mode
+                # Get input images and doc data
+                doc = self.task_dict[task][split][doc_id]
+                input_images = []
+                if doc_to_visual is not None:
+                    visuals = [doc_to_visual(doc)]
+                    input_images = self.flatten(visuals)
+
+                output_text, output_images = self.generate_uni_mmmu_interleaved(
+                    input_images, prompt, str(doc_id), task, bagel_interleaved, doc
+                )
+                formatted_output = self.format_output(output_text, output_images)
+
+            elif self.mode == "understanding":
                 # Image understanding mode
                 if doc_to_visual is None:
                     eval_logger.warning(f"No image provided for understanding mode, doc_id={doc_id}")

@@ -94,7 +94,7 @@ class AzureTRAPIVisualCoT(lmms):
         stage1_image_size: str = "1024x1024",
         stage1_quality: str = "auto",
         # Stage 2 parameters
-        stage2_max_tokens: int = 8192,
+        stage2_max_tokens: int = 16384,
         # Output
         output_dir: str = None,
         save_intermediate: bool = False,
@@ -336,11 +336,15 @@ class AzureTRAPIVisualCoT(lmms):
 
         for attempt in range(self.max_retries):
             try:
-                response = self.chat_client.chat.completions.create(
-                    model=self.chat_deployment,
-                    messages=messages,
-                    max_tokens=self.stage2_max_tokens,
-                )
+                # Build request kwargs - only include max_tokens if specified
+                request_kwargs = {
+                    "model": self.chat_deployment,
+                    "messages": messages,
+                }
+                if self.stage2_max_tokens is not None:
+                    request_kwargs["max_tokens"] = self.stage2_max_tokens
+
+                response = self.chat_client.chat.completions.create(**request_kwargs)
                 return response.choices[0].message.content
             except Exception as e:
                 eval_logger.warning(

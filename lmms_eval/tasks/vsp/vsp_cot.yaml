@@ -1,0 +1,5 @@
+# Visual-Spatial-Planning Visual CoT Task Group
+group: vsp_cot
+task:
+  - vsp_google_map_visual_cot
+  - vsp_collision_visual_cot

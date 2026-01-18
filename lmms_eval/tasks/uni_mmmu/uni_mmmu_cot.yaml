@@ -1,0 +1,6 @@
+# Uni-MMMU Visual CoT Task Group
+group: uni_mmmu_cot
+task:
+  - uni_mmmu_jigsaw100_visual_cot
+  - uni_mmmu_maze100_visual_cot
+  - uni_mmmu_sliding54_visual_cot

@@ -1,0 +1,47 @@
+# VSP Google Map Navigation Task - Visual CoT Version
+dataset_path: parquet
+dataset_kwargs:
+  data_files: /home/yifeishen/blob/mount/lmms-eval-dataset/vsp_google_map_50.parquet
+task: "vsp_google_map_visual_cot"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.gmap_doc_to_visual
+doc_to_text: !function utils.gmap_doc_to_text_visual_cot
+doc_to_target: "gt_north_south"
+
+process_results: !function utils.gmap_process_results
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: gmap_acc
+    aggregation: !function utils.gmap_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  bagel_visual_cot:
+    # Stage 1: Image generation parameters
+    stage1_cfg_text_scale: 4.0
+    stage1_cfg_interval: 0.4
+    stage1_timestep_shift: 3.0
+    stage1_num_timesteps: 50
+    stage1_cfg_renorm_min: 0.0
+    stage1_cfg_renorm_type: "global"
+    stage1_image_ratio: "1:1"
+    # Stage 2: Visual understanding parameters
+    stage2_max_new_tokens: 1024
+    stage2_temperature: 0.0
+    stage2_do_sample: false
+    # Save intermediate artifacts for debugging
+    save_intermediate: true
+
+metadata:
+  version: 1.0
+  num_samples: 50
+  seed: 42
+  prompt_type: visual_cot
+  description: "VSP Google Map Navigation with Visual CoT"

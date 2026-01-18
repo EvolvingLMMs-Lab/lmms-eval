@@ -1,0 +1,41 @@
+# Uni-MMMU Jigsaw 100 samples - Visual CoT Version
+dataset_path: parquet
+dataset_kwargs:
+  data_files: /home/yifeishen/blob/mount/lmms-eval-dataset/uni_mmmu_jigsaw100.parquet
+task: "uni_mmmu_jigsaw100_visual_cot"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.jigsaw_doc_to_visual
+doc_to_text: !function utils.jigsaw_doc_to_text_visual_cot
+doc_to_target: "label"
+
+process_results: !function utils.jigsaw_process_results
+
+generation_kwargs:
+  max_new_tokens: 2048
+  do_sample: false
+  temperature: 0.0
+
+lmms_eval_specific_kwargs:
+  bagel_interleaved:
+    # Task type: jigsaw generates 2 completed images
+    task_type: "jigsaw"
+    num_images: 2
+    # Image generation parameters
+    cfg_text_scale: 4.0
+    cfg_interval: 0.4
+    timestep_shift: 3.0
+    num_timesteps: 50
+
+metric_list:
+  - metric: jigsaw_text_acc
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  version: 1.0
+  num_samples: 100
+  seed: 42
+  prompt_type: visual_cot
+  description: "Uni-MMMU Jigsaw with Visual CoT"

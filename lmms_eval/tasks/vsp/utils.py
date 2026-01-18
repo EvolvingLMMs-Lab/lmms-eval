@@ -245,3 +245,114 @@ def collision_aggregate_results(results: List[Dict]) -> float:
     eval_logger.info(f"  Overall Accuracy: {overall_acc:.4f}")
 
     return overall_acc
+
+
+# ============================================================================
+# Visual CoT Versions
+# ============================================================================
+
+GMAP_GEN_PROMPT = (
+    "This image shows a map with a starting point marked 'S' (blue) and a goal marked 'G' (red). "
+    "Your task: Generate a clear visualization that highlights the optimal path from S to G. "
+    "Draw a simplified map showing the route with arrows indicating directions (North, South, East, West) "
+    "and mark the number of crossroads to pass in each direction."
+)
+
+GMAP_QUESTION_PROMPT_COT = '''In addition to the original images, you are also given an auxiliary visualization image showing the path analysis.
+
+As a professional pathfinder, your task is to analyze a map and find a route from the starting location to the goal. Since coding is not within your skill set, your approach relies on logical reasoning of the map.
+
+## Game Setup
+- The game presents a fully observable map.
+- The starting location is marked with blue "S", and the goal is marked with red "G".
+- Your goal is to find a path from the starting location to the goal.
+
+## Moving Rules
+- The action plan involves moves in four directions: 'W' (West), 'E' (east), 'N' (north), or 'S' (south).
+- Each move is along with distances. Distances are measured by how many crossroads passed.
+We provide an example to further illustrate the rules.
+
+[Example Image]
+
+In this provided example:
+- You are now at the southwest of the goal.
+- If you move north by 1 crossroad, you will be at the west of the goal.
+- If you move east by 4 crossroads, you will be at the goal.
+- IMPORTANT: Please ignore the name of the street and avenue. The numbers in the name cannot be used to compute how many crossroads need to be passed.
+
+## Procedure and Output
+Now you will solve the given maze. To analyze the relative spatial relation between the starting point and the goal (for example, southwest). Then, output a path using the format <Direction>: <Number of crossroads passed>.
+For example:
+<Output>
+1. North: 1
+2. East: 4
+means move north by 1 crossroad, and move east by 4 crossroads.
+<Output>
+1. South: 1
+means move south by 1 crossroad.
+Do not output any extra content after the above aggregated output.
+
+Please output path for the following map:
+
+[Test Image]'''
+
+
+def gmap_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+    """Get Visual CoT prompt for google map task."""
+    return f"[GEN_PROMPT]{GMAP_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{GMAP_QUESTION_PROMPT_COT}[/QUESTION]"
+
+
+COLLISION_GEN_PROMPT = (
+    "This image shows a map with a car, a person, and a goal. "
+    "Your task: Generate a clear visualization that analyzes the distances and paths. "
+    "Draw a simplified diagram showing the grid distances from the car to the goal "
+    "and from the person to the goal, with arrows indicating their movement directions."
+)
+
+COLLISION_QUESTION_TEMPLATE_COT = '''In addition to the original images, you are also given an auxiliary visualization image showing the distance analysis.
+
+As a professional navigation agent, your task is to analyze a map and determine the time needed for the car and the person passing the goal.
+
+## Game Setup
+- The game presents a fully observable map. There is a person, a car, and a goal on the map.
+- The game further specifies the moving direction of the person and car ("up", "down", "left", "right").
+- Your goal is to determine the time needed for the car and the person passing the goal.
+The following figure shows how the player, the car, and the goals look like.
+
+[Icon Image]
+
+We provide an example to further illustrate the rules.
+
+[Example Image]
+
+The car is moving left with speed 1.0 grid per second, and the person is moving up with speed 0.5 grid per second.
+
+In this provided example:
+- The car is 2 grid away from the goal. Given it's time as 1.0 grid per second, the time needed is 2 / 1.0 = 2 seconds.
+- The person is 1 grid away from the goal. Given it's time as 0.5 grid per second, the time needed is 1 / 0.5 = 2 seconds.
+
+## Procedure and Output
+Now you will answer for the following given map. To solve it, analyze the car and the person separately. Then, answer for them separately. For example:
+Car: 2.0
+Person: 2.0
+means car and the person will need 2.0 seconds to pass the goal respectively.
+Do not output any extra content after the above aggregated output.
+
+Please analyze and determine the time needed for the car and the person passing the goal:
+
+[Test Image]
+
+The car is moving {car_dir} with speed {car_speed}, and the person is moving {person_dir} with speed {person_speed}.'''
+
+
+def collision_doc_to_text_visual_cot(
+    doc: Dict, lmms_eval_specific_kwargs: Dict = None
+) -> str:
+    """Get Visual CoT prompt for collision task."""
+    question = COLLISION_QUESTION_TEMPLATE_COT.format(
+        car_dir=doc.get("car_dir", ""),
+        car_speed=doc.get("car_speed", ""),
+        person_dir=doc.get("person_dir", ""),
+        person_speed=doc.get("person_speed", ""),
+    )
+    return f"[GEN_PROMPT]{COLLISION_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"

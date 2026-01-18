@@ -91,3 +91,43 @@ def phyx_aggregate_results(results):
     hit = [x["true_false"] for x in results]
     Overall_acc = np.mean(hit)
     return Overall_acc
+
+
+# ============================================================================
+# Visual CoT Versions
+# ============================================================================
+
+# Optics: 根据题目画光路图
+OPTICS_GEN_PROMPT = (
+    "Based on this optics problem, draw a light ray diagram that helps solve the problem. "
+    "Show the paths of light rays, including incident rays, reflected rays, refracted rays, "
+    "and any relevant angles or focal points as needed by the problem."
+)
+
+# Mechanics: 根据题目画受力分析图
+MECHANICS_GEN_PROMPT = (
+    "Based on this mechanics problem, draw a free body diagram (force analysis diagram) "
+    "that helps solve the problem. "
+    "Show all the forces acting on the object(s), including gravity, normal force, friction, "
+    "tension, applied forces, etc., with arrows indicating direction and relative magnitude."
+)
+
+
+def phyx_doc_to_text_optics_cot(doc, lmms_eval_specific_kwargs=None):
+    """Visual CoT prompt for PhyX Optics task."""
+    question = (
+        "In addition to the original image, you are also given an auxiliary "
+        "light ray diagram to help you solve the problem.\n\n"
+        + doc["question"]
+    )
+    return f"[GEN_PROMPT]{OPTICS_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
+
+
+def phyx_doc_to_text_mechanics_cot(doc, lmms_eval_specific_kwargs=None):
+    """Visual CoT prompt for PhyX Mechanics task."""
+    question = (
+        "In addition to the original image, you are also given an auxiliary "
+        "free body diagram (force analysis diagram) to help you solve the problem.\n\n"
+        + doc["question"]
+    )
+    return f"[GEN_PROMPT]{MECHANICS_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
