@@ -244,3 +244,70 @@ def process_docs(dataset, task_type: str):
 
 process_fine_grained = partial(process_docs, task_type="Fine-grained Discrimination")
 process_visual_tracking = partial(process_docs, task_type="Visual Tracking")
+
+
+# ============================================================================
+# Visual CoT Versions
+# ============================================================================
+
+# Fine-grained Discrimination: 需要辨别细微差异，生成图突出细节
+FINE_GRAINED_GEN_PROMPT = (
+    "This image contains subtle visual details that need careful examination. "
+    "Your task: Generate a visualization that highlights and emphasizes the fine-grained details, "
+    "subtle differences, and distinguishing features in the image. "
+    "Make the key discriminative elements more prominent and easier to identify."
+)
+
+# Visual Tracking: 需要追踪物体，生成图突出物体轨迹/位置
+VISUAL_TRACKING_GEN_PROMPT = (
+    "This image involves tracking objects or their movements. "
+    "Your task: Generate a visualization that highlights the objects of interest, "
+    "their positions, trajectories, or movement patterns. "
+    "Make it easier to follow and track the relevant visual elements."
+)
+
+
+def doc_to_text_visual_cot(
+    doc: Dict,
+    lmms_eval_specific_kwargs: Dict = None,
+    gen_prompt: str = "",
+) -> str:
+    """Format Visual CoT prompt with generation prompt and question."""
+    question = doc["question"].strip()
+
+    # Add choices for multiple choice questions
+    if doc["ansType"] == "choice" and doc.get("options"):
+        question = question + "\nChoices:\n" + format_choices(doc["options"])
+
+    # Add auxiliary image notice
+    question = (
+        "In addition to the original image, you are also given an auxiliary "
+        "visualization image that highlights key visual elements.\n\n" + question
+    )
+
+    # Add pre_prompt and post_prompt
+    if lmms_eval_specific_kwargs:
+        if lmms_eval_specific_kwargs.get("pre_prompt"):
+            question = lmms_eval_specific_kwargs["pre_prompt"] + question
+        if lmms_eval_specific_kwargs.get("post_prompt"):
+            question = question + lmms_eval_specific_kwargs["post_prompt"]
+
+    return f"[GEN_PROMPT]{gen_prompt}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
+
+
+def doc_to_text_fine_grained_cot(
+    doc: Dict, lmms_eval_specific_kwargs: Dict = None
+) -> str:
+    """Visual CoT prompt for Fine-grained Discrimination task."""
+    return doc_to_text_visual_cot(
+        doc, lmms_eval_specific_kwargs, FINE_GRAINED_GEN_PROMPT
+    )
+
+
+def doc_to_text_visual_tracking_cot(
+    doc: Dict, lmms_eval_specific_kwargs: Dict = None
+) -> str:
+    """Visual CoT prompt for Visual Tracking task."""
+    return doc_to_text_visual_cot(
+        doc, lmms_eval_specific_kwargs, VISUAL_TRACKING_GEN_PROMPT
+    )

@@ -317,3 +317,112 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         "sliding_text_exact": text_exact,
         "sliding_text_frame_acc": text_frame_acc,
     }
+
+
+# ============================================================================
+# Visual CoT Versions - Aligned with Original Uni-MMMU
+# ============================================================================
+# These prompts match the exact prompts used in the original Uni-MMMU benchmark
+
+
+# Jigsaw prompt (aligned with original jigsaw.py)
+JIGSAW_PROMPT = """You are a unified vision-language model. You will be given:
+(1) a 2×2 reference image with the bottom-right cell hidden, and
+(2) two candidate patch images ("Candidate 0" and "Candidate 1").
+
+Your job:
+- For each candidate, synthesize a completed 2×2 image by placing that candidate EXACTLY into the bottom-right cell. Keep the other three cells pixel-identical to the reference (no filtering, no re-rendering). If sizes differ, only scale the candidate to fit that quadrant; do NOT rotate, mirror, or alter colors.
+- Compare the two completed results and decide which candidate yields the correct completion.
+
+Output EXACTLY the following, in order:
+
+1) A single image with Candidate 0 placed in the bottom-right cell
+
+2) A single image with Candidate 1 placed in the bottom-right cell
+
+
+3) analysis comparing seam continuity, color/texture gradient, structural alignment, and global semantics
+
+4) One strict JSON object with your decision, wrapped as:
+<FINAL_ANSWER_JSON>
+{"choice": 0 or 1, "rationale": "≤30 words decisive cue"}
+</FINAL_ANSWER_JSON>
+
+Hard constraints:
+- Deterministic, single outcome. No hedging, no multiple possibilities.
+- No meta talk about prompts, models, or pipelines.
+- Do not restate the task as the answer; reason from visual evidence.
+- The only edits allowed are pasting the candidate into the bottom-right cell and necessary size matching for that cell. All other pixels must remain identical to the reference.
+
+Inputs:"""
+
+
+# Maze prompt (aligned with original maze.py)
+MAZE_PROMPT = """You are a precise maze solver.
+
+SEMANTICS (for all mazes)
+- Black squares: walls (impassable)
+- White squares: path (walkable)
+- Blue dot: start (the agent)
+- Green rectangular frame: goal (reaching any white cell inside the green frame counts as success)
+- Legal moves: up, down, left, right only. One cell per step; no diagonals, no jumps; never cross walls.
+
+OUTPUT FORMAT (STRICT)
+1) MULTI-IMAGE MODE — generate a SEQUENCE OF SEPARATE IMAGES, one per move:
+   - Each output image must depict the maze state AFTER applying exactly one legal move.
+   - Do NOT include the initial (pre-move) state.
+   - Keep palette/layout/scale identical to the input; only the blue dot moves.
+   - The number of returned images MUST equal the number of moves in the final answer (see step 2).
+   - Absolutely FORBIDDEN: any collage/montage/spritesheet/grid/multi-panel/side-by-side/stacked images; no arrows, captions, or overlays; no GIFs/animations/video.
+
+2) After all step images, emit EXACTLY ONE LINE containing ONLY the final move list as a JSON array of lowercase strings, wrapped as:
+   <ANSWER_JSON>["right","down","left"]</ANSWER_JSON>
+
+
+NO EXTRAS
+- No tools, no OCR, no explanations, and no text other than the single <ANSWER_JSON>…</ANSWER_JSON> line.
+- Do not restate the instructions or the condition.
+
+REMINDERS
+- Decide the full path first, then emit the image sequence (one image per move), then the single <ANSWER_JSON> line.
+- One move per image; images must be separate files/parts, not stitched together in any way."""
+
+
+# Sliding puzzle prompt (aligned with original sliding.py)
+SLIDING_PROMPT = """You are a precise sliding puzzle solver.
+
+SEMANTICS
+- The puzzle is a 3×3 grid with 8 colored tiles and one empty space (shown as red).
+- A "move" slides an adjacent tile INTO the empty space.
+- Moves are named by the direction the COLORED TILE moves (not the empty space).
+- Legal moves: up, down, left, right only. One tile per step.
+
+OUTPUT FORMAT (STRICT)
+1) MULTI-IMAGE MODE — generate a SEQUENCE OF SEPARATE IMAGES, one per move:
+   - Each output image must depict the puzzle state AFTER applying exactly one move.
+   - Do NOT include the initial (pre-move) state.
+   - Keep tile colors identical; only positions change.
+   - The number of returned images MUST equal the number of moves in the final answer.
+   - Absolutely FORBIDDEN: any collage/montage/spritesheet/grid/multi-panel/side-by-side/stacked images.
+
+2) After all step images, emit EXACTLY ONE LINE containing ONLY the final move list as a JSON array of lowercase strings, wrapped as:
+   <ANSWER_JSON>["down","right","up"]</ANSWER_JSON>
+
+NO EXTRAS
+- No explanations beyond the single <ANSWER_JSON>…</ANSWER_JSON> line.
+- Do not restate the instructions."""
+
+
+def jigsaw_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+    """Visual CoT prompt for jigsaw task - aligned with original Uni-MMMU."""
+    return JIGSAW_PROMPT
+
+
+def maze_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+    """Visual CoT prompt for maze task - aligned with original Uni-MMMU."""
+    return MAZE_PROMPT
+
+
+def sliding_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+    """Visual CoT prompt for sliding puzzle - aligned with original Uni-MMMU."""
+    return SLIDING_PROMPT

@@ -27,11 +27,11 @@ def relaxed_correctness(prediction, target, max_relative_change: float = 0.05) -
 
     The correctness tolerates certain error ratio defined by max_relative_change.
     See https://arxiv.org/pdf/2203.10244.pdf, end of section 5.1:
-    “Following Methani et al. (2020), we use a relaxed accuracy measure for the
+    "Following Methani et al. (2020), we use a relaxed accuracy measure for the
     numeric answers to allow a minor inaccuracy that may result from the automatic
     data extraction process. We consider an answer to be correct if it is within
     5% of the gold answer. For non-numeric answers, we still need an exact match
-    to consider an answer to be correct.”
+    to consider an answer to be correct."
 
     This funcion is taken from https://github.com/QwenLM/Qwen-VL/blob/34b4c0ee7b07726371b960911f249fe61b362ca3/eval_mm/evaluate_vqa.py#L113
     Args:
@@ -60,3 +60,29 @@ def relaxed_correctness(prediction, target, max_relative_change: float = 0.05) -
         return relative_change <= max_relative_change
     else:
         return prediction.lower() == target.lower()
+
+
+# ============================================================================
+# Visual CoT Version
+# ============================================================================
+
+CHARTQA_GEN_PROMPT = (
+    "Based on this chart and the question being asked, generate an annotated version "
+    "of the chart that highlights the relevant data points, bars, lines, or regions "
+    "needed to answer the question. Mark or circle the key values and label them clearly."
+)
+
+
+def chartqa_doc_to_text_visual_cot(doc, lmms_eval_specific_kwargs):
+    """Visual CoT prompt for ChartQA task."""
+    question = doc["question"]
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
+
+    question_with_aux = (
+        "In addition to the original chart, you are also given an annotated version "
+        "that highlights the relevant data points for the question.\n\n"
+        f"{pre_prompt}{question}{post_prompt}"
+    )
+
+    return f"[GEN_PROMPT]{CHARTQA_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question_with_aux}[/QUESTION]"
