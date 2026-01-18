@@ -1,0 +1,32 @@
+# BabyVision Visual Tracking Task
+dataset_path: UnipatAI/BabyVision
+task: "babyvision_visual_tracking"
+test_split: train
+output_type: generate_until
+
+process_docs: !function utils.process_visual_tracking
+
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "blankAns"
+
+process_results: !function utils.process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\n\nThink step by step and give your final answer in \\boxed{Answer} format."
+
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: Visual Tracking
+    aggregation: !function utils.aggregate_results
+    higher_is_better: true
+
+metadata:
+  version: 1.0
+  num_samples: 83

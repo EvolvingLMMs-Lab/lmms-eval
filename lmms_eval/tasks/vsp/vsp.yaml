@@ -1,0 +1,5 @@
+# Visual-Spatial-Planning Task Group
+group: vsp
+task:
+  - vsp_google_map
+  - vsp_collision

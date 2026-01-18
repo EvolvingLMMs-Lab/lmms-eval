@@ -1,0 +1,5 @@
+# BabyVision Task Group
+group: babyvision
+task:
+  - babyvision_fine_grained
+  - babyvision_visual_tracking

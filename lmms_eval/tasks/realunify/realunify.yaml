@@ -1,0 +1,6 @@
+# RealUnify GEU Task Group (Direct mode)
+group: realunify
+task:
+  - realunify_mental_tracking
+  - realunify_mental_reconstruction
+  - realunify_attentional_focusing
