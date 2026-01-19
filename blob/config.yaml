@@ -1,0 +1,32 @@
+# Refer ./setup/baseConfig.yaml for full set of config parameters
+
+logging:
+  type: syslog
+  level: log_debug
+
+components:
+  - libfuse
+  - stream
+  - attr_cache
+  - azstorage
+
+libfuse:
+  attribute-expiration-sec: 120
+  entry-expiration-sec: 120
+  negative-entry-expiration-sec: 240
+
+stream:
+  block-size-mb: 32
+  max-buffers: 256
+  buffer-size-mb: 96
+
+attr_cache:
+  timeout-sec: 7200
+
+azstorage:
+  ##### az cil
+  type: block
+  account-name: yifeishen
+  container: zimowen
+  endpoint: https://yifeishen.blob.core.windows.net  # replace it with your blob address
+  mode: azcli
