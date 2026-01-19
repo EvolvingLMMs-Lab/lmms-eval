@@ -1,0 +1,38 @@
+dataset_path: Borise/CaptionQA
+dataset_kwargs:
+  trust_remote_code: true
+output_type: generate_until
+dataset_name: null
+process_docs: !function utils.captionqa_process_docs
+doc_to_visual: !function utils.captionqa_doc_to_visual
+doc_to_text: !function utils.captionqa_doc_to_text
+doc_to_target: "id"
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0.7
+  top_p: 1.0
+  num_beams: 1
+  do_sample: true
+process_results: !function utils.captionqa_process_results
+metric_list:
+  - metric: captionqa_score
+    aggregation: !function utils.captionqa_aggregate_score
+    higher_is_better: true
+  - metric: captionqa_accuracy
+    aggregation: !function utils.captionqa_aggregate_accuracy
+    higher_is_better: true
+  - metric: captionqa_cannot_answer_rate
+    aggregation: !function utils.captionqa_aggregate_cannot_answer
+    higher_is_better: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    caption_prompt: "Describe this image in detail."
+metadata:
+  version: 0.0
+  paper: "https://arxiv.org/abs/2511.21025"
+  homepage: "https://captionqa.github.io/website"
+  hf_dataset: "https://huggingface.co/datasets/Borise/CaptionQA"
+  judge_model: "Qwen/Qwen2.5-72B-Instruct"
+
