@@ -22,7 +22,9 @@ from accelerate import Accelerator
 from accelerate.utils import InitProcessGroupKwargs
 from loguru import logger as eval_logger
 
+import lmms_eval.tasks
 from lmms_eval import evaluator, utils
+from lmms_eval.api.metrics import power_analysis
 from lmms_eval.api.registry import ALL_TASKS
 from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
@@ -79,6 +81,61 @@ def _handle_non_serializable(o):
         return list(o)
     else:
         return str(o)
+
+
+def _run_power_analysis(args: argparse.Namespace) -> None:
+    """Run power analysis to calculate minimum sample size for detecting a given effect."""
+    task_sizes = {}
+    if args.tasks and args.tasks not in ["list", "list_groups", "list_tags", "list_subtasks"]:
+        task_manager = TaskManager(args.verbosity, include_path=args.include_path)
+        task_names = task_manager.match_tasks(args.tasks.split(","))
+        for task_name in task_names:
+            task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
+            for name, task_obj in task_dict.items():
+                if hasattr(task_obj, "eval_docs"):
+                    task_sizes[name] = len(task_obj.eval_docs)
+
+    result = power_analysis(
+        effect_size=args.effect_size,
+        alpha=args.alpha,
+        power=args.power,
+        correlation=args.correlation,
+    )
+
+    print("\n" + "=" * 60)
+    print("POWER ANALYSIS RESULTS")
+    print("=" * 60)
+    print(f"\nParameters:")
+    print(f"  Effect size (delta):     {args.effect_size:.1%}")
+    print(f"  Significance level (α):  {args.alpha}")
+    print(f"  Desired power (1-β):     {args.power}")
+    print(f"  Correlation (ρ):         {args.correlation}")
+    print(f"\nResult:")
+    print(f"  Minimum sample size:     n = {result['min_n']}")
+    print(f"\nInterpretation:")
+    print(f"  To detect a {args.effect_size:.1%} difference with {args.power:.0%} power,")
+    print(f"  you need at least {result['min_n']} questions in your benchmark.")
+
+    if task_sizes:
+        print(f"\n" + "-" * 60)
+        print("TASK ANALYSIS")
+        print("-" * 60)
+        for task_name, n_samples in task_sizes.items():
+            task_result = power_analysis(
+                effect_size=args.effect_size,
+                alpha=args.alpha,
+                power=args.power,
+                correlation=args.correlation,
+                current_n=n_samples,
+            )
+            status = "✓ Sufficient" if n_samples >= result["min_n"] else "✗ Insufficient"
+            print(f"\n  {task_name}:")
+            print(f"    Sample size:         n = {n_samples}")
+            print(f"    Current power:       {task_result['current_power']:.1%}")
+            print(f"    Min detectable Δ:    {task_result['min_detectable_effect']:.1%}")
+            print(f"    Status:              {status}")
+
+    print("\n" + "=" * 60 + "\n")
 
 
 def parse_eval_args() -> argparse.Namespace:
@@ -274,6 +331,39 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
     parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
+
+    # Power Analysis arguments
+    parser.add_argument(
+        "--power-analysis",
+        action="store_true",
+        default=False,
+        help="Enable power analysis to calculate minimum sample size for detecting a given effect size.",
+    )
+    parser.add_argument(
+        "--effect-size",
+        type=float,
+        default=0.03,
+        help="Minimum effect size to detect (default: 0.03 = 3%%). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.05,
+        help="Significance level for power analysis (default: 0.05). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--power",
+        type=float,
+        default=0.80,
+        help="Desired statistical power (default: 0.80). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--correlation",
+        type=float,
+        default=0.5,
+        help="Expected correlation between paired samples (default: 0.5). Used with --power-analysis.",
+    )
+
     args = parser.parse_args()
     return args
 
@@ -295,6 +385,11 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             setattr(default_args, key, value)
 
     args = default_args
+
+    # Handle power analysis mode (pre-evaluation planning)
+    if getattr(args, "power_analysis", False):
+        _run_power_analysis(args)
+        sys.exit(0)
 
     if args.wandb_args:
         if "name" not in args.wandb_args:
