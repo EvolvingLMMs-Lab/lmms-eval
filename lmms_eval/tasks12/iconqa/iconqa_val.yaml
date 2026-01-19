@@ -1,3 +1,0 @@
-task: "iconqa_val"
-test_split: val
-include: _default_template_docvqa_yaml

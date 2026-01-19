@@ -1,4 +1,0 @@
-dataset_name: Pharmacy
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_pharmacy"
-include: _default_template_yaml

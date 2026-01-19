@@ -1,3 +1,0 @@
-dataset_name: open_single_image
-task: "megabench_open_si"
-include: _default_template_yaml

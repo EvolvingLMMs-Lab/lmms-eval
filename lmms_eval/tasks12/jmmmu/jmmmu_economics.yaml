@@ -1,4 +1,0 @@
-dataset_name: Economics
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_economics"
-include: _default_template_yaml

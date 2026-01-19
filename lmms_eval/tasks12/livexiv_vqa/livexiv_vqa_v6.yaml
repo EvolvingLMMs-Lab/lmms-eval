@@ -1,3 +1,0 @@
-task: "livexiv_vqa_v6"
-dataset_name: "v6-VQA"
-include: livexiv_vqa_template_yaml

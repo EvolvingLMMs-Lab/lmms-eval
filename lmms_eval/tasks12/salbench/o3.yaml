@@ -1,3 +1,0 @@
-dataset_name: O3
-task: "o3"
-include: _o3_default

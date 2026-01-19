@@ -1,4 +1,0 @@
-dataset_name: World_History
-tag: "jmmmu_culture_specific"
-task: "jmmmu_world_history"
-include: _default_template_yaml

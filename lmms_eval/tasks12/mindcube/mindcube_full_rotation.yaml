@@ -1,4 +1,0 @@
-dataset_name: full
-test_split: rotation
-task: "mindcube_full_rotation"
-include: _default_template_yaml

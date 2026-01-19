@@ -1,4 +1,0 @@
-dataset_name: Biology
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_biology"
-include: _default_template_yaml

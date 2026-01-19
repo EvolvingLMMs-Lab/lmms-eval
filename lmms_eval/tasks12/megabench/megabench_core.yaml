@@ -1,3 +1,0 @@
-dataset_name: core
-task: "megabench_core"
-include: _default_template_yaml

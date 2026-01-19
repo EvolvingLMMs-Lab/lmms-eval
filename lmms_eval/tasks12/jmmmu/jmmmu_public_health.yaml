@@ -1,4 +1,0 @@
-dataset_name: Public_Health
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_public_health"
-include: _default_template_yaml

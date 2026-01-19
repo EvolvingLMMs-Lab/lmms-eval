@@ -1,4 +1,0 @@
-include: _default_template_yaml
-
-task: capability_character_identification
-dataset_name: character_identification

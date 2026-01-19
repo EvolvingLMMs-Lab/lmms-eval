@@ -1,4 +1,0 @@
-group: refcoco+_bbox
-task: refcoco+_bbox_testA
-include: _default_template_bbox_yaml
-test_split: testA

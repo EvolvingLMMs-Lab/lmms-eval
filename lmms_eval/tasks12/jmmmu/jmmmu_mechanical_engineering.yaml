@@ -1,4 +1,0 @@
-dataset_name: Mechanical_Engineering
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_mechanical_engineering"
-include: _default_template_yaml

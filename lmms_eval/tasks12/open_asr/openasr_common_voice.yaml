@@ -1,4 +1,0 @@
-dataset_name: common_voice 
-test_split: test
-include: _default_template_yaml
-task: open_asr_common_voice

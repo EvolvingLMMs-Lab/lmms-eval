@@ -1,4 +1,0 @@
-dataset_name: Marketing
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_marketing"
-include: _default_template_yaml

@@ -1,4 +1,0 @@
-include: _default_template_yaml
-
-task: capability_camera_movement
-dataset_name: camera_movement

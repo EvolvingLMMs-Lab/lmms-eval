@@ -1,4 +1,0 @@
-dataset_name: tiny
-test_split: among
-task: "mindcube_tiny_among"
-include: _default_template_yaml

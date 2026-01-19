@@ -1,3 +1,0 @@
-task: "livexiv_vqa_v1"
-dataset_name: "VQA-2024-09-21"
-include: livexiv_vqa_template_yaml

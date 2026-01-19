@@ -1,4 +1,0 @@
-dataset_name: Basic_Medical_Science
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_basic_medical_science"
-include: _default_template_yaml

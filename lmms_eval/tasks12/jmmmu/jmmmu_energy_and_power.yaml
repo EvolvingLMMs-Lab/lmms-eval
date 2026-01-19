@@ -1,4 +1,0 @@
-dataset_name: Energy_and_Power
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_energy_and_power"
-include: _default_template_yaml

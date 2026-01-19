@@ -1,4 +1,0 @@
-dataset_name: Materials
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_materials"
-include: _default_template_yaml

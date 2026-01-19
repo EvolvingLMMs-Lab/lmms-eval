@@ -1,4 +1,0 @@
-dataset_name: Design
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_design"
-include: _default_template_yaml

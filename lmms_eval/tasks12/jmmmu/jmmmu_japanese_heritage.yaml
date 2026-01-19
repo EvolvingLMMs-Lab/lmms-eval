@@ -1,4 +1,0 @@
-dataset_name: Japanese_Heritage
-tag: "jmmmu_culture_specific"
-task: "jmmmu_japanese_heritage"
-include: _default_template_yaml

@@ -1,5 +1,0 @@
-group: olympiadbench
-task:
-- olympiadbench_testmini
-metadata:
-  - version: 0.0

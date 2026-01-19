@@ -1,7 +1,0 @@
-group: mathvista
-task:
-  - mathvista_testmini
-  - mathvista_test
-metadata:
-  version: 0.0
-  quick_extract: false

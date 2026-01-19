@@ -1,3 +1,0 @@
-dataset_name: open
-task: "megabench_open"
-include: _default_template_yaml

@@ -1,4 +1,0 @@
-group: refcoco+_bbox
-task: refcoco+_bbox_val
-include: _default_template_bbox_yaml
-test_split: val

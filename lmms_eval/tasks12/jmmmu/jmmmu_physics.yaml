@@ -1,4 +1,0 @@
-dataset_name: Physics
-tag: "jmmmu_culture_agnostic"
-task: "jmmmu_physics"
-include: _default_template_yaml

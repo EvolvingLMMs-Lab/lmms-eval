@@ -1,4 +1,0 @@
-dataset_name: tiny
-test_split: combined
-task: "mindcube_tiny"
-include: _default_template_yaml

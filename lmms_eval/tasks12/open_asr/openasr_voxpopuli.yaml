@@ -1,4 +1,0 @@
-dataset_name: voxpopuli 
-test_split: test
-include: _default_template_yaml
-task: open_asr_voxpopuli

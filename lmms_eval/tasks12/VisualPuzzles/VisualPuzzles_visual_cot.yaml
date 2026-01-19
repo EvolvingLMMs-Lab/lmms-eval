@@ -1,7 +1,0 @@
-group: VisualPuzzles_visual_cot
-task:
-  - VisualPuzzles_algorithmic_visual_cot
-  - VisualPuzzles_analogical_visual_cot
-  - VisualPuzzles_deductive_visual_cot
-  - VisualPuzzles_inductive_visual_cot
-  - VisualPuzzles_spatial_visual_cot

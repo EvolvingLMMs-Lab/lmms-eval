@@ -1,3 +1,0 @@
-dataset_name: O3_box
-task: "o3_box"
-include: _o3_default

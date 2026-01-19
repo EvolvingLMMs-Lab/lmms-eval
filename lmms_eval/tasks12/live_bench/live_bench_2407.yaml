@@ -1,3 +1,0 @@
-task: "live_bench_2407"
-dataset_name: 2024-07
-include: live_bench_template_yaml
