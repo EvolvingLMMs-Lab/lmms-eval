@@ -20,7 +20,7 @@
 
 ---
 
-## Recent Progress
+## What's New
 
 Evaluating multimodal models is harder than it looks. We have hundreds of benchmarks, but no standard way to run them. Results vary between labs. Comparisons become unreliable. We've been working to address this - not through heroic effort, but through systematic process.
 
