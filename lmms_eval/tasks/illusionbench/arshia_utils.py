@@ -17,26 +17,34 @@ from PIL import Image
 _DIFF_TOKENS = {"easy", "medium", "hard"}
 
 # ============ 候选类别定义 ============
+# Shape candidates (原始大小写，与原始代码库对齐)
 SHAPE_CANDIDATES_ICON = [
-    "animal", "vehicle", "stationary", "sport", "music", "face_emoji"
+    "Animal", "Face_Emoji", "Music", "Sport", "Stationery", "Vehicle"
 ]
 
 SHAPE_CANDIDATES_LOGO = [
-    "tesla", "starbucks", "mcdonalds", "adidas", "reebok", "bmw", "ubuntu",
-    "benz", "telegram", "nike", "apple", "puma", "facebook", "playstation",
-    "instagram", "audi", "olympics", "google", "spotify", "amazon", "nasa"
+    "Adidas", "Amazon", "Apple", "Audi", "BMW", "Mercedes Benz", "Facebook", 
+    "Google", "Instagram", "Mcdonalds", "Nasa", "Nike", "Olympics", 
+    "Playstation", "Puma", "Reebok", "Spotify", "Starbucks", "Tesla", 
+    "Telegram", "Ubuntu"
 ]
 
 SHAPE_CANDIDATES_IN = [
-    "guitar", "teapot", "cat", "paper_clip", "bird", "dolphin", "mug",
-    "bicycle", "bottle", "panda", "dog", "sailboat", "car", "fork",
-    "scooter", "airplane"
+    "Airplane", "Bicycle", "Bird", "Bottle", "Car", "Cat", "Dog", "Dolphin",
+    "Fork", "Guitar", "Mug", "Panda", "Paper_clip", "Sailboat", "Scooter", "Teapot"
 ]
 
-SCENE_CANDIDATES = [
-    "Underwater_ruins", "Time_square", "Medieval_Village", "City", "Museum",
-    "Cloud", "Ocean", "Sand_dune", "Bazaar_market", "Forest", "Origami"
+# Scene candidates (与原始代码库一致)
+SIMPLE_SCENE_CANDIDATES = [
+    "Ocean", "Origami", "Forest", "Cloud", "Sand_dune"
 ]
+
+COMPLEX_SCENE_CANDIDATES = [
+    "Medieval_Village", "City", "Underwater_ruins", "Museum", 
+    "Bazaar_market", "Time_square"
+]
+
+SCENE_CANDIDATES = SIMPLE_SCENE_CANDIDATES + COMPLEX_SCENE_CANDIDATES
 
 
 def _normalize_text(s: str) -> str:
@@ -53,13 +61,17 @@ def _normalize_text(s: str) -> str:
 def _recall_match(pred: str, gt: str) -> int:
     """
     "Recall" here means: does the model mention the correct label somewhere in its output.
-    This is intentionally more tolerant than strict exact-match because the website reports recall.
+    This matches the original codebase evaluation style (substring matching).
+    Uses simple lowercase matching like the original codebase: class_name.lower() in prediction
     """
-    p = _normalize_text(pred)
-    g = _normalize_text(gt)
-    if not g:
+    if not pred or not gt:
         return 0
-    return int(g in p)
+    # Simple lowercase substring matching (like original codebase)
+    pred_lower = pred.strip().lower()
+    gt_lower = gt.strip().lower()
+    # Also handle underscore/space variations
+    gt_variants = [gt_lower, gt_lower.replace("_", " "), gt_lower.replace("-", " ")]
+    return int(any(variant in pred_lower for variant in gt_variants if variant))
 
 
 def _extract_answer(pred: str) -> str:
@@ -195,40 +207,103 @@ def illusionbench_arshia_doc_to_text_shape(doc):
     )
 
 
-def _build_shape_prompt(candidates: List[str]) -> str:
-    options = ", ".join(candidates)
-    return (
-        "You are given an image where scene elements form an abstract SHAPE.\n"
-        "Task: Identify what shape is hidden in this image.\n\n"
-        f"Options: [{options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
-    )
+def _build_shape_prompt(shape_candidates: List[str], scene_candidates: List[str], task_type: str = "icon") -> str:
+    """
+    Build shape prompt matching original codebase format.
+    Options list mixes shape candidates + scene candidates (simple + complex).
+    task_type: "icon", "logo", or "in"
+    """
+    # Combine shape and scene candidates as in original codebase
+    all_options = shape_candidates + scene_candidates
+    shape_string = ", ".join(shape_candidates)
+    scene_string = ", ".join(scene_candidates)
+    
+    if task_type == "icon":
+        return (
+            f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
+            f"Identify the icon that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
+            f"Provide your response by stating only the single, most accurate class name that represents the icon. "
+            f"You have to respond with a single word."
+        )
+    elif task_type == "logo":
+        return (
+            f"This image contains a icon integrated into a background, where elements of the background contribute to forming the logo. "
+            f"Identify the logo that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
+            f"Provide your response by stating only the single, most accurate class name that represents the logo. "
+            f"You have to respond with a single word."
+        )
+    else:  # "in" or "sin"
+        return (
+            f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
+            f"Identify the shape that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
+            f"Provide your response by stating only the single, most accurate class name that represents the icon. "
+            f"You have to respond with a single word."
+        )
 
 
 def illusionbench_arshia_doc_to_text_shape_icon(doc):
-    return _build_shape_prompt(SHAPE_CANDIDATES_ICON)
+    return _build_shape_prompt(SHAPE_CANDIDATES_ICON, SCENE_CANDIDATES, "icon")
 
 
 def illusionbench_arshia_doc_to_text_shape_logo(doc):
-    return _build_shape_prompt(SHAPE_CANDIDATES_LOGO)
+    return _build_shape_prompt(SHAPE_CANDIDATES_LOGO, SCENE_CANDIDATES, "logo")
 
 
 def illusionbench_arshia_doc_to_text_shape_in(doc):
-    return _build_shape_prompt(SHAPE_CANDIDATES_IN)
+    return _build_shape_prompt(SHAPE_CANDIDATES_IN, SCENE_CANDIDATES, "in")
 
 
-def _build_scene_prompt(candidates: List[str]) -> str:
-    options = ", ".join(candidates)
-    return (
-        "You are given an image depicting a SCENE.\n"
-        "Task: Identify what scene is shown in this image.\n\n"
-        f"Options: [{options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
-    )
+def _build_scene_prompt(shape_candidates: List[str], scene_candidates: List[str], task_type: str = "icon") -> str:
+    """
+    Build scene prompt matching original codebase format.
+    Options list mixes shape candidates + scene candidates (simple + complex).
+    task_type: "icon", "logo", or "in"
+    """
+    shape_string = ", ".join(shape_candidates)
+    scene_string = ", ".join(scene_candidates)
+    
+    if task_type == "icon":
+        return (
+            f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
+            f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
+            f"Provide your response by stating only the single, most accurate class name that represents the background. "
+            f"You have to respond with a single word."
+        )
+    elif task_type == "logo":
+        return (
+            f"This image contains an icon integrated into a background, where elements of the background contribute to forming the logo. "
+            f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
+            f"Provide your response by stating only the single, most accurate class name that represents the background. "
+            f"You have to respond with a single word."
+        )
+    else:  # "in" or "sin"
+        return (
+            f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
+            f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
+            f"Provide your response by stating only the single, most accurate class name that represents the background. "
+            f"You have to respond with a single word."
+        )
 
 
 def illusionbench_arshia_doc_to_text_scene(doc):
-    return _build_scene_prompt(SCENE_CANDIDATES)
+    # Default to icon for backward compatibility
+    # In practice, different YAML files call different functions
+    return _build_scene_prompt(SHAPE_CANDIDATES_ICON, SCENE_CANDIDATES, "icon")
+
+
+def illusionbench_arshia_doc_to_text_scene_icon(doc):
+    """Scene task for ICON subset"""
+    return _build_scene_prompt(SHAPE_CANDIDATES_ICON, SCENE_CANDIDATES, "icon")
+
+
+def illusionbench_arshia_doc_to_text_scene_logo(doc):
+    """Scene task for LOGO subset"""
+    return _build_scene_prompt(SHAPE_CANDIDATES_LOGO, SCENE_CANDIDATES, "logo")
+
+
+def illusionbench_arshia_doc_to_text_scene_in(doc):
+    """Scene task for IN subset"""
+    return _build_scene_prompt(SHAPE_CANDIDATES_IN, SCENE_CANDIDATES, "in")
 
 
 _LINE_SHAPE = re.compile(r"^\s*shape\s*:\s*(?P<v>.+?)\s*$", re.IGNORECASE)
@@ -265,18 +340,28 @@ def illusionbench_arshia_process_results(doc, results):
 
 
 def illusionbench_arshia_process_results_shape(doc, results):
+    """
+    Process shape results using recall-style matching (substring matching) 
+    to match original codebase evaluation style.
+    """
     pred = str(results[0]) if results else ""
-    answer = _extract_answer(pred)
+    # Use recall_match instead of strict_match to match original codebase
+    # Original codebase: class_name.lower() in prediction
     return {
-        "shape_recall": _strict_match(answer, doc.get("shape_gt", "")),
+        "shape_recall": _recall_match(pred, doc.get("shape_gt", "")),
     }
 
 
 def illusionbench_arshia_process_results_scene(doc, results):
+    """
+    Process scene results using recall-style matching (substring matching)
+    to match original codebase evaluation style.
+    """
     pred = str(results[0]) if results else ""
-    answer = _extract_answer(pred)
+    # Use recall_match instead of strict_match to match original codebase
+    # Original codebase: class_name.lower() in prediction
     return {
-        "scene_recall": _strict_match(answer, doc.get("scene_gt", "")),
+        "scene_recall": _recall_match(pred, doc.get("scene_gt", "")),
     }
 
 
@@ -304,14 +389,14 @@ def illusionbench_arshia_doc_to_text_visual_cot_icon_shape(doc, lmms_eval_specif
         "Make the hidden shape prominent and easily recognizable."
     )
 
-    # question_prompt: Aligned with direct generation version + explain two images
-    shape_options = ", ".join(SHAPE_CANDIDATES_ICON)
+    # question_prompt: Use original codebase format with mixed options
+    shape_string = ", ".join(SHAPE_CANDIDATES_ICON)
+    scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images: the original image and an auxiliary visualization.\n"
-        "The image shows scene elements forming an abstract SHAPE.\n"
-        "Task: Identify what shape is hidden in this image.\n\n"
-        f"Options: [{shape_options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
+        f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
+        f"Identify the icon that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
+        f"Provide your response by stating only the single, most accurate class name that represents the icon. "
+        f"You have to respond with a single word."
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -325,14 +410,14 @@ def illusionbench_arshia_doc_to_text_visual_cot_icon_scene(doc, lmms_eval_specif
         "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
-    # question_prompt: Aligned with direct generation version + explain two images
-    scene_options = ", ".join(SCENE_CANDIDATES)
+    # question_prompt: Use original codebase format with mixed options
+    shape_string = ", ".join(SHAPE_CANDIDATES_ICON)
+    scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images: the original image and an auxiliary visualization.\n"
-        "The image depicts a SCENE.\n"
-        "Task: Identify what scene is shown in this image.\n\n"
-        f"Options: [{scene_options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
+        f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
+        f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
+        f"Provide your response by stating only the single, most accurate class name that represents the background. "
+        f"You have to respond with a single word."
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -346,14 +431,14 @@ def illusionbench_arshia_doc_to_text_visual_cot_logo_shape(doc, lmms_eval_specif
         "Generate a clear image that highlights the shape's distinctive outline and design elements."
     )
 
-    # question_prompt: Aligned with direct generation version + explain two images
-    shape_options = ", ".join(SHAPE_CANDIDATES_LOGO)
+    # question_prompt: Use original codebase format with mixed options
+    shape_string = ", ".join(SHAPE_CANDIDATES_LOGO)
+    scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images: the original image and an auxiliary visualization.\n"
-        "The image shows scene elements forming an abstract SHAPE.\n"
-        "Task: Identify what shape is hidden in this image.\n\n"
-        f"Options: [{shape_options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
+        f"This image contains a icon integrated into a background, where elements of the background contribute to forming the logo. "
+        f"Identify the logo that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
+        f"Provide your response by stating only the single, most accurate class name that represents the logo. "
+        f"You have to respond with a single word."
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -367,14 +452,14 @@ def illusionbench_arshia_doc_to_text_visual_cot_logo_scene(doc, lmms_eval_specif
         "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
-    # question_prompt: Aligned with direct generation version + explain two images
-    scene_options = ", ".join(SCENE_CANDIDATES)
+    # question_prompt: Use original codebase format with mixed options
+    shape_string = ", ".join(SHAPE_CANDIDATES_LOGO)
+    scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images: the original image and an auxiliary visualization.\n"
-        "The image depicts a SCENE.\n"
-        "Task: Identify what scene is shown in this image.\n\n"
-        f"Options: [{scene_options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
+        f"This image contains an icon integrated into a background, where elements of the background contribute to forming the logo. "
+        f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
+        f"Provide your response by stating only the single, most accurate class name that represents the background. "
+        f"You have to respond with a single word."
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -388,14 +473,14 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_shape(doc, lmms_eval_specific
         "Generate a clear image that highlights the shape's outline and recognizable features."
     )
 
-    # question_prompt: Aligned with direct generation version + explain two images
-    shape_options = ", ".join(SHAPE_CANDIDATES_IN)
+    # question_prompt: Use original codebase format with mixed options
+    shape_string = ", ".join(SHAPE_CANDIDATES_IN)
+    scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images: the original image and an auxiliary visualization.\n"
-        "The image shows scene elements forming an abstract SHAPE.\n"
-        "Task: Identify what shape is hidden in this image.\n\n"
-        f"Options: [{shape_options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
+        f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
+        f"Identify the shape that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
+        f"Provide your response by stating only the single, most accurate class name that represents the icon. "
+        f"You have to respond with a single word."
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
@@ -409,14 +494,14 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_scene(doc, lmms_eval_specific
         "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
-    # question_prompt: Aligned with direct generation version + explain two images
-    scene_options = ", ".join(SCENE_CANDIDATES)
+    # question_prompt: Use original codebase format with mixed options
+    shape_string = ", ".join(SHAPE_CANDIDATES_IN)
+    scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
-        "You are given TWO images: the original image and an auxiliary visualization.\n"
-        "The image depicts a SCENE.\n"
-        "Task: Identify what scene is shown in this image.\n\n"
-        f"Options: [{scene_options}]\n\n"
-        "Reply in this exact format:\nAnswer: <your choice>\n"
+        f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
+        f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
+        f"Provide your response by stating only the single, most accurate class name that represents the background. "
+        f"You have to respond with a single word."
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
 
