@@ -20,10 +20,20 @@
 
 ---
 
-## 공지
+## 최신 소식
 
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** 출시! 이 메이저 릴리스에서는 포괄적인 오디오 평가, 응답 캐싱, 5개의 새 모델(GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme) 및 오디오(Step2, VoiceBench, WenetSpeech), 비전(CharXiv, Lemonade), 추론(CSBench, SciBench, MedQA, SuperGPQA)에 걸친 50개 이상의 새로운 벤치마크 변형을 도입합니다. 자세한 내용은 [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md)를 참조하세요.
+멀티모달 모델을 평가하는 것은 보기보다 어렵습니다. 수백 개의 벤치마크가 있지만 이를 실행하는 표준화된 방법은 없었습니다. 실험실마다 결과가 다르고 비교의 신뢰도가 떨어집니다. 우리는 영웅적인 노력이 아닌 체계적인 프로세스를 통해 이 문제를 해결하기 위해 노력해 왔습니다.
+
+**2026년 1월** - 기존 벤치마크에서 공간 및 구성적 추론이 여전히 사각지대로 남아있음을 확인했습니다. 이에 [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)을 추가했습니다. 원격 평가 파이프라인을 운영하는 팀들을 위해 HTTP 평가 서버(#972)를 도입했습니다. 통계적 엄밀함이 필요한 사용자들을 위해 CLT 및 클러스터링된 표준 오차 추정(#989)을 추가했습니다.
+
+**2025년 10월 (v0.5)** - 오디오 분야는 그동안 공백이었습니다. 모델은 들을 수 있었지만 이를 테스트할 일관된 방법이 없었습니다. 이번 릴리스에서는 포괄적인 오디오 평가, 효율성을 위한 응답 캐싱, 그리고 오디오, 비전, 추론을 아우르는 50개 이상의 벤치마크 변형을 추가했습니다. [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
+
+<details>
+<summary>아래는 놀라운 기여자들에 의해 추가된 최근 태스크, 모델 및 기능의 연대순 목록입니다.</summary>
+
 - [2025-07] 🚀🚀 `lmms-eval-0.4`를 출시했습니다. 자세한 내용은 [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md)를 참조하세요.
+
+</details>
 
 ## 왜 `lmms-eval`인가?
 
@@ -91,10 +101,73 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/llava_onevision.sh
 ```
 
+**LLaVA-OneVision1_5 평가**
+
+```bash
+bash examples/models/llava_onevision1_5.sh
+```
+
+**LLaMA-3.2-Vision 평가**
+
+```bash
+bash examples/models/llama_vision.sh
+```
+
+**Qwen2-VL 평가**
+
+```bash
+bash examples/models/qwen2_vl.sh
+bash examples/models/qwen2_5_vl.sh
+```
+
+**더 큰 모델을 위한 텐서 병렬(tensor parallel) 평가 (llava-next-72b)**
+
+```bash
+bash examples/models/tensor_parallel.sh
+```
+
+**더 큰 모델을 위한 SGLang 평가 (llava-next-72b)**
+
+```bash
+bash examples/models/sglang.sh
+```
+
+**더 큰 모델을 위한 vLLM 평가 (llava-next-72b)**
+
+```bash
+bash examples/models/vllm_qwen2vl.sh
+```
+
 **추가 파라미터**
 
 ```bash
 python3 -m lmms_eval --help
+```
+
+**환경 변수**
+실험 및 평가를 실행하기 전에 다음 환경 변수를 설정하는 것을 권장합니다. 일부 변수는 특정 태스크 실행에 필수적입니다.
+
+```bash
+export OPENAI_API_KEY="<YOUR_API_KEY>"
+export HF_HOME="<Path to HF cache>" 
+export HF_TOKEN="<YOUR_API_KEY>"
+export HF_HUB_ENABLE_HF_TRANSFER="1"
+export REKA_API_KEY="<YOUR_API_KEY>"
+# 기타 가능한 환경 변수는 다음과 같습니다:
+# ANTHROPIC_API_KEY, DASHSCOPE_API_KEY 등
+```
+
+**일반적인 환경 문제**
+
+가끔 httpx 또는 protobuf와 관련된 오류와 같은 일반적인 문제에 직면할 수 있습니다. 이러한 문제를 해결하기 위해 다음 명령어를 먼저 시도해 볼 수 있습니다:
+
+```bash
+python3 -m pip install httpx==0.23.3;
+python3 -m pip install protobuf==3.20;
+# numpy==2.x를 사용하는 경우 오류가 발생할 수 있습니다
+python3 -m pip install numpy==1.26;
+# 토크나이저 작동을 위해 sentencepiece가 필요할 수 있습니다
+python3 -m pip install sentencepiece;
 ```
 
 ## 사용자 정의 모델 및 데이터셋 추가
@@ -116,5 +189,15 @@ lmms_eval은 [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harne
       archivePrefix={arXiv},
       primaryClass={cs.CL},
       url={https://arxiv.org/abs/2407.12772}, 
+}
+
+@misc{lmms_eval2024,
+    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
+    author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
+    publisher    = {Zenodo},
+    version      = {v0.1.0},
+    month={March},
+    year={2024}
 }
 ```
