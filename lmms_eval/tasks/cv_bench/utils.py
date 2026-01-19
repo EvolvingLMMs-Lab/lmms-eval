@@ -28,10 +28,9 @@ def cv_bench_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: Optiona
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
 
-    options_labels = ["A", "B", "C", "D", "E"]
-    num_options = len(doc["choices"])
-    options_current_task = ", ".join(options_labels[:num_options])
-    prompt = lmms_eval_specific_kwargs.get("pre_prompt", "").format(options_current_task) + "\n" + doc["prompt"]
+    num_choices = len(doc["choices"])
+    choice_letters = ", ".join([chr(65 + i) for i in range(num_choices)])
+    prompt = lmms_eval_specific_kwargs.get("pre_prompt", "").format(choice_letters) + "\n" + doc["prompt"]
     return prompt
 
 
