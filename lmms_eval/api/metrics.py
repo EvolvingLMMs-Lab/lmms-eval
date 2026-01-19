@@ -698,3 +698,60 @@ def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
 
     # SE_clustered = sqrt(SE_CLT^2 + cross_term)
     return math.sqrt(se_clt_squared + cross_term)
+
+
+def power_analysis(
+    effect_size: float,
+    std: float = 0.5,
+    alpha: float = 0.05,
+    power: float = 0.80,
+    correlation: float = 0.5,
+    current_n: int = None,
+) -> dict:
+    """
+    Calculate minimum sample size for paired t-test power analysis.
+
+    For paired samples, the effective variance is reduced by correlation:
+    Var(X - Y) = Var(X) + Var(Y) - 2*Cov(X,Y) = 2*sigma^2*(1-rho)
+
+    Formula: n = ((z_alpha + z_beta) / d)^2
+    where d = effect_size / std_diff is the standardized effect size.
+
+    Args:
+        effect_size: Minimum detectable difference (e.g., 0.03 for 3%)
+        std: Standard deviation of scores (default 0.5 for binary 0/1)
+        alpha: Significance level (default 0.05)
+        power: Desired statistical power (default 0.80)
+        correlation: Expected correlation between paired samples (default 0.5)
+        current_n: If provided, also compute the power for this sample size
+
+    Returns:
+        Dictionary with min_n, current_power (if current_n provided), and other details
+    """
+    from scipy import stats
+
+    z_alpha = stats.norm.ppf(1 - alpha / 2)  # Two-tailed
+    z_beta = stats.norm.ppf(power)
+
+    var_diff = 2 * (std**2) * (1 - correlation)
+    std_diff = math.sqrt(var_diff)
+    d = effect_size / std_diff
+    min_n = math.ceil(((z_alpha + z_beta) / d) ** 2)
+
+    result = {
+        "min_n": min_n,
+        "effect_size": effect_size,
+        "alpha": alpha,
+        "power": power,
+        "correlation": correlation,
+    }
+
+    if current_n is not None:
+        achieved_z_beta = d * math.sqrt(current_n) - z_alpha
+        achieved_power = stats.norm.cdf(achieved_z_beta)
+        result["current_n"] = current_n
+        result["current_power"] = round(achieved_power, 4)
+        mde = (z_alpha + z_beta) * std_diff / math.sqrt(current_n)
+        result["min_detectable_effect"] = round(mde, 4)
+
+    return result
