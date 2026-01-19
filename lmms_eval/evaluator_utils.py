@@ -4,17 +4,12 @@ import inspect
 import math
 import pathlib
 import sys
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
 from lmms_eval.api.group import ConfigurableGroup
-from lmms_eval.api.metrics import (
-    aggregate_subtask_metrics,
-    clustered_stderr,
-    pooled_sample_stderr,
-    stderr_for_metric,
-)
+from lmms_eval.api.metrics import aggregate_subtask_metrics, clustered_stderr, paired_ttest, pooled_sample_stderr, stderr_for_metric
 from lmms_eval.api.task import Task
 from lmms_eval.utils import eval_logger, positional_deprecated
 
@@ -537,3 +532,16 @@ def run_task_tests(task_list: List[str]):
     pytest_return_val = pytest.main(args)
     if pytest_return_val:
         raise ValueError(f"Not all tests for the specified tasks ({task_list}) ran successfully! Error code: {pytest_return_val}")
+
+
+def compute_baseline_comparison(
+    current_scores: List[float],
+    baseline_scores: List[float],
+    baseline_name: str,
+) -> Dict[str, Any]:
+    """Compute paired t-test comparison between current and baseline."""
+    result = paired_ttest(current_scores, baseline_scores)
+    result["baseline_name"] = baseline_name
+    result["baseline_mean"] = sum(baseline_scores) / len(baseline_scores) if baseline_scores else float("nan")
+    result["current_mean"] = sum(current_scores) / len(current_scores) if current_scores else float("nan")
+    return result
