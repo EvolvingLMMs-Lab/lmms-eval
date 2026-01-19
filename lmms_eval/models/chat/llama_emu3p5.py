@@ -25,7 +25,7 @@ class LlamaEmu3p5Chat(EMU3p5EncoderModel):
         self,
         model_descriptor: str,
         tokenizer_path: str,
-        vq_hub: str,
+        vq_hub: str = "BAAI/Emu3.5-VisionTokenizer",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
@@ -100,16 +100,6 @@ class LlamaEmu3p5Chat(EMU3p5EncoderModel):
     def _load_llm(self, model_path: str, **kwargs) -> LlamaForCausalLM:
         """Load Llama causal language model."""
         return LlamaForCausalLM.from_pretrained(model_path, **kwargs).eval()
-
-    def _load_vision_tokenizer(self, vq_hub: str, device: str, **kwargs):
-        """Load IBQ vision tokenizer for EMU3.5."""
-        # Import here to avoid dependency if not using this model
-        try:
-            from vision_tokenizer import build_vision_tokenizer
-        except ImportError:
-            raise ImportError("vision_tokenizer package is required for EMU3.5 models. " "Please install it from the EMU3.5 repository.")
-
-        return build_vision_tokenizer(type="ibq", model_path=vq_hub, device=device, **kwargs)
 
     @property
     def image_placeholder(self) -> str:

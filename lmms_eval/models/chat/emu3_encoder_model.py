@@ -127,9 +127,7 @@ class EMU3EncoderModel(EMU3EncoderBaseModel):
                         self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
                         pbar.update(1)
                         continue
-                    else:
-                        # Take only first image
-                        visual = [visual[0]]
+                    # else: process all images (multi-image supported)
 
                 # Convert to HF messages
                 hf_messages = chat_message.to_hf_messages()

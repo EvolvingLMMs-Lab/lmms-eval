@@ -32,7 +32,6 @@ class EMU3p5SimpleModel(EMU3p5EncoderBaseModel):
     Subclasses must implement:
     - _load_llm: Load the language model
     - _load_tokenizer: Load the text tokenizer
-    - _load_vision_tokenizer: Load the IBQ vision tokenizer
     - image_placeholder: Property defining image placeholder token
     """
 

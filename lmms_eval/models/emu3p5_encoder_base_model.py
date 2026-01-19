@@ -7,6 +7,8 @@ and distributed training configuration.
 """
 
 import abc
+import sys
+from pathlib import Path
 from typing import Optional, Union
 
 import torch
@@ -14,10 +16,29 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 
 from lmms_eval.api.model import lmms
+from lmms_eval.models.model_utils.emu3p5.download_utils import ensure_local_weights
 from lmms_eval.models.model_utils.emu3p5.emu3p5_input_processor import (
     Emu3p5Processor,
 )
 from lmms_eval.models.model_utils.memory_utils import print_memory_stats
+
+# Check if Emu3.5 submodule is initialized
+_current_file = Path(__file__).resolve()
+_repo_root = _current_file.parents[3]  # Go up to lmms-eval root
+_emu35_src_path = _repo_root / "external" / "Emu3.5" / "src"
+_emu35_modeling_file = _emu35_src_path / "emu3p5" / "modeling_emu3.py"
+
+if not _emu35_modeling_file.exists():
+    eval_logger.error("Emu3.5 submodule is not initialized. Please run the following commands:\n" f"  cd {_repo_root}\n" "  git submodule update --init --recursive external/Emu3.5\n")
+    sys.exit(1)
+
+# Add external Emu3.5 to path
+if str(_emu35_src_path) not in sys.path:
+    sys.path.insert(0, str(_emu35_src_path))
+
+# Import Emu3 classes from external directory
+from emu3p5 import Emu3Config, Emu3ForCausalLM  # noqa: E402
+from vision_tokenizer import build_vision_tokenizer  # noqa: E402
 
 
 class EMU3p5EncoderBaseModel(lmms):
@@ -36,7 +57,6 @@ class EMU3p5EncoderBaseModel(lmms):
     Subclasses must implement:
     - _load_llm(): Load the language model
     - _load_tokenizer(): Load the text tokenizer
-    - _load_vision_tokenizer(): Load the IBQ vision tokenizer
     - image_placeholder property: Define image token placeholder
     - generate_until(): Model-specific generation logic
     """
@@ -45,7 +65,7 @@ class EMU3p5EncoderBaseModel(lmms):
         self,
         model_descriptor: str,
         tokenizer_path: str,
-        vq_hub: str,
+        vq_hub: str = "BAAI/Emu3.5-VisionTokenizer",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
@@ -171,18 +191,30 @@ class EMU3p5EncoderBaseModel(lmms):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
-    @abc.abstractmethod
-    def _load_vision_tokenizer(self, vq_hub, **kwargs):
+    def _load_vision_tokenizer(self, vq_hub: str, device: str, **kwargs):
         """
-        Load IBQ vision tokenizer.
+        Load IBQ vision tokenizer for EMU3.5.
 
         Args:
             vq_hub: Path or HF identifier for vision tokenizer
+            device: Device to load the tokenizer on
 
         Returns:
             Vision tokenizer object with encode() method
         """
-        raise NotImplementedError("Subclasses must implement this method.")
+        # Ensure vision tokenizer weights are available locally
+        vq_hub = ensure_local_weights(vq_hub, "BAAI/Emu3.5-VisionTokenizer", accelerator=self.accelerator)
+
+        # Map torch_dtype to dtype for build_vision_tokenizer
+        if "torch_dtype" in kwargs:
+            kwargs["dtype"] = kwargs.pop("torch_dtype")
+
+        return build_vision_tokenizer(
+            type="ibq",
+            model_path=vq_hub,
+            device=device,
+            **kwargs,
+        )
 
     @property
     @abc.abstractmethod

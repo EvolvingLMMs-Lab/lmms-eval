@@ -28,7 +28,7 @@ class ApertusEmu3p5Simple(EMU3p5SimpleModel):
         self,
         model_descriptor: str,
         tokenizer_path: str,
-        vq_hub: str,
+        vq_hub: str = "BAAI/Emu3.5-VisionTokenizer",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
@@ -99,15 +99,6 @@ class ApertusEmu3p5Simple(EMU3p5SimpleModel):
     def _load_llm(self, model_path: str, **kwargs) -> ApertusForCausalLM:
         """Load Apertus base model."""
         return ApertusForCausalLM.from_pretrained(model_path, **kwargs).eval()
-
-    def _load_vision_tokenizer(self, vq_hub: str, device: str, **kwargs):
-        """Load IBQ vision tokenizer for EMU3.5."""
-        try:
-            from vision_tokenizer import build_vision_tokenizer
-        except ImportError:
-            raise ImportError("vision_tokenizer package required for EMU3.5 models. " "Install from EMU3.5 repository.")
-
-        return build_vision_tokenizer(type="ibq", model_path=vq_hub, device=device, **kwargs)
 
     @property
     def image_placeholder(self) -> str:

@@ -8,11 +8,13 @@ https://github.com/baaivision/Emu3.5
 This implementation uses direct processing without chat templates.
 """
 
-import sys
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import torch
+
+# Import Emu3 classes (sys.path already set up by base class)
+from emu3p5 import Emu3Config, Emu3ForCausalLM
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
@@ -28,24 +30,10 @@ from lmms_eval.models.model_utils.emu3p5.emu3_tokenizer_loader import (
 )
 from lmms_eval.protocol import ChatMessages
 
-# Check if Emu3.5 submodule is initialized
+# Path to EMU3.5 tokenizer directory
 _current_file = Path(__file__).resolve()
 _repo_root = _current_file.parents[3]  # Go up to lmms-eval root
-_emu35_src_path = _repo_root / "external" / "Emu3.5" / "src"
-_emu35_modeling_file = _emu35_src_path / "emu3p5" / "modeling_emu3.py"
-_txt_tok_path = _emu35_src_path / "tokenizer_emu3_ibq"
-
-if not _emu35_modeling_file.exists():
-    eval_logger.error("Emu3.5 submodule is not initialized. Please run the following commands:\n" f"  cd {_repo_root}\n" "  git submodule update --init --recursive external/Emu3.5\n")
-    sys.exit(1)
-
-# Add external Emu3.5 to path
-if str(_emu35_src_path) not in sys.path:
-    sys.path.insert(0, str(_emu35_src_path))
-
-# Import Emu3 classes from external directory
-from emu3p5 import Emu3Config, Emu3ForCausalLM  # noqa: E402
-from vision_tokenizer import build_vision_tokenizer  # noqa: E402
+_txt_tok_path = _repo_root / "external" / "Emu3.5" / "src" / "tokenizer_emu3_ibq"
 
 
 @register_model("emu3p5")
@@ -131,22 +119,6 @@ class EMU3_5(EMU3p5EncoderBaseModel):
         return Emu3ForCausalLM.from_pretrained(
             model_path,
             config=model_config,
-            **kwargs,
-        )
-
-    def _load_vision_tokenizer(self, vq_hub: str, device: str, **kwargs):
-        """Load IBQ vision tokenizer for EMU3.5."""
-        # Ensure vision tokenizer weights are available locally
-        vq_hub = ensure_local_weights(vq_hub, "BAAI/Emu3.5-VisionTokenizer", accelerator=self.accelerator)
-
-        # Map torch_dtype to dtype for build_vision_tokenizer
-        if "torch_dtype" in kwargs:
-            kwargs["dtype"] = kwargs.pop("torch_dtype")
-
-        return build_vision_tokenizer(
-            type="ibq",
-            model_path=vq_hub,
-            device=device,
             **kwargs,
         )
 
