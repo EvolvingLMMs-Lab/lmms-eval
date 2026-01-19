@@ -389,10 +389,11 @@ def illusionbench_arshia_doc_to_text_visual_cot_icon_shape(doc, lmms_eval_specif
         "Make the hidden shape prominent and easily recognizable."
     )
 
-    # question_prompt: Use original codebase format with mixed options
+    # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_ICON)
     scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
+        f"You are given TWO images: the original image and an auxiliary visualization. "
         f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
         f"Identify the icon that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
         f"Provide your response by stating only the single, most accurate class name that represents the icon. "
@@ -410,10 +411,11 @@ def illusionbench_arshia_doc_to_text_visual_cot_icon_scene(doc, lmms_eval_specif
         "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
-    # question_prompt: Use original codebase format with mixed options
+    # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_ICON)
     scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
+        f"You are given TWO images: the original image and an auxiliary visualization. "
         f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
         f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
         f"Provide your response by stating only the single, most accurate class name that represents the background. "
@@ -431,10 +433,11 @@ def illusionbench_arshia_doc_to_text_visual_cot_logo_shape(doc, lmms_eval_specif
         "Generate a clear image that highlights the shape's distinctive outline and design elements."
     )
 
-    # question_prompt: Use original codebase format with mixed options
+    # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_LOGO)
     scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
+        f"You are given TWO images: the original image and an auxiliary visualization. "
         f"This image contains a icon integrated into a background, where elements of the background contribute to forming the logo. "
         f"Identify the logo that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
         f"Provide your response by stating only the single, most accurate class name that represents the logo. "
@@ -452,10 +455,11 @@ def illusionbench_arshia_doc_to_text_visual_cot_logo_scene(doc, lmms_eval_specif
         "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
-    # question_prompt: Use original codebase format with mixed options
+    # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_LOGO)
     scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
+        f"You are given TWO images: the original image and an auxiliary visualization. "
         f"This image contains an icon integrated into a background, where elements of the background contribute to forming the logo. "
         f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
         f"Provide your response by stating only the single, most accurate class name that represents the background. "
@@ -473,10 +477,11 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_shape(doc, lmms_eval_specific
         "Generate a clear image that highlights the shape's outline and recognizable features."
     )
 
-    # question_prompt: Use original codebase format with mixed options
+    # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_IN)
     scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
+        f"You are given TWO images: the original image and an auxiliary visualization. "
         f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
         f"Identify the shape that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
         f"Provide your response by stating only the single, most accurate class name that represents the icon. "
@@ -494,10 +499,11 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_scene(doc, lmms_eval_specific
         "Generate a clear visualization that emphasizes the environmental features and setting."
     )
 
-    # question_prompt: Use original codebase format with mixed options
+    # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_IN)
     scene_string = ", ".join(SCENE_CANDIDATES)
     question_prompt = (
+        f"You are given TWO images: the original image and an auxiliary visualization. "
         f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
         f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
         f"Provide your response by stating only the single, most accurate class name that represents the background. "
