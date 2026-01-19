@@ -7,7 +7,7 @@ task: illusionbench_arshia_icon_scene_test
 test_split: Illusion_ICON
 output_type: generate_until
 doc_to_visual: !function arshia_utils.illusionbench_arshia_doc_to_visual
-doc_to_text: !function arshia_utils.illusionbench_arshia_doc_to_text_scene
+doc_to_text: !function arshia_utils.illusionbench_arshia_doc_to_text_scene_icon
 doc_to_target: !function arshia_utils.illusionbench_arshia_doc_to_target
 process_results: !function arshia_utils.illusionbench_arshia_process_results_scene
 generation_kwargs:
