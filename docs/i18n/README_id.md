@@ -20,18 +20,37 @@
 
 ---
 
-## Pengumuman
+## Apa yang Baru
+
+Mengevaluasi model multimodal lebih sulit daripada yang terlihat. Kami memiliki ratusan benchmark, tetapi tidak ada cara standar untuk menjalankannya. Hasil bervariasi antar lab. Perbandingan menjadi tidak dapat diandalkan. Kami telah bekerja untuk mengatasi hal ini - bukan melalui upaya heroik, tetapi melalui proses yang sistematis.
+
+**Januari 2026** - Kami menyadari bahwa penalaran spasial dan komposisional tetap menjadi titik buta dalam benchmark yang ada. Kami menambahkan [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), and [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Untuk tim yang menjalankan pipeline evaluasi jarak jauh, kami memperkenalkan server eval HTTP (#972). Bagi mereka yang membutuhkan ketelitian statistik, kami menambahkan CLT dan estimasi kesalahan standar terklaster (#989).
+
+**Oktober 2025 (v0.5)** - Audio telah menjadi celah. Model bisa mendengar, tetapi kami tidak memiliki cara yang konsisten untuk mengujinya. Rilis ini menambahkan evaluasi audio komprehensif, caching respons untuk efisiensi, dan 50+ varian benchmark yang mencakup audio, visi, dan penalaran. [Catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
+
+<details>
+<summary>Di bawah ini adalah daftar kronologis tugas, model, dan fitur terbaru yang ditambahkan oleh kontributor luar biasa kami. </summary>
 
 - [2025-10] 🚀🚀 **LMMs-Eval v0.5** hadir! Rilis utama ini memperkenalkan evaluasi audio komprehensif, caching respons, 5 model baru (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), dan 50+ varian benchmark baru yang mencakup audio (Step2, VoiceBench, WenetSpeech), visi (CharXiv, Lemonade), dan penalaran (CSBench, SciBench, MedQA, SuperGPQA). Lihat [catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md) untuk detail.
 - [2025-07] 🚀🚀 Kami telah merilis `lmms-eval-0.4`. Lihat [catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) untuk detail lebih lanjut.
+
+</details>
 
 ## Mengapa `lmms-eval`?
 
 Kita sedang dalam perjalanan yang menarik menuju penciptaan Kecerdasan Buatan Umum (AGI), mirip dengan antusiasme pendaratan di bulan tahun 1960-an. Perjalanan ini didorong oleh model bahasa besar yang canggih (LLMs) dan model multimodal besar (LMMs), sistem kompleks yang mampu memahami, belajar, dan melakukan berbagai tugas manusia.
 
-Untuk mengukur seberapa maju model-model ini, kami menggunakan berbagai benchmark evaluasi. Benchmark ini adalah alat yang membantu kami memahami kemampuan model-model ini, menunjukkan seberapa dekat kita dengan mencapai AGI. Namun, menemukan dan menggunakan benchmark ini adalah tantangan besar.
+Tetapi inilah masalahnya: sistem pengukuran kami belum sejalan dengan ambisi kami.
 
-Di bidang model bahasa, karya [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) telah menetapkan preseden yang berharga. Kami menyerap desain yang indah dan efisien dari lm-evaluation-harness dan memperkenalkan **lmms-eval**, kerangka kerja evaluasi yang dibuat dengan cermat untuk evaluasi LMM yang konsisten dan efisien.
+Kami memiliki benchmark - ratusan jumlahnya. Tetapi mereka tersebar di folder Google Drive, tautan Dropbox, situs web universitas, dan server lab. Setiap benchmark memiliki format datanya sendiri, skrip evaluasinya sendiri, keunikannya sendiri. Ketika dua tim melaporkan hasil pada benchmark yang sama, mereka sering mendapatkan angka yang berbeda. Bukan karena model mereka berbeda, tetapi karena pipeline evaluasi mereka berbeda.
+
+Bayangkan jika, selama perlombaan ruang angkasa, setiap negara mengukur jarak dalam unit yang berbeda dan tidak pernah membagikan tabel konversi mereka. Itulah kira-kira posisi kita saat ini dengan evaluasi multimodal.
+
+Ini bukan sekadar ketidaknyamanan kecil. Ini adalah kegagalan sistemik. Tanpa pengukuran yang konsisten, kita tidak dapat mengetahui model mana yang sebenarnya lebih baik. Kita tidak dapat mereproduksi hasil. Kita tidak dapat membangun karya satu sama lain.
+
+Untuk model bahasa, masalah ini sebagian besar diselesaikan oleh [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). Ini menyediakan pemuatan data yang terpadu, evaluasi yang terstandarisasi, dan hasil yang dapat direproduksi. Ini mendukung [Open LLM Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard). Ini telah menjadi infrastruktur.
+
+Kami membangun `lmms-eval` untuk melakukan hal yang sama bagi model multimodal. Prinsip yang sama: satu kerangka kerja, antarmuka yang konsisten, angka yang dapat direproduksi. Moonshot membutuhkan penggaris yang andal.
 
 ## Instalasi
 
@@ -91,10 +110,66 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/llava_onevision.sh
 ```
 
+**Evaluasi LLaVA-OneVision1_5**
+
+```bash
+bash examples/models/llava_onevision1_5.sh
+```
+
+**Evaluasi LLaMA-3.2-Vision**
+
+```bash
+bash examples/models/llama_vision.sh
+```
+
+**Evaluasi Qwen2.5-VL**
+
+```bash
+bash examples/models/qwen2_5_vl.sh
+```
+
+**Evaluasi dengan tensor parallel untuk model yang lebih besar (llava-next-72b)**
+
+```bash
+bash examples/models/tensor_parallel.sh
+```
+
+**Evaluasi dengan SGLang untuk model yang lebih besar (llava-next-72b)**
+
+```bash
+bash examples/models/sglang.sh
+```
+
 **Parameter Lainnya**
 
 ```bash
 python3 -m lmms_eval --help
+```
+
+**Variabel Lingkungan**
+Sebelum menjalankan eksperimen dan evaluasi, kami menyarankan Anda untuk mengekspor variabel lingkungan berikut ke lingkungan Anda. Beberapa diperlukan agar tugas tertentu dapat dijalankan.
+
+```bash
+export OPENAI_API_KEY="<YOUR_API_KEY>"
+export HF_HOME="<Path to HF cache>" 
+export HF_TOKEN="<YOUR_API_KEY>"
+export HF_HUB_ENABLE_HF_TRANSFER="1"
+export REKA_API_KEY="<YOUR_API_KEY>"
+# Variabel lingkungan lain yang mungkin termasuk 
+# ANTHROPIC_API_KEY, DASHSCOPE_API_KEY, dll.
+```
+
+**Masalah Lingkungan Umum**
+
+Terkadang Anda mungkin menghadapi beberapa masalah umum, misalnya kesalahan yang terkait dengan httpx atau protobuf. Untuk mengatasi masalah ini, Anda dapat mencoba terlebih dahulu:
+
+```bash
+python3 -m pip install httpx==0.23.3;
+python3 -m pip install protobuf==3.20;
+# Jika Anda menggunakan numpy==2.x, terkadang dapat menyebabkan kesalahan
+python3 -m pip install numpy==1.26;
+# Terkadang sentencepiece diperlukan agar tokenizer dapat berfungsi
+python3 -m pip install sentencepiece;
 ```
 
 ## Menambahkan Model dan Dataset Kustom
@@ -104,6 +179,8 @@ Lihat [dokumentasi](../README.md) kami.
 ## Ucapan Terima Kasih
 
 lmms_eval adalah fork dari [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). Kami menyarankan untuk membaca [dokumentasi lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) untuk informasi yang relevan.
+
+---
 
 ## Sitasi
 
@@ -116,5 +193,15 @@ lmms_eval adalah fork dari [lm-eval-harness](https://github.com/EleutherAI/lm-ev
       archivePrefix={arXiv},
       primaryClass={cs.CL},
       url={https://arxiv.org/abs/2407.12772}, 
+}
+
+@misc{lmms_eval2024,
+    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
+    author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
+    publisher    = {Zenodo},
+    version      = {v0.1.0},
+    month={March},
+    year={2024}
 }
 ```

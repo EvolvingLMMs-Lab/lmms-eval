@@ -22,6 +22,7 @@
 
 ## Duyurular
 
+- [2026-01] 🚀🚀 **Ocak 2026** - Mevcut kıyaslamalarda (benchmarks) uzamsal ve kompozisyonel akıl yürütmenin hala kör noktalar olduğunu fark ettik. [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) ve [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial) benchmarklarını ekledik. Uzaktan değerlendirme boru hatları (pipeline) çalıştıran ekipler için bir HTTP değerlendirme sunucusu (#972) sunduk. İstatistiksel titizlik isteyenler için CLT ve kümelenmiş standart hata tahmini (#989) özelliklerini ekledik.
 - [2025-10] 🚀🚀 **LMMs-Eval v0.5** burada! Bu büyük sürüm, kapsamlı ses değerlendirmesi, yanıt önbellekleme, 5 yeni model (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme) ve ses (Step2, VoiceBench, WenetSpeech), görüntü (CharXiv, Lemonade) ve akıl yürütme (CSBench, SciBench, MedQA, SuperGPQA) kapsayan 50'den fazla yeni benchmark varyantı sunuyor. Detaylar için [sürüm notlarına](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md) bakın.
 - [2025-07] 🚀🚀 `lmms-eval-0.4` sürümünü yayınladık. Daha fazla detay için [sürüm notlarına](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) bakın.
 
@@ -91,10 +92,64 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/llava_onevision.sh
 ```
 
+**LLaVA-OneVision1_5 Değerlendirmesi**
+
+```bash
+bash examples/models/llava_onevision1_5.sh
+```
+
+**LLaMA-3.2-Vision Değerlendirmesi**
+
+```bash
+bash examples/models/llama_vision.sh
+```
+
+**Qwen2.5-VL Değerlendirmesi**
+
+```bash
+bash examples/models/qwen2_5_vl.sh
+```
+
+**Büyük Model için Tensor Parallel Değerlendirmesi (llava-next-72b)**
+
+```bash
+bash examples/models/tensor_parallel.sh
+```
+
+**Büyük Model için SGLang Değerlendirmesi (llava-next-72b)**
+
+```bash
+bash examples/models/sglang.sh
+```
+
 **Daha Fazla Parametre**
 
 ```bash
 python3 -m lmms_eval --help
+```
+
+**Ortam Değişkenleri**
+Deneyleri ve değerlendirmeleri çalıştırmadan önce, aşağıdaki ortam değişkenlerini ortamınıza dışa aktarmanızı (export) öneririz. Bazıları belirli görevlerin çalışması için gereklidir.
+
+```bash
+export OPENAI_API_KEY="<YOUR_API_KEY>"
+export HF_HOME="<Path to HF cache>"
+export HF_TOKEN="<YOUR_API_KEY>"
+export HF_HUB_ENABLE_HF_TRANSFER="1"
+export REKA_API_KEY="<YOUR_API_KEY>"
+```
+
+**Yaygın Ortam Sorunları**
+
+Bazen httpx veya protobuf ile ilgili hatalar gibi yaygın sorunlarla karşılaşabilirsiniz. Bu sorunları çözmek için önce şunları deneyebilirsiniz:
+
+```bash
+python3 -m pip install httpx==0.23.3;
+python3 -m pip install protobuf==3.20;
+# numpy==2.x kullanıyorsanız bazen hatalara neden olabilir
+python3 -m pip install numpy==1.26;
+# Tokenizer'ın çalışması için bazen sentencepiece gereklidir
+python3 -m pip install sentencepiece;
 ```
 
 ## Özel Model ve Veri Seti Ekleme
@@ -117,4 +172,15 @@ lmms_eval, [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness
       primaryClass={cs.CL},
       url={https://arxiv.org/abs/2407.12772}, 
 }
+
+@misc{lmms_eval2024,
+    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
+    author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
+    publisher    = {Zenodo},
+    version      = {v0.1.0},
+    month={March},
+    year={2024}
+}
 ```
+
