@@ -717,8 +717,10 @@ def paired_ttest(current_scores: List[float], baseline_scores: List[float]) -> d
     Returns:
         dict with keys: mean_diff, se_diff, ci_lower, ci_upper, t_stat, p_value, n
     """
+    from scipy import stats
+
     if len(current_scores) != len(baseline_scores):
-        raise ValueError(f"Score lists must have same length: " f"current={len(current_scores)}, baseline={len(baseline_scores)}")
+        raise ValueError(f"Score lists must have same length: current={len(current_scores)}, baseline={len(baseline_scores)}")
 
     n = len(current_scores)
     if n < 2:
@@ -732,44 +734,19 @@ def paired_ttest(current_scores: List[float], baseline_scores: List[float]) -> d
             "n": n,
         }
 
-    # Calculate paired differences
     diffs = [c - b for c, b in zip(current_scores, baseline_scores)]
-
-    # Mean difference
     mean_diff = sum(diffs) / n
-
-    # Standard error of the difference
     var_diff = sum((d - mean_diff) ** 2 for d in diffs) / (n - 1)
     se_diff = math.sqrt(var_diff / n)
 
-    # Try to import scipy for accurate t-distribution calculations
-    try:
-        from scipy import stats
-
-        has_scipy = True
-    except ImportError:
-        has_scipy = False
-
-    # t-statistic and p-value
     if se_diff == 0:
         t_stat = float("inf") if mean_diff > 0 else float("-inf") if mean_diff < 0 else 0.0
         p_value = 0.0 if mean_diff != 0 else 1.0
     else:
         t_stat = mean_diff / se_diff
-        df = n - 1
-        if has_scipy:
-            p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df))
-        elif n >= 30:
-            p_value = 2 * (1 - _normal_cdf(abs(t_stat)))
-        else:
-            p_value = float("nan")
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), n - 1))
 
-    # 95% CI using t-distribution critical value
-    if has_scipy:
-        t_crit = stats.t.ppf(0.975, n - 1)
-    else:
-        t_crit = 1.96 if n >= 30 else 2.0
-
+    t_crit = stats.t.ppf(0.975, n - 1)
     ci_lower = mean_diff - t_crit * se_diff
     ci_upper = mean_diff + t_crit * se_diff
 
@@ -782,9 +759,3 @@ def paired_ttest(current_scores: List[float], baseline_scores: List[float]) -> d
         "p_value": p_value,
         "n": n,
     }
-
-
-def _normal_cdf(x: float) -> float:
-    """Standard normal CDF approximation (for fallback when scipy unavailable)."""
-    # Approximation using error function
-    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))

@@ -9,7 +9,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from lmms_eval.api.group import ConfigurableGroup
-from lmms_eval.api.metrics import aggregate_subtask_metrics, clustered_stderr, paired_ttest, pooled_sample_stderr, stderr_for_metric
+from lmms_eval.api.metrics import (
+    aggregate_subtask_metrics,
+    clustered_stderr,
+    paired_ttest,
+    pooled_sample_stderr,
+    stderr_for_metric,
+)
 from lmms_eval.api.task import Task
 from lmms_eval.utils import eval_logger, positional_deprecated
 
