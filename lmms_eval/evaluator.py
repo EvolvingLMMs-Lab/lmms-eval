@@ -21,32 +21,13 @@ from tqdm import tqdm
 import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-from lmms_eval.evaluator_utils import (
-    consolidate_group_results,
-    consolidate_results,
-    get_sample_size,
-    get_subtask_list,
-    get_task_list,
-    prepare_print_tasks,
-    print_writeout,
-    run_task_tests,
-)
+import lmms_eval.models
+from lmms_eval.evaluator_utils import consolidate_group_results, consolidate_results, get_sample_size, get_subtask_list, get_task_list, prepare_print_tasks, print_writeout, run_task_tests
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
 from lmms_eval.models import get_model
 from lmms_eval.tasks import TaskManager, get_task_dict
-from lmms_eval.utils import (
-    create_iterator,
-    get_datetime_str,
-    get_git_commit_hash,
-    handle_non_serializable,
-    hash_string,
-    is_multimodal_content,
-    make_table,
-    positional_deprecated,
-    run_task_tests,
-    simple_parse_args_string,
-)
+from lmms_eval.utils import create_iterator, get_datetime_str, get_git_commit_hash, handle_non_serializable, hash_string, is_multimodal_content, make_table, positional_deprecated, run_task_tests, simple_parse_args_string
 
 
 @positional_deprecated
@@ -84,6 +65,8 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
+    num_samples: int = 1,
+    baseline: Optional[str] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -320,6 +303,77 @@ def simple_evaluate(
         results["date"] = datetime_str
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
+
+        # Baseline comparison (paired t-test)
+        if baseline:
+            from lmms_eval.baselines import BASELINE_REGISTRY, load_baseline
+            from lmms_eval.evaluator_utils import compute_baseline_comparison
+
+            # Get short display name for baseline
+            def get_baseline_display_name(baseline_arg: str) -> str:
+                """Extract a short display name from baseline argument."""
+                # Handle model:task format (e.g., qwen25vl:mmbench)
+                if ":" in baseline_arg and not baseline_arg.startswith("hf://"):
+                    model_name, task = baseline_arg.split(":", 1)
+                    if model_name in BASELINE_REGISTRY:
+                        return model_name  # Just show model name
+                # Handle model preset (e.g., qwen25vl)
+                if baseline_arg in BASELINE_REGISTRY:
+                    return baseline_arg
+                # Handle HF URL
+                if baseline_arg.startswith("hf://"):
+                    # hf://user/repo/file.jsonl -> user/repo
+                    parts = baseline_arg[5:].split("/")
+                    return "/".join(parts[:2]) if len(parts) >= 2 else baseline_arg
+                # Handle local path
+                if "/" in baseline_arg or "\\" in baseline_arg:
+                    import os
+
+                    filename = os.path.basename(baseline_arg)
+                    return os.path.splitext(filename)[0][:30]  # Truncate to 30 chars
+                return baseline_arg
+
+            baseline_display_name = get_baseline_display_name(baseline)
+
+            for task_name in results.get("results", {}).keys():
+                try:
+                    baseline_scores_dict, baseline_agg = load_baseline(baseline, task_name)
+                    # Extract current scores from samples
+                    if "samples" in results and task_name in results["samples"]:
+                        current_samples = results["samples"][task_name]
+                        current_scores = []
+                        baseline_scores = []
+                        for sample in current_samples:
+                            doc_id = sample.get("doc_id")
+                            if doc_id in baseline_scores_dict:
+                                # Extract score from sample
+                                for key in sample:
+                                    if "score" in key.lower():
+                                        val = sample[key]
+                                        if isinstance(val, (int, float)):
+                                            current_scores.append(float(val))
+                                            baseline_scores.append(baseline_scores_dict[doc_id])
+                                            break
+                                        elif isinstance(val, dict):
+                                            pred = val.get("pred_answer") or val.get("pred")
+                                            ans = val.get("answer") or val.get("target")
+                                            if pred and ans:
+                                                score = 1.0 if str(pred).strip().upper() == str(ans).strip().upper() else 0.0
+                                                current_scores.append(score)
+                                                baseline_scores.append(baseline_scores_dict[doc_id])
+                                                break
+                        if current_scores and baseline_scores:
+                            comparison = compute_baseline_comparison(current_scores, baseline_scores, baseline_display_name)
+                            task_results = results["results"][task_name]
+                            task_results["paired_baseline"] = comparison["baseline_name"]
+                            task_results["paired_baseline_score"] = comparison["baseline_mean"] * 100
+                            task_results["paired_ci_lower"] = comparison["ci_lower"] * 100
+                            task_results["paired_ci_upper"] = comparison["ci_upper"] * 100
+                            task_results["paired_pvalue"] = comparison["p_value"]
+                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff']*100:.2f}%, " f"p={comparison['p_value']:.4f}")
+                except Exception as e:
+                    eval_logger.warning(f"[Baseline] Failed for {task_name}: {e}")
+
         return results
     else:
         return None
