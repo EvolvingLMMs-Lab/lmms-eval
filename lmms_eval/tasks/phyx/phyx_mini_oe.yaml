@@ -5,7 +5,7 @@ dataset_kwargs:
 task: "phyx_mini_oe"
 test_split: phyx_mini_oe
 output_type: generate_until
-doc_to_visual: !function phyx.utils.phyx_doc_to_visual
+doc_to_visual: !function utils.phyx_doc_to_visual
 doc_to_text: !function utils.phyx_doc_to_text
 doc_to_target: "answer"
 process_results: !function utils.phyx_process_results
