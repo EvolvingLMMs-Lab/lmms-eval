@@ -1,0 +1,5 @@
+dataset_path: lmms-lab/video-tt
+dataset_kwargs:
+  token: True
+  cache_dir: video-tt
+  video: True

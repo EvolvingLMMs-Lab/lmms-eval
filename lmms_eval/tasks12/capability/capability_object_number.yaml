@@ -1,0 +1,4 @@
+include: _default_template_yaml
+
+task: capability_object_number
+dataset_name: object_number

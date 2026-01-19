@@ -1,0 +1,30 @@
+dataset_path: lmms-lab/alpaca_audio
+dataset_kwargs:
+  token: True
+
+task: "alpaca_audio"
+test_split: test
+doc_to_target: "answer"
+doc_to_visual: !function utils.doc_to_audio
+doc_to_text: !function utils.doc_to_text
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0.2
+  top_p: 1.0
+  num_beams: 1
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nPlease give a detail answer to the question in the audio."
+metric_list:
+  - metric: gpt_eval
+    aggregation: !function utils.alpaca_audio_aggregate_results
+    higher_is_better: true
+
+process_results: !function utils.alpaca_audio_process_results
+
+metadata:
+  gpt_eval_model_name: gpt-4o
+  version: 0.0

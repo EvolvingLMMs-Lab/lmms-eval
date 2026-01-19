@@ -1,0 +1,4 @@
+group : coco2014_cap
+task:
+  - coco2014_cap_val
+  - coco2014_cap_test

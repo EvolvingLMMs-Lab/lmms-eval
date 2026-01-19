@@ -1,0 +1,44 @@
+dataset_path: parquet
+dataset_kwargs:
+  data_files:
+    Illusion_LOGO: /home/yifeishen/data/zimo/datasets/illusionbench/illusion_logo_test100.parquet
+process_docs: !function arshia_utils.illusionbench_arshia_process_docs
+task: illusionbench_arshia_logo_shape_visual_cot
+test_split: Illusion_LOGO
+output_type: generate_until
+doc_to_visual: !function arshia_utils.illusionbench_arshia_doc_to_visual
+doc_to_text: !function arshia_utils.illusionbench_arshia_doc_to_text_visual_cot_logo_shape
+doc_to_target: !function arshia_utils.illusionbench_arshia_doc_to_target
+process_results: !function arshia_utils.illusionbench_arshia_process_results_shape
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0.0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+metric_list:
+  - metric: shape_recall
+    aggregation: !function arshia_utils.illusionbench_arshia_aggregate
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  bagel_visual_cot:
+    # Stage 1: Image generation parameters
+    stage1_cfg_text_scale: 4.0
+    stage1_cfg_interval: 0.4
+    stage1_timestep_shift: 3.0
+    stage1_num_timesteps: 50
+    stage1_cfg_renorm_min: 0.0
+    stage1_cfg_renorm_type: "global"
+    stage1_image_ratio: "1:1"
+    # Stage 2: Visual understanding parameters
+    stage2_max_new_tokens: 64
+    stage2_temperature: 0.0
+    stage2_do_sample: false
+    # Save intermediate artifacts for debugging
+    save_intermediate: true
+
+metadata:
+  version: 0.1
+  prompt_type: visual_cot_shape
+  description: "IllusionBench LOGO subset - Shape identification with Bagel Visual CoT"

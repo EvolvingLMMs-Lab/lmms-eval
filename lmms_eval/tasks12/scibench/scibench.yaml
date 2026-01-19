@@ -1,0 +1,5 @@
+group: scibench
+task:
+- scibench_math
+- scibench_physics
+- scibench_chemistry

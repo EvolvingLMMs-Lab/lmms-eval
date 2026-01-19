@@ -1,0 +1,12 @@
+task: "cmmmu_test"
+test_split: test
+# The return value of process_results will be used by metrics
+process_results: !function utils.cmmmu_process_test_results_for_submission
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.cmmmu_test_aggregate_results_for_submission
+    higher_is_better: false
+metadata:
+  - version: 0.0
+include: _default_template_cmmmu_yaml

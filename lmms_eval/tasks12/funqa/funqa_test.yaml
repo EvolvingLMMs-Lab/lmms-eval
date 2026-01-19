@@ -1,0 +1,28 @@
+task: "funqa_test"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.funqa_doc_to_visual
+doc_to_text: !function utils.funqa_doc_to_text
+doc_to_target: !function utils.funqa_doc_to_answer
+process_results: !function utils.funqa_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.funqa_aggregate
+    higher_is_better: true
+  - metric: funqa_BLEU
+    aggregation: !function utils.funqa_BLEU
+    higher_is_better: true
+  - metric: funqa_ROUGE
+    aggregation: !function utils.funqa_ROUGE
+    higher_is_better: true
+  - metric: funqa_BLEURT
+    aggregation: !function utils.funqa_BLEURT
+    higher_is_better: true
+  - metric: funqa_gpt
+    aggregation: !function utils.funqa_GPT_eval
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+include: _default_template_yaml

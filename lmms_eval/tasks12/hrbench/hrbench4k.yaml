@@ -1,0 +1,23 @@
+dataset_path: DreamMr/HR-Bench
+dataset_name: hrbench_version_split
+dataset_kwargs:
+  token: True
+task: "hrbench4k"
+test_split: hrbench_4k
+output_type: generate_until
+doc_to_visual: !function utils.hrbench_doc_to_visual
+doc_to_text: !function utils.hrbench_doc_to_text
+doc_to_target: "answer"
+# The return value of process_results will be used by metrics
+process_results: !function utils.hrbench_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: single
+    aggregation: !function utils.hrbench_aggregate_results
+    higher_is_better: true
+  - metric: cross
+    aggregation: !function utils.hrbench_aggregate_results
+    higher_is_better: true
+  - metric: average
+    aggregation: !function utils.hrbench_aggregate_results
+    higher_is_better: true

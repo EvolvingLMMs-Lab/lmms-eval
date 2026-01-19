@@ -1,0 +1,52 @@
+dataset_path: lmms-lab/SEED-Bench-2
+dataset_kwargs:
+  token: True
+task: "seedbench_2"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.seed_doc_to_visual
+doc_to_text: !function utils.seed_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 16
+  image_aspect_ratio: original
+# The return value of process_results will be used by metrics
+process_results: !function utils.seed_process_result
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: seed_Video
+    aggregation: !function utils.seed_aggregation_result
+    higher_is_better: true
+  - metric: seed_Multiple_Images
+    aggregation: !function utils.seed_aggregation_result
+    higher_is_better: true
+  - metric: seed_Image_&_Text_Generation
+    aggregation: !function utils.seed_aggregation_result
+    higher_is_better: true
+  - metric: seed_Single_Image
+    aggregation: !function utils.seed_aggregation_result
+    higher_is_better: true
+  - metric: seed_Image_Generation
+    aggregation: !function utils.seed_aggregation_result
+    higher_is_better: true
+  - metric: seed_Interleaved_Image
+    aggregation: !function utils.seed_aggregation_result
+    higher_is_better: true
+  - metric: seed_all
+    aggregation: !function utils.seed_aggregation_result
+    higher_is_better: true
+metadata:
+  - version: 0.0
+
+lmms_eval_specific_kwargs:
+  llava :
+    img_token : <image>
+    post_prompt : "Answer with the option's letter from the given choices directly."
+  llava_onevision :
+    img_token : <image>
+    post_prompt : "Answer with the option's letter from the given choices directly."    
+  gpt4V :
+    img_token : <image>
+    post_prompt : "Answer with the option's letter from the given choices directly."

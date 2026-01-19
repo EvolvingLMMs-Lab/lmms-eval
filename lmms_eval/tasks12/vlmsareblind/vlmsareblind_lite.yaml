@@ -1,0 +1,30 @@
+dataset_path: XAI/vlmsareblind
+task: "vlmsareblind_lite"
+test_split: valid
+output_type: generate_until
+doc_to_visual: !function utils.vlmsareblind_doc_to_visual
+doc_to_text: !function utils.vlmsareblind_doc_to_text
+doc_to_target: !function utils.vlmsareblind_doc_to_target
+process_results: !function utils.vlmsareblind_process_result
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# Sample only 100 examples for lite version
+dataset_kwargs:
+  num_examples: 100
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  - version: 0.0
+  - description: "VLMs Are Blind (Lite): A smaller subset for quick testing. Tests visual reasoning through path-counting in subway diagrams."
+  - reference: "https://arxiv.org/abs/2407.06581"
+  
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with a number in curly brackets, e.g., {3}."

@@ -1,0 +1,5 @@
+# Official MindCube paper use this configuration
+dataset_name: full
+test_split: combined
+task: "mindcube_full"
+include: _default_template_yaml

@@ -1,0 +1,16 @@
+task: "moviechat_global"
+dataset_path: Enxin/lmms_MovieChat_test
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.moviechat_doc_to_visual
+doc_to_text: !function utils.moviechat_doc_to_text
+doc_to_target: !function utils.moviechat_doc_to_answer
+process_results: !function utils.moviechat_process_results_generic
+metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function utils.moviechat_aggregate_score
+    higher_is_better: true
+  - metric: gpt_eval_acc
+    aggregation: !function utils.moviechat_aggregate_acc
+    higher_is_better: true
+include: _default_template_yaml

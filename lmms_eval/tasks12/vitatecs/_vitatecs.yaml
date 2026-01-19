@@ -1,0 +1,8 @@
+group: vitatecs
+task:
+- vitatecs_direction
+- vitatecs_intensity
+- vitatecs_sequence
+- vitatecs_compositionality
+- vitatecs_localization
+- vitatecs_type

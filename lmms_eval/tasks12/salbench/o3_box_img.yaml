@@ -1,0 +1,3 @@
+dataset_name: O3_box_img
+task: "o3_box_img"
+include: _o3_default

@@ -1,0 +1,4 @@
+group: multidocvqa
+task:
+- multidocvqa_val
+- multidocvqa_test

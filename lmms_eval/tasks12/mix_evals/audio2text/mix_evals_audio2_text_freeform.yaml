@@ -1,0 +1,24 @@
+task: "mix_evals_audio2text_freeform"
+test_split: free_form
+output_type: generate_until
+doc_to_visual: !function utils.mix_evals_audio2text_doc_to_audio
+doc_to_text: !function utils.mix_evals_audio2text_doc_to_text
+doc_to_target: !function utils.mix_evals_audio2text_doc_to_target
+process_results: !function utils.mix_evals_audio2text_process_results_freeform
+metric_list:
+  - metric: gpt_eval
+    aggregation: !function utils.mix_evals_audio2text_gpt_eval
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 64
+
+include: _default_template_yaml
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Answer the question using a single word or phrase."
+  gpt4v:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video with a short phrase."
+    post_prompt: ""

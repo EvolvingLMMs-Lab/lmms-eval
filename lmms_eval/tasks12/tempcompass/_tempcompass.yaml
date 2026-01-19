@@ -1,0 +1,6 @@
+group: tempcompass
+task:
+- tempcompass_multi_choice
+- tempcompass_yes_no
+- tempcompass_caption_matching
+- tempcompass_captioning

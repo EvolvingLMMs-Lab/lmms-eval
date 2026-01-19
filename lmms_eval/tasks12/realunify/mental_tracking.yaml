@@ -1,0 +1,32 @@
+# RealUnify Mental Tracking Task
+dataset_path: parquet
+dataset_kwargs:
+  data_files: /blob/lmms-eval-dataset/realunify_mental_tracking.parquet
+task: "realunify_mental_tracking"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "answer"
+
+process_results: !function utils.process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: mental_tracking
+    aggregation: !function utils.aggregate_results
+    higher_is_better: true
+
+metadata:
+  version: 1.0
+  num_samples: 100

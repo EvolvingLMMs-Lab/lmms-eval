@@ -1,0 +1,11 @@
+group: openasr
+task:
+- open_asr_ami
+- open_asr_common_voice
+- open_asr_earnings22
+- open_asr_gigaspeech
+- open_asr_librispeech_test_clean
+- open_asr_librispeech_test_other
+- open_asr_spgispeech
+- open_asr_voxpopuli
+- open_asr_tedlium

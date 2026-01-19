@@ -1,0 +1,28 @@
+dataset_path: facebook/PLM-VideoBench
+dataset_name: rcap
+task: rcap_test
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function rcap_utils.plm_rcap_doc_to_visual
+doc_to_text: !function rcap_utils.plm_rcap_doc_to_text
+doc_to_target: "caption"
+
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+
+process_results: !function rcap_utils.plm_rcap_process_results
+
+metric_list:
+  -
+  - metric: plm_rcap_llm_judge_score
+    aggregation: !function rcap_utils.plm_rcap_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "Give a detailed description of the events occurring in the region marked by the red rectangle within frames [{start_frame}, {end_frame}] in this {total_frames} frame video."
+
+metadata:
+  - version: 0.0

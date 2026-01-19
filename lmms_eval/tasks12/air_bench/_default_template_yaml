@@ -1,0 +1,7 @@
+dataset_path: lmms-lab/AIR_Bench
+dataset_kwargs:
+  token: True
+
+metadata:
+  gpt_eval_model_name: gpt-4o
+  version: 0.0

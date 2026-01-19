@@ -1,0 +1,5 @@
+group: videochatgpt
+task:
+  - videochatgpt_gen
+  - videochatgpt_temporal
+  - videochatgpt_consistency

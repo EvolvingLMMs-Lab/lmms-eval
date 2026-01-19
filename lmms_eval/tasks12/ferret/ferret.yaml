@@ -1,0 +1,39 @@
+dataset_path: lmms-lab/Ferret-Bench
+dataset_kwargs:
+  token: True
+task: "ferret"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.ferret_doc_to_visual
+doc_to_text: !function utils.ferret_doc_to_text
+doc_to_target: "gpt_answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  image_aspect_ratio: original
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.ferret_process_results
+metric_list:
+  - metric: gpt_eval_ferret_all
+    aggregation: !function utils.ferret_all_aggregation
+    higher_is_better: true
+  - metric: gpt_eval_ferret_refer_desc
+    aggregation: !function utils.ferret_refer_desc_aggregation
+    higher_is_better: true
+  - metric: gpt_eval_ferret_refer_reason
+    aggregation: !function utils.ferret_refer_reason_aggregation
+    higher_is_better: true
+  - metric: gpt_eval_ferret_ground_conv
+    aggregation: !function utils.ferret_ground_conv_aggregation
+    higher_is_better: true
+metadata:
+  version: 0.0
+  gpt_eval_model_name: "gpt-4-0314"
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

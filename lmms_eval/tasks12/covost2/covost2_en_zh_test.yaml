@@ -1,0 +1,12 @@
+task: "covost2_en_zh_test"
+include: _default_template_en_zh_yaml
+dataset_path: lmms-lab/covost2_en-zh
+dataset_name: en_zh
+test_split: test
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Translate the speech into Chinese and only output the translation:"
+    post_prompt: ""
+  qwen2_audio:
+    pre_prompt: "Translate the speech into Chinese and only output the translation: <|en|>"
+    post_prompt: ""

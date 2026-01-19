@@ -1,0 +1,31 @@
+# Uni-MMMU Sliding 54 samples (seed=42)
+dataset_path: parquet
+dataset_kwargs:
+  data_files: /blob/lmms-eval-dataset/uni_mmmu_sliding54.parquet
+task: "uni_mmmu_sliding54"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.sliding_doc_to_visual
+doc_to_text: !function utils.sliding_doc_to_text
+doc_to_target: "steps_words"
+
+process_results: !function utils.sliding_process_results
+
+generation_kwargs:
+  max_new_tokens: 4096
+  do_sample: false
+  temperature: 0.0
+
+metric_list:
+  - metric: sliding_text_exact
+    aggregation: mean
+    higher_is_better: true
+  - metric: sliding_text_frame_acc
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  version: 1.0
+  num_samples: 54
+  seed: 42

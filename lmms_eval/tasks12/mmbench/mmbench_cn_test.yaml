@@ -1,0 +1,7 @@
+task: mmbench_cn_test
+test_split: test
+metric_list:
+  - metric: submission
+    aggregation: !function cn_utils.mmbench_aggregate_test_results
+    higher_is_better: true
+include: _default_template_mmbench_cn_yaml

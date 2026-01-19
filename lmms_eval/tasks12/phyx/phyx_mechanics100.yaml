@@ -1,0 +1,37 @@
+# PhyX Mechanics 100-sample subset (fixed random sample with seed=42)
+# This is a reproducible 100-sample subset of PhyX Mechanics category
+# Subfield distribution:
+#   Dynamics: 37 (37.0%)
+#   Kinematics: 23 (23.0%)
+#   Statics: 16 (16.0%)
+#   Rotational Motion: 12 (12.0%)
+#   Work and Energy: 8 (8.0%)
+#   Momentum and Collisions: 4 (4.0%)
+
+dataset_path: parquet
+dataset_kwargs:
+  data_files: /blob/lmms-eval-dataset/phyx_mechanics100.parquet
+task: "phyx_mechanics100"
+test_split: train
+output_type: generate_until
+doc_to_visual: !function lmms_eval.tasks.phyx.utils.phyx_doc_to_visual
+doc_to_text: !function lmms_eval.tasks.phyx.utils.phyx_doc_to_text
+doc_to_target: "answer"
+process_results: !function lmms_eval.tasks.phyx.utils.phyx_process_results_mc
+metric_list:
+  - metric: eval_results
+    aggregation: !function lmms_eval.tasks.phyx.utils.phyx_aggregate_results
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: False
+
+metadata:
+  version: 1.0
+  description: "PhyX Mechanics 100-sample fixed subset (seed=42)"
+  original_dataset: "Cloudriver/PhyX"
+  category: "Mechanics"
+  num_samples: 100
+  seed: 42

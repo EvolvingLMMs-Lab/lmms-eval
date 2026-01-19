@@ -1,0 +1,28 @@
+dataset_path: primerL/UEval
+task: "ueval"
+test_split: test
+output_type: generate_until
+
+# 多模态处理函数
+doc_to_visual: !function utils.ueval_doc_to_visual
+doc_to_text: !function utils.ueval_doc_to_text
+doc_to_target: !function utils.ueval_doc_to_target
+process_results: !function utils.ueval_process_results
+
+# 模型特定配置
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    
+# 评估指标
+metric_list:
+  - metric: text_score
+    aggregation: !function utils.ueval_text_score_aggregation
+    higher_is_better: true
+  - metric: image_score
+    aggregation: !function utils.ueval_image_score_aggregation
+    higher_is_better: true
+  - metric: overall_score
+    aggregation: !function utils.ueval_aggregation
+    higher_is_better: true

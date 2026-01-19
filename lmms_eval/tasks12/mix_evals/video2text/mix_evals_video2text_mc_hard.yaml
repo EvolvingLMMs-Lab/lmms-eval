@@ -1,0 +1,31 @@
+include: _default_template_yaml
+task: "mix_evals_video2text_mc_hard"
+dataset_name: "video2text"
+test_split: multiple_choice_hard
+output_type: generate_until
+doc_to_visual: !function utils.mix_evals_video2text_doc_to_visual
+doc_to_text: !function utils.mix_evals_video2text_doc_to_text
+doc_to_target: "{{reference_answer}}"
+
+generation_kwargs:
+  max_new_tokens: 1024
+
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+
+filter_list:
+  - name: "flexible-extract"
+    filter:
+      - function: !function utils.GPTMultiChoiceFilter
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
+    post_prompt: "Answer with the option's letter from the given choices directly."
+  gpt4v:
+    pre_prompt: "These are frames from a video. Please answer the following questions about the video."
+    post_prompt: "Answer with the option's letter from the given choices directly."

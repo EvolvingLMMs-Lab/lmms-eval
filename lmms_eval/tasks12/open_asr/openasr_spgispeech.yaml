@@ -1,0 +1,4 @@
+dataset_name: spgispeech 
+test_split: test
+include: _default_template_yaml
+task: open_asr_spgispeech

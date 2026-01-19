@@ -1,0 +1,3 @@
+task: videomme_long_w_subtitle
+include: _default_template_yaml
+process_docs: !function utils.videomme_process_docs_long

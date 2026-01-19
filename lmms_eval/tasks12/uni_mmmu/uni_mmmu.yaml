@@ -1,0 +1,6 @@
+# Uni-MMMU Task Group
+group: uni_mmmu
+task:
+  - uni_mmmu_jigsaw100
+  - uni_mmmu_maze100
+  - uni_mmmu_sliding54

@@ -1,0 +1,29 @@
+task: "VisualPuzzles_algorithmic"
+dataset_path: parquet
+dataset_kwargs:
+  data_files:
+    test: /home/yifeishen/data/zimo/datasets/visualpuzzles/algorithmic.parquet
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.VisualPuzzles_doc_to_visual
+doc_to_text: !function utils.VisualPuzzles_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.VisualPuzzles_process_result_simple
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.VisualPuzzles_aggregate_simple
+    higher_is_better: true
+metadata:
+  version: 1.0
+  category: algorithmic
+  description: "VisualPuzzles Algorithmic reasoning - 100 samples stratified by difficulty"
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "MULTI_CHOICE_DIRECT_PROMPT"

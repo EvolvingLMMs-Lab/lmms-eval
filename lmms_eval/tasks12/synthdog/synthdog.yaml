@@ -1,0 +1,4 @@
+group: synthdog
+task:
+- synthdog_en
+- synthdog_zh

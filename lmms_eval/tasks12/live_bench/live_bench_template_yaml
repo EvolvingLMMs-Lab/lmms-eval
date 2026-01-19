@@ -1,0 +1,29 @@
+dataset_path: lmms-lab/LiveBench
+dataset_kwargs:
+  token: True
+test_split: test
+dataset_name: 2024-07
+output_type: generate_until
+doc_to_visual: !function utils.livebench_doc_to_visual
+doc_to_text: !function utils.livebench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.livebench_process_results
+process_results_use_image: true
+metric_list:
+  - metric: gpt4_eval_score
+    aggregation: !function utils.livebench_aggregate_results
+    higher_is_better: true
+  # - metric: gpt4_eval_score_mini
+  #   aggregation: !function utils.livebench_aggregate_results
+  #   higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

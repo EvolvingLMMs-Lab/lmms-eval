@@ -1,0 +1,12 @@
+task: "mmivqd_option"
+test_split: test
+dataset_name: mmivqd_option
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+include: _default_template_mmupd_yaml
+metric_list:
+  - metric: gpt_eval_score
+    aggregation: !function utils.mmivqd_option
+    higher_is_better: true

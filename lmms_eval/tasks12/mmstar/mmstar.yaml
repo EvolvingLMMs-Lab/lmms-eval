@@ -1,0 +1,40 @@
+dataset_path: Lin-Chen/MMStar
+dataset_kwargs:
+  token: True
+task: "mmstar"
+test_split: val
+output_type: generate_until
+doc_to_visual: !function utils.mmstar_doc_to_visual
+doc_to_text: !function utils.mmstar_doc_to_text
+doc_to_target: "answer"
+# The return value of process_results will be used by metrics
+process_results: !function utils.mmstar_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: coarse perception
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: fine-grained perception
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: instance reasoning
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: logical reasoning
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: science & technology
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: math
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: average
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly"
+metadata:
+  - version: 0.0

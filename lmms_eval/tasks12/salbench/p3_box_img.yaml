@@ -1,0 +1,3 @@
+dataset_name: P3_box_img
+task: "p3_box_img"
+include: _p3_default

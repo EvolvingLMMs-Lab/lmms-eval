@@ -1,0 +1,3 @@
+group: mix_evals_audio2text_hard
+task:
+- mix_evals_audio2_text_freeform_hard

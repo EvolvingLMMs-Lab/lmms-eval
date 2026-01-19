@@ -1,0 +1,15 @@
+dataset_path: lmms-lab/VizWiz-VQA
+output_type: generate_until
+doc_to_visual: !function utils.vizwiz_vqa_doc_to_visual
+doc_to_text: !function utils.vizwiz_vqa_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
+process_results: !function utils.vizwiz_vqa_process_results

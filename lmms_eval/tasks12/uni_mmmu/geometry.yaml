@@ -1,0 +1,102 @@
+dataset_path: G:/Uni-MMMU/data/math_data/filtered.json
+dataset_name: null
+task: "uni_mmmu_geometry"
+test_split: validation
+output_type: generate_until
+
+doc_to_visual: !function utils.geometry_doc_to_visual
+doc_to_text: !function utils.geometry_doc_to_text
+doc_to_target: "solution_en"
+doc_to_messages: !function utils.geometry_doc_to_messages
+
+process_results: !function utils.geometry_process_results
+process_results_use_image: true
+
+generation_kwargs:
+  max_new_tokens: 4096
+  do_sample: false
+  temperature: 0.0
+
+metric_list:
+  - metric: geometry_overlay_acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: geometry_text_acc
+    aggregation: mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_template: |
+      You are given a geometry problem with a diagram.
+
+      Task:
+      1. Analyze the problem and identify what auxiliary lines need to be drawn
+      2. Generate an overlay image with the required auxiliary lines (colored overlays)
+      3. Provide a rigorous mathematical solution
+
+      Output format:
+      1) One or more overlay images showing the auxiliary lines on the original diagram
+      2) A detailed text solution explaining your reasoning
+
+      Requirements for overlay images:
+      - Draw auxiliary lines in distinct colors (red, blue, green)
+      - Lines must be accurate (correct endpoints, angles)
+      - Only draw lines mentioned in the problem or necessary for solution
+      - Keep original diagram visible underneath
+
+      Requirements for text solution:
+      - State which auxiliary lines you drew and why
+      - Provide step-by-step reasoning
+      - Include all intermediate calculations
+      - State the final answer clearly
+
+    # VLM Judge configuration for evaluation
+    judge_config:
+      overlay_judge:
+        model: "qwen2_5_vl_local"
+        system_prompt: |
+          You are a strict yet fair judge for geometry diagram overlays.
+          Your job: compare images to decide if the candidate overlay correctly draws the REQUIRED auxiliary lines.
+
+          Input images:
+            (1) base: original (no overlays), the clean figure.
+            (2) gt  : ground-truth overlay (what SHOULD be drawn).
+            (3) pred: ONLY ONE candidate overlay to judge.
+
+          Also given the English text listing auxiliary lines to draw.
+
+          Rules:
+            - Focus on whether the REQUIRED lines exist (correct endpoints/relations) in the candidate.
+            - Ignore extra small ticks/labels/harmless marks if they do not distort the meaning.
+            - Tolerate minor pixel/position noise if geometry intent is clear (parallel/perpendicular/through-point).
+            - ALL specified lines must be present; otherwise mark 0.
+            - Output MUST be a compact JSON: {"overlay_ok":0|1,"overlay_reason":"<short>"}
+
+        max_retries: 2
+
+      text_judge:
+        model: "qwen3_text_local"
+        system_prompt: |
+          You are a rigorous grader for geometry reasoning.
+          Given: problem statement (text), ground-truth solution text (reference), and a candidate solution text.
+
+          Decide two things:
+            (i) is the reasoning rigorous (no major logical gaps or false claims),
+            (ii) is the final conclusion correct.
+
+          For CALCULATION problems: conclusion correctness means the final NUMERIC result matches the ground-truth
+          (ignore formatting/units; radicals/π are okay if numerically equivalent), even if choices differ.
+
+          For PROVING problems: conclusion correctness means the claim is indeed established (may differ in steps but must be valid).
+
+          Only if (rigorous AND correct) → text_ok=1, else 0.
+
+          Output MUST be a compact JSON: {"reasoning_rigorous":0|1,"conclusion_correct":0|1,
+          "calc_numeric_match":0|1|null,"text_ok":0|1,"text_reason":"<short>"}
+
+        max_retries: 2
+
+metadata:
+  version: 1.0
+  description: "Geometry problem solving with auxiliary line drawing and VLM-based evaluation"

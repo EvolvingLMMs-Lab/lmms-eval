@@ -1,0 +1,4 @@
+group: scienceqa_full
+task:
+  - scienceqa
+  - scienceqa_img

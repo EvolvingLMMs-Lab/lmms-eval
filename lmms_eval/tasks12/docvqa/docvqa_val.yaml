@@ -1,0 +1,7 @@
+task: "docvqa_val"
+test_split: validation
+metric_list:
+  - metric: anls
+    aggregation: mean
+    higher_is_better: true
+include: _default_template_docvqa_yaml

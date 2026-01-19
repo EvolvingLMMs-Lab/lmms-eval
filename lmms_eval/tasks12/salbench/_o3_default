@@ -1,0 +1,73 @@
+dataset_path: salbench-vlm/salbench
+dataset_kwargs:
+  token: True
+
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.p3o3_doc_to_visual
+doc_to_text: !function utils.p3o3_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 128
+  # temperature: 0
+  # top_p: 0
+  # num_beams: 1
+  # do_sample: false
+
+process_results: !function utils.o3_process_results
+metric_list:
+  - metric: exact_match
+    aggregation: !function utils.aggregate_per_sample_score
+    higher_is_better: true
+  - metric: sample_precision
+    aggregation: !function utils.aggregate_per_sample_score
+    higher_is_better: true
+  - metric: sample_recall
+    aggregation: !function utils.aggregate_per_sample_score
+    higher_is_better: true
+  - metric: sample_f1
+    aggregation: !function utils.aggregate_per_sample_score
+    higher_is_better: true
+
+  - metric: all_cat_precision
+    aggregation: !function utils.p3_aggregate_all_category_precision
+    higher_is_better: true
+  - metric: all_cat_recall
+    aggregation: !function utils.p3_aggregate_all_category_recall
+    higher_is_better: true
+  - metric: all_cat_f1
+    aggregation: !function utils.p3_aggregate_all_category_f1
+    higher_is_better: true
+
+  - metric: orientation_precision
+    aggregation: !function utils.aggregate_per_category_precision
+    higher_is_better: true
+  - metric: orientation_recall
+    aggregation: !function utils.aggregate_per_category_recall
+    higher_is_better: true
+  - metric: orientation_f1
+    aggregation: !function utils.aggregate_per_category_f1
+    higher_is_better: true
+
+  - metric: color_precision
+    aggregation: !function utils.aggregate_per_category_precision
+    higher_is_better: true
+  - metric: color_recall
+    aggregation: !function utils.aggregate_per_category_recall
+    higher_is_better: true
+  - metric: color_f1
+    aggregation: !function utils.aggregate_per_category_f1
+    higher_is_better: true
+
+  - metric: size_precision
+    aggregation: !function utils.aggregate_per_category_precision
+    higher_is_better: true
+  - metric: size_recall
+    aggregation: !function utils.aggregate_per_category_recall
+    higher_is_better: true
+  - metric: size_f1
+    aggregation: !function utils.aggregate_per_category_f1
+    higher_is_better: true
+
+metadata:
+  - version: 0.0

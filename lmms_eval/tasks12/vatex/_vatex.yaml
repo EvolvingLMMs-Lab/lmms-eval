@@ -1,0 +1,4 @@
+group : vatex
+task:
+- vatex_val_zh
+- vatex_test

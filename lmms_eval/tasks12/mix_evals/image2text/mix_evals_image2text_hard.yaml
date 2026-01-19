@@ -1,0 +1,5 @@
+group: mix_evals_image2text_hard
+task:
+- mix_evals_image2text_mc_hard
+- mix_evals_image2text_freeform_hard
+# - mix_evals_image2text_openended

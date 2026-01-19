@@ -1,0 +1,28 @@
+dataset_name: "captioning"
+task: "tempcompass_captioning"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.tempcompass_doc_to_visual
+doc_to_text: !function utils.tempcompass_doc_to_text_captioning
+doc_to_target: !function utils.tempcompass_doc_to_answer
+process_results: !function utils.tempcompass_process_results_captioning
+metric_list:
+  - metric: avg_accuracy
+    aggregation: !function utils.tempcompass_aggregate_rating
+    higher_is_better: true
+  - metric: speed_accuracy
+    aggregation: !function utils.tempcompass_aggregate_rating
+    higher_is_better: true
+  - metric: direction_accuracy
+    aggregation: !function utils.tempcompass_aggregate_rating
+    higher_is_better: true
+  - metric: action_accuracy
+    aggregation: !function utils.tempcompass_aggregate_rating
+    higher_is_better: true
+  - metric: order_accuracy
+    aggregation: !function utils.tempcompass_aggregate_rating
+    higher_is_better: true
+  - metric: attribute_change_accuracy
+    aggregation: !function utils.tempcompass_aggregate_rating
+    higher_is_better: true
+include: _default_template_yaml

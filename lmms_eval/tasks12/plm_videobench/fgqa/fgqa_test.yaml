@@ -1,0 +1,27 @@
+dataset_path: facebook/PLM-VideoBench
+dataset_name: fgqa
+task: fgqa_test
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function fgqa_utils.plm_fgqa_doc_to_visual
+doc_to_text: !function fgqa_utils.plm_fgqa_doc_to_text
+doc_to_target: "answer"
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+
+process_results: !function fgqa_utils.plm_fgqa_process_results
+
+metric_list:
+  - metric: plm_fgqa_scores
+    aggregation: !function fgqa_utils.plm_fgqa_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "{question}{answer}"
+
+metadata:
+  - version: 0.0

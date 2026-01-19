@@ -1,0 +1,4 @@
+include: _default_template_yaml
+
+task: capability_OCR
+dataset_name: OCR

@@ -1,0 +1,23 @@
+dataset_path: MMInstruction/VL-RewardBench
+dataset_kwargs:
+  token: True
+task: "vl_rewardbench"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.vlrewardbench_doc_to_visual
+doc_to_text: !function utils.vlrewardbench_doc_to_text
+doc_to_target: "human_ranking"
+generation_kwargs:
+  max_new_tokens: 1024 
+  temperature: 1.0 
+  top_p: 1.0 
+  num_beams: 1
+  do_sample: true 
+# The return value of process_results will be used by metrics
+process_results: !function utils.vlrewardbench_process_results
+metric_list:
+  - metric: vlreward_score
+    aggregation: !function utils.vlrewardbench_aggregate_results
+    higher_is_better: true
+metadata:
+  - version: 0.0

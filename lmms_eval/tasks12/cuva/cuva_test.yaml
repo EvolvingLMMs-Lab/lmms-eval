@@ -1,0 +1,22 @@
+task: "cuva_test"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.cuva_doc_to_visual
+doc_to_text: !function utils.cuva_doc_to_text
+doc_to_target: !function utils.cuva_doc_to_answer
+process_results: !function utils.cuva_process_results
+metric_list:
+  - metric: cuva_BLEU
+    aggregation: !function utils.cuva_BLEU
+    higher_is_better: true
+  - metric: cuva_ROUGE
+    aggregation: !function utils.cuva_ROUGE
+    higher_is_better: true
+  - metric: cuva_BLEURT
+    aggregation: !function utils.cuva_BLEURT
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+include: _default_template_yaml

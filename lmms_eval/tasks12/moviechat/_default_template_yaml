@@ -1,0 +1,13 @@
+dataset_path: Enxin/lmms_MovieChat_test
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: moviechat_1k_test
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "You are able to understand the visual content that the user provides.Follow the instructions carefully and explain your answers in detail."
+    post_prompt: ""
+
+metadata:
+  version: 0.0
+  gpt_eval_model_name: gpt-3.5-turbo-0125

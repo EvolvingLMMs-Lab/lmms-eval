@@ -1,0 +1,26 @@
+# Copyright 2025 Xiaomi Corporation.
+
+dataset_path: lscpku/OlympiadBench-official
+dataset_kwargs:
+  token: True
+dataset_name: physics_zh_all
+task : "olympiadbench_physics_zh"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function zh_utils.olympiadbench_doc_to_visual
+doc_to_text: !function zh_utils.olympiadbench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16384
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function zh_utils.olympiadbench_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function zh_utils.olympiadbench_aggregate_results
+    higher_is_better: true
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true

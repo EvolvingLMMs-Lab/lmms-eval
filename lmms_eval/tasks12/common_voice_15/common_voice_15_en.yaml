@@ -1,0 +1,10 @@
+task : "common_voice_15_en"
+dataset_name: en
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+  qwen2_audio:
+    pre_prompt: ""
+    post_prompt: " <|en|>"
+include : _default_template_yaml

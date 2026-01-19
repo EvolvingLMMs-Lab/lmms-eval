@@ -1,0 +1,8 @@
+task: "infovqa_val"
+test_split: validation
+output_type: generate_until
+metric_list:
+  - metric: anls
+    aggregation: mean
+    higher_is_better: true
+include: _default_template_infovqa_yaml

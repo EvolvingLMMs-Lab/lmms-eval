@@ -1,0 +1,7 @@
+group: VisualPuzzles
+task:
+  - VisualPuzzles_algorithmic
+  - VisualPuzzles_analogical
+  - VisualPuzzles_deductive
+  - VisualPuzzles_inductive
+  - VisualPuzzles_spatial

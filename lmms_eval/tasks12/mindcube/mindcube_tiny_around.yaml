@@ -1,0 +1,4 @@
+dataset_name: tiny
+test_split: around
+task: "mindcube_tiny_around"
+include: _default_template_yaml

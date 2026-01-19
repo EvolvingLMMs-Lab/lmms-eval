@@ -1,0 +1,5 @@
+group: worldqa
+task:
+- worldqa_gen
+- worldqa_mc
+
