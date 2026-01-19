@@ -266,11 +266,11 @@ class EvaluationTracker:
                     sample["input"] = sample["arguments"][0]
                     sample["resps"] = sanitize_list(sample["resps"])
                     sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
-                    # 保留原始输出（resps）与提取答案（filtered_resps）
+                    if sample["filtered_resps"] == sample["resps"][0] or sample["filtered_resps"] == sample["resps"]:
+                        sample.pop("resps")
                     sample["target"] = str(sample["target"])
                     sample.pop("arguments")
                     sample.pop("doc")
-
 
                     sample_dump = (
                         json.dumps(

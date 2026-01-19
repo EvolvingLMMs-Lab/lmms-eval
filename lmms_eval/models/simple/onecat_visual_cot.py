@@ -281,38 +281,6 @@ class OneCATVisualCoT(lmms):
 
         return pixel_values, pixel_values_thumbnail
 
-    def _load_dual_images(
-        self, image1: Image.Image, image2: Image.Image, target_size: Tuple[int, int] = (896, 896)
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Load and preprocess two images with the same size for concatenation
-
-        Args:
-            image1: First image
-            image2: Second image
-            target_size: Target size to resize both images to (height, width)
-
-        Returns:
-            Tuple of (pixel_values, pixel_values_thumbnail) with batch dimension 2
-        """
-        # Resize both images to the same target size
-        transform = self.build_transform(input_size=target_size)
-        pixel_values_1 = transform(image1).unsqueeze(0)
-        pixel_values_2 = transform(image2).unsqueeze(0)
-
-        # Concatenate along batch dimension
-        pixel_values = torch.cat([pixel_values_1, pixel_values_2], dim=0)
-
-        # Thumbnail (base size 448x448) for both images
-        transform_base = self.build_transform(input_size=(448, 448))
-        pixel_values_thumbnail_1 = transform_base(image1).unsqueeze(0)
-        pixel_values_thumbnail_2 = transform_base(image2).unsqueeze(0)
-        pixel_values_thumbnail = torch.cat(
-            [pixel_values_thumbnail_1, pixel_values_thumbnail_2], dim=0
-        )
-
-        return pixel_values, pixel_values_thumbnail
-
     def _stage1_generate_image(
         self, generation_prompt: str, doc_id: str, task: str
     ) -> List[str]:
@@ -442,25 +410,24 @@ class OneCATVisualCoT(lmms):
             # Load generated auxiliary image
             auxiliary_image = Image.open(image_path).convert("RGB")
 
+            # For OneCAT, we can pass both images by concatenating them
+            # or use the auxiliary image as the primary input
+            # Since OneCAT's chat method takes single pixel_values,
+            # we'll use auxiliary image as primary and mention original in prompt
+
             if original_image is not None:
                 eval_logger.debug(
-                    "Stage 2 - Using BOTH original and auxiliary images"
+                    "Stage 2 - Using auxiliary image (original referenced in prompt)"
                 )
-                # Load both images with the same size using the new method
-                # This ensures they can be concatenated along the batch dimension
-                pixel_values, pixel_values_thumbnail = self._load_dual_images(
-                    original_image, auxiliary_image, target_size=(896, 896)
+                # Use auxiliary image for visual input
+                pixel_values, pixel_values_thumbnail = self._load_image(
+                    auxiliary_image
                 )
-
-                # Update question to inform the model about the two images
+                # Enhance question to reference both images
                 enhanced_question = (
-                    f"You are given two images to analyze:\n"
-                    f"Image 1: The original image(s) containing the scene.\n"
-                    f"Image 2: An auxiliary visualization highlighting key features.\n\n"
-                    f"{question}"
+                    f"{question}\n"
+                    f"Note: An auxiliary visualization has been generated to help answer this question."
                 )
-
-                eval_logger.debug(f"Stage 2 - Dual images shape: {pixel_values.shape}")
             else:
                 eval_logger.debug("Stage 2 - Using auxiliary image only")
                 pixel_values, pixel_values_thumbnail = self._load_image(

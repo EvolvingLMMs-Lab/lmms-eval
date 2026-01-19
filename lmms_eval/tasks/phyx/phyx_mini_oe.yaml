@@ -5,11 +5,11 @@ dataset_kwargs:
 task: "phyx_mini_oe"
 test_split: phyx_mini_oe
 output_type: generate_until
-doc_to_visual: !function utils.phyx_doc_to_visual
-doc_to_text: !function utils.phyx_doc_to_text
+doc_to_visual: !function lmms_eval.tasks.phyx.utils.phyx_doc_to_visual
+doc_to_text: !function lmms_eval.tasks.phyx.utils.phyx_doc_to_text
 doc_to_target: "answer"
-process_results: !function utils.phyx_process_results
+process_results: !function lmms_eval.tasks.phyx.utils.phyx_process_results
 metric_list:
   - metric: eval_results
-    aggregation: !function utils.phyx_aggregate_results
+    aggregation: !function lmms_eval.tasks.phyx.utils.phyx_aggregate_results
     higher_is_better: true
