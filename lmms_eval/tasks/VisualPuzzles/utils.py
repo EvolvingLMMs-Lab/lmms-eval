@@ -4,7 +4,6 @@ import os
 import random
 import re
 from collections import defaultdict
-from io import BytesIO
 
 import numpy as np
 from PIL import Image
@@ -17,10 +16,7 @@ PROMPTS = {"MULTI_CHOICE_DIRECT_PROMPT": MULTI_CHOICE_DIRECT_PROMPT, "COT_PROMPT
 
 
 def VisualPuzzles_doc_to_visual(doc):
-    img_data = doc["image"]
-    if isinstance(img_data, dict) and "bytes" in img_data:
-        return [Image.open(BytesIO(img_data["bytes"])).convert("RGB")]
-    return [img_data]
+    return [doc["image"]]
 
 
 def VisualPuzzles_doc_to_text(doc, lmms_eval_specific_kwargs):

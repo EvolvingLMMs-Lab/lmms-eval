@@ -264,13 +264,15 @@ class EvaluationTracker:
                     # using the datasets library
                     # arguments = {}
                     sample["input"] = sample["arguments"][0]
+                    sample["raw_resps"] = sample.get("resps")
+                    sample["raw_filtered_resps"] = sample.get("filtered_resps")
                     sample["resps"] = sanitize_list(sample["resps"])
                     sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
-                    # 保留原始输出（resps）与提取答案（filtered_resps）
+                    if sample["filtered_resps"] == sample["resps"][0] or sample["filtered_resps"] == sample["resps"]:
+                        sample.pop("resps")
                     sample["target"] = str(sample["target"])
                     sample.pop("arguments")
                     sample.pop("doc")
-
 
                     sample_dump = (
                         json.dumps(

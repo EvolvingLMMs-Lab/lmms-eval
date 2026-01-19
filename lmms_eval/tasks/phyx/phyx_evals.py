@@ -5,7 +5,7 @@ import time
 
 from loguru import logger as eval_logger
 from openai import OpenAI
-from utils import load_phyx_config
+from .utils import load_phyx_config
 
 FAIL_MSG = "Failed to obtain answer via API."
 config = load_phyx_config()

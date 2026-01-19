@@ -301,21 +301,13 @@ class JavisGPT(lmms):
         # Load BEATs weights
         eval_logger.info(f"Loading BEATs weights from {self.beats_path}")
         beats_checkpoint = torch.load(self.beats_path, map_location="cpu")
-        # BEATs checkpoint has format {'cfg': ..., 'model': {...}, 'label_dict': ...}
-        beats_state_dict = beats_checkpoint.get('model', beats_checkpoint)
-        # Convert BEATs weights to match model dtype (bfloat16)
-        beats_state_dict = {k: v.to(torch.bfloat16) if isinstance(v, torch.Tensor) and v.dtype == torch.float32 else v
-                           for k, v in beats_state_dict.items()}
-        model.beats.load_state_dict(beats_state_dict, strict=False)
+        model.beats.load_state_dict(beats_checkpoint, strict=False)
 
         # Load projector weights if exists
         projector_path = os.path.join(self.pretrained, "mm_proj_all.bin")
         if os.path.exists(projector_path):
             eval_logger.info(f"Loading projector weights from {projector_path}")
             projector_weights = torch.load(projector_path, map_location="cpu")
-            # Convert projector weights to match model dtype (bfloat16)
-            projector_weights = {k: v.to(torch.bfloat16) if isinstance(v, torch.Tensor) and v.dtype == torch.float32 else v
-                                for k, v in projector_weights.items()}
             model.load_state_dict(projector_weights, strict=False)
 
         # Set model to eval mode
@@ -340,9 +332,8 @@ class JavisGPT(lmms):
                 from javisgpt.constants import AV_GEN_TOKEN_NUM
                 import torch.nn as nn
 
-                # Initialize av_generator and convert to model dtype (bfloat16)
+                # Initialize av_generator
                 model.av_generator = JavisDiTInterface(self.avgen_cfg_path)
-                model.av_generator = model.av_generator.to(model.device, dtype=model.dtype)
 
                 # Create avgen_token parameter
                 model.avgen_token = nn.Parameter(
