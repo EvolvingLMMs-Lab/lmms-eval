@@ -8,4 +8,5 @@ python -m lmms_eval \
   --batch_size 1 \
   --output_path ./logs/bagel_jigsaw \
     --log_samples \
+    --limit 1 \
     --verbosity INFO
