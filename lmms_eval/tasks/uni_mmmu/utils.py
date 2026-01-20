@@ -189,23 +189,18 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             except:
                 pass
 
-    # If no JSON found, try to find choice directly
     if choice is None:
-        # Try to find "choice": 0 or "choice": 1
         choice_match = re.search(r'"choice"\s*:\s*(\d)', result_text)
         if choice_match:
             choice = int(choice_match.group(1))
 
-    # Get ground truth label and ensure type consistency
     gt_label = doc.get("label", -1)
-    # Convert gt_label to int if it's a string
     if isinstance(gt_label, str):
         try:
             gt_label = int(gt_label)
         except ValueError:
             gt_label = -1
     
-    # Ensure choice is also int
     if choice is not None and not isinstance(choice, int):
         try:
             choice = int(choice)

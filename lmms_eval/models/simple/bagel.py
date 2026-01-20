@@ -554,16 +554,10 @@ class Bagel(lmms):
 
             if task_type == "jigsaw":
                 # Jigsaw: Generate 2 completed images then final answer
-                eval_logger.info(f"[JIGSAW DEBUG] Starting jigsaw generation for doc_id={doc_id}, task={task}")
-                eval_logger.info(f"[JIGSAW DEBUG] Initial context setup complete, starting Candidate 0 generation")
-                
-                # Image 1: Candidate 0 completion
                 suffix1 = "Output ONLY a single image with Candidate 0 placed in the bottom-right cell. No text."
                 cfg_text_context = deepcopy(gen_context)
                 gen_context = self.inferencer.update_context_text(suffix1, gen_context)
                 cfg_img_context = self.inferencer.update_context_text(suffix1, cfg_img_context)
-
-                eval_logger.info(f"[JIGSAW DEBUG] Generating Candidate 0 image...")
                 img0 = self.inferencer.gen_image(
                     self.image_shapes,
                     gen_context,
@@ -580,8 +574,6 @@ class Bagel(lmms):
                 img0_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_cand0.png")
                 img0.save(img0_path)
                 generated_images.append(img0_path)
-                eval_logger.info(f"[JIGSAW DEBUG] Saved jigsaw image 0: {img0_path}")
-                eval_logger.info(f"[JIGSAW DEBUG] Current generated_images list: {generated_images}")
 
                 # Add to context
                 img0_transformed = self.inferencer.vae_transform.resize_transform(
@@ -595,13 +587,10 @@ class Bagel(lmms):
                 )
 
                 # Image 2: Candidate 1 completion
-                eval_logger.info(f"[JIGSAW DEBUG] Starting Candidate 1 generation...")
                 suffix2 = "Output ONLY a single image with Candidate 1 placed in the bottom-right cell. No text."
                 cfg_text_context = deepcopy(gen_context)
                 gen_context = self.inferencer.update_context_text(suffix2, gen_context)
                 cfg_img_context = self.inferencer.update_context_text(suffix2, cfg_img_context)
-
-                eval_logger.info(f"[JIGSAW DEBUG] Generating Candidate 1 image...")
                 img1 = self.inferencer.gen_image(
                     self.image_shapes,
                     gen_context,
@@ -618,18 +607,12 @@ class Bagel(lmms):
                 img1_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_cand1.png")
                 img1.save(img1_path)
                 generated_images.append(img1_path)
-                eval_logger.info(f"[JIGSAW DEBUG] Saved jigsaw image 1: {img1_path}")
-                eval_logger.info(f"[JIGSAW DEBUG] Current generated_images list: {generated_images}")
-                eval_logger.info(f"[JIGSAW DEBUG] Total images generated so far: {len(generated_images)}")
 
                 # Rebuild context for final answer generation (align with Uni-MMMU)
-                # Need to include: original 3 input images + 2 generated images
-                eval_logger.info(f"[JIGSAW DEBUG] Rebuilding context for final answer generation...")
                 gen_context = self.inferencer.init_gen_context()
                 cfg_img_context = self.inferencer.init_gen_context()
 
                 # Re-add original 3 input images (reference 2x2 + candidate 0 patch + candidate 1 patch)
-                eval_logger.info(f"[JIGSAW DEBUG] Re-adding {len(input_images)} original input images to context")
                 for idx, img in enumerate(input_images):
                     if img is not None:
                         img_transformed = self.inferencer.vae_transform.resize_transform(
@@ -638,16 +621,14 @@ class Bagel(lmms):
                         gen_context = self.inferencer.update_context_image(
                             img_transformed, gen_context, vae=False, vit=True
                         )
-                        eval_logger.debug(f"[JIGSAW DEBUG] Re-added original input image {idx+1}/{len(input_images)}")
 
                 # Re-add initial prompt
                 gen_context = self.inferencer.update_context_text(prompt, gen_context)
                 cfg_img_context = self.inferencer.update_context_text(prompt, cfg_img_context)
 
                 # Add generated Candidate 0 image
-                eval_logger.info(f"[JIGSAW DEBUG] Adding generated Candidate 0 image to context")
                 img0_transformed = self.inferencer.vae_transform.resize_transform(
-                    self.pil_img2rgb(img0)  # Use img0 from memory, not reload from file
+                    self.pil_img2rgb(img0)
                 )
                 gen_context = self.inferencer.update_context_image(
                     img0_transformed, gen_context, vae=False, vit=True
@@ -657,9 +638,8 @@ class Bagel(lmms):
                 )
 
                 # Add generated Candidate 1 image
-                eval_logger.info(f"[JIGSAW DEBUG] Adding generated Candidate 1 image to context")
                 img1_transformed = self.inferencer.vae_transform.resize_transform(
-                    self.pil_img2rgb(img1)  # Use img1 from memory
+                    self.pil_img2rgb(img1)
                 )
                 gen_context = self.inferencer.update_context_image(
                     img1_transformed, gen_context, vae=False, vit=True
@@ -669,17 +649,12 @@ class Bagel(lmms):
                 )
 
                 # Final answer
-                eval_logger.info(f"[JIGSAW DEBUG] Context rebuilt complete. Preparing to generate final text answer...")
                 final_suffix = (
                     'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n'
                     "Do not output any additional images."
                 )
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
-                eval_logger.info(f"[JIGSAW DEBUG] Final suffix added to context")
-                eval_logger.info(f"[JIGSAW DEBUG] gen_text params: max_length={self.max_new_tokens}, do_sample={self.do_sample}, temperature={self.text_temperature}")
                 
-                # Generate final text answer for jigsaw
-                eval_logger.info(f"[JIGSAW DEBUG] Calling gen_text() to generate final answer...")
                 final_text = self.inferencer.gen_text(
                     gen_context,
                     max_length=self.max_new_tokens,
@@ -687,19 +662,8 @@ class Bagel(lmms):
                     temperature=self.text_temperature,
                 )
                 
-                eval_logger.info(f"[JIGSAW DEBUG] gen_text() returned. Type: {type(final_text)}, Value: {repr(final_text)}")
-                
-                # Handle empty text
                 if final_text is None:
-                    eval_logger.warning(f"[JIGSAW DEBUG] final_text is None for doc_id={doc_id}, task={task}")
-                    final_text = ""  # Ensure it's a string, not None
-                elif final_text.strip() == "":
-                    eval_logger.warning(f"[JIGSAW DEBUG] final_text is empty string for doc_id={doc_id}, task={task}")
-                
-                eval_logger.info(f"[JIGSAW DEBUG] Final answer text: {final_text}")
-                eval_logger.info(f"[JIGSAW DEBUG] Total generated_images count: {len(generated_images)}")
-                eval_logger.info(f"[JIGSAW DEBUG] Generated images list: {generated_images}")
-                eval_logger.info(f"[JIGSAW DEBUG] About to return: final_text (type={type(final_text).__name__}, len={len(final_text) if final_text else 0}), generated_images (count={len(generated_images)})")
+                    final_text = ""
 
             else:
                 # Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
@@ -758,12 +722,10 @@ class Bagel(lmms):
                     )
 
                 # Rebuild context for final answer generation (align with Uni-MMMU)
-                eval_logger.info(f"[MAZE/SLIDING DEBUG] Rebuilding context for final answer generation...")
                 gen_context = self.inferencer.init_gen_context()
                 cfg_img_context = self.inferencer.init_gen_context()
 
                 # Re-add original input images
-                eval_logger.info(f"[MAZE/SLIDING DEBUG] Re-adding {len(input_images)} original input images to context")
                 for idx, img in enumerate(input_images):
                     if img is not None:
                         img_transformed = self.inferencer.vae_transform.resize_transform(
@@ -777,7 +739,6 @@ class Bagel(lmms):
                 gen_context = self.inferencer.update_context_text(prompt, gen_context)
 
                 # Re-add all step texts and images
-                eval_logger.info(f"[MAZE/SLIDING DEBUG] Re-adding {len(step_texts)} step texts and {len(step_images)} step images")
                 for i, (plan_text, step_img) in enumerate(zip(step_texts, step_images), 1):
                     gen_context = self.inferencer.update_context_text(plan_text, gen_context)
                     gen_context = self.inferencer.update_context_text(f"Image for step {i}:", gen_context)
@@ -789,14 +750,11 @@ class Bagel(lmms):
                     )
 
                 # Final answer
-                eval_logger.info(f"[MAZE/SLIDING DEBUG] Context rebuilt complete. Preparing to generate final text answer...")
                 final_suffix = (
                     "After the images, emit EXACTLY ONE LINE containing ONLY the final move list "
                     "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
                 )
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
-
-                # Generate final text answer for maze/sliding
                 final_text = self.inferencer.gen_text(
                     gen_context,
                     max_length=self.max_new_tokens,
@@ -848,13 +806,7 @@ class Bagel(lmms):
             prompt = contexts
 
             # Check if this is Uni-MMMU interleaved generation mode
-            # Specified via lmms_eval_specific_kwargs in yaml
-            eval_logger.info(f"[GENERATE_UNTIL DEBUG] Processing doc_id={doc_id}, task={task}")
-            eval_logger.info(f"[GENERATE_UNTIL DEBUG] gen_kwargs keys: {list(gen_kwargs.keys())}")
-            eval_logger.info(f"[GENERATE_UNTIL DEBUG] gen_kwargs full content: {gen_kwargs}")
-            
             bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
-            eval_logger.info(f"[GENERATE_UNTIL DEBUG] bagel_interleaved value: {bagel_interleaved}")
 
             if bagel_interleaved is not None:
                 # Uni-MMMU interleaved generation mode
@@ -865,21 +817,10 @@ class Bagel(lmms):
                     visuals = [doc_to_visual(doc)]
                     input_images = self.flatten(visuals)
 
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] Calling generate_uni_mmmu_interleaved for doc_id={doc_id}, task={task}")
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] input_images count: {len(input_images)}")
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] bagel_interleaved config: {bagel_interleaved}")
-                
                 output_text, output_images = self.generate_uni_mmmu_interleaved(
                     input_images, prompt, str(doc_id), task, bagel_interleaved, doc
                 )
-                
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] generate_uni_mmmu_interleaved returned")
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] output_text type: {type(output_text)}, value: {repr(output_text)}")
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] output_images type: {type(output_images)}, count: {len(output_images) if output_images else 0}")
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] output_images list: {output_images}")
-                
                 formatted_output = self.format_output(output_text, output_images)
-                eval_logger.info(f"[BAGEL INTERLEAVED DEBUG] format_output result: {formatted_output[:200]}..." if len(formatted_output) > 200 else f"[BAGEL INTERLEAVED DEBUG] format_output result: {formatted_output}")
 
             elif self.mode == "understanding":
                 # Image understanding mode
