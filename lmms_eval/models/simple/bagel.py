@@ -622,19 +622,54 @@ class Bagel(lmms):
                 eval_logger.info(f"[JIGSAW DEBUG] Current generated_images list: {generated_images}")
                 eval_logger.info(f"[JIGSAW DEBUG] Total images generated so far: {len(generated_images)}")
 
-                # Add to context
-                img1_transformed = self.inferencer.vae_transform.resize_transform(
-                    self.pil_img2rgb(img1)
+                # Rebuild context for final answer generation (align with Uni-MMMU)
+                # Need to include: original 3 input images + 2 generated images
+                eval_logger.info(f"[JIGSAW DEBUG] Rebuilding context for final answer generation...")
+                gen_context = self.inferencer.init_gen_context()
+                cfg_img_context = self.inferencer.init_gen_context()
+
+                # Re-add original 3 input images (reference 2x2 + candidate 0 patch + candidate 1 patch)
+                eval_logger.info(f"[JIGSAW DEBUG] Re-adding {len(input_images)} original input images to context")
+                for idx, img in enumerate(input_images):
+                    if img is not None:
+                        img_transformed = self.inferencer.vae_transform.resize_transform(
+                            self.pil_img2rgb(img)
+                        )
+                        gen_context = self.inferencer.update_context_image(
+                            img_transformed, gen_context, vae=False, vit=True
+                        )
+                        eval_logger.debug(f"[JIGSAW DEBUG] Re-added original input image {idx+1}/{len(input_images)}")
+
+                # Re-add initial prompt
+                gen_context = self.inferencer.update_context_text(prompt, gen_context)
+                cfg_img_context = self.inferencer.update_context_text(prompt, cfg_img_context)
+
+                # Add generated Candidate 0 image
+                eval_logger.info(f"[JIGSAW DEBUG] Adding generated Candidate 0 image to context")
+                img0_transformed = self.inferencer.vae_transform.resize_transform(
+                    self.pil_img2rgb(img0)  # Use img0 from memory, not reload from file
                 )
                 gen_context = self.inferencer.update_context_image(
-                    img1_transformed, gen_context, vae=True, vit=True
+                    img0_transformed, gen_context, vae=False, vit=True
+                )
+                gen_context = self.inferencer.update_context_text(
+                    "COMPLETED WITH CANDIDATE 0:", gen_context
+                )
+
+                # Add generated Candidate 1 image
+                eval_logger.info(f"[JIGSAW DEBUG] Adding generated Candidate 1 image to context")
+                img1_transformed = self.inferencer.vae_transform.resize_transform(
+                    self.pil_img2rgb(img1)  # Use img1 from memory
+                )
+                gen_context = self.inferencer.update_context_image(
+                    img1_transformed, gen_context, vae=False, vit=True
                 )
                 gen_context = self.inferencer.update_context_text(
                     "COMPLETED WITH CANDIDATE 1:", gen_context
                 )
 
                 # Final answer
-                eval_logger.info(f"[JIGSAW DEBUG] Both images generated, preparing to generate final text answer...")
+                eval_logger.info(f"[JIGSAW DEBUG] Context rebuilt complete. Preparing to generate final text answer...")
                 final_suffix = (
                     'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n'
                     "Do not output any additional images."
@@ -668,6 +703,9 @@ class Bagel(lmms):
 
             else:
                 # Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
+                step_texts = []  # Store all plan texts
+                step_images = []  # Store all generated step images
+                
                 for i in range(1, num_images + 1):
                     # Generate planning text
                     if task_type == "maze":
@@ -683,6 +721,7 @@ class Bagel(lmms):
                         prompt_suffix=plan_suffix,
                     )
                     eval_logger.info(f"Step {i} plan: {plan_text}")
+                    step_texts.append(plan_text)
                     gen_context = self.inferencer.update_context_text(plan_text, gen_context)
 
                     # Generate step image
@@ -707,6 +746,7 @@ class Bagel(lmms):
                     img_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_step_{i:04d}.png")
                     img.save(img_path)
                     generated_images.append(img_path)
+                    step_images.append(img)
                     eval_logger.info(f"Saved step {i} image: {img_path}")
 
                     # Add to context
@@ -717,7 +757,39 @@ class Bagel(lmms):
                         img_transformed, gen_context, vae=True, vit=True
                     )
 
+                # Rebuild context for final answer generation (align with Uni-MMMU)
+                eval_logger.info(f"[MAZE/SLIDING DEBUG] Rebuilding context for final answer generation...")
+                gen_context = self.inferencer.init_gen_context()
+                cfg_img_context = self.inferencer.init_gen_context()
+
+                # Re-add original input images
+                eval_logger.info(f"[MAZE/SLIDING DEBUG] Re-adding {len(input_images)} original input images to context")
+                for idx, img in enumerate(input_images):
+                    if img is not None:
+                        img_transformed = self.inferencer.vae_transform.resize_transform(
+                            self.pil_img2rgb(img)
+                        )
+                        gen_context = self.inferencer.update_context_image(
+                            img_transformed, gen_context, vae=False, vit=True
+                        )
+
+                # Re-add initial prompt
+                gen_context = self.inferencer.update_context_text(prompt, gen_context)
+
+                # Re-add all step texts and images
+                eval_logger.info(f"[MAZE/SLIDING DEBUG] Re-adding {len(step_texts)} step texts and {len(step_images)} step images")
+                for i, (plan_text, step_img) in enumerate(zip(step_texts, step_images), 1):
+                    gen_context = self.inferencer.update_context_text(plan_text, gen_context)
+                    gen_context = self.inferencer.update_context_text(f"Image for step {i}:", gen_context)
+                    img_transformed = self.inferencer.vae_transform.resize_transform(
+                        self.pil_img2rgb(step_img)
+                    )
+                    gen_context = self.inferencer.update_context_image(
+                        img_transformed, gen_context, vae=False, vit=True
+                    )
+
                 # Final answer
+                eval_logger.info(f"[MAZE/SLIDING DEBUG] Context rebuilt complete. Preparing to generate final text answer...")
                 final_suffix = (
                     "After the images, emit EXACTLY ONE LINE containing ONLY the final move list "
                     "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
