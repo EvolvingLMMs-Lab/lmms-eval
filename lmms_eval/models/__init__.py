@@ -76,6 +76,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "slime": "Slime",
     "srt_api": "SRT_API",
     "tinyllava": "TinyLlava",
+    "uniworld": "UniWorld",
     "videoChatGPT": "VideoChatGPT",
     "videochat2": "VideoChat2",
     "videollama3": "VideoLLaMA3",
