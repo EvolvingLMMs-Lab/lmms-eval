@@ -1,6 +1,6 @@
 # Tools
 
-Utility scripts and modules for lmms-eval development and dataset preparation.
+Utility scripts for lmms-eval development and dataset preparation.
 
 ## Scripts
 
@@ -32,12 +32,11 @@ python tools/regression.py --tasks ocrbench,mmmu_val --limit 8
 
 Tutorial for creating properly formatted Hugging Face datasets with images. Demonstrates the complete workflow from raw data to HF Hub upload.
 
-## Modules
+---
 
-### `lite/`
+## Archived Modules
 
-LMMs-Eval Lite module for dataset core-set selection using embedding-based sampling. Creates smaller, representative versions of evaluation benchmarks.
+The following modules were removed during cleanup. They can be found in the `main` branch if needed:
 
-### `live_bench/`
-
-Separate package for LiveBench data generation and website screenshot capture. Has its own `pyproject.toml` and dependencies. Used to generate periodic benchmark updates.
+- **`lite/`** - LMMs-Eval Lite for dataset core-set selection using embedding-based sampling
+- **`live_bench/`** - Separate package for LiveBench data generation and website screenshot capture
