@@ -196,8 +196,23 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         if choice_match:
             choice = int(choice_match.group(1))
 
+    # Get ground truth label and ensure type consistency
     gt_label = doc.get("label", -1)
-    text_correct = 1 if choice == gt_label else 0
+    # Convert gt_label to int if it's a string
+    if isinstance(gt_label, str):
+        try:
+            gt_label = int(gt_label)
+        except ValueError:
+            gt_label = -1
+    
+    # Ensure choice is also int
+    if choice is not None and not isinstance(choice, int):
+        try:
+            choice = int(choice)
+        except (ValueError, TypeError):
+            choice = None
+    
+    text_correct = 1 if choice is not None and choice == gt_label else 0
 
     return {"jigsaw_text_acc": text_correct}
 
