@@ -17,7 +17,6 @@ from PIL import Image
 
 from lmms_eval.tasks.babyvision_gen.prompt import build_evaluation_prompt
 
-
 BABYVISION_API_KEY = os.getenv("BABYVISION_API_KEY")
 BABYVISION_BASE_URL = os.getenv("BABYVISION_BASE_URL")
 BABYVISION_MODEL_NAME = os.getenv("BABYVISION_MODEL_NAME", "gpt-4o")
@@ -161,9 +160,7 @@ def babyvision_process_results(doc, results, **kwargs):
     gt_image_pil = doc["answerImage"].convert("RGB")
     generated_image_pil = Image.open(model_images[0]).convert("RGB")
 
-    model_response = _call_openai_for_evaluation(
-        client, input_image_pil, gt_image_pil, generated_image_pil, task_type, subtype, generation_prompt
-    )
+    model_response = _call_openai_for_evaluation(client, input_image_pil, gt_image_pil, generated_image_pil, task_type, subtype, generation_prompt)
 
     if model_response is None:
         eval_logger.warning(f"Model evaluation failed for taskId {task_id}")
