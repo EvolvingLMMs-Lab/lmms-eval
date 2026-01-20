@@ -1,16 +1,22 @@
 # Copyright 2025 lmms-eval Authors
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import os
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from huggingface_hub import snapshot_download
-
 import numpy as np
 import torch
-from accelerate import Accelerator, DistributedType, infer_auto_device_map, init_empty_weights, load_checkpoint_and_dispatch
+from accelerate import (
+    Accelerator,
+    DistributedType,
+    infer_auto_device_map,
+    init_empty_weights,
+    load_checkpoint_and_dispatch,
+)
+from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
@@ -157,24 +163,16 @@ class BagelUMM(lmms):
         super().__init__()
 
         if not BAGEL_AVAILABLE:
-            raise ImportError(
-                f"Failed to import Bagel dependencies: {BAGEL_IMPORT_ERROR}\n"
-                "Please install the Bagel package by running:\n"
-                "uv pip install git+https://github.com/oscarqjh/Bagel.git"
-            )
+            raise ImportError(f"Failed to import Bagel dependencies: {BAGEL_IMPORT_ERROR}\n" "Please install the Bagel package by running:\n" "uv pip install git+https://github.com/oscarqjh/Bagel.git")
 
         # Validate mode
         if mode not in BASE_PARAMS:
-            raise ValueError(
-                f"Invalid mode '{mode}'. Must be one of: {list(BASE_PARAMS.keys())}"
-            )
+            raise ValueError(f"Invalid mode '{mode}'. Must be one of: {list(BASE_PARAMS.keys())}")
 
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(
-                f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}"
-            )
+            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
         self.attn_implementation = attn_implementation
 
         self.pretrained = pretrained
@@ -182,15 +180,7 @@ class BagelUMM(lmms):
         self.use_cache = use_cache
         self.text_temperature = text_temperature
         self.image_shapes = image_shapes
-
-        # Set up output directory for generated images
-        run_id = generate_run_id()
-        if output_dir is None:
-            self.output_dir = os.path.join("./logs/bagel_images", run_id)
-        else:
-            self.output_dir = os.path.join(output_dir, run_id)
-        os.makedirs(self.output_dir, exist_ok=True)
-        eval_logger.info(f"Bagel output directory: {self.output_dir}")
+        self._output_dir_base = output_dir  # Store for later, create after accelerator setup
 
         # Build inference parameters from mode defaults + overrides
         self.inference_params = BASE_PARAMS[mode].copy()
@@ -231,6 +221,29 @@ class BagelUMM(lmms):
             self._device = torch.device(device)
             self.device_map = device_map if device_map else device
 
+        # Set up output directory for generated images (after accelerator setup)
+        # Only main process generates run_id to ensure all processes use same folder
+        if self.mode in ["generate", "think_generate", "edit", "think_edit"]:
+            if accelerator.is_main_process:
+                run_id = generate_run_id()
+                if self._output_dir_base is None:
+                    self.output_dir = os.path.join("./logs/bagel_images", run_id)
+                else:
+                    self.output_dir = os.path.join(self._output_dir_base, run_id)
+                os.makedirs(self.output_dir, exist_ok=True)
+                # Write output_dir to a temp file for other processes
+                with open("/tmp/bagel_output_dir.txt", "w") as f:
+                    f.write(self.output_dir)
+                eval_logger.info(f"Bagel output directory: {self.output_dir}")
+
+            # Wait for main process to create directory
+            accelerator.wait_for_everyone()
+
+            # Non-main processes read the output_dir from temp file
+            if not accelerator.is_main_process:
+                with open("/tmp/bagel_output_dir.txt", "r") as f:
+                    self.output_dir = f.read().strip()
+
         # Load model
         self._load_model()
 
@@ -265,10 +278,7 @@ class BagelUMM(lmms):
         else:
             # First try to load from cache without downloading
             try:
-                model_path = snapshot_download(
-                    repo_id=self.pretrained,
-                    local_files_only=True
-                )
+                model_path = snapshot_download(repo_id=self.pretrained, local_files_only=True)
                 eval_logger.info(f"Loaded model from cache: {model_path}")
             except Exception:
                 # Not in cache, need to download
@@ -277,23 +287,16 @@ class BagelUMM(lmms):
                     eval_logger.info(f"Downloading model from HuggingFace Hub: {self.pretrained}")
                     # Use user-specific cache to avoid permission issues with shared caches
                     user_cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-                    model_path = snapshot_download(
-                        repo_id=self.pretrained,
-                        cache_dir=user_cache_dir
-                    )
+                    model_path = snapshot_download(repo_id=self.pretrained, cache_dir=user_cache_dir)
                     eval_logger.info(f"Model downloaded to: {model_path}")
-                
+
                 # Wait for main process to finish downloading
                 self.accelerator.wait_for_everyone()
-                
+
                 # Non-main processes get the cached path
                 if not self.accelerator.is_main_process:
                     user_cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-                    model_path = snapshot_download(
-                        repo_id=self.pretrained,
-                        cache_dir=user_cache_dir,
-                        local_files_only=True
-                    )
+                    model_path = snapshot_download(repo_id=self.pretrained, cache_dir=user_cache_dir, local_files_only=True)
 
         # Load LLM config
         llm_config = Qwen2Config.from_json_file(os.path.join(model_path, "llm_config.json"))
@@ -345,7 +348,7 @@ class BagelUMM(lmms):
 
         # Infer device map - when using accelerate with data parallelism,
         # each process should only use its assigned GPU
-        if hasattr(self, 'accelerator') and self.accelerator.num_processes > 1:
+        if hasattr(self, "accelerator") and self.accelerator.num_processes > 1:
             # Data parallelism: each process loads full model on its own GPU
             local_gpu = self.accelerator.local_process_index
             device_map = infer_auto_device_map(
@@ -373,7 +376,7 @@ class BagelUMM(lmms):
         ]
 
         # Determine the target device for same_device_modules
-        if hasattr(self, 'accelerator') and self.accelerator.num_processes > 1:
+        if hasattr(self, "accelerator") and self.accelerator.num_processes > 1:
             # Data parallelism: all modules go to local GPU
             target_device = f"cuda:{self.accelerator.local_process_index}"
             for k in same_device_modules:
@@ -395,7 +398,7 @@ class BagelUMM(lmms):
             os.path.join(model_path, "model.safetensors"),
             os.path.join(model_path, "model.safetensors.index.json"),
         ]
-        
+
         checkpoint = None
         for candidate in checkpoint_candidates:
             if os.path.exists(candidate):
@@ -405,13 +408,10 @@ class BagelUMM(lmms):
                 else:
                     checkpoint = candidate
                 break
-        
+
         if checkpoint is None:
-            raise FileNotFoundError(
-                f"Could not find checkpoint in {model_path}. "
-                f"Expected one of: {checkpoint_candidates}"
-            )
-        
+            raise FileNotFoundError(f"Could not find checkpoint in {model_path}. " f"Expected one of: {checkpoint_candidates}")
+
         eval_logger.info(f"Loading checkpoint from: {checkpoint}")
 
         # Load checkpoint and dispatch
@@ -502,7 +502,7 @@ class BagelUMM(lmms):
             # Build input list for inferencer
             input_list = []
             processed_visuals = []
-            
+
             # Process and collect all visual inputs
             if visuals is not None:
                 for visual in visuals:
@@ -518,11 +518,11 @@ class BagelUMM(lmms):
                             processed_visuals.append(img)
                         else:
                             eval_logger.warning(f"Image file not found, skipping: {visual}")
-            
+
             # Count <image> tokens in context
             num_image_tags = contexts.count("<image>")
             num_visuals = len(processed_visuals)
-            
+
             # Build input_list based on <image> token presence
             if num_image_tags == 0:
                 # Case 1: No <image> tokens in context
@@ -532,42 +532,33 @@ class BagelUMM(lmms):
                 else:
                     # text-only input (no visuals)
                     input_list = [contexts.strip()]
-                    
+
             elif num_image_tags == num_visuals:
                 # Case 2: Number of <image> tokens matches number of visuals
                 # Split context by <image> and interleave with images
                 context_parts = contexts.split("<image>")
-                
+
                 # Sanity check: splitting by N tags should give N+1 parts
-                assert len(context_parts) == num_visuals + 1, \
-                    f"Split error: expected {num_visuals + 1} parts, got {len(context_parts)}"
-                
+                assert len(context_parts) == num_visuals + 1, f"Split error: expected {num_visuals + 1} parts, got {len(context_parts)}"
+
                 for i, text_part in enumerate(context_parts):
                     # Add text part (may be empty string after strip)
                     text_stripped = text_part.strip()
                     if text_stripped:  # Only add non-empty text
                         input_list.append(text_stripped)
-                    
+
                     # Add corresponding image after this text part (except for last part)
                     if i < num_visuals:
                         input_list.append(processed_visuals[i])
-                        
+
             else:
                 # Case 3: Mismatch between <image> tokens and actual visuals
-                raise ValueError(
-                    f"Mismatch between <image> tokens and visuals: "
-                    f"Found {num_image_tags} <image> token(s) in context, "
-                    f"but received {num_visuals} visual(s). "
-                    f"Context preview: '{contexts[:200]}...'"
-                )
-            
+                raise ValueError(f"Mismatch between <image> tokens and visuals: " f"Found {num_image_tags} <image> token(s) in context, " f"but received {num_visuals} visual(s). " f"Context preview: '{contexts[:200]}...'")
+
             # Final sanity check: input_list should not be empty
             if not input_list:
-                raise ValueError(
-                    f"Failed to build input_list: no valid inputs. "
-                    f"Context: '{contexts[:100]}...', Visuals: {num_visuals}"
-                )
-            
+                raise ValueError(f"Failed to build input_list: no valid inputs. " f"Context: '{contexts[:100]}...', Visuals: {num_visuals}")
+
             # Prepare inference parameters
             inference_params = self.inference_params.copy()
             inference_params["text_temperature"] = self.text_temperature
@@ -596,8 +587,15 @@ class BagelUMM(lmms):
                     output_images.append(image_path)
                     eval_logger.debug(f"Saved generated image: {image_path}")
 
-            # Return text response (primary output for evaluation)
-            res.append(output_text)
+            # Format output based on mode
+            # For image generation/editing modes, return JSON with image paths
+            # For understanding modes, return plain text
+            if self.mode in ["generate", "think_generate", "edit", "think_edit"] and output_images:
+                output_dict = {"text": output_text, "images": output_images}
+                formatted_output = json.dumps(output_dict, ensure_ascii=False)
+                res.append(formatted_output)
+            else:
+                res.append(output_text)
             pbar.update(1)
 
         pbar.close()
