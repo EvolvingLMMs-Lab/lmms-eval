@@ -6,6 +6,8 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from huggingface_hub import snapshot_download
+
 import numpy as np
 import torch
 from accelerate import Accelerator, DistributedType, infer_auto_device_map, init_empty_weights, load_checkpoint_and_dispatch
@@ -256,7 +258,42 @@ class BagelUMM(lmms):
 
     def _load_model(self):
         """Load Bagel model components."""
-        model_path = self.pretrained
+        # Handle HuggingFace Hub paths - download if not a local directory
+        # Use barrier to ensure only main process downloads to avoid race conditions
+        if os.path.isdir(self.pretrained):
+            model_path = self.pretrained
+        else:
+            # First try to load from cache without downloading
+            try:
+                model_path = snapshot_download(
+                    repo_id=self.pretrained,
+                    local_files_only=True
+                )
+                eval_logger.info(f"Loaded model from cache: {model_path}")
+            except Exception:
+                # Not in cache, need to download
+                # Only main process downloads, others wait
+                if self.accelerator.is_main_process:
+                    eval_logger.info(f"Downloading model from HuggingFace Hub: {self.pretrained}")
+                    # Use user-specific cache to avoid permission issues with shared caches
+                    user_cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+                    model_path = snapshot_download(
+                        repo_id=self.pretrained,
+                        cache_dir=user_cache_dir
+                    )
+                    eval_logger.info(f"Model downloaded to: {model_path}")
+                
+                # Wait for main process to finish downloading
+                self.accelerator.wait_for_everyone()
+                
+                # Non-main processes get the cached path
+                if not self.accelerator.is_main_process:
+                    user_cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+                    model_path = snapshot_download(
+                        repo_id=self.pretrained,
+                        cache_dir=user_cache_dir,
+                        local_files_only=True
+                    )
 
         # Load LLM config
         llm_config = Qwen2Config.from_json_file(os.path.join(model_path, "llm_config.json"))
