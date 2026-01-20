@@ -24,12 +24,12 @@ from lmms_eval.models.model_utils.memory_utils import print_memory_stats
 
 # Check if Emu3.5 submodule is initialized
 _current_file = Path(__file__).resolve()
-_repo_root = _current_file.parents[3]  # Go up to lmms-eval root
+_repo_root = _current_file.parents[2]  # Go up to lmms-eval root
 _emu35_src_path = _repo_root / "external" / "Emu3.5" / "src"
 _emu35_modeling_file = _emu35_src_path / "emu3p5" / "modeling_emu3.py"
 
 if not _emu35_modeling_file.exists():
-    eval_logger.error("Emu3.5 submodule is not initialized. Please run the following commands:\n" f"  cd {_repo_root}\n" "  git submodule update --init --recursive external/Emu3.5\n")
+    eval_logger.error(f"Emu3.5 submodule is not initialized in. {_repo_root / "external" / "Emu3.5"}. Please run the following commands:\n" f"  cd {_repo_root}\n" "  git submodule update --init --recursive external/Emu3.5\n")
     sys.exit(1)
 
 # Add external Emu3.5 to path
