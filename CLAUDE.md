@@ -30,19 +30,19 @@ The `uv.lock` file ensures all developers and CI/CD systems use exactly the same
    - Follow existing patterns exactly
    - Line length: 88 chars maximum
 
-3. Testing Requirements
-   - Framework: `uv run pytest`
-   - Async testing: use anyio, not asyncio
-   - Coverage: test edge cases and errors
-   - New features require tests
-   - Bug fixes require regression tests
+3. CI/CD Testing
+    - Location: `cicd/` directory
+    - Tests evaluation server and model interactions
+    - Python unittest framework
+    - See `cicd/README.md` for detailed testing guide
+    - GPU management and job submission handled by cicd scripts
 
 4. Code Style
-    - PEP 8 naming (snake_case for functions/variables)
-    - Class names in PascalCase
-    - Constants in UPPER_SNAKE_CASE
-    - Document with docstrings
-    - Use f-strings for formatting
+     - PEP 8 naming (snake_case for functions/variables)
+     - Class names in PascalCase
+     - Constants in UPPER_SNAKE_CASE
+     - Document with docstrings
+     - Use f-strings for formatting
 
 - For commits fixing bugs or adding features based on user reports add:
   ```bash
@@ -120,62 +120,36 @@ python -m lmms_eval --model qwen2_5_vl --model_args pretrained=Qwen/Qwen2.5-VL-3
 
 ## Code Formatting
 
-1. Ruff
-   - Format: `uv run ruff format .`
-   - Check: `uv run ruff check .`
-   - Fix: `uv run ruff check . --fix`
-   - Critical issues:
-     - Line length (88 chars)
-     - Import sorting (I001)
-     - Unused imports
-   - Line wrapping:
-     - Strings: use parentheses
-     - Function calls: multi-line with proper indent
-     - Imports: split into multiple lines
+Pre-commit hooks manage all code formatting and linting automatically on git commit.
 
-2. Type Checking
-   - Tool: `uv run pyright`
-   - Requirements:
-     - Explicit None checks for Optional
-     - Type narrowing for strings
-     - Version warnings can be ignored if checks pass
-
-3. Pre-commit
-   - Config: `.pre-commit-config.yaml`
-   - Runs: on git commit
-   - Tools: Prettier (YAML/JSON), Ruff (Python)
-   - Ruff updates:
-     - Check PyPI versions
-     - Update config rev
-     - Commit config first
+1. Pre-commit
+    - Config: `.pre-commit-config.yaml`
+    - Runs: on git commit
+    - Tools: Prettier (YAML/JSON), Ruff (Python)
+    - Ruff handles: formatting, import sorting, and linting
+    - Prettier handles: YAML and JSON files
+    - Updates: Config changes should be committed separately first
 
 ## Error Resolution
 
 1. CI Failures
-   - Fix order:
-     1. Formatting
-     2. Type errors
-     3. Linting
-   - Type errors:
-     - Get full line context
-     - Check Optional types
-     - Add type narrowing
-     - Verify function signatures
+    - Fix order:
+      1. Formatting
+      2. Type errors
+      3. Linting
 
 2. Common Issues
-   - Line length:
-     - Break strings with parentheses
-     - Multi-line function calls
-     - Split imports
-   - Types:
-     - Add None checks
-     - Narrow string types
-     - Match existing patterns
+    - Line length:
+      - Break strings with parentheses
+      - Multi-line function calls
+      - Split imports
+    - Types:
+      - Add None checks
+      - Narrow string types
+      - Match existing patterns
 
 3. Best Practices
-   - Check git status before commits
-   - Run formatters before type checks
-   - Keep changes minimal
-   - Follow existing patterns
-   - Document public APIs
-   - Test thoroughly
+    - Check git status before commits
+    - Keep changes minimal
+    - Follow existing patterns
+    - Document public APIs
