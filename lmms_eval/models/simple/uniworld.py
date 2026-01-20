@@ -179,13 +179,34 @@ class UniWorld(lmms):
         for request in requests:
             context, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
             
-            try:
-                output = self._process_single_request(
-                    context, doc_to_visual, doc_id, task, split, gen_kwargs
-                )
-            except Exception as e:
-                eval_logger.error(f"Error processing doc_id={doc_id}: {e}")
-                output = ""
+            # Check for Uni-MMMU interleaved mode
+            uniworld_interleaved = gen_kwargs.get("uniworld_interleaved", None)
+            
+            if uniworld_interleaved is not None:
+                # Uni-MMMU interleaved generation
+                try:
+                    doc = self.task_dict[task][split][doc_id]
+                    input_images = []
+                    if doc_to_visual:
+                        visuals = [doc_to_visual(doc)]
+                        input_images = self.flatten(visuals)
+                    
+                    output_text, output_images = self.generate_uni_mmmu_interleaved(
+                        input_images, context, str(doc_id), task, uniworld_interleaved, doc
+                    )
+                    output = json.dumps({"text": output_text, "images": output_images}, ensure_ascii=False)
+                except Exception as e:
+                    eval_logger.error(f"Error in Uni-MMMU interleaved for doc_id={doc_id}: {e}")
+                    output = json.dumps({"text": "", "images": []}, ensure_ascii=False)
+            else:
+                # Normal processing
+                try:
+                    output = self._process_single_request(
+                        context, doc_to_visual, doc_id, task, split, gen_kwargs
+                    )
+                except Exception as e:
+                    eval_logger.error(f"Error processing doc_id={doc_id}: {e}")
+                    output = ""
             
             res.append(output)
             pbar.update(1)
@@ -374,6 +395,219 @@ class UniWorld(lmms):
     def generate_until_multi_round(self, requests) -> List[str]:
         """Multi-round dialogue generation"""
         raise NotImplementedError("Multi-round generation not yet implemented for UniWorld")
+
+    def generate_uni_mmmu_interleaved(
+        self,
+        input_images: List,
+        prompt: str,
+        doc_id: str,
+        task: str,
+        interleaved_config: dict,
+        doc: dict = None,
+    ) -> Tuple[str, List[str]]:
+        """
+        Uni-MMMU interleaved generation using UniWorld
+        
+        Aligned with Bagel's implementation:
+        - Jigsaw: gen_image(cand0) → gen_image(cand1) → gen_text(answer)
+        - Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
+        """
+        task_type = interleaved_config.get("task_type", "jigsaw")
+        num_images = interleaved_config.get("num_images", 2)
+        
+        # Get num_images from doc if available
+        if doc is not None:
+            if task_type == "maze":
+                steps = json.loads(doc.get("steps", "[]")) if isinstance(doc.get("steps", "[]"), str) else doc.get("steps", [])
+                if steps:
+                    num_images = len(steps)
+            elif task_type == "sliding":
+                steps = json.loads(doc.get("steps_words", "[]")) if isinstance(doc.get("steps_words", "[]"), str) else doc.get("steps_words", [])
+                if steps:
+                    num_images = len(steps)
+        
+        generated_images = []
+        
+        if task_type == "jigsaw":
+            # Save input images temporarily
+            temp_imgs = []
+            for idx, img in enumerate(input_images):
+                if img:
+                    temp_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_input_{idx}.png")
+                    if hasattr(img, 'save'):
+                        img.save(temp_path)
+                    temp_imgs.append(temp_path)
+            
+            # Generate Candidate 0 completion
+            suffix1 = "Output ONLY a single image with Candidate 0 placed in the bottom-right cell. No text."
+            full_prompt1 = f"{prompt}\n{suffix1}"
+            
+            img0_output = self._generate_image_with_original(
+                prompt_text=full_prompt1,
+                original_image=input_images[0] if input_images else None,
+                doc_id=f"{doc_id}_cand0",
+                task=task
+            )
+            img0_dict = json.loads(img0_output)
+            img0_path = img0_dict.get("images", [])[0] if img0_dict.get("images") else None
+            if img0_path:
+                generated_images.append(img0_path)
+            
+            # Generate Candidate 1 completion
+            suffix2 = "Output ONLY a single image with Candidate 1 placed in the bottom-right cell. No text."
+            full_prompt2 = f"{prompt}\n{suffix2}"
+            
+            img1_output = self._generate_image_with_original(
+                prompt_text=full_prompt2,
+                original_image=input_images[0] if input_images else None,
+                doc_id=f"{doc_id}_cand1",
+                task=task
+            )
+            img1_dict = json.loads(img1_output)
+            img1_path = img1_dict.get("images", [])[0] if img1_dict.get("images") else None
+            if img1_path:
+                generated_images.append(img1_path)
+            
+            # Generate final answer using understanding mode
+            final_suffix = (
+                'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n'
+                "Do not output any additional images."
+            )
+            final_question = f"{prompt}\n{final_suffix}"
+            
+            # Prepare all images for final answer
+            all_images = input_images + [img0_path, img1_path]
+            final_text = self._answer_with_images(
+                question=final_question,
+                images=all_images,
+                doc_id=doc_id
+            )
+        
+        else:
+            # Maze/Sliding: alternating text plan and image generation
+            step_texts = []
+            step_images = []
+            
+            for i in range(1, num_images + 1):
+                # Generate planning text
+                if task_type == "maze":
+                    plan_suffix = f'Now planning for step {i}, Please output a sentence in the form: "Next, move one step up/down/left/right."'
+                else:
+                    plan_suffix = f'Now planning for step {i}, Please output a sentence describing which tile to move and in which direction.'
+                
+                # Use understanding mode to generate plan
+                plan_question = f"{prompt}\n{plan_suffix}"
+                plan_text = self._answer_with_images(
+                    question=plan_question,
+                    images=input_images + step_images,
+                    doc_id=f"{doc_id}_plan_{i}"
+                )
+                step_texts.append(plan_text)
+                eval_logger.info(f"Step {i} plan: {plan_text}")
+                
+                # Generate step image
+                img_suffix = f"Now, generate the image for step {i}."
+                img_prompt = f"{prompt}\n{' '.join(step_texts)}\n{img_suffix}"
+                
+                img_output = self._generate_image_with_original(
+                    prompt_text=img_prompt,
+                    original_image=input_images[0] if input_images else None,
+                    doc_id=f"{doc_id}_step_{i:04d}",
+                    task=task
+                )
+                img_dict = json.loads(img_output)
+                img_path = img_dict.get("images", [])[0] if img_dict.get("images") else None
+                if img_path:
+                    generated_images.append(img_path)
+                    step_images.append(img_path)
+                    eval_logger.info(f"Saved step {i} image: {img_path}")
+            
+            # Generate final answer
+            final_suffix = (
+                "After the images, emit EXACTLY ONE LINE containing ONLY the final move list "
+                "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
+            )
+            final_question = f"{prompt}\n{' '.join(step_texts)}\n{final_suffix}"
+            
+            all_images = input_images + step_images
+            final_text = self._answer_with_images(
+                question=final_question,
+                images=all_images,
+                doc_id=doc_id
+            )
+            eval_logger.info(f"{task_type} final answer: {final_text}")
+        
+        return final_text, generated_images
+
+    def _generate_image_with_original(
+        self, prompt_text: str, original_image, doc_id: str, task: str
+    ) -> str:
+        """Helper for Visual CoT: Generate image conditioned on original image"""
+        # Prepare inputs similar to _generate_image but with original image
+        history_image_paths = []
+        if original_image:
+            if isinstance(original_image, str):
+                history_image_paths.append(original_image)
+            else:
+                # Save temp image
+                temp_path = os.path.join(self.output_image_dir, f"temp_{doc_id}.png")
+                original_image.save(temp_path)
+                history_image_paths.append(temp_path)
+        
+        # Create fake inputs for generation
+        conversation = [{"role": "user", "content": [{"type": "text", "text": prompt_text}]}]
+        for img_path in history_image_paths:
+            conversation[0]["content"].append({
+                "type": "image",
+                "image": img_path,
+                "min_pixels": self.min_pixels,
+                "max_pixels": self.max_pixels
+            })
+        
+        chat_text = self.processor.apply_chat_template(conversation, tokenize=False, add_generation_prompt=True)
+        chat_text = '<|im_end|>\n'.join(chat_text.split('<|im_end|>\n')[1:])
+        
+        image_inputs, video_inputs = process_vision_info(conversation)
+        inputs = self.processor(
+            text=[chat_text],
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True,
+            return_tensors="pt",
+        ).to(self._device)
+        
+        # Generate image
+        return self._generate_image(inputs, prompt_text, history_image_paths, doc_id, task)
+
+    def _answer_with_images(self, question: str, images: List, doc_id: str) -> str:
+        """Helper for Visual CoT: Answer question with multiple images"""
+        # Prepare conversation with multiple images
+        content = [{"type": "text", "text": question}]
+        for img in images:
+            if img is not None:
+                content.append({
+                    "type": "image",
+                    "image": img if isinstance(img, str) else img,
+                    "min_pixels": self.min_pixels,
+                    "max_pixels": self.max_pixels
+                })
+        
+        conversation = [{"role": "user", "content": content}]
+        
+        chat_text = self.processor.apply_chat_template(conversation, tokenize=False, add_generation_prompt=True)
+        chat_text = '<|im_end|>\n'.join(chat_text.split('<|im_end|>\n')[1:])
+        
+        image_inputs, video_inputs = process_vision_info(conversation)
+        inputs = self.processor(
+            text=[chat_text],
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True,
+            return_tensors="pt",
+        ).to(self._device)
+        
+        # Generate text answer
+        return self._generate_text(inputs)
 
     def flatten(self, input_list):
         """Flatten nested list"""

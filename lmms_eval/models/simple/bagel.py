@@ -677,12 +677,14 @@ class Bagel(lmms):
                     else:  # sliding
                         plan_suffix = f'Now planning for step {i}, Please output a sentence describing which tile to move and in which direction.'
 
+                    # Add suffix to context temporarily for generation
+                    gen_context = self.inferencer.update_context_text(plan_suffix, gen_context)
+                    
                     plan_text = self.inferencer.gen_text(
                         gen_context,
                         max_length=128,
                         do_sample=self.do_sample,
                         temperature=self.text_temperature,
-                        prompt_suffix=plan_suffix,
                     )
                     eval_logger.info(f"Step {i} plan: {plan_text}")
                     step_texts.append(plan_text)
