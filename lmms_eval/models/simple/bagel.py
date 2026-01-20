@@ -777,7 +777,12 @@ class Bagel(lmms):
 
             # Check if this is Uni-MMMU interleaved generation mode
             # Specified via lmms_eval_specific_kwargs in yaml
+            eval_logger.info(f"[GENERATE_UNTIL DEBUG] Processing doc_id={doc_id}, task={task}")
+            eval_logger.info(f"[GENERATE_UNTIL DEBUG] gen_kwargs keys: {list(gen_kwargs.keys())}")
+            eval_logger.info(f"[GENERATE_UNTIL DEBUG] gen_kwargs full content: {gen_kwargs}")
+            
             bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
+            eval_logger.info(f"[GENERATE_UNTIL DEBUG] bagel_interleaved value: {bagel_interleaved}")
 
             if bagel_interleaved is not None:
                 # Uni-MMMU interleaved generation mode
