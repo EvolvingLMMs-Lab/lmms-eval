@@ -36,7 +36,7 @@ Tutorial for creating properly formatted Hugging Face datasets with images. Demo
 
 ## Archived Modules
 
-The following modules were removed during cleanup. They can be found in the `main` branch if needed:
+The following modules were removed during cleanup. They can be found in the [`v0.5`](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/v0.5/tools) tag if needed:
 
 - **`lite/`** - LMMs-Eval Lite for dataset core-set selection using embedding-based sampling
 - **`live_bench/`** - Separate package for LiveBench data generation and website screenshot capture
