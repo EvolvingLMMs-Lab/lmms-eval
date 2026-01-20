@@ -630,6 +630,15 @@ class Bagel(lmms):
                     "Do not output any additional images."
                 )
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
+                
+                # Generate final text answer for jigsaw
+                final_text = self.inferencer.gen_text(
+                    gen_context,
+                    max_length=self.max_new_tokens,
+                    do_sample=self.do_sample,
+                    temperature=self.text_temperature,
+                )
+                eval_logger.info(f"Jigsaw final answer: {final_text}")
 
             else:
                 # Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
@@ -689,13 +698,14 @@ class Bagel(lmms):
                 )
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
 
-            # Generate final text answer
-            final_text = self.inferencer.gen_text(
-                gen_context,
-                max_length=self.max_new_tokens,
-                do_sample=self.do_sample,
-                temperature=self.text_temperature,
-            )
+                # Generate final text answer for maze/sliding
+                final_text = self.inferencer.gen_text(
+                    gen_context,
+                    max_length=self.max_new_tokens,
+                    do_sample=self.do_sample,
+                    temperature=self.text_temperature,
+                )
+                eval_logger.info(f"Maze/Sliding final answer: {final_text}")
 
         return final_text, generated_images
 
