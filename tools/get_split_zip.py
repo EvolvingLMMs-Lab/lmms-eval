@@ -94,8 +94,7 @@ Examples:
     parser.add_argument(
         "--max-size",
         default="5GB",
-        help="Maximum size per output file (default: 5GB). "
-        "Supports units: B, KB, MB, GB, TB",
+        help="Maximum size per output file (default: 5GB). " "Supports units: B, KB, MB, GB, TB",
     )
 
     args = parser.parse_args()
