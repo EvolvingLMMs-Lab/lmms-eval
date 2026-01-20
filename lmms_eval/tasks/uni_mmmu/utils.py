@@ -143,15 +143,42 @@ Inputs:"""
 
 def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process jigsaw results - text evaluation only."""
-    result_text = results[0] if results else ""
+    result_raw = results[0] if results else ""
+    
+    # Handle case where result is a JSON string (from bagel format_output)
+    result_text = ""
+    if isinstance(result_raw, str):
+        # Try to parse as JSON first (bagel outputs JSON string)
+        try:
+            parsed_result = json.loads(result_raw)
+            if isinstance(parsed_result, dict) and "text" in parsed_result:
+                result_text = parsed_result["text"]
+            else:
+                result_text = result_raw
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON, use as-is
+            result_text = result_raw
+    else:
+        result_text = str(result_raw)
 
-    # Parse choice from <FINAL_ANSWER_JSON>
+    # Parse choice from <FINAL_ANSWER_JSON> or <FINAL_ANSWER JSON> (flexible matching)
     choice = None
+    
+    # Try exact match first: <FINAL_ANSWER_JSON>
     match = re.search(
         r"<FINAL_ANSWER_JSON>\s*(\{.*?\})\s*</FINAL_ANSWER_JSON>",
         result_text,
         re.DOTALL | re.IGNORECASE,
     )
+    
+    # If not found, try with space: <FINAL_ANSWER JSON>
+    if not match:
+        match = re.search(
+            r"<FINAL_ANSWER\s+JSON>\s*(\{.*?\})\s*</FINAL_ANSWER\s+JSON>",
+            result_text,
+            re.DOTALL | re.IGNORECASE,
+        )
+    
     if match:
         json_str = match.group(1)
         parsed = find_first_json_substring(json_str)
