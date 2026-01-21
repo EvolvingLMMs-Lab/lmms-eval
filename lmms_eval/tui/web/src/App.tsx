@@ -878,7 +878,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="flex-1 flex flex-col bg-white transition-all duration-300">
+          <div className="flex-1 flex flex-col bg-white transition-all duration-300 min-h-0">
             <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
               <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Log Output</h2>
               <div className="flex items-center gap-3">
