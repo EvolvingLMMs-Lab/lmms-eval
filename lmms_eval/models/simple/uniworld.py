@@ -331,8 +331,11 @@ class UniWorld(lmms):
             padding=True,
             return_tensors="pt",
         )
-        # Note: Don't use .to(device) when model has device_map="auto"
-        # The model handles device placement automatically
+        # Move inputs to the first device of the model (for device_map="auto")
+        # Get the device of the first parameter
+        first_device = next(self.model.parameters()).device
+        inputs = {k: v.to(first_device) if isinstance(v, torch.Tensor) else v 
+                  for k, v in inputs.items()}
         
         # Get task classification
         with torch.inference_mode():
@@ -649,6 +652,10 @@ class UniWorld(lmms):
             padding=True,
             return_tensors="pt",
         )
+        # Move inputs to the first device of the model
+        first_device = next(self.model.parameters()).device
+        inputs = {k: v.to(first_device) if isinstance(v, torch.Tensor) else v 
+                  for k, v in inputs.items()}
         
         # Generate image
         return self._generate_image(inputs, prompt_text, history_image_paths, doc_id, task)
@@ -679,6 +686,10 @@ class UniWorld(lmms):
             padding=True,
             return_tensors="pt",
         )
+        # Move inputs to the first device of the model
+        first_device = next(self.model.parameters()).device
+        inputs = {k: v.to(first_device) if isinstance(v, torch.Tensor) else v 
+                  for k, v in inputs.items()}
         
         # Generate text answer
         return self._generate_text(inputs)
