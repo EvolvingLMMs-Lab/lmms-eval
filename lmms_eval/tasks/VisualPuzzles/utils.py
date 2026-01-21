@@ -16,7 +16,20 @@ PROMPTS = {"MULTI_CHOICE_DIRECT_PROMPT": MULTI_CHOICE_DIRECT_PROMPT, "COT_PROMPT
 
 
 def VisualPuzzles_doc_to_visual(doc):
-    return [doc["image"]]
+    image = doc["image"]
+    # Handle HuggingFace datasets image format (dict with 'bytes' or already PIL Image)
+    if isinstance(image, dict):
+        # If it's a dict, convert to PIL Image
+        if "bytes" in image:
+            import io
+            image = Image.open(io.BytesIO(image["bytes"]))
+        elif "path" in image:
+            image = Image.open(image["path"])
+        else:
+            # Try to use the dict directly as Image (some formats)
+            import numpy as np
+            image = Image.fromarray(np.array(image))
+    return [image]
 
 
 def VisualPuzzles_doc_to_text(doc, lmms_eval_specific_kwargs):
