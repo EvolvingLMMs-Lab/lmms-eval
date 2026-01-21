@@ -141,6 +141,7 @@ class UniWorld(lmms):
         eval_logger.info(f"Loading UniWorld from {self.pretrained}")
         
         # 1. Load main UniWorld model (Qwen2.5-VL + Denoise Tower)
+        # Using same loading method as original UniWorld app.py
         self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
             self.pretrained,
             torch_dtype=self._dtype,
