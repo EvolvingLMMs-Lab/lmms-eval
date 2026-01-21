@@ -14,7 +14,7 @@ from loguru import logger as eval_logger
 from transformers import AutoTokenizer
 
 
-def load_emu3_tokenizer(pretrained_path: str, trust_remote_code: bool = True, **kwargs):
+def load_emu3p5_tokenizer(pretrained_path: str, trust_remote_code: bool = True, **kwargs):
     """
     Load Emu3.5 tokenizer matching the official implementation.
 
@@ -102,4 +102,4 @@ def load_emu3_tokenizer(pretrained_path: str, trust_remote_code: bool = True, **
             raise ValueError(f"Failed to load Emu3.5 tokenizer: {e}") from e
 
 
-__all__ = ["load_emu3_tokenizer"]
+__all__ = ["load_emu3p5_tokenizer"]

@@ -27,7 +27,7 @@ def smart_resize(image: Image.Image, area: int = 512 * 512, ds_factor: int = 16)
     return image.resize((new_width, new_height), Image.BICUBIC)
 
 
-def format_image_string(tokenizer, image_tokens):
+def format_image_string(processor, image_tokens):
     image_string = ""
     h, w = image_tokens.shape
     for _h in range(h):
@@ -36,21 +36,21 @@ def format_image_string(tokenizer, image_tokens):
             row_string += "<|visual token {token_id:0>6d}|>".format(token_id=image_tokens[_h, _w])
 
         if _h < h - 1:
-            row_string += tokenizer.eol_token
+            row_string += processor.eol_token
         image_string += row_string
 
     return "{image_start}{token_height}*{token_width}{image_token}{token_str}{image_end}".format(
-        image_start=tokenizer.boi_token,
+        image_start=processor.boi_token,
         token_height=h,
         token_width=w,
-        image_token=tokenizer.img_token,
+        image_token=processor.img_token,
         token_str=image_string,
-        image_end=tokenizer.eoi_token,
+        image_end=processor.eoi_token,
     )
 
 
 @torch.no_grad()
-def build_image(image, img_area, tokenizer, vq_model):
+def build_image(image, img_area, processor, vq_model):
     image = smart_resize(image, img_area)
     w, h = image.size
     device = next(vq_model.parameters()).device
@@ -58,7 +58,7 @@ def build_image(image, img_area, tokenizer, vq_model):
     image = torch.tensor((np.array(image) / 127.5 - 1.0)).to(device, dtype).permute(2, 0, 1)
     _, _, token = vq_model.encode(image[None])
     token = token[-1].view(h // 16, w // 16)
-    return format_image_string(tokenizer, token)
+    return format_image_string(processor, token)
 
 
 class Emu3p5Processor:
@@ -95,6 +95,42 @@ class Emu3p5Processor:
         # Cache device and dtype from vision tokenizer (required for accelerator-wrapped models)
         self._vt_device = next(self.vision_tokenizer.parameters()).device
         self._vt_dtype = next(self.vision_tokenizer.parameters()).dtype
+
+        # Cache special tokens for performance
+        self._cache_special_tokens()
+
+    def _cache_special_tokens(self) -> None:
+        """Cache special tokens for efficient access during processing."""
+        # Try to access token attributes first, fall back to hardcoded strings if needed
+        try:
+            self.bos_token = self.txt_tokenizer.bos_token
+        except AttributeError:
+            self.bos_token = "<|bos|>"
+
+        try:
+            self.boi_token = self.txt_tokenizer.boi_token
+        except AttributeError:
+            self.boi_token = "<|img_start|>"
+
+        try:
+            self.img_token = self.txt_tokenizer.img_token
+        except AttributeError:
+            self.img_token = "<|img_token_start|>"
+
+        try:
+            self.eol_token = self.txt_tokenizer.eol_token
+        except AttributeError:
+            self.eol_token = "<|img_end_of_row|>"
+
+        try:
+            self.eof_token = self.txt_tokenizer.eof_token
+        except AttributeError:
+            self.eof_token = "<|img_end_of_frame|>"
+
+        try:
+            self.eoi_token = self.txt_tokenizer.eoi_token
+        except AttributeError:
+            self.eoi_token = "<|img_end|>"
 
     @torch.no_grad()
     def __call__(
@@ -210,7 +246,7 @@ class Emu3p5Processor:
                     target_area = max(min(self.max_pixels, curr_area), self.min_pixels)
 
                     # Build image via IBQ (returns formatted string with special tokens)
-                    image_string = build_image(img, target_area, self.txt_tokenizer, self.vision_tokenizer)
+                    image_string = build_image(img, target_area, self, self.vision_tokenizer)
 
                     # Replace first occurrence only to maintain order
                     text = text.replace(image_placeholder, image_string, 1)
@@ -234,6 +270,6 @@ class Emu3p5Processor:
             w, h = img.size
             curr_area = w * h
             target_area = max(min(self.max_pixels, curr_area), self.min_pixels)
-            image_strings.append(build_image(img, target_area, self.txt_tokenizer, self.vision_tokenizer))
+            image_strings.append(build_image(img, target_area, self, self.vision_tokenizer))
 
         return image_strings

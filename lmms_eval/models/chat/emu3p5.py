@@ -25,8 +25,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.emu3p5_encoder_base_model import EMU3p5EncoderBaseModel
 from lmms_eval.models.model_utils.emu3p5.download_utils import ensure_local_weights
-from lmms_eval.models.model_utils.emu3p5.emu3_tokenizer_loader import (
-    load_emu3_tokenizer,
+from lmms_eval.models.model_utils.emu3p5.emu3p5_tokenizer_loader import (
+    load_emu3p5_tokenizer,
 )
 from lmms_eval.protocol import ChatMessages
 
@@ -95,7 +95,7 @@ class EMU3_5(EMU3p5EncoderBaseModel):
 
     def _load_tokenizer(self, tokenizer_path: str, **kwargs):
         """Load EMU3.5 text tokenizer with fallback handling."""
-        return load_emu3_tokenizer(
+        return load_emu3p5_tokenizer(
             tokenizer_path,
             trust_remote_code=self._trust_remote_code,
             padding_side="left",
