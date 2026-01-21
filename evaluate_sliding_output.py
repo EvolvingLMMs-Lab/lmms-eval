@@ -52,7 +52,14 @@ def evaluate_single_sample(
     
     # Parse the model output JSON
     result_text = ""
-    if isinstance(result_raw, str):
+    images = []
+    
+    if isinstance(result_raw, dict):
+        # Already parsed dictionary
+        result_text = result_raw.get("text", "")
+        images = result_raw.get("images", [])
+    elif isinstance(result_raw, str):
+        # String that needs parsing
         try:
             parsed_result = json.loads(result_raw)
             if isinstance(parsed_result, dict) and "text" in parsed_result:
@@ -60,13 +67,11 @@ def evaluate_single_sample(
                 images = parsed_result.get("images", [])
             else:
                 result_text = result_raw
-                images = []
         except (json.JSONDecodeError, TypeError):
             result_text = result_raw
-            images = []
     else:
+        # Fallback
         result_text = str(result_raw)
-        images = []
     
     # Parse predicted moves
     pred_moves = parse_predicted_moves(result_text)
@@ -174,18 +179,12 @@ def main():
     
     # Evaluate each sample
     results = []
-    task_prefix = "uni_mmmu_sliding54_visual_cot___train___"
     
-    for key, value in responses.items():
-        if not key.startswith(task_prefix):
-            continue
-        
-        # Extract doc_id
-        doc_id_str = key.replace(task_prefix, "")
-        try:
-            doc_id = int(doc_id_str)
-        except ValueError:
-            print(f"Warning: Could not parse doc_id from key: {key}")
+    for response in responses:
+        # Get doc_id from response
+        doc_id = response.get("doc_id")
+        if doc_id is None:
+            print(f"Warning: Response missing doc_id: {response}")
             continue
         
         # Get ground truth
@@ -196,7 +195,7 @@ def main():
         gt_moves = gt_dict[doc_id]
         
         # Evaluate
-        result = evaluate_single_sample(value, gt_moves, doc_id)
+        result = evaluate_single_sample(response, gt_moves, doc_id)
         results.append(result)
     
     # Calculate overall metrics
