@@ -15,6 +15,7 @@ from tqdm import tqdm
 import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
+from lmms_eval import models
 from lmms_eval.evaluator_utils import (
     consolidate_group_results,
     consolidate_results,
@@ -180,7 +181,7 @@ def simple_evaluate(
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lmms_eval.models.get_model(model, force_simple).create_from_arg_string(
+        lm = models.get_model(model, force_simple).create_from_arg_string(
             model_args,
             {
                 "batch_size": batch_size,
