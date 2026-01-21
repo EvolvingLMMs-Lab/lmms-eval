@@ -158,6 +158,7 @@ class UniWorld(lmms):
         if num_gpus > 1:
             # Multi-GPU: use device_map for automatic distribution
             eval_logger.info("Using device_map='auto' for multi-GPU model parallelism")
+            eval_logger.info("Loading UniWorld model with device_map...")
             self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
                 self.pretrained,
                 torch_dtype=self._dtype,
@@ -165,15 +166,19 @@ class UniWorld(lmms):
                 max_memory={i: "35GiB" for i in range(num_gpus)},  # Leave some memory for other operations
                 # attn_implementation="flash_attention_2",  # Disabled: UnivaDenoiseTower doesn't support it
             )
+            eval_logger.info("✅ UniWorld model loaded with device_map")
         else:
             # Single GPU: use normal loading
+            eval_logger.info("Loading UniWorld model to single GPU...")
             self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
                 self.pretrained,
                 torch_dtype=self._dtype,
                 # attn_implementation="flash_attention_2",  # Disabled: UnivaDenoiseTower doesn't support it
             ).to(self._device)
+            eval_logger.info("✅ UniWorld model loaded to GPU")
         
         # 2. Load task head (classifier for understanding vs generation)
+        eval_logger.info("Loading task head...")
         self.task_head = nn.Sequential(
             nn.Linear(3584, 10240),
             nn.SiLU(),
@@ -183,19 +188,23 @@ class UniWorld(lmms):
         task_head_path = os.path.join(self.pretrained, 'task_head_final.pt')
         if os.path.exists(task_head_path):
             self.task_head.load_state_dict(torch.load(task_head_path))
-            eval_logger.info("Loaded task head")
+            eval_logger.info("✅ Loaded task head from checkpoint")
         else:
             eval_logger.warning(f"Task head not found at {task_head_path}, using random weights")
         self.task_head.eval()
         
         # 3. Load processor
+        eval_logger.info("Loading processor...")
         self.processor = AutoProcessor.from_pretrained(
             self.pretrained,
             min_pixels=self.min_pixels,
             max_pixels=self.max_pixels
         )
+        eval_logger.info("✅ Loaded processor")
         
         # 4. Load FLUX pipeline
+        eval_logger.info(f"Loading FLUX pipeline from {self.flux_path}...")
+        eval_logger.info("⏳ This may take a while if downloading for the first time (~20GB)")
         self.pipe = FluxPipeline.from_pretrained(
             self.flux_path,
             transformer=self.model.denoise_tower.denoiser,
