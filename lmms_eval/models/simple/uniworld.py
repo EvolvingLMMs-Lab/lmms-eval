@@ -164,7 +164,7 @@ class UniWorld(lmms):
         self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
             self.pretrained,
             torch_dtype=self._dtype,
-            attn_implementation="flash_attention_2",  # Re-enable for single GPU
+            # attn_implementation="flash_attention_2",  # Disabled: UnivaDenoiseTower doesn't support it
         ).to(self._device)
         eval_logger.info("✅ UniWorld model loaded to single GPU")
         
