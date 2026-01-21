@@ -31,8 +31,11 @@ try:
     
     if not hasattr(modeling_utils, 'restore_default_torch_dtype'):
         @contextmanager
-        def restore_default_torch_dtype():
-            """Compatibility shim for restore_default_torch_dtype"""
+        def restore_default_torch_dtype(*args, **kwargs):
+            """
+            Compatibility shim for restore_default_torch_dtype.
+            Accepts any arguments for compatibility but ignores them.
+            """
             original_dtype = torch.get_default_dtype()
             try:
                 yield

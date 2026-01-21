@@ -14,10 +14,11 @@ try:
     
     if not hasattr(modeling_utils, 'restore_default_torch_dtype'):
         @contextmanager
-        def restore_default_torch_dtype():
+        def restore_default_torch_dtype(*args, **kwargs):
             """
             Context manager to restore default torch dtype after temporarily changing it.
             This is a compatibility shim for older transformers code.
+            Accepts any arguments for compatibility but ignores them.
             """
             original_dtype = torch.get_default_dtype()
             try:
