@@ -49,11 +49,19 @@ except Exception as e:
 
 try:
     from transformers import AutoProcessor, SiglipImageProcessor, SiglipVisionModel
+    from transformers.models.qwen2_5_vl.configuration_qwen2_5_vl import Qwen2_5VLConfig
+    from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
     from univa.models.qwen2p5vl.modeling_univa_qwen2p5vl import UnivaQwen2p5VLForConditionalGeneration
+    from univa.models.qwen2p5vl.configuration_univa_qwen2p5vl import UnivaQwen2p5VLConfig
     from univa.utils.flux_pipeline import FluxPipeline
     from univa.utils.denoiser_prompt_embedding_flux import encode_prompt
     from qwen_vl_utils import process_vision_info
     from univa.utils.anyres_util import dynamic_resize
+    
+    # Fix UniWorld config missing text_config
+    if "text_config" not in UnivaQwen2p5VLConfig.sub_configs:
+        UnivaQwen2p5VLConfig.sub_configs["text_config"] = Qwen2Config
+        eval_logger.info("Applied UniWorld config patch: added text_config to sub_configs")
 except ImportError as e:
     eval_logger.error(f"Failed to import UniWorld dependencies: {e}")
     eval_logger.error("Please ensure UniWorld repository is cloned to UniWorld/UniWorld-V1/")
