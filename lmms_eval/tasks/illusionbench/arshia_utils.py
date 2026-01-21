@@ -233,7 +233,7 @@ def _build_shape_prompt(shape_candidates: List[str], scene_candidates: List[str]
             f"You have to respond with a single word."
         )
     else:  # "in" or "sin"
-    return (
+        return (
             f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
             f"Identify the shape that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
             f"Provide your response by stating only the single, most accurate class name that represents the icon. "
@@ -277,7 +277,7 @@ def _build_scene_prompt(shape_candidates: List[str], scene_candidates: List[str]
             f"You have to respond with a single word."
         )
     else:  # "in" or "sin"
-    return (
+        return (
             f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
             f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
             f"Provide your response by stating only the single, most accurate class name that represents the background. "
