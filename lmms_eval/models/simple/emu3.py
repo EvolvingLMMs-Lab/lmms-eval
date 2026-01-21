@@ -272,13 +272,40 @@ class Emu3(lmms):
             eval_logger.warning(f"Multiple images provided ({len(images)}), using first image only")
             image = images[0]
 
-        # Prepare inputs with image
-        inputs = self.processor(
-            images=image,
-            text=context,
-            return_tensors="pt",
-            padding=True,
-        ).to(self.model.device, dtype=torch.bfloat16)
+        # Debug: log image info
+        eval_logger.debug(f"Image type: {type(image)}, mode: {getattr(image, 'mode', 'N/A')}, size: {getattr(image, 'size', 'N/A')}")
+
+        # Ensure image is RGB
+        if hasattr(image, 'mode') and image.mode != 'RGB':
+            image = image.convert('RGB')
+
+        # Build conversation using chat template (required by Emu3)
+        # Format from official docs: https://huggingface.co/docs/transformers/en/model_doc/emu3
+        conversation = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image"},
+                    {"type": "text", "text": context},
+                ],
+            },
+        ]
+
+        # Apply chat template to get properly formatted prompt
+        prompt = self.processor.apply_chat_template(conversation, add_generation_prompt=True)
+        eval_logger.debug(f"Prompt (first 100 chars): {prompt[:100]}")
+
+        try:
+            # Prepare inputs - use list format as per official example
+            inputs = self.processor(
+                images=[image],
+                text=[prompt],
+                return_tensors="pt",
+            ).to(self.model.device, dtype=torch.bfloat16)
+        except Exception as e:
+            eval_logger.error(f"Processor error: {e}")
+            eval_logger.error(f"Image info: type={type(image)}, mode={getattr(image, 'mode', 'N/A')}, size={getattr(image, 'size', 'N/A')}")
+            raise
 
         # Get generation parameters
         max_new_tokens = gen_kwargs.get("max_new_tokens", self.max_new_tokens)
@@ -296,7 +323,7 @@ class Emu3(lmms):
                 top_p=top_p if do_sample else None,
             )
 
-        # Decode
+        # Decode - skip the input tokens
         generated_text = self.processor.batch_decode(
             output_ids[:, inputs.input_ids.shape[1]:],
             skip_special_tokens=True

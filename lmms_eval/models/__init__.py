@@ -89,18 +89,18 @@ AVAILABLE_SIMPLE_MODELS = {
     "xcomposer2_4KHD": "XComposer2_4KHD",
     "xcomposer2d5": "XComposer2D5",
     "egogpt": "EgoGPT",
+    "emu3": "Emu3",
+    "emu3_visual_cot": "Emu3VisualCoT",
     "internvideo2_5": "InternVideo2_5",
     "videochat_flash": "VideoChat_Flash",
     "javisgpt": "JavisGPT",
     "javisgpt_visual_cot": "JavisGPTVisualCoT",
-    "janus_pro": "JanusPro",
     "onecat": "OneCAT",
     "onecat_visual_cot": "OneCATVisualCoT",
     "whisper": "Whisper",
     "whisper_vllm": "WhisperVllm",
     "vora": "VoRA",
     "unipic2": "UniPic2",
-    "unipic2_visual_cot": "UniPic2VisualCoT",
 }
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
