@@ -103,6 +103,7 @@ class UniWorld(lmms):
         min_pixels: int = 448 * 448,
         max_pixels: int = 448 * 448,
         no_joint_with_t5: bool = False,
+        offload: bool = True,  # Enable CPU offload by default (like original UniWorld)
         image_output_dir: str = "./uniworld_generated_images",
         **kwargs,
     ) -> None:
@@ -124,11 +125,13 @@ class UniWorld(lmms):
         self.min_pixels = min_pixels
         self.max_pixels = max_pixels
         self.no_joint_with_t5 = no_joint_with_t5
+        self.offload = offload
         
         # Image output directory
         self.output_image_dir = image_output_dir
         Path(self.output_image_dir).mkdir(parents=True, exist_ok=True)
         eval_logger.info(f"Image output directory: {self.output_image_dir}")
+        eval_logger.info(f"CPU Offload: {'Enabled' if offload else 'Disabled'}")
         
         # Accelerator setup
         accelerator = Accelerator()
@@ -155,27 +158,15 @@ class UniWorld(lmms):
         num_gpus = torch.cuda.device_count()
         eval_logger.info(f"Detected {num_gpus} GPU(s)")
         
-        if num_gpus > 1:
-            # Multi-GPU: use device_map for automatic distribution
-            eval_logger.info("Using device_map='auto' for multi-GPU model parallelism")
-            eval_logger.info("Loading UniWorld model with device_map...")
-            self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
-                self.pretrained,
-                torch_dtype=self._dtype,
-                device_map="auto",
-                max_memory={i: "35GiB" for i in range(num_gpus)},  # Leave some memory for other operations
-                # attn_implementation="flash_attention_2",  # Disabled: UnivaDenoiseTower doesn't support it
-            )
-            eval_logger.info("✅ UniWorld model loaded with device_map")
-        else:
-            # Single GPU: use normal loading
-            eval_logger.info("Loading UniWorld model to single GPU...")
-            self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
-                self.pretrained,
-                torch_dtype=self._dtype,
-                # attn_implementation="flash_attention_2",  # Disabled: UnivaDenoiseTower doesn't support it
-            ).to(self._device)
-            eval_logger.info("✅ UniWorld model loaded to GPU")
+        # Always use single GPU + CPU offload (like original UniWorld)
+        # device_map="auto" causes issues with UniWorld's custom model structure
+        eval_logger.info("Loading UniWorld model to single GPU (will use CPU offload for memory management)...")
+        self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
+            self.pretrained,
+            torch_dtype=self._dtype,
+            attn_implementation="flash_attention_2",  # Re-enable for single GPU
+        ).to(self._device)
+        eval_logger.info("✅ UniWorld model loaded to single GPU")
         
         # 2. Load task head (classifier for understanding vs generation)
         eval_logger.info("Loading task head...")
@@ -206,9 +197,9 @@ class UniWorld(lmms):
         eval_logger.info(f"Loading FLUX pipeline from {self.flux_path}...")
         eval_logger.info("⏳ This may take a while if downloading for the first time (~20GB)")
         
-        # For multi-GPU: put FLUX on GPU 1 to avoid OOM on GPU 0
-        # For single-GPU: keep on the same device
-        self.flux_device = f"cuda:{min(1, num_gpus - 1)}" if num_gpus > 1 else self._device
+        # Keep FLUX on same device as main model (like original UniWorld)
+        # Use CPU offload for memory management
+        self.flux_device = self._device
         eval_logger.info(f"Loading FLUX pipeline to {self.flux_device}...")
         
         self.pipe = FluxPipeline.from_pretrained(
@@ -216,6 +207,16 @@ class UniWorld(lmms):
             transformer=self.model.denoise_tower.denoiser,
             torch_dtype=self._dtype,
         ).to(self.flux_device)
+        
+        # Enable CPU offload (like original UniWorld app.py)
+        if self.offload:
+            eval_logger.info("Enabling CPU offload for FLUX pipeline...")
+            # Sequential CPU offload: more aggressive memory saving
+            # Moves each component to CPU after use
+            self.pipe.enable_sequential_cpu_offload()
+            self.pipe.enable_vae_slicing()
+            eval_logger.info("✅ Sequential CPU offload enabled (aggressive memory saving)")
+        
         eval_logger.info(f"✅ Loaded FLUX pipeline to {self.flux_device}")
         
         self.tokenizers = [self.pipe.tokenizer, self.pipe.tokenizer_2]
@@ -224,17 +225,28 @@ class UniWorld(lmms):
         # 5. Load SigLIP for reference image encoding
         eval_logger.info(f"Loading SigLIP from {self.siglip_path}...")
         self.siglip_processor = SiglipImageProcessor.from_pretrained(self.siglip_path)
-        # Put SigLIP on the same device as FLUX for efficiency
+        # Keep SigLIP on same device (like original UniWorld)
         self.siglip_model = SiglipVisionModel.from_pretrained(
             self.siglip_path,
             torch_dtype=self._dtype,
-        ).to(self.flux_device)
-        eval_logger.info(f"✅ Loaded SigLIP to {self.flux_device}")
+        ).to(self._device)
+        eval_logger.info(f"✅ Loaded SigLIP to {self._device}")
         
         eval_logger.info("🎉 All models loaded successfully!")
         
         self.model.eval()
         self.siglip_model.eval()
+        
+        # Log memory usage
+        if torch.cuda.is_available():
+            allocated = torch.cuda.memory_allocated(self._device) / 1024**3
+            reserved = torch.cuda.memory_reserved(self._device) / 1024**3
+            eval_logger.info(f"GPU Memory: {allocated:.2f}GB allocated, {reserved:.2f}GB reserved")
+            if reserved > 35:
+                eval_logger.warning(f"⚠️  High memory usage detected! Consider:")
+                eval_logger.warning("  - Using multiple GPUs: bash script.sh '0,1'")
+                eval_logger.warning("  - Reducing batch size")
+                eval_logger.warning("  - Using quantization (if available)")
         
         eval_logger.info("UniWorld models loaded successfully")
 
@@ -331,11 +343,8 @@ class UniWorld(lmms):
             padding=True,
             return_tensors="pt",
         )
-        # Move inputs to the first device of the model (for device_map="auto")
-        # Get the device of the first parameter
-        first_device = next(self.model.parameters()).device
-        inputs = {k: v.to(first_device) if isinstance(v, torch.Tensor) else v 
-                  for k, v in inputs.items()}
+        # Move inputs to device (single GPU)
+        inputs = inputs.to(self._device)
         
         # Get task classification
         with torch.inference_mode():
@@ -652,10 +661,8 @@ class UniWorld(lmms):
             padding=True,
             return_tensors="pt",
         )
-        # Move inputs to the first device of the model
-        first_device = next(self.model.parameters()).device
-        inputs = {k: v.to(first_device) if isinstance(v, torch.Tensor) else v 
-                  for k, v in inputs.items()}
+        # Move inputs to device
+        inputs = inputs.to(self._device)
         
         # Generate image
         return self._generate_image(inputs, prompt_text, history_image_paths, doc_id, task)
@@ -686,10 +693,8 @@ class UniWorld(lmms):
             padding=True,
             return_tensors="pt",
         )
-        # Move inputs to the first device of the model
-        first_device = next(self.model.parameters()).device
-        inputs = {k: v.to(first_device) if isinstance(v, torch.Tensor) else v 
-                  for k, v in inputs.items()}
+        # Move inputs to device
+        inputs = inputs.to(self._device)
         
         # Generate text answer
         return self._generate_text(inputs)
