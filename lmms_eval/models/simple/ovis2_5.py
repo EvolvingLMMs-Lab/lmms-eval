@@ -232,8 +232,13 @@ class Ovis2_5(lmms):
                     visual = Image.open(visual).convert("RGB")
                 messages[0]["content"].append({"type": "image", "image": visual})
 
+            # Remove <image> tokens from context if present
+            # Some tasks (like geometry3k) include <image> tokens in the text
+            # but Ovis2.5 uses messages format where images are separate
+            clean_context = context.replace("<image>", "").strip()
+            
             # Add text to content
-            messages[0]["content"].append({"type": "text", "text": context})
+            messages[0]["content"].append({"type": "text", "text": clean_context})
 
             # Preprocess inputs using model's built-in method
             input_ids, pixel_values, grid_thws = self.model.preprocess_inputs(
@@ -289,6 +294,10 @@ class Ovis2_5(lmms):
 
             # Decode response
             response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # Debug: log first response to check if model is working
+            if len(res) == 0:
+                eval_logger.info(f"First response preview: {response[:500]}")
 
             # Clean up to free memory
             del outputs, input_ids, pixel_values, grid_thws
