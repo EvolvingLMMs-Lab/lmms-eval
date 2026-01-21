@@ -23,6 +23,27 @@ if os.path.exists(UNIWORLD_PATH):
     sys.path.insert(0, UNIWORLD_PATH)
     eval_logger.info(f"Added UniWorld path to sys.path: {UNIWORLD_PATH}")
 
+# Apply transformers compatibility patch for UniWorld
+try:
+    from transformers import modeling_utils
+    import torch
+    from contextlib import contextmanager
+    
+    if not hasattr(modeling_utils, 'restore_default_torch_dtype'):
+        @contextmanager
+        def restore_default_torch_dtype():
+            """Compatibility shim for restore_default_torch_dtype"""
+            original_dtype = torch.get_default_dtype()
+            try:
+                yield
+            finally:
+                torch.set_default_dtype(original_dtype)
+        
+        modeling_utils.restore_default_torch_dtype = restore_default_torch_dtype
+        eval_logger.info("Applied transformers compatibility patch for UniWorld")
+except Exception as e:
+    eval_logger.warning(f"Failed to apply transformers patch: {e}")
+
 try:
     from transformers import AutoProcessor, SiglipImageProcessor, SiglipVisionModel
     from univa.models.qwen2p5vl.modeling_univa_qwen2p5vl import UnivaQwen2p5VLForConditionalGeneration
