@@ -1,7 +1,4 @@
 #!/bin/bash
-# Test Bagel on Uni-MMMU Jigsaw Visual CoT (first 5 samples)
-
-#!/bin/bash
 
 # GPU ID (default: 0)
 GPU_ID=${1:-0}
@@ -17,14 +14,17 @@ export NCCL_P2P_DISABLE=1
 export NCCL_IB_DISABLE=1
 export GLOO_USE_IPV6=0
 
-echo "Running on GPU: ${GPU_ID}"
+echo "Running UniWorldVisualCoT on ChartQA Visual CoT using GPU: ${GPU_ID}"
 echo "MASTER_PORT: ${MASTER_PORT}"
 
+# UniWorld model path
+MODEL_PATH=${MODEL_PATH:-"LanguageBind/UniWorld-V1"}
+
 torchrun --nproc_per_node=1 --master_port=${MASTER_PORT} -m lmms_eval \
-  --model bagel \
-  --model_args pretrained=./BAGEL-7B-MoT,mode=generation,output_image_dir=/mnt/data/bagel_jigsaw/images \
-  --tasks uni_mmmu_jigsaw100_visual_cot \
+  --model uniworld_visual_cot \
+  --model_args pretrained=${MODEL_PATH},save_intermediate=true,intermediate_dir=./logs/uniworld_chartqa_cot/artifacts \
+  --tasks chartqa100_visual_cot \
   --batch_size 1 \
-  --output_path /mnt/data/bagel_jigsaw \
+  --output_path ./logs/uniworld_chartqa_cot \
   --log_samples \
   --verbosity INFO
