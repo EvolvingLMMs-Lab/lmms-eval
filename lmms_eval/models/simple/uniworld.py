@@ -49,7 +49,7 @@ except Exception as e:
 
 try:
     from transformers import AutoProcessor, SiglipImageProcessor, SiglipVisionModel
-    from transformers.models.qwen2_5_vl.configuration_qwen2_5_vl import Qwen2_5VLConfig
+    from transformers.models.qwen2_5_vl.configuration_qwen2_5_vl import Qwen2_5_VLConfig
     from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
     from univa.models.qwen2p5vl.modeling_univa_qwen2p5vl import UnivaQwen2p5VLForConditionalGeneration
     from univa.models.qwen2p5vl.configuration_univa_qwen2p5vl import UnivaQwen2p5VLConfig
