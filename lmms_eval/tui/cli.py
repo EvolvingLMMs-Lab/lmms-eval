@@ -60,6 +60,10 @@ def main() -> int:
             return 1
 
     print(f"Starting LMMs-Eval Web UI on {server_url}")
+    print(f"Server running at {server_url}")
+    print("Opening browser...")
+    webbrowser.open(server_url)
+    print("Press Ctrl+C to stop\n")
 
     server_process = subprocess.Popen(
         [
@@ -72,38 +76,18 @@ def main() -> int:
             "--port",
             str(port),
         ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
     )
 
-    def cleanup():
-        if server_process and server_process.poll() is None:
-            server_process.terminate()
-            try:
-                server_process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                server_process.kill()
-
-    atexit.register(cleanup)
-
-    if not wait_for_server(server_url):
-        print("Failed to start server", file=sys.stderr)
-        return 1
-
-    print(f"Server running at {server_url}")
-    print("Opening browser...")
-    webbrowser.open(server_url)
-
-    print("Press Ctrl+C to stop")
-
     try:
-        while True:
-            if server_process.poll() is not None:
-                print("Server stopped unexpectedly", file=sys.stderr)
-                return 1
-            time.sleep(1)
+        server_process.wait()
+        return 0
     except KeyboardInterrupt:
         print("\nStopping server...")
+        server_process.terminate()
+        try:
+            server_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server_process.kill()
         return 0
 
 
