@@ -1464,7 +1464,11 @@ class ConfigurableTask(Task):
             return request_list
 
         elif self.OUTPUT_TYPE == "generate_until":
-            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
+            # Merge lmms_eval_specific_kwargs into generation_kwargs if available
+            merged_gen_kwargs = copy.deepcopy(self.config.generation_kwargs)
+            if self.lmms_eval_specific_kwargs is not None:
+                merged_gen_kwargs.update(self.lmms_eval_specific_kwargs)
+            arguments = (ctx, merged_gen_kwargs, self.doc_to_visual, doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "generate_until_multi_round":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)

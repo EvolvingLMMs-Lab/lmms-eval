@@ -143,15 +143,42 @@ Inputs:"""
 
 def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process jigsaw results - text evaluation only."""
-    result_text = results[0] if results else ""
+    result_raw = results[0] if results else ""
+    
+    # Handle case where result is a JSON string (from bagel format_output)
+    result_text = ""
+    if isinstance(result_raw, str):
+        # Try to parse as JSON first (bagel outputs JSON string)
+        try:
+            parsed_result = json.loads(result_raw)
+            if isinstance(parsed_result, dict) and "text" in parsed_result:
+                result_text = parsed_result["text"]
+            else:
+                result_text = result_raw
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON, use as-is
+            result_text = result_raw
+    else:
+        result_text = str(result_raw)
 
-    # Parse choice from <FINAL_ANSWER_JSON>
+    # Parse choice from <FINAL_ANSWER_JSON> or <FINAL_ANSWER JSON> (flexible matching)
     choice = None
+    
+    # Try exact match first: <FINAL_ANSWER_JSON>
     match = re.search(
         r"<FINAL_ANSWER_JSON>\s*(\{.*?\})\s*</FINAL_ANSWER_JSON>",
         result_text,
         re.DOTALL | re.IGNORECASE,
     )
+    
+    # If not found, try with space: <FINAL_ANSWER JSON>
+    if not match:
+        match = re.search(
+            r"<FINAL_ANSWER\s+JSON>\s*(\{.*?\})\s*</FINAL_ANSWER\s+JSON>",
+            result_text,
+            re.DOTALL | re.IGNORECASE,
+        )
+    
     if match:
         json_str = match.group(1)
         parsed = find_first_json_substring(json_str)
@@ -162,15 +189,25 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             except:
                 pass
 
-    # If no JSON found, try to find choice directly
     if choice is None:
-        # Try to find "choice": 0 or "choice": 1
         choice_match = re.search(r'"choice"\s*:\s*(\d)', result_text)
         if choice_match:
             choice = int(choice_match.group(1))
 
     gt_label = doc.get("label", -1)
-    text_correct = 1 if choice == gt_label else 0
+    if isinstance(gt_label, str):
+        try:
+            gt_label = int(gt_label)
+        except ValueError:
+            gt_label = -1
+    
+    if choice is not None and not isinstance(choice, int):
+        try:
+            choice = int(choice)
+        except (ValueError, TypeError):
+            choice = None
+    
+    text_correct = 1 if choice is not None and choice == gt_label else 0
 
     return {"jigsaw_text_acc": text_correct}
 
@@ -211,7 +248,23 @@ NO EXTRAS
 
 def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process maze results - text evaluation only using GPT-4o."""
-    result_text = results[0] if results else ""
+    result_raw = results[0] if results else ""
+    
+    # Handle case where result is a JSON string (from bagel format_output)
+    result_text = ""
+    if isinstance(result_raw, str):
+        # Try to parse as JSON first (bagel outputs JSON string)
+        try:
+            parsed_result = json.loads(result_raw)
+            if isinstance(parsed_result, dict) and "text" in parsed_result:
+                result_text = parsed_result["text"]
+            else:
+                result_text = result_raw
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON, use as-is
+            result_text = result_raw
+    else:
+        result_text = str(result_raw)
 
     # Parse predicted moves from <ANSWER_JSON>
     pred_moves = []
@@ -285,7 +338,23 @@ NO EXTRAS
 
 def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process sliding puzzle results - text evaluation only."""
-    result_text = results[0] if results else ""
+    result_raw = results[0] if results else ""
+    
+    # Handle case where result is a JSON string (from bagel format_output)
+    result_text = ""
+    if isinstance(result_raw, str):
+        # Try to parse as JSON first (bagel outputs JSON string)
+        try:
+            parsed_result = json.loads(result_raw)
+            if isinstance(parsed_result, dict) and "text" in parsed_result:
+                result_text = parsed_result["text"]
+            else:
+                result_text = result_raw
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON, use as-is
+            result_text = result_raw
+    else:
+        result_text = str(result_raw)
 
     # Parse predicted moves from <ANSWER_JSON>
     pred_moves = []

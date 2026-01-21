@@ -271,7 +271,7 @@ class Bagel(lmms):
         # Setup device map for multi-GPU
         device_map = infer_auto_device_map(
             model,
-            max_memory={i: "80GiB" for i in range(torch.cuda.device_count())},
+            max_memory={i: "40GiB" for i in range(torch.cuda.device_count())},
             no_split_module_classes=["Bagel", "Qwen2MoTDecoderLayer"],
         )
 
@@ -554,12 +554,10 @@ class Bagel(lmms):
 
             if task_type == "jigsaw":
                 # Jigsaw: Generate 2 completed images then final answer
-                # Image 1: Candidate 0 completion
                 suffix1 = "Output ONLY a single image with Candidate 0 placed in the bottom-right cell. No text."
                 cfg_text_context = deepcopy(gen_context)
                 gen_context = self.inferencer.update_context_text(suffix1, gen_context)
                 cfg_img_context = self.inferencer.update_context_text(suffix1, cfg_img_context)
-
                 img0 = self.inferencer.gen_image(
                     self.image_shapes,
                     gen_context,
@@ -576,7 +574,6 @@ class Bagel(lmms):
                 img0_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_cand0.png")
                 img0.save(img0_path)
                 generated_images.append(img0_path)
-                eval_logger.info(f"Saved jigsaw image 0: {img0_path}")
 
                 # Add to context
                 img0_transformed = self.inferencer.vae_transform.resize_transform(
@@ -594,7 +591,6 @@ class Bagel(lmms):
                 cfg_text_context = deepcopy(gen_context)
                 gen_context = self.inferencer.update_context_text(suffix2, gen_context)
                 cfg_img_context = self.inferencer.update_context_text(suffix2, cfg_img_context)
-
                 img1 = self.inferencer.gen_image(
                     self.image_shapes,
                     gen_context,
@@ -611,14 +607,42 @@ class Bagel(lmms):
                 img1_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_cand1.png")
                 img1.save(img1_path)
                 generated_images.append(img1_path)
-                eval_logger.info(f"Saved jigsaw image 1: {img1_path}")
 
-                # Add to context
+                # Rebuild context for final answer generation (align with Uni-MMMU)
+                gen_context = self.inferencer.init_gen_context()
+                cfg_img_context = self.inferencer.init_gen_context()
+
+                # Re-add original 3 input images (reference 2x2 + candidate 0 patch + candidate 1 patch)
+                for idx, img in enumerate(input_images):
+                    if img is not None:
+                        img_transformed = self.inferencer.vae_transform.resize_transform(
+                            self.pil_img2rgb(img)
+                        )
+                        gen_context = self.inferencer.update_context_image(
+                            img_transformed, gen_context, vae=False, vit=True
+                        )
+
+                # Re-add initial prompt
+                gen_context = self.inferencer.update_context_text(prompt, gen_context)
+                cfg_img_context = self.inferencer.update_context_text(prompt, cfg_img_context)
+
+                # Add generated Candidate 0 image
+                img0_transformed = self.inferencer.vae_transform.resize_transform(
+                    self.pil_img2rgb(img0)
+                )
+                gen_context = self.inferencer.update_context_image(
+                    img0_transformed, gen_context, vae=False, vit=True
+                )
+                gen_context = self.inferencer.update_context_text(
+                    "COMPLETED WITH CANDIDATE 0:", gen_context
+                )
+
+                # Add generated Candidate 1 image
                 img1_transformed = self.inferencer.vae_transform.resize_transform(
                     self.pil_img2rgb(img1)
                 )
                 gen_context = self.inferencer.update_context_image(
-                    img1_transformed, gen_context, vae=True, vit=True
+                    img1_transformed, gen_context, vae=False, vit=True
                 )
                 gen_context = self.inferencer.update_context_text(
                     "COMPLETED WITH CANDIDATE 1:", gen_context
@@ -630,9 +654,22 @@ class Bagel(lmms):
                     "Do not output any additional images."
                 )
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
+                
+                final_text = self.inferencer.gen_text(
+                    gen_context,
+                    max_length=self.max_new_tokens,
+                    do_sample=self.do_sample,
+                    temperature=self.text_temperature,
+                )
+                
+                if final_text is None:
+                    final_text = ""
 
             else:
                 # Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
+                step_texts = []  # Store all plan texts
+                step_images = []  # Store all generated step images
+                
                 for i in range(1, num_images + 1):
                     # Generate planning text
                     if task_type == "maze":
@@ -640,14 +677,17 @@ class Bagel(lmms):
                     else:  # sliding
                         plan_suffix = f'Now planning for step {i}, Please output a sentence describing which tile to move and in which direction.'
 
+                    # Add suffix to context temporarily for generation
+                    gen_context = self.inferencer.update_context_text(plan_suffix, gen_context)
+                    
                     plan_text = self.inferencer.gen_text(
                         gen_context,
                         max_length=128,
                         do_sample=self.do_sample,
                         temperature=self.text_temperature,
-                        prompt_suffix=plan_suffix,
                     )
                     eval_logger.info(f"Step {i} plan: {plan_text}")
+                    step_texts.append(plan_text)
                     gen_context = self.inferencer.update_context_text(plan_text, gen_context)
 
                     # Generate step image
@@ -672,6 +712,7 @@ class Bagel(lmms):
                     img_path = os.path.join(self.output_image_dir, f"{task}_{doc_id}_step_{i:04d}.png")
                     img.save(img_path)
                     generated_images.append(img_path)
+                    step_images.append(img)
                     eval_logger.info(f"Saved step {i} image: {img_path}")
 
                     # Add to context
@@ -682,27 +723,57 @@ class Bagel(lmms):
                         img_transformed, gen_context, vae=True, vit=True
                     )
 
+                # Rebuild context for final answer generation (align with Uni-MMMU)
+                gen_context = self.inferencer.init_gen_context()
+                cfg_img_context = self.inferencer.init_gen_context()
+
+                # Re-add original input images
+                for idx, img in enumerate(input_images):
+                    if img is not None:
+                        img_transformed = self.inferencer.vae_transform.resize_transform(
+                            self.pil_img2rgb(img)
+                        )
+                        gen_context = self.inferencer.update_context_image(
+                            img_transformed, gen_context, vae=False, vit=True
+                        )
+
+                # Re-add initial prompt
+                gen_context = self.inferencer.update_context_text(prompt, gen_context)
+
+                # Re-add all step texts and images
+                for i, (plan_text, step_img) in enumerate(zip(step_texts, step_images), 1):
+                    gen_context = self.inferencer.update_context_text(plan_text, gen_context)
+                    gen_context = self.inferencer.update_context_text(f"Image for step {i}:", gen_context)
+                    img_transformed = self.inferencer.vae_transform.resize_transform(
+                        self.pil_img2rgb(step_img)
+                    )
+                    gen_context = self.inferencer.update_context_image(
+                        img_transformed, gen_context, vae=False, vit=True
+                    )
+
                 # Final answer
                 final_suffix = (
                     "After the images, emit EXACTLY ONE LINE containing ONLY the final move list "
                     "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
                 )
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
-
-            # Generate final text answer
-            final_text = self.inferencer.gen_text(
-                gen_context,
-                max_length=self.max_new_tokens,
-                do_sample=self.do_sample,
-                temperature=self.text_temperature,
-            )
+                final_text = self.inferencer.gen_text(
+                    gen_context,
+                    max_length=self.max_new_tokens,
+                    do_sample=self.do_sample,
+                    temperature=self.text_temperature,
+                )
+                eval_logger.info(f"Maze/Sliding final answer: {final_text}")
 
         return final_text, generated_images
 
     def format_output(self, text: str, images: List[str]) -> str:
         """Format output as JSON string"""
+        eval_logger.debug(f"[FORMAT OUTPUT] Input: text type={type(text).__name__}, text value={repr(text)}, images count={len(images) if images else 0}")
         output_dict = {"text": text, "images": images}
-        return json.dumps(output_dict, ensure_ascii=False)
+        result = json.dumps(output_dict, ensure_ascii=False)
+        eval_logger.debug(f"[FORMAT OUTPUT] Output JSON: {result[:200]}..." if len(result) > 200 else f"[FORMAT OUTPUT] Output JSON: {result}")
+        return result
 
     def flatten(self, input_list):
         """Flatten a nested list"""
@@ -737,7 +808,6 @@ class Bagel(lmms):
             prompt = contexts
 
             # Check if this is Uni-MMMU interleaved generation mode
-            # Specified via lmms_eval_specific_kwargs in yaml
             bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
 
             if bagel_interleaved is not None:

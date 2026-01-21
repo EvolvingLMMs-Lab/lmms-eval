@@ -120,11 +120,19 @@ class OneCATVisualCoT(lmms):
         self.stage1_max_input_tokens = stage1_max_input_tokens
 
         # Stage 2 parameters
+        # Handle kwargs that might override defaults (e.g., from command line)
+        if "max_new_tokens" in kwargs:
+            stage2_max_new_tokens = kwargs.pop("max_new_tokens")
+            eval_logger.info(f"Overriding stage2_max_new_tokens with {stage2_max_new_tokens} from kwargs")
         self.stage2_max_new_tokens = stage2_max_new_tokens
         self.stage2_do_sample = stage2_do_sample
         self.stage2_num_beams = stage2_num_beams
         self.stage2_top_k = stage2_top_k
         self.stage2_top_p = stage2_top_p
+        
+        # Log any remaining kwargs
+        if kwargs:
+            eval_logger.warning(f"Unused kwargs: {kwargs}")
 
         # Determine dtype
         if dtype == "bfloat16":
@@ -269,15 +277,19 @@ class OneCATVisualCoT(lmms):
     def _load_image(self, image: Image.Image) -> Tuple[torch.Tensor, torch.Tensor]:
         """Load and preprocess image for OneCAT model"""
         width, height = image.size
+        eval_logger.info(f"_load_image - Input image size: {width}x{height}")
 
         # Smart resize
         resized_height, resized_width = self.smart_resize(height, width)
+        eval_logger.info(f"_load_image - After smart_resize: {resized_width}x{resized_height}")
         transform = self.build_transform(input_size=(resized_height, resized_width))
         pixel_values = transform(image).unsqueeze(0)
+        eval_logger.info(f"_load_image - pixel_values shape: {pixel_values.shape}")
 
         # Thumbnail (base size 448x448)
         transform_base = self.build_transform(input_size=(448, 448))
         pixel_values_thumbnail = transform_base(image).unsqueeze(0)
+        eval_logger.info(f"_load_image - pixel_values_thumbnail shape: {pixel_values_thumbnail.shape}")
 
         return pixel_values, pixel_values_thumbnail
 
@@ -365,6 +377,30 @@ class OneCATVisualCoT(lmms):
                 .numpy()
                 .astype(np.uint8)
             )
+            
+            # Ensure generated image is large enough (minimum 448x448)
+            min_size = 448
+            width, height = img_pil.size
+            eval_logger.info(f"Stage 1 - Generated image size: {width}x{height}")
+            
+            if width < min_size or height < min_size:
+                eval_logger.warning(
+                    f"Generated image too small ({width}x{height}), resizing to minimum {min_size}x{min_size}"
+                )
+                # Resize while maintaining aspect ratio
+                if width < height:
+                    new_width = min_size
+                    new_height = int(height * min_size / width)
+                else:
+                    new_height = min_size
+                    new_width = int(width * min_size / height)
+                # Ensure both dimensions are at least min_size
+                if new_height < min_size:
+                    new_height = min_size
+                if new_width < min_size:
+                    new_width = min_size
+                img_pil = img_pil.resize((new_width, new_height), Image.LANCZOS)
+                eval_logger.info(f"Resized generated image to {new_width}x{new_height}")
 
             # Save image
             artifact_dir = os.path.join(self.intermediate_dir, task)
@@ -409,31 +445,89 @@ class OneCATVisualCoT(lmms):
         try:
             # Load generated auxiliary image
             auxiliary_image = Image.open(image_path).convert("RGB")
+            
+            # Check and resize image if too small
+            # OneCAT uses patch_size=14, downsample_ratio=0.5
+            # So final tokens = ((image_size / 14) / 2)
+            # To ensure at least 16x16 tokens, need image >= 14*2*16 = 448
+            min_size = 448
+            width, height = auxiliary_image.size
+            if width < min_size or height < min_size:
+                eval_logger.warning(
+                    f"Auxiliary image too small ({width}x{height}), resizing to minimum {min_size}x{min_size}"
+                )
+                # Resize while maintaining aspect ratio
+                if width < height:
+                    new_width = min_size
+                    new_height = int(height * min_size / width)
+                else:
+                    new_height = min_size
+                    new_width = int(width * min_size / height)
+                # Ensure both dimensions are at least min_size
+                if new_height < min_size:
+                    new_height = min_size
+                if new_width < min_size:
+                    new_width = min_size
+                auxiliary_image = auxiliary_image.resize((new_width, new_height), Image.LANCZOS)
+                eval_logger.info(f"Resized auxiliary image to {new_width}x{new_height}")
 
-            # For OneCAT, we can pass both images by concatenating them
-            # or use the auxiliary image as the primary input
-            # Since OneCAT's chat method takes single pixel_values,
-            # we'll use auxiliary image as primary and mention original in prompt
-
+            # For OneCAT Visual CoT: pass BOTH original image and auxiliary image
+            # Strategy: Concatenate both images horizontally into a single image
+            # IMPORTANT: Resize images to smaller size before concatenation to avoid excessive tokens
+            
             if original_image is not None:
                 eval_logger.debug(
-                    "Stage 2 - Using auxiliary image (original referenced in prompt)"
+                    "Stage 2 - Concatenating original image and auxiliary image side-by-side"
                 )
-                # Use auxiliary image for visual input
-                pixel_values, pixel_values_thumbnail = self._load_image(
-                    auxiliary_image
-                )
-                # Enhance question to reference both images
-                enhanced_question = (
-                    f"{question}\n"
-                    f"Note: An auxiliary visualization has been generated to help answer this question."
-                )
+                
+                # Resize both images to a reasonable size before concatenation
+                # Use 448 as target height (standard thumbnail size for OneCAT)
+                # This ensures the combined image won't have too many tokens
+                target_h = 448
+                
+                # Resize original image
+                orig_w, orig_h = original_image.size
+                orig_new_w = int(orig_w * target_h / orig_h)
+                original_resized = original_image.resize((orig_new_w, target_h), Image.LANCZOS)
+                
+                # Resize auxiliary image
+                aux_w, aux_h = auxiliary_image.size
+                aux_new_w = int(aux_w * target_h / aux_h)
+                auxiliary_resized = auxiliary_image.resize((aux_new_w, target_h), Image.LANCZOS)
+                
+                eval_logger.info(f"Stage 2 - Original resized to: {original_resized.size}")
+                eval_logger.info(f"Stage 2 - Auxiliary resized to: {auxiliary_resized.size}")
+                
+                # Concatenate horizontally
+                combined_w = orig_new_w + aux_new_w
+                combined_image = Image.new('RGB', (combined_w, target_h))
+                combined_image.paste(original_resized, (0, 0))
+                combined_image.paste(auxiliary_resized, (orig_new_w, 0))
+                
+                eval_logger.info(f"Stage 2 - Combined image size: {combined_image.size}")
+                
+                # Load the combined image
+                pixel_values, pixel_values_thumbnail = self._load_image(combined_image)
+                
+                eval_logger.info(f"Stage 2 - pixel_values shape: {pixel_values.shape}")
+                
+                # Use a single <image> token with descriptive text
+                if '<image>' not in question:
+                    enhanced_question = '<image>\n' + question
+                else:
+                    enhanced_question = question
+                
+                eval_logger.info(f"Stage 2 - Enhanced question with 1 <image> token for concatenated image")
             else:
                 eval_logger.debug("Stage 2 - Using auxiliary image only")
                 pixel_values, pixel_values_thumbnail = self._load_image(
                     auxiliary_image
                 )
-                enhanced_question = question
+                # Single image, add one <image> token if missing
+                if '<image>' not in question:
+                    enhanced_question = '<image>\n' + question
+                else:
+                    enhanced_question = question
 
             pixel_values = pixel_values.to(
                 device=self.device_str, dtype=self.torch_dtype
@@ -441,6 +535,30 @@ class OneCATVisualCoT(lmms):
             pixel_values_thumbnail = pixel_values_thumbnail.to(
                 device=self.device_str, dtype=self.torch_dtype
             )
+            
+            # Log image tensor shapes for debugging
+            num_images = pixel_values.shape[0]
+            eval_logger.info(f"Stage 2 - Number of images in batch: {num_images}")
+            eval_logger.info(f"Stage 2 - pixel_values shape: {pixel_values.shape}")
+            eval_logger.info(f"Stage 2 - pixel_values_thumbnail shape: {pixel_values_thumbnail.shape}")
+            
+            # Calculate expected tokens for validation
+            patch_size = 14  # OneCAT default
+            expected_token_h = int((pixel_values.shape[-2] // patch_size) // 2)
+            expected_token_w = int((pixel_values.shape[-1] // patch_size) // 2)
+            expected_tokens = expected_token_h * expected_token_w
+            eval_logger.info(f"Stage 2 - Expected tokens: {expected_tokens} ({expected_token_h}x{expected_token_w})")
+            
+            if expected_tokens == 0:
+                error_msg = (
+                    f"Image too small! pixel_values shape: {pixel_values.shape}, "
+                    f"resulting in 0 tokens. Need at least 448x448 image."
+                )
+                eval_logger.error(error_msg)
+                if self.fail_gracefully:
+                    return ""
+                else:
+                    raise ValueError(error_msg)
 
             # Generation config
             generation_config = dict(
@@ -451,6 +569,23 @@ class OneCATVisualCoT(lmms):
                 max_new_tokens=self.stage2_max_new_tokens,
                 eos_token_id=self.tokenizer.eos_token_id,
             )
+            
+            # Debug: Log generation config
+            eval_logger.info(f"Stage 2 - Generation config: {generation_config}")
+            eval_logger.info(f"Stage 2 - Question length: {len(enhanced_question)}")
+            
+            # Validate question is not empty
+            if not enhanced_question or len(enhanced_question.strip()) == 0:
+                error_msg = f"Enhanced question is empty! Original question: {question}"
+                eval_logger.error(error_msg)
+                if self.fail_gracefully:
+                    return ""
+                else:
+                    raise ValueError(error_msg)
+            
+            # For single concatenated image, no need for num_patches_list
+            # OneCAT will handle it automatically with pixel_values.shape[0]
+            eval_logger.info(f"Stage 2 - About to call model.chat")
 
             # Generate answer
             response = self.model.chat(
@@ -459,14 +594,16 @@ class OneCATVisualCoT(lmms):
                 question=enhanced_question,
                 generation_config=generation_config,
                 pixel_values_thumbnail=pixel_values_thumbnail,
-                verbose=False,
+                verbose=True,  # Enable verbose for debugging
             )
 
             eval_logger.debug(f"Stage 2 - Generated answer: {response[:100]}...")
             return response
 
         except Exception as e:
-            eval_logger.error(f"Stage 2 failed for doc {doc_id}: {e}")
+            import traceback
+            eval_logger.error(f"Stage 2 failed for doc {doc_id}: {type(e).__name__}: {e}")
+            eval_logger.error(f"Full traceback:\n{traceback.format_exc()}")
             if self.fail_gracefully:
                 return ""
             else:

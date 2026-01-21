@@ -264,6 +264,8 @@ class EvaluationTracker:
                     # using the datasets library
                     # arguments = {}
                     sample["input"] = sample["arguments"][0]
+                    sample["raw_resps"] = sample.get("resps")
+                    sample["raw_filtered_resps"] = sample.get("filtered_resps")
                     sample["resps"] = sanitize_list(sample["resps"])
                     sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
                     if sample["filtered_resps"] == sample["resps"][0] or sample["filtered_resps"] == sample["resps"]:
