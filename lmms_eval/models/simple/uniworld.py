@@ -150,10 +150,11 @@ class UniWorld(lmms):
         
         # 1. Load main UniWorld model (Qwen2.5-VL + Denoise Tower)
         # Using same loading method as original UniWorld app.py
+        # Note: flash_attention_2 disabled due to UnivaDenoiseTower compatibility
         self.model = UnivaQwen2p5VLForConditionalGeneration.from_pretrained(
             self.pretrained,
             torch_dtype=self._dtype,
-            attn_implementation="flash_attention_2",
+            # attn_implementation="flash_attention_2",  # Disabled: UnivaDenoiseTower doesn't support it
         ).to(self._device)
         
         # 2. Load task head (classifier for understanding vs generation)
