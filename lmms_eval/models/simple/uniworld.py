@@ -205,11 +205,18 @@ class UniWorld(lmms):
         # 4. Load FLUX pipeline
         eval_logger.info(f"Loading FLUX pipeline from {self.flux_path}...")
         eval_logger.info("⏳ This may take a while if downloading for the first time (~20GB)")
+        
+        # For multi-GPU: put FLUX on GPU 1 to avoid OOM on GPU 0
+        # For single-GPU: keep on the same device
+        self.flux_device = f"cuda:{min(1, num_gpus - 1)}" if num_gpus > 1 else self._device
+        eval_logger.info(f"Loading FLUX pipeline to {self.flux_device}...")
+        
         self.pipe = FluxPipeline.from_pretrained(
             self.flux_path,
             transformer=self.model.denoise_tower.denoiser,
             torch_dtype=self._dtype,
-        ).to(self._device)
+        ).to(self.flux_device)
+        eval_logger.info(f"✅ Loaded FLUX pipeline to {self.flux_device}")
         
         self.tokenizers = [self.pipe.tokenizer, self.pipe.tokenizer_2]
         self.text_encoders = [self.pipe.text_encoder, self.pipe.text_encoder_2]
@@ -217,11 +224,12 @@ class UniWorld(lmms):
         # 5. Load SigLIP for reference image encoding
         eval_logger.info(f"Loading SigLIP from {self.siglip_path}...")
         self.siglip_processor = SiglipImageProcessor.from_pretrained(self.siglip_path)
+        # Put SigLIP on the same device as FLUX for efficiency
         self.siglip_model = SiglipVisionModel.from_pretrained(
             self.siglip_path,
             torch_dtype=self._dtype,
-        ).to(self._device)
-        eval_logger.info("✅ Loaded SigLIP")
+        ).to(self.flux_device)
+        eval_logger.info(f"✅ Loaded SigLIP to {self.flux_device}")
         
         eval_logger.info("🎉 All models loaded successfully!")
         
@@ -365,7 +373,7 @@ class UniWorld(lmms):
                     do_convert_rgb=True
                 ).pixel_values
                 siglip_pixel_values.append(pixel_value)
-            siglip_pixel_values = torch.concat(siglip_pixel_values).to(self._device)
+            siglip_pixel_values = torch.concat(siglip_pixel_values).to(self.flux_device)
             siglip_hidden_states = self.siglip_model(siglip_pixel_values).last_hidden_state
         
         # Get LVLM embeddings
@@ -388,17 +396,18 @@ class UniWorld(lmms):
                 self.tokenizers,
                 prompt_text,
                 256,
-                self._device,
+                self.flux_device,
                 1,
             )
-            input_embeds = torch.concat([t5_prompt_embeds, input_embeds], dim=1)
+            # Ensure both embeddings are on the same device before concatenation
+            input_embeds = torch.concat([t5_prompt_embeds, input_embeds.to(self.flux_device)], dim=1)
         else:
             _, pooled_prompt_embeds = encode_prompt(
                 self.text_encoders,
                 self.tokenizers,
                 "",
                 256,
-                self._device,
+                self.flux_device,
                 1,
             )
         
@@ -410,7 +419,7 @@ class UniWorld(lmms):
             width=self.width,
             num_inference_steps=self.num_inference_steps,
             guidance_scale=self.guidance_scale,
-            generator=torch.Generator(device=self._device).manual_seed(42),
+            generator=torch.Generator(device=self.flux_device).manual_seed(42),
         ).images[0]
         
         # Save image
