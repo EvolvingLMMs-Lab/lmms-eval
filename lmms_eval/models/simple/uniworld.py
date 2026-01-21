@@ -330,7 +330,9 @@ class UniWorld(lmms):
             videos=video_inputs,
             padding=True,
             return_tensors="pt",
-        ).to(self._device)
+        )
+        # Note: Don't use .to(device) when model has device_map="auto"
+        # The model handles device placement automatically
         
         # Get task classification
         with torch.inference_mode():
@@ -646,7 +648,7 @@ class UniWorld(lmms):
             videos=video_inputs,
             padding=True,
             return_tensors="pt",
-        ).to(self._device)
+        )
         
         # Generate image
         return self._generate_image(inputs, prompt_text, history_image_paths, doc_id, task)
@@ -676,7 +678,7 @@ class UniWorld(lmms):
             videos=video_inputs,
             padding=True,
             return_tensors="pt",
-        ).to(self._device)
+        )
         
         # Generate text answer
         return self._generate_text(inputs)
