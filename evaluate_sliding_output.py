@@ -135,7 +135,34 @@ def main():
     if args.response_file:
         print(f"Loading responses from: {args.response_file}")
         with open(args.response_file, 'r', encoding='utf-8') as f:
-            responses = json.load(f)
+            raw_data = json.load(f)
+            
+        # Support different formats
+        if isinstance(raw_data, dict):
+            # Format: {"doc_id_key": "{json_string}", ...}
+            responses = []
+            for key, value in raw_data.items():
+                # Extract doc_id from key (e.g., "uni_mmmu_sliding54_visual_cot___train___0" -> 0)
+                parts = key.split("___")
+                doc_id = int(parts[-1]) if parts else 0
+                
+                # Parse the JSON string value
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                        if isinstance(parsed, dict):
+                            parsed["doc_id"] = doc_id
+                            responses.append(parsed)
+                    except json.JSONDecodeError:
+                        print(f"Warning: Failed to parse response for {key}")
+                        continue
+            print(f"Loaded {len(responses)} responses from dictionary format")
+        elif isinstance(raw_data, list):
+            # Format: [{"doc_id": ..., ...}, ...]
+            responses = raw_data
+            print(f"Loaded {len(responses)} responses from list format")
+        else:
+            raise ValueError(f"Unsupported response file format: {type(raw_data)}")
     elif args.response_json:
         responses = json.loads(args.response_json)
     else:
