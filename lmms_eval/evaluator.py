@@ -22,7 +22,7 @@ import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
 import lmms_eval.models
-from lmms_eval.baselines import BASELINE_REGISTRY, load_baseline
+from lmms_eval.baselines import BASELINE_REGISTRY, get_baseline_display_name, load_baseline
 from lmms_eval.evaluator_utils import (
     compute_baseline_comparison,
     consolidate_group_results,
@@ -328,30 +328,6 @@ def simple_evaluate(
 
         # Baseline comparison (paired t-test)
         if baseline:
-            # Get short display name for baseline
-            def get_baseline_display_name(baseline_arg: str) -> str:
-                """Extract a short display name from baseline argument."""
-                # Handle model:task format (e.g., qwen25vl:mmbench)
-                if ":" in baseline_arg and not baseline_arg.startswith("hf://"):
-                    model_name, task = baseline_arg.split(":", 1)
-                    if model_name in BASELINE_REGISTRY:
-                        return model_name  # Just show model name
-                # Handle model preset (e.g., qwen25vl)
-                if baseline_arg in BASELINE_REGISTRY:
-                    return baseline_arg
-                # Handle HF URL
-                if baseline_arg.startswith("hf://"):
-                    # hf://user/repo/file.jsonl -> user/repo
-                    parts = baseline_arg[5:].split("/")
-                    return "/".join(parts[:2]) if len(parts) >= 2 else baseline_arg
-                # Handle local path
-                if "/" in baseline_arg or "\\" in baseline_arg:
-                    import os
-
-                    filename = os.path.basename(baseline_arg)
-                    return os.path.splitext(filename)[0][:30]  # Truncate to 30 chars
-                return baseline_arg
-
             baseline_display_name = get_baseline_display_name(baseline)
 
             for task_name in results.get("results", {}).keys():
