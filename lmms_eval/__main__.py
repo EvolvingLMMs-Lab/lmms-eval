@@ -97,6 +97,8 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
 
     result = power_analysis(
         effect_size=args.effect_size,
+        std_a=args.std_a,
+        std_b=args.std_b,
         alpha=args.alpha,
         power=args.power,
         correlation=args.correlation,
@@ -107,6 +109,8 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     print("=" * 60)
     print(f"\nParameters:")
     print(f"  Effect size (delta):     {args.effect_size:.1%}")
+    print(f"  Std (model A):           {result['std_a']}")
+    print(f"  Std (model B):           {result['std_b']}")
     print(f"  Significance level (α):  {args.alpha}")
     print(f"  Desired power (1-β):     {args.power}")
     print(f"  Correlation (ρ):         {args.correlation}")
@@ -123,6 +127,8 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
         for task_name, n_samples in task_sizes.items():
             task_result = power_analysis(
                 effect_size=args.effect_size,
+                std_a=args.std_a,
+                std_b=args.std_b,
                 alpha=args.alpha,
                 power=args.power,
                 correlation=args.correlation,
@@ -362,6 +368,18 @@ def parse_eval_args() -> argparse.Namespace:
         type=float,
         default=0.5,
         help="Expected correlation between paired samples (default: 0.5). Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--std-a",
+        type=float,
+        default=None,
+        help="Std deviation of model A scores (estimate from previous eval). Default: 0.5 for binary. Used with --power-analysis.",
+    )
+    parser.add_argument(
+        "--std-b",
+        type=float,
+        default=None,
+        help="Std deviation of model B scores (estimate from previous eval). If not set, assumes equal to --std-a. Used with --power-analysis.",
     )
 
     args = parser.parse_args()

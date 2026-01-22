@@ -702,7 +702,8 @@ def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
 
 def power_analysis(
     effect_size: float,
-    std: float = 0.5,
+    std_a: float = None,
+    std_b: float = None,
     alpha: float = 0.05,
     power: float = 0.80,
     correlation: float = 0.5,
@@ -711,21 +712,24 @@ def power_analysis(
     """
     Calculate minimum sample size for paired t-test power analysis.
 
-    For paired samples, the effective variance is reduced by correlation:
-    Var(X - Y) = Var(X) + Var(Y) - 2*Cov(X,Y) = 2*sigma^2*(1-rho)
+    For paired samples, the effective variance is:
+        Var(X - Y) = Var(X) + Var(Y) - 2*Cov(X,Y)
+                   = std_a^2 + std_b^2 - 2*rho*std_a*std_b
 
     Formula (from Miller 2024, "Adding Error Bars to Evals"):
         n = ((z_alpha + z_beta) / d)^2
     where d = effect_size / std_diff is the standardized effect size.
 
-    Note: The 'std' parameter should ideally be estimated from previous
-    evaluation data rather than using the default value.
+    Note: std_a and std_b should ideally be estimated from previous
+    evaluation data rather than using the default values.
     See: https://arxiv.org/abs/2411.00640 Section 5 for details.
 
     Args:
         effect_size: Minimum detectable difference (e.g., 0.03 for 3%)
-        std: Standard deviation of scores (estimate from previous eval,
-             default 0.5 is approximation for binary 0/1 scores)
+        std_a: Std deviation of model A scores (estimate from previous eval)
+        std_b: Std deviation of model B scores (estimate from previous eval)
+               If only std_a provided, assumes std_b = std_a
+               If neither provided, defaults to 0.5 (binary 0/1 approximation)
         alpha: Significance level (default 0.05)
         power: Desired statistical power (default 0.80)
         correlation: Expected correlation between paired samples (default 0.5)
@@ -736,10 +740,20 @@ def power_analysis(
     """
     from scipy import stats
 
+    # Handle std defaults: if neither provided, use 0.5; if only std_a, assume equal
+    if std_a is None and std_b is None:
+        std_a = std_b = 0.5  # Default for binary (0/1) scores
+    elif std_a is not None and std_b is None:
+        std_b = std_a  # Assume equal variance if only one provided
+    elif std_a is None and std_b is not None:
+        std_a = std_b
+
     z_alpha = stats.norm.ppf(1 - alpha / 2)  # Two-tailed
     z_beta = stats.norm.ppf(power)
 
-    var_diff = 2 * (std**2) * (1 - correlation)
+    # General formula: Var(X-Y) = Var(X) + Var(Y) - 2*Cov(X,Y)
+    # where Cov(X,Y) = rho * std_a * std_b
+    var_diff = std_a**2 + std_b**2 - 2 * correlation * std_a * std_b
     std_diff = math.sqrt(var_diff)
     d = effect_size / std_diff
     min_n = math.ceil(((z_alpha + z_beta) / d) ** 2)
@@ -747,6 +761,8 @@ def power_analysis(
     result = {
         "min_n": min_n,
         "effect_size": effect_size,
+        "std_a": std_a,
+        "std_b": std_b,
         "alpha": alpha,
         "power": power,
         "correlation": correlation,
