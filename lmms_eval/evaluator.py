@@ -349,7 +349,7 @@ def simple_evaluate(
                         for sample in current_samples:
                             doc_id = sample.get("doc_id")
                             if doc_id in baseline_scores_dict:
-                                # Extract score using score_key
+                                # Extract score: first try exact score_key, then search for *_score fields
                                 score = None
                                 if score_key in sample:
                                     val = sample[score_key]
@@ -357,6 +357,17 @@ def simple_evaluate(
                                         score = float(val)
                                     elif isinstance(val, dict) and "score" in val:
                                         score = float(val["score"])
+                                # Fallback: search for fields ending with "_score" (e.g., videomme_perception_score)
+                                if score is None:
+                                    for key in sample:
+                                        if key.endswith("_score") and key != score_key:
+                                            val = sample[key]
+                                            if isinstance(val, (int, float)):
+                                                score = float(val)
+                                                break
+                                            elif isinstance(val, dict) and "score" in val:
+                                                score = float(val["score"])
+                                                break
                                 if score is not None:
                                     current_scores.append(score)
                                     baseline_scores.append(baseline_scores_dict[doc_id])
