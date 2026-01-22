@@ -1,0 +1,36 @@
+dataset_path: kcz358/babyvision_gen
+dataset_kwargs:
+  token: True
+task: "babyvision_gen"
+test_split: test 
+output_type: generate_until
+
+cluster_key: "type"
+score_key: "correct"
+
+doc_to_visual: !function utils.babyvision_doc_to_visual
+doc_to_text: !function utils.babyvision_doc_to_text
+doc_to_target: "generationPrompt"
+
+generation_kwargs:
+  max_new_tokens: 512
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.babyvision_process_results
+
+metric_list:
+  - metric: babyvision_overall_accuracy
+    aggregation: !function utils.babyvision_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  - version: 0.1
+    description: "BabyVision Gen - Visual Reasoning Task Generation (LLM-based evaluation)"
