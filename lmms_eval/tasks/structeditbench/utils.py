@@ -63,7 +63,7 @@ JUDGE_PROMPT = (
     "   - Accept alternative wording or paraphrases that do not contradict the core content.\n"
     "   - Reject answers that describe a different object, relation, or action than the ground truth.\n"
     '   - Reject answers that are "N/A".\n\n'
-    '2. **Numerical Values**: A tolerance of ±10% is allowed for any numerical values compared to the '
+    "2. **Numerical Values**: A tolerance of ±10% is allowed for any numerical values compared to the "
     '"Ground Truth Answer".\n\n'
     "3. **Over- or under-specification**:\n"
     "   - Accept answers that are less detailed but still factually consistent with the ground truth.\n"
@@ -437,11 +437,7 @@ def structeditbench_process_results(doc, results, **kwargs):
         eval_logger.error(f"structeditbench scoring failed for key={key}: {e}")
         editing_acc, maintain_acc, weighted_acc, qa_results = 0.0, 0.0, 0.0, []
 
-    eval_logger.info(
-        f"[structeditbench] key={key} category={category} weighted={weighted_acc:.2f}% "
-        f"edit={editing_acc:.2f}% maintain={maintain_acc:.2f}% "
-        f"(qa={len(qa_results)}/{len(qa_list) if isinstance(qa_list, list) else 0})"
-    )
+    eval_logger.info(f"[structeditbench] key={key} category={category} weighted={weighted_acc:.2f}% " f"edit={editing_acc:.2f}% maintain={maintain_acc:.2f}% " f"(qa={len(qa_results)}/{len(qa_list) if isinstance(qa_list, list) else 0})")
 
     base_entry = {
         "key": key,
@@ -504,5 +500,3 @@ def structeditbench_aggregate_science(results):
 
 def structeditbench_aggregate_table(results):
     return _aggregate_by_category(results, "table")
-
-
