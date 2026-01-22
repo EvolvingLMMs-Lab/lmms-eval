@@ -1,7 +1,7 @@
 # Uni-MMMU Sliding 54 samples (seed=42)
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/uni_mmmu_sliding54.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/uni_mmmu_sliding54.parquet
 task: "uni_mmmu_sliding54"
 test_split: train
 output_type: generate_until

@@ -1,7 +1,7 @@
 # VSP Google Map Navigation Task (50 samples)
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/vsp_google_map_50.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/vsp_google_map_50.parquet
 task: "vsp_google_map"
 test_split: train
 output_type: generate_until

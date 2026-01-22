@@ -1,7 +1,7 @@
 # VSP Collision Detection Task - Visual CoT Version
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/vsp_collision_50.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/vsp_collision_50.parquet
 task: "vsp_collision_visual_cot"
 test_split: train
 output_type: generate_until

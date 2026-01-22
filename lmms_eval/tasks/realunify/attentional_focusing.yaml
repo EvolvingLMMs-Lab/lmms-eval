@@ -1,7 +1,7 @@
 # RealUnify Attentional Focusing Task
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/realunify_attentional_focusing.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/realunify_attentional_focusing.parquet
 task: "realunify_attentional_focusing"
 test_split: train
 output_type: generate_until

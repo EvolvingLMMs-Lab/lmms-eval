@@ -1,0 +1,7 @@
+group: mmsi_cot
+task:
+  - mmsi_attribute_appr_visual_cot
+  - mmsi_attribute_meas_visual_cot
+  - mmsi_motion_cam_visual_cot
+  - mmsi_motion_obj_visual_cot
+  - mmsi_msr_visual_cot

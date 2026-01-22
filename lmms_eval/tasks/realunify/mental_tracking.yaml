@@ -1,7 +1,7 @@
 # RealUnify Mental Tracking Task
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/realunify_mental_tracking.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/realunify_mental_tracking.parquet
 task: "realunify_mental_tracking"
 test_split: train
 output_type: generate_until

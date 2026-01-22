@@ -1,0 +1,7 @@
+group: mmsi
+task:
+  - mmsi_attribute_appr
+  - mmsi_attribute_meas
+  - mmsi_motion_cam
+  - mmsi_motion_obj
+  - mmsi_msr

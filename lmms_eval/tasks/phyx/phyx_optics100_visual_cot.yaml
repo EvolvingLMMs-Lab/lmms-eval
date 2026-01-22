@@ -6,7 +6,7 @@
 
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/phyx_optics100.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/phyx_optics100.parquet
 task: "phyx_optics100_visual_cot"
 test_split: train
 output_type: generate_until

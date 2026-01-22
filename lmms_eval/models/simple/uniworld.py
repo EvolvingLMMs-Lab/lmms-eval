@@ -50,18 +50,12 @@ except Exception as e:
 try:
     from transformers import AutoProcessor, SiglipImageProcessor, SiglipVisionModel
     from transformers.models.qwen2_5_vl.configuration_qwen2_5_vl import Qwen2_5_VLConfig
-    from transformers.models.qwen2.configuration_qwen2 import Qwen2Config
     from univa.models.qwen2p5vl.modeling_univa_qwen2p5vl import UnivaQwen2p5VLForConditionalGeneration
     from univa.models.qwen2p5vl.configuration_univa_qwen2p5vl import UnivaQwen2p5VLConfig
     from univa.utils.flux_pipeline import FluxPipeline
     from univa.utils.denoiser_prompt_embedding_flux import encode_prompt
     from qwen_vl_utils import process_vision_info
     from univa.utils.anyres_util import dynamic_resize
-    
-    # Fix UniWorld config missing text_config
-    if "text_config" not in UnivaQwen2p5VLConfig.sub_configs:
-        UnivaQwen2p5VLConfig.sub_configs["text_config"] = Qwen2Config
-        eval_logger.info("Applied UniWorld config patch: added text_config to sub_configs")
 except ImportError as e:
     eval_logger.error(f"Failed to import UniWorld dependencies: {e}")
     eval_logger.error("Please ensure UniWorld repository is cloned to UniWorld/UniWorld-V1/")
@@ -88,6 +82,7 @@ class UniWorld(lmms):
     def __init__(
         self,
         pretrained: str = "LanguageBind/UniWorld-V1",
+        mode: str = "understanding",  # "understanding" or "generation"
         flux_path: str = "black-forest-labs/FLUX.1-dev",
         siglip_path: str = "google/siglip2-so400m-patch16-512",
         device: str = "cuda",
@@ -109,6 +104,11 @@ class UniWorld(lmms):
     ) -> None:
         super().__init__()
         
+        # Validate mode
+        if mode not in ["understanding", "generation"]:
+            raise ValueError(f"mode must be 'understanding' or 'generation', got '{mode}'")
+        
+        self.mode = mode
         self.pretrained = pretrained
         self.flux_path = flux_path
         self.siglip_path = siglip_path
@@ -146,6 +146,8 @@ class UniWorld(lmms):
         
         # Image generation counter
         self.gen_image_counter = 0
+        self._debug_counter = 0
+        self._debug_limit = 3
 
     def _load_models(self):
         """Load all required models"""
@@ -193,49 +195,55 @@ class UniWorld(lmms):
         )
         eval_logger.info("✅ Loaded processor")
         
-        # 4. Load FLUX pipeline
-        eval_logger.info(f"Loading FLUX pipeline from {self.flux_path}...")
-        eval_logger.info("⏳ This may take a while if downloading for the first time (~20GB)")
+        # 4-5. Load FLUX and SigLIP only in generation mode
+        if self.mode == "generation":
+            eval_logger.info("🖼️  Generation mode: Loading FLUX and SigLIP...")
+            
+            # Load FLUX pipeline
+            eval_logger.info(f"Loading FLUX pipeline from {self.flux_path}...")
+            eval_logger.info("⏳ This may take a while if downloading for the first time (~20GB)")
+            
+            self.flux_device = self._device
+            eval_logger.info(f"Loading FLUX pipeline to {self.flux_device}...")
+            
+            self.pipe = FluxPipeline.from_pretrained(
+                self.flux_path,
+                transformer=self.model.denoise_tower.denoiser,
+                torch_dtype=self._dtype,
+            ).to(self.flux_device)
+            
+            if self.offload:
+                eval_logger.info("Enabling CPU offload for FLUX pipeline...")
+                self.pipe.enable_sequential_cpu_offload()
+                self.pipe.enable_vae_slicing()
+                eval_logger.info("✅ Sequential CPU offload enabled (aggressive memory saving)")
+            
+            eval_logger.info(f"✅ Loaded FLUX pipeline to {self.flux_device}")
+            
+            self.tokenizers = [self.pipe.tokenizer, self.pipe.tokenizer_2]
+            self.text_encoders = [self.pipe.text_encoder, self.pipe.text_encoder_2]
+            
+            # Load SigLIP
+            eval_logger.info(f"Loading SigLIP from {self.siglip_path}...")
+            self.siglip_processor = SiglipImageProcessor.from_pretrained(self.siglip_path)
+            self.siglip_model = SiglipVisionModel.from_pretrained(
+                self.siglip_path,
+                torch_dtype=self._dtype,
+            ).to(self._device)
+            eval_logger.info(f"✅ Loaded SigLIP to {self._device}")
+        else:
+            eval_logger.info("📖 Understanding mode: Skipping FLUX and SigLIP (not needed)")
+            self.pipe = None
+            self.siglip_model = None
+            self.siglip_processor = None
+            self.tokenizers = None
+            self.text_encoders = None
         
-        # Keep FLUX on same device as main model (like original UniWorld)
-        # Use CPU offload for memory management
-        self.flux_device = self._device
-        eval_logger.info(f"Loading FLUX pipeline to {self.flux_device}...")
-        
-        self.pipe = FluxPipeline.from_pretrained(
-            self.flux_path,
-            transformer=self.model.denoise_tower.denoiser,
-            torch_dtype=self._dtype,
-        ).to(self.flux_device)
-        
-        # Enable CPU offload (like original UniWorld app.py)
-        if self.offload:
-            eval_logger.info("Enabling CPU offload for FLUX pipeline...")
-            # Sequential CPU offload: more aggressive memory saving
-            # Moves each component to CPU after use
-            self.pipe.enable_sequential_cpu_offload()
-            self.pipe.enable_vae_slicing()
-            eval_logger.info("✅ Sequential CPU offload enabled (aggressive memory saving)")
-        
-        eval_logger.info(f"✅ Loaded FLUX pipeline to {self.flux_device}")
-        
-        self.tokenizers = [self.pipe.tokenizer, self.pipe.tokenizer_2]
-        self.text_encoders = [self.pipe.text_encoder, self.pipe.text_encoder_2]
-        
-        # 5. Load SigLIP for reference image encoding
-        eval_logger.info(f"Loading SigLIP from {self.siglip_path}...")
-        self.siglip_processor = SiglipImageProcessor.from_pretrained(self.siglip_path)
-        # Keep SigLIP on same device (like original UniWorld)
-        self.siglip_model = SiglipVisionModel.from_pretrained(
-            self.siglip_path,
-            torch_dtype=self._dtype,
-        ).to(self._device)
-        eval_logger.info(f"✅ Loaded SigLIP to {self._device}")
-        
-        eval_logger.info("🎉 All models loaded successfully!")
+        eval_logger.info("🎉 All required models loaded successfully!")
         
         self.model.eval()
-        self.siglip_model.eval()
+        if self.siglip_model is not None:
+            self.siglip_model.eval()
         
         # Log memory usage
         if torch.cuda.is_available():
@@ -345,24 +353,42 @@ class UniWorld(lmms):
         )
         # Move inputs to device (single GPU)
         inputs = inputs.to(self._device)
+
+        debug_logging = self._debug_counter < self._debug_limit
+        if debug_logging:
+            eval_logger.info("[UniWorld Debug] ===== Request %d =====", self._debug_counter)
+            eval_logger.info("[UniWorld Debug] Context: %s", context)
+            eval_logger.info("[UniWorld Debug] Visuals: %s", visuals)
+            eval_logger.info("[UniWorld Debug] Conversation: %s", conversation)
+            eval_logger.info("[UniWorld Debug] Chat text (first 500 chars): %s", chat_text[:500])
+            eval_logger.info("[UniWorld Debug] Input IDs shape: %s", tuple(inputs.input_ids.shape))
+            if hasattr(inputs, "pixel_values") and inputs.pixel_values is not None:
+                eval_logger.info("[UniWorld Debug] Pixel values shape: %s", tuple(inputs.pixel_values.shape))
+            else:
+                eval_logger.info("[UniWorld Debug] No pixel_values present")
         
-        # Get task classification
-        with torch.inference_mode():
-            outputs = self.model(**inputs, return_dict=True, output_hidden_states=True)
-        
-        hidden_states = outputs.hidden_states[-1]  # B L D
-        assistant_mask = inputs.input_ids == 77091  # assistant token
-        assistant_vectors = hidden_states[assistant_mask][-1:]
-        task_result = self.task_head(assistant_vectors.float())[0]
-        
-        if task_result[0] < task_result[1]:
-            # Generation task
-            output = self._generate_image(
-                inputs, context, history_image_paths, doc_id, task
-            )
+        # Determine task type based on mode
+        if self.mode == "understanding":
+            # Understanding mode: directly use text generation
+            output = self._generate_text(inputs, gen_kwargs)
         else:
-            # Understanding task
-            output = self._generate_text(inputs)
+            # Generation mode: use task head to classify
+            with torch.inference_mode():
+                outputs = self.model(**inputs, return_dict=True, output_hidden_states=True)
+            
+            hidden_states = outputs.hidden_states[-1]  # B L D
+            assistant_mask = inputs.input_ids == 77091  # assistant token
+            assistant_vectors = hidden_states[assistant_mask][-1:]
+            task_result = self.task_head(assistant_vectors.float())[0]
+            
+            if task_result[0] < task_result[1]:
+                # Generation task
+                output = self._generate_image(
+                    inputs, context, history_image_paths, doc_id, task
+                )
+            else:
+                # Understanding task
+                output = self._generate_text(inputs, gen_kwargs)
         
         return output
 
@@ -451,14 +477,45 @@ class UniWorld(lmms):
         }
         return json.dumps(output, ensure_ascii=False)
 
-    def _generate_text(self, inputs) -> str:
+    def _generate_text(self, inputs, gen_kwargs: Dict = None) -> str:
         """Generate text using Qwen2.5-VL"""
+        # Merge task-specific gen_kwargs with defaults
+        generation_config = {
+            "max_new_tokens": self.max_new_tokens,
+            "do_sample": self.do_sample,
+        }
+        
+        # Only add temperature if sampling
+        if self.do_sample:
+            generation_config["temperature"] = self.temperature
+        
+        # Override with task-specific settings (filter out invalid params)
+        if gen_kwargs:
+            # Valid generation parameters for transformers.generate()
+            valid_params = {
+                'max_new_tokens', 'min_new_tokens', 'do_sample', 'temperature',
+                'top_k', 'top_p', 'repetition_penalty', 'num_beams', 'length_penalty'
+            }
+            filtered_kwargs = {k: v for k, v in gen_kwargs.items() if k in valid_params}
+            generation_config.update(filtered_kwargs)
+            
+            # Remove temperature if do_sample is False
+            if not generation_config.get("do_sample", False) and "temperature" in generation_config:
+                del generation_config["temperature"]
+        
+        debug_logging = self._debug_counter < self._debug_limit
+        if debug_logging:
+            eval_logger.info("[UniWorld Debug] Generation config: %s", generation_config)
         with torch.inference_mode():
             generated_ids = self.model.generate(
                 **inputs,
-                max_new_tokens=self.max_new_tokens,
-                do_sample=self.do_sample,
-                temperature=self.temperature if self.do_sample else 0.0,
+                **generation_config,
+            )
+        if debug_logging:
+            eval_logger.info("[UniWorld Debug] Generated IDs shape: %s", tuple(generated_ids.shape))
+            eval_logger.info(
+                "[UniWorld Debug] Generated tokens tail: %s",
+                generated_ids[0, -40:].tolist()
             )
         
         # Decode only newly generated tokens
@@ -471,6 +528,13 @@ class UniWorld(lmms):
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False
         )[0]
+        if debug_logging:
+            eval_logger.info(
+                "[UniWorld Debug] Trimmed token count: %s",
+                [len(t) for t in trimmed]
+            )
+            eval_logger.info("[UniWorld Debug] Raw reply: %r", reply)
+            self._debug_counter += 1
         
         return reply
 

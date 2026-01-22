@@ -2,7 +2,7 @@ task: "VisualPuzzles_analogical"
 dataset_path: parquet
 dataset_kwargs:
   data_files:
-    test: /blob/lmms-eval-dataset/visualpuzzles/analogical.parquet
+    test: /home/aiscuser/lmms-eval-dataset/visualpuzzles/analogical.parquet
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.VisualPuzzles_doc_to_visual

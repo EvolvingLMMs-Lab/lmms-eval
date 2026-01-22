@@ -1,7 +1,7 @@
 # Uni-MMMU Maze 100 samples - Visual CoT Version
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/uni_mmmu_maze100.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/uni_mmmu_maze100.parquet
 task: "uni_mmmu_maze100_visual_cot"
 test_split: train
 output_type: generate_until

@@ -11,20 +11,23 @@ import os
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from loguru import logger as eval_logger
+import torch
 from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval import utils
+
+eval_logger = utils.eval_logger
 
 
 @register_model("uniworld_visual_cot")
 class UniWorldVisualCoT(lmms):
     """
     UniWorld Visual Chain-of-Thought Model
-    
+
     Performs two-stage visual reasoning:
     1. Generate visualization using UniWorld's generation pipeline
     2. Answer question using Qwen2.5-VL understanding
@@ -44,18 +47,17 @@ class UniWorldVisualCoT(lmms):
         stage2_max_new_tokens: int = 512,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
-        # Generation prompt template
-        generation_prompt_template: str = "Generate a detailed visual diagram or illustration to help answer this question: {question}",
         # Output and debugging
         output_dir: Optional[str] = None,
-        save_intermediate: bool = False,
-        intermediate_dir: Optional[str] = None,
-        # Error handling
-        fail_gracefully: bool = True,
+        save_intermediate: bool = True,
+        # Hugging Face upload
+        hf_repo: Optional[str] = None,
+        hf_upload: bool = False,
         # Model loading
         min_pixels: int = 448 * 448,
         max_pixels: int = 448 * 448,
         no_joint_with_t5: bool = False,
+        offload: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -64,8 +66,6 @@ class UniWorldVisualCoT(lmms):
         self.flux_path = flux_path
         self.siglip_path = siglip_path
         self.save_intermediate = save_intermediate
-        self.fail_gracefully = fail_gracefully
-        self.generation_prompt_template = generation_prompt_template
 
         # Stage 1 parameters
         self.stage1_height = stage1_height
@@ -82,6 +82,25 @@ class UniWorldVisualCoT(lmms):
         self.min_pixels = min_pixels
         self.max_pixels = max_pixels
         self.no_joint_with_t5 = no_joint_with_t5
+        self.offload = offload
+
+        # Hugging Face upload
+        self.hf_upload = hf_upload
+        self.hf_repo = hf_repo
+        self.hf_api = None
+
+        if self.hf_upload:
+            if not self.hf_repo:
+                eval_logger.warning("hf_upload=True but hf_repo not specified, disabling upload")
+                self.hf_upload = False
+            else:
+                try:
+                    from huggingface_hub import HfApi
+                    self.hf_api = HfApi()
+                    eval_logger.info(f"✅ Hugging Face upload enabled: {self.hf_repo}")
+                except ImportError:
+                    eval_logger.warning("huggingface_hub not installed, disabling upload")
+                    self.hf_upload = False
 
         # Setup output directories
         if output_dir is None:
@@ -89,31 +108,26 @@ class UniWorldVisualCoT(lmms):
         else:
             self.output_dir = output_dir
 
-        if intermediate_dir is None:
-            self.intermediate_dir = self.output_dir
-        else:
-            self.intermediate_dir = intermediate_dir
+        os.makedirs(self.output_dir, exist_ok=True)
+        eval_logger.info(f"Output directory: {self.output_dir}")
 
-        if save_intermediate:
-            os.makedirs(self.intermediate_dir, exist_ok=True)
-            eval_logger.info(f"Intermediate artifacts will be saved under: {self.intermediate_dir}")
-
-        # Load UniWorld model
+        # Load UniWorld models
         eval_logger.info(f"Loading UniWorld model from {pretrained}")
-        self._load_uniworld_model()
+        self._load_uniworld_models()
 
         eval_logger.info("UniWorldVisualCoT initialized successfully")
 
-    def _load_uniworld_model(self):
-        """Load UniWorld model for both generation and understanding"""
+    def _load_uniworld_models(self):
+        """Load UniWorld model with full capabilities (generation + understanding)"""
         from lmms_eval.models.simple.uniworld import UniWorld
 
-        # Initialize UniWorld with full capabilities
+        # Load UniWorld with generation mode (includes all models: Qwen2.5-VL + FLUX + SigLIP)
+        eval_logger.info("Loading UniWorld with full capabilities...")
         self.uniworld = UniWorld(
             pretrained=self.pretrained,
             flux_path=self.flux_path,
             siglip_path=self.siglip_path,
-            mode="unified",  # Special mode for Visual CoT (both gen + und)
+            mode="generation",  # Load all models
             height=self.stage1_height,
             width=self.stage1_width,
             num_inference_steps=self.stage1_num_inference_steps,
@@ -124,10 +138,11 @@ class UniWorldVisualCoT(lmms):
             min_pixels=self.min_pixels,
             max_pixels=self.max_pixels,
             no_joint_with_t5=self.no_joint_with_t5,
-            image_output_dir=self.intermediate_dir,
+            offload=self.offload,
+            image_output_dir=self.output_dir,
         )
 
-        eval_logger.info("UniWorld model loaded successfully")
+        eval_logger.info("UniWorld loaded successfully (generation + understanding)")
 
     @property
     def rank(self):
@@ -142,95 +157,8 @@ class UniWorldVisualCoT(lmms):
         return self.uniworld.model
 
     @property
-    def tokenizer(self):
-        return self.uniworld.processor.tokenizer if hasattr(self.uniworld.processor, 'tokenizer') else None
-
-    def _stage1_generate_image(
-        self, generation_prompt: str, doc_id: str, task: str, original_image=None
-    ) -> Tuple[str, List[str]]:
-        """Stage 1: Generate visualization image"""
-        eval_logger.debug(f"Stage 1 - Generating image for doc {doc_id}")
-        
-        try:
-            # Use UniWorld's generation capability
-            output = self.uniworld._generate_image_with_original(
-                prompt_text=generation_prompt,
-                original_image=original_image,
-                doc_id=f"{doc_id}_stage1",
-                task=task
-            )
-            
-            # Parse output
-            if isinstance(output, str):
-                output_dict = json.loads(output)
-                images = output_dict.get("images", [])
-                text = output_dict.get("text", "")
-            else:
-                images = []
-                text = ""
-            
-            eval_logger.debug(f"Stage 1 - Generated {len(images)} image(s)")
-            return text, images
-        except Exception as e:
-            eval_logger.error(f"Stage 1 failed for doc {doc_id}: {e}")
-            if self.fail_gracefully:
-                return "", []
-            else:
-                raise
-
-    def _stage2_answer_with_image(
-        self, question: str, image_path: str, doc_id: str, original_image=None
-    ) -> str:
-        """Stage 2: Answer question using generated image"""
-        eval_logger.debug(f"Stage 2 - Answering question for doc {doc_id}")
-        
-        try:
-            # Use UniWorld's understanding capability
-            answer = self.uniworld._answer_with_images(
-                question=question,
-                images=[original_image, image_path] if original_image else [image_path],
-                doc_id=doc_id
-            )
-            
-            eval_logger.debug(f"Stage 2 - Generated answer: {answer[:100]}...")
-            return answer
-        except Exception as e:
-            eval_logger.error(f"Stage 2 failed for doc {doc_id}: {e}")
-            if self.fail_gracefully:
-                return ""
-            else:
-                raise
-
-    def _save_intermediate_artifacts(
-        self,
-        doc_id: str,
-        task: str,
-        generation_prompt: str,
-        stage1_text: str,
-        generated_images: List[str],
-        question: str,
-        stage2_answer: str,
-    ) -> None:
-        """Save intermediate artifacts for debugging"""
-        if not self.save_intermediate:
-            return
-
-        artifact_dir = os.path.join(self.intermediate_dir, task)
-        os.makedirs(artifact_dir, exist_ok=True)
-
-        metadata = {
-            "doc_id": doc_id,
-            "task": task,
-            "generation_prompt": generation_prompt,
-            "stage1_text": stage1_text,
-            "generated_images": generated_images,
-            "question": question,
-            "stage2_answer": stage2_answer,
-        }
-
-        metadata_path = os.path.join(artifact_dir, f"{doc_id}_metadata.json")
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, ensure_ascii=False, indent=2)
+    def batch_size(self):
+        return 1  # Visual CoT processes one at a time
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """Main inference method implementing two-stage visual CoT"""
@@ -238,75 +166,191 @@ class UniWorldVisualCoT(lmms):
         pbar = tqdm(
             total=len(requests),
             disable=(self.rank != 0),
-            desc="UniWorldVisualCoT Generating",
+            desc="UniWorldVisualCoT",
         )
 
         for request in requests:
             contexts, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
 
-            # Extract original image
-            original_image = None
-            if doc_to_visual is not None:
-                try:
+            try:
+                # Extract original image if available
+                original_images = []
+                if doc_to_visual is not None:
                     doc = self.task_dict[task][split][doc_id]
-                    original_visuals = doc_to_visual(doc)
-                    if original_visuals and len(original_visuals) > 0:
-                        original_image = original_visuals[0]
-                except Exception as e:
-                    eval_logger.warning(f"Failed to extract original image: {e}")
+                    visuals = [doc_to_visual(doc)]
+                    original_images = self.flatten(visuals)
 
-            # Parse generation prompt
-            import re
-            gen_prompt_match = re.search(r'\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]', contexts, re.DOTALL)
-            question_match = re.search(r'\[QUESTION\](.*?)\[/QUESTION\]', contexts, re.DOTALL)
+                # Stage 1: Generate visualization
+                eval_logger.info(f"[Doc {doc_id}] Stage 1: Generating visualization...")
+                generated_image_path = self._stage1_generate(
+                    prompt=contexts,
+                    doc_id=doc_id,
+                    task=task,
+                    original_images=original_images,
+                )
 
-            if gen_prompt_match and question_match:
-                custom_gen_prompt = gen_prompt_match.group(1).strip()
-                actual_question = question_match.group(1).strip()
-                generation_prompt = custom_gen_prompt.replace("{question}", actual_question)
-                contexts = contexts.replace(f"[GEN_PROMPT]{gen_prompt_match.group(1)}[/GEN_PROMPT]", "")
-                contexts = contexts.replace(f"[QUESTION]{question_match.group(1)}[/QUESTION]", question_match.group(1))
-            else:
-                generation_prompt = self.generation_prompt_template.format(question=contexts)
+                if not generated_image_path:
+                    eval_logger.warning(f"No image generated for doc {doc_id}")
+                    res.append("")
+                    pbar.update(1)
+                    continue
 
-            # Stage 1: Generate visualization
-            stage1_text, generated_images = self._stage1_generate_image(
-                generation_prompt=generation_prompt,
-                doc_id=doc_id,
-                task=task,
-                original_image=original_image,
-            )
+                # Stage 2: Answer with generated image
+                eval_logger.info(f"[Doc {doc_id}] Stage 2: Understanding with visualization...")
+                final_answer = self._stage2_understand(
+                    prompt=contexts,
+                    generated_image_path=generated_image_path,
+                    original_images=original_images,
+                    doc_id=doc_id,
+                )
 
-            if not generated_images:
-                eval_logger.warning(f"No image generated for doc {doc_id}")
-                res.append(stage1_text if stage1_text else "")
-                pbar.update(1)
-                continue
+                res.append(final_answer)
+                eval_logger.info(f"[Doc {doc_id}] ✅ Answer: {final_answer[:100]}...")
 
-            # Stage 2: Answer with generated image
-            final_answer = self._stage2_answer_with_image(
-                question=contexts,
-                image_path=generated_images[0],
-                doc_id=doc_id,
-                original_image=original_image
-            )
+            except Exception as e:
+                eval_logger.error(f"Error in visual CoT for doc_id={doc_id}: {e}")
+                import traceback
+                traceback.print_exc()
+                res.append("")
 
-            # Save artifacts
-            self._save_intermediate_artifacts(
-                doc_id=doc_id,
-                task=task,
-                generation_prompt=generation_prompt,
-                stage1_text=stage1_text,
-                generated_images=generated_images,
-                question=contexts,
-                stage2_answer=final_answer,
-            )
-
-            res.append(final_answer)
             pbar.update(1)
 
         pbar.close()
         return res
+
+    def _stage1_generate(
+        self,
+        prompt: str,
+        doc_id: int,
+        task: str,
+        original_images: List,
+    ) -> Optional[str]:
+        """Stage 1: Generate visualization image"""
+        # Create generation prompt
+        gen_prompt = f"{prompt}\n\nGenerate a clear schematic visualization to help understand this problem."
+
+        # Use UniWorld's generation capability
+        try:
+            # Call UniWorld's internal generation method
+            output = self.uniworld._process_single_request(
+                context=gen_prompt,
+                doc_to_visual=None,  # No input images for pure generation
+                doc_id=doc_id,
+                task=task,
+                split="",
+                gen_kwargs={},
+            )
+
+            # Parse output to get image path
+            if isinstance(output, str) and output.startswith("{"):
+                output_dict = json.loads(output)
+                images = output_dict.get("images", [])
+                if images:
+                    image_path = images[0]
+                    # Upload to HF if enabled
+                    if self.hf_upload and self.hf_api:
+                        self._upload_to_hf(image_path, f"logs/{task}/images")
+                    return image_path
+
+            return None
+
+        except Exception as e:
+            eval_logger.error(f"Stage 1 generation failed: {e}")
+            return None
+
+    def _upload_to_hf(self, file_path: str, hf_path: str):
+        """Upload file to Hugging Face"""
+        try:
+            self.hf_api.upload_file(
+                path_or_fileobj=file_path,
+                path_in_repo=f"{hf_path}/{os.path.basename(file_path)}",
+                repo_id=self.hf_repo,
+                repo_type="dataset",
+            )
+            eval_logger.debug(f"📤 Uploaded to HF: {file_path}")
+        except Exception as e:
+            eval_logger.warning(f"Failed to upload to HF: {e}")
+
+    def _stage2_understand(
+        self,
+        prompt: str,
+        generated_image_path: str,
+        original_images: List,
+        doc_id: int,
+    ) -> str:
+        """Stage 2: Understand with generated visualization"""
+        try:
+            # Load generated image
+            generated_image = Image.open(generated_image_path).convert("RGB")
+
+            # Combine original + generated images
+            all_images = original_images + [generated_image]
+
+            # Create understanding prompt
+            und_prompt = f"{prompt}\n\nBased on the visualization, provide your answer."
+
+            # Prepare messages for Qwen2.5-VL
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        *[{"type": "image", "image": img} for img in all_images],
+                        {"type": "text", "text": und_prompt}
+                    ]
+                }
+            ]
+
+            # Process with Qwen2.5-VL (use UniWorld's processor and model)
+            from qwen_vl_utils import process_vision_info
+
+            text = self.uniworld.processor.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+            image_inputs, video_inputs = process_vision_info(messages)
+
+            inputs = self.uniworld.processor(
+                text=[text],
+                images=image_inputs,
+                videos=video_inputs,
+                padding=True,
+                return_tensors="pt",
+            ).to(self.uniworld._device)
+
+            # Generate response
+            with torch.no_grad():
+                generated_ids = self.uniworld.model.generate(
+                    **inputs,
+                    max_new_tokens=self.stage2_max_new_tokens,
+                    do_sample=self.stage2_do_sample,
+                    temperature=self.stage2_temperature if self.stage2_do_sample else None,
+                )
+
+            # Decode output
+            generated_ids_trimmed = [
+                out_ids[len(in_ids):]
+                for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+            ]
+            output_text = self.uniworld.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False
+            )[0]
+
+            return output_text.strip()
+
+        except Exception as e:
+            eval_logger.error(f"Stage 2 understanding failed: {e}")
+            return ""
+
+    def flatten(self, item):
+        """Flatten nested lists"""
+        if isinstance(item, list):
+            output = []
+            for sub_item in item:
+                output.extend(self.flatten(sub_item))
+            return output
+        else:
+            return [item]
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         """Not supported"""

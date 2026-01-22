@@ -1,7 +1,7 @@
 dataset_path: parquet
 dataset_kwargs:
   data_files:
-    Illusion_IN: /blob/lmms-eval-dataset/illusionbench/illusion_in_test100.parquet
+    Illusion_IN: /home/aiscuser/lmms-eval-dataset/illusionbench/illusion_in_test100.parquet
 process_docs: !function arshia_utils.illusionbench_arshia_process_docs
 task: illusionbench_arshia_in_shape_test
 test_split: Illusion_IN

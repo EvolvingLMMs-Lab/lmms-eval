@@ -2,7 +2,7 @@ dataset_path: parquet
 
 task: "mmsi_attribute_appr_visual_cot"
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/mmsi_bench_5tasks/attribute_appr.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/mmsi_bench_5tasks/attribute_appr.parquet
 test_split: train
 output_type: generate_until
 doc_to_visual: !function utils.msr_doc_to_visual

@@ -1,7 +1,7 @@
 # RealUnify Mental Reconstruction Task - Visual CoT Version
 dataset_path: parquet
 dataset_kwargs:
-  data_files: /blob/lmms-eval-dataset/realunify_mental_reconstruction.parquet
+  data_files: /home/aiscuser/lmms-eval-dataset/realunify_mental_reconstruction.parquet
 task: "realunify_mental_reconstruction_visual_cot"
 test_split: train
 output_type: generate_until
