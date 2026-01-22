@@ -714,12 +714,18 @@ def power_analysis(
     For paired samples, the effective variance is reduced by correlation:
     Var(X - Y) = Var(X) + Var(Y) - 2*Cov(X,Y) = 2*sigma^2*(1-rho)
 
-    Formula: n = ((z_alpha + z_beta) / d)^2
+    Formula (from Miller 2024, "Adding Error Bars to Evals"):
+        n = ((z_alpha + z_beta) / d)^2
     where d = effect_size / std_diff is the standardized effect size.
+
+    Note: The 'std' parameter should ideally be estimated from previous
+    evaluation data rather than using the default value.
+    See: https://arxiv.org/abs/2411.00640 Section 5 for details.
 
     Args:
         effect_size: Minimum detectable difference (e.g., 0.03 for 3%)
-        std: Standard deviation of scores (default 0.5 for binary 0/1)
+        std: Standard deviation of scores (estimate from previous eval,
+             default 0.5 is approximation for binary 0/1 scores)
         alpha: Significance level (default 0.05)
         power: Desired statistical power (default 0.80)
         correlation: Expected correlation between paired samples (default 0.5)
