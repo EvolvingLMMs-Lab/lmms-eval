@@ -336,27 +336,27 @@ def simple_evaluate(
                     # Extract current scores from samples
                     if "samples" in results and task_name in results["samples"]:
                         current_samples = results["samples"][task_name]
+                        # Get score_key from task config, default to "score"
+                        task_config = results.get("configs", {}).get(task_name, {})
+                        score_key = task_config.get("score_key", "score")
+
                         current_scores = []
                         baseline_scores = []
                         for sample in current_samples:
                             doc_id = sample.get("doc_id")
                             if doc_id in baseline_scores_dict:
-                                # Extract score from sample
-                                for key in sample:
-                                    if "score" in key.lower():
-                                        val = sample[key]
-                                        if isinstance(val, (int, float)):
-                                            current_scores.append(float(val))
-                                            baseline_scores.append(baseline_scores_dict[doc_id])
-                                            break
-                                        elif isinstance(val, dict):
-                                            pred = val.get("pred_answer") or val.get("pred")
-                                            ans = val.get("answer") or val.get("target")
-                                            if pred and ans:
-                                                score = 1.0 if str(pred).strip().upper() == str(ans).strip().upper() else 0.0
-                                                current_scores.append(score)
-                                                baseline_scores.append(baseline_scores_dict[doc_id])
-                                                break
+                                # Extract score using score_key
+                                score = None
+                                if score_key in sample:
+                                    val = sample[score_key]
+                                    if isinstance(val, (int, float)):
+                                        score = float(val)
+                                    elif isinstance(val, dict) and "score" in val:
+                                        score = float(val["score"])
+                                if score is not None:
+                                    current_scores.append(score)
+                                    baseline_scores.append(baseline_scores_dict[doc_id])
+
                         if current_scores and baseline_scores:
                             comparison = compute_baseline_comparison(current_scores, baseline_scores, baseline_display_name)
                             task_results = results["results"][task_name]
@@ -365,7 +365,9 @@ def simple_evaluate(
                             task_results["paired_ci_lower"] = comparison["ci_lower"] * 100
                             task_results["paired_ci_upper"] = comparison["ci_upper"] * 100
                             task_results["paired_pvalue"] = comparison["p_value"]
-                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff']*100:.2f}%, " f"p={comparison['p_value']:.4f}")
+                            eval_logger.info(f"[Baseline] {task_name}: diff={comparison['mean_diff']*100:.2f}%, p={comparison['p_value']:.4f}")
+                        else:
+                            eval_logger.debug(f"[Baseline] Skipping {task_name}: no valid scores found with score_key='{score_key}'")
                 except Exception as e:
                     eval_logger.warning(f"[Baseline] Failed for {task_name}: {e}")
 
