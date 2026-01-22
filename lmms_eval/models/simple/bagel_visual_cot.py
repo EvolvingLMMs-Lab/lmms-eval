@@ -13,6 +13,7 @@ Usage:
         --batch_size 1 \
         --device cuda:0 \
         --output_path ./logs/
+
 """
 
 import json

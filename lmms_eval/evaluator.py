@@ -578,6 +578,7 @@ def evaluate(
                             # else:
                             #     filtered_arguments.append(_handle_non_serializable(value))
 
+
                     example = {
                         "doc_id": doc_id,
                         "doc": saved_doc,

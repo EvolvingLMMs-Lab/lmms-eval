@@ -111,19 +111,36 @@ class MIO(lmms):
         results = []
         
         for request in tqdm(requests, desc="Processing MIO requests"):
-            # Extract context (question + image placeholders)
-            context = request.arguments[0]
+            # Extract arguments from request
+            context, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
             
-            # Extract images
-            visuals = request.arguments[1] if len(request.arguments) > 1 else []
-            images = []
+            # Get document and extract images
+            doc = self.task_dict[task][split][doc_id]
+            visuals = [doc_to_visual(doc)] if doc_to_visual else []
+            visuals = self.flatten(visuals)
             
+            # Prepare image paths - keep temp files alive
+            image_paths = []
+            temp_files = []  # Keep reference to prevent deletion
             if visuals:
-                for visual in visuals:
+                for i, visual in enumerate(visuals):
                     if isinstance(visual, str):
-                        images.append(Image.open(visual).convert("RGB"))
-                    elif isinstance(visual, Image.Image):
-                        images.append(visual.convert("RGB"))
+                        image_paths.append(visual)
+                    else:
+                        # Handle PIL Image objects - save to persistent temp file
+                        import tempfile
+                        from PIL import Image
+                        if isinstance(visual, Image.Image):
+                            # Create temp file with delete=False to keep it
+                            tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+                            visual.save(tmp.name, 'JPEG')
+                            tmp.close()
+                            image_paths.append(tmp.name)
+                            temp_files.append(tmp.name)
+                            if doc_id < 3:  # Debug first 3 samples
+                                eval_logger.info(f"[Doc {doc_id}] Created temp image {i}: {tmp.name} (size: {visual.size})")
+                                import os
+                                eval_logger.info(f"[Doc {doc_id}] Temp file exists: {os.path.exists(tmp.name)}")
             
             # Prepare generation config
             gen_config = {
@@ -137,37 +154,80 @@ class MIO(lmms):
                 "eos_token_id": 7,  # <|im_end|> for Instruct model
             }
             
-            # Apply chat template (standard mode for image understanding)
-            messages = [
-                {"role": "system", "content": "You are MIO, an AI assistant capable of understanding and generating images, text, videos, and speech."},
-                {"role": "user", "content": context}
-            ]
+            # Add image placeholders to context if images exist
+            if image_paths:
+                # Add image placeholders at the end of the question
+                image_placeholders = "".join([f"<image_placeholder_{i}>" for i in range(len(image_paths))])
+                context_with_images = f"{context}\n{image_placeholders}"
+                eval_logger.info(f"[Doc {doc_id}] 🖼️ Images: {len(image_paths)} paths: {[p[:50] for p in image_paths]}")
+                eval_logger.info(f"[Doc {doc_id}] 📝 Context: {context_with_images[:150]}")
+            else:
+                context_with_images = context
+                eval_logger.info(f"[Doc {doc_id}] ❌ NO IMAGES for context: {context[:100]}")
             
-            # Tokenize with images
-            input_ids = self.tokenizer.tokenize(
-                batch_prompts=[context],
-                batch_image_paths=[images] if images else None,
-                batch_video_paths=None,
+            # Prepare conversation in MIO format
+            conversations = [[{"role": "user", "content": context_with_images}]]
+            
+            # Apply chat template (standard mode for image understanding)
+            # Note: batch_image_paths expects a list of image path lists for each conversation
+            batch_img_paths = [image_paths] if image_paths else None
+            eval_logger.info(f"[Doc {doc_id}] 🔄 Calling tokenizer with batch_image_paths: {batch_img_paths}")
+            
+            inputs = self.tokenizer.apply_chat_template(
+                conversations,
+                batch_image_paths=batch_img_paths,
                 batch_speech_paths=None,
-                mode='std',  # Standard mode for understanding
-                system_prompt=None,
-                apply_chat_template=True
+                mode='std',
+                padding=True,
+                truncation=True,
+                max_length=2048,
+                return_tensors='pt'
             )
+            
+            input_ids = inputs['input_ids'].to(self._device)
+            attention_mask = inputs['attention_mask'].to(self._device)
             
             # Generate
             with torch.inference_mode():
                 outputs = self.model.generate(
-                    input_ids.to(self._device),
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
                     **gen_config
                 )
             
-            # Decode
-            response = self.tokenizer.tokenizer.decode(
-                outputs[0][input_ids.shape[1]:],
-                skip_special_tokens=True
+            # Decode using MIO's detokenize method
+            generated_sequences, _, _ = self.tokenizer.detokenize(
+                outputs,
+                output_image_dir=None,
+                output_speech_dir=None,
+                extract_assistant=True,  # Extract only assistant response for Instruct model
+                save_images=False,
+                save_speeches=False
             )
             
-            results.append(response.strip())
+            response = generated_sequences[0].strip()
+            
+            # Clean up any image/speech tokens that model generated incorrectly
+            import re
+            # Remove image tokens like <img749>, <image>, </image>
+            response = re.sub(r'<img\d+>', '', response)
+            response = re.sub(r'</?image>', '', response)
+            # Remove speech tokens like <spch749>, <spch>, </spch>
+            response = re.sub(r'<spch\d+>', '', response)
+            response = re.sub(r'</?spch>', '', response)
+            response = response.strip()
+            
+            if doc_id < 5:
+                eval_logger.info(f"[Doc {doc_id}] 💬 Response: '{response[:100]}' | Target: '{doc.get('target', 'N/A')}'")
+            results.append(response)
+            
+            # Clean up temp files
+            import os
+            for temp_file in temp_files:
+                try:
+                    os.unlink(temp_file)
+                except:
+                    pass
         
         return results
     

@@ -16,7 +16,15 @@ PROMPTS = {"MULTI_CHOICE_DIRECT_PROMPT": MULTI_CHOICE_DIRECT_PROMPT, "COT_PROMPT
 
 
 def VisualPuzzles_doc_to_visual(doc):
-    return [doc["image"]]
+    # Load image from dict (contains 'bytes' and 'path')
+    import io
+    if isinstance(doc["image"], dict) and "bytes" in doc["image"]:
+        # Load from bytes
+        image = Image.open(io.BytesIO(doc["image"]["bytes"]))
+        return [image.convert("RGB")]
+    else:
+        # Fallback: assume it's already a PIL Image
+        return [doc["image"]]
 
 
 def VisualPuzzles_doc_to_text(doc, lmms_eval_specific_kwargs):
