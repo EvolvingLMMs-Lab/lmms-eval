@@ -248,7 +248,23 @@ NO EXTRAS
 
 def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process maze results - text evaluation only using GPT-4o."""
-    result_text = results[0] if results else ""
+    result_raw = results[0] if results else ""
+    
+    # Handle case where result is a JSON string (from bagel format_output)
+    result_text = ""
+    if isinstance(result_raw, str):
+        # Try to parse as JSON first (bagel outputs JSON string)
+        try:
+            parsed_result = json.loads(result_raw)
+            if isinstance(parsed_result, dict) and "text" in parsed_result:
+                result_text = parsed_result["text"]
+            else:
+                result_text = result_raw
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON, use as-is
+            result_text = result_raw
+    else:
+        result_text = str(result_raw)
 
     # Parse predicted moves from <ANSWER_JSON>
     pred_moves = []
@@ -322,7 +338,23 @@ NO EXTRAS
 
 def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process sliding puzzle results - text evaluation only."""
-    result_text = results[0] if results else ""
+    result_raw = results[0] if results else ""
+    
+    # Handle case where result is a JSON string (from bagel format_output)
+    result_text = ""
+    if isinstance(result_raw, str):
+        # Try to parse as JSON first (bagel outputs JSON string)
+        try:
+            parsed_result = json.loads(result_raw)
+            if isinstance(parsed_result, dict) and "text" in parsed_result:
+                result_text = parsed_result["text"]
+            else:
+                result_text = result_raw
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON, use as-is
+            result_text = result_raw
+    else:
+        result_text = str(result_raw)
 
     # Parse predicted moves from <ANSWER_JSON>
     pred_moves = []

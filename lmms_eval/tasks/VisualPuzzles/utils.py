@@ -27,7 +27,8 @@ def VisualPuzzles_doc_to_visual(doc):
             image = Image.open(image["path"])
         else:
             # Try to use the dict directly as Image (some formats)
-            image = Image.fromarray(image)
+            import numpy as np
+            image = Image.fromarray(np.array(image))
     return [image]
 
 

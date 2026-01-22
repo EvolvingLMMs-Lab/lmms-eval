@@ -271,7 +271,7 @@ class Bagel(lmms):
         # Setup device map for multi-GPU
         device_map = infer_auto_device_map(
             model,
-            max_memory={i: "80GiB" for i in range(torch.cuda.device_count())},
+            max_memory={i: "40GiB" for i in range(torch.cuda.device_count())},
             no_split_module_classes=["Bagel", "Qwen2MoTDecoderLayer"],
         )
 

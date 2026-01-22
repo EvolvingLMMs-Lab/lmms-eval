@@ -49,6 +49,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "mantis": "Mantis",
     "minicpm_v": "MiniCPM_V",
     "minimonkey": "MiniMonkey",
+    "mmada": "MMaDA",
     "moviechat": "MovieChat",
     "mplug_owl_video": "mplug_Owl",
     "nano_banana": "NanoBanana",
@@ -94,6 +95,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "videochat_flash": "VideoChat_Flash",
     "javisgpt": "JavisGPT",
     "javisgpt_visual_cot": "JavisGPTVisualCoT",
+    "janus_pro": "JanusPro",
     "onecat": "OneCAT",
     "onecat_visual_cot": "OneCATVisualCoT",
     "tokenflow" :"TokenFlow",
@@ -102,6 +104,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "whisper_vllm": "WhisperVllm",
     "vora": "VoRA",
     "unipic2": "UniPic2",
+    "unipic2_visual_cot": "UniPic2VisualCoT",
 }
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {

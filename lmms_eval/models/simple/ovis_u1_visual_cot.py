@@ -321,32 +321,41 @@ class OvisU1VisualCoT(lmms):
             # Helper function to build inputs
             def build_inputs(prompt_text, pil_image, target_width, target_height):
                 if pil_image is not None:
+                    # Keep original PIL image for preprocess_inputs
+                    original_pil = pil_image
+                    
+                    # Process image for VAE
                     target_size = (int(target_width), int(target_height))
-                    pil_image, vae_pixel_values, cond_img_ids = self.model.visual_generator.process_image_aspectratio(
+                    processed_img, vae_pixel_values, cond_img_ids = self.model.visual_generator.process_image_aspectratio(
                         pil_image, target_size
                     )
                     cond_img_ids[..., 0] = 1.0
                     vae_pixel_values = vae_pixel_values.unsqueeze(0).to(
                         device=self.model.device, dtype=torch.bfloat16
                     )
-                    img_width = pil_image.width
-                    img_height = pil_image.height
+                    
+                    # Use original PIL image for visual tokenizer
+                    img_width = original_pil.width
+                    img_height = original_pil.height
                     resized_height, resized_width = visual_tokenizer.smart_resize(
                         img_height, img_width, max_pixels=visual_tokenizer.image_processor.min_pixels
                     )
-                    pil_image = pil_image.resize((resized_width, resized_height))
+                    resized_pil = original_pil.resize((resized_width, resized_height))
+                    images_list = [resized_pil]
                 else:
                     vae_pixel_values = None
+                    images_list = []
 
                 _, input_ids, pixel_values, grid_thws = self.model.preprocess_inputs(
                     prompt_text,
-                    [pil_image],
+                    images_list if images_list else None,
                     generation_preface=None,
                     return_labels=False,
                     propagate_exception=False,
-                    multimodal_type='single_image',
+                    multimodal_type='single_image' if images_list else 'text_only',
                     fix_sample_overall_length_navit=False
                 )
+                
                 attention_mask = torch.ne(input_ids, text_tokenizer.pad_token_id)
                 input_ids = input_ids.unsqueeze(0).to(device=self.model.device)
                 attention_mask = attention_mask.unsqueeze(0).to(device=self.model.device)
@@ -369,9 +378,24 @@ class OvisU1VisualCoT(lmms):
 
             # Step 2: Generate conditional with original image + prompt + question
             # Use cond_image (original image) so model can see and analyze it
-            prompt_text = (
-                "<image>\n" + generation_prompt + "\n\nQuestion: " + question
-            )
+            # Build prompt text - generation_prompt may already contain <image> tags
+            # We need exactly 1 <image> tag for 1 image
+            full_prompt = generation_prompt + "\n\nQuestion: " + question
+            image_tag_count = full_prompt.count("<image>")
+            
+            if image_tag_count == 0:
+                # No <image> tag, add one at the beginning
+                prompt_text = "<image>\n" + full_prompt
+            elif image_tag_count == 1:
+                # Already has 1 <image> tag, use as is
+                prompt_text = full_prompt
+            else:
+                # Multiple <image> tags - keep only the first one
+                parts = full_prompt.split("<image>")
+                # parts[0] is before first <image>, parts[1:] are after each <image>
+                # Reconstruct with only one <image> tag
+                prompt_text = parts[0] + "<image>" + "".join(parts[1:])
+            
             input_ids, pixel_values, attention_mask, grid_thws, vae_pixel_values = build_inputs(
                 prompt_text, cond_image, width, height
             )
@@ -388,13 +412,17 @@ class OvisU1VisualCoT(lmms):
                     cond=cond, no_both_cond=no_both_cond, no_txt_cond=None, **gen_kwargs
                 )
 
-            # Save generated image
+            # Save generated image (organized by task)
             generated_images = []
             if generated_images_list is not None and len(generated_images_list) > 0:
+                # Create task-specific subdirectory
+                task_image_dir = os.path.join(self.generated_images_dir, task)
+                os.makedirs(task_image_dir, exist_ok=True)
+                
                 for idx, img in enumerate(generated_images_list):
                     if img is not None and hasattr(img, 'save'):
                         safe_filename = f"{task}_{doc_id}_stage1_{idx}.png"
-                        image_path = os.path.join(self.generated_images_dir, safe_filename)
+                        image_path = os.path.join(task_image_dir, safe_filename)
                         img.save(image_path)
                         generated_images.append(image_path)
                         eval_logger.info(f"Saved generated image: {image_path}")
@@ -440,24 +468,40 @@ class OvisU1VisualCoT(lmms):
 
             # Prepare images list: original image + auxiliary image
             images = []
-            image_placeholder = ""
 
             if original_image is not None:
-                eval_logger.debug("Stage 2 - Using original image + auxiliary image")
                 images.append(original_image)
                 images.append(auxiliary_image)
-                image_placeholder = "<image><image>"
+                expected_image_count = 2
             else:
-                eval_logger.debug("Stage 2 - Using auxiliary image only")
                 images.append(auxiliary_image)
-                image_placeholder = "<image>"
+                expected_image_count = 1
 
-            # Build query: images + prompt + question
-            query = (
-                image_placeholder + "\n" +
-                generation_prompt + "\n\n" +
-                "Question: " + question
-            )
+            # Build query text (without image placeholders first)
+            query_text = generation_prompt + "\n\n" + "Question: " + question
+            
+            # Count existing <image> tags in the query
+            existing_image_tags = query_text.count("<image>")
+            
+            # Adjust <image> tags to match the number of images
+            if existing_image_tags == expected_image_count:
+                # Perfect match, use as is
+                query = query_text
+            elif existing_image_tags < expected_image_count:
+                # Need to add more <image> tags at the beginning
+                tags_to_add = expected_image_count - existing_image_tags
+                image_placeholder = "<image>" * tags_to_add
+                query = image_placeholder + "\n" + query_text
+            else:
+                # Too many <image> tags, keep only the first expected_image_count
+                parts = query_text.split("<image>")
+                # Reconstruct with only expected_image_count tags
+                query = parts[0]
+                for i in range(1, min(expected_image_count + 1, len(parts))):
+                    query += "<image>" + parts[i]
+                # Add remaining parts without <image> tags
+                for i in range(expected_image_count + 1, len(parts)):
+                    query += parts[i]
 
             # Preprocess inputs
             _, input_ids, pixel_values, grid_thws = self.model.preprocess_inputs(
@@ -514,6 +558,41 @@ class OvisU1VisualCoT(lmms):
             else:
                 raise
 
+    def _extract_image_from_various_formats(self, img_data) -> Optional[Image.Image]:
+        """
+        Extract PIL Image from various formats (HuggingFace datasets, file paths, etc.)
+        
+        Args:
+            img_data: Image data in various formats
+            
+        Returns:
+            PIL Image or None if extraction fails
+        """
+        try:
+            if img_data is None:
+                return None
+            elif isinstance(img_data, Image.Image):
+                return img_data.convert("RGB")
+            elif isinstance(img_data, str):
+                # File path
+                return Image.open(img_data).convert("RGB")
+            elif isinstance(img_data, dict):
+                # HuggingFace dataset format
+                if "bytes" in img_data:
+                    from io import BytesIO
+                    return Image.open(BytesIO(img_data["bytes"])).convert("RGB")
+                elif "path" in img_data:
+                    return Image.open(img_data["path"]).convert("RGB")
+                elif "image" in img_data:
+                    inner_img = img_data["image"]
+                    return self._extract_image_from_various_formats(inner_img)
+            else:
+                # Try to open it directly
+                return Image.open(img_data).convert("RGB")
+        except Exception as e:
+            eval_logger.debug(f"Failed to extract image from format {type(img_data)}: {e}")
+            return None
+
     def _save_intermediate_artifacts(
         self,
         doc_id: str,
@@ -565,22 +644,43 @@ class OvisU1VisualCoT(lmms):
         for request in requests:
             contexts, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
 
-            # Extract original image from document using task_dict
+            # Extract original image from document
             original_image = None
             if doc_to_visual is not None:
                 try:
                     # Get doc from task_dict
                     doc = self.task_dict[task][split][doc_id]
+                    
+                    # Try doc_to_visual first
                     original_visuals = doc_to_visual(doc)
+                    
                     if original_visuals and len(original_visuals) > 0:
-                        original_image = original_visuals[0]
-                        if isinstance(original_image, str):
-                            original_image = Image.open(original_image).convert("RGB")
-                        eval_logger.debug(f"Extracted original image for doc {doc_id}")
+                        original_image = self._extract_image_from_various_formats(original_visuals[0])
+                    
+                    # If doc_to_visual didn't work, try direct field access
+                    if original_image is None:
+                        # Try common image field names
+                        for field_name in ["image", "images", "original_image", "img"]:
+                            if field_name in doc:
+                                img_data = doc[field_name]
+                                # Handle list of images
+                                if isinstance(img_data, list):
+                                    if len(img_data) > 0:
+                                        img_data = img_data[0]
+                                original_image = self._extract_image_from_various_formats(img_data)
+                                if original_image is not None:
+                                    eval_logger.debug(f"Extracted image from doc['{field_name}']")
+                                    break
+                    
+                    if original_image is not None:
+                        eval_logger.debug(f"Successfully extracted original image for doc {doc_id}")
+                    else:
+                        eval_logger.warning(f"No image found for doc {doc_id}")
+                        
                 except Exception as e:
-                    eval_logger.warning(
-                        f"Failed to extract original image for doc {doc_id}: {e}"
-                    )
+                    import traceback
+                    eval_logger.error(f"Failed to extract original image for doc {doc_id}: {e}")
+                    eval_logger.debug(f"Traceback: {traceback.format_exc()}")
 
             # Parse contexts to extract generation_prompt if provided
             import re
@@ -646,6 +746,12 @@ class OvisU1VisualCoT(lmms):
                 original_image=original_image,
             )
 
+            # Build full question with image tags for metadata (matching bagel format)
+            if original_image is not None:
+                full_question = f"<image>{actual_question}"
+            else:
+                full_question = actual_question
+
             # Save intermediate artifacts if enabled
             self._save_intermediate_artifacts(
                 doc_id=doc_id,
@@ -653,7 +759,7 @@ class OvisU1VisualCoT(lmms):
                 generation_prompt=generation_prompt,
                 stage1_text=stage1_text,
                 generated_images=generated_images,
-                question=actual_question,
+                question=full_question,
                 stage2_answer=final_answer,
             )
 
