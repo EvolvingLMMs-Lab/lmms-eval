@@ -1,0 +1,35 @@
+dataset_path: MMVP/MMVP
+dataset_kwargs:
+  token: True
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.mmvp_doc_to_visual
+doc_to_text: !function utils.mmvp_doc_to_text
+doc_to_target: !function utils.mmvp_doc_to_target
+
+process_results: !function utils.mmvp_process_results
+
+metric_list:
+  - metric: mmvp_accuracy
+    aggregation: !function utils.mmvp_aggregate_results
+    higher_is_better: true
+  - metric: mmvp_pair_accuracy
+    aggregation: !function utils.mmvp_aggregate_pair_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+
+metadata:
+  version: 0.0
+  # Ground truth corrections applied based on verification in issue #1018
+  # https://github.com/EvolvingLMMs-Lab/lmms-eval/issues/1018
+  # Index 99: Corrected from B to A (elephant tusks are long, not short)
+  # Index 279: Corrected from B to A (person is standing, not sitting)
