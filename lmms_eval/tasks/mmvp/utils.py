@@ -51,10 +51,7 @@ def _get_corrected_answer(index: int, original_answer: str) -> str:
     if index in GROUND_TRUTH_CORRECTIONS:
         corrected = GROUND_TRUTH_CORRECTIONS[index]
         if corrected != original_answer:
-            eval_logger.debug(
-                f"Applied ground truth correction for index {index}: "
-                f"{original_answer} -> {corrected}"
-            )
+            eval_logger.debug(f"Applied ground truth correction for index {index}: " f"{original_answer} -> {corrected}")
         return corrected
     return original_answer
 
@@ -120,9 +117,7 @@ def _parse_options(options_str: str) -> List[str]:
     return [m.strip() for m in matches]
 
 
-def mmvp_doc_to_text(
-    doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Dict[str, Any]] = None
-) -> str:
+def mmvp_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs: Optional[Dict[str, Any]] = None) -> str:
     """
     Construct the prompt text from the document.
 
@@ -247,9 +242,7 @@ def mmvp_aggregate_results(results: List[Dict[str, Any]]) -> float:
     # Log detailed results
     corrected_indices = [r["index"] for r in results if r["correction_applied"]]
     if corrected_indices:
-        eval_logger.info(
-            f"MMVP: Applied ground truth corrections to indices: {corrected_indices}"
-        )
+        eval_logger.info(f"MMVP: Applied ground truth corrections to indices: {corrected_indices}")
 
     eval_logger.info(f"MMVP Accuracy: {accuracy:.4f} ({correct}/{total})")
 
@@ -295,17 +288,12 @@ def mmvp_aggregate_pair_results(results: List[Dict[str, Any]]) -> float:
                 correct_pairs += 1
         elif len(pair_results) == 1:
             # Handle edge case of incomplete pairs (shouldn't happen with full dataset)
-            eval_logger.warning(
-                f"MMVP: Incomplete pair at index {pair_idx}, "
-                f"only {len(pair_results)} sample(s)"
-            )
+            eval_logger.warning(f"MMVP: Incomplete pair at index {pair_idx}, " f"only {len(pair_results)} sample(s)")
 
     if total_pairs == 0:
         return 0.0
 
     pair_accuracy = correct_pairs / total_pairs
-    eval_logger.info(
-        f"MMVP Pair Accuracy: {pair_accuracy:.4f} ({correct_pairs}/{total_pairs})"
-    )
+    eval_logger.info(f"MMVP Pair Accuracy: {pair_accuracy:.4f} ({correct_pairs}/{total_pairs})")
 
     return pair_accuracy
