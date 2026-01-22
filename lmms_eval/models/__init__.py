@@ -18,6 +18,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "aria": "Aria",
     "auroracap": "AuroraCap",
     "bagel": "Bagel",
+    "bagel_umm": "BagelUMM",
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
