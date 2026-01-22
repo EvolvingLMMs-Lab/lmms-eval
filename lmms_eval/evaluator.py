@@ -22,7 +22,9 @@ import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
 import lmms_eval.models
+from lmms_eval.baselines import BASELINE_REGISTRY, load_baseline
 from lmms_eval.evaluator_utils import (
+    compute_baseline_comparison,
     consolidate_group_results,
     consolidate_results,
     get_sample_size,
@@ -326,9 +328,6 @@ def simple_evaluate(
 
         # Baseline comparison (paired t-test)
         if baseline:
-            from lmms_eval.baselines import BASELINE_REGISTRY, load_baseline
-            from lmms_eval.evaluator_utils import compute_baseline_comparison
-
             # Get short display name for baseline
             def get_baseline_display_name(baseline_arg: str) -> str:
                 """Extract a short display name from baseline argument."""
