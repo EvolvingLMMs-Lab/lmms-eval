@@ -38,9 +38,7 @@ def download_json(url: str) -> list:
     return json.loads(response.text)
 
 
-def download_and_extract_images(
-    url: str, output_dir: Path
-) -> dict[str, PILImage.Image]:
+def download_and_extract_images(url: str, output_dir: Path) -> dict[str, PILImage.Image]:
     response = requests.get(url, stream=True)
     response.raise_for_status()
 

@@ -20,9 +20,7 @@ def illusionbench_doc_to_visual(doc: dict[str, Any]) -> list:
     return [doc["image"].convert("RGB")]
 
 
-def illusionbench_doc_to_text(
-    doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None
-) -> str:
+def illusionbench_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None) -> str:
     """Format question text based on question type for lmms-eval framework."""
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
@@ -32,9 +30,7 @@ def illusionbench_doc_to_text(
 
     if question_type == "TF":
         pre_prompt = lmms_eval_specific_kwargs.get("tf_pre_prompt", "")
-        post_prompt = lmms_eval_specific_kwargs.get(
-            "tf_post_prompt", "\nAnswer with True or False only."
-        )
+        post_prompt = lmms_eval_specific_kwargs.get("tf_post_prompt", "\nAnswer with True or False only.")
     else:
         pre_prompt = lmms_eval_specific_kwargs.get("mc_pre_prompt", "")
         post_prompt = lmms_eval_specific_kwargs.get(
@@ -92,9 +88,7 @@ def _normalize_mc_answer(answer: str) -> str:
     return answer
 
 
-def illusionbench_process_results(
-    doc: dict[str, Any], results: list[str]
-) -> dict[str, dict]:
+def illusionbench_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, dict]:
     """Process results and compute correctness for lmms-eval framework."""
     pred = results[0]
     question_type = doc["question_type"]
@@ -125,12 +119,8 @@ def illusionbench_process_results(
 
 def illusionbench_aggregate_results(results: list[dict]) -> float:
     """Aggregate results to compute overall accuracy for lmms-eval framework."""
-    category_results: dict[str, dict[str, list]] = defaultdict(
-        lambda: {"correct": [], "total": []}
-    )
-    type_results: dict[str, dict[str, list]] = defaultdict(
-        lambda: {"correct": [], "total": []}
-    )
+    category_results: dict[str, dict[str, list]] = defaultdict(lambda: {"correct": [], "total": []})
+    type_results: dict[str, dict[str, list]] = defaultdict(lambda: {"correct": [], "total": []})
 
     total_correct = 0
     total_count = 0
