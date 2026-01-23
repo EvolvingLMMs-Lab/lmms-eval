@@ -23,8 +23,8 @@ lmms_eval_specific_kwargs:
 
 dataset_kwargs:
   token: True
+  trust_remote_code: True
   cache_dir: spatial457
-  force_download: true
 
 metadata:
   version: 1.0
