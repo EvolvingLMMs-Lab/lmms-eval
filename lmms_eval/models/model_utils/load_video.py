@@ -16,9 +16,7 @@ def load_video_decord(video_path, max_frames_num):
     else:
         vr = VideoReader(video_path[0], ctx=cpu(0))
     total_frame_num = len(vr)
-    uniform_sampled_frames = np.linspace(
-        0, total_frame_num - 1, max_frames_num, dtype=int
-    )
+    uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
     frame_idx = uniform_sampled_frames.tolist()
     spare_frames = vr.get_batch(frame_idx).asnumpy()
     del vr  # Release VideoReader to prevent memory leak
@@ -50,9 +48,7 @@ def record_video_length_packet(container):
     return frames
 
 
-def load_video_stream(
-    container, num_frm: int = 8, fps: float = None, force_include_last_frame=False
-):
+def load_video_stream(container, num_frm: int = 8, fps: float = None, force_include_last_frame=False):
     # container = av.open(video_path)
     total_frames = container.streams.video[0].frames
     frame_rate = container.streams.video[0].average_rate
