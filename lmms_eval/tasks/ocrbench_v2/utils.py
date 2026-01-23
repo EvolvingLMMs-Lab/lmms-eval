@@ -60,6 +60,10 @@ def ocrbench_v2_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
+def ocrbench_v2_doc_to_target(doc):
+    return doc["answers"]
+
+
 def ocrbench_v2_doc_to_text(doc):
     # Assuming the 'doc' dictionary has a key 'question' with the question text
     question = doc["question"].strip()

@@ -6,7 +6,7 @@ test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.ocrbench_v2_doc_to_visual
 doc_to_text: !function utils.ocrbench_v2_doc_to_text
-doc_to_target: "answer"
+doc_to_target: !function utils.ocrbench_v2_doc_to_target
 generation_kwargs:
   max_new_tokens: 128
   temperature: 0

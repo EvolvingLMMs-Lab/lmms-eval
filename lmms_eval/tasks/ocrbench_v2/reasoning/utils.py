@@ -2,13 +2,14 @@ import re
 
 from lmms_eval.tasks.ocrbench_v2.utils import (
     ocrbench_v2_aggregate_accuracy,
+    ocrbench_v2_doc_to_target,
     ocrbench_v2_doc_to_text,
     ocrbench_v2_doc_to_visual,
 )
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant. When the user asks a question, your response must include two parts: "
-    "first, the reasoning process enclosed in <thinking>...</thinking> tags, then the final answer enclosed in <answer>...</answer> tags."
+    "first, the reasoning process enclosed in <think>...</think> tags, then the final answer enclosed in <answer>...</answer> tags."
     "Please provide a clear, concise response within <answer> </answer> tags that directly addresses the question."
 )
 
@@ -31,7 +32,7 @@ def extract_answer_tag(predict_str):
 
 
 def ocrbench_v2_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = ocrbench_v2_doc_to_text(doc, lmms_eval_specific_kwargs)
+    question = ocrbench_v2_doc_to_text(doc)
     visuals = ocrbench_v2_doc_to_visual(doc)
     system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     messages = [{"role": "user", "content": []}]

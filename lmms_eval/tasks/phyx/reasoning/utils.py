@@ -1,4 +1,5 @@
 from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
+from lmms_eval.tasks.phyx.utils import decode_base64_to_image
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant. When the user asks a question, your response must include two parts: "
@@ -13,8 +14,6 @@ def phyx_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def phyx_doc_to_visual(doc):
-    from lmms_eval.tasks.phyx.utils import decode_base64_to_image
-
     image = decode_base64_to_image(doc["image"])
     return [image]
 
