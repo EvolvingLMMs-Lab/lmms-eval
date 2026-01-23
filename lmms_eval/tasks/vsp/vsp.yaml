@@ -1,0 +1,9 @@
+# Visual-Spatial-Planning Task Group
+# Paper: VSP: Diagnosing the Dual Challenges of Perception and Reasoning
+#        in Spatial Planning Tasks for MLLMs (ICCV 2025)
+# Paper link: https://arxiv.org/abs/2407.01863
+# GitHub: https://github.com/UCSB-NLP-Chang/Visual-Spatial-Planning
+group: vsp
+task:
+  - vsp_google_map
+  - vsp_collision

@@ -1,0 +1,31 @@
+# VSP Collision Detection Task
+# Evaluates time estimation for car and person reaching goal
+dataset_path: AnonyCAD/VSP
+dataset_name: collision
+task: "vsp_collision"
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function utils.collision_doc_to_visual
+doc_to_text: !function utils.collision_doc_to_text
+doc_to_target: "answer"
+
+process_results: !function utils.collision_process_results
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: collision_acc
+    aggregation: !function utils.collision_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  version: 1.0
