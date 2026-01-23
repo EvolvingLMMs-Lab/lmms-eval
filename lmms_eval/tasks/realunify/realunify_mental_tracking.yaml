@@ -1,8 +1,7 @@
-dataset_path: parquet
-dataset_kwargs:
-  data_files: ${LMMS_EVAL_DATA_DIR:-./data}/realunify/realunify_mental_tracking.parquet
+dataset_path: lmms-lab-eval/RealUnify
+dataset_name: mental_tracking
 task: realunify_mental_tracking
-test_split: train
+test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.doc_to_visual
 doc_to_text: !function utils.doc_to_text

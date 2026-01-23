@@ -1,8 +1,7 @@
-dataset_path: parquet
-dataset_kwargs:
-  data_files: ${LMMS_EVAL_DATA_DIR:-./data}/realunify/realunify_attentional_focusing.parquet
+dataset_path: lmms-lab-eval/RealUnify
+dataset_name: attentional_focusing
 task: realunify_attentional_focusing
-test_split: train
+test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.doc_to_visual
 doc_to_text: !function utils.doc_to_text

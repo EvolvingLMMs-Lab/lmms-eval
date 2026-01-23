@@ -5,28 +5,16 @@
 RealUnify is a benchmark designed to evaluate bidirectional capability synergy in unified multimodal models.
 
 - **Paper**: [RealUnify: Do Unified Models Truly Benefit from Unification?](https://arxiv.org/abs/2509.24897)
-- **Dataset**: [DogNeverSleep/RealUnify](https://huggingface.co/datasets/DogNeverSleep/RealUnify)
+- **Dataset**: [lmms-lab-eval/RealUnify](https://huggingface.co/datasets/lmms-lab-eval/RealUnify)
 - **GitHub**: [FrankYang-17/RealUnify](https://github.com/FrankYang-17/RealUnify)
 
-## Data Preparation
+## Dataset
 
-The RealUnify benchmark requires parquet files with annotations. You need to prepare the data in one of these ways:
-
-1. **Request from authors**: Contact `frankyang1517@gmail.com` for the full dataset with annotations
-2. **Convert from JSON**: Download `GEU_direct.json` from the official repo and convert to parquet
-
-Place the parquet files in your data directory:
-```
-${LMMS_EVAL_DATA_DIR}/realunify/
-├── realunify_mental_tracking.parquet
-├── realunify_mental_reconstruction.parquet
-└── realunify_attentional_focusing.parquet
-```
-
-Set the environment variable:
-```bash
-export LMMS_EVAL_DATA_DIR=/path/to/your/data
-```
+The dataset is available at [lmms-lab-eval/RealUnify](https://huggingface.co/datasets/lmms-lab-eval/RealUnify) with configs for each task type:
+- `mental_tracking` (100 samples)
+- `mental_reconstruction` (100 samples)
+- `attentional_focusing` (100 samples)
+- `cognitive_navigation` (100 samples)
 
 ## Benchmark Structure
 
