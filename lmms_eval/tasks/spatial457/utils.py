@@ -9,7 +9,10 @@ import os
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    import datasets
 
 import yaml
 from huggingface_hub import snapshot_download
@@ -31,8 +34,16 @@ cache_dir = snapshot_download(
 )
 
 TASK_INSTRUCTIONS: dict[str, str] = {
-    "L1_single": ("You are an intelligent chatbot designed to answer questions based on " "an image. Your task is to analyze the images, identify attributes of " "the objects, and then determine the answer to the question.\n"),
-    "L2_objects": ("You are an intelligent chatbot designed to answer questions based on " "an image. Your task is to analyze the images, identify attributes of " "multiple objects, and then determine the answer to the question.\n"),
+    "L1_single": (
+        "You are an intelligent chatbot designed to answer questions based on "
+        "an image. Your task is to analyze the images, identify attributes of "
+        "the objects, and then determine the answer to the question.\n"
+    ),
+    "L2_objects": (
+        "You are an intelligent chatbot designed to answer questions based on "
+        "an image. Your task is to analyze the images, identify attributes of "
+        "multiple objects, and then determine the answer to the question.\n"
+    ),
     "L3_2d_spatial": (
         "You are an intelligent chatbot designed to answer questions based on "
         "an image. Your task is to analyze the images, identify attributes of "
@@ -335,3 +346,74 @@ def load_spatial457_questions(category: str) -> list[dict[str, Any]]:
         q["answer"] = str(q.get("answer", ""))
 
     return questions
+
+
+def create_spatial457_dataset(category: str) -> "datasets.Dataset":
+    """Create a HuggingFace Dataset from Spatial457 JSON files.
+
+    This function works around the datasets>=4.0 breaking change that removed
+    support for custom loading scripts.
+
+    Args:
+        category: Category name (e.g., 'L1_single', 'L2_objects').
+
+    Returns:
+        HuggingFace Dataset with the questions for the specified category.
+    """
+    import datasets
+
+    questions = load_spatial457_questions(category)
+    if not questions:
+        eval_logger.warning(f"No questions loaded for category: {category}")
+        return datasets.Dataset.from_dict({})
+
+    data_dict: dict[str, list[Any]] = {
+        "image_filename": [],
+        "question": [],
+        "answer": [],
+        "question_index": [],
+        "category": [],
+    }
+
+    for q in questions:
+        data_dict["image_filename"].append(q.get("image_filename", ""))
+        data_dict["question"].append(q.get("question", ""))
+        data_dict["answer"].append(str(q.get("answer", "")))
+        data_dict["question_index"].append(q.get("question_index", 0))
+        data_dict["category"].append(q.get("category", category))
+
+    return datasets.Dataset.from_dict(data_dict)
+
+
+def load_spatial457_from_local(category: str) -> "datasets.Dataset":
+    """Load Spatial457 dataset from local Arrow files.
+
+    Args:
+        category: Category name (e.g., 'L1_single', 'L2_objects').
+
+    Returns:
+        HuggingFace Dataset loaded from disk.
+
+    Raises:
+        FileNotFoundError: If the local data directory is not set or doesn't exist.
+    """
+    import datasets
+
+    data_dir = os.environ.get("SPATIAL457_DATA_DIR", "")
+    if not data_dir:
+        raise FileNotFoundError(
+            "SPATIAL457_DATA_DIR environment variable not set. "
+            "See README.md for data preparation instructions."
+        )
+
+    category_dir = os.path.join(data_dir, category)
+    if not os.path.exists(category_dir):
+        raise FileNotFoundError(
+            f"Local data not found at {category_dir}. "
+            "Run data preparation script first. See README.md."
+        )
+
+    loaded = datasets.load_from_disk(category_dir)
+    if isinstance(loaded, datasets.DatasetDict):
+        return loaded["validation"]
+    return loaded
