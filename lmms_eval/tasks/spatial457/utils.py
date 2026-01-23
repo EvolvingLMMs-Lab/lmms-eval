@@ -25,16 +25,8 @@ cache_dir = snapshot_download(
 )
 
 TASK_INSTRUCTIONS: dict[str, str] = {
-    "L1_single": (
-        "You are an intelligent chatbot designed to answer questions based on an image. "
-        "Your task is to analyze the images, identify attributes of the objects, "
-        "and then determine the answer to the question.\n"
-    ),
-    "L2_objects": (
-        "You are an intelligent chatbot designed to answer questions based on an image. "
-        "Your task is to analyze the images, identify attributes of multiple objects, "
-        "and then determine the answer to the question.\n"
-    ),
+    "L1_single": ("You are an intelligent chatbot designed to answer questions based on an image. " "Your task is to analyze the images, identify attributes of the objects, " "and then determine the answer to the question.\n"),
+    "L2_objects": ("You are an intelligent chatbot designed to answer questions based on an image. " "Your task is to analyze the images, identify attributes of multiple objects, " "and then determine the answer to the question.\n"),
     "L3_2d_spatial": (
         "You are an intelligent chatbot designed to answer questions based on an image. "
         "Your task is to analyze the images, identify attributes of multiple objects "

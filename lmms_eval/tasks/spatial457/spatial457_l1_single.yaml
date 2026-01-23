@@ -2,3 +2,9 @@ dataset_name: L1_single
 test_split: validation
 task: spatial457_l1_single
 include: _default_template_yaml
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    category: "L1_single"
