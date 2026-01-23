@@ -3,7 +3,7 @@
 dataset_path: lscpku/OlympiadBench-official
 dataset_kwargs:
   token: True
-  dataset_name: maths_en_all
+dataset_name: maths_en_all
 task: olympiadbench_math_en_reasoning
 test_split: test
 output_type: generate_until
