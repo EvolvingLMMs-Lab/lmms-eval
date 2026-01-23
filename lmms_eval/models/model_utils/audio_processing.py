@@ -66,10 +66,7 @@ def load_audio_safe(
             else:
                 audio_array = np.array(audio_data)
                 sample_rate = 16000
-                eval_logger.warning(
-                    f"Unexpected audio format with datasets {datasets_version}, "
-                    f"attempting conversion. Type: {type(audio_data)}"
-                )
+                eval_logger.warning(f"Unexpected audio format with datasets {datasets_version}, " f"attempting conversion. Type: {type(audio_data)}")
         else:
             if isinstance(audio_data, dict):
                 audio_array = np.array(audio_data["array"])
@@ -82,26 +79,17 @@ def load_audio_safe(
             audio_array = audio_array.mean(axis=-1)
 
         if target_sr is not None and target_sr != sample_rate:
-            audio_array = resample(
-                audio_array, orig_sr=sample_rate, target_sr=target_sr
-            )
+            audio_array = resample(audio_array, orig_sr=sample_rate, target_sr=target_sr)
             sample_rate = target_sr
 
         return audio_array, sample_rate
 
     except Exception as e:
-        raise ValueError(
-            f"Failed to load audio from document. datasets version: {datasets_version}, "
-            f"audio_data type: {type(audio_data)}, error: {e}"
-        ) from e
+        raise ValueError(f"Failed to load audio from document. datasets version: {datasets_version}, " f"audio_data type: {type(audio_data)}, error: {e}") from e
 
 
-def downsample_audio(
-    audio_array: np.ndarray, original_sr: int, target_sr: int
-) -> np.ndarray:
-    audio_resample_array = resample(
-        audio_array, orig_sr=original_sr, target_sr=target_sr
-    )
+def downsample_audio(audio_array: np.ndarray, original_sr: int, target_sr: int) -> np.ndarray:
+    audio_resample_array = resample(audio_array, orig_sr=original_sr, target_sr=target_sr)
     return audio_resample_array
 
 
