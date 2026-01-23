@@ -41,17 +41,18 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
+
 from lmms_eval.tasks.kris_bench.prompt import (
-    prompt_consist,
-    prompt_quality,
-    prompt_instruction_following,
     prompt_abnormal_instruction_following,
-    prompt_dual_evaluation,
-    prompt_view_instruction_following,
-    prompt_consist_temporal,
-    prompt_instruction_temporal,
+    prompt_consist,
     prompt_consist_multi,
+    prompt_consist_temporal,
+    prompt_dual_evaluation,
+    prompt_instruction_following,
     prompt_instruction_multi,
+    prompt_instruction_temporal,
+    prompt_quality,
+    prompt_view_instruction_following,
 )
 
 # -----------------------------------------------------------------------------
