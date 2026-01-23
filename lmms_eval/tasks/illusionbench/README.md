@@ -4,11 +4,11 @@ IllusionBench is a benchmark for evaluating visual illusion understanding in Vis
 
 **Paper**: [IllusionBench: A Large-scale and Comprehensive Benchmark for Visual Illusion Understanding in Vision-Language Models](https://arxiv.org/abs/2501.00848)
 
-**Dataset**: [HuggingFace](https://huggingface.co/datasets/lmms-lab/IllusionBench)
+**Dataset**: [lmms-lab-eval/IllusionBench](https://huggingface.co/datasets/lmms-lab-eval/IllusionBench)
 
 ## Overview
 
-- 1,051 images with 5,548 question-answer pairs
+- 5,357 question-answer pairs from 1,000+ images
 - Covers classic cognitive illusions and real-world scene illusions
 - Question types: True/False and Multiple Choice
 - Categories: Classic Cognitive, Trap, Real Scene, Ishihara, No Illusion

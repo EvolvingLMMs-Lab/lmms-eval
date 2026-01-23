@@ -1,6 +1,4 @@
-dataset_path: lmms-lab/IllusionBench
-dataset_kwargs:
-  token: True
+dataset_path: lmms-lab-eval/IllusionBench
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.illusionbench_doc_to_visual
