@@ -1,5 +1,5 @@
 dataset_name: L3_2d_spatial
-test_split: validation
+test_split: test
 task: spatial457_l3_2d_spatial
 include: _default_template_yaml
 

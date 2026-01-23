@@ -4,34 +4,12 @@ This module provides functions for processing the Spatial457 benchmark,
 which evaluates 6D spatial reasoning capabilities of large multimodal models.
 """
 
-import json
-import os
 import re
 from collections import defaultdict
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
-if TYPE_CHECKING:
-    import datasets
-
-import yaml
-from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import Image
-
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for line in raw_data:
-        if "!function" not in line:
-            safe_data.append(line)
-    config = yaml.safe_load("".join(safe_data))
-
-cache_dir = snapshot_download(
-    repo_id=config["dataset_path"],
-    repo_type="dataset",
-    local_dir_use_symlinks=False,
-)
 
 TASK_INSTRUCTIONS: dict[str, str] = {
     "L1_single": (
@@ -105,24 +83,13 @@ def spatial457_doc_to_visual(doc: dict[str, Any]) -> list[Image.Image]:
 
     Returns:
         List containing a single PIL Image in RGB format.
-
-    Raises:
-        FileNotFoundError: If the image file cannot be found.
     """
-    image_filename = doc.get("image_filename", "")
-    if not image_filename:
-        image = doc.get("image")
-        if image is not None:
-            if isinstance(image, Image.Image):
-                return [image.convert("RGB")]
-            return [image]
+    image = doc.get("image")
+    if image is None:
         return []
-
-    image_path = os.path.join(cache_dir, "images", image_filename)
-    if os.path.exists(image_path):
-        return [Image.open(image_path).convert("RGB")]
-
-    raise FileNotFoundError(f"Image path: {image_path} does not exist.")
+    if isinstance(image, Image.Image):
+        return [image.convert("RGB")]
+    return [image]
 
 
 def spatial457_doc_to_text(
@@ -321,99 +288,3 @@ def _check_correctness(gt: str, pred: str) -> bool:
         return int(gt_normalized) == int(pred_normalized)
 
     return False
-
-
-def load_spatial457_questions(category: str) -> list[dict[str, Any]]:
-    """Load questions for a specific Spatial457 category.
-
-    Args:
-        category: Category name (e.g., 'L1_single', 'L2_objects').
-
-    Returns:
-        List of question dictionaries.
-    """
-    json_path = os.path.join(cache_dir, "questions", f"{category}.json")
-    if not os.path.exists(json_path):
-        eval_logger.warning(f"Question file not found: {json_path}")
-        return []
-
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    questions = data.get("questions", [])
-    for q in questions:
-        q["category"] = category
-        q["answer"] = str(q.get("answer", ""))
-
-    return questions
-
-
-def create_spatial457_dataset(category: str) -> "datasets.Dataset":
-    """Create a HuggingFace Dataset from Spatial457 JSON files.
-
-    This function works around the datasets>=4.0 breaking change that removed
-    support for custom loading scripts.
-
-    Args:
-        category: Category name (e.g., 'L1_single', 'L2_objects').
-
-    Returns:
-        HuggingFace Dataset with the questions for the specified category.
-    """
-    import datasets
-
-    questions = load_spatial457_questions(category)
-    if not questions:
-        eval_logger.warning(f"No questions loaded for category: {category}")
-        return datasets.Dataset.from_dict({})
-
-    data_dict: dict[str, list[Any]] = {
-        "image_filename": [],
-        "question": [],
-        "answer": [],
-        "question_index": [],
-        "category": [],
-    }
-
-    for q in questions:
-        data_dict["image_filename"].append(q.get("image_filename", ""))
-        data_dict["question"].append(q.get("question", ""))
-        data_dict["answer"].append(str(q.get("answer", "")))
-        data_dict["question_index"].append(q.get("question_index", 0))
-        data_dict["category"].append(q.get("category", category))
-
-    return datasets.Dataset.from_dict(data_dict)
-
-
-def load_spatial457_from_local(category: str) -> "datasets.Dataset":
-    """Load Spatial457 dataset from local Arrow files.
-
-    Args:
-        category: Category name (e.g., 'L1_single', 'L2_objects').
-
-    Returns:
-        HuggingFace Dataset loaded from disk.
-
-    Raises:
-        FileNotFoundError: If the local data directory is not set or doesn't exist.
-    """
-    import datasets
-
-    data_dir = os.environ.get("SPATIAL457_DATA_DIR", "")
-    if not data_dir:
-        raise FileNotFoundError(
-            "SPATIAL457_DATA_DIR environment variable not set. "
-            "See README.md for data preparation instructions."
-        )
-
-    category_dir = os.path.join(data_dir, category)
-    if not os.path.exists(category_dir):
-        raise FileNotFoundError(
-            f"Local data not found at {category_dir}. "
-            "Run data preparation script first. See README.md."
-        )
-
-    loaded = datasets.load_from_disk(category_dir)
-    if isinstance(loaded, datasets.DatasetDict):
-        return loaded["validation"]
-    return loaded
