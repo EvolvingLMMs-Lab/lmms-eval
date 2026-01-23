@@ -1,7 +1,5 @@
-dataset_path: parquet
-dataset_kwargs:
-  data_files:
-    test: "${UNI_MMMU_DATA_DIR}/jigsaw_dataset_2x2ref/*.parquet"
+dataset_path: lmms-lab-eval/UniMMMU
+dataset_name: jigsaw
 task: "uni_mmmu_jigsaw"
 test_split: test
 output_type: generate_until

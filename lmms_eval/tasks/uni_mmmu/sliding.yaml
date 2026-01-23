@@ -1,7 +1,5 @@
-dataset_path: parquet
-dataset_kwargs:
-  data_files:
-    test: "${UNI_MMMU_DATA_DIR}/sliding_puzzle_dataset/*.parquet"
+dataset_path: lmms-lab-eval/UniMMMU
+dataset_name: sliding
 task: "uni_mmmu_sliding"
 test_split: test
 output_type: generate_until
