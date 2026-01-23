@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional
 
 from PIL import Image
 
-
 JIGSAW_PROMPT = """You are given:
 (1) a 2x2 reference image with the bottom-right cell hidden
 (2) two candidate patches ("Candidate 0" and "Candidate 1")
@@ -148,9 +147,7 @@ def jigsaw_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return images
 
 
-def jigsaw_doc_to_text(
-    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
-) -> str:
+def jigsaw_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None) -> str:
     return JIGSAW_PROMPT
 
 
@@ -217,9 +214,7 @@ def maze_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def maze_doc_to_text(
-    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
-) -> str:
+def maze_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None) -> str:
     return MAZE_PROMPT
 
 
@@ -252,19 +247,11 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             pred_moves = [str(m).strip().lower() for m in moves_data]
 
     gt_moves_str = doc.get("steps", "[]")
-    gt_moves = (
-        _parse_json_list(gt_moves_str)
-        if isinstance(gt_moves_str, str)
-        else gt_moves_str
-    )
+    gt_moves = _parse_json_list(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
     gt_moves = [str(m).lower() for m in gt_moves]
 
     exact = 1 if pred_moves == gt_moves else 0
-    frame_acc = (
-        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
-        if gt_moves
-        else 0.0
-    )
+    frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
 
     return {"exact_match": exact, "frame_accuracy": frame_acc}
 
@@ -277,9 +264,7 @@ def sliding_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def sliding_doc_to_text(
-    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
-) -> str:
+def sliding_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None) -> str:
     return SLIDING_PROMPT
 
 
@@ -312,19 +297,11 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             pred_moves = [str(m).strip().lower() for m in moves_data]
 
     gt_moves_str = doc.get("steps_words", "[]")
-    gt_moves = (
-        _parse_json_list(gt_moves_str)
-        if isinstance(gt_moves_str, str)
-        else gt_moves_str
-    )
+    gt_moves = _parse_json_list(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
     gt_moves = [str(m).lower() for m in gt_moves]
 
     exact = 1 if pred_moves == gt_moves else 0
-    frame_acc = (
-        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
-        if gt_moves
-        else 0.0
-    )
+    frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
 
     return {"exact_match": exact, "frame_accuracy": frame_acc}
 
@@ -337,9 +314,7 @@ def geometry_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def geometry_doc_to_text(
-    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
-) -> str:
+def geometry_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None) -> str:
     question = doc.get("question", doc.get("problem", ""))
     return f"{GEOMETRY_PROMPT}\n\nProblem: {question}"
 
