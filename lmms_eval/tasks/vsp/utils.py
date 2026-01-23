@@ -136,9 +136,7 @@ def vsp_doc_to_visual(doc: dict[str, Any]) -> list[Image.Image]:
     return images
 
 
-def vsp_doc_to_text(
-    doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None
-) -> str:
+def vsp_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None) -> str:
     """Generic text extractor for VSP tasks."""
     return doc.get("question", doc.get("prompt", ""))
 
@@ -158,18 +156,14 @@ def gmap_doc_to_visual(doc: dict[str, Any]) -> list[Image.Image]:
     return images
 
 
-def gmap_doc_to_text(
-    doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None
-) -> str:
+def gmap_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None) -> str:
     """Get prompt for google map task."""
     if "prompt" in doc:
         return doc["prompt"]
     return GMAP_PROMPT
 
 
-def gmap_process_results(
-    doc: dict[str, Any], results: list[str]
-) -> dict[str, dict[str, Any]]:
+def gmap_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, dict[str, Any]]:
     """Process google map results - parse directions and compare."""
     result_text = results[0] if results else ""
 
@@ -230,9 +224,7 @@ def gmap_aggregate_results(results: list[dict[str, Any]]) -> float:
     """Aggregate google map results."""
     scores = [r["score"] for r in results]
     acc = sum(scores) / len(scores) if scores else 0.0
-    eval_logger.info(
-        f"Google Map Accuracy: {acc:.4f} ({sum(scores):.0f}/{len(scores)})"
-    )
+    eval_logger.info(f"Google Map Accuracy: {acc:.4f} ({sum(scores):.0f}/{len(scores)})")
     return acc
 
 
@@ -251,9 +243,7 @@ def collision_doc_to_visual(doc: dict[str, Any]) -> list[Image.Image]:
     return images
 
 
-def collision_doc_to_text(
-    doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None
-) -> str:
+def collision_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: dict[str, Any] | None = None) -> str:
     """Get prompt for collision task."""
     if "prompt" in doc:
         return doc["prompt"]
@@ -265,9 +255,7 @@ def collision_doc_to_text(
     )
 
 
-def collision_process_results(
-    doc: dict[str, Any], results: list[str]
-) -> dict[str, dict[str, Any]]:
+def collision_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, dict[str, Any]]:
     """Process collision results - parse Car/Person times and compare."""
     result_text = results[0] if results else ""
 
@@ -307,13 +295,8 @@ def collision_aggregate_results(results: list[dict[str, Any]]) -> float:
     person_acc = sum(person_scores) / len(person_scores) if person_scores else 0.0
     overall_acc = (car_acc + person_acc) / 2
 
-    eval_logger.info(
-        f"  Car Accuracy: {car_acc:.4f} ({sum(car_scores):.0f}/{len(car_scores)})"
-    )
-    eval_logger.info(
-        f"  Person Accuracy: {person_acc:.4f} "
-        f"({sum(person_scores):.0f}/{len(person_scores)})"
-    )
+    eval_logger.info(f"  Car Accuracy: {car_acc:.4f} ({sum(car_scores):.0f}/{len(car_scores)})")
+    eval_logger.info(f"  Person Accuracy: {person_acc:.4f} " f"({sum(person_scores):.0f}/{len(person_scores)})")
     eval_logger.info(f"  Overall Accuracy: {overall_acc:.4f}")
 
     return overall_acc
