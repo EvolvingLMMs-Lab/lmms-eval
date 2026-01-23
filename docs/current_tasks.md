@@ -36,7 +36,7 @@ python -m lmms_eval --tasks list_with_num
 
 ### Core VQA & Understanding Benchmarks
 - [AI2D](https://arxiv.org/abs/1603.07396) (ai2d)
-- [BLINK](https://github.com/jdf-prog/BLINK) (blink)
+- [BLINK](https://github.com/zeyofu/BLINK_Benchmark) (blink)
 - [ChartQA](https://github.com/vis-nlp/ChartQA) (chartqa)
 - [CharXiv](https://charxiv.github.io/) (charxiv)
 - [COCO Caption](https://github.com/tylin/coco-caption) (coco_cap)
