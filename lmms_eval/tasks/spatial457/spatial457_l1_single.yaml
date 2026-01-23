@@ -1,0 +1,4 @@
+dataset_name: L1_single
+test_split: validation
+task: spatial457_l1_single
+include: _default_template_yaml

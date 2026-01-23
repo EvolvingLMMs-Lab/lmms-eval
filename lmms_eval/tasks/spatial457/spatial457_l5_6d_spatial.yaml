@@ -1,0 +1,4 @@
+dataset_name: L5_6d_spatial
+test_split: validation
+task: spatial457_l5_6d_spatial
+include: _default_template_yaml

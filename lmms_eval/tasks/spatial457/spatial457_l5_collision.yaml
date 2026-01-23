@@ -1,0 +1,4 @@
+dataset_name: L5_collision
+test_split: validation
+task: spatial457_l5_collision
+include: _default_template_yaml

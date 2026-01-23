@@ -1,0 +1,4 @@
+dataset_name: L4_occ
+test_split: validation
+task: spatial457_l4_occ
+include: _default_template_yaml

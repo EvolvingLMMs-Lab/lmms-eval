@@ -1,0 +1,4 @@
+dataset_name: L4_pose
+test_split: validation
+task: spatial457_l4_pose
+include: _default_template_yaml
