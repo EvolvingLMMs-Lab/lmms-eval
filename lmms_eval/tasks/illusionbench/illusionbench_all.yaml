@@ -1,0 +1,2 @@
+task: illusionbench_all
+include: _default_template_yaml
