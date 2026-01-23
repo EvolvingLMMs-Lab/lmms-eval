@@ -52,3 +52,4 @@ workspace/*
 .claude/*
 remote_code/*
 .opencode
+.worktrees/
