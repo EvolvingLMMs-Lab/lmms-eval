@@ -22,6 +22,8 @@
 
 ## Объявления
 
+**Январь 2026** — Мы признали, что пространственное и композиционное рассуждение оставались слепыми зонами в существующих бенчмарках. Мы добавили [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) и [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Для команд, использующих удаленные конвейеры оценки, мы представили HTTP-сервер для оценки (#972). Для тех, кому нужна статистическая строгость, мы добавили CLT и оценку кластеризованной стандартной ошибки (#989).
+
 - [2025-10] 🚀🚀 **LMMs-Eval v0.5** здесь! Этот крупный релиз включает комплексную оценку аудио, кэширование ответов, 5 новых моделей (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme) и более 50 новых вариантов бенчмарков, охватывающих аудио (Step2, VoiceBench, WenetSpeech), зрение (CharXiv, Lemonade) и рассуждения (CSBench, SciBench, MedQA, SuperGPQA). Подробности см. в [примечаниях к релизу](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
 - [2025-07] 🚀🚀 Мы выпустили `lmms-eval-0.4`. Подробности см. в [примечаниях к релизу](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md).
 
@@ -91,10 +93,66 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/llava_onevision.sh
 ```
 
+**Оценка LLaVA-OneVision1_5**
+
+```bash
+bash examples/models/llava_onevision1_5.sh
+```
+
+**Оценка LLaMA-3.2-Vision**
+
+```bash
+bash examples/models/llama_vision.sh
+```
+
+**Оценка Qwen2.5-VL**
+
+```bash
+bash examples/models/qwen2_5_vl.sh
+```
+
+**Оценка с использованием тензорного параллелизма для больших моделей (llava-next-72b)**
+
+```bash
+bash examples/models/tensor_parallel.sh
+```
+
+**Оценка с использованием SGLang для больших моделей (llava-next-72b)**
+
+```bash
+bash examples/models/sglang.sh
+```
+
 **Дополнительные параметры**
 
 ```bash
 python3 -m lmms_eval --help
+```
+
+**Переменные окружения**
+Перед запуском экспериментов и оценок мы рекомендуем экспортировать следующие переменные окружения. Некоторые из них необходимы для работы определенных задач.
+
+```bash
+export OPENAI_API_KEY="<ВАШ_API_KEY>"
+export HF_HOME="<Путь к кэшу HF>" 
+export HF_TOKEN="<ВАШ_API_KEY>"
+export HF_HUB_ENABLE_HF_TRANSFER="1"
+export REKA_API_KEY="<ВАШ_API_KEY>"
+# Другие возможные переменные окружения включают 
+# ANTHROPIC_API_KEY, DASHSCOPE_API_KEY и т. д.
+```
+
+**Общие проблемы с окружением**
+
+Иногда вы можете столкнуться с общими проблемами, например, ошибками, связанными с httpx или protobuf. Для решения этих проблем вы можете сначала попробовать:
+
+```bash
+python3 -m pip install httpx==0.23.3;
+python3 -m pip install protobuf==3.20;
+# Если вы используете numpy==2.x, это иногда может вызывать ошибки
+python3 -m pip install numpy==1.26;
+# Иногда для работы токенизатора требуется sentencepiece
+python3 -m pip install sentencepiece;
 ```
 
 ## Добавление пользовательской модели и набора данных
@@ -116,5 +174,15 @@ lmms_eval — это форк [lm-eval-harness](https://github.com/EleutherAI/lm
       archivePrefix={arXiv},
       primaryClass={cs.CL},
       url={https://arxiv.org/abs/2407.12772}, 
+}
+
+@misc{lmms_eval2024,
+    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
+    author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
+    publisher    = {Zenodo},
+    version      = {v0.1.0},
+    month={March},
+    year={2024}
 }
 ```

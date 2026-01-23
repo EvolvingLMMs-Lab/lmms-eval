@@ -700,6 +700,67 @@ def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
     return math.sqrt(se_clt_squared + cross_term)
 
 
+def paired_ttest(current_scores: List[float], baseline_scores: List[float]) -> dict:
+    """
+    Perform paired t-test comparing current model scores against baseline.
+
+    This implements a paired-differences test for model comparison, computing:
+    - Mean difference (current - baseline)
+    - Standard error of the difference
+    - 95% confidence interval
+    - t-statistic and p-value
+
+    Args:
+        current_scores: List of scores from the current model (per sample)
+        baseline_scores: List of scores from the baseline model (per sample)
+
+    Returns:
+        dict with keys: mean_diff, se_diff, ci_lower, ci_upper, t_stat, p_value, n
+    """
+    from scipy import stats
+
+    if len(current_scores) != len(baseline_scores):
+        raise ValueError(f"Score lists must have same length: current={len(current_scores)}, baseline={len(baseline_scores)}")
+
+    n = len(current_scores)
+    if n < 2:
+        return {
+            "mean_diff": float("nan"),
+            "se_diff": float("nan"),
+            "ci_lower": float("nan"),
+            "ci_upper": float("nan"),
+            "t_stat": float("nan"),
+            "p_value": float("nan"),
+            "n": n,
+        }
+
+    diffs = [c - b for c, b in zip(current_scores, baseline_scores)]
+    mean_diff = sum(diffs) / n
+    var_diff = sum((d - mean_diff) ** 2 for d in diffs) / (n - 1)
+    se_diff = math.sqrt(var_diff / n)
+
+    if se_diff == 0:
+        t_stat = float("inf") if mean_diff > 0 else float("-inf") if mean_diff < 0 else 0.0
+        p_value = 0.0 if mean_diff != 0 else 1.0
+    else:
+        t_stat = mean_diff / se_diff
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), n - 1))
+
+    t_crit = stats.t.ppf(0.975, n - 1)
+    ci_lower = mean_diff - t_crit * se_diff
+    ci_upper = mean_diff + t_crit * se_diff
+
+    return {
+        "mean_diff": mean_diff,
+        "se_diff": se_diff,
+        "ci_lower": ci_lower,
+        "ci_upper": ci_upper,
+        "t_stat": t_stat,
+        "p_value": p_value,
+        "n": n,
+    }
+
+
 def power_analysis(
     effect_size: float,
     std_a: float = None,

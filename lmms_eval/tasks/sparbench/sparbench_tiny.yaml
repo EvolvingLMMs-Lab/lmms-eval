@@ -1,0 +1,4 @@
+# taken from https://github.com/LogosRoboticsGroup/SPAR/blob/main/lmms-eval/lmms_eval/tasks/sparbench_tiny/sparbench_tiny.yaml
+dataset_path: jasonzhango/SPAR-Bench-Tiny
+task: sparbench_tiny
+include: _default_template_yaml

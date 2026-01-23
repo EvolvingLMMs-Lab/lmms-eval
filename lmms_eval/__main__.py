@@ -337,6 +337,8 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
     parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
+    parser.add_argument("-n", "--num_samples", type=int, default=1, help="Number of samples per question for model stability measurement. When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.")
+    parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
 
     # Power Analysis arguments
     parser.add_argument(
@@ -624,6 +626,8 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
         force_simple=args.force_simple,
         launcher_args=args.launcher_args,
+        num_samples=args.num_samples,
+        baseline=args.baseline,
         **request_caching_args,
     )
 
