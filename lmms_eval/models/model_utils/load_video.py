@@ -31,15 +31,10 @@ def load_video_decord(video_path, max_frames_num):
 
     # Guard for empty or corrupted videos
     if total_frame_num <= 0:
-        raise ValueError(
-            f"Video has no extractable frames: {video_path}. "
-            "Check if the file is corrupted or has unsupported encoding."
-        )
+        raise ValueError(f"Video has no extractable frames: {video_path}. " "Check if the file is corrupted or has unsupported encoding.")
 
     # Use unique indices to prevent duplicate frame extraction for short videos
-    uniform_sampled_frames = np.linspace(
-        0, total_frame_num - 1, max_frames_num, dtype=int
-    )
+    uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
     frame_idx = np.unique(uniform_sampled_frames).tolist()
 
     spare_frames = vr.get_batch(frame_idx).asnumpy()
@@ -71,9 +66,7 @@ def record_video_length_packet(container):
     return frames
 
 
-def load_video_stream(
-    container, num_frm: int = 8, fps: float = None, force_include_last_frame=False
-):
+def load_video_stream(container, num_frm: int = 8, fps: float = None, force_include_last_frame=False):
     # container = av.open(video_path)
     total_frames = container.streams.video[0].frames
     frame_rate = container.streams.video[0].average_rate
@@ -148,10 +141,7 @@ def read_video_pyav(
         frames = record_video_length_packet(container)
 
     if not frames:
-        raise ValueError(
-            f"No frames extracted from video: {video_path}. "
-            "The video may be corrupted or use an unsupported codec."
-        )
+        raise ValueError(f"No frames extracted from video: {video_path}. " "The video may be corrupted or use an unsupported codec.")
 
     return np.stack([x.to_ndarray(format=format) for x in frames])
 
