@@ -74,12 +74,8 @@ def _compare_math_answers(pred: str, gt: str, tolerance: float = 0.01) -> bool:
         return True
 
     try:
-        pred_val = float(
-            eval(pred_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979"))
-        )
-        gt_val = float(
-            eval(gt_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979"))
-        )
+        pred_val = float(eval(pred_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979")))
+        gt_val = float(eval(gt_norm.replace("sqrt", "**0.5").replace("pi", "3.14159265358979")))
         if abs(pred_val - gt_val) < tolerance:
             return True
         if gt_val != 0 and abs((pred_val - gt_val) / gt_val) < tolerance:
@@ -147,11 +143,7 @@ def auxsolidmath_process_results(
     gt_answer = doc.get("answer", "")
 
     extracted = _extract_answer_from_response(response)
-    is_correct = (
-        _compare_math_answers(extracted, gt_answer)
-        if extracted and gt_answer
-        else False
-    )
+    is_correct = _compare_math_answers(extracted, gt_answer) if extracted and gt_answer else False
 
     return {
         "auxsolidmath_accuracy": 1.0 if is_correct else 0.0,
