@@ -117,9 +117,7 @@ class LlavaVid(lmms):
         if accelerator.num_processes > 1:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
-        elif accelerator.num_processes == 1 and (
-            device_map == "auto" or device_map == "balanced_low_0"
-        ):
+        elif accelerator.num_processes == 1 and (device_map == "auto" or device_map == "balanced_low_0"):
             self._device = torch.device(device)
             self.device_map = device_map
         else:
@@ -160,15 +158,9 @@ class LlavaVid(lmms):
 
                 if "224" in cfg_pretrained.mm_vision_tower:
                     # suppose the length of text tokens is around 1000, from bo's report
-                    least_token_number = (
-                        self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2
-                        + 1000
-                    )
+                    least_token_number = self.max_frames_num * (16 // self.mm_spatial_pool_stride) ** 2 + 1000
                 else:
-                    least_token_number = (
-                        self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2
-                        + 1000
-                    )
+                    least_token_number = self.max_frames_num * (24 // self.mm_spatial_pool_stride) ** 2 + 1000
 
                 scaling_factor = math.ceil(least_token_number / 4096)
                 if scaling_factor >= 2:
@@ -179,31 +171,25 @@ class LlavaVid(lmms):
                         "type": "linear",
                     }
                     overwrite_config["max_sequence_length"] = 4096 * scaling_factor
-                    overwrite_config["tokenizer_model_max_length"] = (
-                        4096 * scaling_factor
-                    )
+                    overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
 
-            self._tokenizer, self._model, self._image_processor, self._max_length = (
-                load_pretrained_model(
-                    pretrained,
-                    None,
-                    self.model_name,
-                    device_map=self.device_map,
-                    torch_dtype=self.torch_dtype,
-                    overwrite_config=overwrite_config,
-                    attn_implementation=attn_implementation,
-                )
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+                pretrained,
+                None,
+                self.model_name,
+                device_map=self.device_map,
+                torch_dtype=self.torch_dtype,
+                overwrite_config=overwrite_config,
+                attn_implementation=attn_implementation,
             )
         else:
-            self._tokenizer, self._model, self._image_processor, self._max_length = (
-                load_pretrained_model(
-                    pretrained,
-                    None,
-                    self.model_name,
-                    device_map=self.device_map,
-                    torch_dtype=self.torch_dtype,
-                    attn_implementation=attn_implementation,
-                )
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+                pretrained,
+                None,
+                self.model_name,
+                device_map=self.device_map,
+                torch_dtype=self.torch_dtype,
+                attn_implementation=attn_implementation,
             )
 
         self._config = self._model.config
@@ -236,35 +222,21 @@ class LlavaVid(lmms):
             if accelerator.distributed_type == DistributedType.DEEPSPEED:
                 kwargs = {
                     "train_micro_batch_size_per_gpu": self.batch_size_per_gpu,
-                    "train_batch_size": self.batch_size_per_gpu
-                    * accelerator.num_processes,
+                    "train_batch_size": self.batch_size_per_gpu * accelerator.num_processes,
                 }
-                AcceleratorState().deepspeed_plugin.deepspeed_config_process(
-                    must_match=True, **kwargs
-                )
-                eval_logger.info(
-                    "Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0"
-                )
-            if (
-                accelerator.distributed_type == DistributedType.FSDP
-                or accelerator.distributed_type == DistributedType.DEEPSPEED
-            ):
+                AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **kwargs)
+                eval_logger.info("Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0")
+            if accelerator.distributed_type == DistributedType.FSDP or accelerator.distributed_type == DistributedType.DEEPSPEED:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         elif accelerator.num_processes == 1 and device_map == "auto":
-            eval_logger.info(
-                f"Using {accelerator.num_processes} devices with tensor parallelism"
-            )
+            eval_logger.info(f"Using {accelerator.num_processes} devices with tensor parallelism")
             self._rank = 0
             self._world_size = 1
         else:
@@ -302,9 +274,7 @@ class LlavaVid(lmms):
     def pad_sequence(self, input_ids, batch_first, padding_value):
         if self.tokenizer.padding_side == "left":
             input_ids = [torch.flip(_input_ids, [0]) for _input_ids in input_ids]
-        input_ids = torch.nn.utils.rnn.pad_sequence(
-            input_ids, batch_first=batch_first, padding_value=padding_value
-        )
+        input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=batch_first, padding_value=padding_value)
         if self.tokenizer.padding_side == "left":
             input_ids = torch.flip(input_ids, [1])
         return input_ids
@@ -325,9 +295,7 @@ class LlavaVid(lmms):
     def world_size(self):
         return self._world_size
 
-    def tok_encode(
-        self, string: str, left_truncate_len=None, add_special_tokens=None
-    ) -> List[int]:
+    def tok_encode(self, string: str, left_truncate_len=None, add_special_tokens=None) -> List[int]:
         """ """
         add_special_tokens = False if add_special_tokens is None else add_special_tokens
         encoding = self.tokenizer.encode(string, add_special_tokens=add_special_tokens)
@@ -337,11 +305,7 @@ class LlavaVid(lmms):
         return encoding
 
     def load_image(self, image_path):
-        frame_files = [
-            os.path.join(image_path, f)
-            for f in os.listdir(image_path)
-            if os.path.isfile(os.path.join(image_path, f))
-        ]
+        frame_files = [os.path.join(image_path, f) for f in os.listdir(image_path) if os.path.isfile(os.path.join(image_path, f))]
         frame_files.sort()  # Ensure the frames are sorted if they are named sequentially
 
         # TODO: Hard CODE: Determine the indices for uniformly sampling 10 frames
@@ -349,9 +313,7 @@ class LlavaVid(lmms):
 
         total_frames = len(frame_files)
 
-        sampled_indices = np.linspace(
-            0, total_frames - 1, num_frames_to_sample, dtype=int
-        )
+        sampled_indices = np.linspace(0, total_frames - 1, num_frames_to_sample, dtype=int)
 
         # Read and store the sampled frames
         video = []
@@ -378,9 +340,7 @@ class LlavaVid(lmms):
         frame_time = [i / fps for i in frame_idx]
         if len(frame_idx) > max_frames_num or force_sample:
             sample_fps = max_frames_num
-            uniform_sampled_frames = np.linspace(
-                0, total_frame_num - 1, sample_fps, dtype=int
-            )
+            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, sample_fps, dtype=int)
             frame_idx = uniform_sampled_frames.tolist()
             frame_time = [i / vr.get_avg_fps() for i in frame_idx]
         frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
@@ -394,13 +354,9 @@ class LlavaVid(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         res = []
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [
-            reg.args for reg in requests
-        ]:
+        for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
             if type(doc_to_target) == str:
                 continuation = doc_to_target
@@ -416,9 +372,7 @@ class LlavaVid(lmms):
                     self.fps,
                     force_sample=self.force_sample,
                 )
-                video = self._image_processor.preprocess(video, return_tensors="pt")[
-                    "pixel_values"
-                ].to(self._device)
+                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].to(self._device)
                 if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
                 else:
@@ -427,13 +381,7 @@ class LlavaVid(lmms):
 
             qs = contexts
             if self.model.config.mm_use_im_start_end:
-                qs = (
-                    DEFAULT_IM_START_TOKEN
-                    + DEFAULT_IMAGE_TOKEN
-                    + DEFAULT_IM_END_TOKEN
-                    + "\n"
-                    + qs
-                )
+                qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
                 qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
 
@@ -442,29 +390,15 @@ class LlavaVid(lmms):
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            contxt_id = (
-                tokenizer_image_token(
-                    prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-                )
-                .unsqueeze(0)
-                .to(self.device)
-            )
+            contxt_id = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
 
             conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], qs)
             conv.append_message(conv.roles[1], continuation)
             prompt = conv.get_prompt()
 
-            input_ids = (
-                tokenizer_image_token(
-                    prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-                )
-                .unsqueeze(0)
-                .to(self._device)
-            )
-            attention_masks = (
-                input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
-            )
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
+            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
 
             labels = input_ids.clone()
             # Context part no need to calculate for loss
@@ -483,9 +417,7 @@ class LlavaVid(lmms):
             logits = outputs["logits"]
             greedy_tokens = logits.argmax(dim=-1)
             cont_toks = input_ids[:, contxt_id.shape[1] :]  # [1, seq]
-            greedy_tokens = greedy_tokens[
-                :, contxt_id.shape[1] : input_ids.shape[1]
-            ]  # [1, seq]
+            greedy_tokens = greedy_tokens[:, contxt_id.shape[1] : input_ids.shape[1]]  # [1, seq]
             max_equal = (greedy_tokens == cont_toks).all()
             res.append((float(loss.item()), bool(max_equal)))
             pbar.update(1)
@@ -501,13 +433,9 @@ class LlavaVid(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [
-            reg.args for reg in requests
-        ]:
+        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # if self.task_dict[task][split][doc_id]["duration"] != "short":
             # # if doc_id != 112:
             #     # import pdb;pdb.set_trace()
@@ -551,9 +479,7 @@ class LlavaVid(lmms):
                         # Reference: https://github.com/jayleicn/TVQA/blob/dfb0e5fe4582efca574dfddfeafd1008db3b33ef/data/README.md?plain=1#L50C34-L50C60
                         fps = 3
                         video_time = len(visuals) / fps
-                        sampled_indices = np.linspace(
-                            0, len(visuals) - 1, self.max_frames_num, dtype=int
-                        )
+                        sampled_indices = np.linspace(0, len(visuals) - 1, self.max_frames_num, dtype=int)
                         frame_idx = sampled_indices.tolist()
                         frame_time = [i / fps for i in frame_idx]
                         frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
@@ -563,9 +489,7 @@ class LlavaVid(lmms):
                             axis=0,
                         )
 
-                video = self._image_processor.preprocess(video, return_tensors="pt")[
-                    "pixel_values"
-                ].to(self._device)
+                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].to(self._device)
                 if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
                 else:
@@ -586,13 +510,7 @@ class LlavaVid(lmms):
                 time_instruciton = f"The video lasts for {video_time:.2f} seconds, and {len(video)} frames are uniformly sampled from it. These frames are located at {frame_time}.Please answer the following questions related to this video."
                 qs = f"{time_instruciton}\n{qs}"
             if self.model.config.mm_use_im_start_end:
-                qs = (
-                    DEFAULT_IM_START_TOKEN
-                    + DEFAULT_IMAGE_TOKEN
-                    + DEFAULT_IM_END_TOKEN
-                    + "\n"
-                    + qs
-                )
+                qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
                 qs = DEFAULT_IMAGE_TOKEN * len(videos) + "\n" + qs
 
@@ -606,18 +524,8 @@ class LlavaVid(lmms):
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            input_ids = (
-                tokenizer_image_token(
-                    prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-                )
-                .unsqueeze(0)
-                .to(self._device)
-            )
-            pad_token_ids = (
-                self.tokenizer.pad_token_id
-                if self.tokenizer.pad_token_id is not None
-                else self.tokenizer.eos_token_id
-            )
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
+            pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             if "llama_3" in self.conv_template:
                 pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
             attention_masks = input_ids.ne(pad_token_ids).long().to(self._device)
@@ -625,9 +533,7 @@ class LlavaVid(lmms):
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
 
-            stopping_criteria = KeywordsStoppingCriteria(
-                keywords, self.tokenizer, input_ids
-            )
+            stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
 
             cur_prompt = qs
 
@@ -658,9 +564,7 @@ class LlavaVid(lmms):
                 # output_ids_2 = self.model.generate(inputs=input_ids, images=videos, attention_mask=attention_masks, modalities="video", do_sample=False, max_new_tokens=50,stopping_criteria=[stopping_criteria])
                 # output_ids = self.model.generate(inputs=input_ids, images=videos, attention_mask=attention_masks, modalities="video", do_sample=True, temperature=0.2, max_new_tokens=50,use_cache=True)
 
-            outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[
-                0
-            ].strip()
+            outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
             eval_logger.debug(f"Question: {cur_prompt}")
             eval_logger.debug(f"Answer: {outputs}")
             # import pdb;pdb.set_trace()

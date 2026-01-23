@@ -38,9 +38,7 @@ try:
     )
     from llava.model.builder import load_pretrained_model
 except ImportError as e:
-    raise ImportError(
-        f"VILA is not installed. Please install VILA to use this model. Error: {e}"
-    )
+    raise ImportError(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
 
 
 @register_model("vila")
@@ -86,13 +84,11 @@ class VILA(lmms):
         self.max_frames_num = max_frames_num
         # self._config = AutoConfig.from_pretrained(self.pretrained)
 
-        self._tokenizer, self._model, self._image_processor, self._max_length = (
-            load_pretrained_model(
-                pretrained,
-                self.model_name,
-                device_map=self.device_map,
-                attn_implementation=attn_implementation,
-            )
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+            pretrained,
+            self.model_name,
+            device_map=self.device_map,
+            attn_implementation=attn_implementation,
         )
 
         self.model.image_processor = self._image_processor
@@ -125,35 +121,21 @@ class VILA(lmms):
             if accelerator.distributed_type == DistributedType.DEEPSPEED:
                 kwargs = {
                     "train_micro_batch_size_per_gpu": self.batch_size_per_gpu,
-                    "train_batch_size": self.batch_size_per_gpu
-                    * accelerator.num_processes,
+                    "train_batch_size": self.batch_size_per_gpu * accelerator.num_processes,
                 }
-                AcceleratorState().deepspeed_plugin.deepspeed_config_process(
-                    must_match=True, **kwargs
-                )
-                eval_logger.info(
-                    "Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0"
-                )
-            if (
-                accelerator.distributed_type == DistributedType.FSDP
-                or accelerator.distributed_type == DistributedType.DEEPSPEED
-            ):
+                AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **kwargs)
+                eval_logger.info("Detected that you are using DistributedType.DEEPSPEED. Make sure you run `accelerate config` and set zero stage to 0")
+            if accelerator.distributed_type == DistributedType.FSDP or accelerator.distributed_type == DistributedType.DEEPSPEED:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         elif accelerator.num_processes == 1 and device_map == "auto":
-            eval_logger.info(
-                f"Using {accelerator.num_processes} devices with tensor parallelism"
-            )
+            eval_logger.info(f"Using {accelerator.num_processes} devices with tensor parallelism")
             self._rank = 0
             self._world_size = 1
         else:
@@ -191,9 +173,7 @@ class VILA(lmms):
     def pad_sequence(self, input_ids, batch_first, padding_value):
         if self.tokenizer.padding_side == "left":
             input_ids = [torch.flip(_input_ids, [0]) for _input_ids in input_ids]
-        input_ids = torch.nn.utils.rnn.pad_sequence(
-            input_ids, batch_first=batch_first, padding_value=padding_value
-        )
+        input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=batch_first, padding_value=padding_value)
         if self.tokenizer.padding_side == "left":
             input_ids = torch.flip(input_ids, [1])
         return input_ids
@@ -214,9 +194,7 @@ class VILA(lmms):
     def world_size(self):
         return self._world_size
 
-    def tok_encode(
-        self, string: str, left_truncate_len=None, add_special_tokens=None
-    ) -> List[int]:
+    def tok_encode(self, string: str, left_truncate_len=None, add_special_tokens=None) -> List[int]:
         """ """
         add_special_tokens = False if add_special_tokens is None else add_special_tokens
         encoding = self.tokenizer.encode(string, add_special_tokens=add_special_tokens)
@@ -242,13 +220,9 @@ class VILA(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         res = []
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [
-            reg.args for reg in requests
-        ]:
+        for contexts, doc_to_target, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
             if type(doc_to_target) == str:
                 continuation = doc_to_target
@@ -259,24 +233,12 @@ class VILA(lmms):
             videos = []
             for visual in visuals:
                 video = self.load_video(visual, self.max_frames_num)
-                video = (
-                    self._image_processor.preprocess(video, return_tensors="pt")[
-                        "pixel_values"
-                    ]
-                    .half()
-                    .to(self._device)
-                )
+                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().to(self._device)
                 videos.append(video)
 
             qs = contexts
             if self.model.config.mm_use_im_start_end:
-                qs = (
-                    DEFAULT_IM_START_TOKEN
-                    + DEFAULT_IMAGE_TOKEN
-                    + DEFAULT_IM_END_TOKEN
-                    + "\n"
-                    + qs
-                )
+                qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
                 qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
 
@@ -285,29 +247,15 @@ class VILA(lmms):
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            contxt_id = (
-                tokenizer_image_token(
-                    prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-                )
-                .unsqueeze(0)
-                .to(self.device)
-            )
+            contxt_id = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self.device)
 
             conv = conv_templates[self.conv_template].copy()
             conv.append_message(conv.roles[0], qs)
             conv.append_message(conv.roles[1], continuation)
             prompt = conv.get_prompt()
 
-            input_ids = (
-                tokenizer_image_token(
-                    prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-                )
-                .unsqueeze(0)
-                .to(self._device)
-            )
-            attention_masks = (
-                input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
-            )
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
+            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
 
             labels = input_ids.clone()
             # Context part no need to calculate for loss
@@ -326,9 +274,7 @@ class VILA(lmms):
             logits = outputs["logits"]
             greedy_tokens = logits.argmax(dim=-1)
             cont_toks = input_ids[:, contxt_id.shape[1] :]  # [1, seq]
-            greedy_tokens = greedy_tokens[
-                :, contxt_id.shape[1] : input_ids.shape[1]
-            ]  # [1, seq]
+            greedy_tokens = greedy_tokens[:, contxt_id.shape[1] : input_ids.shape[1]]  # [1, seq]
             max_equal = (greedy_tokens == cont_toks).all()
             res.append((float(loss.item()), bool(max_equal)))
             pbar.update(1)
@@ -344,13 +290,9 @@ class VILA(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [
-            reg.args for reg in requests
-        ]:
+        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
@@ -359,13 +301,7 @@ class VILA(lmms):
             videos = []
             if self.max_frames_num == 0:
                 images = [Image.new("RGB", (448, 448), (0, 0, 0))] * num_video_frames
-                video = (
-                    process_images(
-                        images, self.model.image_processor, self.model.config
-                    )
-                    .half()
-                    .to(self._device)
-                )
+                video = process_images(images, self.model.image_processor, self.model.config).half().to(self._device)
                 videos.append(video)
             else:
                 for visual in visuals:
@@ -373,24 +309,12 @@ class VILA(lmms):
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
                         images = read_video_pyav(visual, num_frm=num_video_frames)
-                    video = (
-                        process_images(
-                            images, self.model.image_processor, self.model.config
-                        )
-                        .half()
-                        .to(self._device)
-                    )
+                    video = process_images(images, self.model.image_processor, self.model.config).half().to(self._device)
                     videos.append(video)
 
             qs = f"<video>\n {contexts}"
             if self.model.config.mm_use_im_start_end:
-                qs = (
-                    DEFAULT_IM_START_TOKEN
-                    + DEFAULT_IMAGE_TOKEN
-                    + DEFAULT_IM_END_TOKEN
-                    + "\n"
-                    + qs
-                )
+                qs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + "\n" + qs
             else:
                 qs = (DEFAULT_IMAGE_TOKEN + "\n") * len(images) + qs
 
@@ -405,18 +329,8 @@ class VILA(lmms):
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            input_ids = (
-                tokenizer_image_token(
-                    prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt"
-                )
-                .unsqueeze(0)
-                .to(self._device)
-            )
-            pad_token_ids = (
-                self.tokenizer.pad_token_id
-                if self.tokenizer.pad_token_id is not None
-                else self.tokenizer.eos_token_id
-            )
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
+            pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             # if "llama_3" in self.conv_template:
             #     pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
             attention_masks = input_ids.ne(pad_token_ids).long().to(self._device)
@@ -429,9 +343,7 @@ class VILA(lmms):
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
 
-            stopping_criteria = KeywordsStoppingCriteria(
-                keywords, self.tokenizer, input_ids
-            )
+            stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
 
             cur_prompt = contexts
 
@@ -460,9 +372,7 @@ class VILA(lmms):
                 # output_ids_2 = self.model.generate(inputs=input_ids, images=videos, attention_mask=attention_masks, modalities="video", do_sample=False, max_new_tokens=50,stopping_criteria=[stopping_criteria])
                 # output_ids = self.model.generate(inputs=input_ids, images=videos, attention_mask=attention_masks, modalities="video", do_sample=True, temperature=0.2, max_new_tokens=50,use_cache=True)
 
-            outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[
-                0
-            ].strip()
+            outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
             print("Question: ", cur_prompt)
             print("Answer: ", outputs)
             res.append(outputs)
