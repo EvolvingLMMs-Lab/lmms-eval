@@ -1,9 +1,11 @@
+import ast
 import json
 import re
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
 from PIL import Image
+
 
 JIGSAW_PROMPT = """You are given:
 (1) a 2x2 reference image with the bottom-right cell hidden
@@ -89,6 +91,53 @@ def _find_json_object(text: str) -> Optional[str]:
     return None
 
 
+def _parse_json_list(raw: str) -> List[Any]:
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    try:
+        return ast.literal_eval(raw)
+    except (ValueError, SyntaxError):
+        pass
+    return []
+
+
+def _find_last_json_list(text: str) -> Optional[str]:
+    matches = list(re.finditer(r"\[.*?\]", text, re.DOTALL))
+    for match in reversed(matches):
+        candidate = match.group(0)
+        try:
+            json.loads(candidate)
+            return candidate
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def _normalize_geometry_answer(text: str) -> str:
+    text = text.strip().lower()
+    text = re.sub(r"[°\$\\]", "", text)
+    text = re.sub(r"\b(cm|mm|m|degrees?|units?)\b", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _extract_final_answer(text: str) -> str:
+    patterns = [
+        r"(?:the\s+)?(?:final\s+)?answer\s+is[:\s]+([^\n.]+)",
+        r"(?:answer|solution)[:\s]+([^\n.]+)$",
+        r"=\s*([^\n=]+)$",
+        r"\\boxed\{([^}]+)\}",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+        if match:
+            return match.group(1).strip()
+    lines = [line.strip() for line in text.strip().split("\n") if line.strip()]
+    return lines[-1] if lines else ""
+
+
 def jigsaw_doc_to_visual(doc: Dict) -> List[Image.Image]:
     images = []
     for key in ["ref_image", "cand0_image", "cand1_image"]:
@@ -99,7 +148,9 @@ def jigsaw_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return images
 
 
-def jigsaw_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+def jigsaw_doc_to_text(
+    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
+) -> str:
     return JIGSAW_PROMPT
 
 
@@ -166,7 +217,9 @@ def maze_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def maze_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+def maze_doc_to_text(
+    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
+) -> str:
     return MAZE_PROMPT
 
 
@@ -190,18 +243,28 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         )
     )
     if matches:
-        try:
-            moves_data = json.loads(matches[-1].group(1))
+        moves_data = _parse_json_list(matches[-1].group(1))
+        pred_moves = [str(m).strip().lower() for m in moves_data]
+    else:
+        fallback = _find_last_json_list(result_text)
+        if fallback:
+            moves_data = _parse_json_list(fallback)
             pred_moves = [str(m).strip().lower() for m in moves_data]
-        except (json.JSONDecodeError, TypeError):
-            pass
 
     gt_moves_str = doc.get("steps", "[]")
-    gt_moves = json.loads(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
+    gt_moves = (
+        _parse_json_list(gt_moves_str)
+        if isinstance(gt_moves_str, str)
+        else gt_moves_str
+    )
     gt_moves = [str(m).lower() for m in gt_moves]
 
     exact = 1 if pred_moves == gt_moves else 0
-    frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
+    frame_acc = (
+        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
+        if gt_moves
+        else 0.0
+    )
 
     return {"exact_match": exact, "frame_accuracy": frame_acc}
 
@@ -214,7 +277,9 @@ def sliding_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def sliding_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+def sliding_doc_to_text(
+    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
+) -> str:
     return SLIDING_PROMPT
 
 
@@ -238,18 +303,28 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         )
     )
     if matches:
-        try:
-            moves_data = json.loads(matches[-1].group(1))
+        moves_data = _parse_json_list(matches[-1].group(1))
+        pred_moves = [str(m).strip().lower() for m in moves_data]
+    else:
+        fallback = _find_last_json_list(result_text)
+        if fallback:
+            moves_data = _parse_json_list(fallback)
             pred_moves = [str(m).strip().lower() for m in moves_data]
-        except (json.JSONDecodeError, TypeError):
-            pass
 
     gt_moves_str = doc.get("steps_words", "[]")
-    gt_moves = json.loads(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
+    gt_moves = (
+        _parse_json_list(gt_moves_str)
+        if isinstance(gt_moves_str, str)
+        else gt_moves_str
+    )
     gt_moves = [str(m).lower() for m in gt_moves]
 
     exact = 1 if pred_moves == gt_moves else 0
-    frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
+    frame_acc = (
+        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
+        if gt_moves
+        else 0.0
+    )
 
     return {"exact_match": exact, "frame_accuracy": frame_acc}
 
@@ -262,7 +337,9 @@ def geometry_doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def geometry_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+def geometry_doc_to_text(
+    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
+) -> str:
     question = doc.get("question", doc.get("problem", ""))
     return f"{GEOMETRY_PROMPT}\n\nProblem: {question}"
 
@@ -278,8 +355,11 @@ def geometry_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         except (json.JSONDecodeError, TypeError):
             pass
 
-    gt_answer = str(doc.get("answer", doc.get("solution_en", ""))).strip().lower()
-    pred_answer = result_text.strip().lower()
+    gt_answer = str(doc.get("answer", doc.get("solution_en", ""))).strip()
+    gt_normalized = _normalize_geometry_answer(gt_answer)
 
-    correct = 1 if gt_answer and gt_answer in pred_answer else 0
+    pred_answer = _extract_final_answer(result_text)
+    pred_normalized = _normalize_geometry_answer(pred_answer)
+
+    correct = 1 if gt_normalized and gt_normalized == pred_normalized else 0
     return {"exact_match": correct}
