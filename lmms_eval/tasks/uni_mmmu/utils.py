@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 
 from PIL import Image
 
-
 JIGSAW_PROMPT = """You are given:
 (1) a 2x2 reference image with the bottom-right cell hidden
 (2) two candidate patches ("Candidate 0" and "Candidate 1")
@@ -198,17 +197,11 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             pass
 
     gt_moves_str = doc.get("steps", "[]")
-    gt_moves = (
-        json.loads(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
-    )
+    gt_moves = json.loads(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
     gt_moves = [str(m).lower() for m in gt_moves]
 
     exact = 1 if pred_moves == gt_moves else 0
-    frame_acc = (
-        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
-        if gt_moves
-        else 0.0
-    )
+    frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
 
     return {"exact_match": exact, "frame_accuracy": frame_acc}
 
@@ -252,17 +245,11 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             pass
 
     gt_moves_str = doc.get("steps_words", "[]")
-    gt_moves = (
-        json.loads(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
-    )
+    gt_moves = json.loads(gt_moves_str) if isinstance(gt_moves_str, str) else gt_moves_str
     gt_moves = [str(m).lower() for m in gt_moves]
 
     exact = 1 if pred_moves == gt_moves else 0
-    frame_acc = (
-        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
-        if gt_moves
-        else 0.0
-    )
+    frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
 
     return {"exact_match": exact, "frame_accuracy": frame_acc}
 
