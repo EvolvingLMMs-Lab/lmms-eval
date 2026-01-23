@@ -1,18 +1,17 @@
 # KRIS-Bench task configuration for lmms-eval
 #
-# This task uses a local jsonl index file listing all samples.
-# Images are loaded at runtime from:
-#   $KRIS_BENCH_DATA_ROOT/{category}/{filename}
+# This task loads data from Hugging Face Hub (images embedded in dataset).
+# No local paths or environment variables needed for data loading.
 #
 # Scoring uses a multimodal judge (OpenAI-compatible VLM server) inside process_results.
+#
+# To upload your own dataset:
+#   python lmms_eval/tasks/kris_bench/upload_to_hf.py \
+#     --bench_root /path/to/KRIS_Bench --repo_id your-username/kris-bench
 
-dataset_path: json
-dataset_kwargs:
-  data_files:
-    train: lmms_eval/tasks/kris_bench/kris_bench.jsonl
-
+dataset_path: wukeming11/kris-bench
 task: "kris_bench"
-test_split: train
+test_split: test
 output_type: generate_until
 
 doc_to_visual: !function utils.kris_bench_doc_to_visual

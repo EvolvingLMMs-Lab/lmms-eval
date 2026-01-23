@@ -13,18 +13,14 @@ This task:
   1) Generates an image per sample (typically edit/generate conditioned on 1+ images).
   2) Scores the generated image with a multimodal judge (OpenAI-compatible endpoint).
 
-Image output (compatible with original Kris_Bench repo convention):
-  {KRIS_BENCH_OUTPUT_DIR}/results/{KRIS_BENCH_MODEL_NAME}/{category}/{image_id}.jpg
+Data flow (aligned with gedit_bench/imgedit):
+  - Input images: loaded from HF dataset via --process_with_media (doc["ori_images"])
+  - Edited images: loaded from model output path (pred["images"][0])
 
-Environment variables:
-  - KRIS_BENCH_DATA_ROOT: path to KRIS_Bench directory (default: "KRIS_Bench")
-  - KRIS_BENCH_MODEL_NAME: name used in output path (default: "bagel")
-  - KRIS_BENCH_OUTPUT_DIR: base directory for "results/" (default: BAGEL_OUTPUT_IMAGE_DIR or ./logs/kris_bench_results)
-
-Judge server (ImgEdit-style):
+Judge server environment variables:
   - KRIS_BENCH_API_KEY: API key for judge server (use "EMPTY" for local vLLM)
   - KRIS_BENCH_BASE_URL: base URL (e.g., http://localhost:8000/v1)
-  - KRIS_BENCH_EVAL_MODEL_NAME: model used for judging (default: "default" -> auto-detect if /models works)
+  - KRIS_BENCH_EVAL_MODEL_NAME: model used for judging (default: "default" -> auto-detect)
   - KRIS_BENCH_JUDGE_MODEL_NAME: optional separate judge model
   - KRIS_BENCH_TIMEOUT: API timeout seconds (default: 180)
   - KRIS_BENCH_MAX_RETRIES: retries on transient errors (default: 3)
@@ -45,6 +41,18 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
+from lmms_eval.tasks.kris_bench.prompt import (
+    prompt_consist,
+    prompt_quality,
+    prompt_instruction_following,
+    prompt_abnormal_instruction_following,
+    prompt_dual_evaluation,
+    prompt_view_instruction_following,
+    prompt_consist_temporal,
+    prompt_instruction_temporal,
+    prompt_consist_multi,
+    prompt_instruction_multi,
+)
 
 # -----------------------------------------------------------------------------
 # Score scaling
@@ -181,356 +189,29 @@ def _kris_dimension_group(doc) -> Tuple[Optional[str], Optional[str]]:
 
 
 # -----------------------------------------------------------------------------
-# Prompts (copied from github_repo/Kris_Bench/utils/prompts.py)
-# -----------------------------------------------------------------------------
-
-prompt_consist = """
-You are a professional digital artist and image evaluation specialist.
-
-You will be given:
-1. **Image A**: the original image.
-2. **Image B**: an edited version of Image A.
-3. **Editing Instruction**: a directive describing the intended modification to Image A to produce Image B.
-
-Your Objective:
-Your task is to **evaluate the visual consistency between the original and edited images, focusing exclusively on elements that are NOT specified for change in the instruction**. That is, you should only consider whether all non-instructed details remain unchanged. Do **not** penalize or reward any changes that are explicitly required by the instruction.
-
-## Evaluation Scale (1 to 5):
-You will assign a **consistency_score** according to the following rules:
-- **5 Perfect Consistency**: All non-instruction elements are completely unchanged and visually identical.
-- **4 Minor Inconsistency**: Only one very small, non-instruction detail is different (e.g., a tiny accessory, a subtle shadow, or a minor background artifact).
-- **3 Noticeable Inconsistency**: One clear non-instruction element is changed (e.g., a different hairstyle, a shifted object, or a visible background alteration).
-- **2 Significant Inconsistency**: Two or more non-instruction elements have been noticeably altered.
-- **1 Severe Inconsistency**: Most or all major non-instruction details are different (e.g., changed identity, gender, or overall scene layout).
-
-## Guidance:
-- First, **identify all elements that the instruction explicitly allows or requires to be changed**. Exclude these from your consistency check.
-- For all other elements (e.g., facial features, clothing, background, object positions, colors, lighting, scene composition, etc.), **compare Image B to Image A** and check if they remain visually identical.
-- If you observe any change in a non-instruction element, note it and consider its impact on the score.
-- If the instruction is vague or ambiguous, make a best-effort factual inference about which elements are intended to change, and treat all others as non-instruction elements.
-
-## Note:
-- **Do not penalize changes that are required by the instruction.**
-- **Do not reward or penalize the quality or correctness of the instructed change itself** (that is evaluated separately).
-- If the edited image introduces new artifacts, objects, or changes to non-instruction elements, this should lower the consistency score.
-
-## Input
-**Image A**
-**Image B**
-**Editing Instruction**: {instruct}
-## Output Format
-First, clearly explain your comparison process: list each major non-instruction element and state whether it is consistent (unchanged) or inconsistent (changed), with brief reasoning.
-Then, provide your evaluation in the following JSON format:
-{{
-"reasoning": **Compared to original image**, [list of non-instruction elements that changed or remained the same] **in the edited image**. 
-"consistency_score": X
-}}
-"""
-
-prompt_quality = """
-You are a professional digital artist and image evaluation specialist.
-
-You will be given:
-- **Image A**: a single AI-generated image.
-
-## Objective:
-Your task is to **evaluate the perceptual quality** of the image, focusing on:
-- **Structural and semantic coherence**
-- **Natural appearance**
-- **Absence of generation artifacts**
-
-You must **not penalize low resolution or moderate softness** unless it introduces semantic ambiguity or visually degrading effects.
-
-## Evaluation Scale (1 to 5):
-You will assign a **quality_score** with the following rule:
-
-- **5 Excellent Quality**: All aspects are visually coherent, natural, and free from noticeable artifacts. Structure, layout, and textures are accurate and consistent.
-- **4 Minor Issues**: One small imperfection (e.g., slight texture blending, minor lighting inconsistency).
-- **3 Noticeable Artifacts**: One or two clear visual flaws or semantic problems (e.g., extra fingers, minor duplication, slight distortion).
-- **2 Structural Degradation**: Multiple distracting errors (e.g., melted hands, warped shapes, unreadable text).
-- **1 Severe Errors**: Major structural failures or hallucinations (e.g., broken anatomy, garbled symbols).
-
-## Guidance:
-Check the following visual aspects and mark them as ✔ (satisfactory) or ✘ (problematic):
-- Structural coherence (e.g., correct anatomy, object shapes, legible text)
-- Naturalness (lighting, perspective, shadow logic)
-- Artifact-free (no duplication, ghosting, watermarks)
-- Texture fidelity (clothing, hair, surfaces not melted or corrupted)
-- Optional: Sharpness (only penalize if blur causes semantic loss)
-✔ The more checks, the higher the score.
-
-Example
-  "reasoning": "Structural coherence: ✔, Natural appearance: ✔, Artifacts: ✔, Texture fidelity: ✘ (fabric partially deformed).",
-  "quality_score": 4
-
-## Output Format:
-After evaluation, provide your score and concise reasoning using the following JSON format:
-{{
-"reasoning": XXX,
-"quality_score": X,
-}}
-"""
-
-prompt_instruction_following = """
-You are a professional digital artist and image evaluation specialist. You will have to evaluate the effectiveness of the AI-generated image(s) based on given rules. 
-
-You will be given:
-1. **Image A**: the original image.
-2. **Image B**: an edited version of Image A.
-3. **Editing Instruction**: a directive describing the intended modification to Image A to produce Image B.
-
-Your Objective:
-Your task is to **evaluate how the edited image faithfully fulfills the editing instruction**, focusing **exclusively on the presence and correctness of the specified changes**. 
-
-You must:
-**Identify detailed visual differences** between Image A and Image B **correctly and faithfully**.
-Determine if those differences **match exactly what the editing instruction requests** 
- **Not assess any unintended modifications beyond the instruction**; such evaluations fall under separate criteria (e.g., visual consistency).
-**Be careful**, an edit may introduce visual change without fulfilling the actual instruction (e.g., replacing the object instead of modifying it)
-
-## Reasoning:
-You must follow these reasoning steps before scoring:
-**1. Detect Difference**: What has visually changed between Image A and Image B? (e.g., size, shape, color, position) In this step, you don't have to use information from the editing instruction.
-**2. Expected Visual Caption**: Write a factual description of how the edited image should look if the instruction were perfectly followed.
-**3. Instruction Match**: 
-Compare the observed differences in **1** to the expected change in **2**:
-- Was the correct object modified (not replaced)?
-- Was the requested attribute (e.g., size, color, position) modified as intended?
-- Is the degree of modification accurate (e.g., “match size,” “slightly increase,” etc.)?
-**4. Decision**: Use the 1–5 scale to assign a final score.
-
-## Evaluation Scale (1 to 5):
-You will assign an **instruction_score** with following rule:
-- **5 Perfect Compliance**: The edited image **precisely matches** the intended modification; all required changes are present and accurate. 
-- **4 Minor Omission**: The core change is made, but **minor detail** is missing or slightly incorrect. 
-- **3 Partial Compliance**: The main idea is present, but one or more required aspects are wrong or incomplete. 
-- **2 Major Omission**: Most of the required changes are missing or poorly implemented. 
-- **1 Non-Compliance**: The instruction is **not followed at all** or is **completely misinterpreted** 
-
-## Input
-**Image A**
-**Image B**
-**Editing Instruction**: {instruct}
-## Output Format
-Look at the input again, provide the evaluation score and the explanation in the following JSON format:
-{{
-"instruction_score": X,
-"reasoning": 1. Detect Difference 2. Expected Visual Caption 3. Instruction Match 4. Decision
-}}
-"""
-
-prompt_dual_evaluation = """
-You are a professional digital artist and image evaluation specialist. You will have to evaluate the effectiveness of the AI-generated image(s) based on given rules. 
-
-You will be given:
-1. **Image A**: the original image.
-2. **Image B**: an edited version of Image A.
-3. **Editing Instruction**: a directive describing the intended modification to Image A to produce Image B.
-4. **Real-World Knowledge Explanation**: a factual rationale describing what the correct result should look like and why, based on domain knowledge (e.g., physics, chemistry, logic).
-
-## Objective
-You must provide **two independent scores** for the **edited image**:
-- **Instruction Score**: Does the edited image visually and accurately follow the editing instruction?
-- **Knowledge Score**: Given the instruction and original image, does the edited image reflect what should realistically happen based on the explanation?
-
-## A. Instruction Compliance
-Your Objective:
-Your task is to **evaluate how the edited image faithfully fulfills the editing instruction**, focusing **exclusively on the presence and correctness of the specified changes**. 
-
-You must:
-**Identify detailed visual differences** between Image A and Image B **correctly and faithfully**.
-Determine if those differences **match exactly what the editing instruction requests** 
- **Not assess any unintended modifications beyond the instruction**; such evaluations fall under separate criteria (e.g., visual consistency).
-**Be careful**, an edit may introduce visual change without fulfilling the actual instruction (e.g., replacing the object instead of modifying it)
-
-## Reasoning:
-You must follow these reasoning steps before scoring:
-**1. Detect Difference**: What has visually changed between Image A and Image B? (e.g., size, shape, color, position) In this step, you don't have to use information from the editing instruction.
-**2. Expected Visual Caption**: Write a factual description of how the edited image should look if the instruction were perfectly followed.
-**3. Instruction Match**: 
-Compare the observed differences in **1** to the expected change in **2**:
-- Was the correct object modified (not replaced)?
-- Was the requested attribute (e.g., size, color, position) modified as intended?
-- Is the degree of modification accurate (e.g., “match size,” “slightly increase,” etc.)?
-**4. Decision**: Use the 1–5 scale to assign a final score.
-
-## Evaluation Scale (1 to 5):
-You will assign an **instruction_score** with following rule:
-- **5 Perfect Compliance**: The edited image **precisely matches** the intended modification; all required changes are present and accurate. 
-- **4 Minor Omission**: The core change is made, but **minor detail** is missing or slightly incorrect. 
-- **3 Partial Compliance**: The main idea is present, but one or more required aspects are wrong or incomplete. 
-- **2 Major Omission**: Most of the required changes are missing or poorly implemented. 
-- **1 Non-Compliance**: The instruction is **not followed at all** or is **completely misinterpreted** 
-
-## B. Knowledge Plausibility 
-Your Objective:
-Evaluate whether the edited image, after applying the instruction to the original image, accurately reflects the real-world behavior described in the provided explanation.
-
-If instruction is not followed (score ≤ 2), assign `knowledge_score = 1` and note: *"Instruction failure ⇒ knowledge invalid."*
-
-## Input
-**Original Image**
-**Edited Image**
-**Editing Instruction**: {instruct}
-**Real-World Knowledge Explanation**：{explanation}
-
-## Output Format
-Provide both scores and clear reasoning in the following JSON format:
-{{
-  "instruction_score": X,
-  "instruction_reasoning": 1. Detect Difference 2. Expected Visual Caption 3. Instruction Match 4. Decision
-  "knowledge_score": X,
-  "knowledge_reasoning": 1. Detect Difference 2. Expected Knowledge Expectation 3. Knowledge Match 4. Decision
-}}
-"""
-
-prompt_abnormal_instruction_following = """
-You are a professional digital artist and image evaluation specialist. You will evaluate whether the edited image faithfully and accurately follows the editing instruction, with a focus on correcting unreasonable or implausible aspects.
-
-## You will be given:
-1. **Original Image**
-2. **Edited Image**
-3. **Editing Instruction**: {instruct}  (typically a general instruction such as "correct the unreasonable parts in the image")
-4. **Explanation**:  {explanation} (What the image should look like if it were reasonable)
-
-## Your Objective:
-Your task is to **evaluate how well the edited image corrects the unreasonable or implausible aspects** described or implied by the instruction, using the explanation as the factual reference for what a "reasonable" image should look like.
-
-## Output Format
-Provide your evaluation in the following JSON format:
-{{
-  "instruction_score": X,
-  "reasoning": 1. Detect Unreasonable Aspects 2. Expected Visual Caption 3. Correction Match 4. Decision
-}}
-"""
-
-prompt_view_instruction_following = """
-You are a professional digital artist and image-evaluation specialist.
-
-## Inputs
-1. **Original Image**
-2. **Edited Image**
-3. **Ground-Truth Image**
-4. **Editing Instruction**: {instruct}
-
-## Objective
-Assess whether the edited image alters the **viewpoint / perspective** of the scene exactly as specified, using the ground-truth image as reference.
-
-## Output Format
-Then output in JSON:
-{{
-  "instruction_score": X,
-  "reasoning": "1. Detect Viewpoint Change 2. Expected Visual Caption 3. Viewpoint-Change Match 4. Decision"
-}}
-"""
-
-prompt_consist_temporal = """
-You are a professional digital artist and image-evaluation specialist.
-
-## Inputs
-1. **Reference Frames**: multiple original images
-2. **Predicted Frame**: one modified image
-3. **Modification Instruction**: {instruct}
-
-## Objective
-Evaluate **visual consistency** of the predicted frame within the temporal context of the reference frames.
-
-## Output Format
-Then output:
-{{
-  "consistency_score": X,
-  "reasoning": 1. Detect Consistency 2. Expected Visual Caption 3. Consistency Match 4. Decision
-}}
-"""
-
-prompt_instruction_temporal = """
-You are a professional digital artist and image-evaluation specialist.
-
-## Inputs
-1. **Reference Frames**: multiple original images
-2. **Predicted Frame**: one modified image
-3. **Modification Instruction**: {instruct}
-
-## Objective
-Judge whether the predicted frame **faithfully follows the temporal instruction**.
-
-## Output Format
-Then output:
-{{
-  "instruction_score": X,
-  "reasoning": 1. Detect Instruction Following 2. Expected Visual Caption 3. Instruction Following Match 4. Decision
-}}
-"""
-
-prompt_consist_multi = """
-You are a professional digital artist and image-evaluation specialist.
-
-## Inputs
-1. **Multiple Source Images**
-2. **Composite Image**: final output
-3. **Modification Instruction**: {instruct}
-
-## Objective
-Assess **visual consistency** between the composite image and the chosen **background source**.
-
-## Output Format
-Then output:
-{{
-  "consistency_score": X,
-  "reasoning": 1. Detect Consistency 2. Expected Visual Caption 3. Consistency Match 4. Decision
-}}
-"""
-
-prompt_instruction_multi = """
-You are a professional digital artist and image-evaluation specialist.
-
-## Inputs
-1. **Multiple Source Images**
-2. **Composite Image**: final output
-3. **Modification Instruction**: {instruct}
-
-## Objective
-Determine whether the composite image **accurately follows the instruction**.
-
-## Output Format
-Then output:
-{{
-  "instruction_score": X,
-  "reasoning": 1. Detect Instruction Following 2. Expected Visual Caption 3. Instruction Following Match 4. Decision
-}}
-"""
-
-
-# -----------------------------------------------------------------------------
 # Dataset -> model inputs
 # -----------------------------------------------------------------------------
 
 
-def _data_root() -> str:
-    return os.getenv("KRIS_BENCH_DATA_ROOT", "KRIS_Bench")
-
-
 def kris_bench_doc_to_visual(doc):
     """
-    Return 1+ source images.
+    Return 1+ source images from doc.
 
-    doc["ori_img"] is a list of filenames, relative to {KRIS_BENCH_DATA_ROOT}/{category}/.
+    Images are loaded from HF dataset via --process_with_media flag.
+    The dataset contains "ori_images" field with PIL Images.
     """
-    category = str(doc.get("category") or "").strip()
-    ori_imgs = doc.get("ori_img") or []
-    if isinstance(ori_imgs, str):
-        ori_imgs = [ori_imgs]
-    if not category or not ori_imgs:
-        return []
-
-    root = _data_root()
+    ori_images = doc.get("ori_images") or []
     out = []
-    for fn in ori_imgs:
-        p = os.path.join(root, category, fn)
-        if not os.path.exists(p):
+    for img in ori_images:
+        if img is None:
             continue
         try:
-            out.append(Image.open(p).convert("RGB"))
+            # HF datasets.Image returns PIL Image directly
+            if hasattr(img, "convert"):
+                out.append(img.convert("RGB"))
+            elif isinstance(img, dict) and "bytes" in img:
+                # Fallback for dict format
+                out.append(Image.open(BytesIO(img["bytes"])).convert("RGB"))
         except Exception:
             continue
     return out
@@ -706,6 +387,8 @@ def _extract_json_field(response: str, score_key: str, reason_key: str) -> Tuple
         reason = data.get(reason_key)
         if score is not None:
             score = int(score)
+            # Clamp score to valid 1-5 range (judge may hallucinate out-of-range values)
+            score = max(1, min(5, score))
         return score, reason
     except Exception:
         return None, None
@@ -759,13 +442,19 @@ def _extract_quality_score_and_reason(response: str) -> Tuple[Optional[int], Opt
 
 
 def _extract_dual_scores(response: str) -> Dict[str, Any]:
+    def _clamp(v):
+        """Clamp score to valid 1-5 range."""
+        if v is None:
+            return None
+        return max(1, min(5, int(v)))
+
     m = re.search(r"\{[^{}]*instruction_score[^{}]*\}", response, re.DOTALL)
     if m:
         try:
             data = json.loads(m.group(0))
             return {
-                "instruction_score": int(data.get("instruction_score")) if data.get("instruction_score") is not None else None,
-                "knowledge_score": int(data.get("knowledge_score")) if data.get("knowledge_score") is not None else None,
+                "instruction_score": _clamp(data.get("instruction_score")),
+                "knowledge_score": _clamp(data.get("knowledge_score")),
                 "instruction_reasoning": data.get("instruction_reasoning") or data.get("reasoning"),
                 "knowledge_reasoning": data.get("knowledge_reasoning"),
             }
@@ -792,15 +481,12 @@ def _extract_dual_scores(response: str) -> Dict[str, Any]:
 # -----------------------------------------------------------------------------
 
 
-def _get_paths_from_doc(doc) -> Tuple[str, str, List[str], str, str]:
+def _get_doc_metadata(doc) -> Tuple[str, str, str]:
+    """Extract key, category, image_id from doc."""
     category = str(doc.get("category") or "").strip()
     image_id = str(doc.get("image_id") or doc.get("id") or "").strip()
     key = str(doc.get("key") or f"{category}__{image_id}")
-    ori_imgs = doc.get("ori_img") or []
-    if isinstance(ori_imgs, str):
-        ori_imgs = [ori_imgs]
-    gt_img = str(doc.get("gt_img") or "").strip()
-    return key, category, list(ori_imgs), gt_img, image_id
+    return key, category, image_id
 
 
 def _evaluate_one(
@@ -808,18 +494,40 @@ def _evaluate_one(
     category: str,
     instruction: str,
     explanation: str,
-    ori_img_paths: List[str],
-    edited_img_path: str,
-    gt_img_path: Optional[str],
+    ori_images: List[Any],
+    edited_image: Any,
+    gt_image: Optional[Any] = None,
+    ori_img_filenames: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
+    """
+    Evaluate generated image with judge.
+
+    Args:
+        category: Category name for selecting appropriate prompts
+        instruction: Editing instruction
+        explanation: Additional explanation (for knowledge categories)
+        ori_images: List of original PIL Images
+        edited_image: Edited PIL Image
+        gt_image: Optional ground truth PIL Image
+        ori_img_filenames: Optional list of original image filenames (for temporal frame extraction)
+    """
+    # Encode original images
+    # Use filenames if available (for temporal frame extraction), otherwise use index
     ori_pairs: List[Tuple[str, str]] = []
-    for p in ori_img_paths:
-        b64 = image_to_base64(p)
+    filenames = ori_img_filenames or [f"ori_{i}" for i in range(len(ori_images))]
+    for i, img in enumerate(ori_images):
+        b64 = image_to_base64(img)
         if b64:
-            ori_pairs.append((p, b64))
+            fname = filenames[i] if i < len(filenames) else f"ori_{i}"
+            ori_pairs.append((fname, b64))
+
     ori_b64_list = [b64 for (_p, b64) in ori_pairs]
-    edited_b64 = image_to_base64(edited_img_path)
-    gt_b64 = image_to_base64(gt_img_path) if gt_img_path else None
+
+    # Encode edited image
+    edited_b64 = image_to_base64(edited_image)
+
+    # Encode GT image if provided
+    gt_b64 = image_to_base64(gt_image) if gt_image is not None else None
 
     out: Dict[str, Any] = {
         "consistency_score": None,
@@ -987,73 +695,88 @@ def _evaluate_one(
 
 def kris_bench_process_results(doc, results, **kwargs):
     """
-    Parse model output JSON, reorganize saved images to Kris_Bench required structure,
-    then call the judge backend and return metrics.
-    """
-    model_name = os.getenv("KRIS_BENCH_MODEL_NAME", "bagel")
-    output_base_dir = os.getenv("KRIS_BENCH_OUTPUT_DIR") or os.getenv("BAGEL_OUTPUT_IMAGE_DIR") or "./logs/kris_bench_results"
+    Process model predictions and evaluate using multimodal judge.
 
-    key, category, ori_imgs, gt_img, image_id = _get_paths_from_doc(doc)
+    Similar to gedit_bench and imgedit:
+    - Original images: from doc (via --process_with_media)
+    - Edited image: from pred["images"][0] path
+
+    Args:
+        doc: Document containing ori_images, gt_image, instruction, category, etc.
+        results: Model predictions [JSON string with {"text": "...", "images": [...]}]
+        **kwargs: Additional arguments
+
+    Returns:
+        Dict with metrics for all breakdown categories
+    """
+    key, category, image_id = _get_doc_metadata(doc)
     instruction = (doc.get("ins_en") or "").strip()
     explanation = (doc.get("explain_en") or "").strip()
 
-    pred0 = results[0] if results else "{}"
-    if isinstance(pred0, dict):
-        pred = pred0
-    else:
+    # Parse prediction JSON (same as gedit_bench/imgedit)
+    pred = results[0] if results else "{}"
+    try:
+        pred = json.loads(pred)
+    except (json.JSONDecodeError, TypeError):
+        eval_logger.warning(f"Failed to parse prediction JSON for key={key}")
+        pred = {"text": "", "images": []}
+
+    model_images = pred.get("images", [])
+
+    # Get original images from doc (loaded via --process_with_media)
+    ori_images_list: List[Any] = []
+    for img in doc.get("ori_images") or []:
+        if img is not None:
+            try:
+                if hasattr(img, "convert"):
+                    ori_images_list.append(img.convert("RGB"))
+                elif isinstance(img, dict) and "bytes" in img:
+                    ori_images_list.append(Image.open(BytesIO(img["bytes"])).convert("RGB"))
+            except Exception:
+                continue
+
+    # Get GT image from doc if available
+    gt_image_obj: Optional[Any] = None
+    gt_img_data = doc.get("gt_image")
+    if gt_img_data is not None:
         try:
-            pred = json.loads(pred0)
+            if hasattr(gt_img_data, "convert"):
+                gt_image_obj = gt_img_data.convert("RGB")
+            elif isinstance(gt_img_data, dict) and "bytes" in gt_img_data:
+                gt_image_obj = Image.open(BytesIO(gt_img_data["bytes"])).convert("RGB")
         except Exception:
-            pred = {"text": "", "images": []}
+            pass
 
-    model_images = pred.get("images", []) or []
-    generated_path = None
+    # Load edited image from pred path (same as gedit_bench/imgedit)
+    edited_image_pil: Optional[Any] = None
     if model_images:
-        p0 = model_images[0]
-        if isinstance(p0, dict):
-            p0 = p0.get("path") or p0.get("image") or p0.get("file")
-        if isinstance(p0, str) and os.path.exists(p0):
-            generated_path = p0
-
-    # Fallback to unified location if needed: {BAGEL_OUTPUT_IMAGE_DIR}/{task}/{key}.png
-    if generated_path is None:
-        bagel_root = os.getenv("BAGEL_OUTPUT_IMAGE_DIR")
-        if bagel_root:
-            cand = os.path.join(bagel_root, "kris_bench", f"{key}.png")
-            if os.path.exists(cand):
-                generated_path = cand
-
-    # Reorganize to: {output_base_dir}/results/{model}/{category}/{image_id}.jpg
-    saved_jpg_path = None
-    if generated_path and os.path.exists(generated_path):
-        target_dir = os.path.join(output_base_dir, "results", model_name, category)
-        os.makedirs(target_dir, exist_ok=True)
-        target_path = os.path.join(target_dir, f"{image_id}.jpg")
         try:
-            img = Image.open(generated_path).convert("RGB")
-            img.save(target_path, format="JPEG", quality=95)
-            saved_jpg_path = target_path
+            edited_image_pil = Image.open(model_images[0]).convert("RGB")
         except Exception as e:
-            eval_logger.warning(f"kris_bench: failed to convert/save image for key={key}: {e}")
+            eval_logger.warning(f"Failed to load edited image for key={key}: {e}")
 
-    root = _data_root()
-    ori_img_paths = [os.path.join(root, category, fn) for fn in (ori_imgs or [])]
-    gt_img_path = os.path.join(root, category, gt_img) if gt_img else None
+    # Get original image filenames for temporal frame extraction
+    ori_img_filenames = doc.get("ori_img_filenames") or []
 
+    # Evaluate using judge
     scores: Dict[str, Any] = {}
-    if saved_jpg_path and os.path.exists(saved_jpg_path):
+    if edited_image_pil is not None and ori_images_list:
         try:
             scores = _evaluate_one(
                 category=category,
                 instruction=instruction,
                 explanation=explanation,
-                ori_img_paths=ori_img_paths,
-                edited_img_path=saved_jpg_path,
-                gt_img_path=gt_img_path,
+                ori_images=ori_images_list,
+                edited_image=edited_image_pil,
+                gt_image=gt_image_obj,
+                ori_img_filenames=ori_img_filenames,
             )
         except Exception as e:
             eval_logger.error(f"kris_bench judge failed for key={key} category={category}: {str(e)[:300]}")
             scores = {}
+
+    # Get edited image path for logging
+    edited_image_path = model_images[0] if model_images else None
 
     def _pack(score: Optional[float], reasoning: Optional[str]) -> Dict[str, Any]:
         # NOTE: score must be a float (not None) to avoid np.std crash in lmms-eval's
@@ -1063,7 +786,7 @@ def kris_bench_process_results(doc, results, **kwargs):
             "key": key,
             "category": category,
             "image_id": image_id,
-            "edited_image_path": saved_jpg_path,
+            "edited_image_path": edited_image_path,
             "score": float(score) if score is not None else -1.0,
             "reasoning": reasoning,
             "valid": score is not None,  # Flag to indicate if this score should be used
