@@ -527,7 +527,11 @@ class Grouper:
 
 
 def make_table(result_dict, column: str = "results", sort_results: bool = False):
-    """Generate table of results."""
+    """Generate table of results.
+
+    Automatically hides columns that are all N/A (e.g., stability metrics when
+    num_samples=1, or baseline comparison when --baseline is not provided).
+    """
     from pytablewriter import LatexTableWriter, MarkdownTableWriter
 
     if column == "results":
@@ -547,12 +551,30 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
         "Stderr",
         "Stderr_CLT",
         "Stderr_Clustered",
+        "EA",
+        "CA",
+        "IV",
+        "CR",
+        "Baseline",
+        "Diff",
+        "CI",
+        "P_Value",
     ]
 
-    md_writer = MarkdownTableWriter()
-    latex_writer = LatexTableWriter()
-    md_writer.headers = all_headers
-    latex_writer.headers = all_headers
+    # Optional columns (index 9+) are hidden if all values are N/A
+    optional_col_indices = list(range(9, len(all_headers)))
+
+    # Helper to format stderr value
+    def fmt_se(se_val):
+        if se_val is None or se_val == "N/A":
+            return "N/A"
+        # Handle empty list/array safely (numpy array comparison is ambiguous)
+        if hasattr(se_val, "__len__") and len(se_val) == 0:
+            return "N/A"
+        try:
+            return "%.4f" % se_val
+        except Exception:
+            return "N/A"
 
     values = []
 
@@ -579,24 +601,21 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             # Skip stderr variants - they'll be shown as columns
             if m.endswith("_stderr") or m.endswith("_stderr_clt") or m.endswith("_stderr_clustered"):
                 continue
+            if m.endswith("_expected_accuracy") or m.endswith("_consensus_accuracy"):
+                continue
+            if m.endswith("_internal_variance") or m.endswith("_consistency_rate"):
+                continue
+            # Skip paired t-test fields - they'll be shown as columns, not separate rows
+            if m.startswith("paired_"):
+                continue
 
             hib = HIGHER_IS_BETTER_SYMBOLS.get(higher_is_better.get(m), "")
 
+            # Save original numeric value for diff calculation
+            v_numeric = v if isinstance(v, (int, float)) else None
             v = "%.4f" % v if isinstance(v, float) else v
             if v == "" or v is None:
                 v = "N/A"
-
-            # Helper to format stderr value
-            def fmt_se(se_val):
-                if se_val is None or se_val == "N/A":
-                    return "N/A"
-                # Handle empty list/array safely (numpy array comparison is ambiguous)
-                if hasattr(se_val, "__len__") and len(se_val) == 0:
-                    return "N/A"
-                try:
-                    return "%.4f" % se_val
-                except:
-                    return "N/A"
 
             # Bootstrap stderr (original)
             se = fmt_se(dic.get(m + "_stderr," + f))
@@ -604,15 +623,55 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             se_clt = fmt_se(dic.get(m + "_stderr_clt," + f))
             # Clustered stderr
             se_clustered = fmt_se(dic.get(m + "_stderr_clustered," + f))
+            # Stability metrics (EA, CA, IV, CR)
+            ea = fmt_se(dic.get(m + "_expected_accuracy," + f))
+            ca = fmt_se(dic.get(m + "_consensus_accuracy," + f))
+            iv = fmt_se(dic.get(m + "_internal_variance," + f))
+            cr = fmt_se(dic.get(m + "_consistency_rate," + f))
+
+            # Baseline comparison columns (using paired_ prefix from JSON)
+            baseline_name = dic.get("paired_baseline")
+            baseline_str = str(baseline_name) if baseline_name else "N/A"
+            # Diff column: computed from current value - baseline_score (e.g., -25.0%)
+            baseline_score = dic.get("paired_baseline_score")
+            if v_numeric is not None and isinstance(baseline_score, (int, float)):
+                diff = v_numeric - baseline_score
+                diff_str = "%+.1f%%" % diff
+            else:
+                diff_str = "N/A"
+            # CI column: confidence interval (e.g., [-63.7%, +13.7%])
+            ci_lower = dic.get("paired_ci_lower")
+            ci_upper = dic.get("paired_ci_upper")
+            if isinstance(ci_lower, (int, float)) and isinstance(ci_upper, (int, float)):
+                ci_str = "[%+.1f%%, %+.1f%%]" % (ci_lower, ci_upper)
+            else:
+                ci_str = "N/A"
+            # P_Value column
+            pval = dic.get("paired_pvalue")
+            pval_str = "%.4f*" % pval if isinstance(pval, (int, float)) and pval < 0.05 else ("%.4f" % pval if isinstance(pval, (int, float)) else "N/A")
 
             # Check if v is not empty (handle numpy array safely)
             is_empty = hasattr(v, "__len__") and not isinstance(v, str) and len(v) == 0
             if not is_empty:
-                values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered])
-            # k = ""
-            # version = ""
-    md_writer.value_matrix = values
-    latex_writer.value_matrix = values
+                values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered, ea, ca, iv, cr, baseline_str, diff_str, ci_str, pval_str])
+
+    # Determine which optional columns to hide (all values are N/A)
+    cols_to_hide = set()
+    for col_idx in optional_col_indices:
+        all_na = all(row[col_idx] == "N/A" for row in values) if values else True
+        if all_na:
+            cols_to_hide.add(col_idx)
+
+    # Filter headers and values to exclude hidden columns
+    final_headers = [h for i, h in enumerate(all_headers) if i not in cols_to_hide]
+    final_values = [[v for i, v in enumerate(row) if i not in cols_to_hide] for row in values]
+
+    md_writer = MarkdownTableWriter()
+    latex_writer = LatexTableWriter()
+    md_writer.headers = final_headers
+    latex_writer.headers = final_headers
+    md_writer.value_matrix = final_values
+    latex_writer.value_matrix = final_values
 
     # todo: make latex table look good
     # print(latex_writer.dumps())
