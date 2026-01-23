@@ -1,0 +1,7 @@
+group: auxsolidmath
+task:
+  - auxsolidmath_easy
+  - auxsolidmath_hard
+metadata:
+  version: 1.0
+  description: "AuxSolidMath: Solid geometry problems with auxiliary line construction"
