@@ -1,12 +1,6 @@
 import json
-import os
 import re
-import time
-from collections import defaultdict
-from pathlib import Path
 
-import requests
-import yaml
 from loguru import logger as eval_logger
 from PIL import Image
 from rouge import Rouge
@@ -208,7 +202,7 @@ def overall_score(results):
     category_scores = {}
     matched_subtasks = set()
 
-    eval_logger.info(f"Evaluation Sub-Task Results:")
+    eval_logger.info("Evaluation Sub-Task Results:")
     for category, subtasks in categories.items():
         score = 0
         count = 0

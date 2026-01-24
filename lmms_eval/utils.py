@@ -21,7 +21,6 @@ from typing import (
     Literal,
     Optional,
     Tuple,
-    Type,
     Union,
 )
 
@@ -270,7 +269,7 @@ class MultiChoice:
     def __contains__(self, values) -> bool:
         for value in values.split(","):
             if len(fnmatch.filter(self.choices, value)) == 0:
-                eval_logger.info(f"Available tasks to choose:")
+                eval_logger.info("Available tasks to choose:")
                 for choice in self.choices:
                     eval_logger.info(f"  - {choice}")
                 raise ValueError("'{}' is not in task list".format(value))
@@ -598,7 +597,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
         for (mf), v in metric_items:
             m, _, f = mf.partition(",")
-            # Skip stderr variants - they'll be shown as columns
+            # Skip stderr and stability metric variants - they'll be shown as columns
             if m.endswith("_stderr") or m.endswith("_stderr_clt") or m.endswith("_stderr_clustered"):
                 continue
             if m.endswith("_expected_accuracy") or m.endswith("_consensus_accuracy"):

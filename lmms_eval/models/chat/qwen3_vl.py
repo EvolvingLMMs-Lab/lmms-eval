@@ -1,14 +1,13 @@
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List
 
-import numpy as np
 from loguru import logger as eval_logger
-from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.model_utils.reasoning_model_utils import (
     parse_reasoning_model_answer,
@@ -16,9 +15,8 @@ from lmms_eval.models.model_utils.reasoning_model_utils import (
 from lmms_eval.models.simple.qwen3_vl import Qwen3_VL as Qwen3_VLSimple
 from lmms_eval.protocol import ChatMessages
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
@@ -36,7 +34,12 @@ class Qwen3_VL(Qwen3_VLSimple):
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, group_fn=lambda x: x[2], grouping=True)
+        re_ords = utils.Collator(
+            [reg.args for reg in requests],
+            _collate,
+            group_fn=lambda x: x[2],
+            grouping=True,
+        )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
@@ -69,18 +72,44 @@ class Qwen3_VL(Qwen3_VLSimple):
                 video_kwargs["nframes"] = self.max_num_frames
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
-            image_inputs, video_inputs, video_kwargs_qwen = process_vision_info(batched_messages, return_video_kwargs=True, image_patch_size=16, return_video_metadata=True)
+            image_inputs, video_inputs, video_kwargs_qwen = process_vision_info(
+                batched_messages,
+                return_video_kwargs=True,
+                image_patch_size=16,
+                return_video_metadata=True,
+            )
             video_kwargs = {**video_kwargs, **video_kwargs_qwen}
 
             video_metadatas = None
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
-                video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+                video_inputs, video_metadatas = (
+                    list(video_inputs),
+                    list(video_metadatas),
+                )
 
             if self.batch_size > 1:
-                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, video_metadata=video_metadatas, **video_kwargs, do_resize=False, padding=True, padding_side="left", return_tensors="pt")
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    video_metadata=video_metadatas,
+                    **video_kwargs,
+                    do_resize=False,
+                    padding=True,
+                    padding_side="left",
+                    return_tensors="pt",
+                )
             else:
-                inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, video_metadata=video_metadatas, **video_kwargs, do_resize=False, return_tensors="pt")
+                inputs = self.processor(
+                    text=texts,
+                    images=image_inputs,
+                    videos=video_inputs,
+                    video_metadata=video_metadatas,
+                    **video_kwargs,
+                    do_resize=False,
+                    return_tensors="pt",
+                )
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -122,7 +151,11 @@ class Qwen3_VL(Qwen3_VLSimple):
             end_time = time.time()
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
 
             # Calculate timing metrics for batch
             e2e_latency += end_time - start_time

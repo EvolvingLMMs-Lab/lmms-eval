@@ -3,15 +3,6 @@ import random
 
 import datasets
 
-from lmms_eval.tasks.videommmu.utils import (
-    videommmu_aggregate_results,
-    videommmu_doc_to_answer,
-    videommmu_doc_to_text_adaptation,
-    videommmu_doc_to_text_perception_comprehension,
-    videommmu_doc_to_visual,
-    videommmu_process_results,
-)
-
 
 def videommmu_process_docs_random_choice(dataset: datasets.Dataset) -> datasets.Dataset:
     """Shuffle options and update answer accordingly for MCQ questions."""

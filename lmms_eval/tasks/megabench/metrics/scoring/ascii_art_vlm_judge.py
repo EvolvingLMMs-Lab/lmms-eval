@@ -81,7 +81,7 @@ class AsciiArtVLMJudger(OpenAIVLMJudger):
             if "error" in response_:
                 error_info = response_["error"]
                 print(f"Got error with type: {error_info['type']}. Message: {error_info['message']}")
-                print(f"Retry...")
+                print("Retry...")
             else:
                 response_data = response_
                 break
@@ -94,7 +94,7 @@ class AsciiArtVLMJudger(OpenAIVLMJudger):
                 message_content = choices[0]["message"]["content"]
                 print(f"gpt-4o judge results: {message_content}; tokens:{total_tokens}")
         else:
-            print(f"gpt-4o judge query failed...")
+            print("gpt-4o judge query failed...")
             message_content = ""
 
         return message_content

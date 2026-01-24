@@ -1,15 +1,8 @@
-import json
 import os
-import random
 import re
-import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
-import numpy as np
 from loguru import logger as eval_logger
 
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.llm_judge import ServerConfig, get_server
 
 API_TYPE = os.getenv("API_TYPE", "openai")

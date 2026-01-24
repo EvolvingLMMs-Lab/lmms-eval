@@ -1,10 +1,7 @@
-import json
-import os
 from pathlib import Path
 
 import pandas as pd
 import yaml
-from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
 from lmms_eval.tasks.mathvista.mathvista_evals import MathVistaEvaluator

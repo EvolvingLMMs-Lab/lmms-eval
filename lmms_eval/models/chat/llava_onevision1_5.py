@@ -1,5 +1,5 @@
 import time
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import torch
@@ -9,16 +9,14 @@ from tqdm import tqdm
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.llava_onevision1_5 import (
     Llava_OneVision1_5 as LlavaOneVisionSimple,
 )
 from lmms_eval.protocol import ChatMessages
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
-    process_vision_info = None
+process_vision_info, _ = optional_import("qwen_vl_utils", "process_vision_info")
 
 
 @register_model("llava_onevision1_5_chat")
@@ -33,7 +31,12 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
         def _collate(x):
             return x[2], x[2]
 
-        re_ords = utils.Collator([reg.args for reg in requests], _collate, group_fn=lambda x: x[2], grouping=True)
+        re_ords = utils.Collator(
+            [reg.args for reg in requests],
+            _collate,
+            group_fn=lambda x: x[2],
+            grouping=True,
+        )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
@@ -82,7 +85,13 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
                     indices = np.append(indices, total_frames - 1)
                 video_inputs[0] = video_inputs[0][indices]
 
-            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+            inputs = self.processor(
+                text=texts,
+                images=image_inputs,
+                videos=video_inputs,
+                padding=True,
+                return_tensors="pt",
+            )
 
             # Device placement
             if self.device_map == "auto":

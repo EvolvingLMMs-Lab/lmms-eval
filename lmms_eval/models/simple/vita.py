@@ -1,4 +1,3 @@
-import copy
 import os
 import warnings
 from datetime import timedelta
@@ -10,15 +9,12 @@ import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
-from packaging import version
 from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model
-from lmms_eval.utils import stop_sequences_criteria
 
 warnings.filterwarnings("ignore")
 
@@ -28,8 +24,6 @@ try:
     from vita.constants import (
         DEFAULT_AUDIO_TOKEN,
         DEFAULT_IMAGE_TOKEN,
-        DEFAULT_VIDEO_TOKEN,
-        IGNORE_INDEX,
         IMAGE_TOKEN_INDEX,
         MAX_IMAGE_LENGTH,
     )
@@ -41,7 +35,6 @@ try:
         tokenizer_image_audio_token,
         tokenizer_image_token,
     )
-    from vita.util.utils import disable_torch_init
 except Exception as e:
     eval_logger.error(f"Error {e} in loading VITA")
     eval_logger.debug("You can set PYTHONPATH to include vita to make the import successful if it is not relative to deps")

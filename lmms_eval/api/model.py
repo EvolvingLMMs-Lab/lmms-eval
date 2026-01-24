@@ -160,7 +160,7 @@ class lmms(abc.ABC):
         """
         try:
             ctx, doc_to_messages, gen_kwargs, doc_id, task, split = request.args
-        except Exception as e:
+        except Exception:
             contexts, gen_kwargs, doc_to_visual, doc_id, task, split = request.arguments
         return doc_id
 

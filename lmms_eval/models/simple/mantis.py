@@ -3,7 +3,6 @@ import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
-import copy
 import warnings
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
@@ -11,14 +10,12 @@ from typing import List, Optional, Tuple, Union
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from loguru import logger as eval_logger
-from packaging import version
 from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.utils import stop_sequences_criteria
 
 warnings.filterwarnings("ignore")
 

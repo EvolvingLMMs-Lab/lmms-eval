@@ -2,7 +2,7 @@ import base64
 import os
 import warnings
 from io import BytesIO
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 from accelerate import Accelerator, DistributedType

@@ -241,7 +241,7 @@ def videomathqa_process_results(doc, results):
     doc["duration"] = doc["length"]
     data_dict = {"question_id": doc["question_id"], "duration": doc["duration"], "category": category, "pred_answer": pred_ans, "answer": doc["answer"]}
 
-    return {f"videomathqa_perception_score": data_dict}
+    return {"videomathqa_perception_score": data_dict}
 
 
 def videomathqa_mcq_aggregate_results(results):

@@ -1,9 +1,37 @@
+import sys
+
+# Early TUI detection - before heavy imports
+if "--tui" in sys.argv:
+    try:
+        from lmms_eval.tui.cli import main as tui_main
+
+        tui_main()
+        sys.exit(0)
+    except ImportError as e:
+        print("TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]")
+        print(f"Error: {e}")
+        sys.exit(1)
+
+# Show quick help when no args provided (before heavy imports)
+if len(sys.argv) == 1:
+    print("┌───────────────────────────────────────────────────────────────────────────────┐")
+    print("│ LMMs-Eval: Evaluation framework for Large Multimodal Models                   │")
+    print("├───────────────────────────────────────────────────────────────────────────────┤")
+    print("│ Usage:                                                                        │")
+    print("│   lmms-eval --model MODEL --tasks TASKS [options]                             │")
+    print("│   lmms-eval --tui              # Interactive TUI mode                         │")
+    print("│   lmms-eval --help             # Full help                                    │")
+    print("├───────────────────────────────────────────────────────────────────────────────┤")
+    print("│ Example:                                                                      │")
+    print("│   lmms-eval --model llava --tasks mme --batch_size 1                          │")
+    print("└───────────────────────────────────────────────────────────────────────────────┘")
+    sys.exit(0)
+
 import argparse
 import datetime
 import importlib
 import json
 import os
-import sys
 import traceback
 import warnings
 from functools import partial
@@ -14,8 +42,6 @@ import yaml
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 
-import hashlib
-from pathlib import Path
 from typing import Union
 
 from accelerate import Accelerator
@@ -30,7 +56,6 @@ from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
-    handle_non_serializable,
     make_table,
     simple_parse_args_string,
 )
@@ -55,7 +80,7 @@ def _int_or_none_list_arg_type(min_len: int, max_len: int, defaults: str, value:
     elif num_items < min_len or num_items > max_len:
         raise argparse.ArgumentTypeError(f"Argument requires {max_len} integers or None, separated by '{split_char}'")
     elif num_items != max_len:
-        logging.warning(f"Argument requires {max_len} integers or None, separated by '{split_char}'. " "Missing values will be filled with defaults.")
+        eval_logger.warning(f"Argument requires {max_len} integers or None, separated by '{split_char}'. " "Missing values will be filled with defaults.")
         default_items = [parse_value(v) for v in defaults.split(split_char)]
         items.extend(default_items[num_items:])  # extend items list with missing defaults
 
@@ -146,7 +171,11 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
 
 def parse_eval_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--config", default="", help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified")
+    parser.add_argument(
+        "--config",
+        default="",
+        help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified",
+    )
     parser.add_argument("--model", default="hf", help="Name of model e.g. `hf`")
     parser.add_argument(
         "--tasks",
@@ -335,9 +364,28 @@ def parse_eval_args() -> argparse.Namespace:
         action="store_true",
         help="Sets trust_remote_code to True to execute code to create HF Datasets from the Hub",
     )
-    parser.add_argument("--process_with_media", action="store_true", help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.")
-    parser.add_argument("--force_simple", action="store_true", help="Force the evaluation to use the simple mode of the models")
-    parser.add_argument("-n", "--num_samples", type=int, default=1, help="Number of samples per question for model stability measurement. When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.")
+    parser.add_argument(
+        "--process_with_media",
+        action="store_true",
+        help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.",
+    )
+    parser.add_argument(
+        "--force_simple",
+        action="store_true",
+        help="Force the evaluation to use the simple mode of the models",
+    )
+    parser.add_argument(
+        "--tui",
+        action="store_true",
+        help="Launch interactive TUI mode for configuration",
+    )
+    parser.add_argument(
+        "-n",
+        "--num_samples",
+        type=int,
+        default=1,
+        help="Number of samples per question for model stability measurement. " "When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.",
+    )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
 
     # Power Analysis arguments
@@ -390,14 +438,6 @@ def parse_eval_args() -> argparse.Namespace:
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     default_args = parse_eval_args()
-
-    if args is None and len(sys.argv) == 1:
-        print("┌───────────────────────────────────────────────────────────────────────────────┐")
-        print("│ Please provide arguments to evaluate the model. e.g.                          │")
-        print("│ `lmms-eval --model llava --model_path liuhaotian/llava-v1.6-7b --tasks okvqa` │")
-        print("│ Use `lmms-eval --help` for more information.                                  │")
-        print("└───────────────────────────────────────────────────────────────────────────────┘")
-        sys.exit(1)
 
     # If args were provided, override the defaults
     if args:
@@ -554,7 +594,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         eval_logger.error("Need to specify task to evaluate.")
         sys.exit()
     elif args.tasks == "list":
-        eval_logger.info("Available Tasks:\n - {}".format(f"\n - ".join(sorted(task_manager.all_tasks))))
+        eval_logger.info("Available Tasks:\n - {}".format("\n - ".join(sorted(task_manager.all_tasks))))
         sys.exit()
     elif args.tasks == "list_groups":
         eval_logger.info(task_manager.list_all_tasks(list_subtasks=False, list_tags=False))
@@ -642,7 +682,11 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
         batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
 
-        evaluation_tracker.save_results_aggregated(results=results, samples=samples if args.log_samples else None, datetime_str=datetime_str)
+        evaluation_tracker.save_results_aggregated(
+            results=results,
+            samples=samples if args.log_samples else None,
+            datetime_str=datetime_str,
+        )
 
         if args.log_samples:
             for task_name, config in results["configs"].items():

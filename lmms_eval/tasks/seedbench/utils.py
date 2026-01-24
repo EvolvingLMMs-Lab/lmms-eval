@@ -21,7 +21,7 @@ def seed_process_result(doc, result):
     answer = doc["answer"]
     data_type = doc["data_type"]
 
-    return {f"seed_{data_type}": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}, f"seed_all": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}}
+    return {f"seed_{data_type}": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}, "seed_all": {"pred": pred, "answer": answer, "question_id": doc["question_id"]}}
 
 
 def seed_aggregation_result(results):

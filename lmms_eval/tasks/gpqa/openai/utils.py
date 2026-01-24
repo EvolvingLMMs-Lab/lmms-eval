@@ -3,7 +3,7 @@ import random
 import re
 import time
 from collections import Counter
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import datasets
 import openai
@@ -17,9 +17,9 @@ if os.getenv("PROMPTLONG") is not None:
 elif os.getenv("PROMPTSHORT") is not None:
     QUERY_TEMPLATE += "\n\nAnswer after a short amount of thinking. Do not spend excessive time double-checking your work."
 elif os.getenv("PROMPTTOKEN") is not None:
-    QUERY_TEMPLATE += f"\n\nThink for up to " + os.getenv("PROMPTTOKEN") + " tokens."
+    QUERY_TEMPLATE += "\n\nThink for up to " + os.getenv("PROMPTTOKEN") + " tokens."
 elif os.getenv("PROMPTSTEP") is not None:
-    QUERY_TEMPLATE += f"\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
+    QUERY_TEMPLATE += "\n\nThink for up to " + os.getenv("PROMPTSTEP") + " steps."
 
 # print("QUERY_TEMPLATE: ", QUERY_TEMPLATE)
 

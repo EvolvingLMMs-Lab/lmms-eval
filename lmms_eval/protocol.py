@@ -3,15 +3,15 @@ from io import BytesIO
 from typing import Any, Dict, List, Literal, Union
 
 import numpy as np
-import torch
-from decord import VideoReader, cpu
 from PIL import Image
 from pydantic import BaseModel
 
-try:
-    from qwen_vl_utils import fetch_video
-except ImportError:
-    fetch_video = None
+from lmms_eval.imports import optional_import
+
+# Optional video processing dependencies
+VideoReader, _has_decord = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
+fetch_video, _has_qwen_vl = optional_import("qwen_vl_utils", "fetch_video")
 
 
 class ChatTextContent(BaseModel):
@@ -64,7 +64,7 @@ class ChatMessages(BaseModel):
     def to_hf_messages(self, video_kwargs: Dict[str, str] = None):
         if video_kwargs is None:
             video_kwargs = {}
-        num_frames = video_kwargs.get("nframes", 32)
+        _num_frames = video_kwargs.get("nframes", 32)  # noqa: F841
         hf_messages = []
         for message in self.messages:
             hf_message = {"role": message.role, "content": []}
@@ -88,14 +88,24 @@ class ChatMessages(BaseModel):
                 if content.type == "text":
                     openai_message["content"].append({"type": "text", "text": content.text})
                 elif content.type == "image":
-                    openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(content.url)}"}})
+                    openai_message["content"].append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{self.encode_image(content.url)}"},
+                        }
+                    )
                 elif content.type == "video":
                     if fetch_video is None:
                         raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
                     video_input = fetch_video({"type": "video", "video": content.url, **video_kwargs})
                     for frame in video_input:
                         image = Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8))
-                        openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(image)}"}})
+                        openai_message["content"].append(
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,{self.encode_image(image)}"},
+                            }
+                        )
                 # TODO, audio hasn't been implemented yet
                 elif content.type == "audio":
                     openai_message["content"].append({"type": "audio_url", "audio_url": {"url": content.url}})
@@ -110,17 +120,31 @@ class ChatMessages(BaseModel):
                 if content.type == "text":
                     openai_message["content"].append({"type": "text", "text": content.text})
                 elif content.type == "image":
-                    openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(content.url)}"}})
+                    openai_message["content"].append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{self.encode_image(content.url)}"},
+                        }
+                    )
                 elif content.type == "video":
                     if fetch_video is None:
                         raise ImportError("qwen_vl_utils is required for video processing. Please install it with: pip install qwen-vl-utils")
-                    video_input, fps = fetch_video({"type": "video", "video": content.url, **video_kwargs}, return_video_metadata=True, return_video_sample_fps=True)
+                    video_input, fps = fetch_video(
+                        {"type": "video", "video": content.url, **video_kwargs},
+                        return_video_metadata=True,
+                        return_video_sample_fps=True,
+                    )
                     frames, video_metadata = video_input
                     timestamps = self._calculate_timestamps(video_metadata)
                     for frame, timestamp in zip(frames, timestamps):
                         image = Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8))
                         openai_message["content"].append({"type": "text", "text": f"<{timestamp:.1f} seconds>"})
-                        openai_message["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{self.encode_image(image)}"}})
+                        openai_message["content"].append(
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,{self.encode_image(image)}"},
+                            }
+                        )
                 # TODO, audio hasn't been implemented yet
                 elif content.type == "audio":
                     openai_message["content"].append({"type": "audio_url", "audio_url": {"url": content.url}})

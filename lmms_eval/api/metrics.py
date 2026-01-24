@@ -9,7 +9,6 @@ from typing import Any, List
 
 import numpy as np
 import sacrebleu
-from loguru import logger as eval_logger
 
 from lmms_eval.api.registry import register_aggregation, register_metric
 
@@ -339,7 +338,12 @@ def mean_stderr(arr):
 @register_metric(
     metric="bypass",
     higher_is_better=True,
-    output_type=["loglikelihood", "multiple_choice", "generate_until", "generate_until_multi_round"],
+    output_type=[
+        "loglikelihood",
+        "multiple_choice",
+        "generate_until",
+        "generate_until_multi_round",
+    ],
     aggregation="bypass",
 )
 def bypass(items):
@@ -550,19 +554,6 @@ def stderr_for_metric(metric, bootstrap_iters: int):
     if bootstrap_iters <= 0:
         # return no function (don't compute stderr) if bootstrap iters = 0
         return None
-    # for coco_cap_chair
-    # for amber_g
-    from lmms_eval.tasks.amber_g.utils import (
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cog,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-    )
-    from lmms_eval.tasks.coco_cap_chair.utils import (
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-    )
 
     bootstrappable = [
         median,
@@ -572,14 +563,44 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         bleu,
         chrf,
         ter,
-        coco_cap_chair_aggregate_results_chair_i,
-        coco_cap_chair_aggregate_results_chair_s,
-        coco_cap_chair_aggregate_results_recall,
-        amber_g_aggregate_chair,
-        amber_g_aggregate_cover,
-        amber_g_aggregate_hal,
-        amber_g_aggregate_cog,
     ]
+
+    # Optional imports for tasks with extra dependencies (spacy, etc.)
+    try:
+        from lmms_eval.tasks.amber_g.utils import (
+            amber_g_aggregate_chair,
+            amber_g_aggregate_cog,
+            amber_g_aggregate_cover,
+            amber_g_aggregate_hal,
+        )
+
+        bootstrappable.extend(
+            [
+                amber_g_aggregate_chair,
+                amber_g_aggregate_cover,
+                amber_g_aggregate_hal,
+                amber_g_aggregate_cog,
+            ]
+        )
+    except ImportError:
+        pass
+
+    try:
+        from lmms_eval.tasks.coco_cap_chair.utils import (
+            coco_cap_chair_aggregate_results_chair_i,
+            coco_cap_chair_aggregate_results_chair_s,
+            coco_cap_chair_aggregate_results_recall,
+        )
+
+        bootstrappable.extend(
+            [
+                coco_cap_chair_aggregate_results_chair_i,
+                coco_cap_chair_aggregate_results_chair_s,
+                coco_cap_chair_aggregate_results_recall,
+            ]
+        )
+    except ImportError:
+        pass
 
     if metric in bootstrappable:
         return lambda x: bootstrap_stderr(metric, x, iters=bootstrap_iters)
@@ -645,6 +666,96 @@ def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
     assert len(metrics) == len(sizes)
 
     return sum([metric * size for metric, size in zip(metrics, sizes)]) / sum(sizes)
+
+
+def expected_accuracy(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Expected Accuracy (EA) - average accuracy over k samples.
+
+    Args:
+        sample_scores: List of lists, where each inner list contains k scores
+                       for a single question (e.g., [[0,1,1], [1,1,0], ...])
+
+    Returns:
+        EA: mean of all individual sample scores
+    """
+    if not sample_scores:
+        return float("nan")
+    all_scores = [s for scores in sample_scores for s in scores]
+    return sum(all_scores) / len(all_scores) if all_scores else float("nan")
+
+
+def consensus_accuracy(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Consensus Accuracy (CA) via majority voting.
+
+    For each question, take the majority vote across k samples.
+    CA = fraction of questions where majority vote is correct.
+
+    Args:
+        sample_scores: List of lists of 0/1 scores per question
+
+    Returns:
+        CA: accuracy after majority voting
+    """
+    if not sample_scores:
+        return float("nan")
+    correct = 0
+    for scores in sample_scores:
+        if not scores:
+            continue
+        # Majority vote: correct if more than half are 1
+        if sum(scores) > len(scores) / 2:
+            correct += 1
+    return correct / len(sample_scores) if sample_scores else float("nan")
+
+
+def internal_variance(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Internal Variance (IV) - average variance within each question.
+
+    Lower IV indicates more consistent/stable model behavior.
+
+    Args:
+        sample_scores: List of lists of scores per question
+
+    Returns:
+        IV: mean of per-question variances
+    """
+    if not sample_scores:
+        return float("nan")
+    variances = []
+    for scores in sample_scores:
+        if len(scores) < 2:
+            continue
+        mean_s = sum(scores) / len(scores)
+        var = sum((s - mean_s) ** 2 for s in scores) / (len(scores) - 1)
+        variances.append(var)
+    return sum(variances) / len(variances) if variances else float("nan")
+
+
+def consistency_rate(sample_scores: List[List[float]]) -> float:
+    """
+    Calculate Consistency Rate (CR) - fraction of questions with consistent answers.
+
+    A question is consistent if all k samples give the same answer.
+
+    Args:
+        sample_scores: List of lists of 0/1 scores per question
+
+    Returns:
+        CR: fraction of questions with all-same answers
+    """
+    if not sample_scores:
+        return float("nan")
+    consistent = 0
+    for scores in sample_scores:
+        if not scores:
+            continue
+        # Consistent if all scores are the same (all 0 or all 1)
+        if len(set(scores)) == 1:
+            consistent += 1
+    return consistent / len(sample_scores) if sample_scores else float("nan")
 
 
 def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:

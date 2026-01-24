@@ -11,7 +11,6 @@ os.environ["FORCE_NO_DOWNSAMPLE"] = "1"
 os.environ["LOAD_VISION_EARLY"] = "1"
 os.environ["PAD2STRIDE"] = "1"
 os.environ["USE_SPEECH"] = "1"
-import copy
 import logging
 from datetime import timedelta
 from pathlib import Path
@@ -20,7 +19,6 @@ from typing import List, Optional, Tuple, Union
 import librosa
 import numpy as np
 import PIL
-import soundfile as sf
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
@@ -32,8 +30,6 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.audio_processing import downsample_audio
-from lmms_eval.models.model_utils.load_video import read_video_pyav
 
 eval_logger = logging.getLogger("lmms-eval")
 

@@ -1,18 +1,10 @@
-import datetime
-import json
 import os
 import re
 import sys
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-import cv2
-import numpy as np
 import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 TASK_CATEGORIES = ["QA", "OCR", "temporal"]
 
@@ -47,7 +39,7 @@ def convert_time_to_frame(time_in_seconds, fps):
 
 def timescope_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
-    eval_logger.info(f"base_cache_dir", base_cache_dir, "cache_name", cache_name)
+    eval_logger.info("base_cache_dir", base_cache_dir, "cache_name", cache_name)
     video_path = doc["video"]
     video_path = os.path.join(cache_dir, video_path)
     if os.path.exists(video_path):
@@ -100,7 +92,7 @@ def timescope_process_results(doc, results):
     video = doc["video"]
     data_dict = {"id": doc["id"], "length": length, "video": video, "task_type": task_type, "pred_answer": pred_ans, "pred": pred, "answer": doc["answer"]}
 
-    return {f"timescope_perception_score": data_dict}
+    return {"timescope_perception_score": data_dict}
 
 
 def timescope_aggregate_results(results):

@@ -1,12 +1,8 @@
-import asyncio
 import base64
 import json
 import os
-import time
 from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
 from io import BytesIO
-from multiprocessing import cpu_count
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -19,14 +15,13 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
 
-try:
-    from vllm import LLM, SamplingParams
-except ImportError:
-    vllm = None
+LLM, _has_vllm = optional_import("vllm", "LLM")
+SamplingParams, _ = optional_import("vllm", "SamplingParams")
 
 
 @register_model("vllm")
@@ -199,7 +194,11 @@ class VLLM(lmms):
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
@@ -342,12 +341,22 @@ class VLLM(lmms):
                 messages = [{"role": "user", "content": []}]
                 if self.image_first:
                     for img in self.flatten(imgs):
-                        messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+                        messages[0]["content"].append(
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,{img}"},
+                            }
+                        )
                     messages[0]["content"].append({"type": "text", "text": contexts})
                 else:
                     messages[0]["content"].append({"type": "text", "text": contexts})
                     for img in self.flatten(imgs):
-                        messages[0]["content"].append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}})
+                        messages[0]["content"].append(
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,{img}"},
+                            }
+                        )
                 batched_messages.append(messages)
 
             sampling_params = SamplingParams(**params)
@@ -358,7 +367,11 @@ class VLLM(lmms):
             # The logic here is similar to the vllm implementation as shown here (https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat)
             # - vllm implementation: https://github.com/vllm-project/vllm/blob/d97841078b6e0dde8da36d5a2b8e8857a2c37944/vllm/entrypoints/chat_utils.py#L829
             if self.chat_template is not None:
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=self.chat_template)
+                response = self.client.chat(
+                    sampling_params=sampling_params,
+                    messages=batched_messages,
+                    chat_template=self.chat_template,
+                )
             else:
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             response_text = [o.outputs[0].text for o in response]

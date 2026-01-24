@@ -167,7 +167,7 @@ class MMUPD_Evaluator:
                 valid_option.append(none_option)
                 answer_option = [gt_option, none_option]
                 if question_type == "inst":
-                    s += f"F. None of the above\n"
+                    s += "F. None of the above\n"
                     valid_option.append("F")
                     answer_option = [gt_option, none_option, "F"]
 
@@ -196,7 +196,7 @@ class MMUPD_Evaluator:
 
                 if question_type == "inst":
                     if gt_option == "E":
-                        s += f"F. None of the above\n"
+                        s += "F. None of the above\n"
                         valid_option.append("F")
                         s += "G. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n"
                         valid_option.append("G")
@@ -206,7 +206,7 @@ class MMUPD_Evaluator:
                         none_option = none_option_mapping[gt_option]
                         s += f"{none_option}. The correct answer is No answer, None of the above, all provided options are irrelevant or incorrect, or I cannot answer.\n"
                         valid_option.append(none_option)
-                        s += f"F. None of the above\n"
+                        s += "F. None of the above\n"
                         valid_option.append("F")
                         answer_option = [gt_option, none_option, "F"]
                 else:
@@ -226,7 +226,7 @@ class MMUPD_Evaluator:
                     all provided options are irrelevant or incorrect, or I cannot answer.\n"
                 valid_option.append(none_option)
                 if question_type == "inst":
-                    s += f"F. None of the above\n"
+                    s += "F. None of the above\n"
                     valid_option.append("F")
         elif upd_type == "ivqd":
             if eval_type == "ivqd":
@@ -239,7 +239,7 @@ class MMUPD_Evaluator:
                 valid_option.append(none_option)
                 answer_option = [none_option]
                 if question_type == "inst":
-                    s += f"F. The image and question are irrelevant.\n"
+                    s += "F. The image and question are irrelevant.\n"
                     valid_option.append("F")
                     answer_option = [none_option, "F"]
 
@@ -252,7 +252,7 @@ class MMUPD_Evaluator:
                 s += f"{none_option}. The correct answer is that The image is incompatible with the question, or I cannot answer.\n"
                 valid_option.append(none_option)
                 if question_type == "inst":
-                    s += f"F. The image and question are irrelevant.\n"
+                    s += "F. The image and question are irrelevant.\n"
                     valid_option.append("F")
         return s, valid_option, answer_option
 

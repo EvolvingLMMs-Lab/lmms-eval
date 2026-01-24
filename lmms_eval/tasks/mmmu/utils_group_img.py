@@ -5,7 +5,6 @@ import random
 import re
 from collections import defaultdict
 
-import matplotlib.font_manager as fm
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 

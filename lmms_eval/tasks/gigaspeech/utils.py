@@ -57,7 +57,7 @@ PUNCS = "!,.?;:"
 
 def remove_sp(text):
     gt = re.sub(r"<\|.*?\|>", " ", text)
-    gt = re.sub(rf"\s+", r" ", gt)  # Replace consecutive spaces in the text with a single space.
+    gt = re.sub(r"\s+", r" ", gt)  # Replace consecutive spaces in the text with a single space.
     gt = re.sub(f" ?([{PUNCS}])", r"\1", gt)
     gt = gt.lstrip(" ")
     return gt

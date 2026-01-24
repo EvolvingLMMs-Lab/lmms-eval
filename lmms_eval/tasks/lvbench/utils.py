@@ -71,4 +71,4 @@ def lvbench_process_results(doc, results):
     score = pred_ans == gt_ans
 
     # return {f"videomme_perception_score": data_dict for metric in matrices}
-    return {f"lvbench_score": score}
+    return {"lvbench_score": score}

@@ -1,8 +1,5 @@
 import ast
-import os
 import re
-
-import ipdb
 
 from lmms_eval.tasks.ocrbench_v2.vqa_metric import vqa_evaluation
 

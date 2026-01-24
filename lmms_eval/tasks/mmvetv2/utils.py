@@ -275,7 +275,7 @@ def mmvet_process_results(doc, results):
             eval_logger.info(f"{doc['question_id']} failed to get a score.")
 
     return {
-        f"gpt_eval_score": {
+        "gpt_eval_score": {
             "question_id": doc["id"],
             "question": doc["question"],
             "gt_answer": doc["answer"],

@@ -13,25 +13,20 @@
 
 import ast
 import json
-import math
 import os
 import random
 import re
 import subprocess
 import sys
 import time
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-import numpy as np
 import requests
-import seaborn as sns
 import torch
 import yaml
-from decord import VideoReader, cpu
+from decord import cpu
 from loguru import logger as eval_logger
-from matplotlib import pyplot as plt
 from PIL import Image
 
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
@@ -103,7 +98,6 @@ def timestamp_to_seconds(timestamp):
 
 
 def load_video(video_file, duration, max_num_frames=16):
-    from decord import VideoReader
 
     vr = VideoReader(video_file, ctx=cpu(0), num_threads=1)
     fps = vr.get_avg_fps()
@@ -152,7 +146,7 @@ def FALCONbench_doc_to_text_mcq_temploc(doc, lmms_eval_specific_kwargs):
 
     question = doc["question"] + "\n" + "\n".join([". ".join([chr(ord("A") + i), candidate]) for i, candidate in enumerate(doc["options"])])
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-    post_prompt = f"""\n **Output Format Instructions:**
+    post_prompt = """\n **Output Format Instructions:**
     You must provide your final answer strictly as a JSON object enclosed in a markdown code block.
 
     The JSON object must contain exactly these two keys:
@@ -161,10 +155,10 @@ def FALCONbench_doc_to_text_mcq_temploc(doc, lmms_eval_specific_kwargs):
 
     **Example of required output:**
     ```json
-    {{
+    {
     "response": "A person running",
     "temporal_window": [105, 140]
-    }}
+    }
     ```
     """
     return f"{pre_prompt}\n{question}\n{post_prompt}"
@@ -181,7 +175,7 @@ def FALCONbench_doc_to_text_oq(doc, lmms_eval_specific_kwargs):
 def FALCONbench_doc_to_text_oq_temploc(doc, lmms_eval_specific_kwargs):
     question = doc["question"]
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
-    post_prompt = f"""\n **Output Format Instructions:**
+    post_prompt = """\n **Output Format Instructions:**
     You must provide your final answer strictly as a JSON object enclosed in a markdown code block.
 
     The JSON object must contain exactly these two keys:
@@ -190,10 +184,10 @@ def FALCONbench_doc_to_text_oq_temploc(doc, lmms_eval_specific_kwargs):
 
     **Example of required output:**
     ```json
-    {{
+    {
     "response": "A person running",
     "temporal_window": [105, 140]
-    }}
+    }
     ```
     """
     return f"{pre_prompt}\n{question}\n{post_prompt}"
@@ -419,7 +413,7 @@ def get_eval_generic(question, answer, pred, max_tokens: int, retries: int = 5):
             eval_logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
 
         if "Sorry! We've encountered an issue with repetitive patterns in your prompt. Please try again with a different prompt." in json.loads(response.content)["error"]["message"]:
-            eval_logger.error(f"Repetitive patterns in prompt. Drop this data.")
+            eval_logger.error("Repetitive patterns in prompt. Drop this data.")
             return "", ""
 
         # Handle other unexpected errors

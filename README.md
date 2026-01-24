@@ -142,6 +142,33 @@ pip install s2wrapper@git+https://github.com/bfshi/scaling_on_scales
 
 Our Development will be continuing on the main branch, and we encourage you to give us feedback on what features are desired and how to improve the library further, or ask questions, either in issues or PRs on GitHub.
 
+## Web UI
+
+LMMS-Eval includes an optional Web UI for interactive evaluation configuration.
+
+### Requirements
+
+- Node.js 18+ (for building the frontend, auto-built on first run)
+
+### Usage
+
+```bash
+# Start the Web UI (opens browser automatically)
+uv run lmms-eval-ui
+
+# Custom port
+LMMS_SERVER_PORT=3000 uv run lmms-eval-ui
+```
+
+The web UI provides:
+- Model selection from all available models
+- Task selection with search/filter
+- Real-time command preview
+- Live evaluation output streaming
+- Start/Stop evaluation controls
+
+For more details, see [Web UI README](lmms_eval/tui/README.md).
+
 ## Usages
 
 > More examples can be found in [examples/models](examples/models)
