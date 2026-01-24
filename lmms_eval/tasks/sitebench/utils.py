@@ -111,9 +111,9 @@ def spatial_doc_to_text_image(doc, lmmseval_specific_kwargs=None):
     prompt += "Question: " + question + "\n"
     prompt += "Options:\n" + option_text + "\n"
 
-    # check the post_prompt
-    if "post_prompt" in lmmseval_specific_kwargs and lmmseval_specific_kwargs["post_prompt"] != "":
-        prompt += lmmseval_specific_kwargs["post_prompt"]
+    # Append post prompt if provided
+    if lmmseval_specific_kwargs:
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("post_prompt", "")
 
     return prompt
 
@@ -126,18 +126,87 @@ def spatial_doc_to_text_video(doc, lmmseval_specific_kwargs=None):
     option_text = "\n".join(f"{UpperLetters[i]}: {options[i]}" for i in range(len(options)))
 
     prompt = pre_prompt + "\n"
+
     # check the pre_prompt
-    if "pre_prompt" in lmmseval_specific_kwargs and lmmseval_specific_kwargs["pre_prompt"] != "":
-        prompt += lmmseval_specific_kwargs["pre_prompt"]
+    if lmmseval_specific_kwargs:
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("pre_prompt", "")
 
     prompt += "Question: " + question + "\n"
     prompt += "Options:\n" + option_text + "\n"
 
-    # check the post_prompt
-    if "post_prompt" in lmmseval_specific_kwargs and lmmseval_specific_kwargs["post_prompt"] != "":
-        prompt += lmmseval_specific_kwargs["post_prompt"]
+    # Append post prompt if provided
+    if lmmseval_specific_kwargs:
+        prompt += lmmseval_specific_kwargs.get("default", {}).get("post_prompt", "")
 
     return prompt
+
+
+def spatial_doc_to_messages_image(doc, lmms_eval_specific_kwargs=None):
+    """
+    Convert a sitebench image document to chat messages format.
+    Builds interleaved image-text messages for chat-based models.
+
+    lmms_eval_specific_kwargs: dict, optional
+        A dictionary containing evaluation-specific keyword arguments.
+        If 'interleave_visuals' is set to False in the 'default' section,
+        the function will generate non-interleaved messages.
+    """
+    if lmms_eval_specific_kwargs and lmms_eval_specific_kwargs.get("default", {}).get("interleave_visuals", True) is False:
+        # Fallback to non-interleaved format - content must be a list for ChatMessages
+        question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
+        visuals = spatial_doc_to_visual_image(doc)
+        # Build content as a list with images first, then text
+        content = []
+        for visual in visuals:
+            content.append({"type": "image", "url": visual})
+        content.append({"type": "text", "text": question})
+        messages = [{"role": "user", "content": content}]
+        eval_logger.debug(f"[sitebench image] Generated messages (non-interleaved): {messages}")
+        return messages
+
+    question = spatial_doc_to_text_image(doc, lmms_eval_specific_kwargs)
+    visuals = spatial_doc_to_visual_image(doc)
+
+    messages = [{"role": "user", "content": []}]
+    interleaved_content = question.split("<image>")
+
+    # Allow more visuals than placeholders by only attaching pre-image text
+    # if a corresponding segment exists. Always append the final trailing text.
+    for i in range(len(visuals)):
+        if i < len(interleaved_content) - 1:
+            text = interleaved_content[i].strip()
+            if text != "":
+                messages[0]["content"].append({"type": "text", "text": text})
+        messages[0]["content"].append({"type": "image", "url": visuals[i]})
+
+    # Append the trailing text after the last image
+    if len(interleaved_content) > 0:
+        trailing_text = interleaved_content[-1].strip()
+        if trailing_text:
+            messages[0]["content"].append({"type": "text", "text": trailing_text})
+
+    return messages
+
+
+def spatial_doc_to_messages_video(doc, lmms_eval_specific_kwargs=None):
+    """
+    Convert a sitebench video document to chat messages format.
+    Builds video-text messages for chat-based models.
+    """
+    question = spatial_doc_to_text_video(doc, lmms_eval_specific_kwargs)
+    visuals = spatial_doc_to_visual_video(doc)
+
+    # Video uses a simpler format - video first, then the question text
+    messages = [{"role": "user", "content": []}]
+
+    # Add video(s)
+    for video_path in visuals:
+        messages[0]["content"].append({"type": "video", "url": video_path})
+
+    # Add the question text
+    messages[0]["content"].append({"type": "text", "text": question})
+
+    return messages
 
 
 def spatial_process_results(doc, results):
@@ -152,13 +221,20 @@ def spatial_process_results(doc, results):
     accuracy_dict = {"overall": score, category: score, dataset: score, "total": 1}
 
     adjusted_score = score - 1.0 / len(all_choices)
-    chance_adjusted_accuracy_dict = {"overall": adjusted_score, category: adjusted_score, dataset: adjusted_score, "total": 1.0 - 1.0 / len(all_choices)}
+    chance_adjusted_accuracy_dict = {
+        "overall": adjusted_score,
+        category: adjusted_score,
+        dataset: adjusted_score,
+        "total": 1.0 - 1.0 / len(all_choices),
+    }
 
-    return {"accuracy": accuracy_dict, "chance_adjusted_acc": chance_adjusted_accuracy_dict}
+    return {
+        "accuracy": accuracy_dict,
+        "chance_adjusted_acc": chance_adjusted_accuracy_dict,
+    }
 
 
 def spatial_aggregate_results(results):
-
     total_correct, total_examples = 0, 0
     category_correct, category_total = defaultdict(int), defaultdict(int)
     dataset_correct, dataset_total = defaultdict(int), defaultdict(int)

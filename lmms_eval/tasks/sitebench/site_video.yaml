@@ -15,6 +15,7 @@ generation_kwargs:
   do_sample: false
 doc_to_visual: !function utils.spatial_doc_to_visual_video
 doc_to_text: !function utils.spatial_doc_to_text_video
+doc_to_messages: !function utils.spatial_doc_to_messages_video
 doc_to_target: "answer"
 process_results: !function utils.spatial_process_results
 metric_list:
@@ -25,9 +26,9 @@ metric_list:
     aggregation: !function utils.spatial_aggregate_results
     higher_is_better: true
 lmms_eval_specific_kwargs:
-  - default:
-      post_prompt: "Give me the answer letter directly. The best answer is:"
-  - gemini_api:
-      pre_prompt: "<video>"
+  default:
+    post_prompt: "Give me the answer letter directly. The best answer is:"
+  gemini_api:
+    pre_prompt: "<video>"
 metadata:
   - version: 0.0

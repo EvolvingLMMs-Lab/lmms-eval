@@ -55,3 +55,5 @@ workspace/*
 .opencode/
 remote_code/*
 docs/plans/
+.opencode
+.worktrees/

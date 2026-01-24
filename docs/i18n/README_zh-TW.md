@@ -22,6 +22,7 @@
 
 ## 公告
 
+- [2026-01] 🚀🚀 **2026年1月** - 我們意識到空間和組合推理仍然是現有基準測試中的盲點。我們新增了 [CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench)、[SiteBench](https://sitebench.github.io/) 和 [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)。針對運行遠端評估流水線的團隊，我們推出了 HTTP 評估伺服器 (#972)。對於需要統計嚴密性的使用者，我們增加了 CLT（中央極限定理）和集群標準誤差估計 (#989)。
 - [2025-10] 🚀🚀 **LMMs-Eval v0.5** 發布！此主要版本引入了全面的音訊評估、回應快取、5個新模型（GPT-4o Audio Preview、Gemma-3、LongViLA-R1、LLaVA-OneVision 1.5、Thyme）以及50多個新基準變體，涵蓋音訊（Step2、VoiceBench、WenetSpeech）、視覺（CharXiv、Lemonade）和推理（CSBench、SciBench、MedQA、SuperGPQA）等可重現結果。詳情請參閱[發布說明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md)。
 - [2025-07] 🚀🚀 我們發布了 `lmms-eval-0.4`。詳情請參閱[發布說明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md)。
 
@@ -91,10 +92,66 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/llava_onevision.sh
 ```
 
+**LLaVA-OneVision1_5 的評估**
+
+```bash
+bash examples/models/llava_onevision1_5.sh
+```
+
+**LLaMA-3.2-Vision 的評估**
+
+```bash
+bash examples/models/llama_vision.sh
+```
+
+**Qwen2.5-VL 的評估**
+
+```bash
+bash examples/models/qwen2_5_vl.sh
+```
+
+**使用張量並列（Tensor Parallel）評估較大模型 (llava-next-72b)**
+
+```bash
+bash examples/models/tensor_parallel.sh
+```
+
+**使用 SGLang 評估較大模型 (llava-next-72b)**
+
+```bash
+bash examples/models/sglang.sh
+```
+
 **更多參數**
 
 ```bash
 python3 -m lmms_eval --help
+```
+
+**環境變數**
+在進行實驗和評估之前，我們建議您將以下環境變數導出到您的環境中。某些任務的執行需要特定的變數。
+
+```bash
+export OPENAI_API_KEY="<YOUR_API_KEY>"
+export HF_HOME="<Path to HF cache>" 
+export HF_TOKEN="<YOUR_API_KEY>"
+export HF_HUB_ENABLE_HF_TRANSFER="1"
+export REKA_API_KEY="<YOUR_API_KEY>"
+# 其他可能的環境變數包括 
+# ANTHROPIC_API_KEY, DASHSCOPE_API_KEY 等。
+```
+
+**常見環境問題**
+
+有時您可能會遇到一些常見問題，例如與 httpx 或 protobuf 相關的錯誤。要解決這些問題，您可以先嘗試：
+
+```bash
+python3 -m pip install httpx==0.23.3;
+python3 -m pip install protobuf==3.20;
+# 如果您使用的是 numpy==2.x，有時可能會導致錯誤
+python3 -m pip install numpy==1.26;
+# 有時需要安裝 sentencepiece 才能使分詞器（tokenizer）正常運作
+python3 -m pip install sentencepiece;
 ```
 
 ## 新增自訂模型和資料集
@@ -116,5 +173,15 @@ lmms-eval 基於 [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-h
       archivePrefix={arXiv},
       primaryClass={cs.CL},
       url={https://arxiv.org/abs/2407.12772}, 
+}
+
+@misc{lmms_eval2024,
+    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
+    author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
+    publisher    = {Zenodo},
+    version      = {v0.1.0},
+    month={March},
+    year={2024}
 }
 ```

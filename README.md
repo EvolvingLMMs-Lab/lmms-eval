@@ -20,14 +20,13 @@
 
 ---
 
-## Annoucement
+## What's New
 
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** is here! This major release introduces comprehensive audio evaluation, response caching, 5 new models (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), and 50+ new benchmark variants spanning audio (Step2, VoiceBench, WenetSpeech), vision (CharXiv, Lemonade), and reasoning (CSBench, SciBench, MedQA, SuperGPQA) with reproducible results. Please refer to the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md) for details.
-- [2025-07] 🚀🚀 We have released the `lmms-eval-0.4`. Please refer to the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) for more details. This is a major update with new features and improvements, for users wish to use `lmms-eval-0.3` please refer to the branch `stable/v0d3`. For our mission to better reproductability, we've opened a specific thread to discuss about the model's eval results in [discussion](https://github.com/EvolvingLMMs-Lab/lmms-eval/discussions/779).
-- [2025-07] 🎉🎉 We welcome the new task [PhyX](https://phyx-bench.github.io/), the first large-scale benchmark designed to assess models capacity for physics-grounded reasoning in visual scenarios.
-- [2025-06] 🎉🎉 We welcome the new task [VideoMathQA](https://mbzuai-oryx.github.io/VideoMathQA), designed to evaluate mathematical reasoning in real-world educational videos.
-- [2025-04] 🚀🚀 Introducing [Aero-1-Audio](https://www.lmms-lab.com/posts/aero_audio/) — a compact yet mighty audio model. We have officially supports evaluation for Aero-1-Audio and it supports batched evaluations! Feel free to try out.
-- [2025-02] 🚀🚀 We have integrated [`vllm`](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/544) into our models, enabling accelerated evaluation for both multimodal and language models. Additionally, we have incorporated [`openai_compatible`](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/546) to support the evaluation of any API-based model that follows the OpenAI API format. Check the usages [here](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/miscs/model_dryruns).
+Evaluating multimodal models is harder than it looks. We have hundreds of benchmarks, but no standard way to run them. Results vary between labs. Comparisons become unreliable. We've been working to address this - not through heroic effort, but through systematic process.
+
+**January 2026** - We recognized that spatial and compositional reasoning remained blind spots in existing benchmarks. We added [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), and [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). For teams running remote evaluation pipelines, we introduced an HTTP eval server (#972). For those who need statistical rigor, we added CLT and clustered standard error estimation (#989).
+
+**October 2025 (v0.5)** - Audio had been a gap. Models could hear, but we had no consistent way to test them. This release added comprehensive audio evaluation, response caching for efficiency, and 50+ benchmark variants spanning audio, vision, and reasoning. [Release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
 
 <details>
 <summary>Below is a chronological list of recent tasks, models, and features added by our amazing contributors. </summary>
@@ -50,13 +49,19 @@
 
 ## Why `lmms-eval`?
 
-We're on an exciting journey toward creating Artificial General Intelligence (AGI), much like the enthusiasm of the 1960s moon landing. This journey is powered by advanced large language models (LLMs) and large multimodal models (LMMs), which are complex systems capable of understanding, learning, and performing a wide variety of human tasks.
+We are in the middle of something that feels like the 1960s space race - except this time, the destination is artificial general intelligence. Large multimodal models are our rockets. They can see, hear, read, and reason. The progress is real and accelerating.
 
-To gauge how advanced these models are, we use a variety of evaluation benchmarks. These benchmarks are tools that help us understand the capabilities of these models, showing us how close we are to achieving AGI. However, finding and using these benchmarks is a big challenge. The necessary benchmarks and datasets are spread out and hidden in various places like Google Drive, Dropbox, and different school and research lab websites. It feels like we're on a treasure hunt, but the maps are scattered everywhere.
+But here is the problem: our measurement systems have not kept pace with our ambitions.
 
-In the field of language models, there has been a valuable precedent set by the work of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). They offer integrated data and model interfaces, enabling rapid evaluation of language models and serving as the backend support framework for the [open-llm-leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard), and has gradually become the underlying ecosystem of the era of foundation models.
+We have benchmarks - hundreds of them. But they are scattered across Google Drive folders, Dropbox links, university websites, and lab servers. Each benchmark has its own data format, its own evaluation script, its own quirks. When two teams report results on the same benchmark, they often get different numbers. Not because their models differ, but because their evaluation pipelines differ.
 
-We humbly obsorbed the exquisite and efficient design of [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) and introduce **lmms-eval**, an evaluation framework meticulously crafted for consistent and efficient evaluation of LMM.
+Imagine if, during the space race, every country measured distance in different units and never shared their conversion tables. That is roughly where we are today with multimodal evaluation.
+
+This is not a minor inconvenience. It is a systemic failure. Without consistent measurement, we cannot know which models are actually better. We cannot reproduce results. We cannot build on each other's work.
+
+For language models, this problem was largely solved by [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness). It provides unified data loading, standardized evaluation, and reproducible results. It powers the [Open LLM Leaderboard](https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard). It has become infrastructure.
+
+We built `lmms-eval` to do the same for multimodal models. Same principle: one framework, consistent interfaces, reproducible numbers. The moonshot needs a reliable ruler.
 
 ## Installation
 

@@ -809,3 +809,143 @@ def clustered_stderr(scores: List[float], cluster_ids: List[Any]) -> float:
 
     # SE_clustered = sqrt(SE_CLT^2 + cross_term)
     return math.sqrt(se_clt_squared + cross_term)
+
+
+def paired_ttest(current_scores: List[float], baseline_scores: List[float]) -> dict:
+    """
+    Perform paired t-test comparing current model scores against baseline.
+
+    This implements a paired-differences test for model comparison, computing:
+    - Mean difference (current - baseline)
+    - Standard error of the difference
+    - 95% confidence interval
+    - t-statistic and p-value
+
+    Args:
+        current_scores: List of scores from the current model (per sample)
+        baseline_scores: List of scores from the baseline model (per sample)
+
+    Returns:
+        dict with keys: mean_diff, se_diff, ci_lower, ci_upper, t_stat, p_value, n
+    """
+    from scipy import stats
+
+    if len(current_scores) != len(baseline_scores):
+        raise ValueError(f"Score lists must have same length: current={len(current_scores)}, baseline={len(baseline_scores)}")
+
+    n = len(current_scores)
+    if n < 2:
+        return {
+            "mean_diff": float("nan"),
+            "se_diff": float("nan"),
+            "ci_lower": float("nan"),
+            "ci_upper": float("nan"),
+            "t_stat": float("nan"),
+            "p_value": float("nan"),
+            "n": n,
+        }
+
+    diffs = [c - b for c, b in zip(current_scores, baseline_scores)]
+    mean_diff = sum(diffs) / n
+    var_diff = sum((d - mean_diff) ** 2 for d in diffs) / (n - 1)
+    se_diff = math.sqrt(var_diff / n)
+
+    if se_diff == 0:
+        t_stat = float("inf") if mean_diff > 0 else float("-inf") if mean_diff < 0 else 0.0
+        p_value = 0.0 if mean_diff != 0 else 1.0
+    else:
+        t_stat = mean_diff / se_diff
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), n - 1))
+
+    t_crit = stats.t.ppf(0.975, n - 1)
+    ci_lower = mean_diff - t_crit * se_diff
+    ci_upper = mean_diff + t_crit * se_diff
+
+    return {
+        "mean_diff": mean_diff,
+        "se_diff": se_diff,
+        "ci_lower": ci_lower,
+        "ci_upper": ci_upper,
+        "t_stat": t_stat,
+        "p_value": p_value,
+        "n": n,
+    }
+
+
+def power_analysis(
+    effect_size: float,
+    std_a: float = None,
+    std_b: float = None,
+    alpha: float = 0.05,
+    power: float = 0.80,
+    correlation: float = 0.5,
+    current_n: int = None,
+) -> dict:
+    """
+    Calculate minimum sample size for paired t-test power analysis.
+
+    For paired samples, the effective variance is:
+        Var(X - Y) = Var(X) + Var(Y) - 2*Cov(X,Y)
+                   = std_a^2 + std_b^2 - 2*rho*std_a*std_b
+
+    Formula (from Miller 2024, "Adding Error Bars to Evals"):
+        n = ((z_alpha + z_beta) / d)^2
+    where d = effect_size / std_diff is the standardized effect size.
+
+    Note: std_a and std_b should ideally be estimated from previous
+    evaluation data rather than using the default values.
+    See: https://arxiv.org/abs/2411.00640 Section 5 for details.
+
+    Args:
+        effect_size: Minimum detectable difference (e.g., 0.03 for 3%)
+        std_a: Std deviation of model A scores (estimate from previous eval)
+        std_b: Std deviation of model B scores (estimate from previous eval)
+               If only std_a provided, assumes std_b = std_a
+               If neither provided, defaults to 0.5 (binary 0/1 approximation)
+        alpha: Significance level (default 0.05)
+        power: Desired statistical power (default 0.80)
+        correlation: Expected correlation between paired samples (default 0.5)
+        current_n: If provided, also compute the power for this sample size
+
+    Returns:
+        Dictionary with min_n, current_power (if current_n provided), and other details
+    """
+    from scipy import stats
+
+    # Handle std defaults: if neither provided, use 0.5; if only std_a, assume equal
+    if std_a is None and std_b is None:
+        std_a = std_b = 0.5  # Default for binary (0/1) scores
+    elif std_a is not None and std_b is None:
+        std_b = std_a  # Assume equal variance if only one provided
+    elif std_a is None and std_b is not None:
+        std_a = std_b
+
+    z_alpha = stats.norm.ppf(1 - alpha / 2)  # Two-tailed
+    z_beta = stats.norm.ppf(power)
+
+    # General formula: Var(X-Y) = Var(X) + Var(Y) - 2*Cov(X,Y)
+    # where Cov(X,Y) = rho * std_a * std_b
+    var_diff = std_a**2 + std_b**2 - 2 * correlation * std_a * std_b
+    std_diff = math.sqrt(var_diff)
+    d = effect_size / std_diff
+    min_n = math.ceil(((z_alpha + z_beta) / d) ** 2)
+
+    result = {
+        "min_n": min_n,
+        "effect_size": effect_size,
+        "std_a": std_a,
+        "std_b": std_b,
+        "alpha": alpha,
+        "power": power,
+        "correlation": correlation,
+    }
+
+    if current_n is not None:
+        achieved_z_beta = d * math.sqrt(current_n) - z_alpha
+        achieved_power = stats.norm.cdf(achieved_z_beta)
+        result["current_n"] = current_n
+        result["current_power"] = round(achieved_power, 4)
+        mde = (z_alpha + z_beta) * std_diff / math.sqrt(current_n)
+        result["min_detectable_effect"] = round(mde, 4)
+
+    return result

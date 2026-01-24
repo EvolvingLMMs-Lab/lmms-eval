@@ -22,8 +22,20 @@
 
 ## Anuncios
 
-- [2025-10] 🚀🚀 ¡**LMMs-Eval v0.5** está aquí! Esta versión principal introduce evaluación de audio completa, caché de respuestas, 5 nuevos modelos (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), y más de 50 nuevas variantes de benchmark que abarcan audio (Step2, VoiceBench, WenetSpeech), visión (CharXiv, Lemonade) y razonamiento (CSBench, SciBench, MedQA, SuperGPQA). Consulte las [notas de la versión](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md) para más detalles.
-- [2025-07] 🚀🚀 Hemos lanzado `lmms-eval-0.4`. Consulte las [notas de la versión](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) para más detalles.
+Evaluar modelos multimodales es más difícil de lo que parece. Tenemos cientos de benchmarks, pero no hay una forma estándar de ejecutarlos. Los resultados varían entre laboratorios. Las comparaciones se vuelven poco fiables. Hemos estado trabajando para abordar esto, no mediante esfuerzos heroicos, sino mediante procesos sistemáticos.
+
+**Enero de 2026** - Reconocimos que el razonamiento espacial y composicional seguían siendo puntos ciegos en los benchmarks existentes. Añadimos [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), y [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Para los equipos que ejecutan flujos de evaluación remotos, introdujimos un servidor de evaluación HTTP (#972). Para quienes necesitan rigor estadístico, añadimos CLT y estimación de error estándar por clúster (#989).
+
+**Octubre de 2025 (v0.5)** - El audio había sido una brecha. Los modelos podían oír, pero no teníamos una forma consistente de probarlos. Esta versión añadió una evaluación de audio completa, caché de respuestas para mayor eficiencia y más de 50 variantes de benchmarks que abarcan audio, visión y razonamiento. [Notas de la versión](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
+
+<details>
+<summary>A continuación se presenta una lista cronológica de las tareas, modelos y características recientes añadidos por nuestros increíbles colaboradores.</summary>
+
+- [2025-01] 🎓🎓 Hemos lanzado nuestro nuevo benchmark: [Video-MMMU: Evaluating Knowledge Acquisition from Multi-Discipline Professional Videos](https://arxiv.org/abs/2501.13826). Consulte la [página del proyecto](https://videommmu.github.io/) para más detalles.
+- [2024-12] 🎉🎉 Hemos presentado [MME-Survey: A Comprehensive Survey on Evaluation of Multimodal LLMs](https://arxiv.org/pdf/2411.15296), conjuntamente con el [Equipo MME](https://github.com/BradyFU/Video-MME) y el [Equipo OpenCompass](https://github.com/open-compass).
+- [2024-11] 🔈🔊 El `lmms-eval/v0.3.0` ha sido actualizado para soportar evaluaciones de audio para modelos de audio como Qwen2-Audio y Gemini-Audio en tareas como AIR-Bench, Clotho-AQA, LibriSpeech, y más. ¡Consulte el [blog](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.3.md) para más detalles!
+
+</details>
 
 ## ¿Por qué `lmms-eval`?
 
@@ -91,10 +103,75 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/llava_onevision.sh
 ```
 
+**Evaluación de LLaVA-OneVision1_5**
+
+```bash
+bash examples/models/llava_onevision1_5.sh
+```
+
+**Evaluación de LLaMA-3.2-Vision**
+
+```bash
+bash examples/models/llama_vision.sh
+```
+
+**Evaluación de Qwen2-VL**
+
+```bash
+bash examples/models/qwen2_vl.sh
+bash examples/models/qwen2_5_vl.sh
+```
+
+**Evaluación de LLaVA en MME**
+
+Si desea probar LLaVA 1.5, tendrá que clonar su repositorio de [LLaVA](https://github.com/haotian-liu/LLaVA) y
+
+```bash
+bash examples/models/llava_next.sh
+```
+
+**Evaluación con tensor parallel para modelos más grandes (llava-next-72b)**
+
+```bash
+bash examples/models/tensor_parallel.sh
+```
+
+**Evaluación con SGLang para modelos más grandes (llava-next-72b)**
+
+```bash
+bash examples/models/sglang.sh
+```
+
 **Más Parámetros**
 
 ```bash
 python3 -m lmms_eval --help
+```
+
+## Variables de Entorno
+Antes de ejecutar experimentos y evaluaciones, le recomendamos exportar las siguientes variables de entorno a su entorno. Algunas son necesarias para que ciertas tareas funcionen.
+
+```bash
+export OPENAI_API_KEY="<YOUR_API_KEY>"
+export HF_HOME="<Path to HF cache>" 
+export HF_TOKEN="<YOUR_API_KEY>"
+export HF_HUB_ENABLE_HF_TRANSFER="1"
+export REKA_API_KEY="<YOUR_API_KEY>"
+# Otras posibles variables de entorno incluyen 
+# ANTHROPIC_API_KEY, DASHSCOPE_API_KEY etc.
+```
+
+## Problemas Comunes del Entorno
+
+A veces puede encontrar algunos problemas comunes, por ejemplo, errores relacionados con httpx o protobuf. Para resolver estos problemas, primero puede intentar:
+
+```bash
+python3 -m pip install httpx==0.23.3;
+python3 -m pip install protobuf==3.20;
+# Si está usando numpy==2.x, a veces puede causar errores
+python3 -m pip install numpy==1.26;
+# A veces se requiere sentencepiece para que el tokenizador funcione
+python3 -m pip install sentencepiece;
 ```
 
 ## Agregar Modelo y Conjunto de Datos Personalizados
@@ -116,5 +193,15 @@ lmms_eval es un fork de [lm-eval-harness](https://github.com/EleutherAI/lm-evalu
       archivePrefix={arXiv},
       primaryClass={cs.CL},
       url={https://arxiv.org/abs/2407.12772}, 
+}
+
+@misc{lmms_eval2024,
+    title={LMMs-Eval: Accelerating the Development of Large Multimoal Models},
+    url={https://github.com/EvolvingLMMs-Lab/lmms-eval},
+    author={Bo Li*, Peiyuan Zhang*, Kaichen Zhang*, Fanyi Pu*, Xinrun Du, Yuhao Dong, Haotian Liu, Yuanhan Zhang, Ge Zhang, Chunyuan Li and Ziwei Liu},
+    publisher    = {Zenodo},
+    version      = {v0.1.0},
+    month={March},
+    year={2024}
 }
 ```
