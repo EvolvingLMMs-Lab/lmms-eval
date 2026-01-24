@@ -1,9 +1,4 @@
-import argparse
-import json
 import logging
-import math
-import os
-import signal
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
@@ -13,32 +8,30 @@ from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
 from accelerate.state import AcceleratorState
 from decord import VideoReader, cpu
 from PIL import Image
-from torchvision.transforms import Resize
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import require_package
 
 eval_logger = logging.getLogger("lmms-eval")
-# import sys;sys.path.append("llava-video")
-try:
-    from llava.constants import (
-        DEFAULT_IM_END_TOKEN,
-        DEFAULT_IM_START_TOKEN,
-        DEFAULT_IMAGE_TOKEN,
-        IMAGE_TOKEN_INDEX,
-    )
-    from llava.conversation import SeparatorStyle, conv_templates
-    from llava.mm_utils import (
-        KeywordsStoppingCriteria,
-        get_model_name_from_path,
-        process_images,
-        tokenizer_image_token,
-    )
-    from llava.model.builder import load_pretrained_model
-except ImportError as e:
-    raise ImportError(f"VILA is not installed. Please install VILA to use this model. Error: {e}")
+
+require_package("llava", feature="VILA model")
+from llava.constants import (
+    DEFAULT_IM_END_TOKEN,
+    DEFAULT_IM_START_TOKEN,
+    DEFAULT_IMAGE_TOKEN,
+    IMAGE_TOKEN_INDEX,
+)
+from llava.conversation import SeparatorStyle, conv_templates
+from llava.mm_utils import (
+    KeywordsStoppingCriteria,
+    get_model_name_from_path,
+    process_images,
+    tokenizer_image_token,
+)
+from llava.model.builder import load_pretrained_model
 
 
 @register_model("vila")
@@ -84,7 +77,12 @@ class VILA(lmms):
         self.max_frames_num = max_frames_num
         # self._config = AutoConfig.from_pretrained(self.pretrained)
 
-        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, self.model_name, device_map=self.device_map, attn_implementation=attn_implementation)
+        self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+            pretrained,
+            self.model_name,
+            device_map=self.device_map,
+            attn_implementation=attn_implementation,
+        )
 
         self.model.image_processor = self._image_processor
 
@@ -105,7 +103,11 @@ class VILA(lmms):
         self.truncate_context = truncate_context
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
             # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
@@ -253,7 +255,12 @@ class VILA(lmms):
             labels[0, : contxt_id.shape[1]] = -100
 
             with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=videos, modalities="video")
+                outputs = self.model(
+                    input_ids=input_ids,
+                    labels=labels,
+                    images=videos,
+                    modalities="video",
+                )
 
             loss = outputs["loss"]
             # loss = torch.exp(loss)

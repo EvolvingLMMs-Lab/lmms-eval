@@ -1,10 +1,8 @@
-import math
 import os
 import subprocess
 from datetime import timedelta
 from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import requests
 import torch
 from accelerate import Accelerator, DistributedType, InitProcessGroupKwargs
@@ -13,14 +11,11 @@ from decord import VideoReader, cpu
 from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from tqdm import tqdm
-from transformers import AutoConfig
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.load_video import read_video_pyav
-from lmms_eval.utils import stop_sequences_criteria
 
 try:
     from llamavid.constants import (

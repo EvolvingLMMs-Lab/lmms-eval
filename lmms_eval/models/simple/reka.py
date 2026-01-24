@@ -2,12 +2,10 @@ import base64
 import json
 import os
 import time
-from copy import deepcopy
 from io import BytesIO
 from typing import List, Tuple
 
 import numpy as np
-import requests as url_requests
 from accelerate import Accelerator, DistributedType
 from PIL import Image
 from tqdm import tqdm
@@ -15,6 +13,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
 NUM_SECONDS_TO_SLEEP = 30
 
@@ -22,12 +21,12 @@ from loguru import logger
 
 eval_logger = logger
 
-try:
-    from decord import VideoReader, cpu
-    from reka import ChatMessage
-    from reka.client import Reka as RekaClient
-except Exception as e:
-    eval_logger.warning(f"Error importing reka: {e}")
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
+ChatMessage, _has_reka = optional_import("reka", "ChatMessage")
+RekaClient, _ = optional_import("reka.client", "Reka")
+if not _has_reka:
+    eval_logger.warning("reka is not installed. Please install reka to use this model.")
 
 
 @register_model("reka")
@@ -68,7 +67,11 @@ class Reka(lmms):
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")

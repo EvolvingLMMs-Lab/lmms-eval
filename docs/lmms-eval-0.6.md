@@ -58,56 +58,16 @@ python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B
 
 ### 1.2 Data Layer
 
-#### Storage Format Migration
+#### Storage Format
 
 | Format | Random Access | Media Handling | Use in v0.6 |
 |--------|---------------|----------------|-------------|
 | JSON/Files | O(N) scan | External files | Legacy |
-| Parquet | Row-group decompress | Binary blobs | Metadata |
-| Lance | O(1) lookup | Native blob support | Multimodal data |
+| Parquet | Row-group decompress | Binary blobs | Primary format |
 
 **Parquet**: Task metadata (questions, answers, splits). Supports projection pushdown, read only required columns. Underlying format for HF Datasets (disk).
 
-**Lance**: Images and video data. Zero-copy memory mapping via Apache Arrow layout.
-
-#### Why Lance for Multimodal Data?
-
-| Approach | Problem |
-|----------|---------|
-| Separate image files | Millions of small file I/O, slow metadata lookups |
-| Parquet with binary columns | No random access within row groups, full decompression required |
-
-Lance addresses these with a columnar format designed for ML workloads:
-
-| Feature | Mechanism | Benefit |
-|---------|-----------|---------|
-| O(1) random access | Global offsets & structural encoding | Instant lookup by index |
-| Native blob support | Variable-length binary columns | Images/videos inline, no external files |
-| Zero-copy reads | Memory-mapped Arrow buffers | No serialization overhead |
-| Append-only versioning | Immutable fragments with manifest | Safe concurrent writes |
-
-**Usage Pattern**
-
-```python
-import lancedb
-
-db = lancedb.connect("./benchmark_data")
-table = db.open_table("videomme")
-
-# Filtered query - only reads necessary columns/rows
-samples = (
-    table.search()
-    .where("split = 'test' AND duration_sec > 60")
-    .select(["video_id", "question", "video_bytes"])
-    .limit(1000)
-    .to_arrow()  # Returns pyarrow.Table (memory-mapped)
-)
-
-for batch in samples.to_batches():
-    # PyArrow Array backed by memory-mapped buffer
-    video_col = batch["video_bytes"]
-    # Use video_col[i].as_buffer() to avoid Python bytes copy
-```
+**TODO**: Optimize for high-throughput multimodal access (e.g., Lance or similar columnar storage for images/videos).
 
 ### 1.3 Evaluation Pipeline
 
@@ -171,7 +131,7 @@ vLLM/SGLang reuse KV cache for shared prefixes. We cluster inputs by media to ma
 
 ### 1.4 Evaluation as a Service
 
-To integrate evaluation into training workflows, v0.6 provides a disaggregated HTTP service architecture.
+To integrate evaluation into training workflows, v0.6 provides a disaggregated HTTP service architecture. Implementation: [lmms-engine#127](https://github.com/EvolvingLMMs-Lab/lmms-engine/pull/127)
 
 ```
 ┌─────────────────┐          ┌─────────────────┐           ┌─────────────────┐
@@ -357,7 +317,9 @@ Same accuracy, but Model A is 3× more stable.
 
 ---
 
-## 3. Frontier Multimodal Evaluation
+## 3. Frontier Multimodal Evaluation (TODO)
+
+> **Note**: This section outlines planned frontier evaluation features. Implementation is in progress.
 
 ### 3.1 Why Frontier Scenarios Matter
 

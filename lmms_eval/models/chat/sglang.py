@@ -10,11 +10,11 @@ import uuid
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecodeError
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
 from accelerate import Accelerator, DistributedType
-from mcp.types import AudioContent, ImageContent, TextContent
+from mcp.types import ImageContent, TextContent
 from PIL import Image
 from sglang import Engine
 from tqdm import tqdm
@@ -25,13 +25,17 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.mcp import MCPClient
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.model_utils.load_video import load_video_decord
 from lmms_eval.protocol import ChatMessages
 
 warnings.filterwarnings("ignore")
 
 from loguru import logger as eval_logger
-from qwen_vl_utils import process_vision_info
+
+try:
+    from qwen_vl_utils import process_vision_info
+except ImportError:
+    process_vision_info = None
+    eval_logger.warning("Failed to import qwen_vl_utils. Please install it via: pip install qwen-vl-utils")
 
 try:
     from sglang.srt.function_call.function_call_parser import FunctionCallParser
@@ -94,9 +98,20 @@ class Sglang(lmms):
         else:
             self.mcp_client = None
         self.processor = AutoProcessor.from_pretrained(model, trust_remote_code=trust_remote_code)
-        self.tools, self.tool_call_parser_type, self.sgl_tools, self.function_call_parser = self._init_tools_sglang()
+        (
+            self.tools,
+            self.tool_call_parser_type,
+            self.sgl_tools,
+            self.function_call_parser,
+        ) = self._init_tools_sglang()
         # Set up sglang client
-        self.client = Engine(model_path=model, tp_size=tensor_parallel_size, mem_fraction_static=gpu_memory_utilization, trust_remote_code=trust_remote_code, **kwargs)
+        self.client = Engine(
+            model_path=model,
+            tp_size=tensor_parallel_size,
+            mem_fraction_static=gpu_memory_utilization,
+            trust_remote_code=trust_remote_code,
+            **kwargs,
+        )
         if chat_template is not None:
             with open(chat_template, "r") as f:
                 chat_template = f.read()
@@ -104,7 +119,11 @@ class Sglang(lmms):
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
@@ -178,7 +197,11 @@ class Sglang(lmms):
         assert False, "TODO, not implemented"
 
     def _prepare_video_kwargs(self):
-        video_kwargs = {"max_pixels": self.max_pixels, "min_pixels": self.min_pixels, "max_frames": self.max_frame_num}
+        video_kwargs = {
+            "max_pixels": self.max_pixels,
+            "min_pixels": self.min_pixels,
+            "max_frames": self.max_frame_num,
+        }
         if self.fps is not None:
             video_kwargs["fps"] = self.fps
         else:
@@ -216,9 +239,19 @@ class Sglang(lmms):
             for image_idx, image in enumerate(images):
                 image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
                 image.save(image_path)
-                messages[-1]["content"].append({"type": "text", "text": f"\nImage {image_idx} has image path: {image_path}"})
+                messages[-1]["content"].append(
+                    {
+                        "type": "text",
+                        "text": f"\nImage {image_idx} has image path: {image_path}",
+                    }
+                )
             for video_idx, video in enumerate(videos):
-                messages[-1]["content"].append({"type": "text", "text": f"\nVideo {video_idx} has video path: {video}"})
+                messages[-1]["content"].append(
+                    {
+                        "type": "text",
+                        "text": f"\nVideo {video_idx} has video path: {video}",
+                    }
+                )
 
         return messages, images
 
@@ -289,11 +322,22 @@ class Sglang(lmms):
             )
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
-                video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+                video_inputs, video_metadatas = (
+                    list(video_inputs),
+                    list(video_metadatas),
+                )
             else:
                 video_metadatas = None
             assert image_inputs is None or video_inputs is None, "Only one of image or video inputs should be provided"
-            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, video_metadata=video_metadatas, **video_kwargs, padding=True, return_tensors="pt")
+            inputs = self.processor(
+                text=texts,
+                images=image_inputs,
+                videos=video_inputs,
+                video_metadata=video_metadatas,
+                **video_kwargs,
+                padding=True,
+                return_tensors="pt",
+            )
             # If video inputs is not None, we need to replace the image token ids with the video token ids before generating
             # so that the visual tokens are being scattered correctly.
             if video_inputs is not None:
@@ -311,7 +355,12 @@ class Sglang(lmms):
             if self.mcp_client is None:
                 outputs = self.batch_level_generate(input_ids=input_ids, sampling_params=params, image_data=image_inputs)
             else:
-                outputs = self.req_level_generate(input_ids=input_ids, image_data=image_inputs, sampling_params=params, batched_messages=batched_messages)
+                outputs = self.req_level_generate(
+                    input_ids=input_ids,
+                    image_data=image_inputs,
+                    sampling_params=params,
+                    batched_messages=batched_messages,
+                )
             end_time = time.time()
 
             response_text = [o["text"] for o in outputs]
@@ -412,8 +461,19 @@ class Sglang(lmms):
             if self.function_call_parser.has_tool_call(content):
                 finish_reason = "tool_calls"
             if finish_reason == "stop" or finish_reason == "length":
-                messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
-                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False, tools=self.tools, skip_special_tokens=True)
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": content}],
+                    }
+                )
+                return self.processor.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=False,
+                    tools=self.tools,
+                    skip_special_tokens=True,
+                )
             elif finish_reason == "tool_calls":
                 try:
                     normed_content, tool_calls = self.function_call_parser.parse_non_stream(content)
@@ -442,7 +502,13 @@ class Sglang(lmms):
                             content_list.append({"type": "text", "text": result.text})
                         else:
                             raise ValueError(f"Unsupported result type: {type(result)}. Only ImageContent, TextContent are supported.")
-                    tool_messages.append({"role": "tool", "name": tool_call.name, "content": content_list})
+                    tool_messages.append(
+                        {
+                            "role": "tool",
+                            "name": tool_call.name,
+                            "content": content_list,
+                        }
+                    )
                 original_text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
                 # Get the text for the tool calling part without system prompt
                 tool_calling_text = self.processor.apply_chat_template(messages + tool_messages, tokenize=False, add_generation_prompt=True)
@@ -453,21 +519,43 @@ class Sglang(lmms):
                 tool_input_ids = inputs.pop("input_ids").flatten().tolist()
 
                 # Append this round's result
-                messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": content}],
+                    }
+                )
                 messages.extend(tool_messages)
                 if new_image_data is not None:
                     image.extend(new_image_data)
                 input_id = input_id + content_id + tool_input_ids
             else:
                 # Finish reason is neither "stop", "length", nor "tool_calls"
-                messages.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
-                return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False, tools=self.tools, skip_special_tokens=True)
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": content}],
+                    }
+                )
+                return self.processor.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=False,
+                    tools=self.tools,
+                    skip_special_tokens=True,
+                )
             turn_count += 1
             if turn_count >= self.max_turn:
                 keep_rolling = False
 
         # Return the final message if max turns reached
-        return self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=False, tools=self.tools, skip_special_tokens=True)
+        return self.processor.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=False,
+            tools=self.tools,
+            skip_special_tokens=True,
+        )
 
     def req_level_generate(self, input_ids, image_data, sampling_params, batched_messages):
         """

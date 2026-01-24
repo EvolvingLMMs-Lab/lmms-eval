@@ -1,5 +1,4 @@
 import ast
-import datetime
 import json
 import os
 import sys
@@ -8,8 +7,6 @@ from pathlib import Path
 
 import requests
 import yaml
-
-import lmms_eval.tasks._task_utils.file_utils as file_utils
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -155,7 +152,7 @@ def get_eval_generic(question, answer, pred, max_tokens: int, retries: int = 5):
             eval_logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
 
         if "Sorry! We've encountered an issue with repetitive patterns in your prompt. Please try again with a different prompt." in json.loads(response.content)["error"]["message"]:
-            eval_logger.error(f"Repetitive patterns in prompt. Drop this data.")
+            eval_logger.error("Repetitive patterns in prompt. Drop this data.")
             return "", ""
 
         # Handle other unexpected errors

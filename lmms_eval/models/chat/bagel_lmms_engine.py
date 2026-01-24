@@ -1,7 +1,5 @@
 import json
 import os
-import sys
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -15,7 +13,6 @@ from PIL import Image
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
@@ -23,7 +20,6 @@ from lmms_eval.protocol import ChatMessages
 
 try:
     from lmms_engine.datasets.processor import BagelDataProcessor, ProcessorConfig
-    from lmms_engine.models.bagel import Bagel
     from lmms_engine.models.bagel.inferencer import InterleaveInferencer
 except Exception as e:
     eval_logger.error(f"Failed to import Bagel dependencies. {e}")

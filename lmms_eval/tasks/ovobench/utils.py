@@ -16,7 +16,7 @@ from lmms_eval.tasks.ovobench.score_utils.score import (
 
 def is_forward_task(doc):
     task = doc["task"]
-    return not task in ["EPM", "ASI", "HLD", "STU", "OJR", "ATR", "ACR", "OCR", "FPD"]
+    return task not in ["EPM", "ASI", "HLD", "STU", "OJR", "ATR", "ACR", "OCR", "FPD"]
 
 
 def get_task_type(task_name):

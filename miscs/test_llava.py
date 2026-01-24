@@ -1,4 +1,3 @@
-import requests
 import torch
 from PIL import Image
 from transformers import AutoProcessor, LlavaForConditionalGeneration

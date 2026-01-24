@@ -1,5 +1,4 @@
 import io
-import json
 import multiprocessing
 import pathlib
 from multiprocessing.queues import Empty
@@ -43,7 +42,7 @@ class CodeTester:
         process.join(self.timeout)
         if process.is_alive():
             process.terminate()
-            return f"ERROR: Code execution exceeded the time limit."
+            return "ERROR: Code execution exceeded the time limit."
 
         try:
             result = output_queue.get(timeout=10)  # Add timeout for queue retrieval

@@ -1,19 +1,11 @@
-import datetime
-import json
 import os
 import re
 import shutil
 import sys
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-import cv2
-import numpy as np
 import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 DISCIPLINES = ["Tech & Engineering", "Science", "Health & Medicine", "Sports & Arts", "Game", "Business", "Embodied Tasks"]
 
@@ -129,7 +121,7 @@ def mmworld_process_results(doc, results):
     discipline = doc["discipline"]
     data_dict = {"video_id": doc["video_id"], "discipline": discipline, "pred_answer": pred_ans, "answer": doc["correct_answer_label"].upper()}
 
-    return {f"mmworld_accuracy": data_dict}
+    return {"mmworld_accuracy": data_dict}
 
 
 def mmworld_aggregate_results(results):

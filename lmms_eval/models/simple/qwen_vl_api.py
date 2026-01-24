@@ -1,17 +1,11 @@
-import base64
 import json
 import os
 import tempfile
 import time
-from copy import deepcopy
-from io import BytesIO
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
-import requests as url_requests
-from PIL import Image
 from tqdm import tqdm
 
-from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model

@@ -3,13 +3,6 @@ import random
 
 import datasets
 
-from lmms_eval.tasks.longvideobench.utils import (
-    longvideobench_aggregate_results,
-    longvideobench_doc_to_text,
-    longvideobench_doc_to_visual_v,
-    longvideobench_process_results,
-)
-
 
 def longvideobench_process_docs_random_choice(dataset: datasets.Dataset) -> datasets.Dataset:
     """Shuffle options and update answer accordingly."""

@@ -1,13 +1,10 @@
 import datetime
 import json
 import os
-import re
 import sys
-import time
 from pathlib import Path
 
 import numpy as np
-import requests
 import torch
 import yaml
 from bleurt_pytorch import (
@@ -16,12 +13,11 @@ from bleurt_pytorch import (
     BleurtTokenizer,
 )
 from loguru import logger as eval_logger
-from pycocoevalcap.eval import Bleu, Cider, COCOEvalCap, Meteor, Rouge, Spice
+from pycocoevalcap.eval import Bleu, Rouge
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from tqdm import tqdm
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
-from lmms_eval.filters.extraction import ExtendedRegexFilter
 
 # import nltk
 # nltk.download('punkt')
@@ -102,8 +98,6 @@ cache_dir = config["dataset_kwargs"]["cache_dir"]
 cache_dir = os.path.join(HF_HOME, cache_dir)
 cache_dir = os.path.join(cache_dir, "videos")
 
-from loguru import logger as eval_logger
-
 
 # Pass in video path here
 # Can only work correctly with video llm
@@ -181,7 +175,7 @@ def cuva_aggregate_results_bleurt(results, args):
     tokenizer = BleurtTokenizer.from_pretrained(bleurt_version)
 
     scores_dict = {"Description": [], "Cause": [], "Result": []}
-    eval_logger.info(f"Calculating BLEURT score")
+    eval_logger.info("Calculating BLEURT score")
     for result in tqdm(results):
         gt = result["answer"]
         pred = result["pred"]

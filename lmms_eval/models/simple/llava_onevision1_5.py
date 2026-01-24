@@ -1,6 +1,4 @@
-import base64
 import re
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import decord
@@ -16,10 +14,10 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 
-try:
-    from qwen_vl_utils import process_vision_info
-except ImportError:
+process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
+if not _has_qwen_vl:
     eval_logger.warning("Failed to import qwen_vl_utils; Please install it via `pip install qwen-vl-utils`")
 
 
@@ -77,7 +75,11 @@ class Llava_OneVision1_5(lmms):
             self.device_map = device_map if device_map else device
 
         # Prepare model loading arguments
-        model_kwargs = {"torch_dtype": "auto", "device_map": self.device_map, "trust_remote_code": True}
+        model_kwargs = {
+            "torch_dtype": "auto",
+            "device_map": self.device_map,
+            "trust_remote_code": True,
+        }
 
         # Add attention implementation if specified
         if attn_implementation is not None:
@@ -92,7 +94,12 @@ class Llava_OneVision1_5(lmms):
             self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
         else:
             self.reasoning_prompt = None
-        self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels, trust_remote_code=True)
+        self.processor = AutoProcessor.from_pretrained(
+            pretrained,
+            max_pixels=max_pixels,
+            min_pixels=min_pixels,
+            trust_remote_code=True,
+        )
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=True)
         self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
@@ -232,7 +239,14 @@ class Llava_OneVision1_5(lmms):
                         first_frame = vr[0].asnumpy()
                         height, width = first_frame.shape[:2]
                         # max_pixels = height * width
-                        processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                        processed_visuals.append(
+                            {
+                                "type": "video",
+                                "video": visual,
+                                "max_pixels": self.max_pixels,
+                                "min_pixels": self.min_pixels,
+                            }
+                        )
                     elif isinstance(visual, Image.Image):
                         processed_visuals.append({"type": "image", "image": visual.convert("RGB")})
 
@@ -284,7 +298,13 @@ class Llava_OneVision1_5(lmms):
                 if total_frames - 1 not in indices:
                     indices = np.append(indices, total_frames - 1)
                 video_inputs[0] = video_inputs[0][indices]
-            inputs = self.processor(text=texts, images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt")
+            inputs = self.processor(
+                text=texts,
+                images=image_inputs,
+                videos=video_inputs,
+                padding=True,
+                return_tensors="pt",
+            )
 
             if self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -320,7 +340,11 @@ class Llava_OneVision1_5(lmms):
                 cont = self.model.generate(**gen_args)
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+            answers = self.processor.batch_decode(
+                generated_ids_trimmed,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )
             for i, ans in enumerate(answers):
                 for term in until:
                     if len(term) > 0:

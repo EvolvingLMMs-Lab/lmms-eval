@@ -2,7 +2,6 @@ import ast
 import os
 import re
 import shutil
-import subprocess
 import zipfile
 
 import ipdb

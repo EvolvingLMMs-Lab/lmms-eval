@@ -1,11 +1,9 @@
 import base64
 from io import BytesIO
-from random import sample
 from typing import Optional, Tuple, Union
 
 import av
 import numpy as np
-from av.codec.context import CodecContext
 from decord import VideoReader, cpu
 from PIL import Image
 

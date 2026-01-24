@@ -3,12 +3,6 @@ import random
 
 import datasets
 
-from lmms_eval.tasks.lvbench.utils import (
-    lvbench_doc_to_text,
-    lvbench_doc_to_visual,
-    lvbench_process_results,
-)
-
 
 def lvbench_process_docs_random_choice(dataset: datasets.Dataset) -> datasets.Dataset:
     """Shuffle options and update answer accordingly."""

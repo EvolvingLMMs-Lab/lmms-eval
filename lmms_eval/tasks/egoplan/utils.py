@@ -1,18 +1,10 @@
-import datetime
-import json
 import os
 import re
 import sys
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 import cv2
-import numpy as np
 import yaml
-from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 # with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 #     raw_data = f.readlines()
@@ -194,7 +186,7 @@ def egoplan_process_results(doc, results):
     # gt_ans = doc["answer"].lower().strip().replace(".", "")
     doc["pred_answer"] = pred_ans
     data_dict = doc.copy()
-    return {f"egoplan_mcq_accuracy": data_dict}
+    return {"egoplan_mcq_accuracy": data_dict}
 
 
 def egoplan_aggregate_results(results):

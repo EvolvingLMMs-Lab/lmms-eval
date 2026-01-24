@@ -1,12 +1,10 @@
 import asyncio
-import json
 from datetime import timedelta
 from typing import List, Union
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import AudioContent, ImageContent, TextContent
-from openai import OpenAI
 
 
 class MCPClient:

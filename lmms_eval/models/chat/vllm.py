@@ -1,20 +1,19 @@
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
+from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.vllm import VLLM as VLLMSimple
 from lmms_eval.protocol import ChatMessages
 
-try:
-    from vllm import LLM, SamplingParams
-except ImportError:
-    vllm = None
+LLM, _ = optional_import("vllm", "LLM")
+SamplingParams, _ = optional_import("vllm", "SamplingParams")
 
 WORKERS = int(os.getenv("WORKERS", "32"))
 
@@ -39,7 +38,18 @@ class VLLM(VLLMSimple):
         nframes: Optional[int] = 32,
         **kwargs,
     ):
-        super().__init__(model, tensor_parallel_size, data_parallel_size, gpu_memory_utilization, batch_size, max_frame_num, trust_remote_code, chat_template, min_image_pixels, **kwargs)
+        super().__init__(
+            model,
+            tensor_parallel_size,
+            data_parallel_size,
+            gpu_memory_utilization,
+            batch_size,
+            max_frame_num,
+            trust_remote_code,
+            chat_template,
+            min_image_pixels,
+            **kwargs,
+        )
         self.fps = fps
         self.max_pixels = max_pixels
         self.nframes = nframes
@@ -98,7 +108,11 @@ class VLLM(VLLMSimple):
             if self.chat_template is not None:
                 with open(self.chat_template, "r") as f:
                     chat_template = f.read()
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=chat_template)
+                response = self.client.chat(
+                    sampling_params=sampling_params,
+                    messages=batched_messages,
+                    chat_template=chat_template,
+                )
             else:
                 response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
             end_time = time.time()

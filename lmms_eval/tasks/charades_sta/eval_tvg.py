@@ -1,12 +1,6 @@
 import argparse
 import json
-import os
-import pdb
 import re
-from copy import deepcopy
-from pathlib import Path
-
-import numpy as np
 
 
 # read json files

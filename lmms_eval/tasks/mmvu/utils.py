@@ -3,7 +3,7 @@ import re
 import string
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import yaml
 from loguru import logger as eval_logger
@@ -345,7 +345,7 @@ def mmvu_process_results(doc, results):
 
     data_dict = {"question_id": doc["id"], "category": category, "pred_answer": extracted_answer, "answer": doc["answer"], "correct": int(correct), "eval_method": eval_method}  # "rule-based" or "gpt-based"
 
-    return {f"accuracy": data_dict}
+    return {"accuracy": data_dict}
 
 
 def mmvu_aggregate_results_val(results):

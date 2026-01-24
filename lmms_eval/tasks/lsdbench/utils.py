@@ -74,7 +74,7 @@ def lsdbench_process_results(doc, results):
 
     data_dict = {"video_id": video_id, "pred_answer": pred_ans, "answer": gt_ans}
 
-    return {f"accuracy": data_dict}
+    return {"accuracy": data_dict}
 
 
 def lsdbench_aggregate_accuracy_results(results):

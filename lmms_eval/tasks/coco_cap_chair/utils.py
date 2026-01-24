@@ -900,7 +900,7 @@ def coco_cap_chair_doc_to_visual(doc):
 
 
 def coco_cap_chair_doc_to_text(doc):
-    return f"Please describe this image in detail."
+    return "Please describe this image in detail."
 
 
 def caption_to_words(caption):

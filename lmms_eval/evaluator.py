@@ -1,27 +1,21 @@
 import collections
-import inspect
 import itertools
 import json
 import os
 import random
-import sys
-import time
-from collections import defaultdict
-from dataclasses import dataclass
 from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
 import torch.distributed as dist
 from accelerate import Accelerator
-from datasets import Image, Sequence
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
 import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-import lmms_eval.models
+from lmms_eval import models
 from lmms_eval.baselines import (
     BASELINE_REGISTRY,
     get_baseline_display_name,
@@ -40,7 +34,6 @@ from lmms_eval.evaluator_utils import (
 )
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
-from lmms_eval.models import get_model
 from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
@@ -49,7 +42,6 @@ from lmms_eval.utils import (
     handle_non_serializable,
     hash_string,
     is_multimodal_content,
-    make_table,
     positional_deprecated,
     run_task_tests,
     simple_parse_args_string,
@@ -176,7 +168,7 @@ def simple_evaluate(
 
     if gen_kwargs:
         gen_kwargs = simple_parse_args_string(gen_kwargs)
-        eval_logger.warning(f"generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks.")
+        eval_logger.warning("generation_kwargs specified through cli, these settings will be used over set parameters in yaml tasks.")
         if gen_kwargs == "":
             gen_kwargs = None
 
@@ -196,7 +188,7 @@ def simple_evaluate(
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lmms_eval.models.get_model(model, force_simple).create_from_arg_string(
+        lm = models.get_model(model, force_simple).create_from_arg_string(
             model_args,
             {
                 "batch_size": batch_size,
@@ -251,6 +243,12 @@ def simple_evaluate(
                 # fewshot_random_seed set for tasks, even with a default num_fewshot (e.g. in the YAML file)
                 task_obj.set_fewshot_seed(seed=fewshot_random_seed)
                 # eval_logger.info(f"Setting fewshot random generator seed to {fewshot_random_seed}")
+
+                # Handle num_samples for model stability measurement (k-samples mode)
+                if num_samples > 1:
+                    default_repeats = task_obj.get_config("repeats") or 1
+                    eval_logger.info(f"[Model Stability] Setting repeats={num_samples} for {task_name} (was: {default_repeats})")
+                    task_obj.set_config(key="repeats", value=num_samples)
 
                 adjusted_task_dict[task_name] = task_obj
 
@@ -616,15 +614,36 @@ def evaluate(
         # iterate over different filters used
         for filter_key in task.instances[0].filtered_resps.keys():
             if cli_args is not None and not cli_args.process_with_media:
-                doc_iterator = create_iterator(enumerate(task.eval_docs_no_media), rank=RANK, limit=int(limit) if limit else None, world_size=WORLD_SIZE)
+                doc_iterator = create_iterator(
+                    enumerate(task.eval_docs_no_media),
+                    rank=RANK,
+                    limit=int(limit) if limit else None,
+                    world_size=WORLD_SIZE,
+                )
             else:
                 doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
             doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), RANK, limit, WORLD_SIZE) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), RANK, limit, WORLD_SIZE)
             total_docs = sum(1 for _ in doc_iterator_for_counting)
-            pbar = tqdm(total=total_docs, desc=f"Postprocessing", disable=(RANK != 0))
+            pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
             for doc_id, doc in doc_iterator:
                 requests = instances_by_doc_id[doc_id]
                 metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
+
+                # For stability metrics: compute per-sample scores when repeats > 1
+                repeats = task.config.repeats if hasattr(task, "config") and hasattr(task.config, "repeats") else 1
+                if repeats > 1 and len(requests) == repeats:
+                    # Compute per-sample scores by calling process_results for each sample individually
+                    per_sample_scores = {}
+                    for req in requests:
+                        sample_metrics = task.process_results(doc, [req.filtered_resps[filter_key]])
+                        for metric_name, value in sample_metrics.items():
+                            if metric_name not in per_sample_scores:
+                                per_sample_scores[metric_name] = []
+                            per_sample_scores[metric_name].append(value)
+                    # Store per-sample scores grouped by doc_id
+                    for metric_name, scores in per_sample_scores.items():
+                        task_output.per_sample_metrics[(metric_name, filter_key)].append(scores)
+
                 if log_samples:
                     target = task.doc_to_target(doc)
                     saved_doc = {}
@@ -697,6 +716,17 @@ def evaluate(
                 if RANK == 0:
                     task_output.sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
 
+            # gather per_sample_metrics for stability metrics
+            for metrics in task_output.per_sample_metrics:
+                metric_list = [None] * WORLD_SIZE if RANK == 0 else None
+                torch.distributed.gather_object(
+                    obj=task_output.per_sample_metrics[metrics],
+                    object_gather_list=metric_list,
+                    dst=0,
+                )
+                if RANK == 0:
+                    task_output.per_sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
+
         dist.barrier()  # Ensure all processes are synced before proceeding
 
     if RANK == 0:
@@ -707,6 +737,7 @@ def evaluate(
         for task_output in eval_tasks:
             task_output.calculate_aggregate_metric(bootstrap_iters=bootstrap_iters)
             task_output.calculate_clt_aggregate_metric()
+            task_output.calculate_stability_metrics()
         (
             results,
             samples,
