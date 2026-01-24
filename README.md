@@ -280,6 +280,16 @@ Below are the changes we made to the original API:
 - lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
 ---
 
+## Star History
+
+<a href="https://star-history.com/#EvolvingLMMs-Lab/lmms-eval&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=EvolvingLMMs-Lab/lmms-eval&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=EvolvingLMMs-Lab/lmms-eval&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=EvolvingLMMs-Lab/lmms-eval&type=Date" />
+ </picture>
+</a>
+
 ## Citations
 
 ```shell
