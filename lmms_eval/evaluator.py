@@ -15,7 +15,7 @@ from tqdm import tqdm
 import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
-import lmms_eval.models
+from lmms_eval import models
 from lmms_eval.baselines import (
     BASELINE_REGISTRY,
     get_baseline_display_name,
