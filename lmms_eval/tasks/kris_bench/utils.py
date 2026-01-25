@@ -133,10 +133,7 @@ def _temporal_target_frame_from_doc(doc) -> Optional[int]:
     if gt:
         m = re.search(r"(\d+)-(\d+)", os.path.basename(gt))
         if m:
-            try:
-                return int(m.group(2))
-            except Exception:
-                return None
+            return int(m.group(2))
     ori = doc.get("ori_img") or []
     if isinstance(ori, str):
         ori = [ori]
@@ -144,10 +141,7 @@ def _temporal_target_frame_from_doc(doc) -> Optional[int]:
     for fn in ori:
         m = re.search(r"(\d+)-(\d+)", os.path.basename(str(fn)))
         if m:
-            try:
-                frame_numbers.append(int(m.group(2)))
-            except Exception:
-                continue
+            frame_numbers.append(int(m.group(2)))
     missing = {1, 2, 3, 4} - set(frame_numbers)
     if len(missing) == 1:
         return list(missing)[0]
@@ -195,27 +189,8 @@ def _kris_dimension_group(doc) -> Tuple[Optional[str], Optional[str]]:
 
 
 def kris_bench_doc_to_visual(doc):
-    """
-    Return 1+ source images from doc.
-
-    Images are loaded from HF dataset via --process_with_media flag.
-    The dataset contains "ori_images" field with PIL Images.
-    """
-    ori_images = doc.get("ori_images") or []
-    out = []
-    for img in ori_images:
-        if img is None:
-            continue
-        try:
-            # HF datasets.Image returns PIL Image directly
-            if hasattr(img, "convert"):
-                out.append(img.convert("RGB"))
-            elif isinstance(img, dict) and "bytes" in img:
-                # Fallback for dict format
-                out.append(Image.open(BytesIO(img["bytes"])).convert("RGB"))
-        except Exception:
-            continue
-    return out
+    """Return source images from doc (loaded via --process_with_media)."""
+    return [img.convert("RGB") for img in doc["ori_images"]]
 
 
 def kris_bench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -342,26 +317,11 @@ def _call_chat(messages: List[Dict[str, Any]], *, max_tokens: int, temperature: 
     raise last_error if last_error else RuntimeError("KRIS judge call failed with unknown error")
 
 
-def image_to_base64(image: Any) -> Optional[str]:
-    """
-    Encode image to base64.
-    To reduce payload size, always encode as JPEG in-memory (quality=85).
-    """
-    try:
-        if isinstance(image, str):
-            if not os.path.exists(image):
-                return None
-            image = Image.open(image).convert("RGB")
-        elif hasattr(image, "convert"):
-            image = image.convert("RGB")
-        else:
-            return None
-
-        buf = BytesIO()
-        image.save(buf, format="JPEG", quality=85)
-        return base64.b64encode(buf.getvalue()).decode("utf-8")
-    except Exception:
-        return None
+def image_to_base64(image: Any) -> str:
+    """Encode PIL image to base64 JPEG."""
+    buf = BytesIO()
+    image.convert("RGB").save(buf, format="JPEG", quality=85)
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
 def _msg_text(text: str) -> Dict[str, Any]:
@@ -498,31 +458,10 @@ def _evaluate_one(
     ori_images: List[Any],
     edited_image: Any,
     gt_image: Optional[Any] = None,
-    ori_img_filenames: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """
-    Evaluate generated image with judge.
-
-    Args:
-        category: Category name for selecting appropriate prompts
-        instruction: Editing instruction
-        explanation: Additional explanation (for knowledge categories)
-        ori_images: List of original PIL Images
-        edited_image: Edited PIL Image
-        gt_image: Optional ground truth PIL Image
-        ori_img_filenames: Optional list of original image filenames (for temporal frame extraction)
-    """
+    """Evaluate generated image with judge."""
     # Encode original images
-    # Use filenames if available (for temporal frame extraction), otherwise use index
-    ori_pairs: List[Tuple[str, str]] = []
-    filenames = ori_img_filenames or [f"ori_{i}" for i in range(len(ori_images))]
-    for i, img in enumerate(ori_images):
-        b64 = image_to_base64(img)
-        if b64:
-            fname = filenames[i] if i < len(filenames) else f"ori_{i}"
-            ori_pairs.append((fname, b64))
-
-    ori_b64_list = [b64 for (_p, b64) in ori_pairs]
+    ori_b64_list = [image_to_base64(img) for img in ori_images]
 
     # Encode edited image
     edited_b64 = image_to_base64(edited_image)
@@ -559,26 +498,11 @@ def _evaluate_one(
     elif category == TEMPORAL_CATEGORY:
         prompt = prompt_consist_temporal.format(instruct=instruction)
         content = [_msg_text(prompt)]
-        frame_numbers: List[int] = []
-        ref_frames: List[Tuple[int, str]] = []
-        for p, b64 in ori_pairs:
-            m = re.search(r"(\d+)-(\d+)", os.path.basename(p))
-            frame_num = int(m.group(2)) if m else 0
-            if frame_num:
-                frame_numbers.append(frame_num)
-            ref_frames.append((frame_num, b64))
-
-        all_possible = {1, 2, 3, 4}
-        missing = all_possible - set(frame_numbers)
-        pred_frame_num = list(missing)[0] if len(missing) == 1 else (max(frame_numbers) + 1 if frame_numbers else 0)
-
-        frames: List[Tuple[int, str, str]] = [(fn, "Reference", b64) for fn, b64 in ref_frames]
-        frames.append((pred_frame_num, "Generated", edited_b64))
-        frames.sort(key=lambda x: x[0])
-
-        for fn, kind, b64 in frames:
-            content.append(_msg_text(f"Frame {fn} ({kind}):" if fn else f"{kind} Frame:"))
+        for i, b64 in enumerate(ori_b64_list, start=1):
+            content.append(_msg_text(f"Frame {i} (Reference):"))
             content.append(_msg_image_jpeg(b64))
+        content.append(_msg_text(f"Frame {len(ori_b64_list) + 1} (Generated):"))
+        content.append(_msg_image_jpeg(edited_b64))
         resp = _call_chat([{"role": "user", "content": content}], max_tokens=1000, temperature=0.0)
         out["consistency_score"], out["consistency_reasoning"] = _extract_consistency_score_and_reason(resp)
 
@@ -640,25 +564,11 @@ def _evaluate_one(
     elif category == TEMPORAL_CATEGORY:
         prompt = prompt_instruction_temporal.format(instruct=instruction)
         content = [_msg_text(prompt)]
-        frame_numbers = []
-        ref_frames = []
-        for p, b64 in ori_pairs:
-            m = re.search(r"(\d+)-(\d+)", os.path.basename(p))
-            frame_num = int(m.group(2)) if m else 0
-            if frame_num:
-                frame_numbers.append(frame_num)
-            ref_frames.append((frame_num, b64))
-
-        all_possible = {1, 2, 3, 4}
-        missing = all_possible - set(frame_numbers)
-        pred_frame_num = list(missing)[0] if len(missing) == 1 else (max(frame_numbers) + 1 if frame_numbers else 0)
-
-        frames = [(fn, "Reference", b64) for fn, b64 in ref_frames]
-        frames.append((pred_frame_num, "Generated", edited_b64))
-        frames.sort(key=lambda x: x[0])
-        for fn, kind, b64 in frames:
-            content.append(_msg_text(f"Frame {fn} ({kind}):" if fn else f"{kind} Frame:"))
+        for i, b64 in enumerate(ori_b64_list, start=1):
+            content.append(_msg_text(f"Frame {i} (Reference):"))
             content.append(_msg_image_jpeg(b64))
+        content.append(_msg_text(f"Frame {len(ori_b64_list) + 1} (Generated):"))
+        content.append(_msg_image_jpeg(edited_b64))
         resp = _call_chat([{"role": "user", "content": content}], max_tokens=1000, temperature=0.0)
         out["instruction_score"], out["instruction_reasoning"] = _extract_instruction_score_and_reason(resp)
 
@@ -724,44 +634,16 @@ def kris_bench_process_results(doc, results, **kwargs):
 
     model_images = pred.get("images", [])
 
-    # Get original images from doc (loaded via --process_with_media)
-    ori_images_list: List[Any] = []
-    for img in doc.get("ori_images") or []:
-        if img is not None:
-            try:
-                if hasattr(img, "convert"):
-                    ori_images_list.append(img.convert("RGB"))
-                elif isinstance(img, dict) and "bytes" in img:
-                    ori_images_list.append(Image.open(BytesIO(img["bytes"])).convert("RGB"))
-            except Exception:
-                continue
-
-    # Get GT image from doc if available
-    gt_image_obj: Optional[Any] = None
-    gt_img_data = doc.get("gt_image")
-    if gt_img_data is not None:
-        try:
-            if hasattr(gt_img_data, "convert"):
-                gt_image_obj = gt_img_data.convert("RGB")
-            elif isinstance(gt_img_data, dict) and "bytes" in gt_img_data:
-                gt_image_obj = Image.open(BytesIO(gt_img_data["bytes"])).convert("RGB")
-        except Exception:
-            pass
+    # Get images from doc (loaded via --process_with_media)
+    ori_images_list = [img.convert("RGB") for img in doc["ori_images"]]
+    gt_image_obj = doc["gt_image"].convert("RGB") if doc.get("gt_image") else None
 
     # Load edited image from pred path (same as gedit_bench/imgedit)
-    edited_image_pil: Optional[Any] = None
-    if model_images:
-        try:
-            edited_image_pil = Image.open(model_images[0]).convert("RGB")
-        except Exception as e:
-            eval_logger.warning(f"Failed to load edited image for key={key}: {e}")
-
-    # Get original image filenames for temporal frame extraction
-    ori_img_filenames = doc.get("ori_img_filenames") or []
+    edited_image_pil = Image.open(model_images[0]).convert("RGB") if model_images else None
 
     # Evaluate using judge
     scores: Dict[str, Any] = {}
-    if edited_image_pil is not None and ori_images_list:
+    if edited_image_pil and ori_images_list:
         try:
             scores = _evaluate_one(
                 category=category,
@@ -770,7 +652,6 @@ def kris_bench_process_results(doc, results, **kwargs):
                 ori_images=ori_images_list,
                 edited_image=edited_image_pil,
                 gt_image=gt_image_obj,
-                ori_img_filenames=ori_img_filenames,
             )
         except Exception as e:
             eval_logger.error(f"kris_bench judge failed for key={key} category={category}: {str(e)[:300]}")
@@ -793,15 +674,7 @@ def kris_bench_process_results(doc, results, **kwargs):
             "valid": score is not None,  # Flag to indicate if this score should be used
         }
 
-    overall_vals: List[float] = []
-    for k_score in ("consistency_score", "instruction_score", "quality_score", "knowledge_score"):
-        v = scores.get(k_score)
-        if v is None:
-            continue
-        try:
-            overall_vals.append(float(v))
-        except Exception:
-            continue
+    overall_vals = [float(scores[k]) for k in ("consistency_score", "instruction_score", "quality_score", "knowledge_score") if scores.get(k) is not None]
     overall_avg = float(np.mean(overall_vals)) if overall_vals else None
 
     dim_group, big_class = _kris_dimension_group(doc)
@@ -839,20 +712,13 @@ def _aggregate_metric(results, metric_name: str) -> float:
     cat_scores: Dict[str, List[float]] = defaultdict(list)
     scores: List[float] = []
     for r in results:
-        if not isinstance(r, dict):
-            continue
-        # Skip invalid results (score=-1.0 is sentinel for failed evaluation)
-        if not r.get("valid", True):
+        if not isinstance(r, dict) or not r.get("valid", True):
             continue
         s = r.get("score")
         if s is None or s < 0:
             continue
-        try:
-            s = float(s)
-        except Exception:
-            continue
-        scores.append(s)
-        cat_scores[str(r.get("category") or "unknown")].append(s)
+        scores.append(float(s))
+        cat_scores[str(r.get("category") or "unknown")].append(float(s))
 
     overall_raw = float(np.mean(scores)) if scores else 0.0
     overall = _normalize_score(overall_raw)
@@ -864,26 +730,10 @@ def _aggregate_metric(results, metric_name: str) -> float:
 
 
 def kris_bench_aggregate_mean(results) -> float:
-    """
-    Quiet mean aggregation (no per-category logging).
-    Used for many group metrics to avoid extremely verbose logs.
-    """
+    """Quiet mean aggregation (no per-category logging)."""
     if not results:
         return 0.0
-    scores: List[float] = []
-    for r in results:
-        if not isinstance(r, dict):
-            continue
-        # Skip invalid results (score=-1.0 is sentinel for failed evaluation)
-        if not r.get("valid", True):
-            continue
-        s = r.get("score")
-        if s is None or s < 0:
-            continue
-        try:
-            scores.append(float(s))
-        except Exception:
-            continue
+    scores = [float(r["score"]) for r in results if isinstance(r, dict) and r.get("valid", True) and r.get("score") is not None and r["score"] >= 0]
     return _normalize_score(float(np.mean(scores))) if scores else 0.0
 
 
