@@ -1,0 +1,8 @@
+group: phyx_reasoning
+task:
+  - phyx_mc_reasoning
+  - phyx_oe_reasoning
+  - phyx_mini_mc_reasoning
+  - phyx_mini_oe_reasoning
+metadata:
+  version: 0.0
