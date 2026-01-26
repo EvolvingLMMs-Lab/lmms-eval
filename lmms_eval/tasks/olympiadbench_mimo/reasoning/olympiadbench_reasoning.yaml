@@ -1,0 +1,10 @@
+# Copyright 2025 Xiaomi Corporation.
+
+group: olympiadbench_mimo_reasoning
+task:
+  - olympiadbench_math_en_reasoning
+  - olympiadbench_physics_en_reasoning
+  - olympiadbench_math_zh_reasoning
+  - olympiadbench_physics_zh_reasoning
+metadata:
+  - version: 0.0
