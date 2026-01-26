@@ -1,0 +1,6 @@
+task: "phyx_oe_reasoning"
+test_split: phyx_oe
+include: _default_template_phyx_reasoning_yaml
+process_results: !function utils.phyx_process_results
+metadata:
+  version: 0.0
