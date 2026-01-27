@@ -112,38 +112,22 @@ def _normalize_category(category: Any) -> str:
     return c or "unknown"
 
 
-def image_to_base64(image: Any) -> Optional[str]:
-    try:
-        if isinstance(image, str):
-            if not os.path.exists(image):
-                return None
-            with open(image, "rb") as f:
-                return base64.b64encode(f.read()).decode("utf-8")
-        if hasattr(image, "save"):
-            buffer = BytesIO()
-            image.save(buffer, format="PNG")
-            return base64.b64encode(buffer.getvalue()).decode("utf-8")
-        return None
-    except Exception as e:
-        eval_logger.warning(f"image_to_base64 failed: {e}")
-        return None
+def image_to_base64(image: Any) -> str:
+    """Encode PIL image to base64 PNG."""
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
 def structeditbench_doc_to_visual(doc):
-    """Return the source image for editing (so editing models enter edit mode)."""
+    """Return the source image for editing."""
     img = doc.get("source_image") or doc.get("input_image") or doc.get("image") or doc.get("input_image_raw") or doc.get("source")
     if img is None:
         return []
-    if isinstance(img, str) and os.path.exists(img):
-        try:
-            img = Image.open(img).convert("RGB")
-        except Exception:
-            return []
-    if hasattr(img, "convert"):
-        try:
-            img = img.convert("RGB")
-        except Exception:
-            pass
+    if isinstance(img, str):
+        img = Image.open(img).convert("RGB")
+    else:
+        img = img.convert("RGB")
     return [img]
 
 
@@ -250,14 +234,9 @@ def _judge_is_correct(text: str) -> bool:
 def _evaluate_one_image(edited_image: Image.Image, qa_list: List[Dict[str, Any]]) -> Tuple[float, float, float, List[Dict[str, Any]]]:
     max_qa_env = os.getenv("STRUCTEDITBENCH_MAX_QA")
     if max_qa_env:
-        try:
-            qa_list = qa_list[: max(0, int(max_qa_env))]
-        except Exception:
-            pass
+        qa_list = qa_list[: int(max_qa_env)]
 
     edited_b64 = image_to_base64(edited_image)
-    if not edited_b64:
-        return 0.0, 0.0, 0.0, []
 
     cfg = _get_eval_config()
     client = _get_or_create_client(cfg)
@@ -385,36 +364,22 @@ def structeditbench_process_results(doc, results, **kwargs):
         p0 = model_images[0]
         if isinstance(p0, str) and os.path.exists(p0):
             edited_image_path = p0
-            try:
-                edited_image_pil = Image.open(p0).convert("RGB")
-            except Exception as e:
-                eval_logger.warning(f"Failed to load edited image for key={key} from {p0}: {e}")
+            edited_image_pil = Image.open(p0).convert("RGB")
 
     if edited_image_pil is None:
         # Fallback: allow evaluation-only datasets that already contain the model image
-        cand_fields = [
-            f"output_image_{model_name}",
-            f"output_image_{model_name.lower()}",
-            "output_image",
-            "edited_image",
-        ]
+        cand_fields = [f"output_image_{model_name}", f"output_image_{model_name.lower()}", "output_image", "edited_image"]
         for f in cand_fields:
             v = doc.get(f)
             if v is None:
                 continue
             if hasattr(v, "convert"):
-                try:
-                    edited_image_pil = v.convert("RGB")
-                    break
-                except Exception:
-                    continue
+                edited_image_pil = v.convert("RGB")
+                break
             if isinstance(v, str) and os.path.exists(v):
-                try:
-                    edited_image_pil = Image.open(v).convert("RGB")
-                    edited_image_path = v
-                    break
-                except Exception:
-                    continue
+                edited_image_pil = Image.open(v).convert("RGB")
+                edited_image_path = v
+                break
 
     if edited_image_pil is None:
         eval_logger.warning(f"structeditbench: no edited image found for key={key}")
