@@ -112,11 +112,15 @@ def _normalize_category(category: Any) -> str:
     return c or "unknown"
 
 
-def image_to_base64(image: Any) -> str:
-    """Encode PIL image to base64 PNG."""
-    buffer = BytesIO()
-    image.save(buffer, format="PNG")
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+def image_to_base64(image: Any) -> Optional[str]:
+    """Encode image to base64 PNG. Returns None on failure."""
+    try:
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    except Exception as e:
+        eval_logger.warning(f"image_to_base64 failed: {e}")
+        return None
 
 
 def structeditbench_doc_to_visual(doc):
@@ -124,11 +128,15 @@ def structeditbench_doc_to_visual(doc):
     img = doc.get("source_image") or doc.get("input_image") or doc.get("image") or doc.get("input_image_raw") or doc.get("source")
     if img is None:
         return []
-    if isinstance(img, str):
-        img = Image.open(img).convert("RGB")
-    else:
-        img = img.convert("RGB")
-    return [img]
+    try:
+        if isinstance(img, str):
+            img = Image.open(img).convert("RGB")
+        else:
+            img = img.convert("RGB")
+        return [img]
+    except Exception as e:
+        eval_logger.warning(f"structeditbench_doc_to_visual failed: {e}")
+        return []
 
 
 def structeditbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -237,6 +245,8 @@ def _evaluate_one_image(edited_image: Image.Image, qa_list: List[Dict[str, Any]]
         qa_list = qa_list[: int(max_qa_env)]
 
     edited_b64 = image_to_base64(edited_image)
+    if not edited_b64:
+        return 0.0, 0.0, 0.0, []
 
     cfg = _get_eval_config()
     client = _get_or_create_client(cfg)
@@ -364,7 +374,10 @@ def structeditbench_process_results(doc, results, **kwargs):
         p0 = model_images[0]
         if isinstance(p0, str) and os.path.exists(p0):
             edited_image_path = p0
-            edited_image_pil = Image.open(p0).convert("RGB")
+            try:
+                edited_image_pil = Image.open(p0).convert("RGB")
+            except Exception as e:
+                eval_logger.warning(f"Failed to load edited image for key={key}: {e}")
 
     if edited_image_pil is None:
         # Fallback: allow evaluation-only datasets that already contain the model image
@@ -373,13 +386,16 @@ def structeditbench_process_results(doc, results, **kwargs):
             v = doc.get(f)
             if v is None:
                 continue
-            if hasattr(v, "convert"):
-                edited_image_pil = v.convert("RGB")
-                break
-            if isinstance(v, str) and os.path.exists(v):
-                edited_image_pil = Image.open(v).convert("RGB")
-                edited_image_path = v
-                break
+            try:
+                if hasattr(v, "convert"):
+                    edited_image_pil = v.convert("RGB")
+                    break
+                if isinstance(v, str) and os.path.exists(v):
+                    edited_image_pil = Image.open(v).convert("RGB")
+                    edited_image_path = v
+                    break
+            except Exception:
+                continue
 
     if edited_image_pil is None:
         eval_logger.warning(f"structeditbench: no edited image found for key={key}")
