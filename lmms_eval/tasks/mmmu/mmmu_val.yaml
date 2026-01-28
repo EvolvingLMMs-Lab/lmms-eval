@@ -1,4 +1,6 @@
 dataset_path: lmms-lab/MMMU
+# Change dataset_name to evaluate on different subjects.
+dataset_name: Accounting
 task: "mmmu_val"
 test_split: validation
 output_type: generate_until
