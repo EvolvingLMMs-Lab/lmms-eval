@@ -16,6 +16,7 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
     "aria": "Aria",
+    "glm4v": "GLM4V",
     "auroracap": "AuroraCap",
     "bagel": "Bagel",
     "bagel_umm": "BagelUMM",
@@ -92,6 +93,7 @@ AVAILABLE_SIMPLE_MODELS = {
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "bagel_lmms_engine": "BagelLmmsEngine",
+    "glm4v": "GLM4V",
     "llava_hf": "LlavaHf",
     "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
