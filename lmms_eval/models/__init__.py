@@ -41,6 +41,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "internvl3_5": "InternVL3_5",
     "llama_vid": "LLaMAVid",
     "llama_vision": "LlamaVision",
+    "llama4_scout": "Llama4Scout",
     "llava_hf": "LlavaHf",
     "llava_onevision": "Llava_OneVision",
     "llava_onevision1_5": "Llava_OneVision1_5",
@@ -94,6 +95,7 @@ AVAILABLE_SIMPLE_MODELS = {
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "bagel_lmms_engine": "BagelLmmsEngine",
     "glm4v": "GLM4V",
+    "llama4_scout": "Llama4Scout",
     "llava_hf": "LlavaHf",
     "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
