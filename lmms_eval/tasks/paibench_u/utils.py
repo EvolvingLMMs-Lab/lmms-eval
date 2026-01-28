@@ -1,19 +1,8 @@
-import datetime
-import json
 import os
-from random import random
 import re
-import sys
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Union
-
-import cv2
-import numpy as np
 import yaml
 from loguru import logger as eval_logger
-
-from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface")
 base_cache_dir = os.path.expanduser(hf_home)
@@ -33,10 +22,10 @@ cache_dir_test = os.path.join(base_cache_dir, cache_name_test)
 def paibench_u_doc_to_visual(doc):
     video_path = os.path.join(cache_dir_test, 'videos', doc["video_path"])
     if os.path.exists(video_path):
-        video_path = video_path
+        return [video_path]
     else:
-        sys.exit(f"video path:{video_path} does not exist, please check")
-    return [video_path]
+        eval_logger.warning(f"Video path: {video_path} does not exist, skipping sample")
+        return []
 
 
 
@@ -60,8 +49,11 @@ def parse_multi_choice_response(response):
     """
     Changed from MMMU-style complex parsing into simple parsing.
     Fixed to avoid 'D. A book' be parsed as A.
-    Same as original LongVideoBench paper (from author Haoning Wu), if parsing failed, it will assign a random choice to model.
+    Same as original LongVideoBench paper (from author Haoning Wu), if parsing failed,
+    it will assign a random choice to model.
     """
+    import random
+
     s = response.strip()
     answer_prefixes = [
         "The best answer is",
@@ -77,12 +69,23 @@ def parse_multi_choice_response(response):
         s = s.replace(answer_prefix, "")
 
     if len(s.split()) > 10 and not re.search("[ABCDE]", s):
-        return 'Unknown'
+        return random.choice(['A', 'B', 'C', 'D', 'E'])
 
-    matches = re.search(r"[ABCDE]", s)
-    if matches is None:
-        return 'Unknown'
-    return matches[0]
+    # Try multiple patterns for robustness: (A), [A], A), A
+    patterns = [
+        r"\(([ABCDE])\)",  # (A)
+        r"\[([ABCDE])\]",  # [A]
+        r"([ABCDE])\)",    # A)
+        r"([ABCDE])\.",    # A.
+        r"([ABCDE])",      # A
+    ]
+
+    for pattern in patterns:
+        matches = re.search(pattern, s)
+        if matches is not None:
+            return matches[1]
+
+    return random.choice(['A', 'B', 'C', 'D', 'E'])
 
 
 def paibench_u_process_results(doc, results):
@@ -101,7 +104,7 @@ def paibench_u_process_results(doc, results):
     subcategory = doc['subcategory']
     data_dict = {"question_id": doc["question"], "pred_answer": pred_ans, "answer": doc["answer"], "category": category, "subcategory": subcategory}
 
-    return {"paibench_u_percetion_score": data_dict}
+    return {"paibench_u_perception_score": data_dict}
 
 
 def paibench_u_aggregate_results(results):

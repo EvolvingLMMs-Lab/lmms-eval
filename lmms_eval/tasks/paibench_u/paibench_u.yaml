@@ -17,7 +17,7 @@ doc_to_text: !function utils.paibench_u_doc_to_text
 doc_to_target: "answer"
 process_results: !function utils.paibench_u_process_results
 metric_list:
-  - metric: paibench_u_percetion_score
+  - metric: paibench_u_perception_score
     aggregation: !function utils.paibench_u_aggregate_results
     higher_is_better: true
 lmms_eval_specific_kwargs:
