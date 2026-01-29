@@ -1,17 +1,16 @@
 import time
 import warnings
-from typing import List, Optional, Tuple
 from datetime import timedelta
+from typing import List, Optional, Tuple
 
 import torch
-from tqdm import tqdm
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from accelerate.utils import InitProcessGroupKwargs
 from tqdm import tqdm
 from transformers import (
-    InternVLForConditionalGeneration,
     AutoProcessor,
+    InternVLForConditionalGeneration,
 )
 
 from lmms_eval import utils
@@ -58,6 +57,7 @@ class InternVLHf(lmms):
     """
 
     is_simple = False
+
     def __init__(
         self,
         pretrained: str = "OpenGVLab/InternVL3_5-8B-HF",
