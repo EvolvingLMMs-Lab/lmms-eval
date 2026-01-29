@@ -177,7 +177,11 @@ class AudioFlamingo3(lmms):
             ):
                 conv = [{"role": "user", "content": []}]
 
-                # Add audio content
+                # Add text prompt first (as per official example)
+                if context and context.strip():
+                    conv[0]["content"].append({"type": "text", "text": context})
+
+                # Add audio content after text
                 for audio in audios:
                     audio_array = audio["array"]
                     sampling_rate = audio["sampling_rate"]
@@ -187,10 +191,6 @@ class AudioFlamingo3(lmms):
                     temp_files.append(temp_path)
 
                     conv[0]["content"].append({"type": "audio", "path": temp_path})
-
-                # Add text prompt
-                if context and context.strip():
-                    conv[0]["content"].append({"type": "text", "text": context})
 
                 conversations.append(conv)
 
@@ -204,42 +204,35 @@ class AudioFlamingo3(lmms):
                 gen_kwargs["num_beams"] = 1
 
             try:
-                # Process inputs using apply_chat_template
-                inputs = self.processor.apply_chat_template(
-                    conversations,
-                    tokenize=True,
-                    add_generation_prompt=True,
-                    return_dict=True,
-                    padding=True,
-                    return_tensors="pt",
-                )
+                # Process each conversation individually to avoid batching issues
+                answers = []
+                for conv in conversations:
+                    inputs = self.processor.apply_chat_template(
+                        conv,
+                        tokenize=True,
+                        add_generation_prompt=True,
+                        return_dict=True,
+                    ).to(self.device if self.device_map != "auto" else "cuda")
 
-                if self.device_map == "auto":
-                    inputs = inputs.to("cuda")
-                else:
-                    inputs = inputs.to(self.device)
+                    cont = self.model.generate(
+                        **inputs,
+                        do_sample=True if gen_kwargs["temperature"] > 0 else False,
+                        temperature=gen_kwargs["temperature"],
+                        top_p=gen_kwargs["top_p"],
+                        num_beams=gen_kwargs["num_beams"],
+                        max_new_tokens=gen_kwargs["max_new_tokens"],
+                        min_new_tokens=1,
+                        use_cache=self.use_cache,
+                    )
 
-                cont = self.model.generate(
-                    **inputs,
-                    do_sample=True if gen_kwargs["temperature"] > 0 else False,
-                    temperature=gen_kwargs["temperature"],
-                    top_p=gen_kwargs["top_p"],
-                    num_beams=gen_kwargs["num_beams"],
-                    max_new_tokens=gen_kwargs["max_new_tokens"],
-                    min_new_tokens=1,
-                    use_cache=self.use_cache,
-                )
-
-                # Trim input tokens from output
-                generated_ids_trimmed = [
-                    out_ids[len(in_ids) :]
-                    for in_ids, out_ids in zip(inputs.input_ids, cont)
-                ]
-                answers = self.processor.batch_decode(
-                    generated_ids_trimmed,
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False,
-                )
+                    # Trim input tokens from output
+                    generated_ids_trimmed = cont[:, inputs.input_ids.shape[1]:]
+                    answer = self.processor.batch_decode(
+                        generated_ids_trimmed,
+                        skip_special_tokens=True,
+                        clean_up_tokenization_spaces=False,
+                    )[0]
+                    answers.append(answer)
 
                 # Apply until tokens
                 for i, ans in enumerate(answers):
