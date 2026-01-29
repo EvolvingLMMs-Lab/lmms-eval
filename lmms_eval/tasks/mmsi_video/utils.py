@@ -183,13 +183,13 @@ def doc_to_visual_frames(doc, lmms_eval_specific_kwargs=None):
     Return sampled frames as PIL Images for frame-based input mode.
     Respects max_frame parameter from lmms_eval_specific_kwargs.
     """
-    
+
     max_frame = 50  # default
     if lmms_eval_specific_kwargs:
         max_frame = lmms_eval_specific_kwargs.get("default", {}).get("max_frame", 50)
 
     frames_list = doc.get("frames_list", [])
-    
+
     if isinstance(frames_list, str):
         import ast
 
@@ -198,7 +198,7 @@ def doc_to_visual_frames(doc, lmms_eval_specific_kwargs=None):
     # Calculate total frames and sample proportionally
     total_frames = sum(len(frames) for frames in frames_list)
     eval_logger.debug(f"[doc_to_visual_frames] total_frames: {total_frames}, num_video_segments: {len(frames_list)}")
-    
+
     sampled_frames_list = []
 
     if total_frames > max_frame:
@@ -276,7 +276,7 @@ def doc_to_text_frames(doc, lmms_eval_specific_kwargs=None):
     Build text prompt for frame-based mode.
     Replaces <video> with appropriate number of <image> placeholders.
     """
-    
+
     max_frame = 50
     if lmms_eval_specific_kwargs:
         max_frame = lmms_eval_specific_kwargs.get("default", {}).get("max_frame", 50)
@@ -466,7 +466,7 @@ def process_results(doc, results):
     Process model results and extract accuracy metrics.
     Returns dict with separate metrics for overall and each category.
     """
-    
+
     response = results[0].strip() if results else ""
     pred = extract_answer(response)
     gt = doc.get("ground_truth", "")
@@ -481,10 +481,10 @@ def process_results(doc, results):
 
     # Get question type/category from dataset
     question_type = doc.get("type", doc.get("question_type", ""))
-    
+
     # Map to metric key
     metric_key = CATEGORY_TO_METRIC.get(question_type, None)
-    
+
     if metric_key is None:
         eval_logger.warning(f"[process_results] Unknown category: {question_type}")
 
@@ -493,7 +493,7 @@ def process_results(doc, results):
         # Overall accuracy - always count this sample
         "overall_accuracy": {"score": score, "total": 1},
     }
-    
+
     # Add category-specific metric (only count if this sample belongs to that category)
     for key in METRIC_KEYS:
         if metric_key == key:
@@ -508,14 +508,14 @@ def _aggregate_category(results):
     """Aggregate results for a category. Results are already filtered by lmms-eval."""
     total_correct = 0
     total_count = 0
-    
+
     for result in results:
         total_correct += result.get("score", 0)
         total_count += result.get("total", 0)
-    
+
     if total_count == 0:
         return 0.0
-    
+
     accuracy = (total_correct / total_count) * 100
     return round(accuracy, 2)
 
