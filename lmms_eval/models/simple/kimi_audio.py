@@ -180,7 +180,17 @@ class KimiAudio(lmms):
                     # Build chat messages
                     messages = []
 
-                    # Add audio content
+                    # Add text prompt first (as per official example)
+                    if context and context.strip():
+                        messages.append(
+                            {
+                                "role": "user",
+                                "message_type": "text",
+                                "content": context,
+                            }
+                        )
+
+                    # Add audio content after text
                     for audio in audios:
                         audio_array = audio["array"]
                         sampling_rate = audio["sampling_rate"]
@@ -197,16 +207,6 @@ class KimiAudio(lmms):
                             }
                         )
 
-                    # Add text prompt
-                    if context and context.strip():
-                        messages.append(
-                            {
-                                "role": "user",
-                                "message_type": "text",
-                                "content": context,
-                            }
-                        )
-
                     # Generate response
                     _, generated_text = self.model.generate(
                         chats=messages,
@@ -218,6 +218,7 @@ class KimiAudio(lmms):
                         max_new_tokens=max_new_tokens,
                     )
 
+
                     # Apply until tokens
                     for term in until:
                         if len(term) > 0:
@@ -227,7 +228,7 @@ class KimiAudio(lmms):
 
                 except Exception as e:
                     eval_logger.debug(
-                        f"Error while generating: {e}. Context: {context}"
+                        f"Error while generating: {e}. Context: {context[:100]}"
                     )
                     answer = ""
 
