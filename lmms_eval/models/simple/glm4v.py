@@ -279,6 +279,7 @@ class GLM4V(lmms):
                 add_generation_prompt=True,
                 return_dict=True,
                 return_tensors="pt",
+                padding=True,
             )
 
             # Remove token_type_ids if present (GLM-4.6V specific)

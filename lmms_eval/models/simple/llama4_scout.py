@@ -315,6 +315,7 @@ class Llama4Scout(lmms):
                 add_generation_prompt=True,
                 return_dict=True,
                 return_tensors="pt",
+                padding=True,
             )
 
             if self.device_map == "auto":

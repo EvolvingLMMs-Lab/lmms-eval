@@ -76,6 +76,7 @@ class Llama4Scout(Llama4ScoutSimple):
                 add_generation_prompt=True,
                 return_dict=True,
                 return_tensors="pt",
+                padding=True,
             )
 
             if self.device_map == "auto":
