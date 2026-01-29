@@ -17,6 +17,7 @@ def load_video_decord(video_path, max_frames_num):
     uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
     frame_idx = uniform_sampled_frames.tolist()
     spare_frames = vr.get_batch(frame_idx).asnumpy()
+    del vr  # Release VideoReader to prevent memory leak
     return spare_frames  # (frames, height, width, channels)
 
 
@@ -80,7 +81,14 @@ def load_video_packet(container, num_frm: int = 8, fps: float = None):
     return [frames[i] for i in indices]
 
 
-def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", force_include_last_frame=False) -> np.ndarray:
+def read_video_pyav(
+    video_path: str,
+    *,
+    num_frm: int = 8,
+    fps: float = None,
+    format="rgb24",
+    force_include_last_frame=False,
+) -> np.ndarray:
     """
     Read video using the PyAV library.
 
@@ -96,20 +104,43 @@ def read_video_pyav(video_path: str, *, num_frm: int = 8, fps: float = None, for
 
     container = av.open(video_path)
 
-    if "webm" not in video_path and "mkv" not in video_path:
-        # For mp4, we try loading with stream first
-        try:
-            frames = load_video_stream(container, num_frm, fps, force_include_last_frame=force_include_last_frame)
-        except:
+    try:
+        if "webm" not in video_path and "mkv" not in video_path:
+            # For mp4, we try loading with stream first
+            try:
+                frames = load_video_stream(
+                    container,
+                    num_frm,
+                    fps,
+                    force_include_last_frame=force_include_last_frame,
+                )
+            except Exception:
+                frames = record_video_length_packet(container)
+        else:
             frames = record_video_length_packet(container)
-    else:
-        frames = record_video_length_packet(container)
 
-    return np.stack([x.to_ndarray(format=format) for x in frames])
+        return np.stack([x.to_ndarray(format=format) for x in frames])
+    finally:
+        container.close()  # Ensure container is closed to prevent resource leak
 
 
-def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None, format="rgb24", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize", force_include_last_frame=False):
-    frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format, force_include_last_frame=force_include_last_frame)
+def read_video_pyav_pil(
+    video_path: str,
+    *,
+    num_frm: int = 8,
+    fps: float = None,
+    format="rgb24",
+    max_image_size: Optional[Union[Tuple[int, int], int]] = None,
+    resize_strategy: str = "resize",
+    force_include_last_frame=False,
+):
+    frames = read_video_pyav(
+        video_path,
+        num_frm=num_frm,
+        fps=fps,
+        format=format,
+        force_include_last_frame=force_include_last_frame,
+    )
     pil_frames = []
     for frame in frames:
         img = Image.fromarray(frame)
@@ -127,7 +158,16 @@ def read_video_pyav_pil(video_path: str, *, num_frm: int = 8, fps: float = None,
     # return [Image.fromarray(frame) for frame in frames]
 
 
-def read_video_pyav_base64(video_path: str, *, num_frm: int = 8, fps: Optional[float] = None, format="rgb24", img_format="PNG", max_image_size: Optional[Union[Tuple[int, int], int]] = None, resize_strategy: str = "resize"):
+def read_video_pyav_base64(
+    video_path: str,
+    *,
+    num_frm: int = 8,
+    fps: Optional[float] = None,
+    format="rgb24",
+    img_format="PNG",
+    max_image_size: Optional[Union[Tuple[int, int], int]] = None,
+    resize_strategy: str = "resize",
+):
     frames = read_video_pyav(video_path, num_frm=num_frm, fps=fps, format=format)
     base64_frames = []
     for frame in frames:
