@@ -226,7 +226,7 @@ class VILA(lmms):
             videos = []
             for visual in visuals:
                 video = self.load_video(visual, self.max_frames_num)
-                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
+                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().to(self._device)
                 videos.append(video)
 
             qs = contexts
@@ -247,8 +247,8 @@ class VILA(lmms):
             conv.append_message(conv.roles[1], continuation)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
-            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
+            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
 
             labels = input_ids.clone()
             # Context part no need to calculate for loss
@@ -294,7 +294,7 @@ class VILA(lmms):
             videos = []
             if self.max_frames_num == 0:
                 images = [Image.new("RGB", (448, 448), (0, 0, 0))] * num_video_frames
-                video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
+                video = process_images(images, self.model.image_processor, self.model.config).half().to(self._device)
                 videos.append(video)
             else:
                 for visual in visuals:
@@ -302,7 +302,7 @@ class VILA(lmms):
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
                         images = read_video_pyav(visual, num_frm=num_video_frames)
-                    video = process_images(images, self.model.image_processor, self.model.config).half().cuda()
+                    video = process_images(images, self.model.image_processor, self.model.config).half().to(self._device)
                     videos.append(video)
 
             qs = f"<video>\n {contexts}"
@@ -322,11 +322,11 @@ class VILA(lmms):
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             # if "llama_3" in self.conv_template:
             #     pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
-            attention_masks = input_ids.ne(pad_token_ids).long().cuda()
+            attention_masks = input_ids.ne(pad_token_ids).long().to(self._device)
 
             # input_ids_list = [tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt") for prompt in question_input]
             # pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
