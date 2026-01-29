@@ -74,6 +74,7 @@ dependencies = [
     "sentence_transformers",
     "python-dotenv",
     "qwen-vl-utils>=0.0.14",
+    "math-verify",
 ]
 
 [project.optional-dependencies]
