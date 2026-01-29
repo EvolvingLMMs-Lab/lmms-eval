@@ -1,6 +1,7 @@
 import os
 import re
 from pathlib import Path
+
 import yaml
 from loguru import logger as eval_logger
 
@@ -20,13 +21,12 @@ cache_dir_test = os.path.join(base_cache_dir, cache_name_test)
 
 
 def paibench_u_doc_to_visual(doc):
-    video_path = os.path.join(cache_dir_test, 'videos', doc["video_path"])
+    video_path = os.path.join(cache_dir_test, "videos", doc["video_path"])
     if os.path.exists(video_path):
         return [video_path]
     else:
         eval_logger.warning(f"Video path: {video_path} does not exist, skipping sample")
         return []
-
 
 
 def paibench_u_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -69,15 +69,15 @@ def parse_multi_choice_response(response):
         s = s.replace(answer_prefix, "")
 
     if len(s.split()) > 10 and not re.search("[ABCDE]", s):
-        return random.choice(['A', 'B', 'C', 'D', 'E'])
+        return random.choice(["A", "B", "C", "D", "E"])
 
     # Try multiple patterns for robustness: (A), [A], A), A
     patterns = [
         r"\(([ABCDE])\)",  # (A)
         r"\[([ABCDE])\]",  # [A]
-        r"([ABCDE])\)",    # A)
-        r"([ABCDE])\.",    # A.
-        r"([ABCDE])",      # A
+        r"([ABCDE])\)",  # A)
+        r"([ABCDE])\.",  # A.
+        r"([ABCDE])",  # A
     ]
 
     for pattern in patterns:
@@ -85,7 +85,7 @@ def parse_multi_choice_response(response):
         if matches is not None:
             return matches[1]
 
-    return random.choice(['A', 'B', 'C', 'D', 'E'])
+    return random.choice(["A", "B", "C", "D", "E"])
 
 
 def paibench_u_process_results(doc, results):
@@ -100,8 +100,8 @@ def paibench_u_process_results(doc, results):
 
     pred_ans = parse_multi_choice_response(pred)
 
-    category = doc['category']
-    subcategory = doc['subcategory']
+    category = doc["category"]
+    subcategory = doc["subcategory"]
     data_dict = {"question_id": doc["question"], "pred_answer": pred_ans, "answer": doc["answer"], "category": category, "subcategory": subcategory}
 
     return {"paibench_u_perception_score": data_dict}
@@ -167,4 +167,4 @@ def paibench_u_aggregate_results(results):
         eval_logger.info(f"Subcategory: {subcategory}: {accuracy:.1f}% ({scores['correct']}/{scores['answered']})")
         metrics["subcategory"][subcategory] = accuracy
 
-    return metrics['overall']
+    return metrics["overall"]
