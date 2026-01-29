@@ -71,9 +71,7 @@ class AudioFlamingo3(lmms):
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -117,13 +115,9 @@ class AudioFlamingo3(lmms):
         return self._world_size
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        raise NotImplementedError(
-            "Loglikelihood is not implemented for AudioFlamingo3"
-        )
+        raise NotImplementedError("Loglikelihood is not implemented for AudioFlamingo3")
 
-    def _save_audio_to_temp(
-        self, audio_array: np.ndarray, sampling_rate: int
-    ) -> str:
+    def _save_audio_to_temp(self, audio_array: np.ndarray, sampling_rate: int) -> str:
         """Save audio array to a temporary file and return the path."""
         temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         sf.write(temp_file.name, audio_array, sampling_rate)
@@ -136,13 +130,9 @@ class AudioFlamingo3(lmms):
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
         for chunk in chunks:
@@ -151,9 +141,7 @@ class AudioFlamingo3(lmms):
             split = split[0]
 
             # Get audio data from task
-            batched_audios = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            batched_audios = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
 
             gen_kwargs = all_gen_kwargs[0]
 
@@ -163,18 +151,13 @@ class AudioFlamingo3(lmms):
                 if isinstance(until, str):
                     until = [until]
                 elif not isinstance(until, list):
-                    raise ValueError(
-                        f"Expected `gen_kwargs['until']` to be of type Union[str,list] "
-                        f"but got {type(until)}"
-                    )
+                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str,list] " f"but got {type(until)}")
 
             # Build conversations for each item in the batch
             conversations = []
             temp_files = []
 
-            for batch_idx, (context, audios) in enumerate(
-                zip(contexts, batched_audios)
-            ):
+            for batch_idx, (context, audios) in enumerate(zip(contexts, batched_audios)):
                 conv = [{"role": "user", "content": []}]
 
                 # Add text prompt first (as per official example)
@@ -226,7 +209,7 @@ class AudioFlamingo3(lmms):
                     )
 
                     # Trim input tokens from output
-                    generated_ids_trimmed = cont[:, inputs.input_ids.shape[1]:]
+                    generated_ids_trimmed = cont[:, inputs.input_ids.shape[1] :]
                     answer = self.processor.batch_decode(
                         generated_ids_trimmed,
                         skip_special_tokens=True,
@@ -242,9 +225,7 @@ class AudioFlamingo3(lmms):
                     answers[i] = ans
 
             except Exception as e:
-                eval_logger.debug(
-                    f"Error while generating: {e}. Contexts: {contexts}"
-                )
+                eval_logger.debug(f"Error while generating: {e}. Contexts: {contexts}")
                 answers = [""] * len(contexts)
 
             # Clean up temp files
@@ -256,9 +237,7 @@ class AudioFlamingo3(lmms):
 
             for ans, context in zip(answers, contexts):
                 res.append(ans)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), ans
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
         # Reorder results back to original order

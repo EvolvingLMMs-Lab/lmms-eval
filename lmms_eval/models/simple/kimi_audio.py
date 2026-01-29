@@ -59,9 +59,7 @@ class KimiAudio(lmms):
         from kimia_infer.api.kimia import KimiAudio as KimiAudioModel
 
         # Load the model (it internally moves to CUDA)
-        self._model = KimiAudioModel(
-            model_path=pretrained, load_detokenizer=load_detokenizer
-        )
+        self._model = KimiAudioModel(model_path=pretrained, load_detokenizer=load_detokenizer)
 
         # Store generation parameters
         self.text_temperature = text_temperature
@@ -82,9 +80,7 @@ class KimiAudio(lmms):
             ], "Unsupported distributed type provided."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -126,9 +122,7 @@ class KimiAudio(lmms):
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         raise NotImplementedError("Loglikelihood is not implemented for KimiAudio")
 
-    def _save_audio_to_temp(
-        self, audio_array: np.ndarray, sampling_rate: int
-    ) -> str:
+    def _save_audio_to_temp(self, audio_array: np.ndarray, sampling_rate: int) -> str:
         """Save audio array to a temporary file and return the path."""
         temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         sf.write(temp_file.name, audio_array, sampling_rate)
@@ -141,9 +135,7 @@ class KimiAudio(lmms):
             toks = self.tokenizer.encode(x[0], bos=False, eos=False)
             return -len(toks), x[0]
 
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
@@ -154,9 +146,7 @@ class KimiAudio(lmms):
             split = split[0]
 
             # Get audio data from task
-            batched_audios = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            batched_audios = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
 
             gen_kwargs = all_gen_kwargs[0]
 
@@ -173,9 +163,7 @@ class KimiAudio(lmms):
 
             # Process each item (KimiAudio doesn't support batching)
             temp_files = []
-            for batch_idx, (context, audios) in enumerate(
-                zip(contexts, batched_audios)
-            ):
+            for batch_idx, (context, audios) in enumerate(zip(contexts, batched_audios)):
                 try:
                     # Build chat messages
                     messages = []
@@ -218,7 +206,6 @@ class KimiAudio(lmms):
                         max_new_tokens=max_new_tokens,
                     )
 
-
                     # Apply until tokens
                     for term in until:
                         if len(term) > 0:
@@ -227,15 +214,11 @@ class KimiAudio(lmms):
                     answer = generated_text
 
                 except Exception as e:
-                    eval_logger.debug(
-                        f"Error while generating: {e}. Context: {context[:100]}"
-                    )
+                    eval_logger.debug(f"Error while generating: {e}. Context: {context[:100]}")
                     answer = ""
 
                 res.append(answer)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), answer
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 pbar.update(1)
 
             # Clean up temp files
