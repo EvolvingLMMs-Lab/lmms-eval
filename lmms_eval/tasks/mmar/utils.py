@@ -7,10 +7,12 @@ MMAR evaluates deep reasoning capabilities of Audio-Language Models across
 - 7 audio modalities: Sound, Music, Speech, and their combinations
 """
 
+import random
 import re
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 from loguru import logger as eval_logger
 
 DEFAULT_PRE_PROMPT = ""
@@ -87,54 +89,112 @@ def mmar_doc_to_target(doc: Dict[str, Any]) -> str:
     return str(doc["answer"]).strip().upper()
 
 
-def parse_multi_choice_response(response: Optional[str], all_choices: List[str]) -> str:
+def get_multi_choice_info(choices: List[str]) -> Tuple[Dict[str, str], List[str]]:
     """
-    Parse the model's response to extract the answer letter.
+    Extract choice letters and build index2ans mapping from formatted choices.
+
+    Args:
+        choices: List of choices formatted as ["A. option1", "B. option2", ...]
+
+    Returns:
+        Tuple of (index2ans dict, all_choices list)
+    """
+    index2ans = {}
+    all_choices = []
+    for choice in choices:
+        # Extract letter and content from "A. option" format
+        if len(choice) >= 2 and choice[1] in [".", ")", ":"]:
+            letter = choice[0].upper()
+            content = choice[2:].strip()
+        else:
+            # Fallback: use first character as letter
+            letter = choice[0].upper() if choice else "A"
+            content = choice
+        index2ans[letter] = content
+        all_choices.append(letter)
+    return index2ans, all_choices
+
+
+def parse_multi_choice_response(
+    response: str, all_choices: List[str], index2ans: Dict[str, str]
+) -> str:
+    """
+    Parse the prediction from the generated response.
+    Return the predicted index e.g., A, B, C, D.
+
+    Adapted from MMMU evaluation utils:
+    https://github.com/MMMU-Benchmark/MMMU/blob/main/eval/eval_utils.py
 
     Args:
         response: Raw model output string.
         all_choices: Valid choice labels, e.g., ["A", "B", "C", "D"].
+        index2ans: Mapping from choice letter to answer content.
 
     Returns:
-        Parsed answer letter (uppercased). Falls back to first choice if no match.
+        Parsed answer letter (uppercased).
     """
     response = response or ""
 
-    # Remove common answer prefixes
-    answer_prefixes = [
-        "The best answer is",
-        "The correct answer is",
-        "The answer is",
-        "The answer",
-        "The best option is",
-        "The correct option is",
-        "Best answer:",
-        "Best option:",
-        "Answer:",
-        "Option:",
-        "The correct answer",
-        "The correct option",
-        "Based on the audio",
-        "Correct answer",
-        "\u261e",
-        "<|im_end|>",
-    ]
-    for prefix in answer_prefixes:
-        response = response.replace(prefix, "")
+    # Strip common punctuation from ends
+    for char in [",", ".", "!", "?", ";", ":", "'"]:
+        response = response.strip(char)
+    response = " " + response + " "  # add space to avoid partial match
 
-    response = response.strip()
-    # Remove punctuation and special characters
-    response = re.sub(r"[.,:!\"'`;\\/?`~@#\$%\^&\*\(\)\[\]\{\}\\|<>\n]", " ", response)
-    tokens = response.split()
+    index_ans = True
+    ans_with_brack = False
+    candidates = []
 
-    # Find first valid choice letter
-    for token in tokens:
-        token_upper = token.upper()
-        if token_upper in all_choices:
-            return token_upper
+    # Pattern 1: Check for (A), (B), (C), (D)
+    for choice in all_choices:
+        if f"({choice})" in response:
+            candidates.append(choice)
+            ans_with_brack = True
 
-    # Fallback to first choice
-    return all_choices[0] if all_choices else "A"
+    # Pattern 2: Check for "A ", "B ", etc.
+    if len(candidates) == 0:
+        for choice in all_choices:
+            if f"{choice} " in response:
+                candidates.append(choice)
+
+    # Pattern 3: Check for "A.", "B.", etc.
+    if len(candidates) == 0:
+        for choice in all_choices:
+            if f"{choice}." in response:
+                candidates.append(choice)
+
+    # Pattern 4: If response is long, check if answer content appears
+    if len(candidates) == 0 and len(response.split()) > 5:
+        for index, ans in index2ans.items():
+            if ans.lower() in response.lower():
+                candidates.append(index)
+                index_ans = False  # it's content answer
+
+    # Determine final answer
+    if len(candidates) == 0:
+        # No match found, randomly choose
+        pred_index = random.choice(all_choices)
+    elif len(candidates) > 1:
+        # Multiple candidates: take the LAST occurrence
+        start_indexes = []
+        if index_ans:
+            if ans_with_brack:
+                for can in candidates:
+                    index = response.rfind(f"({can})")
+                    start_indexes.append(index)
+            else:
+                for can in candidates:
+                    index = response.rfind(f" {can} ")
+                    start_indexes.append(index)
+        else:
+            for can in candidates:
+                index = response.lower().rfind(index2ans[can].lower())
+                start_indexes.append(index)
+        pred_index = candidates[np.argmax(start_indexes)]
+    else:
+        # Single candidate
+        pred_index = candidates[0]
+
+    return pred_index
 
 
 def mmar_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Dict[str, Any]]:
@@ -149,10 +209,13 @@ def mmar_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, D
         Dict with metric results including score and metadata.
     """
     pred = results[0] if results else ""
-    all_choices = ["A", "B", "C", "D"]
 
-    # Parse model response
-    parsed_answer = parse_multi_choice_response(pred, all_choices)
+    # Get choices and build index2ans mapping
+    choices = doc.get("choices", ["A. ", "B. ", "C. ", "D. "])
+    index2ans, all_choices = get_multi_choice_info(choices)
+
+    # Parse model response using MMMU-style parsing
+    parsed_answer = parse_multi_choice_response(pred, all_choices, index2ans)
     gt_answer = mmar_doc_to_target(doc)
 
     # Calculate score
