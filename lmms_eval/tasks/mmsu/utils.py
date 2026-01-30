@@ -5,6 +5,7 @@ This module provides evaluation functions for the MMSU benchmark, which
 tests spoken language understanding and reasoning across 47 tasks.
 """
 
+import random
 from collections import defaultdict
 
 import numpy as np
@@ -153,77 +154,95 @@ Answer with the letter (A, B, C, or D) only.{post_prompt}"""
     return prompt
 
 
-def extract_answer(response):
-    """Extract the answer letter from model response.
+def get_multi_choice_info(options):
+    """Get index to answer mapping and all choices.
 
-    Uses multiple patterns to extract A/B/C/D from various response formats.
+    Adapted from MMMU:
+    https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/data_utils.py#L54
+
+    Args:
+        options: List of option strings.
+
+    Returns:
+        Tuple of (index2ans dict, all_choices list).
+    """
+    start_chr = "A"
+    all_choices = []
+    index2ans = {}
+    for i, option in enumerate(options):
+        index2ans[chr(ord(start_chr) + i)] = option
+        all_choices.append(chr(ord(start_chr) + i))
+    return index2ans, all_choices
+
+
+def parse_multi_choice_response(response, all_choices, index2ans):
+    """Parse the prediction from the generated response.
+
+    Return the predicted index e.g., A, B, C, D.
+    Adapted from MMMU:
+    https://github.com/MMMU-Benchmark/MMMU/blob/51ce7f3e829c16bb44bc5445782686b4c3508794/eval/eval_utils.py#L10
 
     Args:
         response: Model response string.
+        all_choices: List of valid choices (e.g., ['A', 'B', 'C', 'D']).
+        index2ans: Dict mapping choice to answer text.
 
     Returns:
-        Extracted answer letter (A/B/C/D) or None if not found.
+        Predicted choice letter.
     """
-    if not response:
-        return None
+    for char in [",", ".", "!", "?", ";", ":", "'"]:
+        response = response.strip(char)
+    response = " " + response + " "  # add space to avoid partial match
 
-    response = response.lower().strip()
+    index_ans = True
+    ans_with_brack = False
+    candidates = []
+    for choice in all_choices:  # e.g., (A) (B) (C) (D)
+        if f"({choice})" in response:
+            candidates.append(choice)
+            ans_with_brack = True
 
-    # Handle common prefixes
-    if response.startswith("<1>") or response.startswith("<2>"):
-        response = response[3:].strip()
+    if len(candidates) == 0:
+        for choice in all_choices:  # e.g., A B C D
+            if f"{choice} " in response:
+                candidates.append(choice)
 
-    # Common answer patterns
-    patterns = [
-        "the answer is [CHOICE]",
-        "the correct answer is [CHOICE]",
-        "answer: [CHOICE]",
-        "answer is [CHOICE]",
-        "[CHOICE] is the answer",
-        "[CHOICE] is correct",
-        "would choose [CHOICE]",
-        "would select [CHOICE]",
-        "option [CHOICE]",
-        "choice [CHOICE]",
-        "is [CHOICE].",
-        "is [CHOICE],",
-        "is [CHOICE]:",
-        "is [CHOICE])",
-        "is ([CHOICE])",
-        "**[CHOICE]**",
-        "**[CHOICE].",
-        "**[CHOICE])",
-        '"[CHOICE]"',
-        "'[CHOICE]'",
-        "([CHOICE])",
-        " [CHOICE].",
-        " [CHOICE],",
-        " [CHOICE]:",
-        " [CHOICE])",
-    ]
+    if len(candidates) == 0:
+        for choice in all_choices:  # e.g., A. B. C. D.
+            if f"{choice}." in response:
+                candidates.append(choice)
 
-    for pattern in patterns:
-        for choice in ["a", "b", "c", "d"]:
-            if pattern.replace("[CHOICE]", choice) in response:
-                return choice.upper()
+    # if all above doesn't get candidates, check if the content is larger than
+    # 5 tokens and try to parse the example
+    if len(candidates) == 0 and len(response.split()) > 5:
+        for index, ans in index2ans.items():
+            if ans.lower() in response.lower():
+                candidates.append(index)
+                index_ans = False  # it's content ans.
 
-    # Check if response is just a single letter
-    for choice in ["a", "b", "c", "d"]:
-        if response == choice:
-            return choice.upper()
-        # Check if response starts with the letter followed by punctuation
-        for punc in [".", ",", ":", ")", " ", "\n"]:
-            if response.startswith(choice + punc):
-                return choice.upper()
+    if len(candidates) == 0:  # still not get answer, randomly choose one.
+        pred_index = random.choice(all_choices)
+    elif len(candidates) > 1:
+        start_indexes = []
+        if index_ans:
+            if ans_with_brack:
+                for can in candidates:
+                    index = response.rfind(f"({can})")
+                    start_indexes.append(index)  # -1 will be ignored anyway
+            else:
+                for can in candidates:
+                    index = response.rfind(f" {can} ")
+                    start_indexes.append(index)
+        else:
+            for can in candidates:
+                index = response.lower().rfind(index2ans[can].lower())
+                start_indexes.append(index)
+        # get the last one
+        pred_index = candidates[np.argmax(start_indexes)]
+    else:  # if only one candidate, use it.
+        pred_index = candidates[0]
 
-    # Check for letter at the end of response
-    response_clean = response.rstrip(".,!?;: \n")
-    if response_clean and response_clean[-1] in ["a", "b", "c", "d"]:
-        # Make sure it's not part of a word
-        if len(response_clean) == 1 or not response_clean[-2].isalpha():
-            return response_clean[-1].upper()
-
-    return None
+    return pred_index
 
 
 def mmsu_process_results(doc, results):
@@ -240,12 +259,21 @@ def mmsu_process_results(doc, results):
     if response is None:
         response = ""
 
+    # Build options list from document
+    options = [
+        doc.get("choice_a", ""),
+        doc.get("choice_b", ""),
+        doc.get("choice_c", ""),
+        doc.get("choice_d", ""),
+    ]
+
+    # Get choice info using MMMU pattern
+    index2ans, all_choices = get_multi_choice_info(options)
+
+    # Parse response using MMMU pattern
+    pred = parse_multi_choice_response(response, all_choices, index2ans)
+
     ground_truth = doc.get("answer", "A")
-    pred = extract_answer(response)
-
-    if pred is None:
-        pred = "A"  # Default fallback
-
     score = 1.0 if pred == ground_truth else 0.0
 
     return {
