@@ -115,9 +115,7 @@ def get_multi_choice_info(choices: List[str]) -> Tuple[Dict[str, str], List[str]
     return index2ans, all_choices
 
 
-def parse_multi_choice_response(
-    response: str, all_choices: List[str], index2ans: Dict[str, str]
-) -> str:
+def parse_multi_choice_response(response: str, all_choices: List[str], index2ans: Dict[str, str]) -> str:
     """
     Parse the prediction from the generated response.
     Return the predicted index e.g., A, B, C, D.
