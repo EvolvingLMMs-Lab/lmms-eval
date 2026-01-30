@@ -263,9 +263,7 @@ def mmsu_process_results(doc, results):
     ground_truth = doc.get("answer", "A")
     pred = extract_answer(response)
 
-    # Check if extraction failed
-    failed = pred is None
-    if failed:
+    if pred is None:
         pred = "A"  # Default fallback
 
     score = 1.0 if pred == ground_truth else 0.0
@@ -276,9 +274,7 @@ def mmsu_process_results(doc, results):
             "category": doc.get("category", "Unknown"),
             "sub_category": doc.get("sub_category", "Unknown"),
             "task_name": doc.get("task_name", "Unknown"),
-            "failed": failed,
         },
-        "failure_rate": {"failed": failed},
     }
 
 
@@ -362,21 +358,3 @@ def mmsu_aggregate_results(results):
     return overall_accuracy
 
 
-def mmsu_aggregate_failure_rate(results):
-    """Aggregate failure rate (answer extraction failures).
-
-    Args:
-        results: List of result dictionaries.
-
-    Returns:
-        Failure rate as a percentage (0-100).
-    """
-    if not results:
-        return 0.0
-
-    failed_count = sum(1 for r in results if r.get("failed", False))
-    failure_rate = (failed_count / len(results)) * 100
-
-    eval_logger.info(f"MMSU Failure Rate: {failure_rate:.2f}% ({failed_count}/{len(results)} failed extractions)")
-
-    return failure_rate
