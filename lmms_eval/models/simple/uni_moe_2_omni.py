@@ -70,15 +70,13 @@ class UniMoE2Omni(lmms):
         try:
             # Import this first to patch DeepSpeed MoE for single-GPU inference
             from uni_moe.model import deepspeed_moe_inference_utils  # noqa: F401
-
-            from uni_moe.model.modeling_out import GrinQwen2VLOutForConditionalGeneration
+            from uni_moe.model.modeling_out import (
+                GrinQwen2VLOutForConditionalGeneration,
+            )
             from uni_moe.model.processing_qwen2_vl import Qwen2VLProcessor
             from uni_moe.qwen_vl_utils import process_mm_info
         except ImportError:
-            raise ImportError(
-                "Please install uni_moe package from https://github.com/HITsz-TMG/Uni-MoE. "
-                "Run: pip install git+https://github.com/HITsz-TMG/Uni-MoE.git"
-            )
+            raise ImportError("Please install uni_moe package from https://github.com/HITsz-TMG/Uni-MoE. " "Run: pip install git+https://github.com/HITsz-TMG/Uni-MoE.git")
 
         self.process_mm_info = process_mm_info
 
@@ -115,16 +113,10 @@ class UniMoE2Omni(lmms):
             if accelerator.distributed_type == DistributedType.DEEPSPEED:
                 batch_kwargs = {
                     "train_micro_batch_size_per_gpu": self.batch_size_per_gpu,
-                    "train_batch_size": self.batch_size_per_gpu
-                    * accelerator.num_processes,
+                    "train_batch_size": self.batch_size_per_gpu * accelerator.num_processes,
                 }
-                AcceleratorState().deepspeed_plugin.deepspeed_config_process(
-                    must_match=True, **batch_kwargs
-                )
-                eval_logger.info(
-                    "Detected DistributedType.DEEPSPEED. "
-                    "Make sure you run `accelerate config` and set zero stage to 0"
-                )
+                AcceleratorState().deepspeed_plugin.deepspeed_config_process(must_match=True, **batch_kwargs)
+                eval_logger.info("Detected DistributedType.DEEPSPEED. " "Make sure you run `accelerate config` and set zero stage to 0")
             if accelerator.distributed_type in [
                 DistributedType.FSDP,
                 DistributedType.DEEPSPEED,
@@ -134,9 +126,7 @@ class UniMoE2Omni(lmms):
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -183,13 +173,9 @@ class UniMoE2Omni(lmms):
     def world_size(self):
         return self._world_size
 
-    def tok_encode(
-        self, string: str, left_truncate_len=None, add_special_tokens=None
-    ) -> List[int]:
+    def tok_encode(self, string: str, left_truncate_len=None, add_special_tokens=None) -> List[int]:
         """Tokenize a string."""
-        add_special_tokens = (
-            False if add_special_tokens is None else add_special_tokens
-        )
+        add_special_tokens = False if add_special_tokens is None else add_special_tokens
         encoding = self.tokenizer.encode(string, add_special_tokens=add_special_tokens)
         if left_truncate_len:
             encoding = encoding[-left_truncate_len:]
@@ -209,9 +195,7 @@ class UniMoE2Omni(lmms):
         except Exception:
             return False
 
-    def meta_form(
-        self, sources, image_folder="", audio_folder="", video_folder=""
-    ) -> List[List[dict]]:
+    def meta_form(self, sources, image_folder="", audio_folder="", video_folder="") -> List[List[dict]]:
         """Convert data format to messages format."""
         messages = []
         images = audios = videos = None
@@ -243,9 +227,7 @@ class UniMoE2Omni(lmms):
                 new_videos = []
                 for video in videos:
                     frames_list = json.loads(video)
-                    frames_list = [
-                        os.path.join(video_folder, frame) for frame in frames_list
-                    ]
+                    frames_list = [os.path.join(video_folder, frame) for frame in frames_list]
                     new_videos.append(frames_list)
                 videos = new_videos
             videos_len = len(videos)
@@ -272,25 +254,19 @@ class UniMoE2Omni(lmms):
 
             while images is not None and "<image>" in tag_count:
                 assert images_len > images_idx
-                conv_dic["content"].append(
-                    {"type": "image", "image": images[images_idx]}
-                )
+                conv_dic["content"].append({"type": "image", "image": images[images_idx]})
                 tag_count = tag_count.replace("<image>", "", 1)
                 images_idx += 1
 
             while audios is not None and "<audio>" in tag_count:
                 assert audios_len > audios_idx
-                conv_dic["content"].append(
-                    {"type": "audio", "audio": audios[audios_idx]}
-                )
+                conv_dic["content"].append({"type": "audio", "audio": audios[audios_idx]})
                 tag_count = tag_count.replace("<audio>", "", 1)
                 audios_idx += 1
 
             while videos is not None and "<video>" in tag_count:
                 assert videos_len > videos_idx
-                conv_dic["content"].append(
-                    {"type": "video", "video": videos[videos_idx]}
-                )
+                conv_dic["content"].append({"type": "video", "video": videos[videos_idx]})
                 tag_count = tag_count.replace("<video>", "", 1)
                 videos_idx += 1
 
@@ -323,22 +299,13 @@ class UniMoE2Omni(lmms):
 
         line_copy["conversations"][0]["value"] = query
         if self.think_mode:
-            line_copy["conversations"] = [
-                {"from": "system", "value": SYSTEM_PROMPT}
-            ] + line_copy["conversations"]
+            line_copy["conversations"] = [{"from": "system", "value": SYSTEM_PROMPT}] + line_copy["conversations"]
 
         messages = self.meta_form(line_copy)
-        prompt = self._processor.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True, no=True
-        )
+        prompt = self._processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, no=True)
 
         for pi, pr in enumerate(prompt):
-            prompt[pi] = (
-                prompt[pi]
-                .replace("<image>", "<|vision_start|><|image_pad|><|vision_end|>")
-                .replace("<audio>", "<|audio_start|><|audio_pad|><|audio_end|>")
-                .replace("<video>", "<|vision_start|><|video_pad|><|vision_end|>")
-            )
+            prompt[pi] = prompt[pi].replace("<image>", "<|vision_start|><|image_pad|><|vision_end|>").replace("<audio>", "<|audio_start|><|audio_pad|><|audio_end|>").replace("<video>", "<|vision_start|><|video_pad|><|vision_end|>")
 
         image_inputs, video_inputs, audio_inputs = self.process_mm_info(messages)
 
@@ -371,26 +338,16 @@ class UniMoE2Omni(lmms):
             toks = self.tok_encode(x[0])
             return -len(toks), x[0]
 
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        num_iters = (
-            len(requests) // self.batch_size
-            if len(requests) % self.batch_size == 0
-            else len(requests) // self.batch_size + 1
-        )
-        pbar = tqdm(
-            total=num_iters, disable=(self.rank != 0), desc="Model Responding"
-        )
+        num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
+        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
         for chunk in chunks:
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visual_list = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            visual_list = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
 
             gen_kwargs = all_gen_kwargs[0]
 
@@ -399,10 +356,7 @@ class UniMoE2Omni(lmms):
             if isinstance(until, str):
                 until = [until]
             elif not isinstance(until, list):
-                raise ValueError(
-                    f"Expected `gen_kwargs['until']` to be of type "
-                    f"Union[str, list], but got {type(until)}"
-                )
+                raise ValueError(f"Expected `gen_kwargs['until']` to be of type " f"Union[str, list], but got {type(until)}")
             until = [item for item in until if item != "\n\n"]
 
             if isinstance(contexts, tuple):
@@ -425,13 +379,9 @@ class UniMoE2Omni(lmms):
 
                 if visual_list[i] is not None:
                     for visual in visual_list[i]:
-                        if isinstance(visual, str) and visual.endswith(
-                            (".mp4", ".avi", ".mov")
-                        ):
+                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):
                             target_messages["videos"].append(visual)
-                            if self.use_audio_in_video and self._check_if_video_has_audio(
-                                visual
-                            ):
+                            if self.use_audio_in_video and self._check_if_video_has_audio(visual):
                                 target_messages["audios"].append(visual)
                         elif isinstance(visual, Image.Image):
                             target_messages["images"].append(visual)
@@ -447,26 +397,18 @@ class UniMoE2Omni(lmms):
                                 audio_np = np.array(audio_array)
 
                             if audio_np.ndim == 1:
-                                audio_tensor = (
-                                    torch.from_numpy(audio_np).float().unsqueeze(0)
-                                )
+                                audio_tensor = torch.from_numpy(audio_np).float().unsqueeze(0)
                             elif audio_np.ndim == 2:
                                 if audio_np.shape[0] < audio_np.shape[1]:
                                     audio_np = audio_np.T
                                 audio_tensor = torch.from_numpy(audio_np).float()
                             else:
-                                raise ValueError(
-                                    f"Unsupported audio array shape: {audio_np.shape}"
-                                )
+                                raise ValueError(f"Unsupported audio array shape: {audio_np.shape}")
 
                             target_sr = 16000
                             if sampling_rate != target_sr:
-                                audio_tensor = torchaudio.functional.resample(
-                                    audio_tensor, sampling_rate, target_sr
-                                )
-                            temp_file = tempfile.NamedTemporaryFile(
-                                suffix=".wav", delete=False
-                            )
+                                audio_tensor = torchaudio.functional.resample(audio_tensor, sampling_rate, target_sr)
+                            temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
                             torchaudio.save(
                                 temp_file.name,
                                 audio_tensor,
@@ -476,9 +418,7 @@ class UniMoE2Omni(lmms):
                             )
                             target_messages["audios"].append(temp_file.name)
 
-                inputs = self.initial_input(target_messages).to(
-                    device=self._model.device
-                )
+                inputs = self.initial_input(target_messages).to(device=self._model.device)
                 for k, v in inputs.items():
                     if k in ["pixel_values", "pixel_values_videos", "audio_features"]:
                         inputs[k] = v.to(dtype=torch.bfloat16)
@@ -499,7 +439,7 @@ class UniMoE2Omni(lmms):
                     if "num_beams" not in gen_kwargs:
                         gen_kwargs["num_beams"] = 1
 
-                del gen_kwargs["until"]
+                gen_kwargs.pop("until", None)
                 with torch.no_grad():
                     output_ids = self.model.generate(
                         **inputs,
@@ -514,9 +454,7 @@ class UniMoE2Omni(lmms):
                 )[0].strip()
 
                 res.append(text_outputs)
-                self.cache_hook.add_partial(
-                    "generate_until", (contexts[0], gen_kwargs), text_outputs
-                )
+                self.cache_hook.add_partial("generate_until", (contexts[0], gen_kwargs), text_outputs)
                 pbar.update(1)
 
         res = re_ords.get_original(res)
