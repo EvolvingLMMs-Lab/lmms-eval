@@ -16,6 +16,7 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
     "aria": "Aria",
+    "glm4v": "GLM4V",
     "auroracap": "AuroraCap",
     "bagel": "Bagel",
     "bagel_umm": "BagelUMM",
@@ -40,6 +41,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "internvl3_5": "InternVL3_5",
     "llama_vid": "LLaMAVid",
     "llama_vision": "LlamaVision",
+    "llama4_scout": "Llama4Scout",
     "llava_hf": "LlavaHf",
     "llava_onevision": "Llava_OneVision",
     "llava_onevision1_5": "Llava_OneVision1_5",
