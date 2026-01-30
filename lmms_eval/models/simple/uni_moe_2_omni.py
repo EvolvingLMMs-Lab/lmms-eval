@@ -68,6 +68,9 @@ class UniMoE2Omni(lmms):
 
         # Import uni_moe modules
         try:
+            # Import this first to patch DeepSpeed MoE for single-GPU inference
+            from uni_moe.model import deepspeed_moe_inference_utils  # noqa: F401
+
             from uni_moe.model.modeling_out import GrinQwen2VLOutForConditionalGeneration
             from uni_moe.model.processing_qwen2_vl import Qwen2VLProcessor
             from uni_moe.qwen_vl_utils import process_mm_info
