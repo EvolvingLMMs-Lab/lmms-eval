@@ -1,0 +1,3 @@
+group: mmsu
+task:
+  - mmsu_test
