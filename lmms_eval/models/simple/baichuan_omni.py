@@ -17,27 +17,47 @@ Example Usage:
         --batch_size 1
 """
 
+import os
+import tempfile
+import traceback
+import uuid
 from typing import List, Optional, Tuple, Union
 
 import librosa
 import numpy as np
 import torch
+import torchaudio
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+# Patch for torchaudio compatibility (list_audio_backends removed in newer versions)
+if not hasattr(torchaudio, "list_audio_backends"):
+    torchaudio.list_audio_backends = lambda: ["soundfile", "sox"]
+
 try:
     from moviepy import VideoFileClip
 except ImportError:
     VideoFileClip = None
 
+try:
+    import ujson
+except ImportError:
+    import json as ujson
+
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.audio_processing import split_audio
+
+# Role prefixes for Baichuan-Omni
+ROLE_PREFIX = {
+    "system": "<B_SYS>",
+    "user": "<C_Q>",
+    "assistant": "<C_A>",
+}
 
 
 @register_model("baichuan_omni")
@@ -57,6 +77,7 @@ class BaichuanOmni(lmms):
         use_cache: bool = True,
         max_num_frames: int = 32,
         system_prompt: str = "You are a helpful assistant.",
+        cache_dir: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -64,6 +85,16 @@ class BaichuanOmni(lmms):
 
         self.max_num_frames = max_num_frames
         self.system_prompt = system_prompt
+
+        # Create cache directory for media files
+        if cache_dir is None:
+            self.cache_dir = tempfile.mkdtemp(prefix="baichuan_omni_")
+        else:
+            self.cache_dir = cache_dir
+        os.makedirs(self.cache_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.cache_dir, "image"), exist_ok=True)
+        os.makedirs(os.path.join(self.cache_dir, "audio"), exist_ok=True)
+        os.makedirs(os.path.join(self.cache_dir, "video"), exist_ok=True)
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
@@ -90,11 +121,20 @@ class BaichuanOmni(lmms):
             trust_remote_code=True,
         )
 
-        # Bind processor to model
-        self.processor = self._model.bind_processor(
+        # Bind processor to model with relative_path for media handling
+        self._model.bind_processor(
             self._tokenizer,
             training=False,
+            relative_path=self.cache_dir,
         )
+
+        # Get special tokens
+        self.image_start_token = self._tokenizer.convert_ids_to_tokens(self._model.config.video_config.image_start_token_id)
+        self.image_end_token = self._tokenizer.convert_ids_to_tokens(self._model.config.video_config.image_end_token_id)
+        self.video_start_token = self._tokenizer.convert_ids_to_tokens(self._model.config.video_config.video_start_token_id)
+        self.video_end_token = self._tokenizer.convert_ids_to_tokens(self._model.config.video_config.video_end_token_id)
+        self.audio_start_token = self._tokenizer.convert_ids_to_tokens(self._model.config.audio_config.audio_start_token_id)
+        self.audio_end_token = self._tokenizer.convert_ids_to_tokens(self._model.config.audio_config.audio_end_token_id)
 
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
@@ -111,9 +151,7 @@ class BaichuanOmni(lmms):
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -201,41 +239,66 @@ class BaichuanOmni(lmms):
         except Exception:
             return False
 
-    def _build_prompt_text(
-        self,
-        context: str,
-        visual,
-        image_tag: str = "<image_start_baichuan>{}<image_end_baichuan>",
-        audio_tag: str = "<audio_start_baichuan>{}<audio_end_baichuan>",
-        video_tag: str = "<video_start_baichuan>{}<video_end_baichuan>",
-    ) -> str:
-        """Build the prompt text with appropriate modality tags."""
-        prefix_parts = []
+    def _save_image(self, image: Image.Image) -> str:
+        """Save image to cache directory and return path."""
+        filename = f"{uuid.uuid4().hex}.png"
+        filepath = os.path.join(self.cache_dir, "image", filename)
+        image.save(filepath)
+        return filepath
 
+    def _save_audio(self, audio: np.ndarray, sample_rate: int = 16000) -> str:
+        """Save audio to cache directory and return path."""
+        filename = f"{uuid.uuid4().hex}.wav"
+        filepath = os.path.join(self.cache_dir, "audio", filename)
+        # Convert to tensor for torchaudio
+        if audio.ndim == 1:
+            audio_tensor = torch.from_numpy(audio).float().unsqueeze(0)
+        else:
+            audio_tensor = torch.from_numpy(audio).float()
+        torchaudio.save(filepath, audio_tensor, sample_rate)
+        return filepath
+
+    def _build_message_content(self, context: str, visual) -> str:
+        """Build message content with special tokens for media."""
+        content_parts = []
+
+        # Process visual inputs
         if visual is not None:
-            if isinstance(visual, str) and visual.endswith(
-                (".mp4", ".avi", ".mov", ".mkv", ".webm")
-            ):
-                prefix_parts.append(video_tag.format('{"path": "' + visual + '"}'))
+            if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
+                # Video file path
+                content_parts.append(f"{self.video_start_token}" + ujson.dumps({"local": visual}, ensure_ascii=False) + f"{self.video_end_token}")
             elif isinstance(visual, Image.Image):
-                prefix_parts.append(image_tag.format('{"local": "image"}'))
+                # Single image
+                img_path = self._save_image(visual)
+                content_parts.append(f"{self.image_start_token}" + ujson.dumps({"local": img_path}, ensure_ascii=False) + f"{self.image_end_token}")
             elif isinstance(visual, (list, tuple)):
                 for v in visual:
                     if isinstance(v, Image.Image):
-                        prefix_parts.append(image_tag.format('{"local": "image"}'))
-                    elif isinstance(v, dict):
-                        prefix_parts.append(audio_tag.format('{"path": "audio"}'))
-                    elif isinstance(v, str) and v.endswith(
-                        (".mp4", ".avi", ".mov", ".mkv", ".webm")
-                    ):
-                        prefix_parts.append(video_tag.format('{"path": "' + v + '"}'))
-            elif isinstance(visual, dict):
-                prefix_parts.append(audio_tag.format('{"path": "audio"}'))
+                        img_path = self._save_image(v)
+                        content_parts.append(f"{self.image_start_token}" + ujson.dumps({"local": img_path}, ensure_ascii=False) + f"{self.image_end_token}")
+                    elif isinstance(v, dict) and "array" in v:
+                        # Audio dict
+                        audio = self.resample_audio(v["array"], v["sampling_rate"])
+                        audio_path = self._save_audio(audio)
+                        content_parts.append(f"{self.audio_start_token}" + ujson.dumps({"path": audio_path}, ensure_ascii=False) + f"{self.audio_end_token}")
+                    elif isinstance(v, str) and v.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
+                        content_parts.append(f"{self.video_start_token}" + ujson.dumps({"local": v}, ensure_ascii=False) + f"{self.video_end_token}")
+            elif isinstance(visual, dict) and "array" in visual:
+                # Audio dict
+                audio = self.resample_audio(visual["array"], visual["sampling_rate"])
+                audio_path = self._save_audio(audio)
+                content_parts.append(f"{self.audio_start_token}" + ujson.dumps({"path": audio_path}, ensure_ascii=False) + f"{self.audio_end_token}")
 
-        prefix = "\n".join(prefix_parts)
-        if prefix:
-            return f"{prefix}\n{context}"
-        return context
+        # Add text
+        content_parts.append(context)
+
+        return "".join(content_parts)
+
+    def _format_prompt(self, user_content: str) -> str:
+        """Format the full prompt with role prefixes."""
+        # System message + User message + Assistant prefix
+        prompt = f"{ROLE_PREFIX['system']}{self.system_prompt}" f"{ROLE_PREFIX['user']}{user_content}" f"{ROLE_PREFIX['assistant']}"
+        return prompt
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
@@ -244,9 +307,7 @@ class BaichuanOmni(lmms):
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
@@ -254,92 +315,72 @@ class BaichuanOmni(lmms):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visuals = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
 
             gen_kwargs = all_gen_kwargs[0]
 
-            until = [self.tokenizer.decode(self.eot_token_id)]
+            # Handle until parameter
             if "until" in gen_kwargs:
-                until = gen_kwargs.pop("until")
-                if isinstance(until, str):
-                    until = [until]
-                elif not isinstance(until, list):
-                    raise ValueError(
-                        f"Expected `gen_kwargs['until']` to be of type "
-                        f"Union[str,list] but got {type(until)}"
-                    )
+                gen_kwargs.pop("until")
 
             for i, context in enumerate(contexts):
                 visual = visuals[i] if i < len(visuals) else None
 
                 try:
-                    # Build prompt with modality tags
-                    prompt_text = self._build_prompt_text(context, visual)
+                    # Build message content with media tags
+                    user_content = self._build_message_content(context, visual)
 
-                    # Prepare inputs using processor
-                    inputs = self.processor(prompt_text)
+                    # Format full prompt
+                    prompt = self._format_prompt(user_content)
 
-                    # Convert to tensors and move to device
-                    input_ids = torch.tensor(inputs.input_ids).unsqueeze(0)
-                    if self.device_map == "auto":
-                        input_ids = input_ids.to("cuda")
-                    else:
-                        input_ids = input_ids.to(self.model.device)
+                    # Process with model's processor
+                    inputs = self.model.processor([prompt])
 
-                    # Prepare additional inputs
+                    # Prepare model inputs
+                    input_ids = inputs.input_ids.cuda()
+                    attention_mask = inputs.attention_mask.cuda() if inputs.attention_mask is not None else None
+
                     model_inputs = {
                         "input_ids": input_ids,
-                        "audios": (
-                            torch.tensor(inputs.audios).to(self.model.device)
-                            if inputs.audios is not None
-                            else None
-                        ),
-                        "encoder_length": (
-                            torch.tensor(inputs.encoder_length).to(self.model.device)
-                            if inputs.encoder_length is not None
-                            else None
-                        ),
-                        "bridge_length": (
-                            torch.tensor(inputs.bridge_length).to(self.model.device)
-                            if inputs.bridge_length is not None
-                            else None
-                        ),
-                        "images": (
-                            [
-                                torch.tensor(img).to(self.model.device)
-                                for img in inputs.images
-                            ]
-                            if inputs.images is not None
-                            else None
-                        ),
-                        "patch_nums": inputs.patch_nums,
-                        "images_grid": inputs.images_grid,
-                        "videos": (
-                            [
-                                torch.tensor(vid).to(self.model.device)
-                                for vid in inputs.videos
-                            ]
-                            if inputs.videos is not None
-                            else None
-                        ),
-                        "videos_patch_nums": inputs.videos_patch_nums,
-                        "videos_grid": inputs.videos_grid,
+                        "attention_mask": attention_mask,
+                        "tokenizer": self.tokenizer,
                     }
 
-                    # Set generation parameters
-                    max_new_tokens = gen_kwargs.get("max_new_tokens", 512)
-                    temperature = gen_kwargs.get("temperature", 0)
+                    # Handle audios
+                    if inputs.audios is not None:
+                        model_inputs["audios"] = inputs.audios.cuda()
+                    if inputs.encoder_length is not None:
+                        model_inputs["encoder_length"] = inputs.encoder_length.cuda()
+                    if inputs.bridge_length is not None:
+                        model_inputs["bridge_length"] = inputs.bridge_length.cuda()
+
+                    # Handle images
+                    if inputs.images is not None:
+                        model_inputs["images"] = [torch.tensor(img, dtype=torch.float32).cuda() for img in inputs.images]
+                        if inputs.patch_nums is not None:
+                            model_inputs["patch_nums"] = inputs.patch_nums
+                        if inputs.images_grid is not None:
+                            model_inputs["images_grid"] = inputs.images_grid
+
+                    # Handle videos
+                    if inputs.videos is not None:
+                        model_inputs["videos"] = [torch.tensor(vid, dtype=torch.float32).cuda() for vid in inputs.videos]
+                        if inputs.videos_patch_nums is not None:
+                            model_inputs["videos_patch_nums"] = inputs.videos_patch_nums
+                        if inputs.videos_grid is not None:
+                            model_inputs["videos_grid"] = inputs.videos_grid
+
+                    max_new_tokens = gen_kwargs.get("max_new_tokens", 1024)
+                    temperature = gen_kwargs.get("temperature", 0.0)
                     do_sample = temperature > 0
 
-                    # Generate
                     with torch.no_grad():
                         outputs = self.model.generate(
                             **model_inputs,
                             max_new_tokens=max_new_tokens,
-                            temperature=temperature if temperature > 0 else None,
+                            stop_strings=["<|endoftext|>"],
+                            temperature=temperature if do_sample else None,
                             do_sample=do_sample,
                             use_cache=self.use_cache,
                             eos_token_id=self.tokenizer.eos_token_id,
@@ -347,19 +388,23 @@ class BaichuanOmni(lmms):
                         )
 
                     # Decode output
-                    generated_ids = outputs[0][input_ids.shape[-1] :]
-                    answer = self.tokenizer.decode(
-                        generated_ids, skip_special_tokens=True
-                    )
+                    if isinstance(outputs, tuple):
+                        output_ids = outputs[0]
+                    else:
+                        output_ids = outputs
+
+                    # Get only generated tokens
+                    input_len = input_ids.shape[1]
+                    generated_ids = output_ids[0, input_len:]
+                    answer = self.tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
 
                 except Exception as e:
                     eval_logger.error(f"Error in generating: {e}")
+                    eval_logger.error(traceback.format_exc())
                     answer = ""
 
                 res.append(answer)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), answer
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 pbar.update(1)
 
         res = re_ords.get_original(res)
