@@ -58,15 +58,9 @@ def mmsu_doc_to_audio(doc):
                     elif hasattr(audio_file, "metadata") and audio_file.metadata:
                         if hasattr(audio_file.metadata, "sample_rate"):
                             sampling_rate = audio_file.metadata.sample_rate
-                        elif (
-                            isinstance(audio_file.metadata, dict)
-                            and "sample_rate" in audio_file.metadata
-                        ):
+                        elif isinstance(audio_file.metadata, dict) and "sample_rate" in audio_file.metadata:
                             sampling_rate = audio_file.metadata["sample_rate"]
-                    elif (
-                        hasattr(audio_file, "_desired_sample_rate")
-                        and audio_file._desired_sample_rate
-                    ):
+                    elif hasattr(audio_file, "_desired_sample_rate") and audio_file._desired_sample_rate:
                         sampling_rate = audio_file._desired_sample_rate
 
                     audio_dict = {"array": audio_array, "sampling_rate": sampling_rate}
@@ -75,9 +69,7 @@ def mmsu_doc_to_audio(doc):
                     decoded_audio = audio_file.decode()
                     if isinstance(decoded_audio, dict):
                         return [decoded_audio]
-                    elif hasattr(decoded_audio, "array") and hasattr(
-                        decoded_audio, "sampling_rate"
-                    ):
+                    elif hasattr(decoded_audio, "array") and hasattr(decoded_audio, "sampling_rate"):
                         return [
                             {
                                 "array": decoded_audio.array,
@@ -88,9 +80,7 @@ def mmsu_doc_to_audio(doc):
                     decoded_audio = audio_file()
                     if isinstance(decoded_audio, dict):
                         return [decoded_audio]
-                    elif hasattr(decoded_audio, "array") and hasattr(
-                        decoded_audio, "sampling_rate"
-                    ):
+                    elif hasattr(decoded_audio, "array") and hasattr(decoded_audio, "sampling_rate"):
                         return [
                             {
                                 "array": decoded_audio.array,
@@ -98,9 +88,7 @@ def mmsu_doc_to_audio(doc):
                             }
                         ]
                 else:
-                    if hasattr(audio_file, "array") and hasattr(
-                        audio_file, "sampling_rate"
-                    ):
+                    if hasattr(audio_file, "array") and hasattr(audio_file, "sampling_rate"):
                         return [
                             {
                                 "array": audio_file.array,
@@ -114,24 +102,16 @@ def mmsu_doc_to_audio(doc):
                 return []
         elif hasattr(audio_file, "array") and hasattr(audio_file, "sampling_rate"):
             try:
-                return [
-                    {"array": audio_file.array, "sampling_rate": audio_file.sampling_rate}
-                ]
+                return [{"array": audio_file.array, "sampling_rate": audio_file.sampling_rate}]
             except Exception as e:
                 eval_logger.error(f"Error converting audio object: {e}")
                 return []
-        elif (
-            isinstance(audio_file, dict)
-            and "array" in audio_file
-            and "sampling_rate" in audio_file
-        ):
+        elif isinstance(audio_file, dict) and "array" in audio_file and "sampling_rate" in audio_file:
             return [audio_file]
         else:
             return [audio_file]
     else:
-        eval_logger.warning(
-            f"No audio file found in document. Available keys: {list(doc.keys())}"
-        )
+        eval_logger.warning(f"No audio file found in document. Available keys: {list(doc.keys())}")
         return []
 
 
@@ -334,27 +314,15 @@ def mmsu_aggregate_results(results):
 
     eval_logger.info("Category-wise Accuracy:")
     for cat in sorted(category_total.keys()):
-        acc = (
-            (category_correct[cat] / category_total[cat]) * 100
-            if category_total[cat] > 0
-            else 0.0
-        )
+        acc = (category_correct[cat] / category_total[cat]) * 100 if category_total[cat] > 0 else 0.0
         eval_logger.info(f"  {cat}: {acc:.2f}% ({int(category_correct[cat])}/{category_total[cat]})")
 
     eval_logger.info("-" * 60)
     eval_logger.info("Sub-category-wise Accuracy:")
     for subcat in sorted(subcategory_total.keys()):
-        acc = (
-            (subcategory_correct[subcat] / subcategory_total[subcat]) * 100
-            if subcategory_total[subcat] > 0
-            else 0.0
-        )
-        eval_logger.info(
-            f"  {subcat}: {acc:.2f}% ({int(subcategory_correct[subcat])}/{subcategory_total[subcat]})"
-        )
+        acc = (subcategory_correct[subcat] / subcategory_total[subcat]) * 100 if subcategory_total[subcat] > 0 else 0.0
+        eval_logger.info(f"  {subcat}: {acc:.2f}% ({int(subcategory_correct[subcat])}/{subcategory_total[subcat]})")
 
     eval_logger.info("=" * 60)
 
     return overall_accuracy
-
-
