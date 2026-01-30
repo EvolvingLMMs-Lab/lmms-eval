@@ -7,7 +7,7 @@ from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
-from transformers import AutoProcessor, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoProcessor, AutoTokenizer
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -26,10 +26,7 @@ except ImportError:
     Glm4vForConditionalGeneration = None
 
 if Glm4vMoeForConditionalGeneration is None and Glm4vForConditionalGeneration is None:
-    eval_logger.warning(
-        "Failed to import GLM4V model classes. "
-        "Please install transformers>=5.0.0: pip install transformers>=5.0.0"
-    )
+    eval_logger.warning("Failed to import GLM4V model classes. " "Please install transformers>=5.0.0: pip install transformers>=5.0.0")
 
 
 @register_model("glm4v")
@@ -39,12 +36,12 @@ class GLM4V(lmms):
     https://huggingface.co/zai-org/GLM-4.6V
 
     Supports:
-    - GLM-4.6V (106B MoE model) - requires 4-bit quantization or multiple GPUs
+    - GLM-4.6V (106B MoE model) - requires multiple GPUs
     - GLM-4.6V-Flash (9B model) - fits on single GPU
 
     Usage examples:
-    - Full model with 4-bit: pretrained=zai-org/GLM-4.6V,load_in_4bit=True
     - Flash model: pretrained=zai-org/GLM-4.6V-Flash
+    - Full model (multi-GPU): pretrained=zai-org/GLM-4.6V
     """
 
     def __init__(
@@ -57,8 +54,6 @@ class GLM4V(lmms):
         attn_implementation: Optional[str] = None,
         max_new_tokens: int = 8192,
         system_prompt: Optional[str] = None,
-        load_in_4bit: bool = False,
-        load_in_8bit: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -69,27 +64,19 @@ class GLM4V(lmms):
 
         if is_moe_model:
             if Glm4vMoeForConditionalGeneration is None:
-                raise ImportError(
-                    "Glm4vMoeForConditionalGeneration not available. "
-                    "Please install transformers>=5.0.0: pip install transformers>=5.0.0"
-                )
+                raise ImportError("Glm4vMoeForConditionalGeneration not available. " "Please install transformers>=5.0.0: pip install transformers>=5.0.0")
             model_class = Glm4vMoeForConditionalGeneration
             eval_logger.info(f"Loading GLM-4.6V MoE model from {pretrained}")
         else:
             if Glm4vForConditionalGeneration is None:
-                raise ImportError(
-                    "Glm4vForConditionalGeneration not available. "
-                    "Please install transformers>=5.0.0: pip install transformers>=5.0.0"
-                )
+                raise ImportError("Glm4vForConditionalGeneration not available. " "Please install transformers>=5.0.0: pip install transformers>=5.0.0")
             model_class = Glm4vForConditionalGeneration
             eval_logger.info(f"Loading GLM-4.6V Flash model from {pretrained}")
 
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(
-                f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}"
-            )
+            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -103,24 +90,8 @@ class GLM4V(lmms):
         # Prepare model loading arguments
         model_kwargs = {
             "device_map": self.device_map,
+            "torch_dtype": torch.bfloat16,
         }
-
-        # Configure quantization
-        if load_in_4bit:
-            eval_logger.info("Loading model with 4-bit quantization")
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.bfloat16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-            )
-            model_kwargs["quantization_config"] = quantization_config
-        elif load_in_8bit:
-            eval_logger.info("Loading model with 8-bit quantization")
-            quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-            model_kwargs["quantization_config"] = quantization_config
-        else:
-            model_kwargs["torch_dtype"] = torch.bfloat16
 
         # Add attention implementation if specified
         if attn_implementation is not None:
@@ -137,7 +108,7 @@ class GLM4V(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
 
-        if accelerator.num_processes > 1 and not (load_in_4bit or load_in_8bit):
+        if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
@@ -257,16 +228,20 @@ class GLM4V(lmms):
                 if visual_list[i] is not None:
                     for visual in visual_list[i]:
                         if isinstance(visual, Image.Image):
-                            content.append({
-                                "type": "image",
-                                "url": self._image_to_base64(visual),
-                            })
+                            content.append(
+                                {
+                                    "type": "image",
+                                    "url": self._image_to_base64(visual),
+                                }
+                            )
                         elif isinstance(visual, str):
                             # URL or file path
-                            content.append({
-                                "type": "image",
-                                "url": visual,
-                            })
+                            content.append(
+                                {
+                                    "type": "image",
+                                    "url": visual,
+                                }
+                            )
 
                 content.append({"type": "text", "text": context})
                 message.append({"role": "user", "content": content})
@@ -320,9 +295,7 @@ class GLM4V(lmms):
             )
 
             # Decode only the generated tokens
-            generated_ids_trimmed = [
-                out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], cont)
-            ]
+            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs["input_ids"], cont)]
             answers = self.processor.batch_decode(
                 generated_ids_trimmed,
                 skip_special_tokens=True,

@@ -12,7 +12,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 from torchvision.transforms.functional import to_pil_image
 from tqdm import tqdm
-from transformers import AutoProcessor, BitsAndBytesConfig
+from transformers import AutoProcessor
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -23,10 +23,7 @@ try:
     from transformers import Llama4ForConditionalGeneration
 except ImportError:
     Llama4ForConditionalGeneration = None
-    eval_logger.warning(
-        "Failed to import Llama4ForConditionalGeneration. "
-        "Please install transformers>=4.51.0: pip install transformers>=4.51.0"
-    )
+    eval_logger.warning("Failed to import Llama4ForConditionalGeneration. " "Please install transformers>=4.51.0: pip install transformers>=4.51.0")
 
 
 @register_model("llama4_scout")
@@ -41,12 +38,9 @@ class Llama4Scout(lmms):
     Requirements:
     - transformers >= 4.51.0
     - GPU memory: ~218GB for bf16 (4x H100 80GB recommended)
-    - For quantization: bitsandbytes >= 0.46.1 (load_in_4bit=True or load_in_8bit=True)
 
     Usage examples:
-    - Full precision (requires 4+ H100 GPUs): pretrained=meta-llama/Llama-4-Scout-17B-16E-Instruct
-    - With 4-bit quantization: pretrained=meta-llama/Llama-4-Scout-17B-16E-Instruct,load_in_4bit=True
-    - With 8-bit quantization: pretrained=meta-llama/Llama-4-Scout-17B-16E-Instruct,load_in_8bit=True
+    - pretrained=meta-llama/Llama-4-Scout-17B-16E-Instruct
     """
 
     def __init__(
@@ -60,25 +54,18 @@ class Llama4Scout(lmms):
         max_new_tokens: int = 4096,
         system_prompt: Optional[str] = None,
         max_frames_num: int = 32,
-        load_in_4bit: bool = False,
-        load_in_8bit: bool = False,
         **kwargs,
     ) -> None:
         super().__init__()
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         if Llama4ForConditionalGeneration is None:
-            raise ImportError(
-                "Llama4ForConditionalGeneration not available. "
-                "Please install transformers>=4.51.0: pip install transformers>=4.51.0"
-            )
+            raise ImportError("Llama4ForConditionalGeneration not available. " "Please install transformers>=4.51.0: pip install transformers>=4.51.0")
 
         # Validate attention implementation
         valid_attn_implementations = [None, "flex_attention", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(
-                f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}"
-            )
+            raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -92,27 +79,8 @@ class Llama4Scout(lmms):
         # Prepare model loading arguments
         model_kwargs = {
             "device_map": self.device_map,
+            "torch_dtype": torch.bfloat16,
         }
-
-        # Configure quantization
-        if load_in_4bit:
-            eval_logger.info("Loading model with 4-bit quantization")
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.bfloat16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-            )
-            model_kwargs["quantization_config"] = quantization_config
-        elif load_in_8bit:
-            eval_logger.info("Loading model with 8-bit quantization")
-            quantization_config = BitsAndBytesConfig(
-                load_in_8bit=True,
-                llm_int8_enable_fp32_cpu_offload=True,
-            )
-            model_kwargs["quantization_config"] = quantization_config
-        else:
-            model_kwargs["torch_dtype"] = torch.bfloat16
 
         # Add attention implementation if specified
         if attn_implementation is not None:
@@ -126,10 +94,11 @@ class Llama4Scout(lmms):
 
         # Load config and set pad_token_id from tokenizer (required by Llama4 model __init__)
         from transformers import AutoConfig
+
         config = AutoConfig.from_pretrained(pretrained)
-        if not hasattr(config, 'pad_token_id') or config.pad_token_id is None:
+        if not hasattr(config, "pad_token_id") or config.pad_token_id is None:
             config.pad_token_id = self._tokenizer.pad_token_id
-        if not hasattr(config, 'eos_token_id') or config.eos_token_id is None:
+        if not hasattr(config, "eos_token_id") or config.eos_token_id is None:
             config.eos_token_id = self._tokenizer.eos_token_id
         model_kwargs["config"] = config
 
@@ -143,7 +112,7 @@ class Llama4Scout(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
 
-        if accelerator.num_processes > 1 and not (load_in_4bit or load_in_8bit):
+        if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
@@ -282,27 +251,33 @@ class Llama4Scout(lmms):
                 if visual_list[i] is not None:
                     for visual in visual_list[i]:
                         if isinstance(visual, PIL.Image.Image):
-                            content.append({
-                                "type": "image",
-                                "url": self._image_to_base64(visual),
-                            })
+                            content.append(
+                                {
+                                    "type": "image",
+                                    "url": self._image_to_base64(visual),
+                                }
+                            )
                         elif isinstance(visual, str):
                             # Video path - load frames
-                            if visual.endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm')):
+                            if visual.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
                                 frames = self.load_video(visual, self.max_frames_num)
                                 frames = torch.from_numpy(frames).permute(0, 3, 1, 2)
                                 for frame in frames:
                                     pil_frame = to_pil_image(frame)
-                                    content.append({
-                                        "type": "image",
-                                        "url": self._image_to_base64(pil_frame),
-                                    })
+                                    content.append(
+                                        {
+                                            "type": "image",
+                                            "url": self._image_to_base64(pil_frame),
+                                        }
+                                    )
                             else:
                                 # Image URL or path
-                                content.append({
-                                    "type": "image",
-                                    "url": visual,
-                                })
+                                content.append(
+                                    {
+                                        "type": "image",
+                                        "url": visual,
+                                    }
+                                )
 
                 content.append({"type": "text", "text": context})
                 message.append({"role": "user", "content": content})
@@ -356,9 +331,7 @@ class Llama4Scout(lmms):
             )
 
             # Decode only the generated tokens
-            generated_ids_trimmed = [
-                out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs["input_ids"], cont)
-            ]
+            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs["input_ids"], cont)]
             answers = self.processor.batch_decode(
                 generated_ids_trimmed,
                 skip_special_tokens=True,

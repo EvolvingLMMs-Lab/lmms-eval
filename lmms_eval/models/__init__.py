@@ -94,8 +94,6 @@ AVAILABLE_SIMPLE_MODELS = {
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "bagel_lmms_engine": "BagelLmmsEngine",
-    "glm4v": "GLM4V",
-    "llama4_scout": "Llama4Scout",
     "llava_hf": "LlavaHf",
     "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
