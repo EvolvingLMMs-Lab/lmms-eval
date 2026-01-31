@@ -149,9 +149,7 @@ class OmniVinci(lmms):
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -367,9 +365,7 @@ class OmniVinci(lmms):
                 return -len(toks), x[0]
             return 0, x[0]
 
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
@@ -377,9 +373,7 @@ class OmniVinci(lmms):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visuals = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
 
             gen_kwargs = all_gen_kwargs[0]
@@ -392,10 +386,7 @@ class OmniVinci(lmms):
                 if isinstance(until, str):
                     until = [until]
                 elif not isinstance(until, list):
-                    raise ValueError(
-                        f"Expected `gen_kwargs['until']` to be of type "
-                        f"Union[str,list] but got {type(until)}"
-                    )
+                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type " f"Union[str,list] but got {type(until)}")
 
             for i, context in enumerate(contexts):
                 visual = visuals[i] if i < len(visuals) else None
@@ -411,10 +402,7 @@ class OmniVinci(lmms):
                         elif isinstance(visual, dict) or type(visual).__name__ in ("AudioDecoder", "AudioSamples"):
                             use_audio = True
                         elif isinstance(visual, (list, tuple)):
-                            use_audio = any(
-                                isinstance(v, (dict, np.ndarray)) or type(v).__name__ in ("AudioDecoder", "AudioSamples")
-                                for v in visual
-                            )
+                            use_audio = any(isinstance(v, (dict, np.ndarray)) or type(v).__name__ in ("AudioDecoder", "AudioSamples") for v in visual)
 
                     # Build message
                     message = self._build_message(context, visual)
@@ -423,9 +411,7 @@ class OmniVinci(lmms):
                     # 1. apply_chat_template to get VILA format text
                     # 2. processor([text]) - pass as list
                     # 3. generate with separate input_ids, media, media_config
-                    vila_text = self.processor.apply_chat_template(
-                        message, add_generation_prompt=True, tokenize=False
-                    )
+                    vila_text = self.processor.apply_chat_template(message, add_generation_prompt=True, tokenize=False)
                     inputs = self.processor([vila_text])
 
                     # Move input_ids to device
@@ -480,18 +466,14 @@ class OmniVinci(lmms):
 
                     # OmniVinci returns ONLY the generated tokens, not input+output
                     # So we decode the full output directly
-                    answer = self.processor.tokenizer.batch_decode(
-                        outputs, skip_special_tokens=True
-                    )[0]
+                    answer = self.processor.tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
 
                 except Exception as e:
                     eval_logger.error(f"Error in generating: {e}")
                     answer = ""
 
                 res.append(answer)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), answer
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 pbar.update(1)
 
         res = re_ords.get_original(res)

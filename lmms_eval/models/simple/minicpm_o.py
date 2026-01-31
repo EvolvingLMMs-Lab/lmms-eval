@@ -173,9 +173,7 @@ class MiniCPM_O(lmms):
                 self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with data parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -338,10 +336,7 @@ class MiniCPM_O(lmms):
         if isinstance(visual, dict) or type(visual).__name__ == "AudioDecoder":
             return True
         if isinstance(visual, (list, tuple)):
-            return any(
-                isinstance(v, dict) or type(v).__name__ == "AudioDecoder"
-                for v in visual
-            )
+            return any(isinstance(v, dict) or type(v).__name__ == "AudioDecoder" for v in visual)
         return False
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
@@ -351,9 +346,7 @@ class MiniCPM_O(lmms):
             toks = self.tokenizer.encode(x[0])
             return -len(toks), x[0]
 
-        pbar = tqdm(
-            total=len(requests), disable=(self.rank != 0), desc="Model Responding"
-        )
+        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
@@ -361,9 +354,7 @@ class MiniCPM_O(lmms):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
             task = task[0]
             split = split[0]
-            visuals = [
-                doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id
-            ]
+            visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
 
             gen_kwargs = all_gen_kwargs[0]
@@ -374,10 +365,7 @@ class MiniCPM_O(lmms):
                 if isinstance(until, str):
                     until = [until]
                 elif not isinstance(until, list):
-                    raise ValueError(
-                        f"Expected `gen_kwargs['until']` to be of type "
-                        f"Union[str,list] but got {type(until)}"
-                    )
+                    raise ValueError(f"Expected `gen_kwargs['until']` to be of type " f"Union[str,list] but got {type(until)}")
 
             for i, context in enumerate(contexts):
                 visual = visuals[i] if i < len(visuals) else None
@@ -429,9 +417,7 @@ class MiniCPM_O(lmms):
                     answer = ""
 
                 res.append(answer)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), answer
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 pbar.update(1)
 
         res = re_ords.get_original(res)
