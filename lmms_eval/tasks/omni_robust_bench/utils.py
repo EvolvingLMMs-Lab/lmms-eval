@@ -10,9 +10,14 @@ It contains 4 variants:
 
 For misleading questions, the model should override the incorrect premise in the question
 and answer based on what it actually perceives in the video/audio.
+
+Videos are stored at: ngqtrung/video-caption-dataset/videos/{video_id}.mp4
+QA data is stored at: ngqtrung/omni_robust_bench
+
+The model receives the full video (which contains both visual and audio tracks).
+For omni-modal models like Qwen2.5-Omni, both modalities are automatically processed.
 """
 
-import json
 import os
 from collections import defaultdict
 from pathlib import Path
@@ -21,13 +26,7 @@ import numpy as np
 from loguru import logger as eval_logger
 
 
-# Video base URL for HuggingFace dataset
-VIDEO_BASE_URL = os.getenv(
-    "OMNI_ROBUST_VIDEO_URL",
-    "https://huggingface.co/datasets/ngqtrung/video-caption-dataset/resolve/main/videos"
-)
-
-# Local video cache directory (optional)
+# Local video cache directory (optional - for faster loading)
 VIDEO_CACHE_DIR = os.getenv("OMNI_ROBUST_VIDEO_CACHE", None)
 
 
@@ -35,32 +34,34 @@ def omni_robust_doc_to_visual(doc):
     """
     Return the video path for this document.
 
-    Videos are hosted on HuggingFace at:
-    https://huggingface.co/datasets/ngqtrung/video-caption-dataset/resolve/main/videos/{video_id}.mp4
+    The video field in the dataset contains the HuggingFace URL to the video file.
+    Videos contain both visual and audio tracks - omni-modal models will process both.
+
+    If OMNI_ROBUST_VIDEO_CACHE environment variable is set, will look for local cached videos first.
     """
     video_id = doc["video_id"]
 
-    # Check for local cache first
+    # Check for local cache first (for faster loading)
     if VIDEO_CACHE_DIR:
         local_path = os.path.join(VIDEO_CACHE_DIR, f"{video_id}.mp4")
         if os.path.exists(local_path):
             return [local_path]
 
-    # Use HuggingFace URL
-    video_url = f"{VIDEO_BASE_URL}/{video_id}.mp4"
-    return [video_url]
+    # Use the video URL from the dataset
+    # Format: https://huggingface.co/datasets/ngqtrung/video-caption-dataset/resolve/main/videos/{video_id}.mp4
+    video_url = doc.get("video")
+    if video_url:
+        return [video_url]
 
-
-def _parse_choices(choices_json):
-    """Parse choices from JSON string or dict."""
-    if isinstance(choices_json, str):
-        return json.loads(choices_json)
-    return choices_json
+    # Fallback: construct URL from video_id
+    return [f"https://huggingface.co/datasets/ngqtrung/video-caption-dataset/resolve/main/videos/{video_id}.mp4"]
 
 
 def omni_robust_doc_to_text_vision(doc, lmms_eval_specific_kwargs=None):
     """
     Format the question text with choices for vision questions.
+
+    Uses the new dataset format with option_a, option_b, option_c, option_d fields.
     """
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
@@ -72,15 +73,9 @@ def omni_robust_doc_to_text_vision(doc, lmms_eval_specific_kwargs=None):
     )
 
     question = doc["question"]
-    choices = _parse_choices(doc["choices"])
 
-    # Format choices as A. xxx, B. xxx, etc.
-    letters = ["A", "B", "C", "D"]
-    options_text = "\n".join(
-        f"{letter}. {choices.get(letter, '')}"
-        for letter in letters
-        if letter in choices
-    )
+    # Get choices from individual option fields
+    options_text = f"A. {doc.get('option_a', '')}\nB. {doc.get('option_b', '')}\nC. {doc.get('option_c', '')}\nD. {doc.get('option_d', '')}"
 
     prompt_text = (
         f"{pre_prompt}"
@@ -95,7 +90,8 @@ def omni_robust_doc_to_text_vision(doc, lmms_eval_specific_kwargs=None):
 def omni_robust_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
     """
     Format the question text with choices for audio questions.
-    Same format as vision but noted for clarity.
+
+    Uses the new dataset format with option_a, option_b, option_c, option_d fields.
     """
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
@@ -107,15 +103,9 @@ def omni_robust_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
     )
 
     question = doc["question"]
-    choices = _parse_choices(doc["choices"])
 
-    # Format choices as A. xxx, B. xxx, etc.
-    letters = ["A", "B", "C", "D"]
-    options_text = "\n".join(
-        f"{letter}. {choices.get(letter, '')}"
-        for letter in letters
-        if letter in choices
-    )
+    # Get choices from individual option fields
+    options_text = f"A. {doc.get('option_a', '')}\nB. {doc.get('option_b', '')}\nC. {doc.get('option_c', '')}\nD. {doc.get('option_d', '')}"
 
     prompt_text = (
         f"{pre_prompt}"
@@ -129,14 +119,12 @@ def omni_robust_doc_to_text_audio(doc, lmms_eval_specific_kwargs=None):
 
 def omni_robust_doc_to_choice_vision(doc):
     """Return list of choices for vision questions."""
-    choices = _parse_choices(doc["choices"])
-    return [choices.get(letter, "") for letter in ["A", "B", "C", "D"] if letter in choices]
+    return [doc.get('option_a', ''), doc.get('option_b', ''), doc.get('option_c', ''), doc.get('option_d', '')]
 
 
 def omni_robust_doc_to_choice_audio(doc):
     """Return list of choices for audio questions."""
-    choices = _parse_choices(doc["choices"])
-    return [choices.get(letter, "") for letter in ["A", "B", "C", "D"] if letter in choices]
+    return [doc.get('option_a', ''), doc.get('option_b', ''), doc.get('option_c', ''), doc.get('option_d', '')]
 
 
 def omni_robust_doc_to_target(doc):
