@@ -1,0 +1,17 @@
+include: _default_template_yaml
+
+task: omni_robust_bench_mis_a
+test_split: misleading_audio
+
+doc_to_visual: !function utils.omni_robust_doc_to_visual
+doc_to_text: !function utils.omni_robust_doc_to_text_audio
+doc_to_choice: !function utils.omni_robust_doc_to_choice_audio
+doc_to_target: !function utils.omni_robust_doc_to_target_misleading
+
+process_results: !function utils.omni_robust_process_results_misleading
+
+metadata:
+  version: 1.0
+  description: "Audio questions with WRONG audio premise - tests robustness"
+  modality: audio
+  is_misleading: true

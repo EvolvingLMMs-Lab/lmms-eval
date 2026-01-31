@@ -1,0 +1,6 @@
+group: omni_robust_bench
+task:
+  - omni_robust_bench_std_v
+  - omni_robust_bench_mis_v
+  - omni_robust_bench_std_a
+  - omni_robust_bench_mis_a

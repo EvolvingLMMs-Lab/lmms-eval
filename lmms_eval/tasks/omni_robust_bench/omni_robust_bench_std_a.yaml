@@ -1,0 +1,17 @@
+include: _default_template_yaml
+
+task: omni_robust_bench_std_a
+test_split: standard_audio
+
+doc_to_visual: !function utils.omni_robust_doc_to_visual
+doc_to_text: !function utils.omni_robust_doc_to_text_audio
+doc_to_choice: !function utils.omni_robust_doc_to_choice_audio
+doc_to_target: !function utils.omni_robust_doc_to_target
+
+process_results: !function utils.omni_robust_process_results
+
+metadata:
+  version: 1.0
+  description: "Standard audio questions with correct audio premise"
+  modality: audio
+  is_misleading: false
