@@ -1,6 +1,7 @@
 dataset_path: ngqtrung/omni_robust_bench
 dataset_kwargs:
   token: True
+  cache_dir: omni_robust_bench
   video: True
 output_type: generate_until
 
