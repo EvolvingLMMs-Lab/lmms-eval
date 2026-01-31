@@ -31,10 +31,13 @@ Example Usage:
         --batch_size 1
 """
 
+import os
+import tempfile
 from typing import List, Optional, Tuple, Union
 
 import librosa
 import numpy as np
+import soundfile as sf
 import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
@@ -130,6 +133,10 @@ class OmniVinci(lmms):
         self._config = self._model.config
         self.batch_size_per_gpu = int(batch_size)
         self.use_cache = use_cache
+
+        # Create temp directory for audio files
+        self._temp_dir = tempfile.mkdtemp(prefix="omnivinci_audio_")
+        self._temp_audio_counter = 0
 
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
@@ -229,11 +236,36 @@ class OmniVinci(lmms):
             return audio_obj
 
         type_name = type(audio_obj).__name__
+
+        # Handle AudioSamples type (from torchcodec/datasets)
+        if type_name == "AudioSamples":
+            try:
+                # AudioSamples has 'data' (tensor) and 'sample_rate' attributes
+                if hasattr(audio_obj, "data") and hasattr(audio_obj, "sample_rate"):
+                    audio_array = audio_obj.data
+                    if hasattr(audio_array, "cpu"):
+                        audio_array = audio_array.cpu().numpy()
+                    elif hasattr(audio_array, "numpy"):
+                        audio_array = audio_array.numpy()
+                    return {"array": audio_array, "sampling_rate": audio_obj.sample_rate}
+                # Fallback: try samples attribute
+                if hasattr(audio_obj, "samples"):
+                    audio_array = audio_obj.samples
+                    if hasattr(audio_array, "cpu"):
+                        audio_array = audio_array.cpu().numpy()
+                    sr = audio_obj.sample_rate if hasattr(audio_obj, "sample_rate") else 16000
+                    return {"array": audio_array, "sampling_rate": sr}
+            except Exception as e:
+                eval_logger.warning(f"Failed to decode AudioSamples: {e}")
+
+        # Handle AudioDecoder type
         if type_name == "AudioDecoder":
             try:
                 if hasattr(audio_obj, "get_all_samples"):
                     decoded = audio_obj.get_all_samples()
                     audio_array = decoded.samples if hasattr(decoded, "samples") else decoded
+                    if hasattr(decoded, "data"):
+                        audio_array = decoded.data
                     if hasattr(audio_array, "cpu"):
                         audio_array = audio_array.cpu().numpy()
                     sr = decoded.sample_rate if hasattr(decoded, "sample_rate") else 16000
@@ -254,8 +286,21 @@ class OmniVinci(lmms):
         except Exception:
             return self.load_audio_in_video
 
+    def _save_audio_to_temp(self, audio_array: np.ndarray, sample_rate: int = 16000) -> str:
+        """Save audio array to a temporary WAV file and return the path."""
+        self._temp_audio_counter += 1
+        temp_path = os.path.join(self._temp_dir, f"audio_{self._temp_audio_counter}.wav")
+        sf.write(temp_path, audio_array, sample_rate)
+        return temp_path
+
     def _build_message(self, context: str, visual) -> list:
-        """Build message in the format expected by OmniVinci."""
+        """Build message in the format expected by OmniVinci.
+
+        Note: OmniVinci processor expects:
+        - Images: use 'image_pil' key for PIL Images, or 'image'/'path' for file paths
+        - Audio: use 'audio' key with file path
+        - Video: use 'video' key with file path
+        """
         message = [{"role": "system", "content": self.system_prompt}]
 
         user_content = []
@@ -265,30 +310,46 @@ class OmniVinci(lmms):
                 # Video file
                 user_content.append({"type": "video", "video": visual})
             elif isinstance(visual, Image.Image):
-                # Single image
-                user_content.append({"type": "image", "image": visual})
+                # Single image - use image_pil for PIL objects
+                user_content.append({"type": "image", "image_pil": visual})
             elif isinstance(visual, (list, tuple)) and all(isinstance(v, Image.Image) for v in visual):
                 # Multiple images
                 for v in visual:
-                    user_content.append({"type": "image", "image": v})
-            elif isinstance(visual, dict) or type(visual).__name__ == "AudioDecoder":
-                # Audio
+                    user_content.append({"type": "image", "image_pil": v})
+            elif isinstance(visual, np.ndarray):
+                # Already decoded audio array - save to temp file
+                audio = self.resample_audio(visual, 16000)
+                audio_splits = split_audio(audio, 4800000)
+                for audio_chunk in audio_splits:
+                    audio_path = self._save_audio_to_temp(audio_chunk, 16000)
+                    user_content.append({"type": "audio", "audio": audio_path})
+            elif isinstance(visual, dict) or type(visual).__name__ in ("AudioDecoder", "AudioSamples"):
+                # Audio object that needs decoding
                 audio_dict = self._decode_audio(visual)
                 audio = self.resample_audio(audio_dict["array"], audio_dict["sampling_rate"])
                 audio_splits = split_audio(audio, 4800000)
                 for audio_chunk in audio_splits:
-                    user_content.append({"type": "audio", "audio": audio_chunk})
+                    audio_path = self._save_audio_to_temp(audio_chunk, 16000)
+                    user_content.append({"type": "audio", "audio": audio_path})
             elif isinstance(visual, (list, tuple)):
                 # Mixed content
                 for v in visual:
                     if isinstance(v, Image.Image):
-                        user_content.append({"type": "image", "image": v})
-                    elif isinstance(v, dict) or type(v).__name__ == "AudioDecoder":
+                        user_content.append({"type": "image", "image_pil": v})
+                    elif isinstance(v, np.ndarray):
+                        # Already decoded audio array - save to temp file
+                        audio = self.resample_audio(v, 16000)
+                        audio_splits = split_audio(audio, 4800000)
+                        for audio_chunk in audio_splits:
+                            audio_path = self._save_audio_to_temp(audio_chunk, 16000)
+                            user_content.append({"type": "audio", "audio": audio_path})
+                    elif isinstance(v, dict) or type(v).__name__ in ("AudioDecoder", "AudioSamples"):
                         audio_dict = self._decode_audio(v)
                         audio = self.resample_audio(audio_dict["array"], audio_dict["sampling_rate"])
                         audio_splits = split_audio(audio, 4800000)
                         for audio_chunk in audio_splits:
-                            user_content.append({"type": "audio", "audio": audio_chunk})
+                            audio_path = self._save_audio_to_temp(audio_chunk, 16000)
+                            user_content.append({"type": "audio", "audio": audio_path})
                     elif isinstance(v, str) and v.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
                         user_content.append({"type": "video", "video": v})
 
@@ -345,39 +406,34 @@ class OmniVinci(lmms):
                     if visual is not None:
                         if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov", ".mkv", ".webm")):
                             use_audio = self._check_if_video_has_audio(visual)
-                        elif isinstance(visual, dict) or type(visual).__name__ == "AudioDecoder":
+                        elif isinstance(visual, np.ndarray):
+                            use_audio = True
+                        elif isinstance(visual, dict) or type(visual).__name__ in ("AudioDecoder", "AudioSamples"):
                             use_audio = True
                         elif isinstance(visual, (list, tuple)):
                             use_audio = any(
-                                isinstance(v, dict) or type(v).__name__ == "AudioDecoder"
+                                isinstance(v, (dict, np.ndarray)) or type(v).__name__ in ("AudioDecoder", "AudioSamples")
                                 for v in visual
                             )
 
                     # Build message
                     message = self._build_message(context, visual)
 
-                    # Process inputs
-                    if hasattr(self.processor, "apply_chat_template"):
-                        text = self.processor.apply_chat_template(
-                            message, add_generation_prompt=True, tokenize=False
-                        )
-                        inputs = self.processor(
-                            text=text,
-                            return_tensors="pt",
-                            padding=True,
-                        )
-                    else:
-                        # Fallback for processors without chat template
-                        inputs = self.processor(
-                            message,
-                            return_tensors="pt",
-                        )
+                    # Process inputs following OmniVinci example_infer.py pattern:
+                    # 1. apply_chat_template to get VILA format text
+                    # 2. processor([text]) - pass as list
+                    # 3. generate with separate input_ids, media, media_config
+                    vila_text = self.processor.apply_chat_template(
+                        message, add_generation_prompt=True, tokenize=False
+                    )
+                    inputs = self.processor([vila_text])
 
-                    # Move inputs to device
-                    if self.device_map == "auto":
-                        inputs = inputs.to("cuda").to(self.model.dtype)
-                    else:
-                        inputs = inputs.to(self.model.device).to(self.model.dtype)
+                    # Move input_ids to device
+                    if hasattr(inputs, "input_ids") and inputs.input_ids is not None:
+                        if self.device_map == "auto":
+                            inputs.input_ids = inputs.input_ids.to("cuda")
+                        else:
+                            inputs.input_ids = inputs.input_ids.to(self.model.device)
 
                     # Set generation parameters
                     max_new_tokens = gen_kwargs.get("max_new_tokens", 1024)
@@ -399,27 +455,34 @@ class OmniVinci(lmms):
                         gen_params["eos_token_id"] = self.eot_token_id
                         gen_params["pad_token_id"] = self.tokenizer.pad_token_id
 
+                    # Build generation kwargs following OmniVinci pattern
+                    generate_kwargs = {
+                        "input_ids": inputs.input_ids,
+                        "media": getattr(inputs, "media", None),
+                        "media_config": getattr(inputs, "media_config", None),
+                        **gen_params,
+                    }
+
                     if self.generation_config is not None:
                         self.generation_config.update(**gen_params)
-                        outputs = self.model.generate(**inputs, generation_config=self.generation_config)
-                    else:
-                        outputs = self.model.generate(**inputs, **gen_params)
+                        generate_kwargs["generation_config"] = self.generation_config
+                        # Remove duplicated params when using generation_config
+                        for key in list(gen_params.keys()):
+                            if key in generate_kwargs:
+                                del generate_kwargs[key]
+                        generate_kwargs["generation_config"] = self.generation_config
+
+                    outputs = self.model.generate(**generate_kwargs)
 
                     # Decode output
                     if isinstance(outputs, tuple):
                         outputs = outputs[0]
 
-                    if hasattr(inputs, "input_ids"):
-                        generated_ids = outputs[0][inputs.input_ids.shape[-1]:]
-                    else:
-                        generated_ids = outputs[0]
-
-                    if self.tokenizer is not None:
-                        answer = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
-                    elif hasattr(self.processor, "decode"):
-                        answer = self.processor.decode(generated_ids, skip_special_tokens=True)
-                    else:
-                        answer = str(generated_ids)
+                    # OmniVinci returns ONLY the generated tokens, not input+output
+                    # So we decode the full output directly
+                    answer = self.processor.tokenizer.batch_decode(
+                        outputs, skip_special_tokens=True
+                    )[0]
 
                 except Exception as e:
                     eval_logger.error(f"Error in generating: {e}")
