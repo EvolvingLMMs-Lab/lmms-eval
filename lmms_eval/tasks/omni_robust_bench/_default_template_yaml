@@ -1,7 +1,7 @@
-dataset_path: ngqtrung/omni_robust_bench
+dataset_path: ngqtrung/video-caption-dataset
 dataset_kwargs:
   token: True
-  cache_dir: omni_robust_bench
+  cache_dir: video-caption-dataset
   video: True
 output_type: generate_until
 
