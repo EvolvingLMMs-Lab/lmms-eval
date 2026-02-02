@@ -1,18 +1,18 @@
 dataset_path: daluggas/PRISMM-Bench
 dataset_kwargs:
   token: True
-task: "prismm_bench_default"
+task: "prismm_bench_remedy"
 test_split: train
 output_type: generate_until
 doc_to_visual: !function utils.prismm_doc_to_visual
-doc_to_text: !function utils.prismm_doc_to_text
-doc_to_target: "answer"
-doc_to_messages: !function utils.prismm_doc_to_messages
+doc_to_text: !function utils.prismm_edit_doc_to_text
+doc_to_target: !function utils.prismm_edit_doc_to_target
+doc_to_messages: !function utils.prismm_edit_doc_to_messages
 generation_kwargs:
   max_new_tokens: 16
   temperature: 0
   do_sample: False
-process_results: !function utils.prismm_process_results
+process_results: !function utils.prismm_edit_process_results
 metric_list:
   - metric: exact_match
     aggregation: mean
@@ -23,7 +23,4 @@ metadata:
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "\nAnswer with the option's letter from the given choices directly."
-  qwen_vl:
-    pre_prompt: ""
-    post_prompt: " Answer:"
+    post_prompt: "\nOutput only a single letter corresponding to the correct answer. Do not output any explanation or text of the question again."

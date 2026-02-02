@@ -1,15 +1,8 @@
-"""
-Utility functions for PRISMM-Bench evaluation task.
-
-PRISMM-Bench is a dataset for evaluating LMMs on detecting inconsistencies
-in scientific papers. The task presents parts of a scientific paper (both
-text and images) and asks the model to identify what the inconsistency is
-from multiple choice options.
-"""
-
 # ============================================================================
 # Task Default Functions
 # ============================================================================
+
+SYSTEM_PROMPT = "Answer with only the letter of the correct answer (A, B, C, or D), do not output anything else."
 
 
 def prismm_doc_to_visual(doc):
@@ -64,7 +57,7 @@ def prismm_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         for i, text in enumerate(content_texts):
             if text:
                 part_type = part_types[i] if i < len(part_types) else "unknown"
-                text_parts.append(f"[{part_type.upper()}]: {text}")
+                text_parts.append(text)
 
     # Combine all text parts
     context = "\n\n".join(text_parts) if text_parts else ""
@@ -78,20 +71,20 @@ def prismm_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     # Format the choices with their corresponding letters
     choices_str = "\n".join(
-        [f"{letter}. {choice}" for letter, choice in zip(letters, choices)]
+        [f"{letter}) {choice}" for letter, choice in zip(letters, choices)]
     )
 
     # Get pre and post prompts
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {
             "pre_prompt": "",
-            "post_prompt": "\nAnswer with the option's letter from the given choices directly.",
+            "post_prompt": "\nOutput only a single letter corresponding to the correct answer. Do not output any explanation or text of the question again.",
         }
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get(
         "post_prompt",
-        "\nAnswer with the option's letter from the given choices directly.",
+        "\nOutput only a single letter corresponding to the correct answer. Do not output any explanation or text of the question again.",
     )
 
     # Construct the full prompt
@@ -119,24 +112,80 @@ def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     Returns:
         List of message dictionaries in the format expected by the model
     """
-    # Get the question text
-    question_text = prismm_doc_to_text(doc, lmms_eval_specific_kwargs)
+    # Get the task_default question and choices
+    task_default = doc.get("task_default", {})
+    question = task_default.get(
+        "question", "What is the inconsistency in these parts of a scientific paper?"
+    )
+    choices = task_default.get("choices", [])
+
+    # Extract text content from parts
+    parts = doc.get("parts", {})
+    text_parts = []
+
+    if isinstance(parts, dict):
+        content_texts = parts.get("content_text", [])
+        part_types = parts.get("type", [])
+
+        for i, text in enumerate(content_texts):
+            if text:
+                part_type = part_types[i] if i < len(part_types) else "unknown"
+                text_parts.append(text)
+
+    # Combine all text parts
+    context = "\n\n".join(text_parts) if text_parts else ""
+
+    # Get the letter mapping from the dataset (to handle debiasing)
+    letters = task_default.get("letters", [])
+
+    # If letters are not provided, fall back to A, B, C, D
+    if not letters or len(letters) != len(choices):
+        letters = [chr(ord("A") + i) for i in range(len(choices))]
+
+    # Sort choices alphabetically by letter
+    letter_choice_pairs = list(zip(letters, choices))
+    letter_choice_pairs.sort(key=lambda x: x[0])
+
+    # Get pre and post prompts from YAML config
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
+
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     # Get all visuals
     visuals = prismm_doc_to_visual(doc)
 
-    # Create the message structure
+    # Create the message structure with system prompt
+    system_messages = [
+        {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
+    ]
     messages = [{"role": "user", "content": []}]
 
-    # Add all images first, then the text
-    # This is a simple approach - you could make it more sophisticated
-    # by interleaving images with their corresponding text parts
+    # Add all images first
     for img in visuals:
         messages[0]["content"].append({"type": "image", "url": img})
 
-    # Add the question text
-    messages[0]["content"].append({"type": "text", "text": question_text})
+    # Add pre-prompt if any
+    if pre_prompt:
+        messages[0]["content"].append({"type": "text", "text": pre_prompt})
 
+    # Add context if available
+    if context:
+        messages[0]["content"].append({"type": "text", "text": context})
+
+    # Add the question
+    messages[0]["content"].append({"type": "text", "text": question})
+
+    # Add each choice as a separate text part (sorted alphabetically)
+    for letter, choice in letter_choice_pairs:
+        messages[0]["content"].append({"type": "text", "text": choice})
+
+    # Add post-prompt
+    if post_prompt:
+        messages[0]["content"].append({"type": "text", "text": post_prompt})
+
+    messages = system_messages + messages
     return messages
 
 
@@ -208,7 +257,7 @@ def prismm_edit_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         for i, text in enumerate(content_texts):
             if text:
                 part_type = part_types[i] if i < len(part_types) else "unknown"
-                text_parts.append(f"[{part_type.upper()}]: {text}")
+                text_parts.append(text)
 
     # Combine all text parts
     context = "\n\n".join(text_parts) if text_parts else ""
@@ -222,21 +271,15 @@ def prismm_edit_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     # Format the choices with their corresponding letters
     choices_str = "\n".join(
-        [f"{letter}. {choice}" for letter, choice in zip(letters, choices)]
+        [f"{letter}) {choice}" for letter, choice in zip(letters, choices)]
     )
 
-    # Get pre and post prompts
+    # Get pre and post prompts from YAML config
     if lmms_eval_specific_kwargs is None:
-        lmms_eval_specific_kwargs = {
-            "pre_prompt": "",
-            "post_prompt": "\nAnswer with the option's letter from the given choices directly.",
-        }
+        lmms_eval_specific_kwargs = {}
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
-    post_prompt = lmms_eval_specific_kwargs.get(
-        "post_prompt",
-        "\nAnswer with the option's letter from the given choices directly.",
-    )
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     # Construct the full prompt
     if context:
@@ -266,22 +309,83 @@ def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     Returns:
         List of message dictionaries in the format expected by the model
     """
-    # Get the question text
-    question_text = prismm_edit_doc_to_text(doc, lmms_eval_specific_kwargs)
+    # Get the task_edit question and choices
+    task_edit = doc.get("task_edit", {})
+    question = task_edit.get(
+        "question",
+        "What action needs to be taken to resolve the inconsistency in these parts of a scientific paper?",
+    )
+    choices = task_edit.get("choices", [])
+
+    # Extract text content from parts
+    parts = doc.get("parts", {})
+    text_parts = []
+
+    if isinstance(parts, dict):
+        content_texts = parts.get("content_text", [])
+        part_types = parts.get("type", [])
+
+        for i, text in enumerate(content_texts):
+            if text:
+                part_type = part_types[i] if i < len(part_types) else "unknown"
+                text_parts.append(text)
+
+    # Combine all text parts
+    context = "\n\n".join(text_parts) if text_parts else ""
+
+    # Get the letter mapping from the dataset (to handle debiasing)
+    letters = task_edit.get("letters", [])
+
+    # If letters are not provided, fall back to A, B, C, D
+    if not letters or len(letters) != len(choices):
+        letters = [chr(ord("A") + i) for i in range(len(choices))]
+
+    # Sort choices alphabetically by letter
+    letter_choice_pairs = list(zip(letters, choices))
+    letter_choice_pairs.sort(key=lambda x: x[0])
+
+    # Get pre and post prompts from YAML config
+    if lmms_eval_specific_kwargs is None:
+        lmms_eval_specific_kwargs = {}
+
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     # Get all visuals (same as task_default)
     visuals = prismm_doc_to_visual(doc)
 
-    # Create the message structure
+    # Create the message structure with system prompt
+    system_messages = [
+        {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
+    ]
     messages = [{"role": "user", "content": []}]
 
-    # Add all images first, then the text
+    # Add all images first
     for img in visuals:
         messages[0]["content"].append({"type": "image", "url": img})
 
-    # Add the question text
-    messages[0]["content"].append({"type": "text", "text": question_text})
+    # Add pre-prompt if any
+    if pre_prompt:
+        messages[0]["content"].append({"type": "text", "text": pre_prompt})
 
+    # Add context if available
+    if context:
+        messages[0]["content"].append(
+            {"type": "text", "text": f"Context:\n{context}\n"}
+        )
+
+    # Add the question
+    messages[0]["content"].append({"type": "text", "text": question})
+
+    # Add each choice as a separate text part (sorted alphabetically)
+    for letter, choice in letter_choice_pairs:
+        messages[0]["content"].append({"type": "text", "text": f"{letter}) {choice}"})
+
+    # Add post-prompt
+    if post_prompt:
+        messages[0]["content"].append({"type": "text", "text": post_prompt})
+
+    messages = system_messages + messages
     return messages
 
 
@@ -374,27 +478,22 @@ def prismm_pair_match_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """
     task = doc.get("task_pair_match", {})
 
-    # Get pre and post prompts
+    # Get pre and post prompts from YAML config
     if lmms_eval_specific_kwargs is None:
-        lmms_eval_specific_kwargs = {
-            "pre_prompt": "",
-            "post_prompt": "\nAnswer with the option's letter from the given choices directly.",
-        }
+        lmms_eval_specific_kwargs = {}
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
-    post_prompt = lmms_eval_specific_kwargs.get(
-        "post_prompt",
-        "\nAnswer with the option's letter from the given choices directly.",
-    )
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     # Build query part
+    intro = "You are provided with a part of a scientific paper:"
     if task.get("query_type") == "text":
-        query = f"Query (text):\n{task.get('query_text', '')}"
+        query = task.get("query_text", "")
     else:
-        query = "Query: <image>"
+        query = "<image>"
 
     # Build question
-    question = "You are provided with a part of a scientific paper. The combination with one of the other parts within the same paper results in an inconsistency. Pick the letter of the correct answer option."
+    question = "The combination with one of the other parts within the same paper results in an inconsistency. Pick the letter of the correct answer option."
 
     # Build options with letters
     letters = task.get("letters", [])
@@ -403,9 +502,9 @@ def prismm_pair_match_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         num_candidates = len(task.get("candidates", []))
         letters = [chr(ord("A") + i) for i in range(num_candidates)]
 
-    options = "\n".join([f"{letter}. <image>" for letter in letters])
+    options = "\n".join([f"{letter}) <image>" for letter in letters])
 
-    return f"{pre_prompt}{query}\n\n{question}\n\n{options}{post_prompt}"
+    return f"{pre_prompt}{intro}\n{query}\n{question}\n{options}{post_prompt}"
 
 
 def prismm_pair_match_doc_to_target(doc):
@@ -426,32 +525,38 @@ def prismm_pair_match_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
         List of message dictionaries in the format expected by the model
     """
     task = doc.get("task_pair_match", {})
+
+    # Create the message structure with system prompt
+    system_messages = [
+        {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
+    ]
     messages = [{"role": "user", "content": []}]
 
-    # Get pre and post prompts
+    # Get pre and post prompts from YAML config
     if lmms_eval_specific_kwargs is None:
-        lmms_eval_specific_kwargs = {
-            "pre_prompt": "",
-            "post_prompt": "\nAnswer with the option's letter from the given choices directly.",
-        }
+        lmms_eval_specific_kwargs = {}
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
-    post_prompt = lmms_eval_specific_kwargs.get(
-        "post_prompt",
-        "\nAnswer with the option's letter from the given choices directly.",
-    )
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
     # Add pre-prompt if any
     if pre_prompt:
         messages[0]["content"].append({"type": "text", "text": pre_prompt})
 
+    # Add intro text
+    messages[0]["content"].append(
+        {
+            "type": "text",
+            "text": "You are provided with a part of a scientific paper:\n",
+        }
+    )
+
     # Add query
     if task.get("query_type") == "text":
         messages[0]["content"].append(
-            {"type": "text", "text": f"Query:\n{task.get('query_text', '')}"}
+            {"type": "text", "text": task.get("query_text", "")}
         )
     else:
-        messages[0]["content"].append({"type": "text", "text": "Query:"})
         if task.get("query_image") is not None:
             messages[0]["content"].append(
                 {"type": "image", "url": task["query_image"].convert("RGB")}
@@ -461,7 +566,7 @@ def prismm_pair_match_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     messages[0]["content"].append(
         {
             "type": "text",
-            "text": "\n\nYou are provided with a part of a scientific paper. The combination with one of the other parts within the same paper results in an inconsistency. Pick the letter of the correct answer option.\n\n",
+            "text": "\nThe combination with one of the other parts within the same paper results in an inconsistency. Pick the letter of the correct answer option.\n",
         }
     )
 
@@ -474,7 +579,7 @@ def prismm_pair_match_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
         letters = [chr(ord("A") + i) for i in range(len(candidates))]
 
     for letter, candidate in zip(letters, candidates):
-        messages[0]["content"].append({"type": "text", "text": f"{letter}. "})
+        messages[0]["content"].append({"type": "text", "text": f"{letter}) "})
         if candidate is not None:
             messages[0]["content"].append(
                 {"type": "image", "url": candidate.convert("RGB")}
@@ -484,6 +589,7 @@ def prismm_pair_match_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     # Add post-prompt
     messages[0]["content"].append({"type": "text", "text": post_prompt})
 
+    messages = system_messages + messages
     return messages
 
 
@@ -500,7 +606,7 @@ def prismm_pair_match_process_results(doc, results):
     """
     pred = results[0].strip()
     task = doc.get("task_pair_match", {})
-    target = task.get("answer", "").strip().upper()
+    target = task.get("answer", "").strip("'.\" )").upper()
 
     # Normalize the prediction
     pred_upper = pred.upper()
