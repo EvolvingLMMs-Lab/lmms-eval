@@ -1,6 +1,7 @@
-dataset_path: Icey444/CoreCognition
+dataset_path: williamium/CoreCognition
+dataset_name: frame-combined
 task: "corecognition_stage_concrete_operational"
-test_split: default
+test_split: train
 output_type: generate_until
 
 doc_to_visual: !function utils.corecognition_doc_to_visual

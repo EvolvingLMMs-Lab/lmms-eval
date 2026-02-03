@@ -10,7 +10,7 @@ This dataset contains 1,423 multimodal CoreCognition samples and 80 Concept Hack
 
 **Paper**: [Core Knowledge Deficits in Multi-Modal Language Models](https://arxiv.org/abs/2410.10855)
 **Project Page**: [williamium3000.github.io/core-knowledge](https://williamium3000.github.io/core-knowledge/)
-**Dataset**: [Icey444/CoreCognition](https://huggingface.co/datasets/Icey444/CoreCognition)
+**Dataset**: [williamium/CoreCognition](https://huggingface.co/datasets/williamium/CoreCognition) (subset: `frame-combined`, split: `train`)
 
 ## Core Knowledge Concepts (12 Categories)
 
@@ -33,6 +33,13 @@ The benchmark covers these fundamental cognitive concepts grounded in developmen
 
 - **accuracy**: Overall accuracy - how often the model produces the correct answer
 - **accuracy_by_concept**: Per-concept accuracy breakdown across all 12 core knowledge categories
+
+## Answer Matching
+
+Evaluation uses **hybrid matching** (reference: `lmms_eval/tasks/stare/utils.py`):
+
+1. **Template matching** first: extract MCQ (A–F) or YORN (YES/NO) from the model output via regex.
+2. **LLM judge fallback** (optional): when template match fails, an LLM judge can decide correctness. Enable by setting `metadata.use_lmms_judge: true` in `corecognition.yaml` and configuring `API_TYPE` and `DEPLOYMENT_NAME` (or `OPENAI_API_MODEL`) / `OPENAI_API_KEY` in the environment.
 
 ## Usage
 
