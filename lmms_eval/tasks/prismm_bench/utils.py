@@ -1,7 +1,7 @@
-import io
 import math
-from PIL import Image
+
 from pdf2image import convert_from_bytes
+from PIL import Image
 
 SYSTEM_PROMPT = "Answer with only the letter of the correct answer (A, B, C, or D), do not output anything else."
 
@@ -63,9 +63,7 @@ def prismm_doc_to_visual_whole_page(doc):
     page_nums: list[int] = parts.get("page", [])
     for page_num in page_nums:
         try:
-            images = convert_from_bytes(
-                pdf_bytes, dpi=144, first_page=page_num, last_page=page_num
-            )
+            images = convert_from_bytes(pdf_bytes, dpi=144, first_page=page_num, last_page=page_num)
             if images:
                 visuals.append(images[0].convert("RGB"))
         except Exception as e:
@@ -80,9 +78,7 @@ def prismm_doc_to_visual_whole_doc(doc):
         return visuals
 
     try:
-        images = convert_from_bytes(
-            pdf_bytes, dpi=144, last_page=1000
-        )  # safeguard for very large documents
+        images = convert_from_bytes(pdf_bytes, dpi=144, last_page=1000)  # safeguard for very large documents
         max_images = 5
         column_num = 3
 
@@ -107,9 +103,7 @@ def prismm_doc_to_visual_whole_doc(doc):
 def prismm_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     """Construct the question text with all text parts and multiple choice options."""
     task_identification = doc.get("task_identification", {})
-    question = task_identification.get(
-        "question", "What is the inconsistency in these parts of a scientific paper?"
-    )
+    question = task_identification.get("question", "What is the inconsistency in these parts of a scientific paper?")
     choices = task_identification.get("choices", [])
 
     parts = doc.get("parts", {})
@@ -146,13 +140,9 @@ def prismm_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return full_text
 
 
-def _prismm_doc_to_messages_generic(
-    doc, lmms_eval_specific_kwargs, visual_fn, skip_text_context=False
-):
+def _prismm_doc_to_messages_generic(doc, lmms_eval_specific_kwargs, visual_fn, skip_text_context=False):
     task_identification = doc.get("task_identification", {})
-    question = task_identification.get(
-        "question", "What is the inconsistency in these parts of a scientific paper?"
-    )
+    question = task_identification.get("question", "What is the inconsistency in these parts of a scientific paper?")
     choices = task_identification.get("choices", [])
 
     parts = doc.get("parts", {})
@@ -179,9 +169,7 @@ def _prismm_doc_to_messages_generic(
 
     visuals = visual_fn(doc)
 
-    system_messages = [
-        {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
-    ]
+    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     messages = [{"role": "user", "content": []}]
 
     for img in visuals:
@@ -206,9 +194,7 @@ def _prismm_doc_to_messages_generic(
 
 
 def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    return _prismm_doc_to_messages_generic(
-        doc, lmms_eval_specific_kwargs, prismm_doc_to_visual
-    )
+    return _prismm_doc_to_messages_generic(doc, lmms_eval_specific_kwargs, prismm_doc_to_visual)
 
 
 def prismm_doc_to_messages_whole_page(doc, lmms_eval_specific_kwargs=None):
@@ -289,9 +275,7 @@ def prismm_edit_doc_to_target(doc):
     return task_remedy.get("answer", "")
 
 
-def _prismm_edit_doc_to_messages_generic(
-    doc, lmms_eval_specific_kwargs, visual_fn, skip_text_context=False
-):
+def _prismm_edit_doc_to_messages_generic(doc, lmms_eval_specific_kwargs, visual_fn, skip_text_context=False):
     task_remedy = doc.get("task_remedy", {})
     question = task_remedy.get(
         "question",
@@ -323,9 +307,7 @@ def _prismm_edit_doc_to_messages_generic(
 
     visuals = visual_fn(doc)
 
-    system_messages = [
-        {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
-    ]
+    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     messages = [{"role": "user", "content": []}]
 
     for img in visuals:
@@ -350,9 +332,7 @@ def _prismm_edit_doc_to_messages_generic(
 
 
 def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    return _prismm_edit_doc_to_messages_generic(
-        doc, lmms_eval_specific_kwargs, prismm_doc_to_visual
-    )
+    return _prismm_edit_doc_to_messages_generic(doc, lmms_eval_specific_kwargs, prismm_doc_to_visual)
 
 
 def prismm_edit_doc_to_messages_whole_page(doc, lmms_eval_specific_kwargs=None):
@@ -449,9 +429,7 @@ def prismm_pair_match_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     """Convert document to message format for task_pair_match with proper interleaving."""
     task = doc.get("task_pair_match", {})
 
-    system_messages = [
-        {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
-    ]
+    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     messages = [{"role": "user", "content": []}]
 
     if lmms_eval_specific_kwargs is None:
@@ -471,14 +449,10 @@ def prismm_pair_match_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     )
 
     if task.get("query_type") == "text":
-        messages[0]["content"].append(
-            {"type": "text", "text": task.get("query_text", "")}
-        )
+        messages[0]["content"].append({"type": "text", "text": task.get("query_text", "")})
     else:
         if task.get("query_image") is not None:
-            messages[0]["content"].append(
-                {"type": "image", "url": task["query_image"].convert("RGB")}
-            )
+            messages[0]["content"].append({"type": "image", "url": task["query_image"].convert("RGB")})
 
     messages[0]["content"].append(
         {
@@ -496,9 +470,7 @@ def prismm_pair_match_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     for letter, candidate in zip(letters, candidates):
         messages[0]["content"].append({"type": "text", "text": f"{letter}) "})
         if candidate is not None:
-            messages[0]["content"].append(
-                {"type": "image", "url": candidate.convert("RGB")}
-            )
+            messages[0]["content"].append({"type": "image", "url": candidate.convert("RGB")})
         messages[0]["content"].append({"type": "text", "text": "\n"})
 
     messages[0]["content"].append({"type": "text", "text": post_prompt})
