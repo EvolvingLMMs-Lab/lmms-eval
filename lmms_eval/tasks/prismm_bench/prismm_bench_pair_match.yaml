@@ -2,7 +2,7 @@ dataset_path: daluggas/PRISMM-Bench
 dataset_kwargs:
   token: True
 task: "prismm_bench_pair_match"
-test_split: train
+test_split: test
 output_type: generate_until
 process_docs: !function utils.prismm_pair_match_filter_docs
 doc_to_visual: !function utils.prismm_pair_match_doc_to_visual

@@ -2,7 +2,7 @@ dataset_path: daluggas/PRISMM-Bench
 dataset_kwargs:
   token: True
 task: "prismm_bench_remedy"
-test_split: train
+test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.prismm_doc_to_visual
 doc_to_text: !function utils.prismm_edit_doc_to_text
