@@ -62,17 +62,10 @@ To enable hybrid matching with LLM judge:
 
 2. **Set environment variables**:
    ```bash
-   export API_TYPE=openai  # or "azure", "anthropic", etc.
+   export API_TYPE=openai  # or "azure", "anthropic", etc., see lmms_eval/llm_judge/providers
+   export OPENAI_API_URL="https://api.openai.com/v1"
    export OPENAI_API_KEY=your_api_key_here
    export DEPLOYMENT_NAME=gpt-4o  # or OPENAI_API_MODEL=gpt-4o
-   ```
-
-   For Azure OpenAI:
-   ```bash
-   export API_TYPE=azure
-   export AZURE_OPENAI_API_KEY=your_key
-   export AZURE_OPENAI_ENDPOINT=your_endpoint
-   export DEPLOYMENT_NAME=your_deployment_name
    ```
 
 If the API is not configured or `use_lmms_judge` is `false`, the evaluation will use template matching only.
@@ -86,7 +79,8 @@ python -m lmms_eval \
   --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
   --tasks corecognition \
   --batch_size 1 \
-  --device cuda:0
+  --log_samples \
+  --output_path output/corecognition
 
 # Evaluate specific stage
 python -m lmms_eval \
@@ -94,7 +88,8 @@ python -m lmms_eval \
   --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
   --tasks corecognition_stage_sensorimotor \
   --batch_size 1 \
-  --device cuda:0
+  --log_samples \
+  --output_path output/corecognition
 ```
 
 ## Citation
