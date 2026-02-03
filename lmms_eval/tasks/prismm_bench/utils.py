@@ -1,6 +1,41 @@
-from matplotlib.pylab import choice
+import io
+import math
+from PIL import Image
+from pdf2image import convert_from_bytes
 
 SYSTEM_PROMPT = "Answer with only the letter of the correct answer (A, B, C, or D), do not output anything else."
+
+
+def concat_images(images, column_num=3):
+    if not images:
+        return None
+
+    if column_num == 1:
+        total_height = images[0].height * len(images)
+        total_width = images[0].width
+    else:
+        rows = math.ceil(len(images) / column_num)
+        total_height = images[0].height * rows
+        total_width = images[0].width * column_num
+
+    concatenated_image = Image.new("RGB", (total_width, total_height), "white")
+
+    x_offset, y_offset = 0, 0
+    for cnt, image in enumerate(images):
+        concatenated_image.paste(image, (x_offset, y_offset))
+        x_offset += image.width
+        if (cnt + 1) % column_num == 0:
+            y_offset += image.height
+            x_offset = 0
+
+    return concatenated_image
+
+
+def get_pdf_bytes(doc):
+    pdf_data = doc.get("pdf")
+    if pdf_data is None:
+        raise ValueError("PDF data not found in document")
+    return pdf_data.stream.getvalue()
 
 
 def prismm_doc_to_visual(doc):
@@ -13,6 +48,58 @@ def prismm_doc_to_visual(doc):
         for img in content_images:
             if img is not None:
                 visuals.append(img.convert("RGB"))
+
+    return visuals
+
+
+def prismm_doc_to_visual_whole_page(doc):
+    visuals = []
+    pdf_bytes = get_pdf_bytes(doc)
+    if not pdf_bytes:
+        return visuals
+
+    parts = doc.get("parts", {})
+
+    page_nums: list[int] = parts.get("page", [])
+    for page_num in page_nums:
+        try:
+            images = convert_from_bytes(
+                pdf_bytes, dpi=144, first_page=page_num, last_page=page_num
+            )
+            if images:
+                visuals.append(images[0].convert("RGB"))
+        except Exception as e:
+            pass
+    return visuals
+
+
+def prismm_doc_to_visual_whole_doc(doc):
+    visuals = []
+    pdf_bytes = get_pdf_bytes(doc)
+    if not pdf_bytes:
+        return visuals
+
+    try:
+        images = convert_from_bytes(
+            pdf_bytes, dpi=144, last_page=1000
+        )  # safeguard for very large documents
+        max_images = 5
+        column_num = 3
+
+        if not images:
+            return visuals
+
+        pages_per_image = math.ceil(len(images) / max_images)
+
+        for i in range(0, len(images), pages_per_image):
+            batch_pages = images[i : i + pages_per_image]
+            concatenated_image = concat_images(batch_pages, column_num)
+            if concatenated_image:
+                visuals.append(concatenated_image.convert("RGB"))
+            if len(visuals) >= max_images:
+                break
+    except Exception:
+        pass
 
     return visuals
 
@@ -30,18 +117,12 @@ def prismm_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     if isinstance(parts, dict):
         content_texts = parts.get("content_text", [])
-        part_types = parts.get("type", [])
 
         for i, text in enumerate(content_texts):
             if text:
-                part_type = part_types[i] if i < len(part_types) else "unknown"
                 text_parts.append(text)
 
     context = "\n\n".join(text_parts) if text_parts else ""
-
-    letters = task_identification.get("letters", [])
-    if not letters or len(letters) != len(choices):
-        letters = [chr(ord("A") + i) for i in range(len(choices))]
 
     choices_str = "\n".join(choices)
 
@@ -65,8 +146,9 @@ def prismm_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return full_text
 
 
-def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    """Convert document to message format for interleaved text-image content."""
+def _prismm_doc_to_messages_generic(
+    doc, lmms_eval_specific_kwargs, visual_fn, skip_text_context=False
+):
     task_identification = doc.get("task_identification", {})
     question = task_identification.get(
         "question", "What is the inconsistency in these parts of a scientific paper?"
@@ -75,16 +157,11 @@ def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 
     parts = doc.get("parts", {})
     text_parts = []
-
-    if isinstance(parts, dict):
+    if isinstance(parts, dict) and not skip_text_context:
         content_texts = parts.get("content_text", [])
-        part_types = parts.get("type", [])
-
         for i, text in enumerate(content_texts):
             if text:
-                part_type = part_types[i] if i < len(part_types) else "unknown"
                 text_parts.append(text)
-
     context = "\n\n".join(text_parts) if text_parts else ""
 
     letters = task_identification.get("letters", [])
@@ -100,7 +177,7 @@ def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
-    visuals = prismm_doc_to_visual(doc)
+    visuals = visual_fn(doc)
 
     system_messages = [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
@@ -110,11 +187,11 @@ def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     for img in visuals:
         messages[0]["content"].append({"type": "image", "url": img})
 
-    if pre_prompt:
-        messages[0]["content"].append({"type": "text", "text": pre_prompt})
-
     if context:
         messages[0]["content"].append({"type": "text", "text": context})
+
+    if pre_prompt:
+        messages[0]["content"].append({"type": "text", "text": pre_prompt})
 
     messages[0]["content"].append({"type": "text", "text": question})
 
@@ -126,6 +203,30 @@ def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 
     messages = system_messages + messages
     return messages
+
+
+def prismm_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    return _prismm_doc_to_messages_generic(
+        doc, lmms_eval_specific_kwargs, prismm_doc_to_visual
+    )
+
+
+def prismm_doc_to_messages_whole_page(doc, lmms_eval_specific_kwargs=None):
+    return _prismm_doc_to_messages_generic(
+        doc,
+        lmms_eval_specific_kwargs,
+        prismm_doc_to_visual_whole_page,
+        skip_text_context=True,
+    )
+
+
+def prismm_doc_to_messages_whole_doc(doc, lmms_eval_specific_kwargs=None):
+    return _prismm_doc_to_messages_generic(
+        doc,
+        lmms_eval_specific_kwargs,
+        prismm_doc_to_visual_whole_doc,
+        skip_text_context=True,
+    )
 
 
 def prismm_process_results(doc, results):
@@ -159,18 +260,12 @@ def prismm_edit_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     if isinstance(parts, dict):
         content_texts = parts.get("content_text", [])
-        part_types = parts.get("type", [])
 
         for i, text in enumerate(content_texts):
             if text:
-                part_type = part_types[i] if i < len(part_types) else "unknown"
                 text_parts.append(text)
 
     context = "\n\n".join(text_parts) if text_parts else ""
-
-    letters = task_remedy.get("letters", [])
-    if not letters or len(letters) != len(choices):
-        letters = [chr(ord("A") + i) for i in range(len(choices))]
 
     choices_str = "\n".join(choices)
 
@@ -194,8 +289,9 @@ def prismm_edit_doc_to_target(doc):
     return task_remedy.get("answer", "")
 
 
-def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    """Convert document to message format for task_remedy."""
+def _prismm_edit_doc_to_messages_generic(
+    doc, lmms_eval_specific_kwargs, visual_fn, skip_text_context=False
+):
     task_remedy = doc.get("task_remedy", {})
     question = task_remedy.get(
         "question",
@@ -205,16 +301,11 @@ def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 
     parts = doc.get("parts", {})
     text_parts = []
-
-    if isinstance(parts, dict):
+    if isinstance(parts, dict) and not skip_text_context:
         content_texts = parts.get("content_text", [])
-        part_types = parts.get("type", [])
-
         for i, text in enumerate(content_texts):
             if text:
-                part_type = part_types[i] if i < len(part_types) else "unknown"
                 text_parts.append(text)
-
     context = "\n\n".join(text_parts) if text_parts else ""
 
     letters = task_remedy.get("letters", [])
@@ -230,7 +321,7 @@ def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
-    visuals = prismm_doc_to_visual(doc)
+    visuals = visual_fn(doc)
 
     system_messages = [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}
@@ -240,11 +331,11 @@ def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
     for img in visuals:
         messages[0]["content"].append({"type": "image", "url": img})
 
-    if pre_prompt:
-        messages[0]["content"].append({"type": "text", "text": pre_prompt})
-
     if context:
         messages[0]["content"].append({"type": "text", "text": context})
+
+    if pre_prompt:
+        messages[0]["content"].append({"type": "text", "text": pre_prompt})
 
     messages[0]["content"].append({"type": "text", "text": question})
 
@@ -256,6 +347,30 @@ def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 
     messages = system_messages + messages
     return messages
+
+
+def prismm_edit_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    return _prismm_edit_doc_to_messages_generic(
+        doc, lmms_eval_specific_kwargs, prismm_doc_to_visual
+    )
+
+
+def prismm_edit_doc_to_messages_whole_page(doc, lmms_eval_specific_kwargs=None):
+    return _prismm_edit_doc_to_messages_generic(
+        doc,
+        lmms_eval_specific_kwargs,
+        prismm_doc_to_visual_whole_page,
+        skip_text_context=True,
+    )
+
+
+def prismm_edit_doc_to_messages_whole_doc(doc, lmms_eval_specific_kwargs=None):
+    return _prismm_edit_doc_to_messages_generic(
+        doc,
+        lmms_eval_specific_kwargs,
+        prismm_doc_to_visual_whole_doc,
+        skip_text_context=True,
+    )
 
 
 def prismm_edit_process_results(doc, results):
@@ -396,7 +511,7 @@ def prismm_pair_match_process_results(doc, results):
     """Process the model results for task_pair_match."""
     pred = results[0].strip()
     task = doc.get("task_pair_match", {})
-    target = task.get("answer", "").strip("'.\" )").upper()
+    target = task.get("answer", "").strip("'\" )").upper()
 
     pred_upper = pred.upper()
 
