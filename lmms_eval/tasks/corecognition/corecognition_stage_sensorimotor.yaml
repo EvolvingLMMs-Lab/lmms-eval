@@ -3,6 +3,7 @@ dataset_name: frame-combined
 task: "corecognition_stage_sensorimotor"
 test_split: train
 output_type: generate_until
+process_docs: !function utils.process_docs_stage_sensorimotor
 
 doc_to_visual: !function utils.corecognition_doc_to_visual
 doc_to_text: !function utils.corecognition_doc_to_text
@@ -29,10 +30,6 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: ""
-
-dataset_kwargs:
-  filter:
-    stage: "Stage Sensorimotor"
 
 metadata:
   version: 1.0

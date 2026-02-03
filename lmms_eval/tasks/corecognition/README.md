@@ -36,10 +36,46 @@ The benchmark covers these fundamental cognitive concepts grounded in developmen
 
 ## Answer Matching
 
-Evaluation uses **hybrid matching** (reference: `lmms_eval/tasks/stare/utils.py`):
+Evaluation uses **hybrid matching** as described in the original paper (reference: `lmms_eval/tasks/stare/utils.py`):
 
-1. **Template matching** first: extract MCQ (A–F) or YORN (YES/NO) from the model output via regex.
-2. **LLM judge fallback** (optional): when template match fails, an LLM judge can decide correctness. Enable by setting `metadata.use_lmms_judge: true` in `corecognition.yaml` and configuring `API_TYPE` and `DEPLOYMENT_NAME` (or `OPENAI_API_MODEL`) / `OPENAI_API_KEY` in the environment.
+### Hybrid Matching (Default when API is provided)
+
+When an LLM judge API is configured, the evaluation uses hybrid matching:
+1. **Template matching**: Extract MCQ (A–F) or YORN (YES/NO) from the model output via regex.
+2. **LLM judge**: When template matching fails to extract a valid answer, an LLM judge determines correctness based on semantic similarity.
+
+This hybrid approach combines the efficiency of template matching with the robustness of LLM-based semantic evaluation.
+
+### Template Matching Only (when API is not provided)
+
+If no LLM judge API is configured, evaluation uses template matching only, falling back to direct string comparison when template matching fails.
+
+### Configuring Hybrid Matching
+
+To enable hybrid matching with LLM judge:
+
+1. **Enable in configuration**: Set `metadata.use_lmms_judge: true` in `corecognition.yaml`:
+   ```yaml
+   metadata:
+     use_lmms_judge: true  # Enable hybrid matching with LLM judge
+   ```
+
+2. **Set environment variables**:
+   ```bash
+   export API_TYPE=openai  # or "azure", "anthropic", etc.
+   export OPENAI_API_KEY=your_api_key_here
+   export DEPLOYMENT_NAME=gpt-4o  # or OPENAI_API_MODEL=gpt-4o
+   ```
+
+   For Azure OpenAI:
+   ```bash
+   export API_TYPE=azure
+   export AZURE_OPENAI_API_KEY=your_key
+   export AZURE_OPENAI_ENDPOINT=your_endpoint
+   export DEPLOYMENT_NAME=your_deployment_name
+   ```
+
+If the API is not configured or `use_lmms_judge` is `false`, the evaluation will use template matching only.
 
 ## Usage
 

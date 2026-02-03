@@ -153,6 +153,21 @@ def corecognition_doc_to_text(doc: dict[str, Any], lmms_eval_specific_kwargs: Op
     return f"{pre_prompt or ''}{prompt or ''}{post_prompt or ''}"
 
 
+def process_docs_stage_sensorimotor(dataset):
+    """Filter dataset to only include Stage Sensorimotor samples."""
+    return dataset.filter(lambda x: x["stage"] == "Stage Sensorimotor")
+
+
+def process_docs_stage_concrete_operational(dataset):
+    """Filter dataset to only include Stage Concrete Operational samples."""
+    return dataset.filter(lambda x: x["stage"] == "Stage Concrete Operational")
+
+
+def process_docs_stage_formal_operational(dataset):
+    """Filter dataset to only include Stage Formal Operational samples."""
+    return dataset.filter(lambda x: x["stage"] == "Stage Formal Operational")
+
+
 def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> dict[str, Any]:
     """Process model results and compute accuracy.
     Uses template matching (MCQ/YORN) first; when template match fails and
@@ -164,6 +179,8 @@ def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> di
         Dictionary with accuracy metric
     """
     pred = results[0] if results else ""
+    if not isinstance(pred, str):
+        pred = str(pred)
     ground_truth = str(doc["answer"]).strip()
     concept = doc.get("concept", "unknown")
     # MC -> MCQ, TF -> YORN (yes/no)
@@ -202,6 +219,37 @@ def corecognition_process_results(doc: dict[str, Any], results: list[str]) -> di
         "accuracy": float(is_correct),
         "accuracy_by_concept": {"concept": concept, "correct": is_correct},
     }
+
+
+def _extract_answer(pred: str) -> str:
+    """Extract answer from model prediction with aggressive cleanup.
+    Args:
+        pred: Raw model prediction
+    Returns:
+        Extracted answer in uppercase
+    """
+    pred = pred.strip()
+    
+    patterns = [
+        r'^(yes|no|[a-d])(\.|\,|\;| |\n|\*)',
+        r'[\n\*]+(yes|no|[a-d])(\.|\,|\;| |\n|\*)',
+        r'(yes|no|[a-d]) is the correct answer',
+        r'answer is[\:\;\*\n ]*(yes|no|[a-d])',
+        r'answer[\:\;\*\n ]*(yes|no|[a-d])',
+        r'option is[\:\;\*\n ]*(yes|no|[a-d])',
+        r'choice is[\:\;\*\n ]*(yes|no|[a-d])',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, pred, re.IGNORECASE)
+        if match:
+            return match.group(1).upper()
+    
+    cleaned = re.split(r'[,\.\:\;\n\s]+', pred)[0].strip()
+    if cleaned:
+        return cleaned.upper()
+    
+    return pred.upper()
 
 
 def corecognition_aggregate_by_concept(
