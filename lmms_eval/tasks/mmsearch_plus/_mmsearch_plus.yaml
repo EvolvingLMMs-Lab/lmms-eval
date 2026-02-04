@@ -1,0 +1,5 @@
+group: mmsearch_plus
+task:
+  - mmsearch_plus_vqa
+metadata:
+  version: 0.0
