@@ -15,14 +15,18 @@ import yaml
 
 eval_logger = logging.getLogger("lmms-eval")
 
-# Load task config for use_lmms_judge (strip !function lines so yaml.safe_load works)
+# Load task config for use_lmms_judge: merge default template with corecognition.yaml (strip !function lines so yaml.safe_load works)
+_default_template_path = Path(__file__).parent / "_default_template_yaml"
 _corecognition_config_path = Path(__file__).parent / "corecognition.yaml"
-_corecognition_config = None
-if _corecognition_config_path.exists():
-    with open(_corecognition_config_path, "r") as f:
+
+def _load_yaml_stripped(path: Path) -> dict:
+    with open(path, "r") as f:
         raw_data = f.readlines()
     safe_data = [line for line in raw_data if "!function" not in line]
-    _corecognition_config = yaml.safe_load("".join(safe_data)) or {}
+    return yaml.safe_load("".join(safe_data)) or {}
+
+_corecognition_config = _load_yaml_stripped(_default_template_path)
+_corecognition_config.update(_load_yaml_stripped(_corecognition_config_path))
 
 # Initialize LLM judge server when use_lmms_judge is True (reference: stare/utils.py)
 _judge_server = None
