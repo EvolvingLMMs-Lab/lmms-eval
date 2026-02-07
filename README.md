@@ -22,8 +22,6 @@
 
 ## What's New
 
-Evaluating multimodal models is harder than it looks. We have hundreds of benchmarks, but no standard way to run them. Results vary between labs. Comparisons become unreliable. We've been working to address this - not through heroic effort, but through systematic process.
-
 **January 2026** - We recognized that spatial and compositional reasoning remained blind spots in existing benchmarks. We added [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), and [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). For teams running remote evaluation pipelines, we introduced an HTTP eval server (#972). For those who need statistical rigor, we added CLT and clustered standard error estimation (#989).
 
 **October 2025 (v0.5)** - Audio had been a gap. Models could hear, but we had no consistent way to test them. This release added comprehensive audio evaluation, response caching for efficiency, and 50+ benchmark variants spanning audio, vision, and reasoning. [Release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
