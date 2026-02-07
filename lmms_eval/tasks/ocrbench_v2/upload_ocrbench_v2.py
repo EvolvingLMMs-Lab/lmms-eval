@@ -16,12 +16,13 @@
 import io
 import json
 
-import datasets
 import ipdb
 import pandas as pd
-from datasets import Dataset, Features
 from PIL import Image as PIL_Image
 from tqdm import tqdm
+
+import datasets
+from datasets import Dataset, Features
 
 # Find for instance the citation on arxiv or on the dataset repo/website
 _CITATION = """https://www.arxiv.org/abs/2501.00321"""
