@@ -118,9 +118,12 @@ def calculate_mra(prediction_text, answer_text, start=0.5, end=0.95, interval=0.
 
 def calculate_mra_with_threshold(prediction_text, answer_text, threshold=0.30, start=0.5, end=0.95, interval=0.05):
     """
-    Calculate MRA with special handling for near-zero ground truth.
-    If GT < threshold and prediction < threshold, return 1.0 (both considered stationary/zero).
-    Otherwise compute MRA with GT clamped to threshold.
+    Calculate MRA with special handling for zero ground truth.
+    
+    Matches VLMEvalKit logic:
+    - If ans == 0 and pred < threshold: return 1.0 (both considered stationary/zero)
+    - If ans == 0 and pred >= threshold: compute MRA with threshold as reference
+    - Otherwise: compute standard MRA
     
     Used for speed, displacement, and trajectory_length categories.
     """
@@ -135,12 +138,14 @@ def calculate_mra_with_threshold(prediction_text, answer_text, threshold=0.30, s
     except (ValueError, TypeError):
         return 0.0
     
-    # Special handling for near-zero ground truth
-    if ans == 0 or abs(ans) < threshold:
+    # Special handling ONLY when ground truth is exactly 0
+    # (matches VLMEvalKit _apply_osi_na_mra logic)
+    if ans == 0:
         if pred < threshold:
             return 1.0
         else:
-            ans = threshold  # Use threshold as GT for MRA calculation
+            # Use threshold as reference for MRA calculation
+            ans = threshold
     
     relative_error = abs(pred - ans) / abs(ans)
     
@@ -277,32 +282,104 @@ def osi_bench_doc_to_visual_frames(doc, lmms_eval_specific_kwargs=None):
 ##################
 # doc_to_text functions
 ##################
-def osi_bench_doc_to_text_video(doc, lmms_eval_specific_kwargs=None):
-    """Build text prompt for native video input mode."""
-    return build_prompt(doc, lmms_eval_specific_kwargs)
-
-
-def osi_bench_doc_to_text_frames(doc, lmms_eval_specific_kwargs=None):
+def osi_bench_doc_to_text_video(doc, lmms_eval_specific_kwargs=None, include_visual_token=True):
     """
-    Build text prompt for frame-based input mode.
-    Frame context (video length) is appended AFTER the main prompt,
-    following VLMEvalKit format.
+    Build text prompt for native video input mode.
+    
+    Args:
+        doc: Document containing question data
+        lmms_eval_specific_kwargs: Config kwargs
+        include_visual_token: If True, append <video> token for simple models.
+                              Set to False when using doc_to_messages (chat models).
+    
+    Order controlled by 'visual_first' in lmms_eval_specific_kwargs:
+    - visual_first=False (default): [text prompt] → [<video>]
+    - visual_first=True: [<video>] → [text prompt]
     """
     prompt = build_prompt(doc, lmms_eval_specific_kwargs)
     
-    # For frame-based mode, append frame context AFTER main prompt if video_length is available
+    # Check visual_first option
+    visual_first = False
+    if lmms_eval_specific_kwargs:
+        visual_first = lmms_eval_specific_kwargs.get("default", {}).get("visual_first", False)
+    
+    # Append <video> token for simple models that don't use doc_to_messages
+    if include_visual_token:
+        if visual_first:
+            # Video token first, then text prompt
+            prompt = "<video>\n" + prompt
+        else:
+            # Text prompt first, then video token
+            prompt = prompt + "\n<video>"
+    
+    return prompt
+
+
+def osi_bench_doc_to_text_frames(doc, lmms_eval_specific_kwargs=None, include_visual_token=True):
+    """
+    Build text prompt for frame-based input mode.
+    
+    Args:
+        doc: Document containing question data
+        lmms_eval_specific_kwargs: Config kwargs including num_frames
+        include_visual_token: If True, append <image> tokens for simple models.
+                              Set to False when using doc_to_messages (chat models).
+    
+    Order controlled by 'visual_first' in lmms_eval_specific_kwargs:
+    - visual_first=False (default): [text prompt with video_length] → [<image> tokens]
+    - visual_first=True (VLMEvalKit format): [time_context] → [<image> tokens] → [question prompt]
+    """
     video_length = doc.get("video_length") or 0  # Handle None
     num_frames = 32
     if lmms_eval_specific_kwargs:
         num_frames = lmms_eval_specific_kwargs.get("default", {}).get("num_frames", 32)
     
-    if video_length and video_length > 0:
-        frame_context = (
-            f"The video is {round(video_length, 2)} seconds long. "
-            f"The following {num_frames} frames are uniformly sampled from it "
-            "in chronological order:"
-        )
-        prompt = prompt + "\n" + frame_context
+    # Check visual_first option
+    visual_first = False
+    if lmms_eval_specific_kwargs:
+        visual_first = lmms_eval_specific_kwargs.get("default", {}).get("visual_first", False)
+    eval_logger.debug(f"[osi_bench] visual_first = {visual_first}")
+    
+    if visual_first:
+        # VLMEvalKit format: [time_context] → [<image> tokens] → [question prompt]
+        parts = []
+        
+        # 1. Add time context first (if video_length available)
+        if video_length and video_length > 0:
+            time_context = (
+                f"The video is {round(video_length, 2)} seconds long. "
+                f"The following {num_frames} frames are uniformly sampled from it "
+                "in chronological order:"
+            )
+            parts.append(time_context)
+        
+        # 2. Add image tokens
+        if include_visual_token:
+            image_tokens = "<image>" * num_frames
+            parts.append(image_tokens)
+        
+        # 3. Add question prompt last
+        question_prompt = build_prompt(doc, lmms_eval_specific_kwargs)
+        parts.append(question_prompt)
+        
+        prompt = "\n".join(parts)
+    else:
+        # Default format: [text prompt with video_length] → [<image> tokens]
+        prompt = build_prompt(doc, lmms_eval_specific_kwargs)
+        
+        # Append frame context AFTER main prompt if video_length is available
+        if video_length and video_length > 0:
+            frame_context = (
+                f"The video is {round(video_length, 2)} seconds long. "
+                f"The following {num_frames} frames are uniformly sampled from it "
+                "in chronological order:"
+            )
+            prompt = prompt + "\n" + frame_context
+        
+        # Append <image> tokens for simple models that don't use doc_to_messages
+        if include_visual_token:
+            image_tokens = "\n" + "<image>" * num_frames
+            prompt = prompt + image_tokens
     
     return prompt
 
@@ -313,19 +390,34 @@ def osi_bench_doc_to_text_frames(doc, lmms_eval_specific_kwargs=None):
 def osi_bench_doc_to_messages_video(doc, lmms_eval_specific_kwargs=None):
     """
     Build messages for native video mode.
-    Text first, then video (following VLMEvalKit format).
+    
+    Order controlled by 'visual_first' in lmms_eval_specific_kwargs:
+    - visual_first=False (default): [text prompt] → [video]
+    - visual_first=True: [video] → [text prompt]
     """
-    prompt = build_prompt(doc, lmms_eval_specific_kwargs)
+    # Set include_visual_token=False since messages handle visuals separately
+    prompt = osi_bench_doc_to_text_video(doc, lmms_eval_specific_kwargs, include_visual_token=False)
     video_paths = osi_bench_doc_to_visual_video(doc)
+    
+    # Check visual_first option
+    visual_first = False
+    if lmms_eval_specific_kwargs:
+        visual_first = lmms_eval_specific_kwargs.get("default", {}).get("visual_first", False)
     
     messages = [{"role": "user", "content": []}]
     
-    # Add text prompt first
-    messages[0]["content"].append({"type": "text", "text": prompt})
-    
-    # Add video(s)
-    for video_path in video_paths:
-        messages[0]["content"].append({"type": "video", "url": video_path})
+    if visual_first:
+        # Add video(s) first
+        for video_path in video_paths:
+            messages[0]["content"].append({"type": "video", "url": video_path})
+        # Add text prompt
+        messages[0]["content"].append({"type": "text", "text": prompt})
+    else:
+        # Add text prompt first
+        messages[0]["content"].append({"type": "text", "text": prompt})
+        # Add video(s)
+        for video_path in video_paths:
+            messages[0]["content"].append({"type": "video", "url": video_path})
     
     return messages
 
@@ -333,19 +425,48 @@ def osi_bench_doc_to_messages_video(doc, lmms_eval_specific_kwargs=None):
 def osi_bench_doc_to_messages_frames(doc, lmms_eval_specific_kwargs=None):
     """
     Build messages for frame-based mode.
-    Text first, then frames (following VLMEvalKit format).
+    
+    Order controlled by 'visual_first' in lmms_eval_specific_kwargs:
+    - visual_first=False (default): [text prompt with video_length] → [frames]
+    - visual_first=True (VLMEvalKit format): [time_context] → [frames] → [question prompt]
     """
-    prompt = osi_bench_doc_to_text_frames(doc, lmms_eval_specific_kwargs)
     pil_images = osi_bench_doc_to_visual_frames(doc, lmms_eval_specific_kwargs)
+    
+    # Check visual_first option
+    visual_first = False
+    if lmms_eval_specific_kwargs:
+        visual_first = lmms_eval_specific_kwargs.get("default", {}).get("visual_first", False)
     
     messages = [{"role": "user", "content": []}]
     
-    # Add text prompt first
-    messages[0]["content"].append({"type": "text", "text": prompt})
-    
-    # Add frames
-    for img in pil_images:
-        messages[0]["content"].append({"type": "image", "url": img})
+    if visual_first:
+        # VLMEvalKit format: [time_context] → [frames] → [question prompt]
+        video_length = doc.get("video_length") or 0
+        
+        actual_num_frames = len(pil_images)
+        
+        # 1. Add time context prompt first (if video_length available)
+        if video_length and video_length > 0:
+            time_context_prompt = (
+                f"The video is {round(video_length, 2)} seconds long. "
+                f"The following {actual_num_frames} frames are uniformly sampled from it "
+                "in chronological order:"
+            )
+            messages[0]["content"].append({"type": "text", "text": time_context_prompt})
+        
+        # 2. Add frames
+        for img in pil_images:
+            messages[0]["content"].append({"type": "image", "url": img})
+        
+        # 3. Add question prompt last (without video_length context since it's already added)
+        question_prompt = build_prompt(doc, lmms_eval_specific_kwargs)
+        messages[0]["content"].append({"type": "text", "text": question_prompt})
+    else:
+        # Default format: [text prompt with video_length] → [frames]
+        prompt = osi_bench_doc_to_text_frames(doc, lmms_eval_specific_kwargs, include_visual_token=False)
+        messages[0]["content"].append({"type": "text", "text": prompt})
+        for img in pil_images:
+            messages[0]["content"].append({"type": "image", "url": img})
     
     return messages
 

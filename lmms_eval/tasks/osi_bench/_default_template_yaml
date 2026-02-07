@@ -8,7 +8,7 @@ doc_to_target: "answer"
 process_results: !function utils.osi_bench_process_results
 
 generation_kwargs:
-  max_new_tokens: 100
+  max_new_tokens: 4096
   temperature: 0
   top_p: 1.0
   top_k: 1
@@ -72,12 +72,15 @@ lmms_eval_specific_kwargs:
   default:
     post_prompt: ""
     num_frames: 32
+    visual_first: True  # use true if you want prompt format to be [time_context] -> [frames] -> [text_prompt], official prompt format use false
   gemini_api:
     post_prompt: ""
     num_frames: 32
+    visual_first: false
   gpt4v:
     post_prompt: ""
     num_frames: 32
+    visual_first: false
 
 metadata:
   version: 0.1

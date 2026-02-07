@@ -9,14 +9,3 @@ include: _default_template_yaml
 doc_to_visual: !function utils.osi_bench_doc_to_visual_frames
 doc_to_text: !function utils.osi_bench_doc_to_text_frames
 doc_to_messages: !function utils.osi_bench_doc_to_messages_frames
-
-lmms_eval_specific_kwargs:
-  default:
-    post_prompt: ""
-    num_frames: 32  # Number of frames to sample
-  gemini_api:
-    post_prompt: ""
-    num_frames: 32
-  gpt4v:
-    post_prompt: ""
-    num_frames: 32
