@@ -1,0 +1,9 @@
+include: _default_template_yaml
+
+task: "prismm_bench_pair_match"
+process_docs: !function utils.prismm_pair_match_filter_docs
+doc_to_visual: !function utils.prismm_pair_match_doc_to_visual
+doc_to_text: !function utils.prismm_pair_match_doc_to_text
+doc_to_target: !function utils.prismm_pair_match_doc_to_target
+doc_to_messages: !function utils.prismm_pair_match_doc_to_messages
+process_results: !function utils.prismm_pair_match_process_results
