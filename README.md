@@ -4,7 +4,7 @@
 
 # The Evaluation Suite of Large Multimodal Models
 
-🌐 **English** | [简体中文](docs/i18n/README_zh-CN.md) | [繁體中文](docs/i18n/README_zh-TW.md) | [日本語](docs/i18n/README_ja.md) | [한국어](docs/i18n/README_ko.md) | [Español](docs/i18n/README_es.md) | [Français](docs/i18n/README_fr.md) | [Deutsch](docs/i18n/README_de.md) | [Português](docs/i18n/README_pt-BR.md) | [Русский](docs/i18n/README_ru.md) | [Italiano](docs/i18n/README_it.md) | [Nederlands](docs/i18n/README_nl.md) | [Polski](docs/i18n/README_pl.md) | [Türkçe](docs/i18n/README_tr.md) | [العربية](docs/i18n/README_ar.md) | [हिन्दी](docs/i18n/README_hi.md) | [Tiếng Việt](docs/i18n/README_vi.md) | [Indonesia](docs/i18n/README_id.md) 
+🌐 **English** | [简体中文](docs/i18n/README_zh-CN.md) | [繁體中文](docs/i18n/README_zh-TW.md) | [日本語](docs/i18n/README_ja.md) | [한국어](docs/i18n/README_ko.md) | [Español](docs/i18n/README_es.md) | [Français](docs/i18n/README_fr.md) | [Deutsch](docs/i18n/README_de.md) | [Português](docs/i18n/README_pt-BR.md) | [Русский](docs/i18n/README_ru.md) | [Italiano](docs/i18n/README_it.md) | [Nederlands](docs/i18n/README_nl.md) | [Polski](docs/i18n/README_pl.md) | [Türkçe](docs/i18n/README_tr.md) | [العربية](docs/i18n/README_ar.md) | [हिन्दी](docs/i18n/README_hi.md) | [Tiếng Việt](docs/i18n/README_vi.md) | [Indonesia](docs/i18n/README_id.md)
 
 [![PyPI](https://img.shields.io/pypi/v/lmms-eval)](https://pypi.org/project/lmms-eval)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/lmms-eval)
@@ -21,8 +21,6 @@
 ---
 
 ## What's New
-
-Evaluating multimodal models is harder than it looks. We have hundreds of benchmarks, but no standard way to run them. Results vary between labs. Comparisons become unreliable. We've been working to address this - not through heroic effort, but through systematic process.
 
 **January 2026** - We recognized that spatial and compositional reasoning remained blind spots in existing benchmarks. We added [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), and [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). For teams running remote evaluation pipelines, we introduced an HTTP eval server (#972). For those who need statistical rigor, we added CLT and clustered standard error estimation (#989).
 
@@ -41,7 +39,7 @@ Evaluating multimodal models is harder than it looks. We have hundreds of benchm
 - [2024-09] ⚙️️⚙️️️️ We upgrade `lmms-eval` to `0.2.3` with more tasks and features. We support a compact set of language tasks evaluations (code credit to [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)), and we remove the registration logic at start (for all models and tasks) to reduce the overhead. Now `lmms-eval` only launches necessary tasks/models. Please check the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/releases/tag/v0.2.3) for more details.
 - [2024-08] 🎉🎉 We welcome the new model [LLaVA-OneVision](https://huggingface.co/papers/2408.03326), [Mantis](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/162), new tasks [MVBench](https://huggingface.co/datasets/OpenGVLab/MVBench), [LongVideoBench](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/117), [MMStar](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/158). We provide new feature of SGlang Runtime API for llava-onevision model, please refer the [doc](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/commands.md) for inference acceleration
 - [2024-07] 👨‍💻👨‍💻 The `lmms-eval/v0.2.1` has been upgraded to support more models, including [LongVA](https://github.com/EvolvingLMMs-Lab/LongVA), [InternVL-2](https://github.com/OpenGVLab/InternVL), [VILA](https://github.com/NVlabs/VILA), and many more evaluation tasks, e.g. [Details Captions](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/136), [MLVU](https://arxiv.org/abs/2406.04264), [WildVision-Bench](https://huggingface.co/datasets/WildVision/wildvision-arena-data), [VITATECS](https://github.com/lscpku/VITATECS) and [LLaVA-Interleave-Bench](https://llava-vl.github.io/blog/2024-06-16-llava-next-interleave/).
-- [2024-07] 🎉🎉 We have released the [technical report](https://arxiv.org/abs/2407.12772) and [LiveBench](https://huggingface.co/spaces/lmms-lab/LiveBench)! 
+- [2024-07] 🎉🎉 We have released the [technical report](https://arxiv.org/abs/2407.12772) and [LiveBench](https://huggingface.co/spaces/lmms-lab/LiveBench)!
 - [2024-06] 🎬🎬 The `lmms-eval/v0.2.0` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details!
 - [2024-03] 📝📝 We have released the first version of `lmms-eval`, please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/) for more details!
 
@@ -114,7 +112,7 @@ If you want to test on caption dataset such as `coco`, `refcoco`, and `nocaps`, 
 ```
 conda install openjdk=8
 ```
-you can then check your java version by `java -version` 
+you can then check your java version by `java -version`
 
 
 <details>
@@ -169,72 +167,158 @@ The web UI provides:
 
 For more details, see [Web UI README](lmms_eval/tui/README.md).
 
-## Usages
+## HTTP Evaluation Server
+
+LMMS-Eval includes a production-ready HTTP server for remote evaluation workflows.
+
+### Why Use Eval Server?
+
+- **Decoupled evaluation**: Run evaluations on dedicated GPU nodes while training continues
+- **Async workflow**: Submit jobs without blocking training loops
+- **Queue management**: Sequential job processing with automatic resource management
+- **Remote access**: Evaluate models from any machine
+
+### Start Server
+
+```python
+from lmms_eval.entrypoints import ServerArgs, launch_server
+
+# Configure server
+args = ServerArgs(
+    host="0.0.0.0",
+    port=8000,
+    max_completed_jobs=200,
+    temp_dir_prefix="lmms_eval_"
+)
+
+# Launch server
+launch_server(args)
+```
+
+Server runs at `http://host:port` with auto-generated API docs at `/docs`
+
+### Client Usage
+
+**Sync Client:**
+```python
+from lmms_eval.entrypoints import EvalClient
+
+client = EvalClient("http://eval-server:8000")
+
+# Submit evaluation (non-blocking)
+job = client.evaluate(
+    model="qwen2_5_vl",
+    tasks=["mmmu_val", "mme"],
+    model_args={"pretrained": "Qwen/Qwen2.5-VL-7B-Instruct"},
+    num_fewshot=0,
+    batch_size=1,
+    device="cuda:0",
+)
+
+# Continue training...
+# Later, retrieve results
+result = client.wait_for_job(job["job_id"])
+print(result["result"])
+```
+
+**Async Client:**
+```python
+from lmms_eval.entrypoints import AsyncEvalClient
+
+async with AsyncEvalClient("http://eval-server:8000") as client:
+    job = await client.evaluate(
+        model="qwen3_vl",
+        tasks=["mmmu_val"],
+        model_args={"pretrained": "Qwen/Qwen3-VL-4B-Instruct"},
+    )
+    result = await client.wait_for_job(job["job_id"])
+```
+
+### Server API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Server health check |
+| `/evaluate` | POST | Submit evaluation job |
+| `/jobs/{job_id}` | GET | Get job status and results |
+| `/queue` | GET | View queue status |
+| `/tasks` | GET | List available tasks |
+| `/models` | GET | List available models |
+| `/jobs/{job_id}` | DELETE | Cancel queued job |
+| `/merge` | POST | Merge FSDP2 sharded checkpoints |
+
+### Example Workflow
+
+```python
+# Training loop pseudocode
+for epoch in range(num_epochs):
+    train_one_epoch()
+
+    # After every N epochs, evaluate checkpoint
+    if epoch % 5 == 0:
+        checkpoint_path = f"checkpoints/epoch_{epoch}"
+
+        # Submit async evaluation (non-blocking)
+        eval_job = client.evaluate(
+            model="vllm",
+            model_args={"model": checkpoint_path},
+            tasks=["mmmu_val", "mathvista"],
+        )
+
+        # Training continues immediately
+        print(f"Evaluation job submitted: {eval_job['job_id']}")
+
+# After training completes, retrieve all results
+results = []
+for job_id in eval_jobs:
+    result = client.wait_for_job(job_id)
+    results.append(result)
+```
+
+### Security Note
+
+⚠️ **This server is intended for trusted environments only**. Do NOT expose to untrusted networks without additional security layers (authentication, rate limiting, network isolation).
+
+For more details, see the [v0.6 release notes](docs/lmms-eval-0.6.md).
+
+## Usage Examples
 
 > More examples can be found in [examples/models](examples/models)
 
-**Evaluation of OpenAI-Compatible Model**
+### Evaluation with vLLM
 
-```bash
-bash examples/models/openai_compatible.sh
-bash examples/models/xai_grok.sh
-```
-
-**Evaluation of vLLM**
-
+**Qwen2.5-VL:**
 ```bash
 bash examples/models/vllm_qwen2vl.sh
 ```
 
-**Evaluation of LLaVA-OneVision**
-
+**Qwen3-VL:**
 ```bash
-bash examples/models/llava_onevision.sh
+bash examples/models/vllm_qwen3vl.sh
 ```
 
-**Evaluation of LLaVA-OneVision1_5**
-
-```bash
-bash examples/models/llava_onevision1_5.sh
-```
-
-**Evaluation of LLaMA-3.2-Vision**
-
-```bash
-bash examples/models/llama_vision.sh
-```
-
-**Evaluation of Qwen2-VL**
-
-```bash
-bash examples/models/qwen2_vl.sh
-bash examples/models/qwen2_5_vl.sh
-```
-
-**Evaluation of LLaVA on MME**
-
-If you want to test LLaVA 1.5, you will have to clone their repo from [LLaVA](https://github.com/haotian-liu/LLaVA) and
-
-```bash
-bash examples/models/llava_next.sh
-```
-
-**Evaluation with tensor parallel for bigger model (llava-next-72b)**
-
-```bash
-bash examples/models/tensor_parallel.sh
-```
-
-**Evaluation with SGLang for bigger model (llava-next-72b)**
+### Evaluation with SGLang
 
 ```bash
 bash examples/models/sglang.sh
 ```
 
-**Evaluation with vLLM for bigger model (llava-next-72b)**
+### Evaluation of OpenAI-Compatible Model
 
 ```bash
-bash examples/models/vllm_qwen2vl.sh
+bash examples/models/openai_compatible.sh
+```
+
+### Evaluation of Qwen2.5-VL
+
+```bash
+bash examples/models/qwen25vl.sh
+```
+
+### Evaluation of Qwen3-VL
+
+```bash
+bash examples/models/qwen3vl.sh
 ```
 
 **More Parameters**
@@ -244,15 +328,16 @@ python3 -m lmms_eval --help
 ```
 
 **Environmental Variables**
+
 Before running experiments and evaluations, we recommend you to export following environment variables to your environment. Some are necessary for certain tasks to run.
 
 ```bash
 export OPENAI_API_KEY="<YOUR_API_KEY>"
-export HF_HOME="<Path to HF cache>" 
+export HF_HOME="<Path to HF cache>"
 export HF_TOKEN="<YOUR_API_KEY>"
 export HF_HUB_ENABLE_HF_TRANSFER="1"
 export REKA_API_KEY="<YOUR_API_KEY>"
-# Other possible environment variables include 
+# Other possible environment variables include
 # ANTHROPIC_API_KEY,DASHSCOPE_API_KEY etc.
 ```
 
@@ -269,33 +354,176 @@ python3 -m pip install numpy==1.26;
 python3 -m pip install sentencepiece;
 ```
 
-## Add Customized Model and Dataset
+## Custom Model Integration
 
-Please refer to our [documentation](docs/README.md).
+`lmms-eval` supports two types of models: **Chat (recommended)** and **Simple (legacy)**.
+
+### Chat Models (Recommended) 🌟
+
+- Location: `lmms_eval/models/chat/`
+- Use: `doc_to_messages` function from task
+- Input: Structured `ChatMessages` with roles (`user`, `system`, `assistant`) and content types (`text`, `image`, `video`, `audio`)
+- Supports: Interleaved multimodal content
+- Uses: Model's `apply_chat_template()` method
+- Reference: `lmms_eval/models/chat/qwen2_5_vl.py` or `lmms_eval/models/chat/qwen3_vl.py`
+
+**Example input format:**
+```python
+[
+    {"role": "user", "content": [
+        {"type": "image", "url": <image>},
+        {"type": "text", "text": "What's in this image?"}
+    ]}
+]
+```
+
+### Simple Models (Legacy)
+
+- Location: `lmms_eval/models/simple/`
+- Use: `doc_to_visual` + `doc_to_text` functions from task
+- Input: Plain text with `<image>` placeholders + separate visual list
+- Supports: Limited (mainly images)
+- Manual processing: No chat template support
+- Reference: `lmms_eval/models/simple/instructblip.py`
+
+**Example input format:**
+```python
+# Separate visual and text
+doc_to_visual -> [PIL.Image]
+doc_to_text -> "What's in this image?"
+```
+
+### Key Differences
+
+| Aspect | Chat Models | Simple Models |
+|--------|-------------|---------------|
+| File location | `models/chat/` | `models/simple/` |
+| Input method | `doc_to_messages` | `doc_to_visual` + `doc_to_text` |
+| Message format | Structured (roles + content types) | Plain text with placeholders |
+| Interleaved support | ✅ Yes | ❌ Limited |
+| Chat template | ✅ Built-in | ❌ Manual/None |
+| Recommendation | **Use this** | Legacy only |
+
+### Why Use Chat Models?
+
+- ✅ Built-in chat template support
+- ✅ Interleaved multimodal content
+- ✅ Structured message protocol
+- ✅ Better video/audio support
+- ✅ Consistent with modern LLM APIs
+
+### Chat Model Implementation Example
+
+```python
+from lmms_eval.api.registry import register_model
+from lmms_eval.api.model import lmms
+from lmms_eval.protocol import ChatMessages
+
+@register_model("my_chat_model")
+class MyChatModel(lmms):
+    is_simple = False  # Use chat interface
+
+    def generate_until(self, requests):
+        for request in requests:
+            # 5 elements for chat models
+            doc_to_messages, gen_kwargs, doc_id, task, split = request.args
+
+            # Get structured messages
+            raw_messages = doc_to_messages(self.task_dict[task][split][doc_id])
+            messages = ChatMessages(messages=raw_messages)
+
+            # Extract media and apply chat template
+            images, videos, audios = messages.extract_media()
+            hf_messages = messages.to_hf_messages()
+            text = self.processor.apply_chat_template(hf_messages)
+
+            # Generate...
+```
+
+For more details, see the [Model Guide](docs/model_guide.md).
+
+## Custom Dataset Integration
+
+### Task Configuration with `doc_to_messages`
+
+Implement `doc_to_messages` to transform dataset documents into structured chat messages:
+
+```python
+def my_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    # Extract visuals and text from doc
+    visuals = my_doc_to_visual(doc)
+    text = my_doc_to_text(doc, lmms_eval_specific_kwargs)
+
+    # Build structured messages
+    messages = [{"role": "user", "content": []}]
+
+    # Add visuals first
+    for visual in visuals:
+        messages[0]["content"].append({"type": "image", "url": visual})
+
+    # Add text
+    messages[0]["content"].append({"type": "text", "text": text})
+
+    return messages
+```
+
+### YAML Configuration
+
+```yaml
+task: "my_benchmark"
+dataset_path: "my-org/my-dataset"
+test_split: test
+output_type: generate_until
+
+# For chat models (recommended)
+doc_to_messages: !function utils.my_doc_to_messages
+
+# OR legacy approach:
+doc_to_visual: !function utils.my_doc_to_visual
+doc_to_text: !function utils.my_doc_to_text
+
+process_results: !function utils.my_process_results
+metric_list:
+  - metric: acc
+```
+
+### Key Features
+
+#### `doc_to_messages`
+
+- Transforms dataset document into structured chat messages
+- Returns: List of message dicts with `role` and `content`
+- Content supports: `text`, `image`, `video`, `audio` types
+- Protocol: Defined in `lmms_eval/protocol.py` (`ChatMessages` class)
+- Auto-fallback: If not provided, uses `doc_to_visual` + `doc_to_text`
+
+
+For more details, see the [Task Guide](docs/task_guide.md).
 
 ## Acknowledgement
 
-lmms_eval is a fork of [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). We recommend you to read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) for relevant information. 
+lmms_eval is a fork of [lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness). We recommend you to read through the [docs of lm-eval-harness](https://github.com/EleutherAI/lm-evaluation-harness/tree/main/docs) for relevant information.
 
 ---
 
 Below are the changes we made to the original API:
-- Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness other wise the cpu memory would explode.
+- Build context now only pass in idx and process image and doc during the model responding phase. This is due to the fact that dataset now contains lots of images and we can't store them in the doc like the original lm-eval-harness otherwise the cpu memory would explode.
 - Instance.args (lmms_eval/api/instance.py) now contains a list of images to be inputted to lmms.
-- lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Thererfore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
+- lm-eval-harness supports all HF language models as single model class. Currently this is not possible of lmms because the input/output format of lmms in HF are not yet unified. Therefore, we have to create a new class for each lmms model. This is not ideal and we will try to unify them in the future.
+
 ---
 
 ## Citations
 
 ```shell
 @misc{zhang2024lmmsevalrealitycheckevaluation,
-      title={LMMs-Eval: Reality Check on the Evaluation of Large Multimodal Models}, 
+      title={LMMs-Eval: Reality Check on the Evaluation of Large Multimodal Models},
       author={Kaichen Zhang and Bo Li and Peiyuan Zhang and Fanyi Pu and Joshua Adrian Cahyono and Kairui Hu and Shuai Liu and Yuanhan Zhang and Jingkang Yang and Chunyuan Li and Ziwei Liu},
       year={2024},
       eprint={2407.12772},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2407.12772}, 
+      url={https://arxiv.org/abs/2407.12772},
 }
 
 @misc{lmms_eval2024,
