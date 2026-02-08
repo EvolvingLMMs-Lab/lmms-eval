@@ -86,20 +86,14 @@ def _create_display_name(task_id: str, yaml_path: Path, is_group: bool = False) 
 
 def discover_models() -> list[tuple[str, str]]:
     try:
-        from lmms_eval.models import (
-            AVAILABLE_CHAT_TEMPLATE_MODELS,
-            AVAILABLE_SIMPLE_MODELS,
-        )
+        from lmms_eval.models import get_model_manifest, list_available_models
 
         models: dict[str, str] = {}
-
-        for model_id, class_name in AVAILABLE_SIMPLE_MODELS.items():
-            display_name = _create_model_display_name(model_id, class_name)
-            models[model_id] = display_name
-
-        for model_id, class_name in AVAILABLE_CHAT_TEMPLATE_MODELS.items():
-            display_name = _create_model_display_name(model_id, class_name, is_chat=True)
-            models[model_id] = display_name
+        for model_id in list_available_models(include_aliases=False):
+            manifest = get_model_manifest(model_id)
+            class_path = manifest.chat_class_path or manifest.simple_class_path
+            class_name = class_path.rsplit(".", 1)[-1] if class_path else model_id
+            models[model_id] = _create_model_display_name(model_id, class_name)
 
         return sorted(models.items(), key=lambda x: x[0])
     except ImportError:

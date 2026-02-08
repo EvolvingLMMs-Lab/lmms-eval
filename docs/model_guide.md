@@ -86,10 +86,31 @@ class MyCustomLM(LM):
     # is_simple = True for simple model (default to True)
 ```
 
-The final step is to import your model in `lmms_eval/models/__init__.py`:
+The final step is to register your model id in `lmms_eval/models/__init__.py`.
+
+Legacy registration (still supported):
 ```python
-from .my_model_filename import MyCustomLM
+AVAILABLE_SIMPLE_MODELS["my_model"] = "MyCustomLM"
+# or
+AVAILABLE_CHAT_TEMPLATE_MODELS["my_model"] = "MyCustomLM"
 ```
+
+Recommended registration (ModelRegistryV2 manifest):
+```python
+from lmms_eval.models.registry_v2 import ModelManifest
+
+MODEL_REGISTRY_V2.register_manifest(
+    ModelManifest(
+        model_id="my_model",
+        chat_class_path="lmms_eval.models.chat.my_model.MyCustomLM",
+        source="builtin",
+        capabilities=("generate_until", "chat", "multimodal"),
+    )
+)
+```
+
+For external plugin packages, prefer Python entry-points (`lmms_eval.models`) over
+`LMMS_EVAL_PLUGINS`.
 
 ## Complete Model Examples
 
