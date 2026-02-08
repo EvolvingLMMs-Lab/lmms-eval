@@ -39,9 +39,8 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
 import requests
-from loguru import logger as eval_logger
-
 from datasets import Dataset
+from loguru import logger as eval_logger
 
 # Constants
 LETTER_ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
