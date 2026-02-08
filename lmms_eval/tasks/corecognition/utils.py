@@ -19,11 +19,13 @@ eval_logger = logging.getLogger("lmms-eval")
 _default_template_path = Path(__file__).parent / "_default_template_yaml"
 _corecognition_config_path = Path(__file__).parent / "corecognition.yaml"
 
+
 def _load_yaml_stripped(path: Path) -> dict:
     with open(path, "r") as f:
         raw_data = f.readlines()
     safe_data = [line for line in raw_data if "!function" not in line]
     return yaml.safe_load("".join(safe_data)) or {}
+
 
 _corecognition_config = _load_yaml_stripped(_default_template_path)
 _corecognition_config.update(_load_yaml_stripped(_corecognition_config_path))
@@ -233,26 +235,26 @@ def _extract_answer(pred: str) -> str:
         Extracted answer in uppercase
     """
     pred = pred.strip()
-    
+
     patterns = [
-        r'^(yes|no|[a-d])(\.|\,|\;| |\n|\*)',
-        r'[\n\*]+(yes|no|[a-d])(\.|\,|\;| |\n|\*)',
-        r'(yes|no|[a-d]) is the correct answer',
-        r'answer is[\:\;\*\n ]*(yes|no|[a-d])',
-        r'answer[\:\;\*\n ]*(yes|no|[a-d])',
-        r'option is[\:\;\*\n ]*(yes|no|[a-d])',
-        r'choice is[\:\;\*\n ]*(yes|no|[a-d])',
+        r"^(yes|no|[a-d])(\.|\,|\;| |\n|\*)",
+        r"[\n\*]+(yes|no|[a-d])(\.|\,|\;| |\n|\*)",
+        r"(yes|no|[a-d]) is the correct answer",
+        r"answer is[\:\;\*\n ]*(yes|no|[a-d])",
+        r"answer[\:\;\*\n ]*(yes|no|[a-d])",
+        r"option is[\:\;\*\n ]*(yes|no|[a-d])",
+        r"choice is[\:\;\*\n ]*(yes|no|[a-d])",
     ]
-    
+
     for pattern in patterns:
         match = re.search(pattern, pred, re.IGNORECASE)
         if match:
             return match.group(1).upper()
-    
-    cleaned = re.split(r'[,\.\:\;\n\s]+', pred)[0].strip()
+
+    cleaned = re.split(r"[,\.\:\;\n\s]+", pred)[0].strip()
     if cleaned:
         return cleaned.upper()
-    
+
     return pred.upper()
 
 
