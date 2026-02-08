@@ -383,6 +383,7 @@ class Task(abc.ABC):
         self,
         *,
         limit: Union[int, None] = None,
+        offset: int = 0,
         rank: int = 0,
         world_size: int = 1,
         cache_requests: bool = False,
@@ -407,6 +408,8 @@ class Task(abc.ABC):
         og_limit = limit
 
         cache_key = f"requests-{self._config.task}-{self.config.num_fewshot}shot-rank{rank}-world_size{world_size}"
+        if offset:
+            cache_key += f"-offset{offset}"
         cache_key += "-chat_template" if apply_chat_template else ""
         cache_key += "-fewshot_as_multiturn" if fewshot_as_multiturn else ""
         cache_key += f"-system_prompt_hash{utils.hash_string(system_instruction)}" if system_instruction is not None else ""
@@ -430,8 +433,30 @@ class Task(abc.ABC):
         if cache_requests and (not cached_instances or rewrite_requests_cache) and limit is not None:
             limit = None
 
-        doc_id_docs = utils.create_iterator(enumerate(self.eval_docs_no_media), rank=rank, limit=int(limit) if limit else None, world_size=world_size)
-        doc_iterator_for_counting = itertools.islice(range(len(self.test_docs())), rank, limit, world_size) if self.has_test_docs() else itertools.islice(range(len(self.validation_docs())), rank, limit, world_size)
+        doc_id_docs = utils.create_iterator(
+            enumerate(self.eval_docs_no_media),
+            rank=rank,
+            limit=int(limit) if limit else None,
+            world_size=world_size,
+            offset=offset,
+        )
+        doc_iterator_for_counting = (
+            utils.create_iterator(
+                range(len(self.test_docs())),
+                rank=rank,
+                limit=limit,
+                world_size=world_size,
+                offset=offset,
+            )
+            if self.has_test_docs()
+            else utils.create_iterator(
+                range(len(self.validation_docs())),
+                rank=rank,
+                limit=limit,
+                world_size=world_size,
+                offset=offset,
+            )
+        )
 
         num_docs = sum(1 for _ in doc_iterator_for_counting)
 
@@ -659,13 +684,14 @@ class Task(abc.ABC):
         else:
             raise ValueError(f"Task dataset (path={self.DATASET_PATH}, name={self.DATASET_NAME}) must have valid or test docs!")
 
-    def doc_iterator(self, *, rank: int = 0, limit: Union[int, None] = None, world_size: int = 1) -> Iterator[Tuple[int, Any]]:
+    def doc_iterator(self, *, rank: int = 0, limit: Union[int, None] = None, world_size: int = 1, offset: int = 0) -> Iterator[Tuple[int, Any]]:
         limit = int(limit) if limit else None
         doc_iterator = utils.create_iterator(
             enumerate(self.eval_docs),
             rank=int(rank),
             limit=limit,
             world_size=int(world_size),
+            offset=offset,
         )
         return doc_iterator
 

@@ -854,13 +854,20 @@ def apply_template(template: str, doc: dict) -> str:
     return rtemplate.render(**doc)
 
 
-def create_iterator(raw_iterator, rank, world_size, limit=None):
+def create_iterator(raw_iterator, rank, world_size, limit=None, offset=0):
     """
     Method for creating a (potentially) sliced and limited
     iterator from a raw document iterator. Used for splitting data
-    among ranks in multigpu setting or only pulling a sample of documents
+    among ranks in multigpu setting or only pulling a sample of documents.
+    Offset applies before rank sharding.
     """
-    return islice(raw_iterator, rank, limit, world_size)
+    if offset is None:
+        offset = 0
+    if offset < 0:
+        raise ValueError(f"offset must be >= 0, got {offset}")
+    start = rank + offset
+    stop = None if limit is None else offset + limit
+    return islice(raw_iterator, start, stop, world_size)
 
 
 def pad_and_concat(

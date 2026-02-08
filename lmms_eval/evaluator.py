@@ -63,6 +63,7 @@ def simple_evaluate(
     rewrite_requests_cache: bool = False,
     delete_requests_cache: bool = False,
     limit: Optional[Union[int, float]] = None,
+    offset: int = 0,
     bootstrap_iters: int = 100000,
     check_integrity: bool = False,
     write_out: bool = False,
@@ -113,6 +114,8 @@ def simple_evaluate(
         Deletes all of the request cache if set to `True`. `None` if not desired.
     :param limit: int or float, optional
         Limit the number of examples per task (only use this for testing), If <1, limit is a percentage of the total number of examples.
+    :param offset: int, optional
+        Start evaluation from this dataset index for each task.
     :param bootstrap_iters:
         Number of iterations for bootstrap statistics, used when calculating stderrs. set to 0 for no stderr calculations to be performed.
     :param check_integrity: bool
@@ -277,6 +280,7 @@ def simple_evaluate(
         lm=lm,
         task_dict=task_dict,
         limit=limit,
+        offset=offset,
         cache_requests=cache_requests,
         rewrite_requests_cache=rewrite_requests_cache,
         bootstrap_iters=bootstrap_iters,
@@ -315,6 +319,7 @@ def simple_evaluate(
                 "device": device,
                 "use_cache": use_cache,
                 "limit": limit,
+                "offset": offset,
                 "bootstrap_iters": bootstrap_iters,
                 "gen_kwargs": gen_kwargs,
                 "random_seed": random_seed,
@@ -397,6 +402,7 @@ def evaluate(
     lm: "LM",
     task_dict,
     limit: Optional[int] = None,
+    offset: int = 0,
     cache_requests: bool = False,
     rewrite_requests_cache: bool = False,
     bootstrap_iters: Optional[int] = 100000,
@@ -418,6 +424,8 @@ def evaluate(
         Dictionary of tasks. Tasks will be taken to have name type(task).config.task .
     :param limit: int, optional
         Limit the number of examples per task (only use this for testing)
+    :param offset: int, optional
+        Start evaluation from this dataset index for each task.
     :param bootstrap_iters:
         Number of iterations for bootstrap statistics, used when calculating stderr. Set to 0 for skipping all stderr calculations.
     :param write_out: bool
@@ -512,6 +520,7 @@ def evaluate(
         limit = get_sample_size(task, limit)
         task.build_all_requests(
             limit=limit,
+            offset=offset,
             rank=global_rank,
             world_size=world_size,
             cache_requests=cache_requests,  # later we will add them
@@ -619,10 +628,27 @@ def evaluate(
                     rank=RANK,
                     limit=int(limit) if limit else None,
                     world_size=WORLD_SIZE,
+                    offset=offset,
                 )
             else:
-                doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE)
-            doc_iterator_for_counting = itertools.islice(range(len(task.test_docs())), RANK, limit, WORLD_SIZE) if task.has_test_docs() else itertools.islice(range(len(task.validation_docs())), RANK, limit, WORLD_SIZE)
+                doc_iterator = task.doc_iterator(rank=RANK, limit=limit, world_size=WORLD_SIZE, offset=offset)
+            doc_iterator_for_counting = (
+                create_iterator(
+                    range(len(task.test_docs())),
+                    rank=RANK,
+                    limit=limit,
+                    world_size=WORLD_SIZE,
+                    offset=offset,
+                )
+                if task.has_test_docs()
+                else create_iterator(
+                    range(len(task.validation_docs())),
+                    rank=RANK,
+                    limit=limit,
+                    world_size=WORLD_SIZE,
+                    offset=offset,
+                )
+            )
             total_docs = sum(1 for _ in doc_iterator_for_counting)
             pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
             for doc_id, doc in doc_iterator:
