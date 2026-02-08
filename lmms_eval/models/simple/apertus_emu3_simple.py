@@ -37,8 +37,8 @@ class ApertusEmu3Simple(EMU3SimpleModel):
         torch_dtype: torch.dtype = torch.bfloat16,
         image_tokenizer_dtype: Optional[torch.dtype] = None,
         use_cache: bool = True,
-        emu3_min_pixels: int = 128 * 128,
-        emu3_max_pixels: int = 1024 * 1024,
+        emu_min_pixels: int = 128 * 128,
+        emu_max_pixels: int = 1024 * 1024,
         skip_text_only: bool = True,
         skip_multi_image: bool = True,
         debug_samples: bool = False,
@@ -60,8 +60,8 @@ class ApertusEmu3Simple(EMU3SimpleModel):
             torch_dtype: Data type for model
             image_tokenizer_dtype: Data type for image tokenizer
             use_cache: Whether to use KV cache
-            emu3_min_pixels: Minimum pixels for image
-            emu3_max_pixels: Maximum pixels for image
+            emu_min_pixels: Minimum pixels for image
+            emu_max_pixels: Maximum pixels for image
             skip_text_only: Skip text-only samples
             skip_multi_image: Skip multi-image samples
             debug_samples: Print debug samples
@@ -79,8 +79,8 @@ class ApertusEmu3Simple(EMU3SimpleModel):
             torch_dtype=torch_dtype,
             image_tokenizer_dtype=image_tokenizer_dtype,
             use_cache=use_cache,
-            emu3_min_pixels=emu3_min_pixels,
-            emu3_max_pixels=emu3_max_pixels,
+            emu_min_pixels=emu_min_pixels,
+            emu_max_pixels=emu_max_pixels,
             skip_text_only=skip_text_only,
             skip_multi_image=skip_multi_image,
             debug_samples=debug_samples,

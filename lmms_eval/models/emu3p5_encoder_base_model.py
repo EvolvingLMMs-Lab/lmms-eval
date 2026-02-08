@@ -74,8 +74,8 @@ class EMU3p5EncoderBaseModel(lmms):
         torch_dtype: torch.dtype = torch.bfloat16,
         vision_tokenizer_dtype: Optional[torch.dtype] = None,
         use_cache: bool = True,
-        emu3_min_pixels: int = 512 * 512,
-        emu3_max_pixels: int = 1024 * 1024,
+        emu_min_pixels: int = 512 * 512,
+        emu_max_pixels: int = 1024 * 1024,
         skip_text_only: bool = True,
         skip_multi_image: bool = True,
         debug_samples: bool = False,
@@ -147,8 +147,8 @@ class EMU3p5EncoderBaseModel(lmms):
         self.processor = Emu3p5Processor(
             vision_tokenizer=vision_tokenizer,
             tokenizer=self._tokenizer,
-            min_pixels=emu3_min_pixels,
-            max_pixels=emu3_max_pixels,
+            min_pixels=emu_min_pixels,
+            max_pixels=emu_max_pixels,
         )
 
         eval_logger.info(f"EMU3.5 model loaded successfully on rank {self.rank}/" f"{self.world_size}")

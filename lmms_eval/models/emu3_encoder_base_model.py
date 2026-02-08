@@ -56,8 +56,8 @@ class EMU3EncoderBaseModel(lmms):
         torch_dtype: torch.dtype = torch.bfloat16,
         image_tokenizer_dtype: Optional[torch.dtype] = None,
         use_cache: bool = True,
-        emu3_min_pixels: int = 512 * 512,
-        emu3_max_pixels: int = 1024 * 1024,
+        emu_min_pixels: int = 512 * 512,
+        emu_max_pixels: int = 1024 * 1024,
         do_check_aspect_ratio: bool = False,
         skip_text_only: bool = True,
         skip_multi_image: bool = True,
@@ -96,8 +96,8 @@ class EMU3EncoderBaseModel(lmms):
         image_processor = Emu3VisionVQImageProcessor.from_pretrained(
             vq_hub,
             trust_remote_code=trust_remote_code,
-            min_pixels=emu3_min_pixels,
-            max_pixels=emu3_max_pixels,
+            min_pixels=emu_min_pixels,
+            max_pixels=emu_max_pixels,
             do_check_aspect_ratio=do_check_aspect_ratio,
         )
         eval_logger.info(f"Loading EMU3 Vision Tokenizer from {vq_hub}")

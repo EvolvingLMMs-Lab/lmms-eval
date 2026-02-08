@@ -33,8 +33,8 @@ ATTN_IMPLEMENTATION="${ATTN_IMPLEMENTATION:-sdpa}"  # Options: flash_attention_2
 DEVICE_MAP="${DEVICE_MAP:-auto}"
 
 # Emu3 image tokenizer configuration
-EMU3_MIN_PIXELS="${EMU3_MIN_PIXELS:-262144}"     # 512*512
-EMU3_MAX_PIXELS="${EMU3_MAX_PIXELS:-1048576}"    # 1024*1024
+EMU_MIN_PIXELS="${EMU_MIN_PIXELS:-262144}"     # 512*512
+EMU_MAX_PIXELS="${EMU_MAX_PIXELS:-1048576}"    # 1024*1024
 
 # Environment configuration
 export HF_HOME="${HF_HOME:-~/.cache/huggingface}"

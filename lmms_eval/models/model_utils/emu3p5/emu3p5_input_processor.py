@@ -33,7 +33,8 @@ def format_image_string(processor, image_tokens):
     for _h in range(h):
         row_string = ""
         for _w in range(w):
-            row_string += "<|visual token {token_id:0>6d}|>".format(token_id=image_tokens[_h, _w])
+            # TODO: might have to change per mode lex. emu3p5 model plain needs other format (6 digits)
+            row_string += "<|visual token {token_id}|>".format(token_id=image_tokens[_h, _w])
 
         if _h < h - 1:
             row_string += processor.eol_token
