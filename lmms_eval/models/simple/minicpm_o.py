@@ -136,13 +136,14 @@ class MiniCPM_O(lmms):
             trust_remote_code=True,
             attn_implementation=attn_implementation,
             torch_dtype=torch.bfloat16,
+            device_map=self.device_map,
             init_vision=init_vision,
             init_audio=init_audio,
             init_tts=init_tts,
         )
 
         if self.device_map == "auto":
-            self._model = self._model.cuda().eval()
+            self._model = self._model.eval()
         else:
             self._model = self._model.to(self._device).eval()
 
