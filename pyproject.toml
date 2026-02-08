@@ -124,6 +124,10 @@ mmsearch = [
     "FlagEmbedding",
     "rouge",
 ]
+prismmbench = [
+    "pdf2image>=1.17.0",
+    "pdfplumber>=0.11.9"
+]
 tui = [
     "fastapi>=0.100.0",
     "uvicorn>=0.20.0",
