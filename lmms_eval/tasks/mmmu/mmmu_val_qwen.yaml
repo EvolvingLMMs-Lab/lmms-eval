@@ -1,0 +1,22 @@
+dataset_path: lmms-lab/MMMU
+task: "mmmu_val_qwen"
+test_split: validation
+output_type: generate_until
+doc_to_visual: !function utils.mmmu_doc_to_visual
+doc_to_text: !function utils.mmmu_doc_to_text
+doc_to_target: "answer"
+doc_to_messages: !function utils.mmmu_doc_to_messages
+process_results: !function utils.mmmu_process_results
+
+metric_list:
+  - metric: mmmu_acc
+    aggregation: !function utils.mmmu_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    format: "qwen3_vl"
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+    open_ended_prompt: "Please answer the question directly."
+include: _default_template_yaml
