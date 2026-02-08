@@ -1,0 +1,10 @@
+task: mmsearch_plus_vqa
+include: _default_template_mmsearch_plus.yaml
+test_split: train
+metric_list:
+  - metric: f1_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true

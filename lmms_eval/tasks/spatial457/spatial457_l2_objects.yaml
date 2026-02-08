@@ -1,0 +1,10 @@
+dataset_name: L2_objects
+test_split: test
+task: spatial457_l2_objects
+include: _default_template_yaml
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    category: "L2_objects"

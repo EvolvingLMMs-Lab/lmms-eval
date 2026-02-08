@@ -165,15 +165,31 @@ class LlavaVid(lmms):
                 if scaling_factor >= 2:
                     eval_logger.info(f"Scaling factor: {scaling_factor}")
                     # print(float(scaling_factor))
-                    overwrite_config["rope_scaling"] = {"factor": float(scaling_factor), "type": "linear"}
+                    overwrite_config["rope_scaling"] = {
+                        "factor": float(scaling_factor),
+                        "type": "linear",
+                    }
                     overwrite_config["max_sequence_length"] = 4096 * scaling_factor
                     overwrite_config["tokenizer_model_max_length"] = 4096 * scaling_factor
 
             self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
-                pretrained, None, self.model_name, device_map=self.device_map, torch_dtype=self.torch_dtype, overwrite_config=overwrite_config, attn_implementation=attn_implementation
+                pretrained,
+                None,
+                self.model_name,
+                device_map=self.device_map,
+                torch_dtype=self.torch_dtype,
+                overwrite_config=overwrite_config,
+                attn_implementation=attn_implementation,
             )
         else:
-            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(pretrained, None, self.model_name, device_map=self.device_map, torch_dtype=self.torch_dtype, attn_implementation=attn_implementation)
+            self._tokenizer, self._model, self._image_processor, self._max_length = load_pretrained_model(
+                pretrained,
+                None,
+                self.model_name,
+                device_map=self.device_map,
+                torch_dtype=self.torch_dtype,
+                attn_implementation=attn_implementation,
+            )
 
         self._config = self._model.config
 
@@ -194,7 +210,11 @@ class LlavaVid(lmms):
         self.truncate_context = truncate_context
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
-            assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            assert accelerator.distributed_type in [
+                DistributedType.FSDP,
+                DistributedType.MULTI_GPU,
+                DistributedType.DEEPSPEED,
+            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             # If you want to use DistributedType.DEEPSPEED, you have to run accelerate config before using the model
             # Also, you have to select zero stage 0 (equivalent to DDP) in order to make the prepare model works
             # I tried to set different parameters in the kwargs to let default zero 2 stage works, but it didn't work.
@@ -345,8 +365,13 @@ class LlavaVid(lmms):
             visuals = self.flatten(visuals)
             videos = []
             for visual in visuals:
-                video, frame_time, video_time = self.load_video(visual, self.max_frames_num, self.fps, force_sample=self.force_sample)
-                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].cuda()
+                video, frame_time, video_time = self.load_video(
+                    visual,
+                    self.max_frames_num,
+                    self.fps,
+                    force_sample=self.force_sample,
+                )
+                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].to(self._device)
                 if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
                 else:
@@ -371,15 +396,20 @@ class LlavaVid(lmms):
             conv.append_message(conv.roles[1], continuation)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
-            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
+            attention_masks = input_ids.ne(self.tokenizer.pad_token_id).long().to(self._device)
 
             labels = input_ids.clone()
             # Context part no need to calculate for loss
             labels[0, : contxt_id.shape[1]] = -100
 
             with torch.inference_mode():
-                outputs = self.model(input_ids=input_ids, labels=labels, images=videos, modalities="video")
+                outputs = self.model(
+                    input_ids=input_ids,
+                    labels=labels,
+                    images=videos,
+                    modalities="video",
+                )
 
             loss = outputs["loss"]
             # loss = torch.exp(loss)
@@ -423,9 +453,19 @@ class LlavaVid(lmms):
                 # for visual in visuals:
                 if len(visuals) == 1:
                     if self.video_decode_backend == "decord":
-                        video, frame_time, video_time = self.load_video(visuals[0], self.max_frames_num, self.fps, force_sample=self.force_sample)
+                        video, frame_time, video_time = self.load_video(
+                            visuals[0],
+                            self.max_frames_num,
+                            self.fps,
+                            force_sample=self.force_sample,
+                        )
                     elif self.video_decode_backend == "pyav":
-                        video, frame_time, video_time = read_video_pyav(visuals[0], self.max_frames_num, self.fps, force_sample=self.force_sample)
+                        video, frame_time, video_time = read_video_pyav(
+                            visuals[0],
+                            self.max_frames_num,
+                            self.fps,
+                            force_sample=self.force_sample,
+                        )
                     elif self.video_decode_backend == "image":
                         video = self.load_image(visuals[0])
                 else:
@@ -443,9 +483,12 @@ class LlavaVid(lmms):
                         frame_time = [i / fps for i in frame_idx]
                         frame_time = ",".join([f"{i:.2f}s" for i in frame_time])
                         # video = [visuals[i] for i in frame_idx]
-                        video = np.stack([np.array(Image.open(visuals[i])) for i in frame_idx], axis=0)
+                        video = np.stack(
+                            [np.array(Image.open(visuals[i])) for i in frame_idx],
+                            axis=0,
+                        )
 
-                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].cuda()
+                video = self._image_processor.preprocess(video, return_tensors="pt")["pixel_values"].to(self._device)
                 if self.torch_dtype == "bfloat16":
                     video = video.bfloat16()
                 else:
@@ -480,11 +523,11 @@ class LlavaVid(lmms):
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()
 
-            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).cuda()
+            input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt").unsqueeze(0).to(self._device)
             pad_token_ids = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
             if "llama_3" in self.conv_template:
                 pad_token_ids = 0  # lmms-lab/llama3-llava-8b is trained on this pad token id. You may need to customize this for other models.
-            attention_masks = input_ids.ne(pad_token_ids).long().cuda()
+            attention_masks = input_ids.ne(pad_token_ids).long().to(self._device)
 
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             keywords = [stop_str]
