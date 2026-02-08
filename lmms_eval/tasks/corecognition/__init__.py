@@ -1,0 +1,1 @@
+"""CoreCognition task implementation."""
