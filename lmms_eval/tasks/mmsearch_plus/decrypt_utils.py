@@ -8,11 +8,11 @@ from typing import Any, Dict
 def derive_key(password: str, length: int) -> bytes:
     """
     Derive encryption key from password using SHA-256.
-    
+
     Args:
         password: Password/canary string
         length: Desired key length
-        
+
     Returns:
         Derived key of specified length
     """
@@ -25,11 +25,11 @@ def derive_key(password: str, length: int) -> bytes:
 def decrypt_text(ciphertext_b64: str, password: str) -> str:
     """
     Decrypt base64-encoded ciphertext using XOR cipher with derived key.
-    
+
     Args:
         ciphertext_b64: Base64-encoded encrypted string
         password: Password/canary string
-        
+
     Returns:
         Decrypted string
     """
@@ -49,11 +49,11 @@ def decrypt_text(ciphertext_b64: str, password: str) -> str:
 def decrypt_sample(sample: Dict[str, Any], canary: str) -> Dict[str, Any]:
     """
     Decrypt text fields in a single sample using the provided canary password.
-    
+
     Args:
         sample: Dataset sample with encrypted fields
         canary: Canary string (e.g., 'MMSearch-Plus')
-        
+
     Returns:
         Decrypted sample
     """
