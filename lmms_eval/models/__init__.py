@@ -16,10 +16,12 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
     "aria": "Aria",
+    "audio_flamingo_3": "AudioFlamingo3",
     "glm4v": "GLM4V",
     "auroracap": "AuroraCap",
     "bagel": "Bagel",
     "bagel_umm": "BagelUMM",
+    "baichuan_omni": "BaichuanOmni",
     "batch_gpt4": "BatchGPT4",
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
@@ -39,6 +41,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "internvl2": "InternVL2",
     "internvl3": "InternVL3",
     "internvl3_5": "InternVL3_5",
+    "kimi_audio": "KimiAudio",
     "llama_vid": "LLaMAVid",
     "llama_vision": "LlamaVision",
     "llama4_scout": "Llama4Scout",
@@ -75,6 +78,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "slime": "Slime",
     "srt_api": "SRT_API",
     "tinyllava": "TinyLlava",
+    "uni_moe_2_omni": "UniMoE2Omni",
     "videoChatGPT": "VideoChatGPT",
     "video_llava": "VideoLLaVA",
     "video_salmonn_2": "VideoSALMONN2",
@@ -94,6 +98,7 @@ AVAILABLE_SIMPLE_MODELS = {
 
 AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "bagel_lmms_engine": "BagelLmmsEngine",
+    "internvl_hf": "InternVLHf",
     "llava_hf": "LlavaHf",
     "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",

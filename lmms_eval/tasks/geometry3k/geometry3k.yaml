@@ -1,0 +1,35 @@
+dataset_path: Yang130/geometry3k_4choices_mixed
+task: "geometry3k"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.geometry3k_doc_to_visual
+doc_to_text: !function utils.geometry3k_doc_to_text
+doc_to_target: "ground_truth"
+process_results: !function utils.geometry3k_process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt_format: mcq
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  cot:
+    prompt_format: mcq
+    post_prompt: "\nAnswer with the option's letter from the given choices. Let's think step by step."
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+
+metadata:
+  version: 1.0
+  description: >-
+    Geometry3K benchmark for evaluating geometry problem solving.
+    3,002 high school multi-choice geometry problems with diagrams.
+    Paper: Inter-GPS (ACL 2021) - https://aclanthology.org/2021.acl-long.528/

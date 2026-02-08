@@ -1,0 +1,15 @@
+# MMSI-Video-Bench: Uniform 50 Frames Mode
+#
+# This config samples up to 50 frames uniformly across all video segments.
+# Suitable for models with limited context window.
+
+task: "mmsi_video_u50"
+doc_to_visual: !function utils.doc_to_visual_frames
+doc_to_text: !function utils.doc_to_text_frames
+doc_to_messages: !function utils.doc_to_messages_frames
+lmms_eval_specific_kwargs:
+  default:
+    max_frame: 50
+    post_prompt: ""
+
+include: _default_template_yaml
