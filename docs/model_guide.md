@@ -6,6 +6,45 @@ In order to properly evaluate a given LM, we require implementation of a wrapper
 - Chat (recommended) - The new recommended model type to be used for the future. Better support for interleaved text, image, video, and audio for multi-modal domain. Should be the type of the model to be implemented for new integrated models
 - Simple (Legacy) - The original and legacy models that use `doc_to_visual` and `doc_to_text` to control the input of the model. You can still add in new models that belongs to this category.
 
+## Interface Map
+
+```mermaid
+flowchart TB
+  M0((Model Dev)) --> M1([Implement lmms wrapper])
+  M1 --> M2([generate_until and loglikelihood])
+  M2 --> M3([ModelManifest in RegistryV2])
+
+  T0((Task Dev)) --> T1([Task YAML + utils.py])
+  T1 --> T2([Preferred doc_to_messages])
+  T1 --> T3([Legacy doc_to_visual + doc_to_text])
+
+  M3 --> P1
+  T2 --> P1
+  T3 --> P1
+
+  subgraph P[Evaluation Runtime]
+    direction TB
+    P1{{Evaluator contract}}
+    P2([Unified Instance requests])
+    P3([Model inference])
+    P4([process_results])
+    P5([Metrics aggregation])
+    P1 --> P2 --> P3 --> P4 --> P5
+  end
+
+  classDef actor fill:#F8FAFC,stroke:#475569,stroke-width:1.2px,color:#0F172A;
+  classDef model fill:#E0ECFF,stroke:#2563EB,stroke-width:1.2px,color:#0B2545;
+  classDef task fill:#E8FFF1,stroke:#16A34A,stroke-width:1.2px,color:#052E16;
+  classDef runtime fill:#FFF4E5,stroke:#D97706,stroke-width:1.2px,color:#3F2305;
+  classDef contract fill:#F3E8FF,stroke:#9333EA,stroke-width:1.6px,color:#3B0764;
+
+  class M0,T0 actor;
+  class M1,M2,M3 model;
+  class T1,T2,T3 task;
+  class P2,P3,P4,P5 runtime;
+  class P1 contract;
+```
+
 
 ## Setup
 
