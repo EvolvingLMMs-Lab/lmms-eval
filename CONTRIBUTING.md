@@ -43,6 +43,26 @@ python -m lmms_eval \
 5. **Commit** with a descriptive message (see [Commit Style](#commit-style))
 6. **Open a pull request** against `main`
 
+### Contributor Funnel and Labels
+
+To make onboarding predictable, we use a lightweight funnel:
+
+`Discover -> First Run -> First Issue -> First PR -> Repeat PRs -> Maintainer Track`
+
+Issue labels to use and follow:
+
+- `good first issue` - Small task, scoped for first-time contributors
+- `help wanted` - Community contribution requested with maintainer support
+- `priority:high` - Important work for upcoming release
+- `needs reproduction` - Missing minimal repro before triage
+- `needs decision` - Maintainer decision required
+- `blocked` - Waiting on dependency or external change
+
+Target response times:
+
+- Triage first response: within 48 hours
+- First PR review: within 72 hours
+
 ### Commit Style
 
 Use conventional commit prefixes:
@@ -170,3 +190,4 @@ uv run tool                # Run a tool in the environment
 
 - **Discord**: [discord.gg/zdkwKUqrPy](https://discord.gg/zdkwKUqrPy)
 - **Issues**: [GitHub Issues](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
+- **Quick-start**: [Evaluate Your Model in 5 Minutes](docs/quickstart.md)
