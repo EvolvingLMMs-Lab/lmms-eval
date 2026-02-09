@@ -62,14 +62,32 @@ class GeneralConfigTracker:
         """Extracts the model name from the model arguments."""
 
         def extract_model_name(model_args: str, key: str) -> str:
-            """Extracts the model name from the model arguments using a key."""
-            args_after_key = model_args.split(key)[1]
-            return args_after_key.split(",")[0]
+            """Extracts the model name from the model arguments using
+            a key, matching only exact parameter names."""
+            # Parse comma-separated key=value pairs and find exact
+            # key match to avoid substring collisions (e.g. "model="
+            # matching inside "model_descriptor=")
+            for part in model_args.split(","):
+                if part.startswith(key):
+                    return part[len(key) :]
+            return ""
 
-        # order does matter, e.g. peft and delta are provided together with pretrained
-        prefixes = ["peft=", "delta=", "pretrained=", "model=", "model_version=", "model_name=", "model_id=", "path=", "engine="]
+        # order does matter, e.g. peft and delta are provided
+        # together with pretrained
+        prefixes = [
+            "peft=",
+            "delta=",
+            "pretrained=",
+            "model_descriptor=",
+            "model_version=",
+            "model_name=",
+            "model_id=",
+            "model=",
+            "path=",
+            "engine=",
+        ]
         for prefix in prefixes:
-            if prefix in model_args:
+            if any(part.startswith(prefix) for part in model_args.split(",")):
                 return extract_model_name(model_args, prefix)
         return ""
 
