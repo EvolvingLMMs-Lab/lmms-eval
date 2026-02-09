@@ -5,12 +5,7 @@ import pathlib
 import sys
 import unittest
 
-_REGISTRY_PATH = (
-    pathlib.Path(__file__).resolve().parents[2]
-    / "lmms_eval"
-    / "models"
-    / "registry_v2.py"
-)
+_REGISTRY_PATH = pathlib.Path(__file__).resolve().parents[2] / "lmms_eval" / "models" / "registry_v2.py"
 _SPEC = importlib.util.spec_from_file_location("registry_v2_for_tests", _REGISTRY_PATH)
 assert _SPEC is not None
 assert _SPEC.loader is not None
@@ -120,12 +115,8 @@ class TestRepresentativeManifestSemantics(unittest.TestCase):
         )
 
         self.assertEqual(registry.resolve("vllm").model_type, "chat")
-        self.assertEqual(
-            registry.resolve("vllm", force_simple=True).model_type, "simple"
-        )
-        self.assertEqual(
-            registry.resolve("sglang", force_simple=True).model_type, "chat"
-        )
+        self.assertEqual(registry.resolve("vllm", force_simple=True).model_type, "simple")
+        self.assertEqual(registry.resolve("sglang", force_simple=True).model_type, "chat")
 
 
 ResolvedModel = _MODULE.ResolvedModel
@@ -176,16 +167,12 @@ class TestValidateModelClass(unittest.TestCase):
             pass
 
         with self.assertRaises(TypeError) as ctx:
-            ModelRegistryV2._validate_model_class(
-                NotAModel, self._resolved("simple", "pkg.NotAModel")
-            )
+            ModelRegistryV2._validate_model_class(NotAModel, self._resolved("simple", "pkg.NotAModel"))
         self.assertIn("not a subclass", str(ctx.exception))
 
     def test_not_a_class_raises(self):
         with self.assertRaises(TypeError) as ctx:
-            ModelRegistryV2._validate_model_class(
-                "not_a_class", self._resolved("simple", "pkg.oops")
-            )
+            ModelRegistryV2._validate_model_class("not_a_class", self._resolved("simple", "pkg.oops"))
         self.assertIn("not a subclass", str(ctx.exception))
 
     def test_chat_resolved_but_is_simple_true_raises(self):
