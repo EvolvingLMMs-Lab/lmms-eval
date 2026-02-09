@@ -20,9 +20,6 @@ class ModelManifest:
     simple_class_path: str | None = None
     chat_class_path: str | None = None
     aliases: tuple[str, ...] = ()
-    source: str = "legacy"
-    capabilities: tuple[str, ...] = ()
-    description: str = ""
 
     def __post_init__(self) -> None:
         if self.simple_class_path is None and self.chat_class_path is None:
@@ -30,7 +27,11 @@ class ModelManifest:
                 f"ModelManifest('{self.model_id}') requires at least one class path",
             )
 
-        normalized_aliases = tuple(alias for alias in dict.fromkeys(self.aliases) if alias and alias != self.model_id)
+        normalized_aliases = tuple(
+            alias
+            for alias in dict.fromkeys(self.aliases)
+            if alias and alias != self.model_id
+        )
         object.__setattr__(self, "aliases", normalized_aliases)
 
 
@@ -42,7 +43,6 @@ class ResolvedModel:
     model_id: str
     model_type: ModelType
     class_path: str
-    source: str
 
     @property
     def class_name(self) -> str:
@@ -71,7 +71,9 @@ class ModelRegistryV2:
         raise `ValueError`.
         """
 
-        merged = self._merge_manifest(self._manifests.get(manifest.model_id), manifest, overwrite=overwrite)
+        merged = self._merge_manifest(
+            self._manifests.get(manifest.model_id), manifest, overwrite=overwrite
+        )
         self._manifests[manifest.model_id] = merged
 
         names = (merged.model_id, *merged.aliases)
@@ -100,7 +102,6 @@ class ModelRegistryV2:
                 model_id=model_id,
                 model_type="simple",
                 class_path=manifest.simple_class_path,
-                source=manifest.source,
             )
 
         if manifest.chat_class_path is not None:
@@ -109,24 +110,52 @@ class ModelRegistryV2:
                 model_id=model_id,
                 model_type="chat",
                 class_path=manifest.chat_class_path,
-                source=manifest.source,
             )
 
+        assert manifest.simple_class_path is not None
         return ResolvedModel(
             requested_name=model_name,
             model_id=model_id,
             model_type="simple",
             class_path=manifest.simple_class_path,
-            source=manifest.source,
         )
 
     def get_model_class(self, model_name: str, force_simple: bool = False):
-        """Resolve and import a model class."""
+        """Resolve, import, and validate a model class.
+
+        Validates that the loaded class is a subclass of ``lmms`` and that its
+        ``is_simple`` flag is consistent with the resolved model type.
+        """
 
         resolved = self.resolve(model_name, force_simple=force_simple)
-        module_name, class_name = resolved.class_path.rsplit(".", 1)
+        module_name, cls_name = resolved.class_path.rsplit(".", 1)
         module = importlib.import_module(module_name)
-        return getattr(module, class_name)
+        cls = getattr(module, cls_name)
+        self._validate_model_class(cls, resolved)
+        return cls
+
+    @staticmethod
+    def _validate_model_class(cls: type, resolved: ResolvedModel) -> None:
+        from lmms_eval.api.model import lmms
+
+        if not (isinstance(cls, type) and issubclass(cls, lmms)):
+            raise TypeError(
+                f"Model class '{resolved.class_path}' is not a subclass of lmms",
+            )
+
+        cls_is_simple = getattr(cls, "is_simple", True)
+        if resolved.model_type == "chat" and cls_is_simple:
+            raise TypeError(
+                f"Model '{resolved.model_id}' resolved as chat but "
+                f"{cls.__name__}.is_simple is True. "
+                f"Set is_simple = False on the class.",
+            )
+        if resolved.model_type == "simple" and not cls_is_simple:
+            raise TypeError(
+                f"Model '{resolved.model_id}' resolved as simple but "
+                f"{cls.__name__}.is_simple is False. "
+                f"Set is_simple = True or register a chat_class_path.",
+            )
 
     def load_entrypoint_manifests(
         self,
@@ -196,20 +225,12 @@ class ModelRegistryV2:
         )
 
         aliases = tuple(dict.fromkeys((*current.aliases, *incoming.aliases)))
-        capabilities = tuple(
-            dict.fromkeys((*current.capabilities, *incoming.capabilities)),
-        )
-        source = incoming.source if overwrite else current.source
-        description = incoming.description or current.description
 
         return ModelManifest(
             model_id=incoming.model_id,
             simple_class_path=simple_class_path,
             chat_class_path=chat_class_path,
             aliases=aliases,
-            source=source,
-            capabilities=capabilities,
-            description=description,
         )
 
     def _merge_class_path(
@@ -230,7 +251,8 @@ class ModelRegistryV2:
         if overwrite:
             return incoming_value
         raise ValueError(
-            f"Conflicting {field_name} for model '{model_id}': " f"'{current_value}' vs '{incoming_value}'",
+            f"Conflicting {field_name} for model '{model_id}': "
+            f"'{current_value}' vs '{incoming_value}'",
         )
 
     def _coerce_payload_to_manifests(self, payload) -> list[ModelManifest]:
@@ -240,7 +262,9 @@ class ModelRegistryV2:
         if isinstance(payload, ModelManifest):
             return [payload]
 
-        if isinstance(payload, Iterable) and not isinstance(payload, (str, bytes, dict)):
+        if isinstance(payload, Iterable) and not isinstance(
+            payload, (str, bytes, dict)
+        ):
             manifests: list[ModelManifest] = []
             for item in payload:
                 if not isinstance(item, ModelManifest):
@@ -251,7 +275,8 @@ class ModelRegistryV2:
             return manifests
 
         raise TypeError(
-            "Entry point payload must be ModelManifest, iterable of ModelManifest, " "or callable returning one of those",
+            "Entry point payload must be ModelManifest, iterable of ModelManifest, "
+            "or callable returning one of those",
         )
 
     def _select_entry_points(self, group: str):

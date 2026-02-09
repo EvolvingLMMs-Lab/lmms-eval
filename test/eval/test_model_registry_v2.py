@@ -5,7 +5,12 @@ import pathlib
 import sys
 import unittest
 
-_REGISTRY_PATH = pathlib.Path(__file__).resolve().parents[2] / "lmms_eval" / "models" / "registry_v2.py"
+_REGISTRY_PATH = (
+    pathlib.Path(__file__).resolve().parents[2]
+    / "lmms_eval"
+    / "models"
+    / "registry_v2.py"
+)
 _SPEC = importlib.util.spec_from_file_location("registry_v2_for_tests", _REGISTRY_PATH)
 assert _SPEC is not None
 assert _SPEC.loader is not None
@@ -115,8 +120,99 @@ class TestRepresentativeManifestSemantics(unittest.TestCase):
         )
 
         self.assertEqual(registry.resolve("vllm").model_type, "chat")
-        self.assertEqual(registry.resolve("vllm", force_simple=True).model_type, "simple")
-        self.assertEqual(registry.resolve("sglang", force_simple=True).model_type, "chat")
+        self.assertEqual(
+            registry.resolve("vllm", force_simple=True).model_type, "simple"
+        )
+        self.assertEqual(
+            registry.resolve("sglang", force_simple=True).model_type, "chat"
+        )
+
+
+ResolvedModel = _MODULE.ResolvedModel
+
+
+class TestValidateModelClass(unittest.TestCase):
+    def setUp(self):
+        import types
+
+        self._fake_model_module = types.ModuleType("lmms_eval.api.model")
+
+        class FakeLmms:
+            is_simple = True
+
+        self._fake_model_module.lmms = FakeLmms
+        self._original = sys.modules.get("lmms_eval.api.model")
+        sys.modules["lmms_eval.api.model"] = self._fake_model_module
+        self.FakeLmms = FakeLmms
+
+    def tearDown(self):
+        if self._original is not None:
+            sys.modules["lmms_eval.api.model"] = self._original
+        else:
+            sys.modules.pop("lmms_eval.api.model", None)
+
+    def _resolved(self, model_type, class_path="pkg.Foo"):
+        return ResolvedModel(
+            requested_name="test",
+            model_id="test",
+            model_type=model_type,
+            class_path=class_path,
+        )
+
+    def test_valid_simple_class(self):
+        class SimpleModel(self.FakeLmms):
+            is_simple = True
+
+        ModelRegistryV2._validate_model_class(SimpleModel, self._resolved("simple"))
+
+    def test_valid_chat_class(self):
+        class ChatModel(self.FakeLmms):
+            is_simple = False
+
+        ModelRegistryV2._validate_model_class(ChatModel, self._resolved("chat"))
+
+    def test_not_a_subclass_raises(self):
+        class NotAModel:
+            pass
+
+        with self.assertRaises(TypeError) as ctx:
+            ModelRegistryV2._validate_model_class(
+                NotAModel, self._resolved("simple", "pkg.NotAModel")
+            )
+        self.assertIn("not a subclass", str(ctx.exception))
+
+    def test_not_a_class_raises(self):
+        with self.assertRaises(TypeError) as ctx:
+            ModelRegistryV2._validate_model_class(
+                "not_a_class", self._resolved("simple", "pkg.oops")
+            )
+        self.assertIn("not a subclass", str(ctx.exception))
+
+    def test_chat_resolved_but_is_simple_true_raises(self):
+        class BadChat(self.FakeLmms):
+            is_simple = True
+
+        with self.assertRaises(TypeError) as ctx:
+            ModelRegistryV2._validate_model_class(BadChat, self._resolved("chat"))
+        self.assertIn("resolved as chat", str(ctx.exception))
+        self.assertIn("is_simple is True", str(ctx.exception))
+
+    def test_simple_resolved_but_is_simple_false_raises(self):
+        class BadSimple(self.FakeLmms):
+            is_simple = False
+
+        with self.assertRaises(TypeError) as ctx:
+            ModelRegistryV2._validate_model_class(BadSimple, self._resolved("simple"))
+        self.assertIn("resolved as simple", str(ctx.exception))
+        self.assertIn("is_simple is False", str(ctx.exception))
+
+    def test_missing_is_simple_defaults_true(self):
+        class NoFlag(self.FakeLmms):
+            pass
+
+        ModelRegistryV2._validate_model_class(NoFlag, self._resolved("simple"))
+        with self.assertRaises(TypeError):
+            ModelRegistryV2._validate_model_class(NoFlag, self._resolved("chat"))
 
 
 if __name__ == "__main__":
