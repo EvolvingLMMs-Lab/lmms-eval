@@ -139,8 +139,6 @@ MODEL_REGISTRY_V2.register_manifest(
     ModelManifest(
         model_id="my_model",
         chat_class_path="lmms_eval.models.chat.my_model.MyModel",
-        source="builtin",
-        capabilities=("generate_until", "chat", "multimodal"),
     )
 )
 
