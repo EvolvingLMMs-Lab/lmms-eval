@@ -88,36 +88,25 @@ class ModelRegistryV2:
     def resolve(self, model_name: str, force_simple: bool = False) -> ResolvedModel:
         """Resolve a model name to one concrete implementation class path."""
 
-        model_id = self._alias_to_model_id.get(model_name)
-        if model_id is None:
-            available = ", ".join(self.list_model_names())
-            raise ValueError(
-                f"Model '{model_name}' not found in available models: {available}",
-            )
+        model_id = self._require_model_id(model_name)
 
         manifest = self._manifests[model_id]
         if force_simple and manifest.simple_class_path is not None:
-            return ResolvedModel(
-                requested_name=model_name,
-                model_id=model_id,
-                model_type="simple",
-                class_path=manifest.simple_class_path,
-            )
+            model_type = "simple"
+            class_path = manifest.simple_class_path
+        elif manifest.chat_class_path is not None:
+            model_type = "chat"
+            class_path = manifest.chat_class_path
+        else:
+            assert manifest.simple_class_path is not None
+            model_type = "simple"
+            class_path = manifest.simple_class_path
 
-        if manifest.chat_class_path is not None:
-            return ResolvedModel(
-                requested_name=model_name,
-                model_id=model_id,
-                model_type="chat",
-                class_path=manifest.chat_class_path,
-            )
-
-        assert manifest.simple_class_path is not None
         return ResolvedModel(
             requested_name=model_name,
             model_id=model_id,
-            model_type="simple",
-            class_path=manifest.simple_class_path,
+            model_type=model_type,
+            class_path=class_path,
         )
 
     def get_model_class(self, model_name: str, force_simple: bool = False):
@@ -191,13 +180,18 @@ class ModelRegistryV2:
     def get_manifest(self, model_name: str) -> ModelManifest:
         """Return canonical manifest for a model id or alias."""
 
-        model_id = self._alias_to_model_id.get(model_name)
-        if model_id is None:
-            available = ", ".join(self.list_model_names())
-            raise ValueError(
-                f"Model '{model_name}' not found in available models: {available}",
-            )
+        model_id = self._require_model_id(model_name)
         return self._manifests[model_id]
+
+    def _require_model_id(self, model_name: str) -> str:
+        model_id = self._alias_to_model_id.get(model_name)
+        if model_id is not None:
+            return model_id
+
+        available = ", ".join(self.list_model_names())
+        raise ValueError(
+            f"Model '{model_name}' not found in available models: {available}",
+        )
 
     def _merge_manifest(
         self,
@@ -265,22 +259,31 @@ class ModelRegistryV2:
         if isinstance(payload, Iterable) and not isinstance(
             payload, (str, bytes, dict)
         ):
-            manifests: list[ModelManifest] = []
-            for item in payload:
-                if not isinstance(item, ModelManifest):
-                    raise TypeError(
-                        "Entry point iterable must contain only ModelManifest objects",
-                    )
-                manifests.append(item)
-            return manifests
+            return self._coerce_manifest_iterable(payload)
 
         raise TypeError(
             "Entry point payload must be ModelManifest, iterable of ModelManifest, "
             "or callable returning one of those",
         )
 
+    @staticmethod
+    def _coerce_manifest_iterable(payload: Iterable[object]) -> list[ModelManifest]:
+        manifests: list[ModelManifest] = []
+        for item in payload:
+            if not isinstance(item, ModelManifest):
+                raise TypeError(
+                    "Entry point iterable must contain only ModelManifest objects",
+                )
+            manifests.append(item)
+        return manifests
+
     def _select_entry_points(self, group: str):
         eps = entry_points()
         if hasattr(eps, "select"):
             return list(eps.select(group=group))
-        return list(eps.get(group, []))
+
+        if isinstance(eps, dict):
+            legacy_group = eps.get(group, [])
+            if isinstance(legacy_group, Iterable):
+                return list(legacy_group)
+        return []

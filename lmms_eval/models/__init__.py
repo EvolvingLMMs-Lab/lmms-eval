@@ -4,6 +4,7 @@ import importlib
 import os
 import sys
 import warnings
+from typing import Literal
 
 from loguru import logger
 
@@ -123,7 +124,11 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
 }
 
 
-def _build_class_path(model_name: str, model_type: str, class_name: str) -> str:
+def _build_class_path(
+    model_name: str,
+    model_type: Literal["simple", "chat"],
+    class_name: str,
+) -> str:
     if "." in class_name:
         return class_name
     return f"lmms_eval.models.{model_type}.{model_name}.{class_name}"
@@ -180,18 +185,24 @@ def _merge_legacy_plugin_models(registry: ModelRegistryV2) -> None:
             )
 
 
-MODEL_REGISTRY_V2 = ModelRegistryV2()
-for manifest in _build_builtin_manifests():
-    MODEL_REGISTRY_V2.register_manifest(manifest)
+def _initialize_model_registry() -> ModelRegistryV2:
+    registry = ModelRegistryV2()
+    for manifest in _build_builtin_manifests():
+        registry.register_manifest(manifest)
 
-for manifest in CORE_MODEL_MANIFESTS:
-    MODEL_REGISTRY_V2.register_manifest(manifest, overwrite=True)
+    for manifest in CORE_MODEL_MANIFESTS:
+        registry.register_manifest(manifest, overwrite=True)
 
-_merge_legacy_plugin_models(MODEL_REGISTRY_V2)
-try:
-    MODEL_REGISTRY_V2.load_entrypoint_manifests(overwrite=True)
-except Exception as exc:  # pragma: no cover
-    logger.warning(f"Failed to load model entry-point manifests: {exc}")
+    _merge_legacy_plugin_models(registry)
+    try:
+        registry.load_entrypoint_manifests(overwrite=True)
+    except Exception as exc:  # pragma: no cover
+        logger.warning(f"Failed to load model entry-point manifests: {exc}")
+
+    return registry
+
+
+MODEL_REGISTRY_V2 = _initialize_model_registry()
 
 
 def _build_available_models_preferred() -> dict[str, str]:
@@ -199,9 +210,8 @@ def _build_available_models_preferred() -> dict[str, str]:
     for model_id in MODEL_REGISTRY_V2.list_canonical_model_ids():
         manifest = MODEL_REGISTRY_V2.get_manifest(model_id)
         class_path = manifest.chat_class_path or manifest.simple_class_path
-        if class_path is None:
-            continue
-        model_map[model_id] = class_path.rsplit(".", 1)[-1]
+        if class_path:
+            model_map[model_id] = class_path.rsplit(".", 1)[-1]
     return model_map
 
 
@@ -226,7 +236,7 @@ def get_model_manifest(model_name: str) -> ModelManifest:
     return MODEL_REGISTRY_V2.get_manifest(model_name)
 
 
-def get_model(model_name, force_simple: bool = False):
+def get_model(model_name: str, force_simple: bool = False) -> type:
     try:
         return MODEL_REGISTRY_V2.get_model_class(model_name, force_simple=force_simple)
     except Exception as exc:
