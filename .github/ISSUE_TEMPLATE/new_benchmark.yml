@@ -1,0 +1,93 @@
+name: New Benchmark / Task
+description: Propose or contribute a new benchmark or evaluation task
+labels: ["new-benchmark"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping expand lmms-eval's benchmark coverage!
+        If you are submitting a PR with the implementation, link it in the Additional Context section below.
+
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked that this benchmark does not already exist in lmms-eval.
+          required: true
+        - label: The dataset is publicly available (or will be upon publication).
+          required: true
+
+  - type: input
+    id: benchmark_name
+    attributes:
+      label: Benchmark Name
+      placeholder: e.g., MMMU-Pro, SWE-bench Verified
+    validations:
+      required: true
+
+  - type: dropdown
+    id: modality
+    attributes:
+      label: Primary Modality
+      options:
+        - Image
+        - Video
+        - Audio
+        - Text-only
+        - Multi-modal (image + text)
+        - Multi-modal (video + text)
+        - Multi-modal (audio + text)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: dataset
+    attributes:
+      label: Dataset Location
+      description: HuggingFace dataset path or URL
+      placeholder: e.g., lmms-lab/MMMU or https://github.com/...
+    validations:
+      required: true
+
+  - type: input
+    id: paper
+    attributes:
+      label: Paper Reference
+      description: Link to the paper introducing this benchmark (if available)
+      placeholder: e.g., https://arxiv.org/abs/...
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Benchmark Description
+      description: |
+        Briefly describe:
+        - What capability does this benchmark evaluate?
+        - How many samples / splits?
+        - What evaluation metrics are used?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: output_type
+    attributes:
+      label: Output Type
+      description: What type of model output does this benchmark require?
+      options:
+        - generate_until (open-ended generation)
+        - multiple_choice (loglikelihood-based)
+        - loglikelihood
+        - Other / Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information, implementation notes, or PR links.
+    validations:
+      required: false
