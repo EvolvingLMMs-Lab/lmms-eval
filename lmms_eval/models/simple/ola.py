@@ -128,7 +128,7 @@ class Ola(lmms):
         conv_template="qwen_1_5",
         use_cache=True,
         truncate_context=False,
-        max_frames_num: int = 64,
+        max_frames_num: int = 50,
         mm_resampler_type: str = "spatial_pool",
         overwrite: bool = True,
         video_decode_backend: str = "decord",

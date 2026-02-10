@@ -76,7 +76,7 @@ class OmniVinci(lmms):
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache: bool = True,
-        num_video_frames: int = 128,
+        num_video_frames: int = 50,
         load_audio_in_video: bool = True,
         audio_length: str = "max_3600",
         system_prompt: str = "You are a helpful assistant.",

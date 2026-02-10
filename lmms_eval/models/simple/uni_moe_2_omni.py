@@ -60,7 +60,7 @@ class UniMoE2Omni(lmms):
         dtype: Optional[Union[str, torch.dtype]] = "auto",
         think_mode: Optional[bool] = False,
         batch_size: Optional[Union[int, str]] = 1,
-        use_audio_in_video: Optional[bool] = False,
+        use_audio_in_video: Optional[bool] = True,
         **kwargs,
     ) -> None:
         super().__init__()

@@ -75,7 +75,7 @@ class BaichuanOmni(lmms):
         device_map: Optional[str] = "auto",
         batch_size: Optional[Union[int, str]] = 1,
         use_cache: bool = True,
-        max_num_frames: int = 32,
+        max_num_frames: int = 50,
         system_prompt: str = "You are a helpful assistant.",
         cache_dir: Optional[str] = None,
         **kwargs,

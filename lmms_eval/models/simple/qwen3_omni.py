@@ -41,7 +41,7 @@ class Qwen3_Omni(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_cache: bool = True,
         attn_implementation: Optional[str] = "flash_attention_2",
-        max_num_frames: int = 128,
+        max_num_frames: int = 50,
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[float] = None,
         max_image_size: Optional[int] = None,

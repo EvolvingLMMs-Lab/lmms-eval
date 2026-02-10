@@ -41,7 +41,7 @@ class Qwen2_5_Omni(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
         attn_implementation: Optional[bool] = "eager",
-        max_num_frames: int = 768,
+        max_num_frames: int = 50,
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
         max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True

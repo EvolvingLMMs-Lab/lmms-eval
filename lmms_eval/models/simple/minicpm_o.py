@@ -64,27 +64,21 @@ except ImportError:
     VideoFileClip = None
 
 
-MAX_NUM_FRAMES = 64
+MAX_NUM_FRAMES = 50
 
 
 def encode_video(video_path: str, max_frames: int = MAX_NUM_FRAMES) -> List[Image.Image]:
-    """Extract frames from video file."""
+    """Extract frames from video file using uniform sampling."""
     if VideoReader is None:
         raise ImportError("decord is required for video processing. Install with: pip install decord")
 
-    def uniform_sample(l, n):
-        gap = len(l) / n
-        idxs = [int(i * gap + gap / 2) for i in range(n)]
-        return [l[i] for i in idxs]
-
     vr = VideoReader(video_path, ctx=cpu(0))
-    sample_fps = round(vr.get_avg_fps() / 1)
-    frame_idx = [i for i in range(0, len(vr), sample_fps)]
-    if len(frame_idx) > max_frames:
-        frame_idx = uniform_sample(frame_idx, max_frames)
-    frames = vr.get_batch(frame_idx).asnumpy()
-    frames = [Image.fromarray(v.astype("uint8")) for v in frames]
-    return frames
+    total_frames = len(vr)
+    num_frames = min(max_frames, total_frames)
+    indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
+    indices = np.unique(indices)
+    frames = vr.get_batch(indices).asnumpy()
+    return [Image.fromarray(v.astype("uint8")) for v in frames]
 
 
 @register_model("minicpm_o")
@@ -294,6 +288,14 @@ class MiniCPM_O(lmms):
                     content.extend(frames)
                 except Exception as e:
                     eval_logger.warning(f"Failed to encode video: {e}")
+                # Extract audio from video if present
+                if self._check_if_video_has_audio(visual):
+                    try:
+                        audio, sr = librosa.load(visual, sr=16000)
+                        audio = self.resample_audio(audio, sr)
+                        content.append(audio)
+                    except Exception as e:
+                        eval_logger.warning(f"Failed to extract audio from video: {e}")
 
             elif isinstance(visual, Image.Image):
                 # Single image
@@ -324,6 +326,14 @@ class MiniCPM_O(lmms):
                             content.extend(frames)
                         except Exception as e:
                             eval_logger.warning(f"Failed to encode video: {e}")
+                        # Extract audio from video if present
+                        if self._check_if_video_has_audio(v):
+                            try:
+                                audio, sr = librosa.load(v, sr=16000)
+                                audio = self.resample_audio(audio, sr)
+                                content.append(audio)
+                            except Exception as e:
+                                eval_logger.warning(f"Failed to extract audio from video: {e}")
 
         content.append(context)
         return content
