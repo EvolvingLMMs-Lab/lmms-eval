@@ -1,0 +1,35 @@
+dataset_name: 3dsr_circular
+test_split: test
+task: "3dsrbench_circular"
+include: _default_template_yaml
+
+metric_list:
+  # Vanilla accuracy (raw accuracy without grouping)
+  - metric: vanilla_accuracy
+    aggregation: !function utils.aggregate_vanilla_accuracy
+    higher_is_better: true
+  # Flip eval: both original and flipped must be correct
+  - metric: flip_accuracy
+    aggregation: !function utils.aggregate_flip_accuracy
+    higher_is_better: true
+  # Circular eval: all circular variants must be correct
+  - metric: circular_accuracy
+    aggregation: !function utils.aggregate_circular_accuracy
+    higher_is_better: true
+  # Flip + Circular: most strict - all variants including flip must be correct
+  - metric: flip_circular_accuracy
+    aggregation: !function utils.aggregate_flip_circular_accuracy
+    higher_is_better: true
+  # Category-specific accuracy
+  - metric: height_accuracy
+    aggregation: !function utils.aggregate_height_accuracy
+    higher_is_better: true
+  - metric: location_accuracy
+    aggregation: !function utils.aggregate_location_accuracy
+    higher_is_better: true
+  - metric: orientation_accuracy
+    aggregation: !function utils.aggregate_orientation_accuracy
+    higher_is_better: true
+  - metric: multi_object_accuracy
+    aggregation: !function utils.aggregate_multi_object_accuracy
+    higher_is_better: true

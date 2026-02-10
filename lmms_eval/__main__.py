@@ -233,6 +233,12 @@ def parse_eval_args() -> argparse.Namespace:
         help="Limit the number of examples per task. " "If <1, limit is a percentage of the total number of examples.",
     )
     parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Start evaluation from this dataset index for each task.",
+    )
+    parser.add_argument(
         "--use_cache",
         "-c",
         type=str,
@@ -529,7 +535,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
-            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), limit: {args.limit}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), " f"limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
             print(make_table(results))
             if "groups" in results:
                 print(make_table(results, "groups"))
@@ -583,6 +589,8 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
     if args.limit:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
+    if args.offset < 0:
+        raise ValueError("--offset must be >= 0")
 
     if os.environ.get("LMMS_EVAL_PLUGINS", None):
         args.include_path = [args.include_path] if args.include_path else []
@@ -646,6 +654,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         device=args.device,
         use_cache=args.use_cache,
         limit=args.limit,
+        offset=args.offset,
         check_integrity=args.check_integrity,
         write_out=args.write_out,
         log_samples=args.log_samples,
@@ -700,7 +709,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
 
 def print_results(args, results):
-    print(f"{args.model} ({args.model_args}),\ngen_kwargs: ({args.gen_kwargs}),\nlimit: {args.limit},\nnum_fewshot: {args.num_fewshot},\nbatch_size: {args.batch_size}")
+    print(f"{args.model} ({args.model_args}),\n" f"gen_kwargs: ({args.gen_kwargs}),\n" f"limit: {args.limit},\n" f"offset: {args.offset},\n" f"num_fewshot: {args.num_fewshot},\n" f"batch_size: {args.batch_size}")
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))

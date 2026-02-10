@@ -50,6 +50,13 @@ class Llava_OneVision1_5(lmms):
         **kwargs,
     ) -> None:
         super().__init__()
+
+        # Extract revision from kwargs
+        # Allows for specifying a particular model revision from Hugging Face Hub
+        # when the official repo havent updated to be compatible with the latest transformers.
+        # e.g. revision='6b3d97091777ae511438186d60270089515adc0d' to be used with transformers==4.57.6
+        revision = kwargs.pop("revision", None)
+
         if kwargs:
             eval_logger.warning(f"Ignoring unexpected kwargs: {list(kwargs.keys())}")
 
@@ -80,6 +87,10 @@ class Llava_OneVision1_5(lmms):
             "device_map": self.device_map,
             "trust_remote_code": True,
         }
+
+        # Add revision if specified
+        if revision is not None:
+            model_kwargs["revision"] = revision
 
         # Add attention implementation if specified
         if attn_implementation is not None:
