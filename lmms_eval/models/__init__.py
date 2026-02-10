@@ -8,7 +8,6 @@ from typing import Literal
 
 from loguru import logger
 
-from lmms_eval.models.model_manifests import CORE_MODEL_MANIFESTS
 from lmms_eval.models.registry_v2 import ModelManifest, ModelRegistryV2
 
 logger.remove()
@@ -175,9 +174,6 @@ def _initialize_model_registry() -> ModelRegistryV2:
     registry = ModelRegistryV2()
     for manifest in _build_builtin_manifests():
         registry.register_manifest(manifest)
-
-    for manifest in CORE_MODEL_MANIFESTS:
-        registry.register_manifest(manifest, overwrite=True)
 
     _merge_legacy_plugin_models(registry)
     try:
