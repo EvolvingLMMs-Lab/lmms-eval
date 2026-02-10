@@ -18,6 +18,8 @@
 
 📖 [Supported Tasks (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Supported Models (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentation](docs/README.md)
 
+🤝 [Contributing Guide](CONTRIBUTING.md) | ⚡ [Evaluate in 5 Minutes](docs/quickstart.md) | 🐛 [Issue Templates](.github/ISSUE_TEMPLATE)
+
 ---
 
 ## What's New
