@@ -392,9 +392,15 @@ def parse_eval_args() -> argparse.Namespace:
     parser.add_argument(
         "-n",
         "--num_samples",
+        "--repeats",
+        dest="num_samples",
         type=int,
         default=1,
-        help="Number of samples per question for model stability measurement. " "When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.",
+        help=(
+            "Number of repeated generations per question for model stability "
+            "measurement. Alias: --repeats. When n > 1, enables k-samples "
+            "mode and computes EA, CA, IV, CR metrics."
+        ),
     )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
 

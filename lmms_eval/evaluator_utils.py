@@ -162,7 +162,7 @@ class TaskOutput:
                 self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = "N/A"
 
     def calculate_stability_metrics(self) -> None:
-        """Calculate model stability metrics (EA, CA, IV, CR) when num_samples > 1.
+        """Calculate model stability metrics (EA, CA, IV, CR) when repeats > 1.
 
         These metrics measure model consistency across multiple samples per question.
         Only computed when repeats > 1 (k-samples mode).

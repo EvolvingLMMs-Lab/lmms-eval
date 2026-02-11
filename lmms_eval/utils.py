@@ -529,7 +529,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     """Generate table of results.
 
     Automatically hides columns that are all N/A (e.g., stability metrics when
-    num_samples=1, or baseline comparison when --baseline is not provided).
+    repeats=1, or baseline comparison when --baseline is not provided).
     """
     from pytablewriter import LatexTableWriter, MarkdownTableWriter
 

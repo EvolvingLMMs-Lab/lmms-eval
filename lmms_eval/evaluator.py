@@ -247,7 +247,7 @@ def simple_evaluate(
                 task_obj.set_fewshot_seed(seed=fewshot_random_seed)
                 # eval_logger.info(f"Setting fewshot random generator seed to {fewshot_random_seed}")
 
-                # Handle num_samples for model stability measurement (k-samples mode)
+                # Handle repeated generations for model stability measurement (k-samples mode)
                 if num_samples > 1:
                     default_repeats = task_obj.get_config("repeats") or 1
                     eval_logger.info(f"[Model Stability] Setting repeats={num_samples} for {task_name} (was: {default_repeats})")
