@@ -898,8 +898,23 @@ def create_iterator(raw_iterator, rank, world_size, limit=None, offset=0):
     """
     if offset is None:
         offset = 0
+
+    rank = int(rank)
+    world_size = int(world_size)
+    offset = int(offset)
+
     if offset < 0:
         raise ValueError(f"offset must be >= 0, got {offset}")
+
+    if limit is not None:
+        if isinstance(limit, float) and not limit.is_integer():
+            raise ValueError(
+                f"limit passed to create_iterator must be an integer count after normalization, got fractional value: {limit}",
+            )
+        limit = int(limit)
+        if limit < 0:
+            raise ValueError(f"limit must be >= 0, got {limit}")
+
     start = rank + offset
     stop = None if limit is None else offset + limit
     return islice(raw_iterator, start, stop, world_size)

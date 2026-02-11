@@ -21,7 +21,7 @@ if [[ -z "${OPENAI_API_KEY}" ]]; then
   exit 1
 fi
 
-MODEL_VERSION="${MODEL_VERSION:-allenai/molmo-2-8b}"
+MODEL_VERSION="${MODEL_VERSION:-bytedance-seed/seed-1.6-flash}"
 TASKS="${TASKS:-mme}"
 NUM_SAMPLES="${NUM_SAMPLES:-3}"
 LIMIT="${LIMIT:-8}"
@@ -30,6 +30,11 @@ VERBOSITY="${VERBOSITY:-INFO}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-./logs/openrouter_mme_stats}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)}"
 OUTPUT_PATH="${OUTPUT_ROOT}/${RUN_ID}"
+
+if [[ "${TASKS}" == "mme" ]] && [[ "${LIMIT}" =~ ^[0-9]+$ ]] && (( LIMIT < 2 )); then
+  echo "[WARN] MME aggregate expects at least 2 samples when using --limit; overriding LIMIT=${LIMIT} -> 2"
+  LIMIT=2
+fi
 
 echo "[INFO] OpenRouter MME statistics test"
 echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} num_samples=${NUM_SAMPLES} limit=${LIMIT}"

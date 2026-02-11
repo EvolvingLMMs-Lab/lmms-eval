@@ -444,7 +444,7 @@ class Task(abc.ABC):
             utils.create_iterator(
                 range(len(self.test_docs())),
                 rank=rank,
-                limit=limit,
+                limit=int(limit) if limit is not None else None,
                 world_size=world_size,
                 offset=offset,
             )
@@ -452,7 +452,7 @@ class Task(abc.ABC):
             else utils.create_iterator(
                 range(len(self.validation_docs())),
                 rank=rank,
-                limit=limit,
+                limit=int(limit) if limit is not None else None,
                 world_size=world_size,
                 offset=offset,
             )
