@@ -230,7 +230,11 @@ def parse_eval_args() -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help="Limit the number of examples per task. Use -1 to evaluate all samples. If 0 < limit < 1, limit is treated as a percentage of the total number of examples.",
+        help=(
+            "Limit examples per task: use -1 (or omit) for all samples, "
+            "0 < limit < 1 for a fraction of the dataset, and limit >= 1 "
+            "for an absolute sample count."
+        ),
     )
     parser.add_argument(
         "--offset",
