@@ -654,6 +654,41 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             if not is_empty:
                 values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered, ea, ca, iv, cr, baseline_str, diff_str, ci_str, pval_str])
 
+    if column == "results":
+        throughput = result_dict.get("throughput", {})
+        if isinstance(throughput, dict) and throughput:
+            preferred_order = ["total_tokens", "e2e_latency", "avg_speed"]
+            ordered_keys = preferred_order + sorted([k for k in throughput.keys() if k not in preferred_order])
+            for metric_name in ordered_keys:
+                if metric_name not in throughput:
+                    continue
+                metric_value = throughput.get(metric_name)
+                if isinstance(metric_value, float):
+                    display_value = f"{metric_value:.4f}"
+                else:
+                    display_value = str(metric_value)
+                values.append([
+                    "throughput",
+                    "N/A",
+                    "none",
+                    "N/A",
+                    metric_name,
+                    "",
+                    display_value,
+                    "",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                    "N/A",
+                ])
+
     # Determine which optional columns to hide (all values are N/A)
     cols_to_hide = set()
     for col_idx in optional_col_indices:

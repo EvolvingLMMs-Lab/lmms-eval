@@ -271,6 +271,10 @@ def simple_evaluate(
             fewshot_as_multiturn=fewshot_as_multiturn,
         )
 
+    from lmms_eval.models.model_utils.gen_metrics import reset_logged_metrics
+
+    reset_logged_metrics()
+
     # Getting the rank settings
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
     global_rank = int(os.environ.get("RANK", 0))
@@ -296,6 +300,8 @@ def simple_evaluate(
     )
 
     if global_rank == 0:
+        from lmms_eval.models.model_utils.gen_metrics import summarize_logged_metrics
+
         if isinstance(model, str):
             model_name = model
         elif hasattr(model, "config") and hasattr(model.config, "_name_or_path"):
@@ -330,6 +336,9 @@ def simple_evaluate(
         )
         results["git_hash"] = get_git_commit_hash()
         results["date"] = datetime_str
+        throughput_summary = summarize_logged_metrics()
+        if throughput_summary:
+            results["throughput"] = throughput_summary
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
 
