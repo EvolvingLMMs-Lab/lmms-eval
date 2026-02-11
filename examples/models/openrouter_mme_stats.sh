@@ -9,7 +9,7 @@ set -euo pipefail
 # - CLT stderr (`*_stderr_clt,*`)
 # - Clustered stderr (`*_stderr_clustered,*`, when task defines clusters)
 # - Stability metrics (`*_expected_accuracy,*`, `*_consensus_accuracy,*`,
-#   `*_internal_variance,*`, `*_consistency_rate,*`) when NUM_SAMPLES > 1
+#   `*_internal_variance,*`, `*_consistency_rate,*`) when REPEATS > 1
 # - Optional paired baseline stats (`paired_ci_*`, `paired_pvalue`) if BASELINE is set
 
 export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
@@ -23,7 +23,7 @@ fi
 
 MODEL_VERSION="${MODEL_VERSION:-bytedance-seed/seed-1.6-flash}"
 TASKS="${TASKS:-mme}"
-NUM_SAMPLES="${NUM_SAMPLES:-3}"
+REPEATS="${REPEATS:-${NUM_SAMPLES:-3}}"
 LIMIT="${LIMIT:--1}"
 BATCH_SIZE="${BATCH_SIZE:-1}"
 VERBOSITY="${VERBOSITY:-INFO}"
@@ -43,7 +43,7 @@ if [[ "${TASKS}" == "mme" ]] && [[ "${LIMIT}" =~ ^[0-9]+$ ]] && (( LIMIT < 2 ));
 fi
 
 echo "[INFO] OpenRouter MME statistics test"
-echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} num_samples=${NUM_SAMPLES} limit=${LIMIT_DISPLAY}"
+echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} repeats=${REPEATS} limit=${LIMIT_DISPLAY}"
 echo "[INFO] output_path=${OUTPUT_PATH}"
 
 cmd=(
@@ -52,7 +52,7 @@ cmd=(
   --model_args "model_version=${MODEL_VERSION},base_url=${OPENAI_API_BASE}"
   --tasks "${TASKS}"
   --batch_size "${BATCH_SIZE}"
-  --num_samples "${NUM_SAMPLES}"
+  --repeats "${REPEATS}"
   --output_path "${OUTPUT_PATH}"
   --log_samples
   --verbosity "${VERBOSITY}"

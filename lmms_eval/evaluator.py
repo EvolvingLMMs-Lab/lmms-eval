@@ -84,7 +84,7 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
-    num_samples: int = 1,
+    repeats: int = 1,
     baseline: Optional[str] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -124,6 +124,8 @@ def simple_evaluate(
         If True, write out an example document and model input for checking task integrity
     :param log_samples: bool
         If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis
+    :param repeats: int
+        Number of repeated generations per question for k-samples stability metrics.
     :param system_instruction: str
         System instruction to be applied to the prompt
     :param apply_chat_template: bool
@@ -248,10 +250,10 @@ def simple_evaluate(
                 # eval_logger.info(f"Setting fewshot random generator seed to {fewshot_random_seed}")
 
                 # Handle repeated generations for model stability measurement (k-samples mode)
-                if num_samples > 1:
+                if repeats > 1:
                     default_repeats = task_obj.get_config("repeats") or 1
-                    eval_logger.info(f"[Model Stability] Setting repeats={num_samples} for {task_name} (was: {default_repeats})")
-                    task_obj.set_config(key="repeats", value=num_samples)
+                    eval_logger.info(f"[Model Stability] Setting repeats={repeats} for {task_name} (was: {default_repeats})")
+                    task_obj.set_config(key="repeats", value=repeats)
 
                 adjusted_task_dict[task_name] = task_obj
 

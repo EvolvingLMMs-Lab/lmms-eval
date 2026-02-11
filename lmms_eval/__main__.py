@@ -391,14 +391,15 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "-n",
-        "--num_samples",
         "--repeats",
-        dest="num_samples",
+        "--num_samples",
+        dest="repeats",
         type=int,
         default=1,
         help=(
             "Number of repeated generations per question for model stability "
-            "measurement. Alias: --repeats. When n > 1, enables k-samples "
+            "measurement. Backward-compatible alias: --num_samples. "
+            "When n > 1, enables k-samples "
             "mode and computes EA, CA, IV, CR metrics."
         ),
     )
@@ -687,7 +688,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
         force_simple=args.force_simple,
         launcher_args=args.launcher_args,
-        num_samples=args.num_samples,
+        repeats=args.repeats,
         baseline=args.baseline,
         **request_caching_args,
     )
