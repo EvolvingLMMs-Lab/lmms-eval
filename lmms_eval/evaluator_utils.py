@@ -285,10 +285,14 @@ def print_writeout(task) -> None:
             eval_logger.info(f"Request: {str(inst)}")
 
 
-def get_sample_size(task, limit: Optional[int]) -> Union[int, None]:
-    if limit is not None:
-        limit = int(math.ceil(len(task.eval_docs) * limit)) if limit < 1.0 else int(limit)
-    return limit
+def get_sample_size(task, limit: Optional[Union[int, float]]) -> Union[int, None]:
+    if limit is None or limit == -1:
+        return None
+    if limit < 0:
+        raise ValueError(f"limit must be -1 or non-negative, got {limit}")
+    if 0 < limit < 1.0:
+        return int(math.ceil(len(task.eval_docs) * limit))
+    return int(limit)
 
 
 def prepare_print_tasks(

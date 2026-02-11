@@ -24,20 +24,26 @@ fi
 MODEL_VERSION="${MODEL_VERSION:-bytedance-seed/seed-1.6-flash}"
 TASKS="${TASKS:-mme}"
 NUM_SAMPLES="${NUM_SAMPLES:-3}"
-LIMIT="${LIMIT:-8}"
+LIMIT="${LIMIT:--1}"
 BATCH_SIZE="${BATCH_SIZE:-1}"
 VERBOSITY="${VERBOSITY:-INFO}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-./logs/openrouter_mme_stats}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)}"
 OUTPUT_PATH="${OUTPUT_ROOT}/${RUN_ID}"
+LIMIT_DISPLAY="${LIMIT}"
+
+if [[ "${LIMIT}" == "-1" ]]; then
+  LIMIT_DISPLAY="all"
+fi
 
 if [[ "${TASKS}" == "mme" ]] && [[ "${LIMIT}" =~ ^[0-9]+$ ]] && (( LIMIT < 2 )); then
   echo "[WARN] MME aggregate expects at least 2 samples when using --limit; overriding LIMIT=${LIMIT} -> 2"
   LIMIT=2
+  LIMIT_DISPLAY="2"
 fi
 
 echo "[INFO] OpenRouter MME statistics test"
-echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} num_samples=${NUM_SAMPLES} limit=${LIMIT}"
+echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} num_samples=${NUM_SAMPLES} limit=${LIMIT_DISPLAY}"
 echo "[INFO] output_path=${OUTPUT_PATH}"
 
 cmd=(
@@ -47,11 +53,14 @@ cmd=(
   --tasks "${TASKS}"
   --batch_size "${BATCH_SIZE}"
   --num_samples "${NUM_SAMPLES}"
-  --limit "${LIMIT}"
   --output_path "${OUTPUT_PATH}"
   --log_samples
   --verbosity "${VERBOSITY}"
 )
+
+if [[ "${LIMIT}" != "-1" ]]; then
+  cmd+=(--limit "${LIMIT}")
+fi
 
 if [[ -n "${BASELINE:-}" ]]; then
   echo "[INFO] baseline=${BASELINE}"

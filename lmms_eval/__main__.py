@@ -230,7 +230,7 @@ def parse_eval_args() -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help="Limit the number of examples per task. " "If <1, limit is a percentage of the total number of examples.",
+        help="Limit the number of examples per task. Use -1 to evaluate all samples. If 0 < limit < 1, limit is treated as a percentage of the total number of examples.",
     )
     parser.add_argument(
         "--offset",
@@ -587,8 +587,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     if "push_samples_to_hub" in evaluation_tracker_args and not args.log_samples:
         eval_logger.warning("Pushing samples to the Hub requires --log_samples to be set. Samples will not be pushed to the Hub.")
 
-    if args.limit:
+    if args.limit is not None and args.limit != -1:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
+    if args.limit is not None and args.limit < 0 and args.limit != -1:
+        raise ValueError("--limit must be -1 or non-negative")
     if args.offset < 0:
         raise ValueError("--offset must be >= 0")
 
