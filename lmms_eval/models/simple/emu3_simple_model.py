@@ -64,7 +64,7 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
             contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
 
             # Extract visuals from dataset
-            visuals = [doc_to_visual[0](self.task_dict[task[0]][split[0]][ids]) for ids in doc_id]
+            visuals = [doc_to_visual[i](self.task_dict[task[i]][split[i]][ids]) for i, ids in enumerate(doc_id)]
 
             gen_kwargs = all_gen_kwargs[0]
 
