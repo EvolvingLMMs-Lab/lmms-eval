@@ -38,7 +38,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
             desc="Model Responding",
         )
 
-        e2e_latency = 0
+        total_elapsed_time = 0
         total_tokens = 0
 
         for batch_requests in batched_requests:
@@ -131,7 +131,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     for future in as_completed(future_to_index):
                         response_text, i, latency, tokens = future.result()
                         batch_responses[i] = response_text
-                        e2e_latency += latency
+                        total_elapsed_time += latency
                         total_tokens += tokens
 
             if self.continual_mode is True:
@@ -145,11 +145,11 @@ class OpenAICompatible(OpenAICompatibleSimple):
             pbar.update(1)
 
         # Calculate average speed
-        avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+        avg_speed = total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0
         # Log metrics
         metric_dict = {
             "total_gen_tokens": total_tokens,
-            "total_elapsed_time": e2e_latency,
+            "total_elapsed_time": total_elapsed_time,
             "avg_speed": avg_speed,
             "additional_metrics": {
                 "total_requests": len(res),

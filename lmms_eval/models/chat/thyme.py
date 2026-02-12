@@ -300,7 +300,7 @@ class Thyme(Qwen2_5_VLSimple):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
-        e2e_latency = 0
+        total_elapsed_time = 0
         total_tokens = 0
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
@@ -347,7 +347,7 @@ class Thyme(Qwen2_5_VLSimple):
             end_time = time.time()
 
             # Calculate timing metrics for batch
-            e2e_latency += end_time - start_time
+            total_elapsed_time += end_time - start_time
 
             for answer, context in zip(answers, cache_contexts):
                 clean_ans = parse_reasoning_model_answer(answer)
@@ -362,11 +362,11 @@ class Thyme(Qwen2_5_VLSimple):
         res = re_ords.get_original(res)
 
         # Calculate average speed
-        avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+        avg_speed = total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0
         # Log metrics
         metric_dict = {
             "total_gen_tokens": total_tokens,
-            "total_elapsed_time": e2e_latency,
+            "total_elapsed_time": total_elapsed_time,
             "avg_speed": avg_speed,
             "additional_metrics": {
                 "rank": self.rank,

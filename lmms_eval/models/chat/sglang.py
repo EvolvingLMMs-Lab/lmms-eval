@@ -299,7 +299,7 @@ class Sglang(lmms):
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         total_tokens = 0
-        e2e_latency = 0
+        total_elapsed_time = 0
         for batch_requests in batched_requests:
             # Prepare messages in parallel using ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=min(len(batch_requests), self.threads)) as executor:
@@ -366,7 +366,7 @@ class Sglang(lmms):
             response_text = [o["text"] for o in outputs]
 
             # Calculate timing metrics for batch
-            e2e_latency += end_time - start_time
+            total_elapsed_time += end_time - start_time
 
             for output_idx, output in enumerate(outputs):
                 # Get token count from output
@@ -378,14 +378,14 @@ class Sglang(lmms):
                 total_tokens += output_tokens
 
             if len(outputs) >= 1:
-                avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+                avg_speed = total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)
             pbar.update(len(batch_requests))
         metric_dict = {
             "total_gen_tokens": total_tokens,
-            "total_elapsed_time": e2e_latency,
+            "total_elapsed_time": total_elapsed_time,
             "avg_speed": avg_speed,
         }
         log_metrics(**metric_dict)

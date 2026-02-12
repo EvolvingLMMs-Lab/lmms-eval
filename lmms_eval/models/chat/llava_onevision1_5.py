@@ -41,7 +41,7 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
 
-        e2e_latency = 0.0
+        total_elapsed_time = 0.0
         total_tokens = 0
 
         if self.batch_size > 1:
@@ -135,7 +135,7 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
                 with torch.inference_mode():
                     cont = self.model.generate(**gen_args)
                 end_time = time.time()
-                e2e_latency += end_time - start_time
+                total_elapsed_time += end_time - start_time
 
                 # Remove prompt tokens
                 cont = cont[:, inputs["input_ids"].shape[-1] :]
@@ -154,8 +154,8 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
 
         metric_dict = {
             "total_gen_tokens": total_tokens,
-            "total_elapsed_time": e2e_latency,
-            "avg_speed": total_tokens / e2e_latency if e2e_latency > 0 else 0,
+            "total_elapsed_time": total_elapsed_time,
+            "avg_speed": total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0,
             "additional_metrics": {
                 "rank": self.rank,
             },
