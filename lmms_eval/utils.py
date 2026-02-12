@@ -654,41 +654,6 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             if not is_empty:
                 values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered, ea, ca, iv, cr, baseline_str, diff_str, ci_str, pval_str])
 
-    if column == "results":
-        throughput = result_dict.get("throughput", {})
-        if isinstance(throughput, dict) and throughput:
-            preferred_order = ["total_tokens", "e2e_latency", "avg_speed"]
-            ordered_keys = preferred_order + sorted([k for k in throughput.keys() if k not in preferred_order])
-            for metric_name in ordered_keys:
-                if metric_name not in throughput:
-                    continue
-                metric_value = throughput.get(metric_name)
-                if isinstance(metric_value, float):
-                    display_value = f"{metric_value:.4f}"
-                else:
-                    display_value = str(metric_value)
-                values.append([
-                    "throughput",
-                    "N/A",
-                    "none",
-                    "N/A",
-                    metric_name,
-                    "",
-                    display_value,
-                    "",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                ])
-
     # Determine which optional columns to hide (all values are N/A)
     cols_to_hide = set()
     for col_idx in optional_col_indices:
@@ -710,7 +675,49 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     # todo: make latex table look good
     # print(latex_writer.dumps())
 
-    return md_writer.dumps()
+    output_tables = [md_writer.dumps()]
+
+    if column == "results":
+        throughput = result_dict.get("throughput", {})
+        if isinstance(throughput, dict) and throughput:
+            preferred_order = ["total_tokens", "e2e_latency", "average_latency", "avg_speed"]
+            ordered_keys = preferred_order + sorted([k for k in throughput.keys() if k not in preferred_order])
+
+            def get_display_name(metric_name: str) -> str:
+                if metric_name == "e2e_latency":
+                    return "total_elapsed_time"
+                if metric_name == "average_latency":
+                    return "average_latency_per_request"
+                return metric_name
+
+            def get_unit(metric_name: str) -> str:
+                if metric_name == "total_tokens":
+                    return "tokens"
+                if metric_name == "e2e_latency":
+                    return "seconds"
+                if metric_name == "average_latency":
+                    return "seconds/request"
+                if metric_name == "avg_speed":
+                    return "tokens/s"
+                return "varies"
+
+            throughput_summary = MarkdownTableWriter()
+            throughput_summary.headers = ["Metric", "Value", "Unit"]
+            throughput_values = []
+
+            for metric_name in ordered_keys:
+                if metric_name not in throughput:
+                    continue
+                metric_value = throughput.get(metric_name)
+                display_value = f"{metric_value:.4f}" if isinstance(metric_value, float) else str(metric_value)
+                unit = get_unit(metric_name)
+                throughput_values.append([get_display_name(metric_name), display_value, unit])
+
+            throughput_summary.value_matrix = throughput_values
+
+            output_tables.extend(["Throughput Summary", throughput_summary.dumps()])
+
+    return "\n\n".join(output_tables)
 
 
 def positional_deprecated(fn):

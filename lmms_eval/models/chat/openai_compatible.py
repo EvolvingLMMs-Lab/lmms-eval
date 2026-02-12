@@ -151,6 +151,9 @@ class OpenAICompatible(OpenAICompatibleSimple):
             "total_tokens": total_tokens,
             "e2e_latency": e2e_latency,
             "avg_speed": avg_speed,
+            "additional_metrics": {
+                "total_requests": len(res),
+            },
         }
         log_metrics(**metric_dict)
 

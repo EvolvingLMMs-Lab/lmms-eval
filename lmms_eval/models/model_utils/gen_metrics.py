@@ -27,6 +27,7 @@ def summarize_logged_metrics() -> Dict[str, Any]:
 
     total_tokens = 0.0
     e2e_latency = 0.0
+    total_requests = 0.0
     avg_speed_vals: List[float] = []
     additional_numeric: Dict[str, List[float]] = {}
 
@@ -34,6 +35,11 @@ def summarize_logged_metrics() -> Dict[str, Any]:
         token_val = metric.get("total_tokens")
         latency_val = metric.get("e2e_latency")
         speed_val = metric.get("avg_speed")
+        requests_val = metric.get("total_requests")
+        if requests_val is None:
+            requests_val = metric.get("request_count")
+        if requests_val is None:
+            requests_val = metric.get("num_requests")
 
         if isinstance(token_val, Number):
             total_tokens += float(token_val)
@@ -41,9 +47,11 @@ def summarize_logged_metrics() -> Dict[str, Any]:
             e2e_latency += float(latency_val)
         if isinstance(speed_val, Number):
             avg_speed_vals.append(float(speed_val))
+        if isinstance(requests_val, Number):
+            total_requests += float(requests_val)
 
         for key, value in metric.items():
-            if key in {"total_tokens", "e2e_latency", "avg_speed"}:
+            if key in {"total_tokens", "e2e_latency", "avg_speed", "total_requests", "request_count", "num_requests"}:
                 continue
             if isinstance(value, Number):
                 additional_numeric.setdefault(key, []).append(float(value))
@@ -53,6 +61,9 @@ def summarize_logged_metrics() -> Dict[str, Any]:
         "e2e_latency": e2e_latency,
         "avg_speed": (total_tokens / e2e_latency) if e2e_latency > 0 else (sum(avg_speed_vals) / len(avg_speed_vals) if avg_speed_vals else 0.0),
     }
+
+    if total_requests > 0:
+        summary["average_latency"] = e2e_latency / total_requests
 
     for key, values in additional_numeric.items():
         if values:
