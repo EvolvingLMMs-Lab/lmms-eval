@@ -18,8 +18,8 @@ DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
 
 PRETRAINED="${PRETRAINED:-/users/rkreft/MLLM-infra01-folder/rkreft/Meg-Runs/image-extension/llama3-3b-SFT-15n-8192sl-240gbsz-0.9i-0.1t-stage2-base-ST-MASKED-PLW0.1-PACKED-eqsample-loss-SEED28/HF}"
 TOKENIZER_PATH="${TOKENIZER_PATH:-/capstor/store/cscs/swissai/infra01/MLLM/llama3_vision_instruct_emu3_tokenizer}"
-EMU_MIN_PIXELS="${EMU_MIN_PIXELS:-262144}"     # 512*512
-EMU_MAX_PIXELS="${EMU_MAX_PIXELS:-1048576}"    # 1024*1024
+EMU_MIN_PIXELS="${EMU_MIN_PIXELS:-16384}"      # 128*128
+EMU_MAX_PIXELS="${EMU_MAX_PIXELS:-490000}"     # 700*700
 
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/llama_emu3_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval

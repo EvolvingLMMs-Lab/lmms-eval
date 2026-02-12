@@ -20,8 +20,8 @@ DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
 
 PRETRAINED="${PRETRAINED:-BAAI/Emu3.5}"
 TOKENIZER_PATH="${TOKENIZER_PATH:-$PRETRAINED}"
-EMU_MIN_PIXELS="${EMU_MIN_PIXELS:-262144}"     # 512*512
-EMU_MAX_PIXELS="${EMU_MAX_PIXELS:-1048576}"    # 1024*1024
+EMU_MIN_PIXELS="${EMU_MIN_PIXELS:-65536}"      # 256*256
+EMU_MAX_PIXELS="${EMU_MAX_PIXELS:-1960000}"    # 1400*1400
 
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/emu3p5_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval

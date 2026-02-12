@@ -37,7 +37,7 @@ class ApertusEmu3Chat(EMU3EncoderModel):
         image_tokenizer_dtype: Optional[torch.dtype] = None,
         use_cache: bool = True,
         emu_min_pixels: int = 128 * 128,
-        emu_max_pixels: int = 1024 * 1024,
+        emu_max_pixels: int = 700 * 700,
         skip_text_only: bool = True,
         skip_multi_image: bool = True,
         debug_samples: bool = False,
