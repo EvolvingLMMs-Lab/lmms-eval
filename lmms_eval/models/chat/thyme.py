@@ -365,8 +365,8 @@ class Thyme(Qwen2_5_VLSimple):
         avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
         # Log metrics
         metric_dict = {
-            "total_tokens": total_tokens,
-            "e2e_latency": e2e_latency,
+            "total_gen_tokens": total_tokens,
+            "total_elapsed_time": e2e_latency,
             "avg_speed": avg_speed,
             "additional_metrics": {
                 "rank": self.rank,

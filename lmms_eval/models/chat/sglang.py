@@ -384,8 +384,8 @@ class Sglang(lmms):
             res.extend(response_text)
             pbar.update(len(batch_requests))
         metric_dict = {
-            "total_tokens": total_tokens,
-            "e2e_latency": e2e_latency,
+            "total_gen_tokens": total_tokens,
+            "total_elapsed_time": e2e_latency,
             "avg_speed": avg_speed,
         }
         log_metrics(**metric_dict)

@@ -25,15 +25,15 @@ def summarize_logged_metrics() -> Dict[str, Any]:
     if not _THROUGHPUT_METRICS_HISTORY:
         return {}
 
-    total_tokens = 0.0
-    e2e_latency = 0.0
+    total_gen_tokens = 0.0
+    total_elapsed_time = 0.0
     total_requests = 0.0
     avg_speed_vals: List[float] = []
     additional_numeric: Dict[str, List[float]] = {}
 
     for metric in _THROUGHPUT_METRICS_HISTORY:
-        token_val = metric.get("total_tokens")
-        latency_val = metric.get("e2e_latency")
+        token_val = metric.get("total_gen_tokens")
+        latency_val = metric.get("total_elapsed_time")
         speed_val = metric.get("avg_speed")
         requests_val = metric.get("total_requests")
         if requests_val is None:
@@ -42,28 +42,28 @@ def summarize_logged_metrics() -> Dict[str, Any]:
             requests_val = metric.get("num_requests")
 
         if isinstance(token_val, Number):
-            total_tokens += float(token_val)
+            total_gen_tokens += float(token_val)
         if isinstance(latency_val, Number):
-            e2e_latency += float(latency_val)
+            total_elapsed_time += float(latency_val)
         if isinstance(speed_val, Number):
             avg_speed_vals.append(float(speed_val))
         if isinstance(requests_val, Number):
             total_requests += float(requests_val)
 
         for key, value in metric.items():
-            if key in {"total_tokens", "e2e_latency", "avg_speed", "total_requests", "request_count", "num_requests"}:
+            if key in {"total_gen_tokens", "total_elapsed_time", "avg_speed", "total_requests", "request_count", "num_requests"}:
                 continue
             if isinstance(value, Number):
                 additional_numeric.setdefault(key, []).append(float(value))
 
     summary: Dict[str, Any] = {
-        "total_tokens": int(total_tokens) if total_tokens.is_integer() else total_tokens,
-        "e2e_latency": e2e_latency,
-        "avg_speed": (total_tokens / e2e_latency) if e2e_latency > 0 else (sum(avg_speed_vals) / len(avg_speed_vals) if avg_speed_vals else 0.0),
+        "total_gen_tokens": int(total_gen_tokens) if total_gen_tokens.is_integer() else total_gen_tokens,
+        "total_elapsed_time": total_elapsed_time,
+        "avg_speed": (total_gen_tokens / total_elapsed_time) if total_elapsed_time > 0 else (sum(avg_speed_vals) / len(avg_speed_vals) if avg_speed_vals else 0.0),
     }
 
     if total_requests > 0:
-        summary["average_latency"] = e2e_latency / total_requests
+        summary["avg_latency"] = total_elapsed_time / total_requests
 
     for key, values in additional_numeric.items():
         if values:
@@ -73,14 +73,14 @@ def summarize_logged_metrics() -> Dict[str, Any]:
 
 
 def _record_metrics(
-    e2e_latency: float,
-    total_tokens: int,
+    total_elapsed_time: float,
+    total_gen_tokens: int,
     avg_speed: float,
     additional_metrics: Optional[Dict[str, Any]] = None,
 ) -> None:
     payload: Dict[str, Any] = {
-        "e2e_latency": e2e_latency,
-        "total_tokens": total_tokens,
+        "total_elapsed_time": total_elapsed_time,
+        "total_gen_tokens": total_gen_tokens,
         "avg_speed": avg_speed,
     }
     if additional_metrics:
@@ -115,8 +115,8 @@ def calculate_token_throughput(token_count: float, duration: float) -> float:
 
 
 def log_metrics(
-    e2e_latency: float,
-    total_tokens: int,
+    total_elapsed_time: float,
+    total_gen_tokens: int,
     avg_speed: float,
     additional_metrics: Optional[Dict[str, Any]] = None,
 ):
@@ -124,19 +124,19 @@ def log_metrics(
     Log the metrics in a structured format.
 
     Args:
-        e2e_latency (float): The end-to-end latency in seconds.
-        total_tokens (int): The total number of tokens processed.
+        total_elapsed_time (float): Sum of generation latencies in seconds.
+        total_gen_tokens (int): The total number of generated tokens.
         avg_speed (float): The average speed in tokens per second.
         additional_metrics (Dict[str, Any]): Additional metrics to log.
     """
-    required_stats = f"Metric summary - Total time: {e2e_latency:.3f}s, Total tokens: {total_tokens}, Avg speed: {avg_speed:.1f} tokens/s"
+    required_stats = f"Metric summary - Total elapsed time: {total_elapsed_time:.3f}s, Total gen tokens: {total_gen_tokens}, Avg speed: {avg_speed:.1f} tokens/s"
     if additional_metrics is not None:
         required_stats += ", Additional metrics: "
         required_stats += ", ".join(f"{k}: {v:.4f}" if isinstance(v, float) else f"{k}: {v}" for k, v in additional_metrics.items())
     eval_logger.info(required_stats)
     _record_metrics(
-        e2e_latency=e2e_latency,
-        total_tokens=total_tokens,
+        total_elapsed_time=total_elapsed_time,
+        total_gen_tokens=total_gen_tokens,
         avg_speed=avg_speed,
         additional_metrics=additional_metrics,
     )
@@ -174,8 +174,8 @@ class GenMetrics:
             self.metrics.update(additional_metrics)
 
         log_metrics(
-            e2e_latency=duration,
-            total_tokens=int(num_tokens),
+            total_elapsed_time=duration,
+            total_gen_tokens=int(num_tokens),
             avg_speed=throughput,
             additional_metrics=additional_metrics,
         )

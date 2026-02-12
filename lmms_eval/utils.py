@@ -680,22 +680,15 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     if column == "results":
         throughput = result_dict.get("throughput", {})
         if isinstance(throughput, dict) and throughput:
-            preferred_order = ["total_tokens", "e2e_latency", "average_latency", "avg_speed"]
+            preferred_order = ["total_gen_tokens", "total_elapsed_time", "avg_latency", "avg_speed"]
             ordered_keys = preferred_order + sorted([k for k in throughput.keys() if k not in preferred_order])
 
-            def get_display_name(metric_name: str) -> str:
-                if metric_name == "e2e_latency":
-                    return "total_elapsed_time"
-                if metric_name == "average_latency":
-                    return "average_latency_per_request"
-                return metric_name
-
             def get_unit(metric_name: str) -> str:
-                if metric_name == "total_tokens":
+                if metric_name == "total_gen_tokens":
                     return "tokens"
-                if metric_name == "e2e_latency":
+                if metric_name == "total_elapsed_time":
                     return "seconds"
-                if metric_name == "average_latency":
+                if metric_name == "avg_latency":
                     return "seconds/request"
                 if metric_name == "avg_speed":
                     return "tokens/s"
@@ -711,7 +704,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
                 metric_value = throughput.get(metric_name)
                 display_value = f"{metric_value:.4f}" if isinstance(metric_value, float) else str(metric_value)
                 unit = get_unit(metric_name)
-                throughput_values.append([get_display_name(metric_name), display_value, unit])
+                throughput_values.append([metric_name, display_value, unit])
 
             throughput_summary.value_matrix = throughput_values
 
