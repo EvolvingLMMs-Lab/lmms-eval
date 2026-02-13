@@ -110,10 +110,7 @@ class OpenAICompatible(lmms):
         # httpx.Client uses macOS proxy server settings. Adding httpx_trust_env option
         # allows httpx to ignore proxy server settings set by VPN clients.
         if not httpx_trust_env and DefaultHttpxClient is None:
-            eval_logger.warning(
-                "DefaultHttpxClient is unavailable in current openai package; "
-                "falling back to default HTTP client with trust_env=True."
-            )
+            eval_logger.warning("DefaultHttpxClient is unavailable in current openai package; " "falling back to default HTTP client with trust_env=True.")
             http_client = None
         else:
             if not httpx_trust_env and DefaultHttpxClient is not None:
@@ -302,24 +299,10 @@ class OpenAICompatible(lmms):
                     visuals = self.flatten(visuals)
                     imgs = []
                     for visual in visuals:
-                        if isinstance(visual, str) and (
-                            ".mp4" in visual
-                            or ".avi" in visual
-                            or ".mov" in visual
-                            or ".flv" in visual
-                            or ".wmv" in visual
-                        ):
+                        if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
                             frames = self.encode_video(visual, self.max_frames_num)
                             imgs.extend(frames)
-                        elif isinstance(visual, str) and (
-                            ".jpg" in visual
-                            or ".jpeg" in visual
-                            or ".png" in visual
-                            or ".gif" in visual
-                            or ".bmp" in visual
-                            or ".tiff" in visual
-                            or ".webp" in visual
-                        ):
+                        elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
                             imgs.append(self.encode_image(visual))
                         elif isinstance(visual, Image.Image):
                             imgs.append(self.encode_image(visual))
@@ -366,13 +349,9 @@ class OpenAICompatible(lmms):
                     except Exception as exc:
                         error_msg = str(exc)
                         rate_limited = rate_limited or is_rate_limit_error(error_msg)
-                        eval_logger.info(
-                            f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}"
-                        )
+                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
                         if attempt == self.max_retries - 1:
-                            eval_logger.error(
-                                f"All {self.max_retries} attempts failed. Last error: {error_msg}"
-                            )
+                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                         else:
                             time.sleep(self.timeout)
 
@@ -383,19 +362,12 @@ class OpenAICompatible(lmms):
             rate_limited_requests = 0
             request_latencies: List[float] = []
 
-            tasks_to_run = [
-                (local_index, payload)
-                for local_index, payload in batch_payloads
-                if batch_responses[local_index] is None
-            ]
+            tasks_to_run = [(local_index, payload) for local_index, payload in batch_payloads if batch_responses[local_index] is None]
 
             if tasks_to_run:
                 max_workers = min(len(tasks_to_run), current_concurrency)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = {
-                        executor.submit(process_single_request, local_index, payload): local_index
-                        for local_index, payload in tasks_to_run
-                    }
+                    futures = {executor.submit(process_single_request, local_index, payload): local_index for local_index, payload in tasks_to_run}
 
                     for future in as_completed(futures):
                         (
@@ -412,10 +384,7 @@ class OpenAICompatible(lmms):
                             rate_limited_requests += 1
                         request_latencies.append(latency)
 
-            completed_batch_responses = [
-                response if response is not None else ""
-                for response in batch_responses
-            ]
+            completed_batch_responses = [response if response is not None else "" for response in batch_responses]
 
             if self.continual_mode:
                 for doc_uuid, response_text in zip(

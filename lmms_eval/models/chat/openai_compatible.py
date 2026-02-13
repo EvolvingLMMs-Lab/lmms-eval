@@ -86,12 +86,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     "temperature": temperature,
                 }
 
-                if (
-                    "o1" in self.model_version
-                    or "o3" in self.model_version
-                    or "o4" in self.model_version
-                    or "gpt-5" in self.model_version
-                ):
+                if "o1" in self.model_version or "o3" in self.model_version or "o4" in self.model_version or "gpt-5" in self.model_version:
                     payload.pop("temperature")
                     payload.pop("max_tokens")
                     payload["response_format"] = {"type": "text"}
@@ -124,13 +119,9 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     except Exception as exc:
                         error_msg = str(exc)
                         rate_limited = rate_limited or is_rate_limit_error(error_msg)
-                        eval_logger.info(
-                            f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}"
-                        )
+                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
                         if attempt == self.max_retries - 1:
-                            eval_logger.error(
-                                f"All {self.max_retries} attempts failed. Last error: {error_msg}"
-                            )
+                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                         else:
                             time.sleep(self.timeout)
 
@@ -141,19 +132,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
             rate_limited_requests = 0
             latencies: List[float] = []
 
-            tasks_to_run = [
-                (local_index, payload)
-                for local_index, payload in batch_payloads
-                if batch_responses[local_index] is None
-            ]
+            tasks_to_run = [(local_index, payload) for local_index, payload in batch_payloads if batch_responses[local_index] is None]
 
             if tasks_to_run:
                 max_workers = min(len(tasks_to_run), current_concurrency)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = {
-                        executor.submit(process_single_request, local_index, payload): local_index
-                        for local_index, payload in tasks_to_run
-                    }
+                    futures = {executor.submit(process_single_request, local_index, payload): local_index for local_index, payload in tasks_to_run}
 
                     for future in as_completed(futures):
                         (
@@ -173,10 +157,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         if rate_limited:
                             rate_limited_requests += 1
 
-            completed_batch_responses = [
-                response if response is not None else ""
-                for response in batch_responses
-            ]
+            completed_batch_responses = [response if response is not None else "" for response in batch_responses]
 
             if self.continual_mode:
                 for doc_uuid, response_text in zip(

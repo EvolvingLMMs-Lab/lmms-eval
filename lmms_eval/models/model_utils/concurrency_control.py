@@ -53,12 +53,7 @@ def parse_bool(value) -> bool:
 
 def is_rate_limit_error(error_msg: str) -> bool:
     lowered = error_msg.lower()
-    return (
-        "429" in lowered
-        or "rate limit" in lowered
-        or "too many requests" in lowered
-        or "quota" in lowered
-    )
+    return "429" in lowered or "rate limit" in lowered or "too many requests" in lowered or "quota" in lowered
 
 
 def compute_p95(values: Sequence[float]) -> float:
@@ -92,11 +87,7 @@ def decide_next_concurrency(
     rate_limit_rate = rate_limited_requests / total_requests
     p95_latency_s = compute_p95(latencies)
 
-    should_reduce = (
-        rate_limit_rate > 0
-        or failure_rate > config.failure_threshold
-        or (p95_latency_s > 0 and p95_latency_s > config.target_latency_s)
-    )
+    should_reduce = rate_limit_rate > 0 or failure_rate > config.failure_threshold or (p95_latency_s > 0 and p95_latency_s > config.target_latency_s)
 
     if should_reduce:
         next_concurrency = max(
