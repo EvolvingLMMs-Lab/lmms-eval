@@ -227,7 +227,7 @@ class InternVLHf(lmms):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
-        e2e_latency = 0
+        total_elapsed_time = 0
         total_tokens = 0
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
@@ -309,12 +309,12 @@ class InternVLHf(lmms):
                 )
 
                 # Calculate timing metrics
-                e2e_latency += end_time - start_time
+                total_elapsed_time += end_time - start_time
                 total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
-                e2e_latency += 0
+                total_elapsed_time += 0
                 total_tokens += 0
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
@@ -327,9 +327,9 @@ class InternVLHf(lmms):
         res = re_ords.get_original(res)
 
         metric_dict = {
-            "total_tokens": total_tokens,
-            "e2e_latency": e2e_latency,
-            "avg_speed": total_tokens / e2e_latency if e2e_latency > 0 else 0,
+            "total_gen_tokens": total_tokens,
+            "total_elapsed_time": total_elapsed_time,
+            "avg_speed": total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0,
             "additional_metrics": {
                 "rank": self.rank,
             },

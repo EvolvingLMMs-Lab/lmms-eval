@@ -94,7 +94,7 @@ class VLLM(VLLMSimple):
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
-        e2e_latency = 0
+        total_elapsed_time = 0
         for batch_requests in batched_requests:
             batched_messages = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
@@ -105,7 +105,11 @@ class VLLM(VLLMSimple):
 
             sampling_params = SamplingParams(**sampling_params)
             start_time = time.time()
-            response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=self.chat_template)
+            response = self.client.chat(
+                sampling_params=sampling_params,
+                messages=batched_messages,
+                chat_template=self.chat_template,
+            )
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]
@@ -113,7 +117,7 @@ class VLLM(VLLMSimple):
                 self.add_request_response_to_cache(req, text)
 
             # Calculate timing metrics for batch
-            e2e_latency += end_time - start_time
+            total_elapsed_time += end_time - start_time
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)
@@ -122,10 +126,10 @@ class VLLM(VLLMSimple):
         if not self.disable_log_stats:
             metrics = self.get_format_metrics()
             total_tokens = metrics["generation_tokens"]
-            avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
+            avg_speed = total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0
             metric_dict = {
-                "total_tokens": total_tokens,
-                "e2e_latency": e2e_latency,
+                "total_gen_tokens": total_tokens,
+                "total_elapsed_time": total_elapsed_time,
                 "avg_speed": avg_speed,
                 "additional_metrics": {
                     "ttft": metrics["ttft"],

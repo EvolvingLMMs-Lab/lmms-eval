@@ -138,7 +138,6 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 max_workers = min(len(tasks_to_run), current_concurrency)
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     futures = {executor.submit(process_single_request, local_index, payload): local_index for local_index, payload in tasks_to_run}
-
                     for future in as_completed(futures):
                         (
                             response_text,

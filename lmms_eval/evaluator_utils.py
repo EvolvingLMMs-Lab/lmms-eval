@@ -162,7 +162,7 @@ class TaskOutput:
                 self.agg_metrics[f"{metric}_stderr_clustered,{filter_key}"] = "N/A"
 
     def calculate_stability_metrics(self) -> None:
-        """Calculate model stability metrics (EA, CA, IV, CR) when num_samples > 1.
+        """Calculate model stability metrics (EA, CA, IV, CR) when repeats > 1.
 
         These metrics measure model consistency across multiple samples per question.
         Only computed when repeats > 1 (k-samples mode).
@@ -285,10 +285,14 @@ def print_writeout(task) -> None:
             eval_logger.info(f"Request: {str(inst)}")
 
 
-def get_sample_size(task, limit: Optional[int]) -> Union[int, None]:
-    if limit is not None:
-        limit = int(math.ceil(len(task.eval_docs) * limit)) if limit < 1.0 else int(limit)
-    return limit
+def get_sample_size(task, limit: Optional[Union[int, float]]) -> Union[int, None]:
+    if limit is None or limit == -1:
+        return None
+    if limit < 0:
+        raise ValueError(f"limit must be -1 or non-negative, got {limit}")
+    if 0 < limit < 1.0:
+        return int(math.ceil(len(task.eval_docs) * limit))
+    return int(limit)
 
 
 def prepare_print_tasks(

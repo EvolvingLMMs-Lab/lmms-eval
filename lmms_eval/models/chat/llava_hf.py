@@ -41,7 +41,7 @@ class LlavaHf(LlavaHfSimple):
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
-        e2e_latency = 0
+        total_elapsed_time = 0
         total_tokens = 0
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
@@ -100,13 +100,13 @@ class LlavaHf(LlavaHfSimple):
                 cont = cont[:, inputs["input_ids"].shape[-1] :]
 
                 # Calculate timing metrics
-                e2e_latency += end_time - start_time
+                total_elapsed_time += end_time - start_time
                 total_tokens += cont.shape[-1] if len(cont.shape) > 1 else len(cont)
 
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = ""
-                e2e_latency += 0
+                total_elapsed_time += 0
                 total_tokens += 0
 
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0] if cont != "" else ""
@@ -121,9 +121,9 @@ class LlavaHf(LlavaHfSimple):
         res = re_ords.get_original(res)
 
         metric_dict = {
-            "total_tokens": total_tokens,
-            "e2e_latency": e2e_latency,
-            "avg_speed": total_tokens / e2e_latency if e2e_latency > 0 else 0,
+            "total_gen_tokens": total_tokens,
+            "total_elapsed_time": total_elapsed_time,
+            "avg_speed": total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0,
             "additional_metrics": {
                 "rank": self.rank,
             },
