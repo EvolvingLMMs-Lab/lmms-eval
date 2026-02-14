@@ -230,7 +230,7 @@ def parse_eval_args() -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help="Limit the number of examples per task. " "If <1, limit is a percentage of the total number of examples.",
+        help=("Limit examples per task: use -1 (or omit) for all samples, " "0 < limit < 1 for a fraction of the dataset, and limit >= 1 " "for an absolute sample count."),
     )
     parser.add_argument(
         "--offset",
@@ -387,10 +387,12 @@ def parse_eval_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "-n",
+        "--repeats",
         "--num_samples",
+        dest="repeats",
         type=int,
         default=1,
-        help="Number of samples per question for model stability measurement. " "When n > 1, enables k-samples mode and computes EA, CA, IV, CR metrics.",
+        help=("Number of repeated generations per question for model stability " "measurement. Backward-compatible alias: --num_samples. " "When n > 1, enables k-samples " "mode and computes EA, CA, IV, CR metrics."),
     )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
 
@@ -587,8 +589,10 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
     if "push_samples_to_hub" in evaluation_tracker_args and not args.log_samples:
         eval_logger.warning("Pushing samples to the Hub requires --log_samples to be set. Samples will not be pushed to the Hub.")
 
-    if args.limit:
+    if args.limit is not None and args.limit != -1:
         eval_logger.warning(" --limit SHOULD ONLY BE USED FOR TESTING." "REAL METRICS SHOULD NOT BE COMPUTED USING LIMIT.")
+    if args.limit is not None and args.limit < 0 and args.limit != -1:
+        raise ValueError("--limit must be -1 or non-negative")
     if args.offset < 0:
         raise ValueError("--offset must be >= 0")
 
@@ -675,7 +679,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         distributed_executor_backend="torchrun" if (torch.distributed.is_available() and torch.distributed.is_initialized()) else "accelerate",
         force_simple=args.force_simple,
         launcher_args=args.launcher_args,
-        num_samples=args.num_samples,
+        repeats=args.repeats,
         baseline=args.baseline,
         **request_caching_args,
     )

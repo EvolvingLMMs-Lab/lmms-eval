@@ -84,7 +84,7 @@ def simple_evaluate(
     distributed_executor_backend: str = "accelerate",
     cli_args=None,
     force_simple: bool = False,
-    num_samples: int = 1,
+    repeats: int = 1,
     baseline: Optional[str] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
@@ -124,6 +124,8 @@ def simple_evaluate(
         If True, write out an example document and model input for checking task integrity
     :param log_samples: bool
         If True, write out all model outputs and documents for per-sample measurement and post-hoc analysis
+    :param repeats: int
+        Number of repeated generations per question for k-samples stability metrics.
     :param system_instruction: str
         System instruction to be applied to the prompt
     :param apply_chat_template: bool
@@ -247,11 +249,11 @@ def simple_evaluate(
                 task_obj.set_fewshot_seed(seed=fewshot_random_seed)
                 # eval_logger.info(f"Setting fewshot random generator seed to {fewshot_random_seed}")
 
-                # Handle num_samples for model stability measurement (k-samples mode)
-                if num_samples > 1:
+                # Handle repeated generations for model stability measurement (k-samples mode)
+                if repeats > 1:
                     default_repeats = task_obj.get_config("repeats") or 1
-                    eval_logger.info(f"[Model Stability] Setting repeats={num_samples} for {task_name} (was: {default_repeats})")
-                    task_obj.set_config(key="repeats", value=num_samples)
+                    eval_logger.info(f"[Model Stability] Setting repeats={repeats} for {task_name} (was: {default_repeats})")
+                    task_obj.set_config(key="repeats", value=repeats)
 
                 adjusted_task_dict[task_name] = task_obj
 
@@ -270,6 +272,10 @@ def simple_evaluate(
             chat_template=lm.chat_template if apply_chat_template else None,
             fewshot_as_multiturn=fewshot_as_multiturn,
         )
+
+    from lmms_eval.models.model_utils.gen_metrics import reset_logged_metrics
+
+    reset_logged_metrics()
 
     # Getting the rank settings
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
@@ -296,6 +302,8 @@ def simple_evaluate(
     )
 
     if global_rank == 0:
+        from lmms_eval.models.model_utils.gen_metrics import summarize_logged_metrics
+
         if isinstance(model, str):
             model_name = model
         elif hasattr(model, "config") and hasattr(model.config, "_name_or_path"):
@@ -330,6 +338,9 @@ def simple_evaluate(
         )
         results["git_hash"] = get_git_commit_hash()
         results["date"] = datetime_str
+        throughput_summary = summarize_logged_metrics()
+        if throughput_summary:
+            results["throughput"] = throughput_summary
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
 
