@@ -105,16 +105,7 @@ class VLLM(VLLMSimple):
 
             sampling_params = SamplingParams(**sampling_params)
             start_time = time.time()
-            if self.chat_template is not None:
-                with open(self.chat_template, "r") as f:
-                    chat_template = f.read()
-                response = self.client.chat(
-                    sampling_params=sampling_params,
-                    messages=batched_messages,
-                    chat_template=chat_template,
-                )
-            else:
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
+            response = self.client.chat(sampling_params=sampling_params, messages=batched_messages, chat_template=self.chat_template)
             end_time = time.time()
 
             response_text = [o.outputs[0].text for o in response]
