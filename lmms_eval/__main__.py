@@ -230,11 +230,7 @@ def parse_eval_args() -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help=(
-            "Limit examples per task: use -1 (or omit) for all samples, "
-            "0 < limit < 1 for a fraction of the dataset, and limit >= 1 "
-            "for an absolute sample count."
-        ),
+        help=("Limit examples per task: use -1 (or omit) for all samples, " "0 < limit < 1 for a fraction of the dataset, and limit >= 1 " "for an absolute sample count."),
     )
     parser.add_argument(
         "--offset",
@@ -396,12 +392,7 @@ def parse_eval_args() -> argparse.Namespace:
         dest="repeats",
         type=int,
         default=1,
-        help=(
-            "Number of repeated generations per question for model stability "
-            "measurement. Backward-compatible alias: --num_samples. "
-            "When n > 1, enables k-samples "
-            "mode and computes EA, CA, IV, CR metrics."
-        ),
+        help=("Number of repeated generations per question for model stability " "measurement. Backward-compatible alias: --num_samples. " "When n > 1, enables k-samples " "mode and computes EA, CA, IV, CR metrics."),
     )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
 
