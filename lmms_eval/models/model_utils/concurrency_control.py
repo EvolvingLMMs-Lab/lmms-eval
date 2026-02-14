@@ -53,7 +53,20 @@ def parse_bool(value) -> bool:
 
 def is_rate_limit_error(error_msg: str) -> bool:
     lowered = error_msg.lower()
-    return "429" in lowered or "rate limit" in lowered or "too many requests" in lowered or "quota" in lowered
+    patterns = (
+        "429",
+        "rate limit",
+        "too many requests",
+        "quota",
+        "rate_limit",
+        "throttle",
+        "throttled",
+        "requests per min",
+        "tokens per min",
+        "rpm",
+        "tpm",
+    )
+    return any(pattern in lowered for pattern in patterns)
 
 
 def compute_p95(values: Sequence[float]) -> float:
@@ -87,19 +100,26 @@ def decide_next_concurrency(
     rate_limit_rate = rate_limited_requests / total_requests
     p95_latency_s = compute_p95(latencies)
 
-    should_reduce = rate_limit_rate > 0 or failure_rate > config.failure_threshold or (p95_latency_s > 0 and p95_latency_s > config.target_latency_s)
+    rate_limit_reduce_threshold = max(0.02, config.failure_threshold)
+    high_latency_threshold = config.target_latency_s * 1.1
+    low_latency_threshold = config.target_latency_s * 0.85
+
+    should_reduce = rate_limit_rate >= rate_limit_reduce_threshold or failure_rate > config.failure_threshold or (p95_latency_s > 0 and p95_latency_s > high_latency_threshold)
+    should_increase = not should_reduce and rate_limit_rate == 0.0 and failure_rate <= (config.failure_threshold * 0.5) and (p95_latency_s == 0 or p95_latency_s < low_latency_threshold)
 
     if should_reduce:
         next_concurrency = max(
             config.min_concurrency,
             int(current_concurrency * config.decrease_factor),
         )
-    else:
+    elif should_increase:
         increase_delta = max(1, int(current_concurrency * config.increase_step))
         next_concurrency = min(
             config.max_concurrency,
             current_concurrency + increase_delta,
         )
+    else:
+        next_concurrency = current_concurrency
 
     next_concurrency = max(config.min_concurrency, next_concurrency)
     return AdaptiveConcurrencyDecision(
