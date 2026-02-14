@@ -1662,7 +1662,7 @@ class ConfigurableTask(Task):
         return getattr(self.config, "task", None)
 
     def __repr__(self):
-        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"num_samples={len(self.eval_docs)})"
+        return f"ConfigurableTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"repeats={getattr(self.config, 'repeats', None)})"
 
 
 class ConfigurableMessagesTask(ConfigurableTask):
@@ -1712,4 +1712,4 @@ class ConfigurableMessagesTask(ConfigurableTask):
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, task_name=self.config.task, doc_id=doc_id, **kwargs)
 
     def __repr__(self):
-        return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"num_samples={len(self.eval_docs)})"
+        return f"ConfigurableMessagesTask(task_name={getattr(self.config, 'task', None)}," f"output_type={self.OUTPUT_TYPE}," f"num_fewshot={getattr(self.config, 'num_fewshot', None)}," f"repeats={getattr(self.config, 'repeats', None)})"

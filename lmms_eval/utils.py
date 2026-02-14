@@ -529,7 +529,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     """Generate table of results.
 
     Automatically hides columns that are all N/A (e.g., stability metrics when
-    num_samples=1, or baseline comparison when --baseline is not provided).
+    repeats=1, or baseline comparison when --baseline is not provided).
     """
     from pytablewriter import LatexTableWriter, MarkdownTableWriter
 
@@ -675,7 +675,42 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     # todo: make latex table look good
     # print(latex_writer.dumps())
 
-    return md_writer.dumps()
+    output_tables = [md_writer.dumps()]
+
+    if column == "results":
+        throughput = result_dict.get("throughput", {})
+        if isinstance(throughput, dict) and throughput:
+            preferred_order = ["total_gen_tokens", "total_elapsed_time", "avg_latency", "avg_speed"]
+            ordered_keys = preferred_order + sorted([k for k in throughput.keys() if k not in preferred_order])
+
+            def get_unit(metric_name: str) -> str:
+                if metric_name == "total_gen_tokens":
+                    return "tokens"
+                if metric_name == "total_elapsed_time":
+                    return "seconds"
+                if metric_name == "avg_latency":
+                    return "seconds/request"
+                if metric_name == "avg_speed":
+                    return "tokens/s"
+                return "varies"
+
+            throughput_summary = MarkdownTableWriter()
+            throughput_summary.headers = ["Metric", "Value", "Unit"]
+            throughput_values = []
+
+            for metric_name in ordered_keys:
+                if metric_name not in throughput:
+                    continue
+                metric_value = throughput.get(metric_name)
+                display_value = f"{metric_value:.4f}" if isinstance(metric_value, float) else str(metric_value)
+                unit = get_unit(metric_name)
+                throughput_values.append([metric_name, display_value, unit])
+
+            throughput_summary.value_matrix = throughput_values
+
+            output_tables.extend(["Throughput Summary", throughput_summary.dumps()])
+
+    return "\n\n".join(output_tables)
 
 
 def positional_deprecated(fn):
@@ -863,8 +898,23 @@ def create_iterator(raw_iterator, rank, world_size, limit=None, offset=0):
     """
     if offset is None:
         offset = 0
+
+    rank = int(rank)
+    world_size = int(world_size)
+    offset = int(offset)
+
     if offset < 0:
         raise ValueError(f"offset must be >= 0, got {offset}")
+
+    if limit is not None:
+        if isinstance(limit, float) and not limit.is_integer():
+            raise ValueError(
+                f"limit passed to create_iterator must be an integer count after normalization, got fractional value: {limit}",
+            )
+        limit = int(limit)
+        if limit < 0:
+            raise ValueError(f"limit must be >= 0, got {limit}")
+
     start = rank + offset
     stop = None if limit is None else offset + limit
     return islice(raw_iterator, start, stop, world_size)

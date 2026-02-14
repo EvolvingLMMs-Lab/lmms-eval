@@ -168,7 +168,7 @@ class LongVila(VLLMSimple):
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
-        e2e_latency = 0
+        total_elapsed_time = 0
         for batch_requests in batched_requests:
             prompt_embeds_list = []
             params_list = []
@@ -190,7 +190,7 @@ class LongVila(VLLMSimple):
                 self.add_request_response_to_cache(req, text)
 
             # Calculate timing metrics for batch
-            e2e_latency += end_time - start_time
+            total_elapsed_time += end_time - start_time
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)
