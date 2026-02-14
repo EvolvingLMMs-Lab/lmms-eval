@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 import uuid
+import time
 from multiprocessing import cpu_count
 from typing import List, Optional, Tuple
 
@@ -13,16 +14,20 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
-
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
-
 from dotenv import load_dotenv
 from loguru import logger as eval_logger
 from openai import AsyncOpenAI
 
-from lmms_eval.mcp import MCPClient
+from lmms_eval.models.model_utils.concurrency_control import (
+    AdaptiveConcurrencyConfig,
+    decide_next_concurrency,
+    is_rate_limit_error,
+    parse_bool,
+)
 from lmms_eval.protocol import ChatMessages
+
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 load_dotenv(verbose=True)
 
@@ -48,6 +53,13 @@ class AsyncOpenAIChat(lmms):
         max_pixels: Optional[int] = 151200,
         min_pixels: Optional[int] = 28 * 28,
         is_qwen3_vl: bool = False,
+        adaptive_concurrency: bool = False,
+        adaptive_min_concurrency: int = 1,
+        adaptive_max_concurrency: int = 128,
+        adaptive_target_latency_s: float = 15.0,
+        adaptive_increase_step: float = 0.1,
+        adaptive_decrease_factor: float = 0.7,
+        adaptive_failure_threshold: float = 0.05,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -69,7 +81,18 @@ class AsyncOpenAIChat(lmms):
         self.min_pixels = min_pixels
         self.max_frames = max_frames
         self.is_qwen3_vl = is_qwen3_vl
+        self.adaptive_concurrency = parse_bool(adaptive_concurrency)
+        self.adaptive_config = AdaptiveConcurrencyConfig.from_raw(
+            min_concurrency=adaptive_min_concurrency,
+            max_concurrency=adaptive_max_concurrency,
+            target_latency_s=adaptive_target_latency_s,
+            increase_step=adaptive_increase_step,
+            decrease_factor=adaptive_decrease_factor,
+            failure_threshold=adaptive_failure_threshold,
+        )
         if mcp_server_path is not None:
+            from lmms_eval.mcp import MCPClient
+
             self.mcp_client = MCPClient(mcp_server_path)
             os.makedirs(self.work_dir, exist_ok=True)
         else:
@@ -238,19 +261,93 @@ class AsyncOpenAIChat(lmms):
         results, requests = self.get_response_from_cache(requests)
 
         async def run():
-            res = []
+            res: List[Tuple[str, int]] = []
             pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
-            sem = asyncio.Semaphore(self.num_cpus)
+            current_concurrency = min(
+                max(1, self.num_cpus),
+                self.adaptive_config.max_concurrency,
+            ) if self.adaptive_concurrency else max(1, self.num_cpus)
+            cursor = 0
 
             async def _process(req, idx):
-                async with sem:
-                    return await self.maybe_forward_with_tool(req, idx)
+                started_at = time.time()
+                rate_limited = False
+                for attempt in range(self.max_retries):
+                    try:
+                        content, original_idx = await self.maybe_forward_with_tool(req, idx)
+                        elapsed = time.time() - started_at
+                        return content, original_idx, True, rate_limited, elapsed
+                    except Exception as exc:
+                        error_msg = str(exc)
+                        rate_limited = rate_limited or is_rate_limit_error(error_msg)
+                        eval_logger.info(
+                            f"Attempt {attempt + 1}/{self.max_retries} failed for request {idx} with error: {error_msg}"
+                        )
+                        if attempt == self.max_retries - 1:
+                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
+                        else:
+                            await asyncio.sleep(self.timeout)
 
-            tasks = [asyncio.create_task(_process(req, idx)) for idx, req in enumerate(requests)]
-            for task in asyncio.as_completed(tasks):
-                content, idx = await task
-                res.append((content, idx))
-                pbar.update(1)
+                elapsed = time.time() - started_at
+                return "", idx, False, rate_limited, elapsed
+
+            while cursor < len(requests):
+                if self.adaptive_concurrency:
+                    window_size = max(1, current_concurrency)
+                else:
+                    window_size = max(1, self.num_cpus)
+
+                batch_requests = requests[cursor : cursor + window_size]
+                if not batch_requests:
+                    break
+
+                sem = asyncio.Semaphore(window_size)
+                failed_requests = 0
+                rate_limited_requests = 0
+                request_latencies: List[float] = []
+
+                async def _run_task(req, idx):
+                    async with sem:
+                        return await _process(req, idx)
+
+                tasks = [asyncio.create_task(_run_task(req, cursor + idx)) for idx, req in enumerate(batch_requests)]
+                for task in asyncio.as_completed(tasks):
+                    (
+                        content,
+                        request_idx,
+                        success,
+                        rate_limited,
+                        elapsed,
+                    ) = await task
+                    res.append((content, request_idx))
+                    if not success:
+                        failed_requests += 1
+                    if rate_limited:
+                        rate_limited_requests += 1
+                    request_latencies.append(elapsed)
+                    pbar.update(1)
+
+                if self.adaptive_concurrency:
+                    decision = decide_next_concurrency(
+                        current_concurrency=current_concurrency,
+                        total_requests=len(batch_requests),
+                        failed_requests=failed_requests,
+                        rate_limited_requests=rate_limited_requests,
+                        latencies=request_latencies,
+                        config=self.adaptive_config,
+                    )
+                    if decision.next_concurrency != decision.current_concurrency:
+                        eval_logger.info(
+                            "Adaptive concurrency update: "
+                            f"{decision.current_concurrency} -> "
+                            f"{decision.next_concurrency} "
+                            f"(fail_rate={decision.failure_rate:.3f}, "
+                            f"rate_limit_rate={decision.rate_limit_rate:.3f}, "
+                            f"p95_latency={decision.p95_latency_s:.3f}s)"
+                        )
+                    current_concurrency = decision.next_concurrency
+
+                cursor += len(batch_requests)
 
             pbar.close()
             return res
