@@ -12,9 +12,6 @@ from lmms_eval.models.model_utils.concurrency_control import (
     is_rate_limit_error,
 )
 
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
-
 from dotenv import load_dotenv
 from loguru import logger as eval_logger
 
@@ -23,6 +20,9 @@ from lmms_eval.models.simple.openai_compatible import (
     OpenAICompatible as OpenAICompatibleSimple,
 )
 from lmms_eval.protocol import ChatMessages
+
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 load_dotenv(verbose=True)
 
@@ -123,7 +123,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         if attempt == self.max_retries - 1:
                             eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                         else:
-                            time.sleep(self.timeout)
+                            time.sleep(self.retry_backoff_s)
 
                 elapsed = time.time() - started_at
                 return "", local_index, False, rate_limited, elapsed, 0
@@ -192,12 +192,11 @@ class OpenAICompatible(OpenAICompatibleSimple):
             pbar.update(len(batch_requests))
 
         avg_speed = total_tokens / total_latency if total_latency > 0 else 0
-        metric_dict = {
-            "total_tokens": total_tokens,
-            "e2e_latency": total_latency,
-            "avg_speed": avg_speed,
-        }
-        log_metrics(**metric_dict)
+        log_metrics(
+            total_elapsed_time=total_latency,
+            total_gen_tokens=total_tokens,
+            avg_speed=avg_speed,
+        )
 
         pbar.close()
         return responses

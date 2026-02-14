@@ -22,9 +22,6 @@ from lmms_eval.models.model_utils.concurrency_control import (
     parse_bool,
 )
 
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
-
 from dotenv import load_dotenv
 from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
@@ -34,6 +31,9 @@ try:
     from openai import DefaultHttpxClient
 except ImportError:
     DefaultHttpxClient = None
+
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 load_dotenv(verbose=True)
 
@@ -46,6 +46,7 @@ class OpenAICompatible(lmms):
         base_url: str = None,
         api_key: str = None,
         timeout: int = 10,
+        retry_backoff_s: float = 1.0,
         max_retries: int = 5,
         max_size_in_mb: int = 20,
         continual_mode: bool = False,
@@ -74,6 +75,7 @@ class OpenAICompatible(lmms):
         super().__init__()
         self.model_version = model_version
         self.timeout = timeout
+        self.retry_backoff_s = max(0.0, float(retry_backoff_s))
         self.max_retries = max_retries
         self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         self.continual_mode = continual_mode
@@ -353,7 +355,7 @@ class OpenAICompatible(lmms):
                         if attempt == self.max_retries - 1:
                             eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                         else:
-                            time.sleep(self.timeout)
+                            time.sleep(self.retry_backoff_s)
 
                 latency = time.time() - started_at
                 return "", local_index, False, rate_limited, latency

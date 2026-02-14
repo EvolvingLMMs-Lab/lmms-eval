@@ -42,6 +42,7 @@ class AsyncOpenAIChat(lmms):
         base_url: str = None,
         api_key: str = None,
         timeout: int = 600,
+        retry_backoff_s: Optional[float] = None,
         max_retries: int = 5,
         max_size_in_mb: int = 20,
         mcp_server_path: str = None,
@@ -65,6 +66,7 @@ class AsyncOpenAIChat(lmms):
         super().__init__()
         self.model_version = model_version
         self.timeout = timeout
+        self.retry_backoff_s = max(0.0, float(1.0 if retry_backoff_s is None else retry_backoff_s))
         self.max_retries = max_retries
         self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         if num_cpus is None:
@@ -286,7 +288,7 @@ class AsyncOpenAIChat(lmms):
                         if attempt == self.max_retries - 1:
                             eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
                         else:
-                            await asyncio.sleep(self.timeout)
+                            await asyncio.sleep(self.retry_backoff_s)
 
                 elapsed = time.time() - started_at
                 return "", idx, False, rate_limited, elapsed
