@@ -2,13 +2,17 @@ import base64
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from io import BytesIO
 from typing import List, Tuple, Union
 from urllib.parse import unquote
 
 import numpy as np
 from accelerate import Accelerator, DistributedType
+from dotenv import load_dotenv
+from loguru import logger as eval_logger
+from openai import AzureOpenAI, OpenAI
+from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
@@ -22,18 +26,13 @@ from lmms_eval.models.model_utils.concurrency_control import (
     parse_bool,
 )
 
-VideoReader, _ = optional_import("decord", "VideoReader")
-cpu, _ = optional_import("decord", "cpu")
-
-from dotenv import load_dotenv
-from loguru import logger as eval_logger
-from openai import AzureOpenAI, OpenAI
-from PIL import Image
-
 try:
     from openai import DefaultHttpxClient
 except ImportError:
     DefaultHttpxClient = None
+
+VideoReader, _ = optional_import("decord", "VideoReader")
+cpu, _ = optional_import("decord", "cpu")
 
 load_dotenv(verbose=True)
 
@@ -46,6 +45,7 @@ class OpenAICompatible(lmms):
         base_url: str = None,
         api_key: str = None,
         timeout: int = 10,
+        retry_backoff_s: float = 1.0,
         max_retries: int = 5,
         max_size_in_mb: int = 20,
         continual_mode: bool = False,
@@ -74,6 +74,7 @@ class OpenAICompatible(lmms):
         super().__init__()
         self.model_version = model_version
         self.timeout = timeout
+        self.retry_backoff_s = max(0.0, float(retry_backoff_s))
         self.max_retries = max_retries
         self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         self.continual_mode = continual_mode
@@ -255,172 +256,195 @@ class OpenAICompatible(lmms):
             disable=(self.rank != 0),
             desc="Model Responding",
         )
-        reordered_responses: List[str] = []
+        reordered_responses: List[Union[str, None]] = [None] * len(ordered_requests)
         current_concurrency = min(
             self.num_concurrent,
             self.adaptive_config.max_concurrency,
         )
         cursor = 0
+        failed_requests = 0
+        rate_limited_requests = 0
+        request_latencies: List[float] = []
+        completed_since_adapt = 0
+        in_flight = {}
+        doc_uuids: List[Union[str, None]] = [None] * len(ordered_requests)
+        max_workers = max(
+            1,
+            self.adaptive_config.max_concurrency if self.adaptive_concurrency else current_concurrency,
+        )
 
-        while cursor < len(ordered_requests):
-            if self.adaptive_concurrency:
-                window_size = max(1, current_concurrency)
-            else:
-                window_size = max(1, max(self.batch_size, self.num_concurrent))
+        def process_single_request(local_index: int, payload: dict):
+            started_at = time.time()
+            rate_limited = False
+            last_error_msg = "unknown error"
 
-            chunk = ordered_requests[cursor : cursor + window_size]
+            for attempt in range(self.max_retries):
+                try:
+                    response = self.client.chat.completions.create(**payload)
+                    response_text = response.choices[0].message.content
+                    latency = time.time() - started_at
+                    return response_text, local_index, True, rate_limited, latency
+                except Exception as exc:
+                    error_msg = str(exc)
+                    last_error_msg = error_msg
+                    rate_limited = rate_limited or is_rate_limit_error(error_msg)
+                    eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
+                    if attempt == self.max_retries - 1:
+                        eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
+                    else:
+                        time.sleep(self.retry_backoff_s)
 
-            batch_payloads = []
-            batch_doc_uuids = []
-            batch_responses: List[Union[str, None]] = []
+            latency = time.time() - started_at
+            error_preview = last_error_msg.replace("\n", " ")[:200]
+            failure_content = f"[LMMS_EVAL_REQUEST_FAILED after {self.max_retries} retries] {error_preview}"
+            return failure_content, local_index, False, rate_limited, latency
 
-            for idx, request_args in enumerate(chunk):
-                (
-                    context,
-                    gen_kwargs,
-                    doc_to_visual_fn,
-                    doc_id_single,
-                    task_name,
-                    split_name,
-                ) = request_args
-                doc_uuid = f"{task_name}___{split_name}___{doc_id_single}"
-                batch_doc_uuids.append(doc_uuid)
+        def maybe_update_concurrency(force: bool = False) -> None:
+            nonlocal current_concurrency
+            nonlocal failed_requests
+            nonlocal rate_limited_requests
+            nonlocal request_latencies
+            nonlocal completed_since_adapt
 
-                if self.continual_mode and self.cache_mode == "resume":
-                    cached_response = self.response_cache.get(doc_uuid)
-                    if cached_response:
-                        batch_responses.append(cached_response)
-                        continue
+            if not self.adaptive_concurrency:
+                return
 
-                visuals = [doc_to_visual_fn(self.task_dict[task_name][split_name][doc_id_single])]
-                if None in visuals:
-                    imgs = []
-                else:
-                    visuals = self.flatten(visuals)
-                    imgs = []
-                    for visual in visuals:
-                        if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
-                            frames = self.encode_video(visual, self.max_frames_num)
-                            imgs.extend(frames)
-                        elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
-                            imgs.append(self.encode_image(visual))
-                        elif isinstance(visual, Image.Image):
-                            imgs.append(self.encode_image(visual))
+            sample_threshold = max(4, current_concurrency)
+            if not force and completed_since_adapt < sample_threshold:
+                return
+            if completed_since_adapt <= 0:
+                return
 
-                request_gen_kwargs = dict(gen_kwargs)
-                max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
-                temperature = request_gen_kwargs.get("temperature", 0)
-
-                payload = {
-                    "model": self.model_version,
-                    "messages": [{"role": "user", "content": []}],
-                    "max_tokens": max_new_tokens,
-                    "temperature": temperature,
-                }
-                payload["messages"][0]["content"].append({"type": "text", "text": context})
-                for img in imgs:
-                    payload["messages"][0]["content"].append(
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{img}"},
-                        }
-                    )
-
-                if "o1" in self.model_version or "o3" in self.model_version:
-                    payload.pop("temperature")
-                    payload["reasoning_effort"] = "medium"
-                    payload["response_format"] = {"type": "text"}
-                    payload.pop("max_tokens")
-                    payload["max_completion_tokens"] = max_new_tokens
-
-                batch_payloads.append((idx, payload))
-                batch_responses.append(None)
-
-            def process_single_request(local_index: int, payload: dict):
-                started_at = time.time()
-                rate_limited = False
-
-                for attempt in range(self.max_retries):
-                    try:
-                        response = self.client.chat.completions.create(**payload)
-                        response_text = response.choices[0].message.content
-                        latency = time.time() - started_at
-                        return response_text, local_index, True, rate_limited, latency
-                    except Exception as exc:
-                        error_msg = str(exc)
-                        rate_limited = rate_limited or is_rate_limit_error(error_msg)
-                        eval_logger.info(f"Attempt {attempt + 1}/{self.max_retries} failed with error: {error_msg}")
-                        if attempt == self.max_retries - 1:
-                            eval_logger.error(f"All {self.max_retries} attempts failed. Last error: {error_msg}")
-                        else:
-                            time.sleep(self.timeout)
-
-                latency = time.time() - started_at
-                return "", local_index, False, rate_limited, latency
-
+            decision = decide_next_concurrency(
+                current_concurrency=current_concurrency,
+                total_requests=completed_since_adapt,
+                failed_requests=failed_requests,
+                rate_limited_requests=rate_limited_requests,
+                latencies=request_latencies,
+                config=self.adaptive_config,
+            )
+            if decision.next_concurrency != decision.current_concurrency:
+                eval_logger.info(
+                    "Adaptive concurrency update: "
+                    f"{decision.current_concurrency} -> "
+                    f"{decision.next_concurrency} "
+                    f"(fail_rate={decision.failure_rate:.3f}, "
+                    f"rate_limit_rate={decision.rate_limit_rate:.3f}, "
+                    f"p95_latency={decision.p95_latency_s:.3f}s)"
+                )
+            current_concurrency = decision.next_concurrency
             failed_requests = 0
             rate_limited_requests = 0
-            request_latencies: List[float] = []
+            request_latencies = []
+            completed_since_adapt = 0
 
-            tasks_to_run = [(local_index, payload) for local_index, payload in batch_payloads if batch_responses[local_index] is None]
+        def build_payload_for_index(global_index: int):
+            (
+                context,
+                gen_kwargs,
+                doc_to_visual_fn,
+                doc_id_single,
+                task_name,
+                split_name,
+            ) = ordered_requests[global_index]
+            doc_uuid = f"{task_name}___{split_name}___{doc_id_single}"
 
-            if tasks_to_run:
-                max_workers = min(len(tasks_to_run), current_concurrency)
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = {executor.submit(process_single_request, local_index, payload): local_index for local_index, payload in tasks_to_run}
+            if self.continual_mode and self.cache_mode == "resume":
+                cached_response = self.response_cache.get(doc_uuid)
+                if cached_response:
+                    return doc_uuid, cached_response, None
 
-                    for future in as_completed(futures):
-                        (
-                            response_text,
-                            local_index,
-                            success,
-                            rate_limited,
-                            latency,
-                        ) = future.result()
-                        batch_responses[local_index] = response_text
-                        if not success:
-                            failed_requests += 1
-                        if rate_limited:
-                            rate_limited_requests += 1
-                        request_latencies.append(latency)
+            visuals = [doc_to_visual_fn(self.task_dict[task_name][split_name][doc_id_single])]
+            if None in visuals:
+                imgs = []
+            else:
+                visuals = self.flatten(visuals)
+                imgs = []
+                for visual in visuals:
+                    if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
+                        frames = self.encode_video(visual, self.max_frames_num)
+                        imgs.extend(frames)
+                    elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
+                        imgs.append(self.encode_image(visual))
+                    elif isinstance(visual, Image.Image):
+                        imgs.append(self.encode_image(visual))
 
-            completed_batch_responses = [response if response is not None else "" for response in batch_responses]
+            request_gen_kwargs = dict(gen_kwargs)
+            max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
+            temperature = request_gen_kwargs.get("temperature", 0)
 
-            if self.continual_mode:
-                for doc_uuid, response_text in zip(
-                    batch_doc_uuids,
-                    completed_batch_responses,
-                ):
-                    self.response_cache[doc_uuid] = response_text
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f)
-
-            reordered_responses.extend(completed_batch_responses)
-            if self.adaptive_concurrency and tasks_to_run:
-                decision = decide_next_concurrency(
-                    current_concurrency=current_concurrency,
-                    total_requests=len(tasks_to_run),
-                    failed_requests=failed_requests,
-                    rate_limited_requests=rate_limited_requests,
-                    latencies=request_latencies,
-                    config=self.adaptive_config,
+            payload = {
+                "model": self.model_version,
+                "messages": [{"role": "user", "content": []}],
+                "max_tokens": max_new_tokens,
+                "temperature": temperature,
+            }
+            payload["messages"][0]["content"].append({"type": "text", "text": context})
+            for img in imgs:
+                payload["messages"][0]["content"].append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{img}"},
+                    }
                 )
-                if decision.next_concurrency != decision.current_concurrency:
-                    eval_logger.info(
-                        "Adaptive concurrency update: "
-                        f"{decision.current_concurrency} -> "
-                        f"{decision.next_concurrency} "
-                        f"(fail_rate={decision.failure_rate:.3f}, "
-                        f"rate_limit_rate={decision.rate_limit_rate:.3f}, "
-                        f"p95_latency={decision.p95_latency_s:.3f}s)"
-                    )
-                current_concurrency = decision.next_concurrency
 
-            cursor += len(chunk)
-            pbar.update(len(chunk))
+            if "o1" in self.model_version or "o3" in self.model_version:
+                payload.pop("temperature")
+                payload["reasoning_effort"] = "medium"
+                payload["response_format"] = {"type": "text"}
+                payload.pop("max_tokens")
+                payload["max_completion_tokens"] = max_new_tokens
+
+            return doc_uuid, None, payload
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            while cursor < len(ordered_requests) or in_flight:
+                while cursor < len(ordered_requests) and len(in_flight) < max(1, current_concurrency):
+                    doc_uuid, cached_response, payload = build_payload_for_index(cursor)
+                    doc_uuids[cursor] = doc_uuid
+                    if cached_response is not None:
+                        reordered_responses[cursor] = cached_response
+                        pbar.update(1)
+                        cursor += 1
+                        continue
+                    future = executor.submit(process_single_request, cursor, payload)
+                    in_flight[future] = cursor
+                    cursor += 1
+
+                if not in_flight:
+                    break
+
+                done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                for future in done:
+                    (
+                        response_text,
+                        local_index,
+                        success,
+                        rate_limited,
+                        latency,
+                    ) = future.result()
+                    in_flight.pop(future, None)
+                    reordered_responses[local_index] = response_text
+                    if not success:
+                        failed_requests += 1
+                    if rate_limited:
+                        rate_limited_requests += 1
+                    request_latencies.append(latency)
+                    completed_since_adapt += 1
+                    if self.continual_mode and doc_uuids[local_index] is not None:
+                        self.response_cache[doc_uuids[local_index]] = response_text
+                    pbar.update(1)
+                    maybe_update_concurrency(force=False)
+
+        maybe_update_concurrency(force=True)
+
+        if self.continual_mode:
+            with open(self.response_persistent_file, "w") as f:
+                json.dump(self.response_cache, f)
 
         pbar.close()
-        return re_ords.get_original(reordered_responses)
+        completed_responses = [response if response is not None else "" for response in reordered_responses]
+        return re_ords.get_original(completed_responses)
 
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation for OpenAI compatible models")
