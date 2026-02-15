@@ -11,9 +11,11 @@ Building on lmms-eval's existing framework, v0.6 transforms evaluation from a on
 - **During training**: Evaluation runs as a standalone service, decoupled from the training loop. Submit checkpoints for async evaluation without blocking GPU training.
 - **Post-training**: Rapid, comprehensive evaluation across all modalities with statistical guarantees on the results.
 
+From the engineering side, v0.6 also ships a substantial API-throughput upgrade. With the latest API control-path updates (adaptive concurrency, refill scheduling, prefix-aware queueing, and retry/backoff decoupling), we observe about **7.5x throughput improvement** on a fixed `LIMIT=100` benchmark (`0.3278 -> 2.4584 req/s`), while preserving metric outputs for the same task/model setup.
+
 | Area | Key Features |
 |------|--------------|
-| **Performance** | Fully async and decoupled inference; data layer optimization for high-throughput multimodal access |
+| **Performance** | Fully async and decoupled inference; adaptive API concurrency control; prefix-aware queueing; measured ~7x+ throughput gain on API benchmark path |
 | **Evaluation as a Service** | Async job submission without blocking GPU training; separately hosted eval service on dedicated GPUs |
 | **Statistical Rigor** | Confidence intervals, clustered standard errors, baseline-anchored paired comparison |
 | **Frontier Evaluation** | Long video, spatial intelligence, and agentic scenarios |
@@ -98,6 +100,35 @@ python -m lmms_eval \
   --model async_openai \
   --model_args model_version=<model>,num_cpus=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
 ```
+
+#### Performance Snapshot: Latest API Path
+
+To make the performance claim auditable, we keep a concrete benchmark trail in this repo:
+- Historical comparison file: `logs/openrouter_molmo_throughput/throughput_comparison.csv`
+- Latest-vs-previous comparison file: `logs/openrouter_molmo_throughput/throughput_comparison_latest_vs_prev.csv`
+
+Benchmark setup used for this snapshot:
+- Task: `mme`
+- Limit: `100`
+- Model backend: `openai_compatible` / `openai_compatible_chat` API path
+- API endpoint family: OpenRouter-compatible
+- Model: `bytedance-seed/seed-1.6-flash`
+- Baseline control: static single concurrency (`num_concurrent=1`)
+- Latest control: adaptive + refill scheduling + prefix-aware queueing + explicit retry backoff
+
+Result summary (`requests_per_sec`):
+
+| Run Type | Concurrency | RPS | Wall Time (s) | Relative to Baseline |
+|----------|-------------|-----|---------------|----------------------|
+| baseline | 1 | 0.327836 | 305.030740 | 1.00x |
+| static | 24 | 1.926987 | 51.894473 | 5.88x |
+| adaptive (previous) | 16 | 2.404706 | 41.585121 | 7.33x |
+| adaptive_supervised_latest | 16 | 2.458435 | 40.676279 | 7.50x |
+
+Interpretation:
+- The latest API control path reaches about **7.5x throughput** over baseline on the same `LIMIT=100` setup.
+- Compared to the previous adaptive result, latest adaptive result still improves (`2.4047 -> 2.4584 req/s`, `+2.23%`).
+- This speedup is not from changing benchmark difficulty; it comes from request scheduling/control changes in the API model path.
 
 ```bash
 python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B
