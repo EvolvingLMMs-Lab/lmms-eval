@@ -51,6 +51,14 @@ Supported backends:
 - SGLang
 - API Models (OpenAI, Anthropic, Groq, etc.)
 
+**Naming unification in v0.6**
+- Chat API model implementations now follow a consistent naming pattern:
+  - `lmms_eval/models/chat/openai_compatible.py`
+  - `lmms_eval/models/chat/async_openai_compatible.py`
+- Runtime model alias compatibility is preserved:
+  - `--model async_openai` (default async alias)
+  - `--model async_openai_compatible_chat` (legacy alias, still supported)
+
 ```bash
 python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B
 python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B
