@@ -23,6 +23,7 @@ from lmms_eval.models.model_utils.concurrency_control import (
     AdaptiveConcurrencyConfig,
     decide_next_concurrency,
     is_rate_limit_error,
+    make_prefix_hash,
     parse_bool,
 )
 
@@ -62,6 +63,8 @@ class OpenAICompatible(lmms):
         adaptive_increase_step: float = 0.1,
         adaptive_decrease_factor: float = 0.7,
         adaptive_failure_threshold: float = 0.05,
+        prefix_aware_queue: bool = True,
+        prefix_hash_chars: int = 256,
         **kwargs,
     ) -> None:
         """
@@ -89,6 +92,8 @@ class OpenAICompatible(lmms):
             decrease_factor=adaptive_decrease_factor,
             failure_threshold=adaptive_failure_threshold,
         )
+        self.prefix_aware_queue = parse_bool(prefix_aware_queue)
+        self.prefix_hash_chars = max(32, int(prefix_hash_chars))
         if self.continual_mode:
             if response_persistent_folder is None:
                 raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
@@ -261,6 +266,14 @@ class OpenAICompatible(lmms):
             self.num_concurrent,
             self.adaptive_config.max_concurrency,
         )
+        dispatch_order = list(range(len(ordered_requests)))
+        if self.prefix_aware_queue:
+            dispatch_order.sort(
+                key=lambda idx: (
+                    make_prefix_hash(str(ordered_requests[idx][0]), self.prefix_hash_chars),
+                    idx,
+                ),
+            )
         cursor = 0
         failed_requests = 0
         rate_limited_requests = 0
@@ -398,17 +411,18 @@ class OpenAICompatible(lmms):
             return doc_uuid, None, payload
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            while cursor < len(ordered_requests) or in_flight:
-                while cursor < len(ordered_requests) and len(in_flight) < max(1, current_concurrency):
-                    doc_uuid, cached_response, payload = build_payload_for_index(cursor)
-                    doc_uuids[cursor] = doc_uuid
+            while cursor < len(dispatch_order) or in_flight:
+                while cursor < len(dispatch_order) and len(in_flight) < max(1, current_concurrency):
+                    request_index = dispatch_order[cursor]
+                    doc_uuid, cached_response, payload = build_payload_for_index(request_index)
+                    doc_uuids[request_index] = doc_uuid
                     if cached_response is not None:
-                        reordered_responses[cursor] = cached_response
+                        reordered_responses[request_index] = cached_response
                         pbar.update(1)
                         cursor += 1
                         continue
-                    future = executor.submit(process_single_request, cursor, payload)
-                    in_flight[future] = cursor
+                    future = executor.submit(process_single_request, request_index, payload)
+                    in_flight[future] = request_index
                     cursor += 1
 
                 if not in_flight:
