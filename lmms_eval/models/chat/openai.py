@@ -14,9 +14,7 @@ from lmms_eval.models.model_utils.concurrency_control import (
     is_rate_limit_error,
 )
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.simple.openai import (
-    OpenAICompatible as OpenAICompatibleSimple,
-)
+from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleSimple
 from lmms_eval.protocol import ChatMessages
 
 VideoReader, _ = optional_import("decord", "VideoReader")
