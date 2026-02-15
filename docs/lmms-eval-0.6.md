@@ -59,6 +59,46 @@ Supported backends:
   - `--model async_openai` (default async alias)
   - `--model async_openai_compatible_chat` (legacy alias, still supported)
 
+#### Adaptive Concurrency Control (New in v0.6)
+
+v0.6 adds adaptive concurrency for API-backed evaluation (`openai_compatible`, `openai_compatible_chat`, `async_openai`).
+
+The controller continuously adjusts in-flight request count using three online signals:
+- request failure rate
+- rate-limit hit rate (e.g., 429 / throttling)
+- p95 latency against a target latency budget
+
+Execution also uses refill-style scheduling (no full-window barrier), so completed requests immediately release slots for new work.
+
+For API models with repeated prompt prefixes, v0.6 also supports prefix-aware queueing to improve prefill-cache hit opportunities by dispatching same-prefix requests close together.
+
+| Control | Meaning |
+|---------|---------|
+| `adaptive_concurrency` | Enable/disable adaptive mode |
+| `adaptive_min_concurrency` | Lower bound for concurrency |
+| `adaptive_max_concurrency` | Upper bound for concurrency |
+| `adaptive_target_latency_s` | Target p95 latency budget |
+| `adaptive_increase_step` | Additive growth step when healthy |
+| `adaptive_decrease_factor` | Multiplicative decrease on pressure |
+| `adaptive_failure_threshold` | Failure-rate threshold for backoff |
+| `retry_backoff_s` | Retry sleep interval (separate from request timeout) |
+| `prefix_aware_queue` | Group dispatch by prefix hash |
+| `prefix_hash_chars` | Prefix length used for hashing |
+
+Example (sync API backend):
+```bash
+python -m lmms_eval \
+  --model openai_compatible \
+  --model_args model_version=<model>,num_concurrent=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
+```
+
+Example (async API backend):
+```bash
+python -m lmms_eval \
+  --model async_openai \
+  --model_args model_version=<model>,num_cpus=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
+```
+
 ```bash
 python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B
 python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B
@@ -325,20 +365,20 @@ Same accuracy, but Model A is 3× more stable.
 
 ---
 
-## 3. Frontier Multimodal Evaluation (TODO)
+## 3. Evaluating Multimodal Models in 2026 (TODO)
 
-> **Note**: This section outlines planned frontier evaluation features. Implementation is in progress.
+> **Note**: This section outlines planned evaluation features. Implementation is in progress.
 
-### 3.1 Why Frontier Scenarios Matter
+### 3.1 More features are expected
 
-Static image QA benchmarks are saturating. Building frontier multimodal systems requires setting more challenging tasks and evaluating them in more realistic scenarios:
+Static image QA benchmarks are saturating. Building multimodal systems requires setting more challenging tasks and evaluating them in more realistic scenarios:
 
 | Capability | Challenge | Current Gap |
 |------------|-----------|-------------|
 | Long video understanding | 10min+ videos, 1000+ frames | Most benchmarks use <128 frames |
-| High temporal resolution | Event detection at 30fps | Sparse sampling loses fine-grained actions |
+| High motion | Objects movement at 30fps | Sparse sampling loses fine-grained actions |
 | Spatial reasoning | 3D world understanding | 2D perception ≠ physical grounding |
-| Agentic interaction (streaming input) | Multi-step task execution | Static QA can't measure planning/tool use |
+| Agentic interaction | Multi-step task execution and feedback | Static QA can't measure planning/tool use well |
 
 **Key insight**: These capabilities require **in-environment evaluation**, the model must interact with simulators, receive feedback, and adapt. Static input-output pairs cannot capture this.
 
