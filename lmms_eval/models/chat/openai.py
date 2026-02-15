@@ -14,7 +14,7 @@ from lmms_eval.models.model_utils.concurrency_control import (
     is_rate_limit_error,
 )
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.simple.openai_compatible import (
+from lmms_eval.models.simple.openai import (
     OpenAICompatible as OpenAICompatibleSimple,
 )
 from lmms_eval.protocol import ChatMessages
@@ -25,7 +25,7 @@ cpu, _ = optional_import("decord", "cpu")
 load_dotenv(verbose=True)
 
 
-@register_model("openai_compatible_chat")
+@register_model("openai")
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
 
