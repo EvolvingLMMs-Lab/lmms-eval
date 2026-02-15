@@ -20,7 +20,9 @@ from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.concurrency_control import (
     AdaptiveConcurrencyConfig,
     decide_next_concurrency,
+    extract_text_prefix_from_chat_messages,
     is_rate_limit_error,
+    make_prefix_hash,
     parse_bool,
 )
 from lmms_eval.protocol import ChatMessages
@@ -60,6 +62,8 @@ class AsyncOpenAIChat(lmms):
         adaptive_increase_step: float = 0.1,
         adaptive_decrease_factor: float = 0.7,
         adaptive_failure_threshold: float = 0.05,
+        prefix_aware_queue: bool = True,
+        prefix_hash_chars: int = 256,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -91,6 +95,8 @@ class AsyncOpenAIChat(lmms):
             decrease_factor=adaptive_decrease_factor,
             failure_threshold=adaptive_failure_threshold,
         )
+        self.prefix_aware_queue = parse_bool(prefix_aware_queue)
+        self.prefix_hash_chars = max(32, int(prefix_hash_chars))
         if mcp_server_path is not None:
             from lmms_eval.mcp import MCPClient
 
@@ -272,6 +278,18 @@ class AsyncOpenAIChat(lmms):
                 if self.adaptive_concurrency
                 else max(1, self.num_cpus)
             )
+            dispatch_order = list(range(len(requests)))
+            if self.prefix_aware_queue:
+                prefix_hashes = {}
+                for idx in dispatch_order:
+                    request_obj = requests[idx]
+                    prefix_text = request_obj.args[0] if isinstance(request_obj.args[0], str) else ""
+                    if not prefix_text:
+                        _, doc_to_messages, _, doc_id, task, split = request_obj.args
+                        chat_messages_raw = doc_to_messages(self.task_dict[task][split][doc_id])
+                        prefix_text = extract_text_prefix_from_chat_messages(chat_messages_raw, self.prefix_hash_chars)
+                    prefix_hashes[idx] = make_prefix_hash(prefix_text, self.prefix_hash_chars)
+                dispatch_order.sort(key=lambda idx: (prefix_hashes[idx], idx))
             cursor = 0
 
             async def _process(req, idx):
@@ -343,10 +361,11 @@ class AsyncOpenAIChat(lmms):
                 request_latencies = []
                 completed_since_adapt = 0
 
-            while cursor < len(requests) or in_flight:
-                while cursor < len(requests) and len(in_flight) < max(1, current_concurrency):
-                    task = asyncio.create_task(_process(requests[cursor], cursor))
-                    in_flight[task] = cursor
+            while cursor < len(dispatch_order) or in_flight:
+                while cursor < len(dispatch_order) and len(in_flight) < max(1, current_concurrency):
+                    request_index = dispatch_order[cursor]
+                    task = asyncio.create_task(_process(requests[request_index], request_index))
+                    in_flight[task] = request_index
                     cursor += 1
 
                 if not in_flight:
