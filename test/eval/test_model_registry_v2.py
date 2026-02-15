@@ -77,10 +77,10 @@ class TestRepresentativeManifestSemantics(unittest.TestCase):
         )
         registry.register_manifest(
             ModelManifest(
-                model_id="openai_compatible",
-                simple_class_path="lmms_eval.models.simple.openai_compatible.OpenAICompatible",
-                chat_class_path="lmms_eval.models.chat.openai_compatible.OpenAICompatible",
-                aliases=("openai_compatible_chat",),
+                model_id="openai",
+                simple_class_path="lmms_eval.models.simple.openai.OpenAICompatible",
+                chat_class_path="lmms_eval.models.chat.openai.OpenAICompatible",
+                aliases=("openai_compatible", "openai_compatible_chat"),
             ),
         )
         registry.register_manifest(
@@ -94,7 +94,11 @@ class TestRepresentativeManifestSemantics(unittest.TestCase):
         self.assertEqual(registry.resolve("vllm_chat").model_id, "vllm")
         self.assertEqual(
             registry.resolve("openai_compatible_chat").model_id,
-            "openai_compatible",
+            "openai",
+        )
+        self.assertEqual(
+            registry.resolve("openai_compatible").model_id,
+            "openai",
         )
         self.assertEqual(registry.resolve("sglang_runtime").model_id, "sglang")
 

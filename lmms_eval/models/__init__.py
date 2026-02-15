@@ -63,7 +63,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "mplug_owl_video": "mplug_Owl",
     "ola": "Ola",
     "omnivinci": "OmniVinci",
-    "openai_compatible": "OpenAICompatible",
+    "openai": "OpenAICompatible",
     "oryx": "Oryx",
     "phi3v": "Phi3v",
     "phi4_multimodal": "Phi4",
@@ -107,7 +107,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
     "thyme": "Thyme",
-    "openai_compatible": "OpenAICompatible",
+    "openai": "OpenAICompatible",
     "vllm": "VLLM",
     "vllm_generate": "VLLMGenerate",
     "sglang": "Sglang",
@@ -115,6 +115,11 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "async_openai": "AsyncOpenAIChat",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
+}
+
+MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "openai": ("openai_compatible", "openai_compatible_chat"),
+    "async_openai": ("async_openai_compatible_chat",),
 }
 
 
@@ -136,11 +141,13 @@ def _build_builtin_manifests() -> list[ModelManifest]:
     for model_id in model_ids:
         simple_class = AVAILABLE_SIMPLE_MODELS.get(model_id)
         chat_class = AVAILABLE_CHAT_TEMPLATE_MODELS.get(model_id)
+        aliases = MODEL_ALIASES.get(model_id, ())
         manifests.append(
             ModelManifest(
                 model_id=model_id,
                 simple_class_path=(_build_class_path(model_id, "simple", simple_class) if simple_class else None),
                 chat_class_path=(_build_class_path(model_id, "chat", chat_class) if chat_class else None),
+                aliases=aliases,
             ),
         )
     return manifests

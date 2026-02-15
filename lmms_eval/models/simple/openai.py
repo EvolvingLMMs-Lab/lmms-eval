@@ -37,7 +37,7 @@ cpu, _ = optional_import("decord", "cpu")
 load_dotenv(verbose=True)
 
 
-@register_model("openai_compatible")
+@register_model("openai")
 class OpenAICompatible(lmms):
     def __init__(
         self,

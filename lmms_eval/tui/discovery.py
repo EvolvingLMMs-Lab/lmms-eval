@@ -122,7 +122,7 @@ def get_popular_tasks() -> list[tuple[str, str]]:
 
 def get_popular_models() -> list[tuple[str, str]]:
     return [
-        ("openai_compatible", "OpenAI Compatible API"),
+        ("openai", "OpenAI Compatible API"),
         ("qwen2_5_vl", "Qwen2.5-VL"),
         ("qwen2_5_vl_chat", "Qwen2.5-VL Chat"),
         ("llava_onevision", "LLaVA-OneVision"),

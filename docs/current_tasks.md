@@ -522,8 +522,8 @@ python -m lmms_eval --tasks list_with_num
 | `vllm_generate` | VLLMGenerate | vLLM generation mode |
 | `sglang` | Sglang | SGLang serving backend |
 | `huggingface` | Huggingface | Generic HuggingFace models |
-| `openai_compatible` | OpenAICompatible | OpenAI-compatible APIs |
-| `async_openai` | AsyncOpenAIChat | Async OpenAI chat |
+| `openai` | OpenAICompatible | OpenAI-compatible APIs (aliases: `openai_compatible`, `openai_compatible_chat`) |
+| `async_openai` | AsyncOpenAIChat | Async OpenAI chat (alias: `async_openai_compatible_chat`) |
 
 ### Simple/Legacy Models
 | Model Name | Class | Modality |
