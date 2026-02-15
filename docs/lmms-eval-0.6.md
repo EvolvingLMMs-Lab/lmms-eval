@@ -61,7 +61,7 @@ Supported backends:
   - `--model async_openai` (default async alias)
   - `--model async_openai_compatible_chat` (legacy alias, still supported)
 
-#### Adaptive Concurrency Control (New in v0.6)
+#### Adaptive Concurrency Control
 
 v0.6 adds adaptive concurrency for API-backed evaluation (`openai_compatible`, `openai_compatible_chat`, `async_openai`).
 
@@ -122,13 +122,19 @@ Result summary (`requests_per_sec`):
 |----------|-------------|-----|---------------|----------------------|
 | baseline | 1 | 0.327836 | 305.030740 | 1.00x |
 | static | 24 | 1.926987 | 51.894473 | 5.88x |
-| adaptive (previous) | 16 | 2.404706 | 41.585121 | 7.33x |
-| adaptive_supervised_latest | 16 | 2.458435 | 40.676279 | 7.50x |
+| adaptive (v1) | 16 | 2.404706 | 41.585121 | 7.33x |
+| adaptive (v2) | 16 | 2.458435 | 40.676279 | 7.50x |
 
 Interpretation:
 - The latest API control path reaches about **7.5x throughput** over baseline on the same `LIMIT=100` setup.
-- Compared to the previous adaptive result, latest adaptive result still improves (`2.4047 -> 2.4584 req/s`, `+2.23%`).
-- This speedup is not from changing benchmark difficulty; it comes from request scheduling/control changes in the API model path.
+- Compared to the previous adaptive run (`v1`), the latest adaptive run (`v2`) still improves (`2.4047 -> 2.4584 req/s`, `+2.23%`). This is a small but measurable delta in a noisy environment (shared network + provider-side scheduling), so the right takeaway is not "a new ceiling", but "less overhead and better utilization under the same constraints."
+- The core point: this speedup is not from changing benchmark difficulty. We keep the same task (`mme`), model (`bytedance-seed/seed-1.6-flash`), limit (`100`), and evaluation prompts/settings. The gain comes from changes in the API request scheduling/control path.
+- What `adaptive (v2)` means in practice:
+- Refill scheduling (no window barrier): maintain a steady pool of in-flight requests and immediately dispatch new work as soon as a request completes. This reduces idle gaps and prevents the slowest request in a window from gating progress.
+- Rolling controller updates: adjust concurrency based on a rolling batch of completions (failure rate, rate-limit hits, and p95 latency vs target) rather than only after fixed windows. This makes the controller more responsive and less sensitive to outliers.
+- Hysteresis for stability: use separate "reduce" vs "increase" conditions (and minimum sample thresholds) to avoid oscillating on a single transient 429 or a brief latency spike.
+- Retry/backoff decoupling: `retry_backoff_s` is explicitly separate from request timeout, so retries don't sleep for long timeouts and tie up worker slots.
+- Prefix-aware queueing (when enabled): reorder dispatch by prefix hash so same-prefix requests are sent close together, improving prefill-cache hit opportunities on providers that support prefix caching. (Some routing layers may dilute this benefit; the mechanism is still safe.)
 
 ```bash
 python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B
