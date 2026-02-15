@@ -66,7 +66,7 @@ We recommend `async_openai` for all API-backed evaluation — it uses native asy
 
 Both resolve to **chat mode by default** via Model Registry V2. The simple mode (`doc_to_visual` + `doc_to_text`) is deprecated and will be removed in a future release. See [Model Registry V2](#model-registry-v2) below for details.
 
-Legacy aliases still work: `async_openai_compatible`, `async_openai_compatible_chat`, `openai_compatible`, `openai_compatible_chat`.
+> **Naming change in v0.6**: the canonical model names have been shortened from `openai_compatible` / `async_openai_compatible` to `openai` / `async_openai`. These are the names used in filenames, registry keys, and `@register_model` decorators. The old names (`openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, `async_openai_compatible_chat`) continue to work as aliases via `MODEL_ALIASES` in `__init__.py`, so existing scripts are not affected.
 
 #### Adaptive Concurrency Control
 
