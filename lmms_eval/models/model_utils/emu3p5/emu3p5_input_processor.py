@@ -30,11 +30,15 @@ def smart_resize(image: Image.Image, area: int = 512 * 512, ds_factor: int = 16)
 def format_image_string(processor, image_tokens):
     image_string = ""
     h, w = image_tokens.shape
+    use_padded = getattr(processor, "visual_token_format", "direct") == "padded"
     for _h in range(h):
         row_string = ""
         for _w in range(w):
-            # TODO: might have to change per mode lex. emu3p5 model plain needs other format (6 digits)
-            row_string += "<|visual token {token_id}|>".format(token_id=image_tokens[_h, _w])
+            tid = image_tokens[_h, _w]
+            if use_padded:
+                row_string += f"<|visual token {tid:06d}|>"
+            else:
+                row_string += f"<|visual token {tid}|>"
 
         if _h < h - 1:
             row_string += processor.eol_token
@@ -81,13 +85,18 @@ class Emu3p5Processor:
         tokenizer=None,
         min_pixels: int = 512 * 512,
         max_pixels: int = 1024 * 1024,
+        visual_token_format: str = "direct",
         **kwargs,
     ):
         assert vision_tokenizer is not None, "image tokenizer can not be None"
         assert tokenizer is not None, "trxt tokenizer cant be None"
+        assert visual_token_format in ("direct", "padded"), (
+            f"visual_token_format must be 'direct' or 'padded', got '{visual_token_format}'"
+        )
 
         self.vision_tokenizer = vision_tokenizer
         self.txt_tokenizer = tokenizer
+        self.visual_token_format = visual_token_format
         # EMU3.5 Is a generative model by design, not meant for understanding tasks, nevertheless try this format.
         self.chat_template = "<|extra_203|>You are a helpful assistant. USER: {question}{images} ASSISTANT: <|extra_100|>"
         self.max_pixels = max_pixels

@@ -12,9 +12,6 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import torch
-
-# Import Emu3 classes (sys.path already set up by base class)
-from emu3p5 import Emu3Config, Emu3ForCausalLM
 from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
@@ -23,11 +20,14 @@ from transformers.generation.configuration_utils import GenerationConfig
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.emu3p5_encoder_base_model import EMU3p5EncoderBaseModel
+from lmms_eval.models.emu3p5_encoder_base_model import EMU3p5EncoderBaseModel  # noqa: E402 — sets up sys.path for emu3p5
 from lmms_eval.models.model_utils.emu3p5.download_utils import ensure_local_weights
 from lmms_eval.models.model_utils.emu3p5.emu3p5_tokenizer_loader import (
     load_emu3p5_tokenizer,
 )
+
+# Import Emu3.5 classes (sys.path set up by EMU3p5EncoderBaseModel import above)
+from emu3p5 import Emu3Config, Emu3ForCausalLM
 from lmms_eval.protocol import ChatMessages
 
 # Path to EMU3.5 tokenizer directory
@@ -49,7 +49,8 @@ class EMU3_5(EMU3p5EncoderBaseModel):
 
     def __init__(
         self,
-        pretrained: str = "BAAI/Emu3.5",
+        model_descriptor: str = "BAAI/Emu3.5",
+        tokenizer_path: Optional[str] = None,
         vq_hub: str = "BAAI/Emu3.5-VisionTokenizer",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
@@ -69,11 +70,14 @@ class EMU3_5(EMU3p5EncoderBaseModel):
     ):
         # Store settings for use in abstract methods
         self._trust_remote_code = trust_remote_code
-        self._pretrained = pretrained
+        self._pretrained = model_descriptor
 
         # Call parent constructor with mapped parameters
+        # Native EMU3.5 uses 6-digit zero-padded visual token format
         super().__init__(
-            model_descriptor=pretrained,
+            model_descriptor=model_descriptor,
+            # Native EMU3.5 always uses the submodule tokenizer (custom tiktoken-based,
+            # not available on HF), ignore any tokenizer_path passed from eval scripts.
             tokenizer_path=str(_txt_tok_path),
             vq_hub=vq_hub,
             device=device,
@@ -90,6 +94,7 @@ class EMU3_5(EMU3p5EncoderBaseModel):
             skip_multi_image=skip_multi_image,
             debug_samples=debug_samples,
             num_debug_samples=num_debug_samples,
+            visual_token_format="padded",
             **kwargs,
         )
 

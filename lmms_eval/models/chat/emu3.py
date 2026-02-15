@@ -36,7 +36,8 @@ class EMU3(EMU3EncoderBaseModel):
 
     def __init__(
         self,
-        pretrained: str = "BAAI/Emu3-Chat",
+        model_descriptor: str = "BAAI/Emu3-Chat",
+        tokenizer_path: Optional[str] = None,
         vq_hub: str = "BAAI/Emu3-VisionTokenizer",
         device: Optional[str] = "cuda",
         device_map: Optional[str] = "auto",
@@ -60,8 +61,8 @@ class EMU3(EMU3EncoderBaseModel):
 
         # Call parent constructor with mapped parameters
         super().__init__(
-            model_descriptor=pretrained,
-            tokenizer_path=pretrained,
+            model_descriptor=model_descriptor,
+            tokenizer_path=tokenizer_path if tokenizer_path is not None else model_descriptor,
             vq_hub=vq_hub,
             device=device,
             device_map=device_map,

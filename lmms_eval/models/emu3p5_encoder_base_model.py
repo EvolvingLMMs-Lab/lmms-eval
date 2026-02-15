@@ -80,6 +80,7 @@ class EMU3p5EncoderBaseModel(lmms):
         skip_multi_image: bool = True,
         debug_samples: bool = False,
         num_debug_samples: int = 5,
+        visual_token_format: str = "direct",
         **kwargs,
     ):
         super().__init__()
@@ -149,6 +150,7 @@ class EMU3p5EncoderBaseModel(lmms):
             tokenizer=self._tokenizer,
             min_pixels=emu_min_pixels,
             max_pixels=emu_max_pixels,
+            visual_token_format=visual_token_format,
         )
 
         eval_logger.info(f"EMU3.5 model loaded successfully on rank {self.rank}/" f"{self.world_size}")
