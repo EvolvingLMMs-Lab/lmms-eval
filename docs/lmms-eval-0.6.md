@@ -53,17 +53,24 @@ Supported backends:
 - SGLang
 - API Models (OpenAI, Anthropic, Groq, etc.)
 
-**Naming unification in v0.6**
-- Chat API model implementations now follow a consistent naming pattern:
-  - `lmms_eval/models/chat/openai_compatible.py`
-  - `lmms_eval/models/chat/async_openai_compatible.py`
-- Runtime model alias compatibility is preserved:
-  - `--model async_openai` (default async alias)
-  - `--model async_openai_compatible_chat` (legacy alias, still supported)
+**Unified API model interfaces**
+
+v0.6 unifies API-backed model evaluation under two interfaces:
+
+| Interface | `--model` name | Backend | Recommended |
+|-----------|---------------|---------|-------------|
+| Async | `async_openai_compatible` | `asyncio` + `AsyncOpenAI` | **Yes** |
+| Sync | `openai_compatible` | `ThreadPoolExecutor` + `OpenAI` | Fallback |
+
+We recommend `async_openai_compatible` for all API-backed evaluation — it uses native async I/O and achieves significantly higher throughput.
+
+Both resolve to **chat mode by default** via Model Registry V2. The simple mode (`doc_to_visual` + `doc_to_text`) is deprecated and will be removed in a future release. See [Model Registry V2](#model-registry-v2) below for details.
+
+Legacy aliases still work: `async_openai`, `async_openai_compatible_chat`, `openai_compatible_chat`.
 
 #### Adaptive Concurrency Control
 
-v0.6 adds adaptive concurrency for API-backed evaluation (`openai_compatible`, `openai_compatible_chat`, `async_openai`).
+v0.6 adds adaptive concurrency for API-backed evaluation (`async_openai_compatible`, `openai_compatible`).
 
 The controller continuously adjusts in-flight request count using three online signals:
 - request failure rate
@@ -94,10 +101,10 @@ python -m lmms_eval \
   --model_args model_version=<model>,num_concurrent=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
 ```
 
-Example (async API backend):
+Example (async API backend, recommended):
 ```bash
 python -m lmms_eval \
-  --model async_openai \
+  --model async_openai_compatible \
   --model_args model_version=<model>,num_cpus=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
 ```
 
@@ -140,6 +147,25 @@ Interpretation:
 python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B
 python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B
 ```
+
+#### Model Registry V2
+
+v0.6 introduces `ModelRegistryV2` — a unified model registry that replaces the previous ad-hoc import system. All model names (`--model X`) resolve through a single path.
+
+**How it works**
+
+Two dicts in `lmms_eval/models/__init__.py` declare available models:
+
+- `AVAILABLE_SIMPLE_MODELS`: maps `model_id` -> `ClassName` for simple (legacy) models in `models/simple/`
+- `AVAILABLE_CHAT_TEMPLATE_MODELS`: maps `model_id` -> `ClassName` for chat models in `models/chat/`
+
+At startup, the registry merges both dicts into `ModelManifest` objects. Each manifest holds a `model_id` and up to two class paths (simple + chat). Class paths are auto-constructed: `lmms_eval.models.{type}.{model_id}.{ClassName}`, so the dict key **must match the filename**.
+
+**Resolution**: chat is always preferred over simple (unless `force_simple=True`). This means `--model openai_compatible` transparently resolves to the chat implementation.
+
+**Aliasing**: backward-compatible names are supported via `@register_model("name1", "name2")` in each model file, and via `ModelManifest.aliases`. Old names like `async_openai` and `openai_compatible_chat` continue to work.
+
+**Simple mode deprecation**: the simple model interface (`doc_to_visual` + `doc_to_text`) for API models is deprecated. New integrations should always use chat (`doc_to_messages` + `ChatMessages`). The simple implementations in `models/simple/openai_compatible.py` will be removed in a future release.
 
 ### 1.2 Data Layer
 

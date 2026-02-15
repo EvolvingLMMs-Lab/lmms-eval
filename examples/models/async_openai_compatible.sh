@@ -32,7 +32,7 @@ MODEL_VERSION="Qwen/Qwen3-VL-4B-Instruct"
 # - is_qwen3_vl: Set to True for Qwen3-VL specific formatting, set to False for other models
 
 accelerate launch --num_processes=1 --main_process_port 12345 -m lmms_eval \
-    --model async_openai \
+    --model async_openai_compatible \
     --model_args model_version=$MODEL_VERSION,max_pixels=151200,base_url=$OPENAI_API_BASE,api_key=$OPENAI_API_KEY,num_cpus=8,timeout=6000,is_qwen3_vl=True \
     --tasks videomme \
     --batch_size 1 \
@@ -80,7 +80,7 @@ accelerate launch --num_processes=1 --main_process_port 12345 -m lmms_eval \
 # (Uncomment the following lines to use)
 #
 # accelerate launch --num_processes=1 --main_process_port 12345 -m lmms_eval \
-#     --model async_openai \
+#     --model async_openai_compatible \
 #     --model_args model_version=$MODEL_VERSION,max_pixels=151200,base_url=$OPENAI_API_BASE,api_key=$OPENAI_API_KEY,num_cpus=8,timeout=6000,mcp_server_path=/path/to/mcp_server.py,work_dir=/tmp/mcp_work \
 #     --tasks videomme \
 #     --batch_size 1 \

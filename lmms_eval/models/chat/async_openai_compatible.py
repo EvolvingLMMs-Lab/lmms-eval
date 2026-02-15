@@ -33,7 +33,7 @@ cpu, _ = optional_import("decord", "cpu")
 load_dotenv(verbose=True)
 
 
-@register_model("async_openai", "async_openai_compatible_chat")
+@register_model("async_openai_compatible_chat", "async_openai")
 class AsyncOpenAIChat(lmms):
     is_simple = False
 
