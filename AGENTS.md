@@ -11,6 +11,30 @@ For detailed development guidelines, see [CLAUDE.md](CLAUDE.md).
 **Lint**: `pre-commit run --all-files`
 **Test registry**: `uv run python -m unittest discover -s test/eval -p "test_model_registry_v2.py"`
 
+### Useful CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--model` | Model backend name (e.g., `qwen2_5_vl`, `openai`, `vllm`) |
+| `--model_args` | Comma-separated key=value pairs (e.g., `pretrained=org/model,device_map=auto`) |
+| `--tasks` | Comma-separated task names |
+| `--limit N` | Only evaluate first N samples (use for quick testing) |
+| `--batch_size N` | Batch size for inference |
+| `--num_fewshot N` | Number of fewshot examples |
+| `--device cuda:0` | Device for local models |
+| `--output_path dir/` | Directory for result output |
+| `--log_samples` | Save per-sample predictions to output |
+| `--verbosity DEBUG` | Set log level (DEBUG, INFO, WARNING, ERROR) |
+
+### Environment Variables
+
+```bash
+export OPENAI_API_KEY="..."      # Required for OpenAI/API-backed models
+export HF_TOKEN="..."            # Required for gated HuggingFace datasets
+export HF_HOME="/path/to/cache"  # HuggingFace cache directory
+export HF_HUB_ENABLE_HF_TRANSFER="1"  # Faster downloads
+```
+
 ## Project Overview
 
 lmms-eval evaluates Large Multimodal Models (LMMs) across image, video, and audio tasks. It supports 100+ benchmarks and 30+ model backends.
@@ -67,6 +91,40 @@ Dataset --> doc_to_messages (or doc_to_visual + doc_to_text)
 3. Tasks auto-register from YAML - no manual registration needed
 4. Test: `python -m lmms_eval --model qwen2_5_vl --tasks <name> --limit 8`
 
+#### Task YAML Advanced Features
+
+**`lmms_eval_specific_kwargs`** - Model-specific prompt overrides. Framework selects matching key based on model, falls back to `default`:
+
+```yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer directly."
+  qwen3_vl:
+    format: "qwen3_vl"
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+```
+
+These kwargs are passed to `doc_to_messages(doc, lmms_eval_specific_kwargs=...)`.
+
+**`include`** - Inherit shared config from a template file (avoids duplication across variants):
+
+```yaml
+include: _default_template_yaml
+```
+
+**`group` + `task` list** - Define task families:
+
+```yaml
+group: mmmu
+task:
+- mmmu_val
+- mmmu_test
+```
+
+**`output_type`** options: `generate_until` (free-form), `loglikelihood` (multiple-choice), `generate_until_multi_round` (multi-turn conversation)
+
 ### Fixing a Model Bug
 
 1. Find the model file in `models/chat/` or `models/simple/`
@@ -80,6 +138,42 @@ Dataset --> doc_to_messages (or doc_to_visual + doc_to_text)
 2. Helper functions are in `utils.py` next to the YAML
 3. `process_results` handles scoring, `doc_to_messages` handles input formatting
 4. Test with `--limit 8` to verify
+
+## Debugging
+
+### Quick Diagnostics
+
+- **Verbose logging**: `python -m lmms_eval --model ... --verbosity DEBUG` - shows detailed traces
+- **Small test run**: `--limit 5` evaluates only 5 samples - always use this when testing changes
+- **Log samples**: `--log_samples` saves per-sample predictions to output directory for inspection
+
+### Common Errors and Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `ValueError: gen_kwargs['until']` | Wrong type for `until` in generation_kwargs | Must be `str` or `list[str]` |
+| `NotImplementedError: loglikelihood` | Model doesn't support multiple-choice | Implement `loglikelihood()` or use `generate_until` tasks only |
+| `AttributeError: '_max_length'` | Missing initialization in model `__init__` | Set `self._max_length` in constructor |
+| Visual is `None` or `[]` | Dataset sample has no image/video | Guard with `if visual is not None and len(visual) > 0` |
+| API timeout/rate limit | API model hitting limits | Use `max_retries` and `retry_backoff_s` in model_args |
+
+### Logging
+
+The codebase uses `eval_logger` from loguru. To add debug logging in your code:
+
+```python
+from lmms_eval.utils import eval_logger
+eval_logger.debug("Processing batch of {} samples", len(batch))
+eval_logger.warning("Missing visual for doc_id={}", doc_id)
+```
+
+### Retry Patterns (API Models)
+
+API-backed models (openai, gemini, etc.) support retry configuration:
+
+```bash
+python -m lmms_eval --model openai --model_args pretrained=gpt-4o,max_retries=5,retry_backoff_s=2.0 --tasks mme
+```
 
 ## Constraints
 

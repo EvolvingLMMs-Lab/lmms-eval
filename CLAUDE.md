@@ -166,7 +166,7 @@ dataset_path: org/my-dataset
 dataset_kwargs:
   token: True
 test_split: test
-output_type: generate_until    # or: loglikelihood, multiple_choice
+output_type: generate_until    # or: loglikelihood, generate_until_multi_round
 
 doc_to_messages: !function utils.my_doc_to_messages  # for chat models (recommended)
 doc_to_visual: !function utils.my_doc_to_visual      # for simple models (legacy)
@@ -183,18 +183,80 @@ metric_list:
     aggregation: !function utils.my_aggregate
     higher_is_better: true
 
+# Model-specific prompt overrides (passed to doc_to_messages/doc_to_text)
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  qwen3_vl:
+    format: "qwen3_vl"
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+
+# Model-specific generation overrides
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
+
 metadata:
   - version: 0.0
 ```
+
+#### Task Groups and Inheritance
+
+Use `group` + `task` list to create task families (e.g., mmmu with 30+ subtasks):
+
+```yaml
+# lmms_eval/tasks/mmmu/mmmu.yaml (group definition)
+group: mmmu
+task:
+- mmmu_val
+- mmmu_test
+```
+
+Use `include` to share config across task variants (avoids duplication):
+
+```yaml
+# lmms_eval/tasks/textcaps/textcaps_val.yaml
+task: "textcaps_val"
+group: "textcaps_caption"
+test_split: val
+# ... task-specific overrides ...
+include: _default_template_textcaps_yaml   # inherits shared config
+```
+
+#### lmms_eval_specific_kwargs
+
+This mechanism lets tasks define model-specific prompt formatting. The `default` key is used for most models; add model-specific keys to override:
+
+```yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer directly."
+  qwen_vl:
+    format: qwen_vl          # completely different format
+  idefics2:
+    pre_prompt: ""
+    post_prompt: "\nAnswer:"  # different suffix
+```
+
+The kwargs are passed to `doc_to_messages(doc, lmms_eval_specific_kwargs=...)` and `doc_to_text(doc, lmms_eval_specific_kwargs=...)`. The framework selects the matching key based on the model being evaluated, falling back to `default`.
 
 ### 3. Implement utils.py
 
 ```python
 def my_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    # lmms_eval_specific_kwargs contains model-specific prompt config
+    # (e.g., pre_prompt, post_prompt) — selected by framework based on model
+    kwargs = lmms_eval_specific_kwargs or {}
+    pre = kwargs.get("pre_prompt", "")
+    post = kwargs.get("post_prompt", "")
+
     messages = [{"role": "user", "content": []}]
     if doc.get("image"):
         messages[0]["content"].append({"type": "image", "url": doc["image"]})
-    messages[0]["content"].append({"type": "text", "text": doc["question"]})
+    messages[0]["content"].append({"type": "text", "text": pre + doc["question"] + post})
     return messages
 
 def my_process_results(doc, results):
