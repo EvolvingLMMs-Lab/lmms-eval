@@ -119,7 +119,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
 
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "openai": ("openai_compatible", "openai_compatible_chat"),
-    "async_openai": ("async_openai_compatible_chat",),
+    "async_openai": ("async_openai_compatible_chat", "async_openai_compatible"),
 }
 
 

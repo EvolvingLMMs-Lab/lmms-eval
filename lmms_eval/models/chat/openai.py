@@ -11,7 +11,9 @@ from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.concurrency_control import (
     decide_next_concurrency,
+    extract_text_prefix_from_chat_messages,
     is_rate_limit_error,
+    make_prefix_hash,
 )
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleSimple
@@ -45,6 +47,18 @@ class OpenAICompatible(OpenAICompatibleSimple):
             self.num_concurrent,
             self.adaptive_config.max_concurrency,
         )
+        dispatch_order = list(range(len(reordered_requests)))
+        if self.prefix_aware_queue:
+            prefix_hashes = {}
+            for idx in dispatch_order:
+                req = reordered_requests[idx]
+                prefix_text = req.args[0] if isinstance(req.args[0], str) else ""
+                if not prefix_text:
+                    _, doc_to_messages, _, doc_id, task, split = req.args
+                    chat_messages_raw = doc_to_messages(self.task_dict[task][split][doc_id])
+                    prefix_text = extract_text_prefix_from_chat_messages(chat_messages_raw, self.prefix_hash_chars)
+                prefix_hashes[idx] = make_prefix_hash(prefix_text, self.prefix_hash_chars)
+            dispatch_order.sort(key=lambda idx: (prefix_hashes[idx], idx))
         cursor = 0
         failed_requests = 0
         rate_limited_requests = 0
@@ -165,18 +179,19 @@ class OpenAICompatible(OpenAICompatibleSimple):
             return doc_uuid, None, payload
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            while cursor < len(reordered_requests) or in_flight:
-                while cursor < len(reordered_requests) and len(in_flight) < max(1, current_concurrency):
-                    doc_uuid, cached_response, payload = build_payload_for_index(cursor)
-                    doc_uuids[cursor] = doc_uuid
+            while cursor < len(dispatch_order) or in_flight:
+                while cursor < len(dispatch_order) and len(in_flight) < max(1, current_concurrency):
+                    request_index = dispatch_order[cursor]
+                    doc_uuid, cached_response, payload = build_payload_for_index(request_index)
+                    doc_uuids[request_index] = doc_uuid
                     if cached_response is not None:
-                        responses[cursor] = cached_response
+                        responses[request_index] = cached_response
                         pbar.update(1)
                         cursor += 1
                         continue
 
-                    future = executor.submit(process_single_request, cursor, payload)
-                    in_flight[future] = cursor
+                    future = executor.submit(process_single_request, request_index, payload)
+                    in_flight[future] = request_index
                     cursor += 1
 
                 if not in_flight:
