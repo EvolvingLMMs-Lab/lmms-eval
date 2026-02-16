@@ -1,5 +1,6 @@
+import hashlib
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Any, Sequence
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,55 @@ def parse_bool(value) -> bool:
     if value is None:
         return False
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def make_prefix_hash(text: str, prefix_chars: int = 256) -> str:
+    clipped = (text or "")[: max(1, int(prefix_chars))]
+    return hashlib.sha1(clipped.encode("utf-8", errors="ignore")).hexdigest()
+
+
+def extract_text_prefix_from_chat_messages(messages: Sequence[Any], max_chars: int = 256) -> str:
+    remaining = max(1, int(max_chars))
+    chunks = []
+
+    for message in messages or []:
+        if remaining <= 0:
+            break
+        if not isinstance(message, dict):
+            continue
+
+        content = message.get("content")
+        if isinstance(content, str):
+            segment = content[:remaining]
+            chunks.append(segment)
+            remaining -= len(segment)
+            continue
+
+        if not isinstance(content, list):
+            continue
+
+        for item in content:
+            if remaining <= 0:
+                break
+            if isinstance(item, str):
+                segment = item[:remaining]
+                chunks.append(segment)
+                remaining -= len(segment)
+                continue
+            if not isinstance(item, dict):
+                continue
+
+            text_value = None
+            if item.get("type") == "text":
+                text_value = item.get("text")
+            elif "text" in item:
+                text_value = item.get("text")
+            if isinstance(text_value, str):
+                segment = text_value[:remaining]
+                chunks.append(segment)
+                remaining -= len(segment)
+
+    return "".join(chunks)
 
 
 def is_rate_limit_error(error_msg: str) -> bool:
