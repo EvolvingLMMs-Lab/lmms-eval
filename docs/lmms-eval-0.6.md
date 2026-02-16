@@ -24,165 +24,7 @@ From the engineering side, v0.6 also ships a substantial API-throughput upgrade.
 
 ## 1. Architecture
 
-### 1.1 Inference Backend
-
-#### Decoupled Design
-
-v0.6 separates evaluation logic from model inference. Models implement a standardized `LMM` abstract base class:
-
-```python
-class LMM(ABC):
-    def generate_until(self, requests: list[Instance]) -> list[str]:
-        """Batched text generation."""
-        pass
-
-    def loglikelihood(self, requests: list[Instance]) -> list[float]:
-        """Token-level log probabilities for multiple-choice ranking."""
-        pass
-```
-
-The `Instance` object carries:
-- `media_list`: Raw images, video paths, or audio buffers
-- `prompt`: Text prompt
-- `gen_kwargs`: Generation parameters
-
-#### Backend Integration
-
-Supported backends:
-- vLLM
-- SGLang
-- API Models (OpenAI, Anthropic, Groq, etc.)
-
-**Unified API model interfaces**
-
-v0.6 unifies API-backed model evaluation under two interfaces:
-
-| Interface | `--model` name | Backend | Recommended |
-|-----------|---------------|---------|-------------|
-| Async | `async_openai` | `asyncio` + `AsyncOpenAI` | **Yes** |
-| Sync | `openai` | `ThreadPoolExecutor` + `OpenAI` | Fallback |
-
-We recommend `async_openai` for all API-backed evaluation — it uses native async I/O and achieves significantly higher throughput.
-
-Both resolve to **chat mode by default** via Model Registry V2. The simple mode (`doc_to_visual` + `doc_to_text`) is deprecated and will be removed in a future release. See [Model Registry V2](#model-registry-v2) below for details.
-
-> **Naming change in v0.6**: the canonical model names have been shortened from `openai_compatible` / `async_openai_compatible` to `openai` / `async_openai`. These are the names used in filenames, registry keys, and `@register_model` decorators. The old names (`openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, `async_openai_compatible_chat`) continue to work as aliases via `MODEL_ALIASES` in `__init__.py`, so existing scripts are not affected.
-
-#### Adaptive Concurrency Control
-
-v0.6 adds adaptive concurrency for API-backed evaluation (`async_openai`, `openai`).
-
-The controller continuously adjusts in-flight request count using three online signals:
-- request failure rate
-- rate-limit hit rate (e.g., 429 / throttling)
-- p95 latency against a target latency budget
-
-Execution also uses refill-style scheduling (no full-window barrier), so completed requests immediately release slots for new work.
-
-For API models with repeated prompt prefixes, v0.6 also supports prefix-aware queueing to improve prefill-cache hit opportunities by dispatching same-prefix requests close together.
-
-| Control | Meaning |
-|---------|---------|
-| `adaptive_concurrency` | Enable/disable adaptive mode |
-| `adaptive_min_concurrency` | Lower bound for concurrency |
-| `adaptive_max_concurrency` | Upper bound for concurrency |
-| `adaptive_target_latency_s` | Target p95 latency budget |
-| `adaptive_increase_step` | Additive growth step when healthy |
-| `adaptive_decrease_factor` | Multiplicative decrease on pressure |
-| `adaptive_failure_threshold` | Failure-rate threshold for backoff |
-| `retry_backoff_s` | Retry sleep interval (separate from request timeout) |
-| `prefix_aware_queue` | Group dispatch by prefix hash |
-| `prefix_hash_chars` | Prefix length used for hashing |
-
-Example (sync API backend):
-```bash
-python -m lmms_eval \
-  --model openai \
-  --model_args model_version=<model>,num_concurrent=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
-```
-
-Example (async API backend, recommended):
-```bash
-python -m lmms_eval \
-  --model async_openai \
-  --model_args model_version=<model>,num_cpus=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
-```
-
-#### Performance Snapshot: Latest API Path
-
-To make the performance claim auditable, we keep a concrete benchmark trail in this repo:
-- Historical comparison file: `logs/openrouter_molmo_throughput/throughput_comparison.csv`
-- Latest-vs-previous comparison file: `logs/openrouter_molmo_throughput/throughput_comparison_latest_vs_prev.csv`
-
-Benchmark setup used for this snapshot:
-- Task: `mme`
-- Limit: `100`
-- Model backend: `openai` / `async_openai` API path
-- API endpoint family: OpenRouter-compatible
-- Model: `bytedance-seed/seed-1.6-flash`
-- Baseline control: static single concurrency (`num_concurrent=1`)
-- Latest control: adaptive + refill scheduling + prefix-aware queueing + explicit retry backoff
-
-Result summary (`requests_per_sec`):
-
-| Run Type | Concurrency | RPS | Wall Time (s) | Relative to Baseline |
-|----------|-------------|-----|---------------|----------------------|
-| baseline | 1 | 0.327836 | 305.030740 | 1.00x |
-| static | 24 | 1.926987 | 51.894473 | 5.88x |
-| adaptive (v1) | 16 | 2.404706 | 41.585121 | 7.33x |
-| adaptive (v2) | 16 | 2.458435 | 40.676279 | 7.50x |
-
-Interpretation:
-- The latest API control path reaches about **7.5x throughput** over baseline on the same `LIMIT=100` setup.
-- Compared to the previous adaptive run (`v1`), the latest adaptive run (`v2`) still improves (`2.4047 -> 2.4584 req/s`, `+2.23%`). This is a small but measurable delta in a noisy environment (shared network + provider-side scheduling), so the right takeaway is not "a new ceiling", but "less overhead and better utilization under the same constraints."
-- The core point: this speedup is not from changing benchmark difficulty. We keep the same task (`mme`), model (`bytedance-seed/seed-1.6-flash`), limit (`100`), and evaluation prompts/settings. The gain comes from changes in the API request scheduling/control path.
-- What `adaptive (v2)` means in practice:
-- Refill scheduling (no window barrier): maintain a steady pool of in-flight requests and immediately dispatch new work as soon as a request completes. This reduces idle gaps and prevents the slowest request in a window from gating progress.
-- Rolling controller updates: adjust concurrency based on a rolling batch of completions (failure rate, rate-limit hits, and p95 latency vs target) rather than only after fixed windows. This makes the controller more responsive and less sensitive to outliers.
-- Hysteresis for stability: use separate "reduce" vs "increase" conditions (and minimum sample thresholds) to avoid oscillating on a single transient 429 or a brief latency spike.
-- Retry/backoff decoupling: `retry_backoff_s` is explicitly separate from request timeout, so retries don't sleep for long timeouts and tie up worker slots.
-- Prefix-aware queueing (when enabled): reorder dispatch by prefix hash so same-prefix requests are sent close together, improving prefill-cache hit opportunities on providers that support prefix caching. (Some routing layers may dilute this benefit; the mechanism is still safe.)
-
-```bash
-python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B
-python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B
-```
-
-#### Model Registry V2
-
-v0.6 introduces `ModelRegistryV2` — a unified model registry that replaces the previous ad-hoc import system. All model names (`--model X`) resolve through a single path.
-
-**How it works**
-
-Two dicts in `lmms_eval/models/__init__.py` declare available models:
-
-- `AVAILABLE_SIMPLE_MODELS`: maps `model_id` -> `ClassName` for simple (legacy) models in `models/simple/`
-- `AVAILABLE_CHAT_TEMPLATE_MODELS`: maps `model_id` -> `ClassName` for chat models in `models/chat/`
-
-At startup, the registry merges both dicts into `ModelManifest` objects. Each manifest holds a `model_id` and up to two class paths (simple + chat). Class paths are auto-constructed: `lmms_eval.models.{type}.{model_id}.{ClassName}`, so the dict key **must match the filename**.
-
-**Resolution**: chat is always preferred over simple (unless `force_simple=True`). This means `--model openai` transparently resolves to the chat implementation.
-
-**Aliasing**: backward-compatible names are supported via `MODEL_ALIASES` in `__init__.py` and via `ModelManifest.aliases`. Old names like `openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, and `async_openai_compatible_chat` continue to work.
-
-**Simple mode deprecation**: the simple model interface (`doc_to_visual` + `doc_to_text`) for API models is deprecated. New integrations should always use chat (`doc_to_messages` + `ChatMessages`). The simple implementations in `models/simple/openai.py` will be removed in a future release.
-
-### 1.2 Data Layer
-
-#### Storage Format
-
-| Format | Random Access | Media Handling | Use in v0.6 |
-|--------|---------------|----------------|-------------|
-| JSON/Files | O(N) scan | External files | Legacy |
-| Parquet | Row-group decompress | Binary blobs | Primary format |
-
-**Parquet**: Task metadata (questions, answers, splits). Supports projection pushdown, read only required columns. Underlying format for HF Datasets (disk).
-
-**TODO**: Optimize for high-throughput multimodal access (e.g., Lance or similar columnar storage for images/videos).
-
-### 1.3 Evaluation Pipeline
-
-#### Three Components
+### 1.1 Evaluation Pipeline
 
 v0.6 defines evaluation as three decoupled components:
 
@@ -240,7 +82,161 @@ vLLM/SGLang reuse KV cache for shared prefixes. We cluster inputs by media to ma
 
 **Persist-First Strategy**: Save model outputs to disk immediately, then score asynchronously.
 
-### 1.4 Evaluation as a Service
+### 1.2 Model Interface & Backends
+
+#### Decoupled Design
+
+v0.6 separates evaluation logic from model inference. Models implement a standardized `LMM` abstract base class:
+
+```python
+class LMM(ABC):
+    def generate_until(self, requests: list[Instance]) -> list[str]:
+        """Batched text generation."""
+        pass
+
+    def loglikelihood(self, requests: list[Instance]) -> list[float]:
+        """Token-level log probabilities for multiple-choice ranking."""
+        pass
+```
+
+The `Instance` object carries:
+- `media_list`: Raw images, video paths, or audio buffers
+- `prompt`: Text prompt
+- `gen_kwargs`: Generation parameters
+
+#### Supported Backends
+
+| Backend | Example |
+|---------|---------|
+| vLLM | `python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B` |
+| SGLang | `python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B` |
+| API Models | OpenAI, Anthropic, Groq, etc. - see [API Concurrency & Throughput](#13-api-concurrency--throughput) |
+
+**Unified API Model Interfaces**
+
+v0.6 unifies API-backed model evaluation under two interfaces:
+
+| Interface | `--model` name | Backend | Recommended |
+|-----------|---------------|---------|-------------|
+| Async | `async_openai` | `asyncio` + `AsyncOpenAI` | **Yes** |
+| Sync | `openai` | `ThreadPoolExecutor` + `OpenAI` | Fallback |
+
+We recommend `async_openai` for all API-backed evaluation — it uses native async I/O and achieves significantly higher throughput.
+
+Both resolve to **chat mode by default** via Model Registry V2. The simple mode (`doc_to_visual` + `doc_to_text`) is deprecated and will be removed in a future release.
+
+> **Naming change in v0.6**: the canonical model names have been shortened from `openai_compatible` / `async_openai_compatible` to `openai` / `async_openai`. These are the names used in filenames, registry keys, and `@register_model` decorators. The old names (`openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, `async_openai_compatible_chat`) continue to work as aliases via `MODEL_ALIASES` in `__init__.py`, so existing scripts are not affected.
+
+#### Model Registry V2
+
+v0.6 introduces `ModelRegistryV2` — a unified model registry that replaces the previous ad-hoc import system. All model names (`--model X`) resolve through a single path.
+
+**How it works**
+
+Two dicts in `lmms_eval/models/__init__.py` declare available models:
+
+- `AVAILABLE_SIMPLE_MODELS`: maps `model_id` -> `ClassName` for simple (legacy) models in `models/simple/`
+- `AVAILABLE_CHAT_TEMPLATE_MODELS`: maps `model_id` -> `ClassName` for chat models in `models/chat/`
+
+At startup, the registry merges both dicts into `ModelManifest` objects. Each manifest holds a `model_id` and up to two class paths (simple + chat). Class paths are auto-constructed: `lmms_eval.models.{type}.{model_id}.{ClassName}`, so the dict key **must match the filename**.
+
+**Resolution**: chat is always preferred over simple (unless `force_simple=True`). This means `--model openai` transparently resolves to the chat implementation.
+
+**Aliasing**: backward-compatible names are supported via `MODEL_ALIASES` in `__init__.py` and via `ModelManifest.aliases`. Old names like `openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, and `async_openai_compatible_chat` continue to work.
+
+**Simple mode deprecation**: the simple model interface (`doc_to_visual` + `doc_to_text`) for API models is deprecated. New integrations should always use chat (`doc_to_messages` + `ChatMessages`). The simple implementations in `models/simple/openai.py` will be removed in a future release.
+
+### 1.3 API Concurrency & Throughput
+
+v0.6 adds adaptive concurrency for API-backed evaluation (`async_openai`, `openai`).
+
+#### Adaptive Concurrency Control
+
+The controller continuously adjusts in-flight request count using three online signals:
+- request failure rate
+- rate-limit hit rate (e.g., 429 / throttling)
+- p95 latency against a target latency budget
+
+Execution also uses refill-style scheduling (no full-window barrier), so completed requests immediately release slots for new work.
+
+For API models with repeated prompt prefixes, v0.6 also supports prefix-aware queueing to improve prefill-cache hit opportunities by dispatching same-prefix requests close together.
+
+| Control | Meaning |
+|---------|---------|
+| `adaptive_concurrency` | Enable/disable adaptive mode |
+| `adaptive_min_concurrency` | Lower bound for concurrency |
+| `adaptive_max_concurrency` | Upper bound for concurrency |
+| `adaptive_target_latency_s` | Target p95 latency budget |
+| `adaptive_increase_step` | Additive growth step when healthy |
+| `adaptive_decrease_factor` | Multiplicative decrease on pressure |
+| `adaptive_failure_threshold` | Failure-rate threshold for backoff |
+| `retry_backoff_s` | Retry sleep interval (separate from request timeout) |
+| `prefix_aware_queue` | Group dispatch by prefix hash |
+| `prefix_hash_chars` | Prefix length used for hashing |
+
+Example (sync API backend):
+```bash
+python -m lmms_eval \
+  --model openai \
+  --model_args model_version=<model>,num_concurrent=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
+```
+
+Example (async API backend, recommended):
+```bash
+python -m lmms_eval \
+  --model async_openai \
+  --model_args model_version=<model>,num_cpus=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
+```
+
+#### Performance Snapshot
+
+To make the performance claim auditable, we keep a concrete benchmark trail in this repo:
+- Historical comparison file: `logs/openrouter_molmo_throughput/throughput_comparison.csv`
+- Latest-vs-previous comparison file: `logs/openrouter_molmo_throughput/throughput_comparison_latest_vs_prev.csv`
+
+Benchmark setup used for this snapshot:
+- Task: `mme`
+- Limit: `100`
+- Model backend: `openai` / `async_openai` API path
+- API endpoint family: OpenRouter-compatible
+- Model: `bytedance-seed/seed-1.6-flash`
+- Baseline control: static single concurrency (`num_concurrent=1`)
+- Latest control: adaptive + refill scheduling + prefix-aware queueing + explicit retry backoff
+
+Result summary (`requests_per_sec`):
+
+| Run Type | Concurrency | RPS | Wall Time (s) | Relative to Baseline |
+|----------|-------------|-----|---------------|----------------------|
+| baseline | 1 | 0.327836 | 305.030740 | 1.00x |
+| static | 24 | 1.926987 | 51.894473 | 5.88x |
+| adaptive (v1) | 16 | 2.404706 | 41.585121 | 7.33x |
+| adaptive (v2) | 16 | 2.458435 | 40.676279 | 7.50x |
+
+Interpretation:
+- The latest API control path reaches about **7.5x throughput** over baseline on the same `LIMIT=100` setup.
+- Compared to the previous adaptive run (`v1`), the latest adaptive run (`v2`) still improves (`2.4047 -> 2.4584 req/s`, `+2.23%`). This is a small but measurable delta in a noisy environment (shared network + provider-side scheduling), so the right takeaway is not "a new ceiling", but "less overhead and better utilization under the same constraints."
+- The core point: this speedup is not from changing benchmark difficulty. We keep the same task (`mme`), model (`bytedance-seed/seed-1.6-flash`), limit (`100`), and evaluation prompts/settings. The gain comes from changes in the API request scheduling/control path.
+- What `adaptive (v2)` means in practice:
+  - Refill scheduling (no window barrier): maintain a steady pool of in-flight requests and immediately dispatch new work as soon as a request completes. This reduces idle gaps and prevents the slowest request in a window from gating progress.
+  - Rolling controller updates: adjust concurrency based on a rolling batch of completions (failure rate, rate-limit hits, and p95 latency vs target) rather than only after fixed windows. This makes the controller more responsive and less sensitive to outliers.
+  - Hysteresis for stability: use separate "reduce" vs "increase" conditions (and minimum sample thresholds) to avoid oscillating on a single transient 429 or a brief latency spike.
+  - Retry/backoff decoupling: `retry_backoff_s` is explicitly separate from request timeout, so retries don't sleep for long timeouts and tie up worker slots.
+  - Prefix-aware queueing (when enabled): reorder dispatch by prefix hash so same-prefix requests are sent close together, improving prefill-cache hit opportunities on providers that support prefix caching. (Some routing layers may dilute this benefit; the mechanism is still safe.)
+
+### 1.4 Data Layer
+
+#### Storage Format
+
+| Format | Random Access | Media Handling | Use in v0.6 |
+|--------|---------------|----------------|-------------|
+| JSON/Files | O(N) scan | External files | Legacy |
+| Parquet | Row-group decompress | Binary blobs | Primary format |
+
+**Parquet**: Task metadata (questions, answers, splits). Supports projection pushdown, read only required columns. Underlying format for HF Datasets (disk).
+
+**TODO**: Optimize for high-throughput multimodal access (e.g., Lance or similar columnar storage for images/videos).
+
+### 1.5 Evaluation as a Service
 
 To integrate evaluation into training workflows, v0.6 provides a disaggregated HTTP service architecture. Implementation: [lmms-engine#127](https://github.com/EvolvingLMMs-Lab/lmms-engine/pull/127)
 
