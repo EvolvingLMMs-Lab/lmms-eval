@@ -30,7 +30,7 @@ v0.6 defines evaluation as three decoupled components:
 
 ```
 ┌─────────┐      ┌─────────┐      ┌─────────┐
-│  Input  │ ───▶ │  Model  │ ───▶ │  Judge  │
+│  Input  │ ───► │  Model  │ ───► │  Judge  │
 └─────────┘      └─────────┘      └─────────┘
 ```
 
