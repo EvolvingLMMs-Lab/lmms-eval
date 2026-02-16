@@ -24,7 +24,75 @@ From the engineering side, v0.6 also ships a substantial API-throughput upgrade.
 
 ## 1. Architecture
 
-### 1.1 Inference Backend
+### 1.1 Evaluation Pipeline
+
+v0.6 defines evaluation as three decoupled components:
+
+```
+┌─────────┐      ┌─────────┐      ┌─────────┐
+│  Input  │ ───► │  Model  │ ───► │  Judge  │
+└─────────┘      └─────────┘      └─────────┘
+```
+
+| Component | Contents | Output |
+|-----------|----------|--------|
+| **Input** | Multimodal data + question + ground truth | `Instance` objects |
+| **Model** | LMM inference (local or API) | Generated responses |
+| **Judge** | Metric computation (exact match, LLM judge, etc.) | Scores |
+
+#### Async Pipeline with Cache
+
+Both stages run asynchronously with intelligent caching:
+
+```mermaid
+graph LR
+    Input[Input]
+    Model[Model]
+    Storage[Storage]
+    Judge[Judge]
+    
+    Input -- async --> Model
+    Model -- "cache" --> Storage
+    Storage -- async --> Judge
+
+    Key["Cache key: hash(input + config + git_commit)"]
+    
+    Model -.-> Key
+```
+
+**Cache System**
+
+Avoid redundant inference when the same evaluation has been run before:
+
+| Cache Key Component | Purpose |
+|---------------------|---------|
+| Input hash | Same dataset + question |
+| Config hash | Same generation parameters (temp, max_tokens, etc.) |
+| Git commit | Same model code version |
+
+Cache hit -> skip inference, reuse stored outputs. Cache miss -> run inference, store results.
+
+**Benefits**:
+- No redundant computation: identical runs return cached results instantly
+- Crash recovery: resume from cached outputs without re-inference
+- Resource separation: Model (GPU) and Judge (API) can run on different machines
+- Reproducibility: cache key ensures exact same conditions
+
+#### Stage 1: Input -> Model
+
+**Prefix Cache Optimization**
+
+vLLM/SGLang reuse KV cache for shared prefixes. We cluster inputs by media to maximize hits:
+
+- Prefix clustering: Group questions by shared image/video
+- Length sorting: Similar lengths in same batch
+- Chunked prefill: Split long prompts into chunks to reduce TTFT and avoid OOM
+
+#### Stage 2: Model -> Judge
+
+**Persist-First Strategy**: Save model outputs to disk immediately, then score asynchronously.
+
+### 1.2 Model Interface & Backends
 
 #### Decoupled Design
 
@@ -46,14 +114,15 @@ The `Instance` object carries:
 - `prompt`: Text prompt
 - `gen_kwargs`: Generation parameters
 
-#### Backend Integration
+#### Supported Backends
 
-Supported backends:
-- vLLM
-- SGLang
-- API Models (OpenAI, Anthropic, Groq, etc.)
+| Backend | Example |
+|---------|---------|
+| vLLM | `python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B` |
+| SGLang | `python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B` |
+| API Models | OpenAI, Anthropic, Groq, etc. - see [API Concurrency & Throughput](#13-api-concurrency--throughput) |
 
-**Unified API model interfaces**
+**Unified API Model Interfaces**
 
 v0.6 unifies API-backed model evaluation under two interfaces:
 
@@ -64,13 +133,34 @@ v0.6 unifies API-backed model evaluation under two interfaces:
 
 We recommend `async_openai` for all API-backed evaluation — it uses native async I/O and achieves significantly higher throughput.
 
-Both resolve to **chat mode by default** via Model Registry V2. The simple mode (`doc_to_visual` + `doc_to_text`) is deprecated and will be removed in a future release. See [Model Registry V2](#model-registry-v2) below for details.
+Both resolve to **chat mode by default** via Model Registry V2. The simple mode (`doc_to_visual` + `doc_to_text`) is deprecated and will be removed in a future release.
 
 > **Naming change in v0.6**: the canonical model names have been shortened from `openai_compatible` / `async_openai_compatible` to `openai` / `async_openai`. These are the names used in filenames, registry keys, and `@register_model` decorators. The old names (`openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, `async_openai_compatible_chat`) continue to work as aliases via `MODEL_ALIASES` in `__init__.py`, so existing scripts are not affected.
 
-#### Adaptive Concurrency Control
+#### Model Registry V2
+
+v0.6 introduces `ModelRegistryV2` — a unified model registry that replaces the previous ad-hoc import system. All model names (`--model X`) resolve through a single path.
+
+**How it works**
+
+Two dicts in `lmms_eval/models/__init__.py` declare available models:
+
+- `AVAILABLE_SIMPLE_MODELS`: maps `model_id` -> `ClassName` for simple (legacy) models in `models/simple/`
+- `AVAILABLE_CHAT_TEMPLATE_MODELS`: maps `model_id` -> `ClassName` for chat models in `models/chat/`
+
+At startup, the registry merges both dicts into `ModelManifest` objects. Each manifest holds a `model_id` and up to two class paths (simple + chat). Class paths are auto-constructed: `lmms_eval.models.{type}.{model_id}.{ClassName}`, so the dict key **must match the filename**.
+
+**Resolution**: chat is always preferred over simple (unless `force_simple=True`). This means `--model openai` transparently resolves to the chat implementation.
+
+**Aliasing**: backward-compatible names are supported via `MODEL_ALIASES` in `__init__.py` and via `ModelManifest.aliases`. Old names like `openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, and `async_openai_compatible_chat` continue to work.
+
+**Simple mode deprecation**: the simple model interface (`doc_to_visual` + `doc_to_text`) for API models is deprecated. New integrations should always use chat (`doc_to_messages` + `ChatMessages`). The simple implementations in `models/simple/openai.py` will be removed in a future release.
+
+### 1.3 API Concurrency & Throughput
 
 v0.6 adds adaptive concurrency for API-backed evaluation (`async_openai`, `openai`).
+
+#### Adaptive Concurrency Control
 
 The controller continuously adjusts in-flight request count using three online signals:
 - request failure rate
@@ -108,7 +198,7 @@ python -m lmms_eval \
   --model_args model_version=<model>,num_cpus=16,adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05,retry_backoff_s=1.0,prefix_aware_queue=true,prefix_hash_chars=256
 ```
 
-#### Performance Snapshot: Latest API Path
+#### Performance Snapshot
 
 To make the performance claim auditable, we keep a concrete benchmark trail in this repo:
 - Historical comparison file: `logs/openrouter_molmo_throughput/throughput_comparison.csv`
@@ -137,37 +227,13 @@ Interpretation:
 - Compared to the previous adaptive run (`v1`), the latest adaptive run (`v2`) still improves (`2.4047 -> 2.4584 req/s`, `+2.23%`). This is a small but measurable delta in a noisy environment (shared network + provider-side scheduling), so the right takeaway is not "a new ceiling", but "less overhead and better utilization under the same constraints."
 - The core point: this speedup is not from changing benchmark difficulty. We keep the same task (`mme`), model (`bytedance-seed/seed-1.6-flash`), limit (`100`), and evaluation prompts/settings. The gain comes from changes in the API request scheduling/control path.
 - What `adaptive (v2)` means in practice:
-- Refill scheduling (no window barrier): maintain a steady pool of in-flight requests and immediately dispatch new work as soon as a request completes. This reduces idle gaps and prevents the slowest request in a window from gating progress.
-- Rolling controller updates: adjust concurrency based on a rolling batch of completions (failure rate, rate-limit hits, and p95 latency vs target) rather than only after fixed windows. This makes the controller more responsive and less sensitive to outliers.
-- Hysteresis for stability: use separate "reduce" vs "increase" conditions (and minimum sample thresholds) to avoid oscillating on a single transient 429 or a brief latency spike.
-- Retry/backoff decoupling: `retry_backoff_s` is explicitly separate from request timeout, so retries don't sleep for long timeouts and tie up worker slots.
-- Prefix-aware queueing (when enabled): reorder dispatch by prefix hash so same-prefix requests are sent close together, improving prefill-cache hit opportunities on providers that support prefix caching. (Some routing layers may dilute this benefit; the mechanism is still safe.)
+  - Refill scheduling (no window barrier): maintain a steady pool of in-flight requests and immediately dispatch new work as soon as a request completes. This reduces idle gaps and prevents the slowest request in a window from gating progress.
+  - Rolling controller updates: adjust concurrency based on a rolling batch of completions (failure rate, rate-limit hits, and p95 latency vs target) rather than only after fixed windows. This makes the controller more responsive and less sensitive to outliers.
+  - Hysteresis for stability: use separate "reduce" vs "increase" conditions (and minimum sample thresholds) to avoid oscillating on a single transient 429 or a brief latency spike.
+  - Retry/backoff decoupling: `retry_backoff_s` is explicitly separate from request timeout, so retries don't sleep for long timeouts and tie up worker slots.
+  - Prefix-aware queueing (when enabled): reorder dispatch by prefix hash so same-prefix requests are sent close together, improving prefill-cache hit opportunities on providers that support prefix caching. (Some routing layers may dilute this benefit; the mechanism is still safe.)
 
-```bash
-python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B
-python -m lmms_eval --model sglang --model_args pretrained=Qwen/Qwen2.5-VL-7B
-```
-
-#### Model Registry V2
-
-v0.6 introduces `ModelRegistryV2` — a unified model registry that replaces the previous ad-hoc import system. All model names (`--model X`) resolve through a single path.
-
-**How it works**
-
-Two dicts in `lmms_eval/models/__init__.py` declare available models:
-
-- `AVAILABLE_SIMPLE_MODELS`: maps `model_id` -> `ClassName` for simple (legacy) models in `models/simple/`
-- `AVAILABLE_CHAT_TEMPLATE_MODELS`: maps `model_id` -> `ClassName` for chat models in `models/chat/`
-
-At startup, the registry merges both dicts into `ModelManifest` objects. Each manifest holds a `model_id` and up to two class paths (simple + chat). Class paths are auto-constructed: `lmms_eval.models.{type}.{model_id}.{ClassName}`, so the dict key **must match the filename**.
-
-**Resolution**: chat is always preferred over simple (unless `force_simple=True`). This means `--model openai` transparently resolves to the chat implementation.
-
-**Aliasing**: backward-compatible names are supported via `MODEL_ALIASES` in `__init__.py` and via `ModelManifest.aliases`. Old names like `openai_compatible`, `openai_compatible_chat`, `async_openai_compatible`, and `async_openai_compatible_chat` continue to work.
-
-**Simple mode deprecation**: the simple model interface (`doc_to_visual` + `doc_to_text`) for API models is deprecated. New integrations should always use chat (`doc_to_messages` + `ChatMessages`). The simple implementations in `models/simple/openai.py` will be removed in a future release.
-
-### 1.2 Data Layer
+### 1.4 Data Layer
 
 #### Storage Format
 
@@ -180,67 +246,7 @@ At startup, the registry merges both dicts into `ModelManifest` objects. Each ma
 
 **TODO**: Optimize for high-throughput multimodal access (e.g., Lance or similar columnar storage for images/videos).
 
-### 1.3 Evaluation Pipeline
-
-#### Three Components
-
-v0.6 defines evaluation as three decoupled components:
-
-```
-┌─────────┐      ┌─────────┐      ┌─────────┐
-│  Input  │ ───▶ │  Model  │ ───▶ │  Judge  │
-└─────────┘      └─────────┘      └─────────┘
-```
-
-| Component | Contents | Output |
-|-----------|----------|--------|
-| **Input** | Multimodal data + question + ground truth | `Instance` objects |
-| **Model** | LMM inference (local or API) | Generated responses |
-| **Judge** | Metric computation (exact match, LLM judge, etc.) | Scores |
-
-#### Async Pipeline with Cache
-
-Both stages run asynchronously with intelligent caching:
-
-```
-Input ──async──▶ Model ──cache──▶ Storage ──async──▶ Judge
-                          │
-                          └── Cache key: hash(input + config + git_commit)
-```
-
-**Cache System**
-
-Avoid redundant inference when the same evaluation has been run before:
-
-| Cache Key Component | Purpose |
-|---------------------|---------|
-| Input hash | Same dataset + question |
-| Config hash | Same generation parameters (temp, max_tokens, etc.) |
-| Git commit | Same model code version |
-
-Cache hit -> skip inference, reuse stored outputs. Cache miss -> run inference, store results.
-
-**Benefits**:
-- No redundant computation: identical runs return cached results instantly
-- Crash recovery: resume from cached outputs without re-inference
-- Resource separation: Model (GPU) and Judge (API) can run on different machines
-- Reproducibility: cache key ensures exact same conditions
-
-#### Stage 1: Input -> Model
-
-**Prefix Cache Optimization**
-
-vLLM/SGLang reuse KV cache for shared prefixes. We cluster inputs by media to maximize hits:
-
-- Prefix clustering: Group questions by shared image/video
-- Length sorting: Similar lengths in same batch
-- Chunked prefill: Split long prompts into chunks to reduce TTFT and avoid OOM
-
-#### Stage 2: Model -> Judge
-
-**Persist-First Strategy**: Save model outputs to disk immediately, then score asynchronously.
-
-### 1.4 Evaluation as a Service
+### 1.5 Evaluation as a Service
 
 To integrate evaluation into training workflows, v0.6 provides a disaggregated HTTP service architecture. Implementation: [lmms-engine#127](https://github.com/EvolvingLMMs-Lab/lmms-engine/pull/127)
 
