@@ -44,10 +44,20 @@ v0.6 defines evaluation as three decoupled components:
 
 Both stages run asynchronously with intelligent caching:
 
-```
-Input ──async──▶ Model ──cache──▶ Storage ──async──▶ Judge
-                          │
-                          └── Cache key: hash(input + config + git_commit)
+```mermaid
+graph LR
+    Input[Input]
+    Model[Model]
+    Storage[Storage]
+    Judge[Judge]
+    
+    Input -- async --> Model
+    Model -- "cache" --> Storage
+    Storage -- async --> Judge
+
+    Key["Cache key: hash(input + config + git_commit)"]
+    
+    Model -.-> Key
 ```
 
 **Cache System**
