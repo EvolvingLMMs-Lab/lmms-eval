@@ -1,0 +1,3 @@
+task: "saco_gold_sa1b"
+test_split: sa1b
+include: _default_template_saco_gold_yaml
