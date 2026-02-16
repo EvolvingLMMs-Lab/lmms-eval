@@ -46,7 +46,7 @@ def get_version() -> str:
     try:
         return pkg_version("lmms_eval")
     except Exception:
-        return "0.5.0"
+        return "0.6.0"
 
 
 def get_git_info() -> dict[str, str]:

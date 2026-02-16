@@ -60,7 +60,7 @@ body:
       placeholder: |
         - OS: Ubuntu 22.04
         - Python: 3.10
-        - lmms-eval: 0.5.0
+        - lmms-eval: 0.6.0
         - GPU: A100 / CUDA 12.1
         - Torch: 2.2.0
     validations:
