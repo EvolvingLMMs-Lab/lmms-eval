@@ -5,7 +5,7 @@ type: software
 authors:
   - name: "MC Evil Team"
 license: MIT
-version: "0.5.0"
+version: "0.6.0"
 date-released: "2024-03-01"
 url: "https://github.com/EvolvingLMMs-Lab/lmms-eval"
 repository-code: "https://github.com/EvolvingLMMs-Lab/lmms-eval"
