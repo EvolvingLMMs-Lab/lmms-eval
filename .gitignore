@@ -52,9 +52,7 @@ span.log
 uv.lock
 workspace/*
 .claude/*
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/lmms-eval-guide/
+!.claude-plugin/
 .opencode/
 remote_code/*
 docs/plans/
