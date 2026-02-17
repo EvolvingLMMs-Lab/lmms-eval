@@ -21,7 +21,7 @@
 
 📚 [Documentation](docs/README.md) | 📖 [100+ Tasks](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [30+ Models](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | ⚡ [Quickstart](docs/quickstart.md)
 
-🏠 [Homepage](https://www.lmms-lab.com/) | 💬 [Discord](https://discord.gg/zdkwKUqrPy) | 🤝 [Contributing](CONTRIBUTING.md)
+🏠 [Homepage](https://www.lmms-lab.com/) | 💬 [Discord](https://discord.gg/8xTM6jWnXa) | 🤝 [Contributing](CONTRIBUTING.md)
 
 ---
 
