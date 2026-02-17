@@ -6,13 +6,15 @@ TASKS="mmmu_val,mme"
 TENSOR_PARALLEL_SIZE=8
 GPU_MEMORY_UTILIZATION=0.85
 BATCH_SIZE=16
+MAX_MODEL_LEN=262144
+REASONING_PARSER="qwen3"
 
 OUTPUT_PATH="./logs/qwen35_vllm"
 LOG_SUFFIX="qwen35_vllm"
 
 CMD="uv run python -m lmms_eval \
     --model vllm \
-    --model_args model=${MODEL},tensor_parallel_size=${TENSOR_PARALLEL_SIZE},gpu_memory_utilization=${GPU_MEMORY_UTILIZATION} \
+    --model_args model=${MODEL},tensor_parallel_size=${TENSOR_PARALLEL_SIZE},gpu_memory_utilization=${GPU_MEMORY_UTILIZATION},max_model_len=${MAX_MODEL_LEN},reasoning_parser=${REASONING_PARSER} \
     --tasks ${TASKS} \
     --batch_size ${BATCH_SIZE} \
     --log_samples --log_samples_suffix ${LOG_SUFFIX} \

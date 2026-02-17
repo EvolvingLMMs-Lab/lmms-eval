@@ -537,6 +537,8 @@ We support 30+ model families out of the box, including Qwen2.5-VL, Qwen3-VL, LL
 
 Qwen3.5 is supported through existing runtime backends (`--model vllm` and `--model sglang`) by setting `model=Qwen/Qwen3.5-397B-A17B` in `--model_args`.
 
+The Qwen3.5 example scripts align with official runtime references (for example, `max_model_len/context_length=262144` and `reasoning_parser=qwen3`).
+
 If a new model family is already fully supported by vLLM or SGLang at runtime, we generally only need documentation and examples instead of adding a dedicated model wrapper.
 
 </details>
