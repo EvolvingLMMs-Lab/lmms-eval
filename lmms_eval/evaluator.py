@@ -3,6 +3,7 @@ import itertools
 import json
 import os
 import random
+import re
 from typing import Callable, List, Optional, Union
 
 import numpy as np
@@ -21,6 +22,7 @@ from lmms_eval.baselines import (
     get_baseline_display_name,
     load_baseline,
 )
+from lmms_eval.caching.response_cache import ResponseCache
 from lmms_eval.evaluator_utils import (
     compute_baseline_comparison,
     consolidate_group_results,
@@ -105,7 +107,7 @@ def simple_evaluate(
     :param device: str, optional
         PyTorch device (e.g. "cpu" or "cuda:0") for running models
     :param use_cache: str, optional
-        A path to a sqlite db file for caching model responses. `None` if not caching.
+        Directory for response-level caching (SQLite + JSONL). `None` to disable.
     :param cache_requests: bool, optional
         Speed up evaluation by caching the building of dataset requests. `None` if not caching.
     :param rewrite_requests_cache: bool, optional
@@ -282,24 +284,50 @@ def simple_evaluate(
     global_rank = int(os.environ.get("RANK", 0))
     world_size = int(os.environ.get("WORLD_SIZE", 1))
 
-    results = evaluate(
-        lm=lm,
-        task_dict=task_dict,
-        limit=limit,
-        offset=offset,
-        cache_requests=cache_requests,
-        rewrite_requests_cache=rewrite_requests_cache,
-        bootstrap_iters=bootstrap_iters,
-        write_out=write_out,
-        log_samples=True if predict_only else log_samples,
-        system_instruction=system_instruction,
-        apply_chat_template=apply_chat_template,
-        fewshot_as_multiturn=fewshot_as_multiturn,
-        verbosity=verbosity,
-        distributed_executor_backend=distributed_executor_backend,
-        cli_args=cli_args,
-        eval_server_launcher=eval_launcher,
-    )
+    response_cache = None
+    if use_cache is not None:
+        _FUNC_ADDR_RE = re.compile(r" at 0x[0-9a-fA-F]+>")
+
+        task_fingerprints = {}
+        for tname, tobj in task_dict.items():
+            if hasattr(tobj, "dump_config"):
+                cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
+                cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
+                task_fingerprints[tname] = hash_string(cfg_str)[:16]
+        model_hash = hash_string(f"{model}|{model_args}")[:16]
+        cache_dir = os.path.join(use_cache, model_hash)
+        os.makedirs(cache_dir, exist_ok=True)
+        db_path = os.path.join(cache_dir, f"rank{global_rank}.db")
+        audit_path = os.path.join(cache_dir, f"rank{global_rank}.jsonl")
+        model_fp = f"{model}|{model_args}"
+        response_cache = ResponseCache(db_path=db_path, audit_path=audit_path, model_fingerprint=model_fp, task_fingerprints=task_fingerprints)
+        eval_logger.info(f"ResponseCache initialized: {db_path}")
+
+    try:
+        results = evaluate(
+            lm=lm,
+            task_dict=task_dict,
+            limit=limit,
+            offset=offset,
+            cache_requests=cache_requests,
+            rewrite_requests_cache=rewrite_requests_cache,
+            bootstrap_iters=bootstrap_iters,
+            write_out=write_out,
+            log_samples=True if predict_only else log_samples,
+            system_instruction=system_instruction,
+            apply_chat_template=apply_chat_template,
+            fewshot_as_multiturn=fewshot_as_multiturn,
+            verbosity=verbosity,
+            distributed_executor_backend=distributed_executor_backend,
+            cli_args=cli_args,
+            eval_server_launcher=eval_launcher,
+            response_cache=response_cache,
+        )
+    finally:
+        if response_cache is not None:
+            stats = response_cache.get_stats()
+            eval_logger.info(f"ResponseCache stats: {stats['hits']} hits, {stats['misses']} misses, {stats['skipped_non_deterministic']} skipped, hit rate: {stats['hit_rate']:.1%}")
+            response_cache.close()
 
     if global_rank == 0:
         from lmms_eval.models.model_utils.gen_metrics import summarize_logged_metrics
@@ -426,6 +454,7 @@ def evaluate(
     distributed_executor_backend: str = "accelerate",
     eval_server_launcher: Optional[Union[str, Callable]] = None,
     cli_args=None,
+    response_cache: Optional[ResponseCache] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -587,8 +616,11 @@ def evaluate(
             for _ in range(padding_requests[reqtype]):
                 cloned_reqs.extend([req] * req.repeats)
 
-        # run requests through model
-        resps = getattr(lm, reqtype)(cloned_reqs)  # Choiszt run generate until
+        # run requests through model (with optional response cache)
+        if response_cache is not None:
+            resps = response_cache.execute(lm, reqtype, cloned_reqs)
+        else:
+            resps = getattr(lm, reqtype)(cloned_reqs)
 
         # put responses from model into a list of length K for each request.
         for x, req in zip(resps, cloned_reqs):
