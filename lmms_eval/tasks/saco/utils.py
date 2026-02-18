@@ -11,7 +11,7 @@ with **oracle evaluation** over 3 independent annotators:
 * **Localization**  — Positive micro-F1 averaged over 10 IoU thresholds [0.5:0.05:0.95]
 * **Combined**      — cgF1 = 100 * pmF1 * IL_MCC
 
-For more details, see: 
+For more details, see:
 Paper: https://arxiv.org/abs/2511.16719
 Official evaluation: https://github.com/facebookresearch/sam3/tree/main/scripts/eval/gold
 
@@ -33,12 +33,12 @@ on the results JSON to compute dataset-level MCC, pmF1, and cgF1.
 
 import json
 import math
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from loguru import logger as eval_logger
 from pycocotools import mask as mask_utils
 from scipy.optimize import linear_sum_assignment
-from typing import Any, Dict, List, Tuple
 
 # Official SAM3 IoU thresholds (0.5:0.05:0.95)
 IOU_THRESHOLDS = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
@@ -47,6 +47,7 @@ IOU_THRESHOLDS = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
 # =========================================================================== #
 #  Mask helpers (COCO RLE)
 # =========================================================================== #
+
 
 def decode_coco_rle(rle: Dict) -> np.ndarray:
     """Decode a single COCO RLE dict to a binary (H, W) numpy mask."""
@@ -88,16 +89,14 @@ def mask_nms(masks: List[np.ndarray], iou_threshold: float = 0.9) -> List[np.nda
 
     filtered = [masks[k] for k in sorted(keep)]
     if len(masks) != len(filtered):
-        eval_logger.debug(
-            f"Mask NMS: {len(masks)} -> {len(filtered)} "
-            f"(removed {len(masks) - len(filtered)})"
-        )
+        eval_logger.debug(f"Mask NMS: {len(masks)} -> {len(filtered)} " f"(removed {len(masks) - len(filtered)})")
     return filtered
 
 
 # =========================================================================== #
 #  Parsing model output
 # =========================================================================== #
+
 
 def parse_predicted_masks(response_text: str) -> List[Dict]:
     """Extract COCO-RLE mask dicts from the model JSON response.
@@ -126,6 +125,7 @@ def parse_predicted_masks(response_text: str) -> List[Dict]:
 #  doc_to_* functions (referenced by task YAML)
 # =========================================================================== #
 
+
 def saco_doc_to_visual(doc):
     """Return a list of PIL images for the document."""
     return [doc["image"].convert("RGB")]
@@ -153,6 +153,7 @@ def saco_doc_to_target(doc):
 # =========================================================================== #
 #  Per-annotator evaluation helper
 # =========================================================================== #
+
 
 def _evaluate_against_one_gt(
     predicted_masks: List[np.ndarray],
@@ -183,7 +184,10 @@ def _evaluate_against_one_gt(
     zero_counts = {"tp": [0.0] * n_thresh, "fp": [0.0] * n_thresh, "fn": [0.0] * n_thresh}
 
     base = {
-        "IL_TP": IL_TP, "IL_TN": IL_TN, "IL_FP": IL_FP, "IL_FN": IL_FN,
+        "IL_TP": IL_TP,
+        "IL_TN": IL_TN,
+        "IL_FP": IL_FP,
+        "IL_FN": IL_FN,
         "count_accuracy": 1.0 if predicted_count == target_count else 0.0,
     }
 
@@ -262,6 +266,7 @@ def _evaluate_against_one_gt(
 #  Oracle selection — pick the best annotator for one sample
 # =========================================================================== #
 
+
 def _select_best_annotator(candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Return the candidate dict that yields the best oracle score."""
     if len(candidates) == 1:
@@ -294,6 +299,7 @@ def _select_best_annotator(candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
 #    3. Oracle-select the annotator that yields the best mean local-F1.
 #    4. Return that annotator's metrics as the sample result.
 # =========================================================================== #
+
 
 def saco_process_results(doc, result):
     """Compute SAM3-style per-sample metrics with 3-annotator oracle.
@@ -350,25 +356,32 @@ def saco_process_results(doc, result):
 #  Aggregation functions (referenced by task YAML metric_list)
 # =========================================================================== #
 
+
 def IL_TP(items):
     return sum(items) if items else 0.0
+
 
 def IL_TN(items):
     return sum(items) if items else 0.0
 
+
 def IL_FP(items):
     return sum(items) if items else 0.0
+
 
 def IL_FN(items):
     return sum(items) if items else 0.0
 
+
 def count_accuracy(items):
     return float(np.mean(items)) if items else 0.0
+
 
 def sample_f1(items):
     """Macro F1: average of per-sample F1 over positive samples only."""
     valid = [x for x in items if x >= 0] if items else []
     return float(np.mean(valid)) if valid else 0.0
+
 
 def loc_counts(items):
     """Element-wise sum of per-sample TP/FP/FN arrays across 10 thresholds."""
@@ -388,6 +401,7 @@ def loc_counts(items):
 # =========================================================================== #
 #  Derived dataset-level metrics (MCC, pmF1, cgF1)
 # =========================================================================== #
+
 
 def compute_IL_MCC(tp: float, tn: float, fp: float, fn: float) -> float:
     """Matthews Correlation Coefficient."""
