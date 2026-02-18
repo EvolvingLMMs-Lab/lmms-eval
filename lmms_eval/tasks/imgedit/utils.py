@@ -29,7 +29,7 @@ from lmms_eval.tasks.imgedit.prompt import IMGEDIT_PROMPTS
 # Environment variable names for OpenAI API configuration
 IMGEDIT_API_KEY = os.getenv("IMGEDIT_API_KEY")
 IMGEDIT_BASE_URL = os.getenv("IMGEDIT_BASE_URL")
-IMGEDIT_MODEL_NAME = os.getenv("IMGEDIT_MODEL_NAME", "gpt-5-mini")
+IMGEDIT_MODEL_NAME = os.getenv("IMGEDIT_MODEL_NAME", "gpt-4o")
 
 # Global OpenAI client (singleton)
 _openai_client = None

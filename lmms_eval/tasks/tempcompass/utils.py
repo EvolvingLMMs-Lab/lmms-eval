@@ -385,7 +385,7 @@ def parse_llm_output_for_captioning(llm_output, gt_answer):
 def get_llm_output_for_captioning(prompt):
     data = {
         "max_tokens": 128,
-        "model": "gpt-5-nano",
+        "model": "gpt-3.5-turbo-1106",
         "temperature": 1.0,
         "top_p": 1,
         "presence_penalty": 1,
@@ -477,7 +477,7 @@ def get_eval_result(prompt, maxtry=10, sys_prompt=None):
 def get_llm_output(prompt, sys_prompt, max_tokens=128):
     if sys_prompt is None:
         sys_prompt = "You are an AI assistant for question answering."
-    data = {"max_tokens": max_tokens, "model": "gpt-5-nano", "temperature": 1.0, "top_p": 1, "presence_penalty": 1, "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]}
+    data = {"max_tokens": max_tokens, "model": "gpt-3.5-turbo-1106", "temperature": 1.0, "top_p": 1, "presence_penalty": 1, "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]}
     response = requests.post(API_URL, headers=headers, data=json.dumps(data).encode("utf-8"))
     result = response.content.decode("utf-8")
     dict_result = json.loads(result)

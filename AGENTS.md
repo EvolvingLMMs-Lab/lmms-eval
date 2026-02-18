@@ -172,7 +172,7 @@ eval_logger.warning("Missing visual for doc_id={}", doc_id)
 API-backed models (openai, gemini, etc.) support retry configuration:
 
 ```bash
-python -m lmms_eval --model openai --model_args pretrained=gpt-5-mini,max_retries=5,retry_backoff_s=2.0 --tasks mme
+python -m lmms_eval --model openai --model_args pretrained=gpt-4o,max_retries=5,retry_backoff_s=2.0 --tasks mme
 ```
 
 ## Constraints

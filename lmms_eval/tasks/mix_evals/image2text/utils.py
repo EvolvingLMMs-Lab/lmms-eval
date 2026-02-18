@@ -27,7 +27,7 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
 
 NUM_SECONDS_TO_SLEEP = 5
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = "gpt-5-nano"
+MODEL_VERSION = "gpt-3.5-turbo-0125"
 MAX_NEW_TOKENS = 999
 
 if API_TYPE == "openai":
@@ -326,7 +326,7 @@ def mix_evals_image2text_aggregate_gen(results, args):
 
 
 class GPTMultiChoiceFilter(Filter):
-    def __init__(self, gpt_version: str = "gpt-5-nano", retries: int = 5):
+    def __init__(self, gpt_version: str = "gpt-3.5-turbo-0125", retries: int = 5):
         """
         Can define custom behavior here, if an individual instantiation of a Filter class should have state.
         """

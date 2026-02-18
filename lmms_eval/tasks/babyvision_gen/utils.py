@@ -19,7 +19,7 @@ from lmms_eval.tasks.babyvision_gen.prompt import build_evaluation_prompt
 
 BABYVISION_API_KEY = os.getenv("BABYVISION_API_KEY")
 BABYVISION_BASE_URL = os.getenv("BABYVISION_BASE_URL")
-BABYVISION_MODEL_NAME = os.getenv("BABYVISION_MODEL_NAME", "gpt-5-mini")
+BABYVISION_MODEL_NAME = os.getenv("BABYVISION_MODEL_NAME", "gpt-4o")
 
 
 def _get_openai_client() -> Optional[OpenAI]:

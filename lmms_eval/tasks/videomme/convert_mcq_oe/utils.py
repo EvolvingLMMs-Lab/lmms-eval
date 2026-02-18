@@ -89,7 +89,7 @@ def _llm_match_option(question, model_answer, options):
         )
 
         response = client.chat.completions.create(
-            model="gpt-5-nano",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=10,
             temperature=0,

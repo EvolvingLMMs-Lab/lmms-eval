@@ -97,7 +97,7 @@ class ChatCompletionSampler:
 
     def __init__(
         self,
-        model: str = "gpt-5-nano",
+        model: str = "gpt-4o-mini",
         system_message: str | None = None,
         temperature: float = 0.5,
         max_tokens: int = 1024,
@@ -170,11 +170,11 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
         n_res_list = []
         metrics["exact_matches"] = []
 
-    if os.getenv("PROCESSOR", "") == "gpt-5-nano":
-        sampler = ChatCompletionSampler(model="gpt-5-nano")
+    if os.getenv("PROCESSOR", "") == "gpt-4o-mini":
+        sampler = ChatCompletionSampler(model="gpt-4o-mini")
         question = QUERY_TEMPLATE_API.format(Question=doc["Question"], choice1=doc["choice1"], choice2=doc["choice2"], choice3=doc["choice3"], choice4=doc["choice4"])
     else:
-        print(f"Unknown processor: {os.getenv('PROCESSOR')}; set 'PROCESSOR=gpt-5-nano' and 'OPENAI_API_KEY=YOUR_KEY' for best results.")
+        print(f"Unknown processor: {os.getenv('PROCESSOR')}; set 'PROCESSOR=gpt-4o-mini' and 'OPENAI_API_KEY=YOUR_KEY' for best results.")
         sampler = None
 
     split_tokens = ["<|im_start|>answer\n", "<|im_start|>"]

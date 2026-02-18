@@ -7,7 +7,7 @@ from lmms_eval.llm_judge import ServerConfig, get_server
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 # Use JUDGE_MODEL_VERSION instead of MODEL_VERSION
-JUDGE_MODEL_VERSION = os.getenv("JUDGE_MODEL_VERSION", "gpt-5-nano")
+JUDGE_MODEL_VERSION = os.getenv("JUDGE_MODEL_VERSION", "gpt-4o-mini")
 
 server_config = ServerConfig(
     model_name=JUDGE_MODEL_VERSION,

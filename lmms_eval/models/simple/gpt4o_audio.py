@@ -51,7 +51,7 @@ else:
 class GPT4OAudio(lmms):
     def __init__(
         self,
-        model_version: str = "gpt-audio",
+        model_version: str = "gpt-4o-audio-preview",
         modality: str = "audio",
         timeout: int = 120,
         continual_mode: bool = False,
@@ -336,7 +336,7 @@ class GPT4OAudio(lmms):
                     # eval_logger.info(f"API type: {API_TYPE}")
 
                     if "audio" not in payload["model"].lower():
-                        eval_logger.warning(f"Model name '{payload['model']}' may not support audio. Consider using 'gpt-audio'")
+                        eval_logger.warning(f"Model name '{payload['model']}' may not support audio. Consider using 'gpt-4o-audio-preview'")
 
                     response = self.client.chat.completions.create(**payload)
 

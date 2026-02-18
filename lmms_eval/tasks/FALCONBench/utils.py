@@ -35,7 +35,7 @@ SOCCERNET_PWD = os.getenv("SOCCERNET_PWD", "s0cc3rn3t")
 
 NUM_SECONDS_TO_SLEEP = 5
 
-GPT_EVAL_MODEL_NAME = "gpt-5-nano"
+GPT_EVAL_MODEL_NAME = "gpt-4o-mini"
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 

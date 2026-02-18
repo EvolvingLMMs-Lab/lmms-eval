@@ -29,7 +29,7 @@ with open(Path(__file__).parent / "alpaca_audio.yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 # specify api type and key in .env
-GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-5-mini")
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "azure")
 
 if API_TYPE == "openai":

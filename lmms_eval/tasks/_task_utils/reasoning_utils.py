@@ -6,7 +6,7 @@ from openai import OpenAI
 
 API_KEY = os.getenv("JUDGE_API_KEY", "YOUR_API_KEY")
 BASE_URL = os.getenv("JUDGE_BASE_URL", "https://api.openai.com/v1")
-MODEL_NAME = os.getenv("JUDGE_MODEL_NAME", "gpt-5-nano")
+MODEL_NAME = os.getenv("JUDGE_MODEL_NAME", "gpt-4o-mini")
 USE_LLM_JUDGE = os.getenv("USE_LLM_JUDGE", "False")
 
 client = OpenAI(api_key=API_KEY, base_url=BASE_URL)

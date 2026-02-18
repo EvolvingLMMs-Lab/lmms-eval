@@ -192,7 +192,7 @@ from lmms_eval.llm_judge.protocol import Request, ServerConfig
 
 # Configure the judge model
 config = ServerConfig(
-    model_name="gpt-5-mini",
+    model_name="gpt-4o-2024-11-20",
     temperature=0.0,
     max_tokens=1024,
     judge_type="score",  # Options: 'general', 'binary', 'score', 'comparative'
@@ -250,7 +250,7 @@ def process_results_with_judge(doc, results):
     
     # Configure judge
     config = ServerConfig(
-        model_name="gpt-5-mini",
+        model_name="gpt-4o-2024-11-20",
         temperature=0.0,
         max_tokens=256
     )
@@ -441,7 +441,7 @@ from lmms_eval.llm_judge import get_server
 
 # Setup judge for custom evaluation
 judge_config = ServerConfig(
-    model_name="gpt-5-mini",
+    model_name="gpt-4o-2024-11-20",
     temperature=0.0,
     max_tokens=256,
     judge_type="binary"
@@ -556,7 +556,7 @@ import asyncio
 import aiohttp
 
 # Concurrent API calls for faster evaluation
-async def evaluate_with_api(samples, model="gpt-5-mini"):
+async def evaluate_with_api(samples, model="gpt-4o-2024-11-20"):
     async with aiohttp.ClientSession() as session:
         tasks = [evaluate_single(session, sample, model) for sample in samples]
         results = await asyncio.gather(*tasks)

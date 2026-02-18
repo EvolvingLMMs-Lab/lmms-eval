@@ -16,7 +16,7 @@ rule_dict = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__
 
 # Config loading removed - now using environment variables directly
 
-GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-5-mini")
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 # Initialize the judge server

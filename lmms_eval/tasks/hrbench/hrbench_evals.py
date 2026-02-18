@@ -25,7 +25,7 @@ class HRBenchEval:
             "Content-Type": "application/json",
         }
 
-    def __init__(self, api_key, gpt_model="gpt-5-nano", max_workers=12):
+    def __init__(self, api_key, gpt_model="gpt-3.5-turbo", max_workers=12):
         self.api_key = api_key
         self.gpt_model = gpt_model
         self.max_workers = max_workers

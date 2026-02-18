@@ -28,7 +28,7 @@ if USE_GPT_PARSER:
     API_TYPE = os.getenv("API_TYPE", "azure")
     if API_TYPE == "openai":
         endpoint = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-        deployment = os.getenv("DEPLOYMENT_NAME", "gpt-5-mini")
+        deployment = os.getenv("DEPLOYMENT_NAME", "gpt-4o")
         subscription_key = os.getenv("OPENAI_API_KEY", "YOUR_API_KEY")
         client = OpenAI(
             api_key=subscription_key,
@@ -38,7 +38,7 @@ if USE_GPT_PARSER:
 
     elif API_TYPE == "azure":
         endpoint = os.getenv("ENDPOINT_URL", "https://haku-chat.openai.azure.com/")
-        deployment = os.getenv("DEPLOYMENT_NAME", "gpt-5-mini")
+        deployment = os.getenv("DEPLOYMENT_NAME", "gpt-4o")
         subscription_key = os.getenv("AZURE_OPENAI_API_KEY")
         client = AzureOpenAI(
             azure_endpoint=endpoint,
@@ -200,7 +200,7 @@ Your extracted letter is:
     ]
 
     params = {
-        "model": "gpt-5-mini",
+        "model": "gpt-4o",
         "messages": prompt_message,
         "max_tokens": 16,
         "temperature": 0.0,

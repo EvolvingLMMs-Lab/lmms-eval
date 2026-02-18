@@ -40,7 +40,7 @@ if _corecognition_config.get("metadata", {}).get("use_lmms_judge"):
 
         eval_logger.info("Using LMMS judge server for CoreCognition task.")
         API_TYPE = os.getenv("API_TYPE", "openai").lower()
-        DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME") or os.getenv("OPENAI_API_MODEL", "gpt-5-mini")
+        DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME") or os.getenv("OPENAI_API_MODEL", "gpt-4o")
 
         _judge_server_config = ServerConfig(model_name=DEPLOYMENT_NAME)
         _judge_server = get_server(server_name=API_TYPE, config=_judge_server_config)

@@ -29,7 +29,7 @@ def get_rubric(qid):
     return instruction
 
 
-def get_descriptive_result_gpt(client, prompt, length, model="gpt-5-mini", max_retries=10):
+def get_descriptive_result_gpt(client, prompt, length, model="gpt-4o-2024-05-13", max_retries=10):
     curr_retries = 0
     max_tokens = 256
     while curr_retries < max_retries:
@@ -78,7 +78,7 @@ def get_descriptive_result_gpt(client, prompt, length, model="gpt-5-mini", max_r
 
 def build_json_keys(length):
     keys = []
-    # specify the keys for gpt-5-mini's json response
+    # specify the keys for gpt-4o's json response
     for i in range(1, length + 1):
         keys.append(f"extract_answer_T{i}")
         keys.append(f"score_T{i}")

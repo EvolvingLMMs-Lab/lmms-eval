@@ -65,7 +65,7 @@ To enable hybrid matching with LLM judge:
    export API_TYPE=openai  # or "azure", "anthropic", etc., see lmms_eval/llm_judge/providers
    export OPENAI_API_URL="https://api.openai.com/v1"
    export OPENAI_API_KEY=your_api_key_here
-   export DEPLOYMENT_NAME=gpt-5-mini  # or OPENAI_API_MODEL=gpt-5-mini
+   export DEPLOYMENT_NAME=gpt-4o  # or OPENAI_API_MODEL=gpt-4o
    ```
 
 If the API is not configured or `use_lmms_judge` is `false`, the evaluation will use template matching only.

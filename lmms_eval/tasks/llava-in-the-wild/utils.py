@@ -26,7 +26,7 @@ with open(Path(__file__).parent / "llava-in-the-wild.yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-5-mini")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
 
 server_config = ServerConfig(
     model_name=MODEL_VERSION,

@@ -34,7 +34,7 @@ def get_llm_judge_server() -> Any:
     global _server
     if _server is None:
         API_TYPE = os.getenv("API_TYPE", "openai")
-        MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-5-mini")
+        MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
         server_config = ServerConfig(model_name=MODEL_VERSION)
         _server = get_server(server_name=API_TYPE, config=server_config)
     return _server

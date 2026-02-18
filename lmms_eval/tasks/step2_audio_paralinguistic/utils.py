@@ -191,7 +191,7 @@ def judge_semantic_match(answer, asr_text, prompt_template):
 
         formatted_prompt = prompt_template.format(text1=answer, text2=asr_text)
 
-        response = client.chat.completions.create(model="gpt-5-nano", messages=[{"role": "system", "content": "你是一个专业的文本评估助手"}, {"role": "user", "content": formatted_prompt}], temperature=0)
+        response = client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "system", "content": "你是一个专业的文本评估助手"}, {"role": "user", "content": formatted_prompt}], temperature=0)
 
         result = response.choices[0].message.content.strip().lower()
         return 1 if result == "yes" else 0

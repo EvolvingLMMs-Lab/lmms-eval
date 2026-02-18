@@ -40,7 +40,7 @@ The evaluation checks if the model's output matches the correct integer answer (
 
 ### Environment Variables
 
-- `PROCESSOR=gpt-5-nano`: Use GPT-4o-mini for answer extraction
+- `PROCESSOR=gpt-4o-mini`: Use GPT-4o-mini for answer extraction
 - `PROMPTSTEP`: Add thinking steps prompt
 - `PROMPTTOKEN`: Add thinking tokens prompt
 - `PROMPTLONG`: Add long thinking prompt

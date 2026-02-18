@@ -38,7 +38,7 @@ if config["metadata"]["use_lmms_judge"]:
     eval_logger.info("Using LMMS judge server for STARE task.")
     API_TYPE = os.getenv("API_TYPE", "azure")  # Default to azure based on .env
     # For Azure OpenAI, use DEPLOYMENT_NAME as the model_name
-    DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME", "gpt-5-mini")
+    DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME", "gpt-4o")
 
     server_config = ServerConfig(
         model_name=DEPLOYMENT_NAME,  # Use deployment name for Azure OpenAI

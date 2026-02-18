@@ -5,5 +5,5 @@ task:
   - mathvista_testmini_format
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-5-nano"
+  gpt_eval_model_name: "gpt-3.5-turbo"
   quick_extract: false
