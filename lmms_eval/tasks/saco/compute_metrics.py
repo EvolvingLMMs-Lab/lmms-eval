@@ -40,14 +40,7 @@ def _print_table(summary: dict, json_path: str) -> None:
 
     # Header
     w_split = max(max(len(v) for v in display.values()), 12)
-    hdr = (
-        f"{'Split':<{w_split}}"
-        f"  {'IL_MCC':>8}"
-        f"  {'pmF1':>8}"
-        f"  {'cgF1':>8}"
-        f"  {'macro_F1':>8}"
-        f"  {'cnt_acc':>8}"
-    )
+    hdr = f"{'Split':<{w_split}}" f"  {'IL_MCC':>8}" f"  {'pmF1':>8}" f"  {'cgF1':>8}" f"  {'macro_F1':>8}" f"  {'cnt_acc':>8}"
     sep = "-" * len(hdr)
 
     print(f"\n{'=' * len(hdr)}")
@@ -66,14 +59,7 @@ def _print_table(summary: dict, json_path: str) -> None:
         # count_accuracy comes from the original JSON (not computed here)
         cnt_acc = m.get("count_accuracy", 0.0)
 
-        print(
-            f"{label:<{w_split}}"
-            f"  {m['IL_MCC']:>8.4f}"
-            f"  {m['pmF1'] * 100:>7.1f}%"
-            f"  {m['cgF1']:>7.2f}"
-            f"  {m['macro_F1'] * 100:>7.1f}%"
-            f"  {cnt_acc * 100:>7.1f}%"
-        )
+        print(f"{label:<{w_split}}" f"  {m['IL_MCC']:>8.4f}" f"  {m['pmF1'] * 100:>7.1f}%" f"  {m['cgF1']:>7.2f}" f"  {m['macro_F1'] * 100:>7.1f}%" f"  {cnt_acc * 100:>7.1f}%")
         totals["IL_MCC"] += m["IL_MCC"]
         totals["pmF1"] += m["pmF1"]
         totals["cgF1"] += m["cgF1"]
@@ -83,21 +69,12 @@ def _print_table(summary: dict, json_path: str) -> None:
 
     if n > 1:
         print(sep)
-        print(
-            f"{'AVERAGE':<{w_split}}"
-            f"  {totals['IL_MCC'] / n:>8.4f}"
-            f"  {totals['pmF1'] / n * 100:>7.1f}%"
-            f"  {totals['cgF1'] / n:>7.2f}"
-            f"  {totals['macro_F1'] / n * 100:>7.1f}%"
-            f"  {totals['cnt_acc'] / n * 100:>7.1f}%"
-        )
+        print(f"{'AVERAGE':<{w_split}}" f"  {totals['IL_MCC'] / n:>8.4f}" f"  {totals['pmF1'] / n * 100:>7.1f}%" f"  {totals['cgF1'] / n:>7.2f}" f"  {totals['macro_F1'] / n * 100:>7.1f}%" f"  {totals['cnt_acc'] / n * 100:>7.1f}%")
     print(f"{'=' * len(hdr)}\n")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Compute SaCO / PBench final metrics (MCC, pmF1, cgF1) from lmms-eval results JSON."
-    )
+    parser = argparse.ArgumentParser(description="Compute SaCO / PBench final metrics (MCC, pmF1, cgF1) from lmms-eval results JSON.")
     parser.add_argument(
         "results_json",
         type=str,
