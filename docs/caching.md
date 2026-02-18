@@ -1,6 +1,120 @@
-## Caching and reloading responses
+## Response Cache
 
-This guide explains how to enable and use the built‑in JSONL cache api in `lmms-eval` so repeated runs can reload model responses instead of re‑calling the model. It also notes an optional legacy SQLite cache wrapper.
+`lmms-eval` includes a unified response cache backed by SQLite + JSONL write-ahead log. When enabled, deterministic model responses are stored and reused across runs, skipping redundant inference.
+
+### Quick start
+
+```bash
+python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-7B-Instruct \
+  --tasks mme \
+  --batch_size 1 \
+  --use_cache ./eval_cache
+```
+
+On a second run with the same command, cached responses are loaded and the model is only called for new or changed requests.
+
+### What gets cached
+
+Only **deterministic** requests are cached. A request is considered non-deterministic (and skipped) when any of:
+
+- `temperature > 0`
+- `do_sample = True`
+- `n > 1`, `best_of > 1`, or `num_return_sequences > 1`
+
+`loglikelihood` requests are always deterministic.
+
+Non-deterministic requests always go to the model, are never stored, and never returned from cache. This ensures `repeat > 1` with `temperature > 0` produces distinct results per repeat.
+
+### Cache key
+
+Each cached response is keyed by:
+
+```
+sha256({
+    "v":   <schema_version>,        # auto-invalidates on schema upgrade
+    "rt":  <request_type>,          # "generate_until" | "loglikelihood"
+    "tn":  <task_name>,             # e.g. "mme"
+    "did": <doc_id>,                # dataset sample ID
+    "idx": <idx>,                   # multiple-choice option index within a doc
+    "gk":  <canonicalized_gen_kwargs>,
+    "ch":  <content_hash>,          # loglikelihood only: conditional vs unconditional
+    "tf":  <task_fingerprint>       # sha256 of task YAML config
+})
+```
+
+Only generation parameters that affect output are included in `gk`:
+
+```
+temperature, top_p, top_k, max_new_tokens, max_gen_toks,
+do_sample, num_beams, until, repetition_penalty,
+n, best_of, num_return_sequences
+```
+
+Float/int normalization: `temperature=0.0` and `temperature=0` produce the same key.
+
+### File layout
+
+```
+{use_cache}/
+  {model_hash}/          # sha256("{model}|{model_args}")[:16]
+    rank0.db             # SQLite (WAL mode) - primary lookup
+    rank0.jsonl          # write-ahead audit log - crash recovery
+    rank1.db             # (if multi-GPU)
+    rank1.jsonl
+```
+
+Per-rank files avoid write contention in distributed runs.
+
+### Cache invalidation
+
+| Change | Effect |
+|--------|--------|
+| Different model or model_args | New `model_hash` directory |
+| Edit task YAML or prompt function | New `task_fingerprint` in key |
+| Change gen_kwargs (e.g. max_new_tokens) | Different `gk` in key |
+| Schema version bump | Different `v` in key |
+
+To force re-evaluation: delete the `{model_hash}/` directory under your cache path.
+
+### Crash recovery
+
+Write order: JSONL append + fsync -> SQLite upsert. On startup, any JSONL entries missing from SQLite are replayed. This survives crashes between the two writes.
+
+### Poisoning prevention
+
+Responses are validated before caching:
+
+- `None` -> rejected
+- Empty or whitespace-only strings -> rejected
+- Malformed loglikelihood tuples (not `[float, bool]`) -> rejected
+
+### Merge distributed shards
+
+After a multi-GPU run, merge per-rank DBs into one:
+
+```python
+from lmms_eval.caching.response_cache import ResponseCache
+
+ResponseCache.merge_shards(
+    shard_paths=["eval_cache/abc123/rank0.db", "eval_cache/abc123/rank1.db"],
+    output_path="eval_cache/abc123/merged.db",
+)
+```
+
+### JSONL audit log
+
+The JSONL file logs **all** model responses regardless of determinism. Each line includes a `"deterministic"` field. This provides real-time observability (`tail -f rank0.jsonl`) while only deterministic responses are stored in SQLite for cache reuse.
+
+### Implementation
+
+Source: `lmms_eval/caching/response_cache.py`
+Tests: `test/cache/test_response_cache.py` (34 tests)
+
+Covered: determinism detection, cache key collision, gen_kwargs extraction, poisoning prevention, hit/miss, non-deterministic bypass with repeats, JSONL audit log observability, crash recovery via JSONL replay, multi-rank isolation and shard merging, model fingerprint isolation, stats accuracy across close/reopen, large batch (1000 requests).
+
+Not covered: `loglikelihood` end-to-end execute flow.
 
 ### What gets cached
 

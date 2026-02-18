@@ -244,7 +244,9 @@ def parse_eval_args() -> argparse.Namespace:
         type=str,
         default=None,
         metavar="DIR",
-        help="A path to a sqlite db file for caching model responses. `None` if not caching.",
+        help="Directory for response-level caching (SQLite + JSONL audit log). "
+        "Caches deterministic model responses (temperature=0) for reuse across runs. "
+        "Per-rank files created automatically for distributed safety. `None` to disable.",
     )
     parser.add_argument(
         "--cache_requests",
