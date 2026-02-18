@@ -172,10 +172,20 @@ bash examples/models/vllm_qwen2vl.sh
 bash examples/models/vllm_qwen3vl.sh
 ```
 
+**Qwen3.5:**
+```bash
+bash examples/models/vllm_qwen35.sh
+```
+
 ### Evaluation with SGLang
 
 ```bash
 bash examples/models/sglang.sh
+```
+
+**Qwen3.5:**
+```bash
+bash examples/models/sglang_qwen35.sh
 ```
 
 ### Evaluation of OpenAI-Compatible Model
@@ -522,6 +532,12 @@ For more details, see the [v0.6 release notes](docs/lmms-eval-0.6.md).
 <summary><strong>What models does lmms-eval support?</strong></summary>
 
 We support 30+ model families out of the box, including Qwen2.5-VL, Qwen3-VL, LLaVA-OneVision, InternVL-2, VILA, and more. Any OpenAI-compatible API endpoint is also supported. See the full list in [`lmms_eval/models/`](lmms_eval/models/).
+
+Qwen3.5 is supported through existing runtime backends (`--model vllm` and `--model sglang`) by setting `model=Qwen/Qwen3.5-397B-A17B` in `--model_args`.
+
+The Qwen3.5 example scripts align with official runtime references (for example, `max_model_len/context_length=262144` and `reasoning_parser=qwen3`).
+
+If a new model family is already fully supported by vLLM or SGLang at runtime, we generally only need documentation and examples instead of adding a dedicated model wrapper.
 
 </details>
 
