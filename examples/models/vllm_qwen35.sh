@@ -7,6 +7,9 @@ TENSOR_PARALLEL_SIZE=8
 GPU_MEMORY_UTILIZATION=0.85
 BATCH_SIZE=16
 MAX_MODEL_LEN=262144
+# Official Qwen3.5 examples use reasoning_parser=qwen3.
+# vLLM recipes currently note deepseek_r1 may parse reasoning content more reliably.
+# If reasoning blocks are not parsed as expected on your vLLM version, switch to deepseek_r1.
 REASONING_PARSER="qwen3"
 
 OUTPUT_PATH="./logs/qwen35_vllm"
