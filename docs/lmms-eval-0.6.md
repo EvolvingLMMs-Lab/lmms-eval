@@ -474,6 +474,35 @@ Spatial intelligence benchmarks are needed to evaluate the model's ability to re
 
 Interaction based simulators are needed to evaluate agentic capabilities, instead of relying on static benchmarks.
 
+## 4. Migration Notes
+
+### 4.1 OpenAI Judge Model Deprecation
+
+Many tasks in lmms-eval use OpenAI models as LLM judges for scoring (e.g., evaluating free-form answers, computing GPT-based metrics). These judge model names are hardcoded as defaults in individual task `utils.py` files and YAML configs.
+
+As OpenAI deprecates older model versions, users may need to switch to newer models. The table below provides our recommended mapping:
+
+| Deprecated Model | Recommended Replacement | Notes |
+|------------------|------------------------|-------|
+| `gpt-4o` / `gpt-4o-2024-*` | `gpt-5-mini` | Cost-efficient GPT-5 variant, direct successor |
+| `gpt-4o-mini` | `gpt-5-nano` | Cheapest GPT-5 variant |
+| `gpt-3.5-turbo-*` | `gpt-5-nano` | Legacy model, cheapest replacement |
+| `gpt-4o-audio-preview-*` | `gpt-audio` | Dedicated audio model |
+| `gpt-4.1` / `gpt-4.1-mini` | `gpt-5-mini` / `gpt-5-nano` | GPT-5 series supersedes 4.1 |
+
+**Why we keep the old defaults in code**: Task configs retain their original model references to preserve reproducibility of published results. Changing defaults would silently alter scoring behavior for existing benchmarks.
+
+**How to override**: Most tasks read the judge model from environment variables. Set `MODEL_VERSION` (or the task-specific variable) to use a newer model:
+
+```bash
+export MODEL_VERSION="gpt-5-mini"
+python -m lmms_eval --model qwen2_5_vl --tasks mme --limit 5
+```
+
+Some tasks use different environment variable names (e.g., `BABYVISION_MODEL_NAME`, `VIESCORE_MODEL_NAME`, `JUDGE_MODEL_NAME`). Check the relevant task's `utils.py` for the exact variable name.
+
+---
+
 ## References
 
 ### Core: Statistical Evaluation Framework
