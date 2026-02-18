@@ -136,7 +136,7 @@ class ChatCompletionSampler:
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-5-nano",
         system_message: str | None = None,
         temperature: float = 0.5,
         max_tokens: int = 1024,
@@ -256,10 +256,10 @@ def process_results(doc: dict, results: List[str]) -> Dict[str, int]:
         n_res_list = []
         metrics["exact_matches"] = []
 
-    if os.getenv("PROCESSOR", "") == "gpt-4o-mini":
-        sampler = ChatCompletionSampler(model="gpt-4o-mini")
+    if os.getenv("PROCESSOR", "") == "gpt-5-nano":
+        sampler = ChatCompletionSampler(model="gpt-5-nano")
     else:
-        print(f"Unknown processor: {os.getenv('PROCESSOR')}; set 'PROCESSOR=gpt-4o-mini' and 'OPENAI_API_KEY=YOUR_KEY' for best results.")
+        print(f"Unknown processor: {os.getenv('PROCESSOR')}; set 'PROCESSOR=gpt-5-nano' and 'OPENAI_API_KEY=YOUR_KEY' for best results.")
         raise ValueError("MATH requires PROCESSOR atm. AIME is fine without it.")
         sampler = None
 

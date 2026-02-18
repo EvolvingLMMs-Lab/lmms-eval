@@ -8,7 +8,7 @@ Usage:
     Set environment variables:
         export VIESCORE_API_BASE="https://api.openai.com/v1"  # or vLLM server URL
         export VIESCORE_API_KEY="your-api-key"
-        export VIESCORE_MODEL_NAME="gpt-4o"  # or "Qwen/Qwen2.5-VL-72B-Instruct"
+        export VIESCORE_MODEL_NAME="gpt-5-mini"  # or "Qwen/Qwen2.5-VL-72B-Instruct"
 """
 
 import base64
@@ -56,7 +56,7 @@ class OpenAIBackend:
     Environment variables:
         - VIESCORE_API_BASE: API base URL (default: "https://api.openai.com/v1")
         - VIESCORE_API_KEY: API key (required)
-        - VIESCORE_MODEL_NAME: Model name (default: "gpt-4o")
+        - VIESCORE_MODEL_NAME: Model name (default: "gpt-5-mini")
         - VIESCORE_TIMEOUT: Request timeout in seconds (default: 120)
     """
 
@@ -75,14 +75,14 @@ class OpenAIBackend:
         Args:
             api_base: API base URL. Defaults to VIESCORE_API_BASE env var.
             api_key: API key. Defaults to VIESCORE_API_KEY env var.
-            model_name: Model name. Defaults to VIESCORE_MODEL_NAME env var or "gpt-4o".
+            model_name: Model name. Defaults to VIESCORE_MODEL_NAME env var or "gpt-5-mini".
             timeout: Request timeout in seconds.
             max_tokens: Maximum tokens in response.
             temperature: Sampling temperature.
         """
         self.api_base = api_base or os.getenv("VIESCORE_API_BASE", "https://api.openai.com/v1")
         self.api_key = api_key or os.getenv("VIESCORE_API_KEY")
-        self.model_name = model_name or os.getenv("VIESCORE_MODEL_NAME", "gpt-4o")
+        self.model_name = model_name or os.getenv("VIESCORE_MODEL_NAME", "gpt-5-mini")
         self.timeout = int(os.getenv("VIESCORE_TIMEOUT", str(timeout)))
         self.max_tokens = max_tokens
         self.temperature = temperature

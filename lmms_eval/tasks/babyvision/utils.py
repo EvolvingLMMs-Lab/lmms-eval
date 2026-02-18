@@ -166,7 +166,7 @@ def babyvision_process_results(doc, results, **kwargs):
 
     try:
         prompt = build_judge_prompt(question, groundtruth, parsed_pred)
-        model_name = os.getenv("BABYVISION_MODEL_NAME", "gpt-4o")
+        model_name = os.getenv("BABYVISION_MODEL_NAME", "gpt-5-mini")
 
         response = client.chat.completions.create(
             model=model_name,

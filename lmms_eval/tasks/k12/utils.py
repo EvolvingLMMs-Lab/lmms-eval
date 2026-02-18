@@ -19,7 +19,7 @@ with open(Path(__file__).parent / "k12.yaml", "r") as f:
 
 # Initialize the judge server
 API_TYPE = os.getenv("API_TYPE", "openai")
-GPT_MODEL = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+GPT_MODEL = os.getenv("MODEL_VERSION", "gpt-5-mini")
 
 server_config = ServerConfig(
     model_name=GPT_MODEL,

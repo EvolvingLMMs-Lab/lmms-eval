@@ -8,7 +8,7 @@ This repository contains an evaluation dataset designed for assessing the perfor
 
 - Answers: The answers are extracted from the "human-generated detailed description" of the videos.
 
-- GPT-3.5 Evaluation: The answers are evaluated using a prompt we designed, which rates the responses based on the aforementioned dimensions with `gpt-3.5-turbo-0613`.
+- GPT-3.5 Evaluation: The answers are evaluated using a prompt we designed, which rates the responses based on the aforementioned dimensions with `gpt-5-nano`.
 
 ## Groups & Tasks
 

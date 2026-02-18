@@ -44,7 +44,7 @@ def videoevalpro_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 class GPT4oJudge:
-    def __init__(self, model_name="gpt-4o-2024-11-20") -> None:
+    def __init__(self, model_name="gpt-5-mini") -> None:
         self.model_name = model_name
         self.client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 

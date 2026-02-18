@@ -171,11 +171,11 @@ def livebench_process_results_for_name(doc, results, model, eval_name):
 
 
 def livebench_process_results_4o(doc, results):
-    return livebench_process_results_for_name(doc, results, "gpt-4o", "gpt4_eval_score")
+    return livebench_process_results_for_name(doc, results, "gpt-5-mini", "gpt4_eval_score")
 
 
 def livebench_process_results_4o_mini(doc, results):
-    return livebench_process_results_for_name(doc, results, "gpt-4o-mini", "gpt4_eval_score_mini")
+    return livebench_process_results_for_name(doc, results, "gpt-5-nano", "gpt4_eval_score_mini")
 
 
 def livebench_process_results(doc, results):

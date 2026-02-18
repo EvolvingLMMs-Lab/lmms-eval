@@ -82,8 +82,8 @@ def parse_pred_ans(pred_ans):
     return flag_choice  # which one is better
 
 
-def parse_by_llm(response, model="gpt-4o-mini", max_tokens=32):
-    # get the judgement from response using gpt-4o
+def parse_by_llm(response, model="gpt-5-nano", max_tokens=32):
+    # get the judgement from response using gpt-5-mini
     data = {"max_tokens": max_tokens, "model": model, "temperature": 0.0, "top_p": 1.0, "presence_penalty": 1, "messages": [{"role": "user", "content": LLM_PARSE_ANSWER_PROMPT.format(judgement=response)}]}
     response = requests.post(API_URL, headers=headers, data=json.dumps(data).encode("utf-8"))
     result = response.content.decode("utf-8")

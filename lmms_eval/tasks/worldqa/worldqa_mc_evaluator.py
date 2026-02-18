@@ -6,7 +6,7 @@ from loguru import logger as eval_logger
 
 
 class WorldQA_MC_Evaluator:
-    def __init__(self, sys_prompt="There are several options:", API_KEY="", API_URL="", model_version="gpt-3.5-turbo-0613"):
+    def __init__(self, sys_prompt="There are several options:", API_KEY="", API_URL="", model_version="gpt-5-nano"):
         self.sys_prompt = sys_prompt
         self.model_version = model_version
         self.API_KEY = API_KEY

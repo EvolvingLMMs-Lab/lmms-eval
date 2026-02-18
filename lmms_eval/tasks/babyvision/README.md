@@ -26,7 +26,7 @@ BabyVision is a benchmark for evaluating multimodal LLMs on core visual reasonin
 # Set up API for LLM-as-Judge (required)
 export BABYVISION_API_KEY="your-api-key"
 export BABYVISION_BASE_URL="https://api.openai.com/v1"  # optional
-export BABYVISION_MODEL_NAME="gpt-4o"  # optional, default: gpt-4o
+export BABYVISION_MODEL_NAME="gpt-5-mini"  # optional, default: gpt-5-mini
 
 # Run evaluation
 lmms-eval \
@@ -60,7 +60,7 @@ The evaluation supports models with extended reasoning (e.g., `<think>...</think
 |----------|----------|---------|-------------|
 | `BABYVISION_API_KEY` | Yes | - | API key for LLM judge |
 | `BABYVISION_BASE_URL` | No | `https://api.openai.com/v1` | API base URL |
-| `BABYVISION_MODEL_NAME` | No | `gpt-4o` | Judge model name |
+| `BABYVISION_MODEL_NAME` | No | `gpt-5-mini` | Judge model name |
 
 ## Related
 

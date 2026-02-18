@@ -38,7 +38,7 @@ with open(Path(__file__).parent / "mia_bench.yaml", "r") as f:
 
 NUM_SECONDS_TO_SLEEP = 10
 API_TYPE = os.getenv("API_TYPE", "openai")
-GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-5-mini")
 
 if API_TYPE == "openai":
     API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")

@@ -3,7 +3,7 @@ import os
 from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
 from lmms_eval.tasks.mmbench.mmbench_evals import MMBench_Evaluator
 
-GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-5-mini")
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":

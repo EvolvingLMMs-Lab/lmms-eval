@@ -185,7 +185,7 @@ with open(Path(__file__).parent / "mmvetv2.yaml", "r") as f:
     config = yaml.safe_load("".join(safe_data))
 
 API_TYPE = os.getenv("API_TYPE", "openai")
-MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "gpt-5-mini")
 
 # Initialize the judge server
 server_config = ServerConfig(model_name=MODEL_VERSION, temperature=0.0, max_tokens=128)

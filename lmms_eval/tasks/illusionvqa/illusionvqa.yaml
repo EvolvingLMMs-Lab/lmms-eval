@@ -1,5 +1,5 @@
 #https://illusionvqa.github.io/
-#python3 -m lmms_eval --model gpt4v --model_args model_version="gpt-4o",modality="image" --tasks illusionvqa
+#python3 -m lmms_eval --model gpt4v --model_args model_version="gpt-5-mini",modality="image" --tasks illusionvqa
 
 tag: "illusionvqa"                  
 

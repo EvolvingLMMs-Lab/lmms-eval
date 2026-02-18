@@ -34,7 +34,7 @@ if config["metadata"]["eval_type"] == "llm":
     eval_logger.info("Using LMMS judge server for OmniSpatial task.")
     API_TYPE = os.getenv("API_TYPE", "openai")
     # Use JUDGE_MODEL_VERSION instead of MODEL_VERSION
-    JUDGE_MODEL_VERSION = os.getenv("JUDGE_MODEL_VERSION", "gpt-4.1-mini")
+    JUDGE_MODEL_VERSION = os.getenv("JUDGE_MODEL_VERSION", "gpt-5-nano")
 
     server_config = ServerConfig(
         model_name=JUDGE_MODEL_VERSION,

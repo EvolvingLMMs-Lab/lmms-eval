@@ -42,7 +42,7 @@ export LMMS_EVAL_HOME="/path/to/cache_root"  # optional
 
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-2024-11-20,base_url=$OPENAI_API_BASE \
+  --model_args model_version=gpt-5-mini,base_url=$OPENAI_API_BASE \
   --tasks mmmu_val \
   --batch_size 1 \
   --output_path ./logs/
@@ -81,7 +81,7 @@ Fine-grained paralinguistic feature evaluation:
 ```bash
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-audio-preview-2024-12-17 \
+  --model_args model_version=gpt-audio \
   --tasks step2_audio_paralinguistic \
   --batch_size 1
 ```
@@ -100,7 +100,7 @@ Comprehensive voice and speech evaluation:
 # Full VoiceBench
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-audio-preview-2024-12-17 \
+  --model_args model_version=gpt-audio \
   --tasks voicebench \
   --batch_size 1
 
@@ -119,7 +119,7 @@ Large-scale ASR and speech evaluation:
 ```bash
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-audio-preview-2024-12-17 \
+  --model_args model_version=gpt-audio \
   --tasks wenet_speech_dev,wenet_speech_test_meeting \
   --batch_size 1
 ```
@@ -136,7 +136,7 @@ Five new model integrations expanding audio and vision capabilities:
 
 | Model | Type | Key Features | Usage Example |
 |-------|------|--------------|---------------|
-| **GPT-4o Audio Preview** | Audio+Text | Paralinguistic understanding, multi-turn audio | `--model async_openai --model_args model_version=gpt-4o-audio-preview-2024-12-17` |
+| **GPT-4o Audio Preview** | Audio+Text | Paralinguistic understanding, multi-turn audio | `--model async_openai --model_args model_version=gpt-audio` |
 | **Gemma-3** | Vision+Text | Enhanced video handling, efficient architecture | `--model gemma3 --model_args pretrained=google/gemma-3-2b-vision-it` |
 | **LLaVA-OneVision 1.5** | Vision+Text | Improved vision understanding, latest LLaVA | `--model llava_onevision1_5 --model_args pretrained=lmms-lab/llava-onevision-1.5-7b` |
 | **LongViLA-R1** | Video+Text | Long-context video, efficient video processing | `--model longvila --model_args pretrained=Efficient-Large-Model/LongViLA-R1-7B` |
@@ -147,7 +147,7 @@ Five new model integrations expanding audio and vision capabilities:
 # GPT-4o Audio Preview for audio tasks
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-audio-preview-2024-12-17 \
+  --model_args model_version=gpt-audio \
   --tasks step2_audio_paralinguistic,voicebench \
   --batch_size 1
 
@@ -210,7 +210,7 @@ Support for MCP-enabled models with tool calling:
 ```bash
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-2024-11-20,mcp_server_path=/path/to/mcp_server.py \
+  --model_args model_version=gpt-5-mini,mcp_server_path=/path/to/mcp_server.py \
   --tasks mmmu_val \
   --batch_size 1
 ```
@@ -234,7 +234,7 @@ Enhanced async API integration:
 # Now supports additional parameters
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o,temperature=0.7,top_p=0.95,max_tokens=2048 \
+  --model_args model_version=gpt-5-mini,temperature=0.7,top_p=0.95,max_tokens=2048 \
   --tasks mmstar
 ```
 
@@ -248,7 +248,7 @@ export OPENAI_API_KEY="your-key"
 
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-audio-preview-2024-12-17 \
+  --model_args model_version=gpt-audio \
   --tasks step2_audio_paralinguistic,voicebench \
   --batch_size 8 \
   --output_path ./audio_results/ \
@@ -262,7 +262,7 @@ python -m lmms_eval \
 # Evaluate across audio, vision, and reasoning tasks
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-2024-11-20 \
+  --model_args model_version=gpt-5-mini \
   --tasks voicebench_mmsu,csbench,scibench_math,charxiv \
   --batch_size 4 \
   --output_path ./multimodal_results/
@@ -290,7 +290,7 @@ from lmms_eval.models.chat.async_openai import AsyncOpenAICompatibleChat
 os.environ["LMMS_EVAL_USE_CACHE"] = "True"
 
 model = AsyncOpenAICompatibleChat(
-    model_version="gpt-4o-audio-preview-2024-12-17",
+    model_version="gpt-audio",
     base_url="https://api.openai.com/v1"
 )
 
@@ -377,7 +377,7 @@ export LMMS_EVAL_USE_CACHE=True
 ```bash
 # GPT-4o Audio Preview
 --model async_openai \
---model_args model_version=gpt-4o-audio-preview-2024-12-17
+--model_args model_version=gpt-audio
 ```
 
 3. **Leverage New Benchmarks:**
@@ -389,7 +389,7 @@ export LMMS_EVAL_USE_CACHE=True
 4. **Optimize Async OpenAI Calls:**
 ```python
 # Use additional parameters for better control
-model_args="model_version=gpt-4o,temperature=0.7,max_tokens=2048"
+model_args="model_version=gpt-5-mini,temperature=0.7,max_tokens=2048"
 ```
 
 ### Updating Existing Workflows
@@ -398,7 +398,7 @@ model_args="model_version=gpt-4o,temperature=0.7,max_tokens=2048"
 ```bash
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-2024-08-06 \
+  --model_args model_version=gpt-5-mini \
   --tasks mmmu_val \
   --batch_size 1
 ```
@@ -409,7 +409,7 @@ export LMMS_EVAL_USE_CACHE=True
 
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-2024-11-20 \
+  --model_args model_version=gpt-5-mini \
   --tasks mmmu_val,voicebench,csbench \
   --batch_size 8  # Higher batch size with caching
 ```
@@ -583,7 +583,7 @@ export LMMS_EVAL_USE_CACHE=True
 ```bash
 python -m lmms_eval \
   --model async_openai \
-  --model_args model_version=gpt-4o-audio-preview-2024-12-17 \
+  --model_args model_version=gpt-audio \
   --tasks step2_audio_paralinguistic,voicebench
 ```
 

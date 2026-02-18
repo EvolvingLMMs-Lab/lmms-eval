@@ -558,7 +558,7 @@ Create a YAML config under `lmms_eval/tasks/` with dataset path, splits, and a `
 <details>
 <summary><strong>Can I evaluate a model behind an API (e.g., GPT-4o, Claude)?</strong></summary>
 
-Yes. Use `--model openai` with `--model_args model=gpt-4o` and set `OPENAI_API_KEY`. Any OpenAI-compatible endpoint works, including local vLLM/SGLang servers.
+Yes. Use `--model openai` with `--model_args model=gpt-5-mini` and set `OPENAI_API_KEY`. Any OpenAI-compatible endpoint works, including local vLLM/SGLang servers.
 
 </details>
 

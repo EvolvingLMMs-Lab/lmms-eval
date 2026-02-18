@@ -185,7 +185,7 @@ cluster_key: videoID    # Correlated questions -> clustered standard errors
 ```python
 from lmms_eval.llm_judge import ServerConfig, get_server
 
-server_config = ServerConfig(model_name="gpt-4o-2024-11-20")
+server_config = ServerConfig(model_name="gpt-5-mini")
 server = get_server(server_name="openai", config=server_config)
 
 def my_process_results(doc, results):

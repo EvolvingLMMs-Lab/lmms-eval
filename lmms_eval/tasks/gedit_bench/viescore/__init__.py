@@ -16,7 +16,7 @@ class VIEScore:
         Environment variables for OpenAI backend:
             - VIESCORE_API_BASE: API base URL (default: "https://api.openai.com/v1")
             - VIESCORE_API_KEY: API key (required)
-            - VIESCORE_MODEL_NAME: Model name (default: "gpt-4o")
+            - VIESCORE_MODEL_NAME: Model name (default: "gpt-5-mini")
         """
         self.task = task
 

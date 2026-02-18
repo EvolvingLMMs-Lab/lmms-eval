@@ -52,7 +52,7 @@ else:
 class BatchGPT4(lmms):
     def __init__(
         self,
-        model_version: str = "gpt-4o",
+        model_version: str = "gpt-5-mini",
         api_key: str = API_KEY,
         api_url: str = API_URL,
         modality: str = "image",

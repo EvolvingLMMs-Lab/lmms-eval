@@ -29,7 +29,7 @@ API_MAX_RETRY = 6
 
 NUM_SECONDS_TO_SLEEP = 15
 
-GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-5-mini")
 
 API_TYPE = os.getenv("API_TYPE", "openai")
 

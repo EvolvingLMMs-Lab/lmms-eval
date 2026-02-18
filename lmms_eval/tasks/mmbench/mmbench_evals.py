@@ -10,7 +10,7 @@ from loguru import logger as eval_logger
 
 
 class MMBench_Evaluator:
-    def __init__(self, sys_prompt="There are several options:", API_KEY="", API_URL="", model_version="gpt-3.5-turbo-0613"):
+    def __init__(self, sys_prompt="There are several options:", API_KEY="", API_URL="", model_version="gpt-5-nano"):
         self.sys_prompt = sys_prompt
         self.model_version = model_version
         self.API_KEY = API_KEY
@@ -244,7 +244,7 @@ class MMBench_Evaluator:
         rd.seed(2680)
         assert eval_method == "openai"
         # Set a large retry number to avoid failure
-        # model = OpenAI('gpt-3.5-turbo-0613', retry=99)
+        # model = OpenAI('gpt-5-nano', retry=99)
 
         # double_log(f'Evaluating {eval_file}', fout)
 

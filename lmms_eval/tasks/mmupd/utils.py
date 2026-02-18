@@ -21,7 +21,7 @@ with open(Path(__file__).parent / "mmupd.yaml", "r") as f:
 
     config = yaml.safe_load("".join(safe_data))
 
-GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
+GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-5-mini")
 API_TYPE = os.getenv("API_TYPE", "openai")
 
 if API_TYPE == "openai":

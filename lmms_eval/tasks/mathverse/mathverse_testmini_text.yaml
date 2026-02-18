@@ -5,6 +5,6 @@ task:
   - mathverse_testmini_text_only
 metadata:
   version: 0.0
-  gpt_eval_model_name: "gpt-3.5-turbo"
+  gpt_eval_model_name: "gpt-5-nano"
   trunk_response: 30
   quick_match: false
