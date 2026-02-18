@@ -260,12 +260,10 @@ class AsyncOpenAIChat(lmms):
                 all_response += last_response
             except Exception as e:
                 all_response += str(e)
-        self.add_request_response_to_cache(request, all_response)
         return all_response, idx
 
     def generate_until(self, requests) -> List[str]:
-        self.load_cache()
-        results, requests = self.get_response_from_cache(requests)
+        results = []
 
         async def run():
             res: List[Tuple[str, int]] = []

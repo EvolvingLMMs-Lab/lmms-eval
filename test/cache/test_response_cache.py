@@ -159,6 +159,89 @@ class TestCacheHitVerification(unittest.TestCase):
         self.assertEqual(cache.get_stats()["total_cached_entries"], 0)
         cache.close()
 
+    def test_temp_positive_repeats_all_bypass_cache(self):
+        """temperature > 0 + repeat > 1: all K clones bypass cache and hit model."""
+        base_req = _make_instance("generate_until", ("prompt", {"temperature": 0.7, "until": ["\n"]}, None, 0, "t", "test"), 0, "t", 0, repeats=3)
+        cloned_reqs = [base_req] * 3
+
+        mock_model = MagicMock()
+        mock_model.generate_until = MagicMock(return_value=["ans_0", "ans_1", "ans_2"])
+
+        cache = ResponseCache(self.db_path, self.audit_path)
+        results = cache.execute(mock_model, "generate_until", cloned_reqs)
+
+        self.assertEqual(results, ["ans_0", "ans_1", "ans_2"])
+        mock_model.generate_until.assert_called_once()
+        sent = mock_model.generate_until.call_args[0][0]
+        self.assertEqual(len(sent), 3)
+        self.assertEqual(cache.get_stats()["skipped_non_deterministic"], 3)
+        self.assertEqual(cache.get_stats()["hits"], 0)
+        self.assertEqual(cache.get_stats()["total_cached_entries"], 0)
+        cache.close()
+
+    def test_temp_zero_repeats_all_hit_same_cache(self):
+        """temperature = 0 + repeat > 1: all K clones hit the same deterministic cache entry."""
+        base_req = _make_instance("generate_until", ("prompt", {"temperature": 0, "until": ["\n"]}, None, 0, "t", "test"), 0, "t", 0, repeats=3)
+
+        mock_model = MagicMock()
+        mock_model.generate_until = MagicMock(return_value=["deterministic_answer"])
+        cache = ResponseCache(self.db_path, self.audit_path)
+        cache.execute(mock_model, "generate_until", [base_req])
+        cache.close()
+
+        cloned_reqs = [base_req] * 3
+        mock_model2 = MagicMock()
+        mock_model2.generate_until = MagicMock(return_value=[])
+        cache2 = ResponseCache(self.db_path, self.audit_path)
+        results = cache2.execute(mock_model2, "generate_until", cloned_reqs)
+
+        self.assertEqual(results, ["deterministic_answer", "deterministic_answer", "deterministic_answer"])
+        mock_model2.generate_until.assert_not_called()
+        self.assertEqual(cache2.get_stats()["hits"], 3)
+        self.assertEqual(cache2.get_stats()["misses"], 0)
+        cache2.close()
+
+    def test_do_sample_repeats_bypass_cache(self):
+        """do_sample=True + repeat > 1: bypass cache same as temperature > 0."""
+        base_req = _make_instance("generate_until", ("prompt", {"temperature": 0, "do_sample": True, "until": ["\n"]}, None, 0, "t", "test"), 0, "t", 0, repeats=3)
+        cloned_reqs = [base_req] * 3
+
+        mock_model = MagicMock()
+        mock_model.generate_until = MagicMock(return_value=["s0", "s1", "s2"])
+
+        cache = ResponseCache(self.db_path, self.audit_path)
+        results = cache.execute(mock_model, "generate_until", cloned_reqs)
+
+        self.assertEqual(results, ["s0", "s1", "s2"])
+        sent = mock_model.generate_until.call_args[0][0]
+        self.assertEqual(len(sent), 3)
+        self.assertEqual(cache.get_stats()["skipped_non_deterministic"], 3)
+        self.assertEqual(cache.get_stats()["total_cached_entries"], 0)
+        cache.close()
+
+    def test_nondeterministic_no_cross_run_poisoning(self):
+        """Non-deterministic results must not leak into DB across runs."""
+        req = _make_instance("generate_until", ("prompt", {"temperature": 0.7, "until": ["\n"]}, None, 0, "t", "test"), 0, "t", 0)
+
+        mock_model = MagicMock()
+        mock_model.generate_until = MagicMock(return_value=["run1_answer"])
+        cache = ResponseCache(self.db_path, self.audit_path)
+        cache.execute(mock_model, "generate_until", [req])
+        self.assertEqual(cache.get_stats()["total_cached_entries"], 0)
+        cache.close()
+
+        mock_model2 = MagicMock()
+        mock_model2.generate_until = MagicMock(return_value=["run2_answer"])
+        cache2 = ResponseCache(self.db_path, self.audit_path)
+        results = cache2.execute(mock_model2, "generate_until", [req])
+
+        self.assertEqual(results, ["run2_answer"])
+        mock_model2.generate_until.assert_called_once()
+        self.assertEqual(cache2.get_stats()["hits"], 0)
+        self.assertEqual(cache2.get_stats()["skipped_non_deterministic"], 1)
+        self.assertEqual(cache2.get_stats()["total_cached_entries"], 0)
+        cache2.close()
+
     def test_partial_cache_hit(self):
         mock_model = MagicMock()
         mock_model.generate_until = MagicMock(return_value=["a0", "a1", "a2"])
