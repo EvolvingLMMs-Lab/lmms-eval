@@ -1,11 +1,11 @@
 import json
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-from PIL import Image
 from loguru import logger as eval_logger
+from PIL import Image
 from tqdm import tqdm
-from typing import Dict, List, Optional, Tuple, Union
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
@@ -101,15 +101,9 @@ class SAM3(lmms):
         super().__init__()
 
         if not HAS_SAM3:
-            raise ImportError(
-                "SAM3 is required but not installed.  "
-                "Please install / upgrade transformers with SAM3 support."
-            )
+            raise ImportError("SAM3 is required but not installed.  " "Please install / upgrade transformers with SAM3 support.")
         if not HAS_PYCOCOTOOLS:
-            raise ImportError(
-                "pycocotools is required for COCO RLE mask encoding.  "
-                "Install with: pip install pycocotools"
-            )
+            raise ImportError("pycocotools is required for COCO RLE mask encoding.  " "Install with: pip install pycocotools")
 
         self.pretrained = pretrained
         self.threshold = threshold
@@ -291,6 +285,4 @@ class SAM3(lmms):
 
     def generate_until_multi_round(self, requests: List[Instance]) -> List[str]:
         """Not applicable for SAM3."""
-        raise NotImplementedError(
-            "Multi-round generation is not supported for SAM3."
-        )
+        raise NotImplementedError("Multi-round generation is not supported for SAM3.")
