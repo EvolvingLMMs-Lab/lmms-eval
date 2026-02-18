@@ -79,6 +79,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "qwen3_vl": "Qwen3_VL",
     "reka": "Reka",
     "ross": "Ross",
+    "sam3": "SAM3",
     "slime": "Slime",
     "srt_api": "SRT_API",
     "tinyllava": "TinyLlava",
