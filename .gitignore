@@ -52,6 +52,7 @@ span.log
 uv.lock
 workspace/*
 .claude/*
+!.claude-plugin/
 .opencode/
 remote_code/*
 docs/plans/
