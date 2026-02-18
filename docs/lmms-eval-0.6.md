@@ -474,6 +474,79 @@ Spatial intelligence benchmarks are needed to evaluate the model's ability to re
 
 Interaction based simulators are needed to evaluate agentic capabilities, instead of relying on static benchmarks.
 
+## 4. Migration Notes
+
+### 4.1 OpenAI Judge Model Deprecation
+
+Many tasks in lmms-eval use OpenAI models as LLM judges for scoring (e.g., evaluating free-form answers, computing GPT-based metrics). These judge model names are hardcoded as defaults in individual task `utils.py` files and YAML configs.
+
+As OpenAI deprecates older model versions, users may need to switch to newer models. Below is the official deprecation timeline and our recommended migration mapping.
+
+#### Official Deprecation Timeline
+
+Source: [OpenAI Deprecations](https://platform.openai.com/docs/deprecations) (last checked: 2026-02-18)
+
+**GPT-3.5 series**
+
+| Model | Shutdown Date | Status | Recommended Replacement |
+|-------|--------------|--------|------------------------|
+| `gpt-3.5-turbo-0301` | 2024-09-13 | **Already shut down** | `gpt-3.5-turbo` |
+| `gpt-3.5-turbo-0613` | 2024-09-13 | **Already shut down** | `gpt-3.5-turbo` |
+| `gpt-3.5-turbo-16k-0613` | 2024-09-13 | **Already shut down** | `gpt-3.5-turbo` |
+| `gpt-3.5-turbo-instruct` | 2026-09-28 | Deprecated | `gpt-5-mini` or `gpt-4.1-mini` |
+| `gpt-3.5-turbo-1106` | 2026-09-28 | Deprecated | `gpt-5-mini` or `gpt-4.1-mini` |
+
+**GPT-4 series**
+
+| Model | Shutdown Date | Status | Recommended Replacement |
+|-------|--------------|--------|------------------------|
+| `gpt-4-vision-preview` | 2024-12-06 | **Already shut down** | `gpt-4o` |
+| `gpt-4-1106-vision-preview` | 2024-12-06 | **Already shut down** | `gpt-4o` |
+| `gpt-4-32k` / `gpt-4-32k-0613` | 2025-06-06 | **Already shut down** | `gpt-4o` |
+| `gpt-4-32k-0314` | 2025-06-06 | **Already shut down** | `gpt-4o` |
+| `gpt-4-0314` | 2026-03-26 | Deprecated | `gpt-5` or `gpt-4.1` |
+| `gpt-4-1106-preview` | 2026-03-26 | Deprecated | `gpt-5` or `gpt-4.1` |
+| `gpt-4-0125-preview` | 2026-03-26 | Deprecated | `gpt-5` or `gpt-4.1` |
+| `gpt-4.5-preview` | 2025-07-14 | **Already shut down** | `gpt-4.1` |
+
+**GPT-4o series** (audio/realtime variants)
+
+| Model | Shutdown Date | Status | Recommended Replacement |
+|-------|--------------|--------|------------------------|
+| `gpt-4o-audio-preview-2024-10-01` | 2025-10-10 | **Already shut down** | `gpt-audio` |
+| `chatgpt-4o-latest` | 2026-02-17 | Deprecated | `gpt-5.1-chat-latest` |
+| `gpt-4o-audio-preview` | 2026-03-24 | Deprecated | `gpt-audio` |
+| `gpt-4o-mini-audio-preview` | 2026-03-24 | Deprecated | `gpt-audio-mini` |
+| `gpt-4o-realtime-preview` | 2026-03-24 | Deprecated | `gpt-realtime` |
+| `gpt-4o-mini-realtime-preview` | 2026-03-24 | Deprecated | `gpt-realtime-mini` |
+
+> **Note**: `gpt-4o` and `gpt-4o-mini` (the base chat models) do **not** have announced deprecation dates as of 2026-02-18. They remain current models.
+
+#### Recommended Migration Mapping for lmms-eval
+
+When a judge model used by a task reaches its shutdown date, override it with a replacement:
+
+| Current Default in Code | Recommended Replacement | Notes |
+|------------------------|------------------------|-------|
+| `gpt-4o` / `gpt-4o-2024-*` | `gpt-5-mini` | Cost-efficient GPT-5 variant, direct successor |
+| `gpt-4o-mini` | `gpt-5-nano` | Cheapest GPT-5 variant |
+| `gpt-3.5-turbo` / `gpt-3.5-turbo-*` | `gpt-5-nano` | Legacy model, cheapest replacement |
+| `gpt-4o-audio-preview` | `gpt-audio` | Dedicated audio model (shutdown 2026-03-24) |
+| `gpt-4.1` / `gpt-4.1-mini` | `gpt-5-mini` / `gpt-5-nano` | GPT-5 series supersedes 4.1 |
+
+**Why we keep the old defaults in code**: Task configs retain their original model references to preserve reproducibility of published results. Changing defaults would silently alter scoring behavior for existing benchmarks.
+
+**How to override**: Most tasks read the judge model from environment variables. Set `MODEL_VERSION` (or the task-specific variable) to use a newer model:
+
+```bash
+export MODEL_VERSION="gpt-5-mini"
+python -m lmms_eval --model qwen2_5_vl --tasks mme --limit 5
+```
+
+Some tasks use different environment variable names (e.g., `BABYVISION_MODEL_NAME`, `VIESCORE_MODEL_NAME`, `JUDGE_MODEL_NAME`). Check the relevant task's `utils.py` for the exact variable name.
+
+---
+
 ## References
 
 ### Core: Statistical Evaluation Framework
