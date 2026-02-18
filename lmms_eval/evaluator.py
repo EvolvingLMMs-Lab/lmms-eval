@@ -743,21 +743,77 @@ def evaluate(
                     task_output.logged_samples = list(itertools.chain.from_iterable(full_samples))
 
             # then collect metrics across all ranks
-            for metrics in task_output.sample_metrics:
+            # All ranks must iterate over metric keys in the SAME order,
+            # otherwise gather_object calls will misalign values between keys.
+            # Gather all keys, merge, sort, and broadcast a canonical order.
+            # this important when returning many keys from a benchmark, to avoid misalignments between ranks.
+            all_metric_keys = list(task_output.sample_metrics.keys())
+            gathered_keys = [None] * WORLD_SIZE if RANK == 0 else None
+            torch.distributed.gather_object(
+                obj=all_metric_keys,
+                object_gather_list=gathered_keys,
+                dst=0,
+            )
+
+            if RANK == 0:
+                all_keys_set = set()
+                for rank_keys in gathered_keys:
+                    if rank_keys:
+                        all_keys_set.update(rank_keys)
+                canonical_keys = sorted(all_keys_set, key=lambda x: str(x))
+            else:
+                canonical_keys = None
+
+            broadcast_list = [canonical_keys] if RANK == 0 else [None]
+            torch.distributed.broadcast_object_list(broadcast_list, src=0)
+            canonical_keys = broadcast_list[0]
+
+            for metrics in canonical_keys:
+                if metrics in task_output.sample_metrics:
+                    pre_gather = task_output.sample_metrics[metrics]
+                else:
+                    pre_gather = []
+
                 metric_list = [None] * WORLD_SIZE if RANK == 0 else None
                 torch.distributed.gather_object(
-                    obj=task_output.sample_metrics[metrics],
+                    obj=pre_gather,
                     object_gather_list=metric_list,
                     dst=0,
                 )
                 if RANK == 0:
                     task_output.sample_metrics[metrics] = list(itertools.chain.from_iterable(metric_list))
 
-            # gather per_sample_metrics for stability metrics
-            for metrics in task_output.per_sample_metrics:
+            # gather per_sample_metrics for stability metrics (same canonical ordering)
+            all_ps_keys = list(task_output.per_sample_metrics.keys())
+            gathered_ps_keys = [None] * WORLD_SIZE if RANK == 0 else None
+            torch.distributed.gather_object(
+                obj=all_ps_keys,
+                object_gather_list=gathered_ps_keys,
+                dst=0,
+            )
+
+            if RANK == 0:
+                all_ps_set = set()
+                for rank_keys in gathered_ps_keys:
+                    if rank_keys:
+                        all_ps_set.update(rank_keys)
+                canonical_ps_keys = sorted(all_ps_set, key=lambda x: str(x))
+            else:
+                canonical_ps_keys = None
+
+            broadcast_ps = [canonical_ps_keys] if RANK == 0 else [None]
+            torch.distributed.broadcast_object_list(broadcast_ps, src=0)
+            canonical_ps_keys = broadcast_ps[0]
+
+            for metrics in canonical_ps_keys:
+                if metrics in task_output.per_sample_metrics:
+                    pre_gather = task_output.per_sample_metrics[metrics]
+                else:
+                    pre_gather = []
+
                 metric_list = [None] * WORLD_SIZE if RANK == 0 else None
                 torch.distributed.gather_object(
-                    obj=task_output.per_sample_metrics[metrics],
+                    obj=pre_gather,
                     object_gather_list=metric_list,
                     dst=0,
                 )
