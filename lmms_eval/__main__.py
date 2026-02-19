@@ -169,12 +169,12 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     print("\n" + "=" * 60 + "\n")
 
 
-def parse_eval_args() -> argparse.Namespace:
+def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
         "--config",
         default="",
-        help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified",
+        help="Path to a yaml file specifying eval arguments. CLI arguments override YAML values.",
     )
     parser.add_argument("--model", default="hf", help="Name of model e.g. `hf`")
     parser.add_argument(
@@ -443,11 +443,11 @@ def parse_eval_args() -> argparse.Namespace:
     )
 
     args = parser.parse_args()
-    return args
+    return parser, args
 
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
-    default_args = parse_eval_args()
+    parser, default_args = parse_eval_args()
 
     # If args were provided, override the defaults
     if args:
@@ -485,10 +485,39 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         with open(args.config, "r") as file:
             config_args = yaml.safe_load(file)
         config_args = [config_args] if type(config_args) != list else config_args
+
+        # Extract and apply env vars before validation (env is not a CLI arg)
+        for config in config_args:
+            env_config = config.pop("env", None)
+            if env_config:
+                if not isinstance(env_config, dict):
+                    raise ValueError(f"'env' in config must be a dict, got {type(env_config).__name__}")
+                for env_key, env_value in env_config.items():
+                    resolved = os.path.expandvars(str(env_value))
+                    os.environ[env_key] = resolved
+                    eval_logger.info(f"Config env: {env_key}={'*' * min(len(resolved), 8) if any(s in env_key.upper() for s in ('KEY', 'TOKEN', 'SECRET', 'PASSWORD')) else resolved}")
+
+        # Validate config keys
+        valid_keys = {action.dest for action in parser._actions}
+        for config in config_args:
+            unknown_keys = set(config.keys()) - valid_keys
+            if unknown_keys:
+                raise ValueError(f"Unknown keys in config file: {sorted(unknown_keys)}. " f"Valid keys are: {sorted(valid_keys - {'help'})}")
+
+        # Determine which CLI args were explicitly provided by the user.
+        default_config_args = parser.parse_args([])
+        cli_explicit = {}
+        for key, value in vars(args).items():
+            default_value = getattr(default_config_args, key, None)
+            if value != default_value:
+                cli_explicit[key] = value
+
         # multiple configs, create args list first
         for config in config_args:
-            args_copy = argparse.Namespace(**vars(args))
+            args_copy = argparse.Namespace(**vars(default_config_args))
             for key, value in config.items():
+                setattr(args_copy, key, value)
+            for key, value in cli_explicit.items():
                 setattr(args_copy, key, value)
             args_list.append(args_copy)
     else:
