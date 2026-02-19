@@ -383,6 +383,12 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Force the evaluation to use the simple mode of the models",
     )
     parser.add_argument(
+        "--reasoning_tags",
+        type=str,
+        default='[["<think>", "</think>"]]',
+        help=("Tag pairs to strip from model output before scoring. " 'JSON list of [start, end] pairs, e.g. \'[["<think>", "</think>"]]\'. ' 'Set to "none" to disable stripping.'),
+    )
+    parser.add_argument(
         "--tui",
         action="store_true",
         help="Launch interactive TUI mode for configuration",

@@ -10,6 +10,7 @@ class Instance:
     metadata: Tuple[str, int, int] = field(default_factory=lambda: (None, None, None))  # TODO: better typehints here
     resps: list = field(default_factory=list)
     filtered_resps: dict = field(default_factory=dict)
+    raw_filtered_resps: dict = field(default_factory=dict)
 
     # initialized after init
     task_name: str = None

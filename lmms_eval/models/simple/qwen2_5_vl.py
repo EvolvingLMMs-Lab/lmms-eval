@@ -21,9 +21,6 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
-from lmms_eval.models.model_utils.reasoning_model_utils import (
-    parse_reasoning_model_answer,
-)
 
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
@@ -365,14 +362,12 @@ class Qwen2_5_VL(lmms):
                 answers[i] = ans
 
             for ans, context in zip(answers, contexts):
-                clean_ans = parse_reasoning_model_answer(ans)
-                res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+                res.append(ans)
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
                 # eval_logger.debug(f"Question: {context}")
-                # eval_logger.debug(f"Model Raw Response: {ans}")
-                # eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                # eval_logger.debug(f"Model Response: {ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
@@ -579,8 +574,7 @@ class Qwen2_5_VL(lmms):
 
                 clean_answers = []
                 for ans in answers:
-                    clean_ans = parse_reasoning_model_answer(ans)
-                    clean_answers.append(clean_ans)
+                    clean_answers.append(ans)
 
                 batched_round_res.append(clean_answers)
                 round_idx += 1

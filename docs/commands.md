@@ -234,6 +234,93 @@ pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3/
 
 
 
+## Log Samples Output Format (`--log_samples`)
+
+When you pass `--log_samples`, the evaluator writes one JSONL file per task to the output directory. The filename follows the pattern:
+
+```
+{datetime}_samples_{task_name}.jsonl
+```
+
+Each line is a JSON object representing one evaluated sample. Below is the full field reference.
+
+### Field Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `doc_id` | `int` | Index of the document within the dataset split. |
+| `input` | `str` | The prompt / context string that was fed to the model (extracted from the first element of the request arguments). |
+| `target` | `str` | The ground-truth answer produced by `doc_to_target()`. |
+| `resps` | `list` | Raw model output **before** any post-processing. When reasoning tag stripping is enabled (see `--reasoning_tags`), this preserves the original text with `<think>` blocks intact so you can inspect the model's chain-of-thought. If no stripping occurred, this field is omitted when it is identical to `filtered_resps` (to save space). |
+| `filtered_resps` | `list` | Model output **after** the filter pipeline and reasoning tag stripping. This is the text that was actually scored by `process_results()`. |
+| `doc_hash` | `str` | A SHA-256 hash of the full document JSON, useful for deduplication and cross-run alignment. |
+| `<metric>` | `float\|int` | Per-sample metric scores returned by `process_results()`. The exact keys depend on the task (e.g., `exact_match`, `acc`, `f1`, task-specific metrics). |
+
+### Example JSONL Record
+
+```json
+{
+  "doc_id": 0,
+  "input": "What is shown in this image?\nAnswer with a single word.",
+  "target": "cat",
+  "resps": [["<think>\nThe image shows a small furry animal...\n</think>\ncat"]],
+  "filtered_resps": ["cat"],
+  "doc_hash": "a1b2c3d4e5...",
+  "exact_match": 1.0
+}
+```
+
+### How `resps` vs `filtered_resps` Work
+
+The evaluation pipeline produces these two fields through the following stages:
+
+```
+Model.generate_until()
+    |
+    v
+raw output (e.g., "<think>...reasoning...</think>\ncat")
+    |
+    v
+Filter pipeline (regex, first-line, etc.)  ->  filtered_resps (initial)
+    |
+    v
+Reasoning tag stripping (if --reasoning_tags enabled)
+    |-> resps = pre-strip value (preserved for analysis)
+    |-> filtered_resps = clean text (used for scoring)
+    |
+    v
+process_results(doc, filtered_resps)  ->  metric scores
+```
+
+- **`resps`** is useful for debugging and analyzing model reasoning behavior.
+- **`filtered_resps`** is the canonical scored output - use this when computing or verifying metrics.
+- When reasoning tag stripping is disabled or no tags are present, `resps` is omitted from the JSONL if it would be identical to `filtered_resps`.
+
+### Reasoning Tag Stripping (`--reasoning_tags`)
+
+By default, `<think>...</think>` blocks are stripped from model output before scoring. This ensures reasoning models (Qwen3-VL, DeepSeek-R1, QwQ, etc.) are scored on clean output.
+
+```bash
+# Default: stripping enabled with <think>...</think>
+python -m lmms_eval --model qwen3_vl --tasks mme --log_samples
+
+# Disable stripping
+python -m lmms_eval --model qwen3_vl --tasks mme --reasoning_tags none
+
+# Custom tag pairs (JSON format)
+python -m lmms_eval --model qwen3_vl --tasks mme \
+    --reasoning_tags '[["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]'
+```
+
+Per-task override is also supported via the `reasoning_tags` field in the task YAML:
+
+```yaml
+# In your task YAML
+reasoning_tags: [["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]
+```
+
+Task-level config takes priority over the CLI flag.
+
 ## Regression Test
 
 Now after each PR, we need to run the regression test to make sure the performance of the model is not degraded.

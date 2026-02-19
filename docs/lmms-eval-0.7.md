@@ -169,3 +169,106 @@ cp configs/example_local.yaml configs/my_experiment.yaml
 # Edit to your needs, then run
 python -m lmms_eval --config configs/my_experiment.yaml
 ```
+
+---
+
+## 2. Pipeline-Level Reasoning Tag Stripping
+
+Reasoning models (Qwen3-VL, DeepSeek-R1, QwQ, etc.) emit `<think>...</think>` blocks as part of their generated text. Without stripping, these tokens pollute scoring on standard benchmarks. Previously, only 6 model files had ad-hoc handling; vLLM, SGLang, and OpenAI backends had zero protection.
+
+v0.7 moves reasoning tag stripping into the evaluator pipeline itself, so it works uniformly across all model backends.
+
+### 2.1 How It Works
+
+Stripping happens in `evaluator.py` **after** the filter pipeline and **before** `process_results()`. Both the raw and cleaned outputs are preserved:
+
+```
+Model.generate_until()  ->  raw output (with <think>)
+    |
+Filter pipeline  ->  filtered_resps (initial)
+    |
+strip_reasoning_tags()  (in evaluator.py)
+    |-> resps = pre-strip value (preserved for analysis)
+    |-> filtered_resps = clean text (used for scoring)
+    |
+process_results(doc, filtered_resps)  ->  metric scores
+```
+
+This means:
+- **Models return raw output** - no model file needs to handle tag stripping anymore.
+- **Scoring is clean** - `process_results()` never sees `<think>` tokens.
+- **Analysis is preserved** - the raw chain-of-thought is still available in `--log_samples` output.
+
+### 2.2 Usage
+
+Stripping is enabled by default with `<think>...</think>` tags:
+
+```bash
+# Default behavior - stripping enabled
+python -m lmms_eval --model qwen3_vl \
+    --model_args pretrained=Qwen/Qwen3-VL-4B-Instruct \
+    --tasks mme --limit 8 --log_samples
+
+# Disable stripping
+python -m lmms_eval --model qwen3_vl \
+    --model_args pretrained=Qwen/Qwen3-VL-4B-Instruct \
+    --tasks mme --reasoning_tags none
+
+# Custom tag pairs (JSON format)
+python -m lmms_eval --model qwen3_vl --tasks mme \
+    --reasoning_tags '[["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]'
+```
+
+### 2.3 Per-Task Override
+
+Tasks can override the CLI setting via the `reasoning_tags` field in their YAML config. Task-level config takes priority over the CLI flag.
+
+```yaml
+# In your task YAML
+reasoning_tags: [["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]
+```
+
+Set to `none` or `false` to disable for a specific task.
+
+### 2.4 JSONL Log Output Fields (`--log_samples`)
+
+When `--log_samples` is passed, each JSONL line contains the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `doc_id` | `int` | Index of the document within the dataset split. |
+| `input` | `str` | The prompt / context string fed to the model. |
+| `target` | `str` | Ground-truth answer from `doc_to_target()`. |
+| `resps` | `list` | Raw model output **before** reasoning tag stripping. Preserves `<think>` blocks intact for chain-of-thought analysis. Omitted when identical to `filtered_resps`. |
+| `filtered_resps` | `list` | Model output **after** filter pipeline + reasoning tag stripping. This is what was actually scored by `process_results()`. |
+| `doc_hash` | `str` | SHA-256 hash of the document JSON for deduplication and cross-run alignment. |
+| `<metric>` | `float/int` | Per-sample metric scores from `process_results()` (e.g., `exact_match`, `acc`). Keys depend on the task. |
+
+**Example JSONL record** (reasoning model with `--log_samples`):
+
+```json
+{
+  "doc_id": 0,
+  "input": "What is shown in this image?\nAnswer with a single word.",
+  "target": "cat",
+  "resps": [["<think>\nThe image shows a small furry animal sitting on a windowsill...\n</think>\ncat"]],
+  "filtered_resps": ["cat"],
+  "doc_hash": "a1b2c3d4e5...",
+  "exact_match": 1.0
+}
+```
+
+- **`resps`** - useful for debugging and analyzing model reasoning behavior. Contains the full chain-of-thought.
+- **`filtered_resps`** - the canonical scored output. Use this when computing or verifying metrics.
+- When no stripping occurred (non-reasoning model or stripping disabled), `resps` is omitted if identical to `filtered_resps` to save space.
+
+### 2.5 Implementation Details
+
+| File | Change |
+|------|--------|
+| `lmms_eval/api/reasoning.py` (NEW) | `strip_reasoning_tags()` and `parse_reasoning_tags_config()` |
+| `lmms_eval/evaluator.py` | Strip logic before scoring, dual storage in JSONL |
+| `lmms_eval/__main__.py` | `--reasoning_tags` CLI argument |
+| `lmms_eval/api/task.py` | Per-task `reasoning_tags` field in `TaskConfig` |
+| `lmms_eval/api/instance.py` | `raw_filtered_resps` dict for pre-strip preservation |
+| 6 model files | Removed ad-hoc `parse_reasoning_model_answer` calls |

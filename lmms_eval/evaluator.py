@@ -17,6 +17,7 @@ import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
 from lmms_eval import models
+from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
 from lmms_eval.baselines import (
     BASELINE_REGISTRY,
     get_baseline_display_name,
@@ -676,6 +677,11 @@ def evaluate(
             instances.sort(key=lambda x: x.idx)
         # iterate over different filters used
         for filter_key in task.instances[0].filtered_resps.keys():
+            # Resolve reasoning tags for this task
+            cli_reasoning_tags = getattr(cli_args, "reasoning_tags", None) if cli_args else None
+            task_reasoning_tags = getattr(task.config, "reasoning_tags", None)
+            reasoning_tags = parse_reasoning_tags_config(cli_value=cli_reasoning_tags, task_value=task_reasoning_tags)
+
             if cli_args is not None and not cli_args.process_with_media:
                 doc_iterator = create_iterator(
                     enumerate(task.eval_docs_no_media),
@@ -707,6 +713,17 @@ def evaluate(
             pbar = tqdm(total=total_docs, desc="Postprocessing", disable=(RANK != 0))
             for doc_id, doc in doc_iterator:
                 requests = instances_by_doc_id[doc_id]
+
+                # Strip reasoning tags before scoring
+                if reasoning_tags is not None:
+                    for req in requests:
+                        raw_resp = req.filtered_resps[filter_key]
+                        req.raw_filtered_resps[filter_key] = raw_resp
+                        if isinstance(raw_resp, str):
+                            req.filtered_resps[filter_key] = strip_reasoning_tags(raw_resp, reasoning_tags)
+                        elif isinstance(raw_resp, list):
+                            req.filtered_resps[filter_key] = [strip_reasoning_tags(r, reasoning_tags) if isinstance(r, str) else r for r in raw_resp]
+
                 metrics = task.process_results(doc, [req.filtered_resps[filter_key] for req in requests])
 
                 # For stability metrics: compute per-sample scores when repeats > 1
@@ -745,7 +762,7 @@ def evaluate(
                         "target": target,
                         # "pred": metrics['coco_cap_chair_i']['pred'],
                         "arguments": filtered_arguments,
-                        "resps": [req.resps for req in requests],
+                        "resps": [req.raw_filtered_resps.get(filter_key, req.resps) for req in requests],
                         "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
                         "doc_hash": hash_string(
                             json.dumps(

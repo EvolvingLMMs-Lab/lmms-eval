@@ -14,9 +14,6 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.model_utils.reasoning_model_utils import (
-    parse_reasoning_model_answer,
-)
 from lmms_eval.models.model_utils.thyme.sandbox import execute_code_in_sandbox
 from lmms_eval.models.model_utils.thyme.utils import (
     REASONING_SYS_PROMPT,
@@ -350,14 +347,12 @@ class Thyme(Qwen2_5_VLSimple):
             total_elapsed_time += end_time - start_time
 
             for answer, context in zip(answers, cache_contexts):
-                clean_ans = parse_reasoning_model_answer(answer)
-                res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+                res.append(answer)
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 pbar.update(1)
 
                 eval_logger.debug(f"Question: {context}")
-                eval_logger.debug(f"Model Raw Response: {answer}")
-                eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                eval_logger.debug(f"Model Response: {answer}")
         # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
