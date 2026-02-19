@@ -1,7 +1,6 @@
 dataset_path: yasserDahou/saco-gold
 dataset_kwargs:
   token: True
-group: "saco_gold"
 output_type: generate_until
 doc_to_visual: !function utils.saco_doc_to_visual
 doc_to_text: !function utils.saco_doc_to_text
