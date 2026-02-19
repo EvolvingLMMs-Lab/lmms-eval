@@ -79,6 +79,7 @@ class AsyncOpenAIChat(lmms):
         adaptive_increase_step: float = 0.1,
         adaptive_decrease_factor: float = 0.7,
         adaptive_failure_threshold: float = 0.05,
+        message_format: str = "openai",
         prefix_aware_queue: bool = True,
         prefix_hash_chars: int = 256,
         **kwargs,
@@ -111,6 +112,7 @@ class AsyncOpenAIChat(lmms):
             decrease_factor=adaptive_decrease_factor,
             failure_threshold=adaptive_failure_threshold,
         )
+        self.message_format = message_format
         self.prefix_aware_queue = parse_bool(prefix_aware_queue)
         self.prefix_hash_chars = max(32, int(prefix_hash_chars))
         if mcp_server_path is not None:
@@ -162,16 +164,7 @@ class AsyncOpenAIChat(lmms):
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation for LLaVAHF")
 
-    def prepare_messages(self, chat_messages: ChatMessages) -> Tuple[List[Dict], Tuple]:
-        """Prepare OpenAI-compatible messages from chat messages.
-
-        Args:
-            chat_messages: The chat messages object containing user queries and media.
-
-        Returns:
-            A tuple of (messages, video_kwargs) where messages is the OpenAI-compatible
-            message format and video_kwargs contains video processing parameters.
-        """
+    def _build_video_kwargs(self) -> Dict:
         video_kwargs = {"max_pixels": self.max_pixels, "min_pixels": self.min_pixels}
         if self.fps is not None:
             video_kwargs["fps"] = self.fps
@@ -179,7 +172,28 @@ class AsyncOpenAIChat(lmms):
             video_kwargs["nframes"] = self.nframes
         if self.max_frames is not None:
             video_kwargs["max_frames"] = self.max_frames
-        messages = chat_messages.to_openai_messages(video_kwargs)
+        return video_kwargs
+
+    def prepare_messages(self, chat_messages: ChatMessages) -> Tuple[List[Dict], Dict]:
+        """Prepare API-compatible messages from chat messages.
+
+        Dispatches to the appropriate message format based on ``self.message_format``.
+        Supported formats:
+            - ``"openai"`` (default): standard OpenAI vision messages.
+            - ``"qwen3_vl"``: Qwen3-VL format with per-frame timestamps.
+
+        Args:
+            chat_messages: The chat messages object containing user queries and media.
+
+        Returns:
+            A tuple of (messages, video_kwargs) where messages is the API-compatible
+            message format and video_kwargs contains video processing parameters.
+        """
+        video_kwargs = self._build_video_kwargs()
+        if self.message_format == "qwen3_vl":
+            messages = chat_messages.to_qwen3_vl_openai_messages(video_kwargs)
+        else:
+            messages = chat_messages.to_openai_messages(video_kwargs)
         return messages, video_kwargs
 
     def _get_initial_concurrency(self) -> int:
@@ -457,7 +471,7 @@ class AsyncOpenAIChat(lmms):
                             elif content["type"] == "text":
                                 all_response += content["text"]
                         tool_messages[-1]["content"].extend(tool_message)
-                    all_response += "</{call.function.name}>"
+                    all_response += f"</{call.function.name}>"
 
             response = await self.client.chat.completions.create(
                 model=self.model_version,

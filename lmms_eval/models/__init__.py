@@ -114,7 +114,6 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "sglang": "Sglang",
     "huggingface": "Huggingface",
     "async_openai": "AsyncOpenAIChat",
-    "async_openai_qwen3_vl": "AsyncOpenAIQwen3VLChat",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
 }
