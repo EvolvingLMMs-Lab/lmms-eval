@@ -560,6 +560,82 @@ export default function App() {
     }
   }
 
+  const exportYaml = async () => {
+    const config = {
+      model,
+      model_args: modelArgs,
+      tasks: Array.from(selectedTasks),
+      env_vars: envVars,
+      batch_size: parseInt(batchSize) || 1,
+      limit: limit ? parseInt(limit) : null,
+      output_path: outputPath,
+      log_samples: true,
+      verbosity,
+      device: device || null,
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/eval/export-yaml`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      })
+      const data = await res.json()
+
+      const blob = new Blob([data.yaml_content], { type: 'text/yaml' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `eval_config_${model}.yaml`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Export failed:', e)
+    }
+  }
+
+  const importYaml = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.yaml,.yml'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      const text = await file.text()
+      try {
+        const res = await fetch(`${API_BASE}/eval/import-yaml`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yaml_content: text }),
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          setOutput(prev => [...prev, `Import error: ${err.detail}`])
+          return
+        }
+        const data = await res.json()
+
+        if (data.model) setModel(data.model)
+        if (data.model_args) setModelArgs(data.model_args)
+        if (data.tasks && data.tasks.length > 0) setSelectedTasks(new Set(data.tasks))
+        if (data.env_vars) setEnvVars(data.env_vars)
+        if (data.batch_size) setBatchSize(String(data.batch_size))
+        if (data.limit != null) setLimit(String(data.limit))
+        if (data.output_path) setOutputPath(data.output_path)
+        if (data.verbosity) setVerbosity(data.verbosity)
+        if (data.device) setDevice(data.device)
+
+        setOutput(prev => [...prev, `Imported config from ${file.name}`])
+      } catch (e) {
+        setOutput(prev => [...prev, `Import failed: ${e}`])
+      }
+    }
+    input.click()
+  }
+
   return (
     <div className="flex flex-col h-screen bg-white text-neutral-900 font-light selection:bg-black selection:text-white">
       <header className="relative h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
@@ -589,6 +665,21 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={importYaml}
+            className="px-2.5 py-1 text-[10px] uppercase tracking-wider font-medium text-neutral-400 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 transition-colors"
+            title="Import YAML config file"
+          >
+            Import YAML
+          </button>
+          <button
+            onClick={exportYaml}
+            className="px-2.5 py-1 text-[10px] uppercase tracking-wider font-medium text-neutral-400 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 transition-colors"
+            title="Export current config as YAML"
+          >
+            Export YAML
+          </button>
+          <div className="w-px h-4 bg-neutral-200"></div>
           <div className={`px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-medium border ${
             status === 'ready' ? 'border-neutral-200 text-neutral-400' :
             status === 'running' ? 'border-black text-black animate-pulse' :

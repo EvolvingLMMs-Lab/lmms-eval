@@ -16,6 +16,7 @@ from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Any
 
+import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
@@ -124,6 +125,40 @@ class PreviewResponse(BaseModel):
     command: str
 
 
+class ExportYamlRequest(BaseModel):
+    model: str
+    model_args: str = ""
+    tasks: list[str]
+    env_vars: str = ""
+    batch_size: int = 1
+    limit: int | None = 10
+    output_path: str = "./logs/"
+    log_samples: bool = True
+    verbosity: str = "INFO"
+    device: str | None = None
+
+
+class ExportYamlResponse(BaseModel):
+    yaml_content: str
+
+
+class ImportYamlRequest(BaseModel):
+    yaml_content: str
+
+
+class ImportYamlResponse(BaseModel):
+    model: str = ""
+    model_args: str = ""
+    tasks: list[str] = []
+    env_vars: str = ""
+    batch_size: int = 1
+    limit: int | None = None
+    output_path: str = "./logs/"
+    log_samples: bool = False
+    verbosity: str = "INFO"
+    device: str | None = None
+
+
 # --- Endpoints ---
 
 
@@ -180,6 +215,29 @@ def _build_env_exports(env_vars: str) -> list[str]:
     return exports
 
 
+def _env_vars_to_dict(env_vars: str) -> dict[str, str]:
+    """Convert env_vars multi-line string to a dict for YAML export."""
+    env_dict: dict[str, str] = {}
+    for line in env_vars.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("export "):
+            stripped = stripped[7:]
+        if "=" in stripped:
+            key, _, value = stripped.partition("=")
+            env_dict[key.strip()] = value.strip()
+    return env_dict
+
+
+def _dict_to_env_vars(env_dict: dict[str, str]) -> str:
+    """Convert env dict from YAML to env_vars multi-line string for UI."""
+    lines = []
+    for key, value in env_dict.items():
+        lines.append(f"export {key}={value}")
+    return "\n".join(lines)
+
+
 def _build_command(request: EvalRequest | PreviewRequest) -> str:
     """Build the lmms_eval command string."""
     parts = ["python -m lmms_eval"]
@@ -234,6 +292,71 @@ async def preview_command(request: PreviewRequest) -> PreviewResponse:
     """Generate command preview without executing."""
     command = _build_command(request)
     return PreviewResponse(command=command)
+
+
+@app.post("/eval/export-yaml", response_model=ExportYamlResponse)
+async def export_yaml(request: ExportYamlRequest) -> ExportYamlResponse:
+    """Export current UI config as a YAML config file."""
+    config: dict[str, Any] = {}
+
+    env_dict = _env_vars_to_dict(request.env_vars)
+    if env_dict:
+        config["env"] = env_dict
+
+    config["model"] = request.model
+    if request.model_args:
+        config["model_args"] = request.model_args
+    if request.tasks:
+        config["tasks"] = ",".join(request.tasks)
+    config["batch_size"] = request.batch_size
+    if request.limit is not None:
+        config["limit"] = request.limit
+    config["output_path"] = request.output_path
+    if request.log_samples:
+        config["log_samples"] = True
+    config["verbosity"] = request.verbosity
+    if request.device:
+        config["device"] = request.device
+
+    header = "# LMMs-Eval config exported from Web UI\n" "# Usage: python -m lmms_eval --config <this_file>.yaml\n" "# CLI args override YAML values.\n\n"
+    yaml_content = header + yaml.dump(config, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    return ExportYamlResponse(yaml_content=yaml_content)
+
+
+@app.post("/eval/import-yaml", response_model=ImportYamlResponse)
+async def import_yaml(request: ImportYamlRequest) -> ImportYamlResponse:
+    """Import a YAML config file into UI config values."""
+    try:
+        config = yaml.safe_load(request.yaml_content)
+    except yaml.YAMLError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}")
+
+    if not isinstance(config, dict):
+        raise HTTPException(status_code=400, detail="YAML must be a dict (not a list or scalar)")
+
+    env_dict = config.pop("env", {})
+    env_vars = _dict_to_env_vars(env_dict) if env_dict else ""
+
+    tasks_raw = config.get("tasks", "")
+    if isinstance(tasks_raw, str):
+        tasks = [t.strip() for t in tasks_raw.split(",") if t.strip()]
+    elif isinstance(tasks_raw, list):
+        tasks = tasks_raw
+    else:
+        tasks = []
+
+    return ImportYamlResponse(
+        model=config.get("model", ""),
+        model_args=config.get("model_args", ""),
+        tasks=tasks,
+        env_vars=env_vars,
+        batch_size=config.get("batch_size", 1),
+        limit=config.get("limit"),
+        output_path=config.get("output_path", "./logs/"),
+        log_samples=config.get("log_samples", False),
+        verbosity=config.get("verbosity", "INFO"),
+        device=config.get("device"),
+    )
 
 
 @app.post("/eval/start", response_model=EvalStartResponse)

@@ -486,6 +486,17 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
             config_args = yaml.safe_load(file)
         config_args = [config_args] if type(config_args) != list else config_args
 
+        # Extract and apply env vars before validation (env is not a CLI arg)
+        for config in config_args:
+            env_config = config.pop("env", None)
+            if env_config:
+                if not isinstance(env_config, dict):
+                    raise ValueError(f"'env' in config must be a dict, got {type(env_config).__name__}")
+                for env_key, env_value in env_config.items():
+                    resolved = os.path.expandvars(str(env_value))
+                    os.environ[env_key] = resolved
+                    eval_logger.info(f"Config env: {env_key}={'*' * min(len(resolved), 8) if any(s in env_key.upper() for s in ('KEY', 'TOKEN', 'SECRET', 'PASSWORD')) else resolved}")
+
         # Validate config keys
         valid_keys = {action.dest for action in parser._actions}
         for config in config_args:
