@@ -1,0 +1,13 @@
+# Example: API model evaluation (OpenAI-compatible)
+# Usage: python -m lmms_eval --config configs/example_api.yaml
+#
+# Requires: OPENAI_API_KEY environment variable
+
+model: openai
+model_args: "model=gpt-4o,max_retries=5"
+tasks: "mme,mmmu_val"
+batch_size: 1
+num_fewshot: 0
+gen_kwargs: "temperature=0,max_new_tokens=1024"
+output_path: "results/"
+log_samples: true

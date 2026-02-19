@@ -364,6 +364,17 @@ def simple_evaluate(
                 "fewshot_seed": fewshot_random_seed,
             }
         )
+        # Store full resolved CLI args for reproducibility
+        if cli_args is not None:
+            resolved = {}
+            for key, value in vars(cli_args).items():
+                try:
+                    json.dumps(value)
+                    resolved[key] = value
+                except (TypeError, ValueError):
+                    resolved[key] = str(value)
+            results["config"]["resolved_cli_args"] = resolved
+
         results["git_hash"] = get_git_commit_hash()
         results["date"] = datetime_str
         throughput_summary = summarize_logged_metrics()

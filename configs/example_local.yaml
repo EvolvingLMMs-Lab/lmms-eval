@@ -1,0 +1,15 @@
+# Example: Local model evaluation
+# Usage: python -m lmms_eval --config configs/example_local.yaml
+#
+# CLI args override YAML values, e.g.:
+#   python -m lmms_eval --config configs/example_local.yaml --limit 5
+
+model: qwen2_5_vl
+model_args: "pretrained=Qwen/Qwen2.5-VL-3B-Instruct,device_map=auto"
+tasks: "mme,mmmu_val"
+batch_size: 1
+num_fewshot: 0
+seed: "42,42,42,42"
+gen_kwargs: "temperature=0,max_new_tokens=1024"
+output_path: "results/"
+log_samples: true
