@@ -44,6 +44,7 @@ class _AdaptiveConcurrencyTracker:
         latencies: List of request latencies in seconds.
         completed_count: Total number of completed requests since last update.
     """
+
     failed_requests: int = 0
     rate_limited_requests: int = 0
     latencies: List[float] = field(default_factory=list)

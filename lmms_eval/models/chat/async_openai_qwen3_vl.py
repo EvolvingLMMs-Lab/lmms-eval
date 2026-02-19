@@ -1,7 +1,7 @@
-from typing import Dict, Tuple, List
+from typing import Dict, List, Tuple
 
-from lmms_eval.models.chat.async_openai import AsyncOpenAIChat
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.chat.async_openai import AsyncOpenAIChat
 from lmms_eval.protocol import ChatMessages
 
 
@@ -12,6 +12,7 @@ class AsyncOpenAIQwen3VLChat(AsyncOpenAIChat):
     Inherits from AsyncOpenAIChat but overrides prepare_messages to use
     Qwen3-VL specific message formatting.
     """
+
     is_simple = False
 
     def prepare_messages(self, chat_messages: ChatMessages) -> Tuple[List[Dict], Tuple]:
