@@ -17,6 +17,7 @@ import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
 from lmms_eval import models
+from lmms_eval.api.instance import unwrap_generation_output
 from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
 from lmms_eval.baselines import (
     BASELINE_REGISTRY,
@@ -647,9 +648,10 @@ def evaluate(
         else:
             resps = getattr(lm, reqtype)(cloned_reqs)
 
-        # put responses from model into a list of length K for each request.
         for x, req in zip(resps, cloned_reqs):
-            req.resps.append(x)
+            text, tc = unwrap_generation_output(x)
+            req.resps.append(text)
+            req.token_counts.append(tc)
 
         if is_budget_exceeded():
             eval_logger.warning("Token budget reached after '{}' requests. Skipping remaining request types.", reqtype)
@@ -774,14 +776,22 @@ def evaluate(
                             # else:
                             #     filtered_arguments.append(_handle_non_serializable(value))
 
+                    per_sample_tc = []
+                    for req in requests:
+                        if req.token_counts:
+                            tc = req.token_counts[0]
+                            per_sample_tc.append(tc.to_dict() if tc is not None else None)
+                        else:
+                            per_sample_tc.append(None)
+
                     example = {
                         "doc_id": doc_id,
                         "doc": saved_doc,
                         "target": target,
-                        # "pred": metrics['coco_cap_chair_i']['pred'],
                         "arguments": filtered_arguments,
                         "resps": [req.raw_filtered_resps.get(filter_key, req.resps) for req in requests],
                         "filtered_resps": [req.filtered_resps[filter_key] for req in requests],
+                        "token_counts": per_sample_tc,
                         "doc_hash": hash_string(
                             json.dumps(
                                 requests[0].doc,
@@ -790,7 +800,6 @@ def evaluate(
                                 ensure_ascii=False,
                             )
                         ),
-                        # Removing prompt hash and target hash here
                     }
                     example.update(metrics)
                     task_output.logged_samples.append(example)

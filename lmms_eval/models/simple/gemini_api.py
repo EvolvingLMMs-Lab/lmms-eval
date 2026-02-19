@@ -11,7 +11,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
@@ -151,7 +151,7 @@ class GeminiAPI(lmms):
 
         return result
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
@@ -160,7 +160,7 @@ class GeminiAPI(lmms):
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if is_budget_exceeded():
-                res.append("")
+                res.append(GenerationResult(text="", token_counts=None))
                 pbar.update(1)
                 continue
             if self.continual_mode and self.cache_mode == "resume":
@@ -168,7 +168,7 @@ class GeminiAPI(lmms):
                 if doc_uuid in self.response_cache:
                     content = self.response_cache[doc_uuid]
                     if content:
-                        res.append(content)
+                        res.append(GenerationResult(text=content, token_counts=None))
                         pbar.update(1)
                         continue
 
@@ -191,6 +191,7 @@ class GeminiAPI(lmms):
             else:
                 message = [contexts] + visuals
 
+            token_counts = None
             for attempt in range(5):
                 try:
                     content = self.model.generate_content(
@@ -212,6 +213,10 @@ class GeminiAPI(lmms):
                             reasoning_tokens=0,
                             source="model",
                         )
+                        token_counts = TokenCounts(
+                            input_tokens=getattr(content.usage_metadata, "prompt_token_count", 0) or 0,
+                            output_tokens=getattr(content.usage_metadata, "candidates_token_count", 0) or 0,
+                        )
                     content = content.text
                     break
                 except Exception as e:
@@ -228,7 +233,8 @@ class GeminiAPI(lmms):
                     else:  # If this was the last attempt, log and return empty
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
                         content = ""
-            res.append(content)
+                        token_counts = None
+            res.append(GenerationResult(text=content, token_counts=token_counts))
             pbar.update(1)
 
             self.free_video()
