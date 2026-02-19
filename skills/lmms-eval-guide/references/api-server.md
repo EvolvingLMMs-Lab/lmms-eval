@@ -145,6 +145,19 @@ for job_id, submitted_epoch in pending.items():
 5. Handle terminal error states explicitly (`failed`, `cancelled`) in trainer logs.
 6. Use small `limit` for frequent progress checks; run full benchmarks less frequently.
 
+### Evaluation Cadence Suggestions
+
+Use two lanes of evaluation to balance signal quality and training throughput:
+
+- **Fast lane (high frequency)**: every `N` steps/epochs with small `limit` on 1-2 sentinel tasks.
+- **Full lane (low frequency)**: less frequent full-benchmark jobs for checkpoint selection and reporting.
+
+Example policy:
+
+1. Every 1-2 epochs: run `limit=64` on a small validation subset.
+2. Every 5-10 epochs: run full `mmmu_val`, `mathvista`, or your publication benchmark set.
+3. On major checkpoint milestones: run complete benchmark suite and archive outputs.
+
 ### Common Operational Flow
 
 1. `GET /health` -> verify server liveness.
