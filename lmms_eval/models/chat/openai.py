@@ -16,6 +16,11 @@ from lmms_eval.models.model_utils.concurrency_control import (
     make_prefix_hash,
 )
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
+from lmms_eval.models.model_utils.usage_metrics import (
+    get_running_totals,
+    is_budget_exceeded,
+    log_usage,
+)
 from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleSimple
 from lmms_eval.protocol import ChatMessages
 
@@ -80,11 +85,26 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     response = self.client.chat.completions.create(**payload)
                     elapsed = time.time() - started_at
                     response_text = response.choices[0].message.content
-                    completion_tokens = 0
-                    if hasattr(response, "usage") and response.usage is not None:
-                        completion_tokens = response.usage.completion_tokens
+                    input_tokens = 0
+                    output_tokens = 0
+                    reasoning_tokens = 0
+                    if hasattr(response, "usage") and response.usage:
+                        input_tokens = getattr(response.usage, "prompt_tokens", 0) or 0
+                        output_tokens = getattr(response.usage, "completion_tokens", 0) or 0
+                        if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details:
+                            reasoning_tokens = getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0
+                        completion_tokens = output_tokens
                     else:
                         completion_tokens = len(response_text.split())
+                        output_tokens = completion_tokens
+                    log_usage(
+                        model_name=self.model_version,
+                        task_name=None,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
+                        reasoning_tokens=reasoning_tokens,
+                        source="model",
+                    )
                     return (
                         response_text,
                         local_index,
@@ -190,6 +210,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         cursor += 1
                         continue
 
+                    if is_budget_exceeded():
+                        responses[request_index] = "[LMMS_EVAL_BUDGET_EXCEEDED]"
+                        pbar.update(1)
+                        cursor += 1
+                        continue
+
                     future = executor.submit(process_single_request, request_index, payload)
                     in_flight[future] = request_index
                     cursor += 1
@@ -219,6 +245,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     completed_since_adapt += 1
                     if self.continual_mode and doc_uuids[local_index] is not None:
                         self.response_cache[doc_uuids[local_index]] = response_text
+                    totals = get_running_totals()
+                    pbar.set_postfix({"tokens": f"{totals['total_tokens']:,}"}, refresh=False)
                     pbar.update(1)
                     maybe_update_concurrency(force=False)
 

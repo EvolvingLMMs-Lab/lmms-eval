@@ -26,6 +26,7 @@ from lmms_eval.models.model_utils.concurrency_control import (
     make_prefix_hash,
     parse_bool,
 )
+from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
 
 try:
     from openai import DefaultHttpxClient
@@ -295,6 +296,15 @@ class OpenAICompatible(lmms):
                 try:
                     response = self.client.chat.completions.create(**payload)
                     response_text = response.choices[0].message.content
+                    if hasattr(response, "usage") and response.usage:
+                        log_usage(
+                            model_name=self.model_version,
+                            task_name=None,
+                            input_tokens=getattr(response.usage, "prompt_tokens", 0) or 0,
+                            output_tokens=getattr(response.usage, "completion_tokens", 0) or 0,
+                            reasoning_tokens=(getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0) if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details else 0,
+                            source="model",
+                        )
                     latency = time.time() - started_at
                     return response_text, local_index, True, rate_limited, latency
                 except Exception as exc:
@@ -413,6 +423,11 @@ class OpenAICompatible(lmms):
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             while cursor < len(dispatch_order) or in_flight:
                 while cursor < len(dispatch_order) and len(in_flight) < max(1, current_concurrency):
+                    if is_budget_exceeded():
+                        reordered_responses[dispatch_order[cursor]] = ""
+                        pbar.update(1)
+                        cursor += 1
+                        continue
                     request_index = dispatch_order[cursor]
                     doc_uuid, cached_response, payload = build_payload_for_index(request_index)
                     doc_uuids[request_index] = doc_uuid

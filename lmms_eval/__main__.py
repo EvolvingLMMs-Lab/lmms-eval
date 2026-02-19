@@ -404,6 +404,14 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
 
+    # Cost & Token Tracking
+    parser.add_argument(
+        "--max_tokens",
+        type=int,
+        default=None,
+        help="Maximum total tokens (input+output+reasoning). Evaluation stops gracefully when exceeded. Disabled by default.",
+    )
+
     # Power Analysis arguments
     parser.add_argument(
         "--power-analysis",
@@ -718,6 +726,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         launcher_args=args.launcher_args,
         repeats=args.repeats,
         baseline=args.baseline,
+        max_tokens=args.max_tokens,
         **request_caching_args,
     )
 
@@ -726,6 +735,21 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             samples = results.pop("samples")
         else:
             samples = None
+
+        # Print token usage summary if available
+        if results.get("usage") and "total" in results["usage"]:
+            u = results["usage"]["total"]
+            eval_logger.info(
+                "Token Usage - Input: {} | Output: {} | Reasoning: {} | Total: {} | API Calls: {}",
+                f"{u['input_tokens']:,}",
+                f"{u['output_tokens']:,}",
+                f"{u['reasoning_tokens']:,}",
+                f"{u['total_tokens']:,}",
+                f"{u['n_api_calls']:,}",
+            )
+            if results["usage"].get("budget_exceeded"):
+                eval_logger.warning("Evaluation stopped early: token budget exceeded. Results are partial.")
+
         dumped = json.dumps(results, indent=4, default=_handle_non_serializable)
         if args.show_config:
             print(dumped)

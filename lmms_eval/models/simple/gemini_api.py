@@ -14,6 +14,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
 
 try:
     import google.generativeai as genai
@@ -158,6 +159,10 @@ class GeminiAPI(lmms):
             return f"{task}___{split}___{doc_id}"
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
+            if is_budget_exceeded():
+                res.append("")
+                pbar.update(1)
+                continue
             if self.continual_mode and self.cache_mode == "resume":
                 doc_uuid = get_uuid(task, split, doc_id)
                 if doc_uuid in self.response_cache:
@@ -198,6 +203,15 @@ class GeminiAPI(lmms):
                             HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
                         },
                     )
+                    if hasattr(content, "usage_metadata") and content.usage_metadata:
+                        log_usage(
+                            model_name=self.model_version,
+                            task_name=task,
+                            input_tokens=getattr(content.usage_metadata, "prompt_token_count", 0) or 0,
+                            output_tokens=getattr(content.usage_metadata, "candidates_token_count", 0) or 0,
+                            reasoning_tokens=0,
+                            source="model",
+                        )
                     content = content.text
                     break
                 except Exception as e:

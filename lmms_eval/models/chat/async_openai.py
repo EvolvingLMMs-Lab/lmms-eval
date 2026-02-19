@@ -25,6 +25,11 @@ from lmms_eval.models.model_utils.concurrency_control import (
     make_prefix_hash,
     parse_bool,
 )
+from lmms_eval.models.model_utils.usage_metrics import (
+    get_running_totals,
+    is_budget_exceeded,
+    log_usage,
+)
 from lmms_eval.protocol import ChatMessages
 
 VideoReader, _ = optional_import("decord", "VideoReader")
@@ -214,6 +219,23 @@ class AsyncOpenAIChat(lmms):
 
         response = await self.client.chat.completions.create(**payload)
         last_response = response.choices[0].message.content
+        # Extract usage metrics
+        input_tokens = 0
+        output_tokens = 0
+        reasoning_tokens = 0
+        if hasattr(response, "usage") and response.usage:
+            input_tokens = getattr(response.usage, "prompt_tokens", 0) or 0
+            output_tokens = getattr(response.usage, "completion_tokens", 0) or 0
+            if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details:
+                reasoning_tokens = getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0
+        log_usage(
+            model_name=self.model_version,
+            task_name=task if "task" in locals() else None,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            reasoning_tokens=reasoning_tokens,
+            source="model",
+        )
         # Sometimes asyncio return None, skip this case
         try:
             all_response += last_response
@@ -255,6 +277,23 @@ class AsyncOpenAIChat(lmms):
                 tools=functions,
                 tool_choice="auto",
             )
+            # Extract usage metrics
+            input_tokens = 0
+            output_tokens = 0
+            reasoning_tokens = 0
+            if hasattr(response, "usage") and response.usage:
+                input_tokens = getattr(response.usage, "prompt_tokens", 0) or 0
+                output_tokens = getattr(response.usage, "completion_tokens", 0) or 0
+                if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details:
+                    reasoning_tokens = getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0
+            log_usage(
+                model_name=self.model_version,
+                task_name=task if "task" in locals() else None,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                reasoning_tokens=reasoning_tokens,
+                source="model",
+            )
             last_response = response.choices[0].message.content
             try:
                 all_response += last_response
@@ -291,6 +330,8 @@ class AsyncOpenAIChat(lmms):
             cursor = 0
 
             async def _process(req, idx):
+                if is_budget_exceeded():
+                    return "[LMMS_EVAL_BUDGET_EXCEEDED]", idx, True, False, 0.0
                 started_at = time.time()
                 rate_limited = False
                 last_error_msg = "unknown error"
@@ -386,6 +427,8 @@ class AsyncOpenAIChat(lmms):
                         rate_limited_requests += 1
                     request_latencies.append(elapsed)
                     completed_since_adapt += 1
+                    totals = get_running_totals()
+                    pbar.set_postfix({"tokens": f"{totals['total_tokens']:,}"}, refresh=False)
                     pbar.update(1)
                     maybe_update_concurrency(force=False)
 
