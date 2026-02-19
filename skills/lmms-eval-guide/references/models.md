@@ -1,4 +1,4 @@
-<!-- lmms-eval v0.6 -->
+<!-- lmms-eval v0.7 -->
 # Adding a New Model
 
 ## Choose Model Type
