@@ -89,7 +89,8 @@ Dataset --> doc_to_messages (or doc_to_visual + doc_to_text)
 1. Create `lmms_eval/tasks/<name>/<name>.yaml` + `utils.py`
 2. YAML needs: `task`, `dataset_path`, `test_split`, `output_type`, `doc_to_messages`, `process_results`, `metric_list`
 3. Tasks auto-register from YAML - no manual registration needed
-4. Test: `python -m lmms_eval --model qwen2_5_vl --tasks <name> --limit 8`
+4. Run OpenRouter smoke test: `TASKS=<name> MODEL_VERSION=bytedance-seed/seed-1.6-flash bash examples/models/openrouter_molmo.sh`
+5. Local fallback test: `python -m lmms_eval --model qwen2_5_vl --tasks <name> --limit 8`
 
 #### Task YAML Advanced Features
 

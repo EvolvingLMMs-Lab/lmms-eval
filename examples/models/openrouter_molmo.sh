@@ -1,45 +1,28 @@
 #!/bin/bash
 
-# ============================================================================
-# OpenRouter API Test Script
-# ============================================================================
-# This script demonstrates how to use OpenRouter API with lmms-eval
-# Model: allenai/molmo-2-8b:free (free tier model)
-#
-# OpenRouter provides access to various LLM/VLM models through a unified API
-# that is compatible with OpenAI's API format.
-# ============================================================================
+set -euo pipefail
 
-export HF_HOME="${HF_HOME:-~/.cache/huggingface}"
+export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-${OPENROUTER_API_KEY:?Error: OPENROUTER_API_KEY not set in environment}}"
+export OPENAI_API_BASE="${OPENAI_API_BASE:-https://openrouter.ai/api/v1}"
 
-# OpenRouter API configuration (reads from ~/.zshrc OPENROUTER_API_KEY)
-export OPENAI_API_KEY="${OPENROUTER_API_KEY:?Error: OPENROUTER_API_KEY not set in environment}"
-export OPENAI_API_BASE="https://openrouter.ai/api/v1"
+MODEL_VERSION="${MODEL_VERSION:-bytedance-seed/seed-1.6-flash}"
+TASKS="${TASKS:-mme}"
+LIMIT="${LIMIT:-5}"
+BATCH_SIZE="${BATCH_SIZE:-1}"
+OUTPUT_PATH="${OUTPUT_PATH:-./logs/openrouter_task_smoke/}"
+VERBOSITY="${VERBOSITY:-DEBUG}"
 
-# Model to use (free tier)
-MODEL_VERSION="allenai/molmo-2-8b:free"
-
-# ============================================================================
-# Basic evaluation example
-# ============================================================================
-# Using a small subset (--limit 5) for quick testing
-# Tasks: mme (multimodal evaluation)
+echo "[INFO] OpenRouter task smoke test"
+echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} limit=${LIMIT} batch_size=${BATCH_SIZE}"
+echo "[INFO] output_path=${OUTPUT_PATH}"
 
 python3 -m lmms_eval \
     --model openai_compatible \
-    --model_args model_version=$MODEL_VERSION \
-    --tasks mme \
-    --batch_size 1 \
-    --limit 5 \
-    --output_path ./logs/openrouter_test/ \
+    --model_args "model_version=${MODEL_VERSION}" \
+    --tasks "${TASKS}" \
+    --batch_size "${BATCH_SIZE}" \
+    --limit "${LIMIT}" \
+    --output_path "${OUTPUT_PATH}" \
     --log_samples \
-    --verbosity DEBUG
-
-# ============================================================================
-# Notes:
-# ============================================================================
-# 1. OpenRouter free models have rate limits - use small --limit for testing
-# 2. Some models may not support all image formats or features
-# 3. Check https://openrouter.ai/models for available models and pricing
-# 4. For production use, consider paid models for better rate limits
-# ============================================================================
+    --verbosity "${VERBOSITY}"
