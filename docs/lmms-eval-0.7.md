@@ -272,3 +272,95 @@ When `--log_samples` is passed, each JSONL line contains the following fields:
 | `lmms_eval/api/task.py` | Per-task `reasoning_tags` field in `TaskConfig` |
 | `lmms_eval/api/instance.py` | `raw_filtered_resps` dict for pre-strip preservation |
 | 6 model files | Removed ad-hoc `parse_reasoning_model_answer` calls |
+
+---
+
+## 3. Async OpenAI: Refactored Concurrency Control & `message_format`
+
+The `async_openai` model backend received two changes: internal refactoring for maintainability, and a `message_format` parameter that replaces the previous `is_qwen3_vl` flag and the separate `async_openai_qwen3_vl` model class. (#1102)
+
+### 3.1 `message_format` Parameter
+
+Different model families served behind OpenAI-compatible APIs may require different message serialization. For example, Qwen3-VL needs per-frame timestamps prepended to video frames, while the standard OpenAI format sends frames as plain base64 images.
+
+Previously this was handled by an `is_qwen3_vl` boolean flag, then by a separate model class (`async_openai_qwen3_vl`). Both approaches scale poorly - every new format would require a new flag or a new file + class + registry entry.
+
+v0.7 replaces this with a single `message_format` parameter on `async_openai`:
+
+```bash
+# Standard OpenAI format (default)
+python -m lmms_eval --model async_openai \
+    --model_args pretrained=gpt-4o,message_format=openai \
+    --tasks mme
+
+# Qwen3-VL format (adds per-frame timestamps for video)
+python -m lmms_eval --model async_openai \
+    --model_args pretrained=Qwen/Qwen3-VL-72B,message_format=qwen3_vl \
+    --tasks video_mme
+```
+
+Adding a new format requires only an `elif` in `prepare_messages()` and a corresponding `to_*_messages()` method in `ChatMessages` - no new files or registry changes.
+
+### 3.2 Refactored Concurrency Control
+
+The `generate_until()` method was a single 130-line function containing retry logic, adaptive concurrency control, and request scheduling all interleaved. It has been decomposed into focused methods:
+
+| Method | Responsibility |
+|--------|----------------|
+| `_build_video_kwargs()` | Construct video processing parameters from model config |
+| `prepare_messages()` | Dispatch to format-specific message serialization |
+| `_get_initial_concurrency()` | Compute starting concurrency from CPU count and adaptive config |
+| `_compute_dispatch_order()` | Sort requests by prefix hash for cache locality |
+| `_process_with_retry()` | Execute a single request with retry and backoff |
+| `_update_concurrency()` | Adjust concurrency based on failure/latency signals |
+| `_run_scheduling_loop()` | Main async scheduling loop with slot refill |
+
+The `generate_until()` method is now 8 lines:
+
+```python
+async def run():
+    pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+    current_concurrency = self._get_initial_concurrency()
+    dispatch_order = self._compute_dispatch_order(requests)
+    res = await self._run_scheduling_loop(requests, dispatch_order, pbar, current_concurrency)
+    pbar.close()
+    return res
+```
+
+Concurrency tracking state is encapsulated in `_AdaptiveConcurrencyTracker` (a dataclass) instead of scattered `nonlocal` variables in nested closures.
+
+---
+
+## 4. Flattened JSONL Log Output
+
+When `--log_samples` is enabled, the per-sample JSONL files previously wrote `resps` and `filtered_resps` as doubly-nested lists:
+
+```json
+{"resps": [["The answer is cat"]], "filtered_resps": [["cat"]]}
+```
+
+The outer list exists because the evaluator groups multiple `Instance` objects per document (e.g., one per choice in multiple-choice tasks). For the dominant `generate_until` output type, there is always exactly one Instance per document, making the outer list redundant.
+
+v0.7 flattens the outer list at serialization time when it contains only a single element:
+
+```json
+{"resps": ["The answer is cat"], "filtered_resps": ["cat"]}
+```
+
+### 4.1 When Flattening Applies
+
+| Output Type | Instances per Doc | Before | After |
+|-------------|-------------------|--------|-------|
+| `generate_until` | 1 | `[["text"]]` | `["text"]` |
+| `generate_until_multi_round` | 1 | `[["text"]]` | `["text"]` |
+| `loglikelihood` (MCQ) | N (one per choice) | `[["a"], ["b"], ...]` | `[["a"], ["b"], ...]` (unchanged) |
+
+Flattening only removes the outer wrapper when there is exactly one Instance. Multi-choice tasks with multiple Instances per document are left untouched.
+
+### 4.2 Deduplication with Flattened Format
+
+The existing dedup logic (omit `resps` when identical to `filtered_resps`) continues to work with the flattened format. After flattening, the two fields are compared directly - if they match, `resps` is omitted from the JSONL record to save space.
+
+### 4.3 Implementation
+
+The flatten happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so that existing consumers (wandb logger, logging utilities) continue to work without changes.
