@@ -551,6 +551,25 @@ def _run_generate_until_agentic(lm, requests: list[Instance]) -> list[str]:
             else:
                 break
 
+        if previous_round_info is not None and not (isinstance(final_response, str) and final_response.strip().startswith("{")):
+            state = previous_round_info.get("state", {}) if isinstance(previous_round_info, dict) else {}
+            valid_tool_calls = float(previous_round_info.get("valid_tool_calls", previous_round_info.get("tool_calls", 0))) if isinstance(previous_round_info, dict) else 0.0
+            invalid_steps = float(previous_round_info.get("invalid_steps", 0.0)) if isinstance(previous_round_info, dict) else 0.0
+            fallback_payload = {
+                "success": False,
+                "error": "max_agentic_steps_reached",
+                "tool_calls": float(previous_round_info.get("tool_calls", 0)) if isinstance(previous_round_info, dict) else 0.0,
+                "valid_tool_calls": valid_tool_calls,
+                "invalid_steps": invalid_steps,
+                "state": state,
+                "last_model_output": final_response,
+            }
+            if isinstance(state, dict):
+                for key in ["cash", "days_elapsed", "inventory", "mobile_data_working"]:
+                    if key in state:
+                        fallback_payload[key] = state[key]
+            final_response = json.dumps(fallback_payload, ensure_ascii=False)
+
         responses.append(final_response)
 
     return responses
