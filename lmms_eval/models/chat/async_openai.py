@@ -461,7 +461,7 @@ class AsyncOpenAIChat(lmms):
                 for call in message.tool_calls:
                     eval_logger.debug(f"Calling {call.function.name}...")
                     result = await self.mcp_client.run_tool(call.function.name, eval(call.function.arguments))
-                    all_response += f"<tool_call>{call.function.name} {call.function.arguments}</tool_call></tool_response>"
+                    all_response += f"<tool_call>{call.function.name} {call.function.arguments}</tool_call><tool_response>"
                     tool_messages.append({"role": "tool", "name": call.function.name, "content": []})
                     for content in result.content:
                         tool_message = self.mcp_client.convert_result_to_openai_format(content)
@@ -471,7 +471,7 @@ class AsyncOpenAIChat(lmms):
                             elif content["type"] == "text":
                                 all_response += content["text"]
                         tool_messages[-1]["content"].extend(tool_message)
-                    all_response += f"</{call.function.name}>"
+                    all_response += "</tool_response>"
 
             response = await self.client.chat.completions.create(
                 model=self.model_version,
