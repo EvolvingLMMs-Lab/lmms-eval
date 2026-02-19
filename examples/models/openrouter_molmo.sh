@@ -12,12 +12,10 @@ LIMIT="${LIMIT:-5}"
 BATCH_SIZE="${BATCH_SIZE:-1}"
 OUTPUT_PATH="${OUTPUT_PATH:-./logs/openrouter_task_smoke/}"
 VERBOSITY="${VERBOSITY:-DEBUG}"
-AGENTIC_TRACE_MODE="${AGENTIC_TRACE_MODE:-basic}"
 
 echo "[INFO] OpenRouter task smoke test"
 echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} limit=${LIMIT} batch_size=${BATCH_SIZE}"
 echo "[INFO] output_path=${OUTPUT_PATH}"
-echo "[INFO] agentic_trace_mode=${AGENTIC_TRACE_MODE}"
 
 python3 -m lmms_eval \
     --model openai_compatible \
@@ -27,5 +25,4 @@ python3 -m lmms_eval \
     --limit "${LIMIT}" \
     --output_path "${OUTPUT_PATH}" \
     --log_samples \
-    --agentic_trace_mode "${AGENTIC_TRACE_MODE}" \
     --verbosity "${VERBOSITY}"
