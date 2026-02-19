@@ -5,7 +5,7 @@ import tempfile
 import time
 import uuid
 from multiprocessing import cpu_count
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from accelerate import Accelerator, DistributedType
 from dotenv import load_dotenv
@@ -54,7 +54,6 @@ class AsyncOpenAIChat(lmms):
         max_frames: Optional[int] = 768,
         max_pixels: Optional[int] = 151200,
         min_pixels: Optional[int] = 28 * 28,
-        is_qwen3_vl: bool = False,
         adaptive_concurrency: bool = False,
         adaptive_min_concurrency: int = 1,
         adaptive_max_concurrency: int = 128,
@@ -71,7 +70,7 @@ class AsyncOpenAIChat(lmms):
         self.timeout = timeout
         self.retry_backoff_s = max(0.0, float(1.0 if retry_backoff_s is None else retry_backoff_s))
         self.max_retries = max_retries
-        self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
+        self.max_size_in_mb = max_size_in_mb
         if num_cpus is None:
             self.num_cpus = cpu_count() // 2
         else:
@@ -85,7 +84,6 @@ class AsyncOpenAIChat(lmms):
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.max_frames = max_frames
-        self.is_qwen3_vl = is_qwen3_vl
         self.adaptive_concurrency = parse_bool(adaptive_concurrency)
         self.adaptive_config = AdaptiveConcurrencyConfig.from_raw(
             min_concurrency=adaptive_min_concurrency,
@@ -106,7 +104,6 @@ class AsyncOpenAIChat(lmms):
             self.mcp_client = None
 
         accelerator = Accelerator()
-        # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [
                 DistributedType.FSDP,
@@ -127,7 +124,6 @@ class AsyncOpenAIChat(lmms):
 
     @property
     def model(self):
-        # returns the model, unwrapping it if using Accelerate
         return self.client
 
     @property
@@ -148,18 +144,7 @@ class AsyncOpenAIChat(lmms):
     def generate_until_multi_round(self, requests) -> List[str]:
         raise NotImplementedError("TODO: Implement multi-round generation for LLaVAHF")
 
-    async def maybe_forward_with_tool(self, request: Instance, idx: int):
-        """
-        Forward the request to the OpenAI API, using tools if available.
-        This method is designed to handle chat messages and tool calls in an asynchronous manner.
-        It retrieves the chat messages from the request, prepares the payload, and sends it to the OpenAI API.
-        If the response indicates that tool calls are needed, it will call the tools using the MCP client and continue the conversation until a final response is received.
-        :param request: The request instance containing the chat messages and other parameters.
-        :param idx: The index of the request in the batch. (Use to restore the original order of responses)
-        """
-        ctx, doc_to_messages, gen_kwargs, doc_id, task, split = request.args
-        chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
-        chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
+    def prepare_messages(self, chat_messages: ChatMessages) -> Tuple[List[Dict], Tuple]:
         video_kwargs = {"max_pixels": self.max_pixels, "min_pixels": self.min_pixels}
         if self.fps is not None:
             video_kwargs["fps"] = self.fps
@@ -167,10 +152,14 @@ class AsyncOpenAIChat(lmms):
             video_kwargs["nframes"] = self.nframes
         if self.max_frames is not None:
             video_kwargs["max_frames"] = self.max_frames
-        if self.is_qwen3_vl:
-            messages = chat_messages.to_qwen3_vl_openai_messages(video_kwargs)
-        else:
-            messages = chat_messages.to_openai_messages(video_kwargs)
+        messages = chat_messages.to_openai_messages(video_kwargs)
+        return messages, video_kwargs
+
+    async def maybe_forward_with_tool(self, request: Instance, idx: int):
+        ctx, doc_to_messages, gen_kwargs, doc_id, task, split = request.args
+        chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
+        chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
+        messages, video_kwargs = self.prepare_messages(chat_messages)
         images, videos, audios = chat_messages.extract_media()
         if self.mcp_client is not None:
             for image_idx, image in enumerate(images):
@@ -202,19 +191,16 @@ class AsyncOpenAIChat(lmms):
             gen_kwargs["top_p"] = None
         if "do_sample" not in gen_kwargs:
             gen_kwargs["do_sample"] = False
-        # payload["max_completion_tokens"] = gen_kwargs["max_new_tokens"]
         payload["max_tokens"] = gen_kwargs["max_new_tokens"]
         payload["temperature"] = gen_kwargs["temperature"]
 
         if self.mcp_client is not None:
-            # get the function list from the MCP server
             functions = await self.mcp_client.get_function_list()
             payload["tools"] = functions
-            payload["tool_choice"] = "auto"  # or "auto" for automatic tool selection
+            payload["tool_choice"] = "auto"
 
         response = await self.client.chat.completions.create(**payload)
         last_response = response.choices[0].message.content
-        # Sometimes asyncio return None, skip this case
         try:
             all_response += last_response
         except Exception as e:
@@ -235,7 +221,7 @@ class AsyncOpenAIChat(lmms):
                 for call in message.tool_calls:
                     eval_logger.debug(f"Calling {call.function.name}...")
                     result = await self.mcp_client.run_tool(call.function.name, eval(call.function.arguments))
-                    all_response += f"<tool_call>{call.function.name} {call.function.arguments}</tool_call></tool_response>"
+                    all_response += f"<{call.function.name} {call.function.arguments}>"
                     tool_messages.append({"role": "tool", "name": call.function.name, "content": []})
                     for content in result.content:
                         tool_message = self.mcp_client.convert_result_to_openai_format(content)
@@ -245,7 +231,7 @@ class AsyncOpenAIChat(lmms):
                             elif content["type"] == "text":
                                 all_response += content["text"]
                         tool_messages[-1]["content"].extend(tool_message)
-                    all_response += "</tool_response>"
+                    all_response += "</{call.function.name}>"
 
             response = await self.client.chat.completions.create(
                 model=self.model_version,
@@ -395,7 +381,7 @@ class AsyncOpenAIChat(lmms):
             return res
 
         eval_results = asyncio.run(run())
-        eval_results.sort(key=lambda x: x[1])  # Sort by index to restore original
+        eval_results.sort(key=lambda x: x[1])
         results = results + [content for content, _ in eval_results]
         if self.mcp_client is not None:
             shutil.rmtree(self.work_dir)
