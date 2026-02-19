@@ -702,7 +702,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             samples = None
 
         # Print token usage summary if available
-        if "usage" in results:
+        if results.get("usage") and "total" in results["usage"]:
             u = results["usage"]["total"]
             eval_logger.info(
                 "Token Usage - Input: {} | Output: {} | Reasoning: {} | Total: {} | API Calls: {}",

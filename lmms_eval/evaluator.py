@@ -381,8 +381,7 @@ def simple_evaluate(
         if throughput_summary:
             results["throughput"] = throughput_summary
         usage_summary = summarize_usage_metrics()
-        if usage_summary:
-            results["usage"] = usage_summary
+        results["usage"] = usage_summary
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
 
