@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Tuple, Union
 
 import av
@@ -9,10 +10,11 @@ from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 
 def load_video_decord(video_path, max_frames_num):
+    num_threads = int(os.getenv("LMMS_VIDEO_DECORD_THREADS", "2"))
     if isinstance(video_path, str):
-        vr = VideoReader(video_path, ctx=cpu(0))
+        vr = VideoReader(video_path, ctx=cpu(0), num_threads=num_threads)
     else:
-        vr = VideoReader(video_path[0], ctx=cpu(0))
+        vr = VideoReader(video_path[0], ctx=cpu(0), num_threads=num_threads)
     total_frame_num = len(vr)
     uniform_sampled_frames = np.linspace(0, total_frame_num - 1, max_frames_num, dtype=int)
     frame_idx = uniform_sampled_frames.tolist()
@@ -26,10 +28,11 @@ def record_video_length_stream(container, indices):
     frames = []
     start_index = indices[0]
     end_index = indices[-1]
+    index_set = set(indices.tolist() if hasattr(indices, "tolist") else indices)
     for i, frame in enumerate(container.decode(video=0)):
         if i > end_index:
             break
-        if i >= start_index and i in indices:
+        if i >= start_index and i in index_set:
             frames.append(frame)
     return frames
 
@@ -103,6 +106,7 @@ def read_video_pyav(
     """
 
     container = av.open(video_path)
+    container.streams.video[0].thread_type = "AUTO"
 
     try:
         if "webm" not in video_path and "mkv" not in video_path:
@@ -115,11 +119,16 @@ def read_video_pyav(
                     force_include_last_frame=force_include_last_frame,
                 )
             except Exception:
+                container.seek(0)
                 frames = record_video_length_packet(container)
         else:
             frames = record_video_length_packet(container)
-
-        return np.stack([x.to_ndarray(format=format) for x in frames])
+        first = frames[0].to_ndarray(format=format)
+        output = np.empty((len(frames),) + first.shape, dtype=first.dtype)
+        output[0] = first
+        for i, frame in enumerate(frames[1:], start=1):
+            output[i] = frame.to_ndarray(format=format)
+        return output
     finally:
         container.close()  # Ensure container is closed to prevent resource leak
 
@@ -170,11 +179,13 @@ def read_video_pyav_base64(
     resize_strategy: str = "resize",
 ):
     container = av.open(video_path)
+    container.streams.video[0].thread_type = "AUTO"
     try:
         if "webm" not in video_path and "mkv" not in video_path:
             try:
                 frames = load_video_stream(container, num_frm, fps)
             except Exception:
+                container.seek(0)
                 frames = record_video_length_packet(container)
         else:
             frames = record_video_length_packet(container)
