@@ -23,6 +23,18 @@ metric_list:
   - metric: tau2_avg_tool_calls
     aggregation: !function utils.tau2_aggregate_avg_tool_calls
     higher_is_better: false
+  - metric: tau2_trace_quality
+    aggregation: !function utils.tau2_aggregate_trace_quality
+    higher_is_better: true
+  - metric: tau2_trace_step_validity
+    aggregation: !function utils.tau2_aggregate_trace_step_validity
+    higher_is_better: true
+  - metric: tau2_trace_state_progress
+    aggregation: !function utils.tau2_aggregate_trace_state_progress
+    higher_is_better: true
+  - metric: tau2_trace_termination_quality
+    aggregation: !function utils.tau2_aggregate_trace_termination_quality
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
