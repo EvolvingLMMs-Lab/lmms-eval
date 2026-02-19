@@ -160,6 +160,18 @@ def _build_agent_prompt(doc, state, tool_result=None):
     if tool_result is not None:
         tool_result_text = f"\nTool result: {json.dumps(tool_result, ensure_ascii=False)}"
 
+    target_state = doc.get("target_state", {})
+    goal_reached = isinstance(target_state, dict) and target_state and all(state.get(key) == value for key, value in target_state.items())
+
+    if goal_reached:
+        return (
+            f"{doc['user_query']}\n"
+            f"Current state: {json.dumps(state, ensure_ascii=False)}{tool_result_text}\n"
+            "Target state is already satisfied. Do not call any more tools.\n"
+            "Output exactly one submit in this format and nothing else:\n"
+            '<submit>{"final":"mobile data works now"}</submit>'
+        )
+
     return (
         f"{doc['user_query']}\n"
         f"Current state: {json.dumps(state, ensure_ascii=False)}{tool_result_text}\n"

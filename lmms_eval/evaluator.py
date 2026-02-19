@@ -563,6 +563,7 @@ def _run_generate_until_agentic(lm, requests: list[Instance]) -> list[str]:
                 "invalid_steps": invalid_steps,
                 "state": state,
                 "last_model_output": final_response,
+                "trace": model_outputs,
             }
             if isinstance(state, dict):
                 for key in ["cash", "days_elapsed", "inventory", "mobile_data_working"]:
