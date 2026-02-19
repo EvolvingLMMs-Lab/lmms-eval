@@ -378,6 +378,13 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.",
     )
     parser.add_argument(
+        "--agentic_trace_mode",
+        type=str,
+        default="basic",
+        choices=["basic", "full"],
+        help="Controls agentic trace logging level. 'basic' logs compact final trace payload, 'full' logs per-round input/output/state snapshots.",
+    )
+    parser.add_argument(
         "--force_simple",
         action="store_true",
         help="Force the evaluation to use the simple mode of the models",

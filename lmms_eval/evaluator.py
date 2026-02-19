@@ -463,7 +463,7 @@ def simple_evaluate(
 decontaminate_suffix = "_decontaminate"
 
 
-def _run_generate_until_agentic(lm, requests: list[Instance]) -> list[str]:
+def _run_generate_until_agentic(lm, requests: list[Instance], agentic_trace_mode: str = "basic") -> list[str]:
     responses: list[str] = []
 
     for req in requests:
@@ -487,8 +487,10 @@ def _run_generate_until_agentic(lm, requests: list[Instance]) -> list[str]:
         model_outputs: list[str] = []
         previous_round_info = None
         final_response = ""
+        full_round_trace: list[dict] = []
 
         for round_idx in range(max_agentic_steps):
+            round_input_context = current_context
             if getattr(lm, "is_simple", False):
                 single_req = Instance(
                     request_type="generate_until",
@@ -539,6 +541,23 @@ def _run_generate_until_agentic(lm, requests: list[Instance]) -> list[str]:
                         final_response = model_outputs[-1]
                 previous_round_info = next_round_info
 
+                if agentic_trace_mode == "full":
+                    round_record = {
+                        "round_idx": round_idx + 1,
+                        "round_input": round_input_context,
+                        "model_output": current_output,
+                        "terminal": bool(terminal_signal),
+                    }
+                    if isinstance(next_round_info, dict):
+                        round_record["state"] = next_round_info.get("state")
+                        round_record["tool_result"] = next_round_info.get("last_tool_result")
+                        round_record["tool_calls"] = next_round_info.get("tool_calls")
+                        round_record["valid_tool_calls"] = next_round_info.get("valid_tool_calls")
+                        round_record["invalid_steps"] = next_round_info.get("invalid_steps")
+                    if next_context is not None:
+                        round_record["next_input"] = next_context
+                    full_round_trace.append(round_record)
+
                 if terminal_signal:
                     break
 
@@ -570,6 +589,16 @@ def _run_generate_until_agentic(lm, requests: list[Instance]) -> list[str]:
                     if key in state:
                         fallback_payload[key] = state[key]
             final_response = json.dumps(fallback_payload, ensure_ascii=False)
+
+        if agentic_trace_mode == "full":
+            try:
+                parsed_response = json.loads(final_response) if isinstance(final_response, str) else None
+                if isinstance(parsed_response, dict):
+                    parsed_response["agentic_trace_mode"] = "full"
+                    parsed_response["agentic_rounds"] = full_round_trace
+                    final_response = json.dumps(parsed_response, ensure_ascii=False)
+            except (TypeError, json.JSONDecodeError):
+                pass
 
         responses.append(final_response)
 
@@ -758,7 +787,10 @@ def evaluate(
 
         # run requests through model (with optional response cache)
         if reqtype == "generate_until_agentic":
-            resps = _run_generate_until_agentic(lm, cloned_reqs)
+            trace_mode = "basic"
+            if cli_args is not None:
+                trace_mode = getattr(cli_args, "agentic_trace_mode", "basic")
+            resps = _run_generate_until_agentic(lm, cloned_reqs, agentic_trace_mode=trace_mode)
         elif response_cache is not None:
             resps = response_cache.execute(lm, reqtype, cloned_reqs)
         else:

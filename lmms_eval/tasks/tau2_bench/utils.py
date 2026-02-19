@@ -86,6 +86,8 @@ def _extract_braced_objects(text):
 
 def _extract_submit_payloads(text):
     payloads = _extract_tag_payload(SUBMIT_PATTERN, text)
+    if payloads:
+        return payloads
 
     for obj_text in _extract_braced_objects(text):
         obj = _parse_json_like(obj_text)
@@ -101,6 +103,8 @@ def _extract_submit_payloads(text):
 
 def _extract_tool_payloads(text):
     payloads = _extract_tag_payload(TOOL_CALL_PATTERN, text)
+    if payloads:
+        return payloads
 
     for obj_text in _extract_braced_objects(text):
         obj = _parse_json_like(obj_text)
@@ -198,6 +202,23 @@ def tau2_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None, 
     state = state_info["state"]
     model_response = previous_output[-1] if previous_output else ""
 
+    tool_payloads = _extract_tool_payloads(model_response)
+    if tool_payloads:
+        for tool_call in tool_payloads:
+            tool_name = tool_call.get("name", "")
+            arguments = tool_call.get("arguments", {})
+            if isinstance(arguments, str):
+                arguments = _parse_json_like(arguments) or {}
+            if not isinstance(arguments, dict):
+                arguments = {}
+            tool_result = _apply_tool(tool_name, arguments, state)
+            state_info["tool_calls"] += 1
+            if isinstance(tool_result, dict) and "error" in tool_result:
+                state_info["invalid_steps"] = state_info.get("invalid_steps", 0) + 1
+            else:
+                state_info["valid_tool_calls"] = state_info.get("valid_tool_calls", 0) + 1
+            state_info["last_tool_result"] = tool_result
+
     submit_payloads = _extract_submit_payloads(model_response)
     if submit_payloads:
         expected = doc["target_state"]
@@ -211,25 +232,10 @@ def tau2_doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None, 
             "submit": submit_payloads[-1],
             "trace": previous_output,
         }
-        return None, None, True, [json.dumps(final_payload, ensure_ascii=False)], None
+        return None, None, True, [json.dumps(final_payload, ensure_ascii=False)], state_info
 
-    tool_payloads = _extract_tool_payloads(model_response)
     if tool_payloads:
-        tool_call = tool_payloads[-1]
-        tool_name = tool_call.get("name", "")
-        arguments = tool_call.get("arguments", {})
-        if isinstance(arguments, str):
-            arguments = _parse_json_like(arguments) or {}
-        if not isinstance(arguments, dict):
-            arguments = {}
-        tool_result = _apply_tool(tool_name, arguments, state)
-        state_info["tool_calls"] += 1
-        if isinstance(tool_result, dict) and "error" in tool_result:
-            state_info["invalid_steps"] = state_info.get("invalid_steps", 0) + 1
-        else:
-            state_info["valid_tool_calls"] = state_info.get("valid_tool_calls", 0) + 1
-        state_info["last_tool_result"] = tool_result
-        next_prompt = _build_agent_prompt(doc, state, tool_result=tool_result)
+        next_prompt = _build_agent_prompt(doc, state, tool_result=state_info.get("last_tool_result"))
         return [], next_prompt, False, previous_output, state_info
 
     no_action_result = {
