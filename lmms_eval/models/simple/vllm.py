@@ -254,9 +254,9 @@ class VLLM(lmms):
         img = self._maybe_resize_image(img)
         return encode_image_to_base64(
             img,
-            image_format="JPEG",
-            convert_rgb=True,
-            quality=85,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
             copy_if_pil=False,
         )
 
@@ -280,9 +280,9 @@ class VLLM(lmms):
             base64_frames.append(
                 encode_image_to_base64(
                     img,
-                    image_format="JPEG",
-                    convert_rgb=True,
-                    quality=85,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
                     copy_if_pil=False,
                 )
             )
@@ -348,7 +348,7 @@ class VLLM(lmms):
                         messages[0]["content"].append(
                             {
                                 "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                                "image_url": {"url": f"data:image/png;base64,{img}"},
                             }
                         )
                     messages[0]["content"].append({"type": "text", "text": contexts})
@@ -358,7 +358,7 @@ class VLLM(lmms):
                         messages[0]["content"].append(
                             {
                                 "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                                "image_url": {"url": f"data:image/png;base64,{img}"},
                             }
                         )
                 batched_messages.append(messages)

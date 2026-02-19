@@ -151,14 +151,9 @@ def read_video_pyav_pil(
             return img
         if resize_strategy == "resize":
             target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
-            scale = min(target[0] / img.width, target[1] / img.height)
-            new_size = (max(1, int(img.width * scale)), max(1, int(img.height * scale)))
-            if new_size != img.size:
-                return img.resize(new_size, Image.Resampling.BILINEAR)
-            return img
+            return img.resize(target)
         if resize_strategy == "thumbnail":
-            target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
-            img.thumbnail(target)
+            img.thumbnail(max_image_size)
             return img
         raise ValueError(f"Unknown resize strategy: {resize_strategy}")
 
@@ -174,7 +169,7 @@ def read_video_pyav_base64(
     num_frm: int = 8,
     fps: Optional[float] = None,
     format="rgb24",
-    img_format="JPEG",
+    img_format="PNG",
     max_image_size: Optional[Union[Tuple[int, int], int]] = None,
     resize_strategy: str = "resize",
 ):
@@ -199,14 +194,9 @@ def read_video_pyav_base64(
             return img
         if resize_strategy == "resize":
             target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
-            scale = min(target[0] / img.width, target[1] / img.height)
-            new_size = (max(1, int(img.width * scale)), max(1, int(img.height * scale)))
-            if new_size != img.size:
-                return img.resize(new_size, Image.Resampling.BILINEAR)
-            return img
+            return img.resize(target)
         if resize_strategy == "thumbnail":
-            target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
-            img.thumbnail(target)
+            img.thumbnail(max_image_size)
             return img
         raise ValueError(f"Unknown resize strategy: {resize_strategy}")
 

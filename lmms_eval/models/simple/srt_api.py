@@ -120,9 +120,9 @@ class SRT_API(lmms):
     def encode_image(self, image: Image.Image):
         return encode_image_to_base64(
             image,
-            image_format="JPEG",
-            convert_rgb=True,
-            quality=85,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
         )
 
     # Function to encode the video
@@ -151,9 +151,9 @@ class SRT_API(lmms):
             base64_frames.append(
                 encode_image_to_base64(
                     img,
-                    image_format="JPEG",
-                    convert_rgb=True,
-                    quality=85,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
                 )
             )
 
@@ -202,7 +202,7 @@ class SRT_API(lmms):
         # put the images in the first place
         content = []
         for img in imgs:
-            content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}, "modalities": self.modality})
+            content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}, "modalities": self.modality})
 
         content.append({"type": "text", "text": contexts})
         messages.append({"role": "user", "content": content})
@@ -265,7 +265,7 @@ class SRT_API(lmms):
         # put the images in the first place
         content = []
         for img in imgs:
-            content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}, "modalities": self.modality})
+            content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}, "modalities": self.modality})
 
         content.append({"type": "text", "text": contexts})
         messages.append({"role": "user", "content": content})

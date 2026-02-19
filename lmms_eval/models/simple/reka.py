@@ -90,18 +90,18 @@ class Reka(lmms):
             for img in image:
                 base64_str = encode_image_to_base64(
                     img,
-                    image_format="JPEG",
-                    convert_rgb=True,
-                    quality=85,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
                 )
                 media_urls.append(f"data:image/jpeg;base64,{base64_str}")
             return media_urls
 
         base64_str = encode_image_to_base64(
             image,
-            image_format="JPEG",
-            convert_rgb=True,
-            quality=85,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
         )
         return f"data:image/jpeg;base64,{base64_str}"
 
@@ -117,9 +117,9 @@ class Reka(lmms):
             img = Image.fromarray(frame)
             base64_str = encode_image_to_base64(
                 img,
-                image_format="JPEG",
-                convert_rgb=True,
-                quality=85,
+                image_format="PNG",
+                convert_rgb=False,
+                quality=None,
             )
             base64_frames.append(f"data:image/jpeg;base64,{base64_str}")
 

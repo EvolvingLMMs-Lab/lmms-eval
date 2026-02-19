@@ -82,9 +82,9 @@ class BatchGPT4(lmms):
     def encode_image(self, image: Image.Image):
         return encode_image_to_base64(
             image,
-            image_format="JPEG",
-            convert_rgb=True,
-            quality=85,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
         )
 
     # Function to encode the video
@@ -101,9 +101,9 @@ class BatchGPT4(lmms):
             base64_frames.append(
                 encode_image_to_base64(
                     img,
-                    image_format="JPEG",
-                    convert_rgb=True,
-                    quality=85,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
                 )
             )
 

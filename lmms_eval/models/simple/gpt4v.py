@@ -107,9 +107,9 @@ class GPT4V(lmms):
                 return encode_image_to_base64_with_size_limit(
                     loaded_image.convert("RGB"),
                     max_size_bytes=self.max_size_in_mb * 1024 * 1024,
-                    image_format="JPEG",
+                    image_format="PNG",
                     convert_rgb=False,
-                    quality=85,
+                    quality=None,
                     copy_if_pil=False,
                     resize_factor=0.75,
                     min_side=100,
@@ -118,9 +118,9 @@ class GPT4V(lmms):
         return encode_image_to_base64_with_size_limit(
             image,
             max_size_bytes=self.max_size_in_mb * 1024 * 1024,
-            image_format="JPEG",
-            convert_rgb=True,
-            quality=85,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
             copy_if_pil=False,
             resize_factor=0.75,
             min_side=100,
@@ -146,9 +146,9 @@ class GPT4V(lmms):
             base64_frames.append(
                 encode_image_to_base64(
                     img,
-                    image_format="JPEG",
-                    convert_rgb=True,
-                    quality=85,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
                 )
             )
 
@@ -202,7 +202,7 @@ class GPT4V(lmms):
                 payload["messages"][0]["content"].append(
                     {
                         "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                        "image_url": {"url": f"data:image/png;base64,{img}"},
                     }
                 )
 
