@@ -1,9 +1,8 @@
 # Standard library imports
-import base64
 import json
 import os
 import time
-from io import BytesIO
+from typing import List
 
 import numpy as np
 
@@ -18,6 +17,7 @@ from tqdm import tqdm
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 # Conditional imports
 VideoReader, _has_decord = optional_import("decord", "VideoReader")
@@ -79,12 +79,13 @@ class BatchGPT4(lmms):
         assert accelerator.state.num_processes == 1, "BatchGPT4 does not support distributed inference."
 
     # Function to encode the image
-    def encode_image(self, image: Image):
-        output_buffer = BytesIO()
-        image.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+    def encode_image(self, image: Image.Image):
+        return encode_image_to_base64(
+            image,
+            image_format="JPEG",
+            convert_rgb=True,
+            quality=85,
+        )
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
@@ -97,11 +98,14 @@ class BatchGPT4(lmms):
         base64_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
+            base64_frames.append(
+                encode_image_to_base64(
+                    img,
+                    image_format="JPEG",
+                    convert_rgb=True,
+                    quality=85,
+                )
+            )
 
         return base64_frames
 

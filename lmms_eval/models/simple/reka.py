@@ -1,8 +1,6 @@
-import base64
 import json
 import os
 import time
-from io import BytesIO
 from typing import List, Tuple
 
 import numpy as np
@@ -14,6 +12,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
 
 NUM_SECONDS_TO_SLEEP = 30
@@ -86,22 +85,25 @@ class Reka(lmms):
         self.device = self.accelerator.device
 
     def encode_image(self, image):
-        if type(image) == list:
+        if isinstance(image, list):
             media_urls = []
             for img in image:
-                output_buffer = BytesIO()
-                img.save(output_buffer, format="PNG")
-                byte_data = output_buffer.getvalue()
-                base64_str = base64.b64encode(byte_data).decode("utf-8")
+                base64_str = encode_image_to_base64(
+                    img,
+                    image_format="JPEG",
+                    convert_rgb=True,
+                    quality=85,
+                )
                 media_urls.append(f"data:image/jpeg;base64,{base64_str}")
             return media_urls
-        else:
-            output_buffer = BytesIO()
-            image.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
 
-            return f"data:image/jpeg;base64,{base64_str}"
+        base64_str = encode_image_to_base64(
+            image,
+            image_format="JPEG",
+            convert_rgb=True,
+            quality=85,
+        )
+        return f"data:image/jpeg;base64,{base64_str}"
 
     def encode_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
@@ -113,10 +115,12 @@ class Reka(lmms):
         base64_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
+            base64_str = encode_image_to_base64(
+                img,
+                image_format="JPEG",
+                convert_rgb=True,
+                quality=85,
+            )
             base64_frames.append(f"data:image/jpeg;base64,{base64_str}")
 
         return base64_frames

@@ -1,8 +1,6 @@
-import base64
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -16,6 +14,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
@@ -253,12 +252,13 @@ class VLLM(lmms):
             img = image.copy()
 
         img = self._maybe_resize_image(img)
-        output_buffer = BytesIO()
-        img.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+        return encode_image_to_base64(
+            img,
+            image_format="JPEG",
+            convert_rgb=True,
+            quality=85,
+            copy_if_pil=False,
+        )
 
     # Function to encode the video
     def encode_video(self, video_path):
@@ -277,11 +277,15 @@ class VLLM(lmms):
         for frame in frames:
             img = Image.fromarray(frame)
             img = self._maybe_resize_image(img)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
+            base64_frames.append(
+                encode_image_to_base64(
+                    img,
+                    image_format="JPEG",
+                    convert_rgb=True,
+                    quality=85,
+                    copy_if_pil=False,
+                )
+            )
 
         return base64_frames
 
@@ -344,7 +348,7 @@ class VLLM(lmms):
                         messages[0]["content"].append(
                             {
                                 "type": "image_url",
-                                "image_url": {"url": f"data:image/png;base64,{img}"},
+                                "image_url": {"url": f"data:image/jpeg;base64,{img}"},
                             }
                         )
                     messages[0]["content"].append({"type": "text", "text": contexts})
@@ -354,7 +358,7 @@ class VLLM(lmms):
                         messages[0]["content"].append(
                             {
                                 "type": "image_url",
-                                "image_url": {"url": f"data:image/png;base64,{img}"},
+                                "image_url": {"url": f"data:image/jpeg;base64,{img}"},
                             }
                         )
                 batched_messages.append(messages)
