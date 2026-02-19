@@ -1,72 +1,62 @@
 #!/usr/bin/env bash
 
-# Orchestrated benchmark and throughput comparison for OpenRouter Molmo.
+# Throughput comparison: baseline vs static concurrency vs adaptive concurrency
+# Usage: bash openrouter_molmo_throughput_compare.sh [LIMIT]
+#   LIMIT defaults to 40. Use openrouter_molmo_adaptive.sh for production runs.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-cd "$REPO_ROOT"
+cd "${SCRIPT_DIR}/../.."
 
+export HF_HOME="${HF_HOME:-/tmp/huggingface}"
 export OPENAI_API_KEY="${OPENROUTER_API_KEY:?Error: OPENROUTER_API_KEY not set}"
+export OPENAI_API_BASE="https://openrouter.ai/api/v1"
 
+MODEL_VERSION="bytedance-seed/seed-1.6-flash"
+TASKS="mme"
 LIMIT="${1:-40}"
+TIMEOUT=10
+MAX_RETRIES=1
 OUTPUT_BASE="./logs/openrouter_molmo_throughput"
-mkdir -p "$OUTPUT_BASE"
+COMPARISON="${OUTPUT_BASE}/throughput_comparison.csv"
 
-bash "${SCRIPT_DIR}/openrouter_molmo_baseline.sh" "$LIMIT"
-bash "${SCRIPT_DIR}/openrouter_molmo_static_concurrency.sh" "$LIMIT"
-bash "${SCRIPT_DIR}/openrouter_molmo_adaptive.sh" "$LIMIT"
+echo "mode,concurrency,limit,wall_time_s,requests_per_sec" > "$COMPARISON"
 
-BASELINE_SUMMARY="${OUTPUT_BASE}/baseline/summary.csv"
-STATIC_SUMMARY="${OUTPUT_BASE}/static_concurrency/summary.csv"
-ADAPTIVE_SUMMARY="${OUTPUT_BASE}/adaptive/summary.csv"
-COMPARISON_SUMMARY="${OUTPUT_BASE}/throughput_comparison.csv"
+run_benchmark() {
+  local mode="$1" concurrency="$2" extra_args="${3:-}"
+  local run_dir="${OUTPUT_BASE}/${mode}_c${concurrency}"
+  mkdir -p "$run_dir"
 
-BASELINE_RPS="$(awk -F, 'NR==2 {print $5}' "$BASELINE_SUMMARY")"
+  local start_ns=$(date +%s%N)
+  python3 -m lmms_eval \
+      --model openai_compatible \
+      --model_args "model_version=$MODEL_VERSION,num_concurrent=$concurrency,timeout=$TIMEOUT,max_retries=$MAX_RETRIES${extra_args}" \
+      --tasks "$TASKS" \
+      --batch_size 1 \
+      --limit "$LIMIT" \
+      --output_path "${run_dir}/results" \
+      --verbosity INFO \
+      --log_samples 2>&1 | tee "${run_dir}/run.log"
+  local end_ns=$(date +%s%N)
 
-if [[ -z "$BASELINE_RPS" || "$BASELINE_RPS" == "0" ]]; then
-  echo "baseline requests_per_sec not found or zero, aborting comparison"
-  exit 1
-fi
-
-echo "run_type,concurrency,requests_per_sec,wall_time_s,improvement_pct,log_path" > "$COMPARISON_SUMMARY"
-
-echo "baseline,1,$BASELINE_RPS,0,0,${OUTPUT_BASE}/baseline/run.log" >> "$COMPARISON_SUMMARY"
-
-dedupe_summary() {
-  local summary_path="$1"
-  awk -F, '
-    NR > 1 {
-      key = $1 SUBSEP $2;
-      if (!(key in seen_order)) {
-        order[++n] = key;
-        seen_order[key] = n;
-        rows[key] = $0;
-        rates[key] = $5;
-      } else if ($5 + 0 > rates[key] + 0) {
-        rows[key] = $0;
-        rates[key] = $5;
-      }
-    }
-    END {
-      for (i = 1; i <= n; i++) {
-        print rows[order[i]];
-      }
-    }
-  ' "$summary_path"
+  local wall=$(awk -v s="$start_ns" -v e="$end_ns" 'BEGIN{printf "%.3f",(e-s)/1e9}')
+  local rps=$(awk -v l="$LIMIT" -v w="$wall" 'BEGIN{if(w>0) printf "%.3f",l/w; else print 0}')
+  echo "$mode,$concurrency,$LIMIT,$wall,$rps" >> "$COMPARISON"
+  printf "[%s] c=%s  wall=%.1fs  rps=%s\n" "$mode" "$concurrency" "$wall" "$rps"
 }
 
-for SUMMARY_PATH in "$STATIC_SUMMARY" "$ADAPTIVE_SUMMARY"; do
-  while IFS=, read -r MODE CONCURRENCY LIMIT_FIELD WALL REQUESTS_PER_SEC LOG_PATH; do
-    # skip malformed lines
-    if [[ "$MODE" == "mode" || "$MODE" == "" ]]; then
-      continue
-    fi
-    IMPROVEMENT_PCT="$(awk -v base="$BASELINE_RPS" -v current="$REQUESTS_PER_SEC" 'BEGIN { printf "%.2f", (current / base - 1) * 100 }')"
-    echo "$MODE,$CONCURRENCY,$REQUESTS_PER_SEC,$WALL,$IMPROVEMENT_PCT,$LOG_PATH" >> "$COMPARISON_SUMMARY"
-  done < <(dedupe_summary "$SUMMARY_PATH")
+# 1. Baseline (sequential)
+run_benchmark "baseline" 1 ",adaptive_concurrency=false"
+
+# 2. Static concurrency sweep
+for c in 2 4 8 16 24; do
+  run_benchmark "static" "$c" ",adaptive_concurrency=false"
 done
 
-echo "Comparison saved to: $COMPARISON_SUMMARY"
-cat "$COMPARISON_SUMMARY"
+# 3. Adaptive concurrency
+run_benchmark "adaptive" 16 ",adaptive_concurrency=true,adaptive_min_concurrency=1,adaptive_max_concurrency=64,adaptive_target_latency_s=15.0,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,adaptive_failure_threshold=0.05"
+
+echo ""
+echo "=== Results ==="
+column -t -s, "$COMPARISON"

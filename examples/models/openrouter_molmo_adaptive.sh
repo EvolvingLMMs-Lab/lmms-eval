@@ -1,60 +1,39 @@
 #!/usr/bin/env bash
 
-# OpenRouter Molmo Throughput adaptive concurrency benchmark
+# Adaptive concurrency benchmark for OpenRouter API models.
+# See openrouter_molmo_throughput_compare.sh for baseline/static comparisons.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-cd "$REPO_ROOT"
+cd "${SCRIPT_DIR}/../.."
 
 export HF_HOME="${HF_HOME:-/tmp/huggingface}"
-export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HF_HOME}/datasets}"
-export HF_HUB_CACHE="${HF_HUB_CACHE:-${HF_HOME}/hub}"
 export OPENAI_API_KEY="${OPENROUTER_API_KEY:?Error: OPENROUTER_API_KEY not set}"
 export OPENAI_API_BASE="https://openrouter.ai/api/v1"
 
 MODEL_VERSION="bytedance-seed/seed-1.6-flash"
 TASKS="mme"
 LIMIT="${1:-40}"
-BATCH_SIZE="1"
-VERBOSITY="INFO"
-MODEL_TIMEOUT=10
-MODEL_MAX_RETRIES=1
-OUTPUT_BASE="./logs/openrouter_molmo_throughput"
+OUTPUT_DIR="./logs/openrouter_molmo_throughput/adaptive"
 
-ADAPTIVE_START=16
-ADAPTIVE_MIN=1
-ADAPTIVE_MAX=64
-TARGET_LATENCY=15.0
-INCREASE_STEP=0.15
-DECREASE_FACTOR=0.75
-FAILURE_THRESHOLD=0.05
+# num_concurrent=16 reaches peak throughput for most OpenRouter endpoints.
+# Only non-default adaptive params are listed; defaults: min=1, target_latency=15s, failure_threshold=0.05
+ADAPTIVE_ARGS="num_concurrent=16,adaptive_concurrency=true,adaptive_max_concurrency=64,adaptive_increase_step=0.15,adaptive_decrease_factor=0.75,max_retries=1"
 
-RUN_NAME="adaptive"
-RUN_DIR="${OUTPUT_BASE}/${RUN_NAME}"
-SUMMARY_FILE="${RUN_DIR}/summary.csv"
-mkdir -p "$RUN_DIR"
+mkdir -p "$OUTPUT_DIR"
 
 START_NS=$(date +%s%N)
 python3 -m lmms_eval \
     --model openai_compatible \
-    --model_args model_version=$MODEL_VERSION,num_concurrent=$ADAPTIVE_START,timeout=$MODEL_TIMEOUT,max_retries=$MODEL_MAX_RETRIES,adaptive_concurrency=true,adaptive_min_concurrency=$ADAPTIVE_MIN,adaptive_max_concurrency=$ADAPTIVE_MAX,adaptive_target_latency_s=$TARGET_LATENCY,adaptive_increase_step=$INCREASE_STEP,adaptive_decrease_factor=$DECREASE_FACTOR,adaptive_failure_threshold=$FAILURE_THRESHOLD \
+    --model_args "model_version=$MODEL_VERSION,$ADAPTIVE_ARGS" \
     --tasks "$TASKS" \
-    --batch_size "$BATCH_SIZE" \
+    --batch_size 1 \
     --limit "$LIMIT" \
-    --output_path "${RUN_DIR}/results" \
-    --verbosity "$VERBOSITY" \
-    --log_samples 2>&1 | tee "${RUN_DIR}/run.log"
+    --output_path "${OUTPUT_DIR}/results" \
+    --log_samples 2>&1 | tee "${OUTPUT_DIR}/run.log"
 END_NS=$(date +%s%N)
 
-WALL_TIME_S=$(awk -v start="$START_NS" -v end="$END_NS" 'BEGIN { printf "%.6f", (end - start) / 1000000000 }')
-REQ_PER_S=$(awk -v limit="$LIMIT" -v wall="$WALL_TIME_S" 'BEGIN { if (wall > 0) printf "%.6f", limit / wall; else print "0" }')
-
-cat > "$SUMMARY_FILE" <<EOF
-mode,concurrency,limit,wall_time_s,requests_per_sec,log_path
-adaptive,$ADAPTIVE_START,$LIMIT,$WALL_TIME_S,$REQ_PER_S,${RUN_DIR}/run.log
-EOF
-
-printf "ADAPTIVE done: %s\n" "$SUMMARY_FILE"
-printf "requests_per_sec=%s\n" "$REQ_PER_S"
+WALL_S=$(awk -v s="$START_NS" -v e="$END_NS" 'BEGIN{printf "%.3f",(e-s)/1e9}')
+RPS=$(awk -v l="$LIMIT" -v w="$WALL_S" 'BEGIN{if(w>0) printf "%.3f",l/w; else print 0}')
+printf "wall=%.1fs  rps=%s\n" "$WALL_S" "$RPS"
