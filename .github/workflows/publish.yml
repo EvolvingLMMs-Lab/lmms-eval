@@ -22,6 +22,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+          echo "Publishing version: $VERSION"
+
       - name: Build package
         run: uv build
 
