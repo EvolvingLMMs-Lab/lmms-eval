@@ -36,6 +36,13 @@ from lmms_eval.evaluator_utils import (
 )
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
+from lmms_eval.models.model_utils.usage_metrics import (
+    is_budget_exceeded,
+    reset_usage_metrics,
+    set_budget,
+    set_task_context,
+    summarize_usage_metrics,
+)
 from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
@@ -88,6 +95,7 @@ def simple_evaluate(
     force_simple: bool = False,
     repeats: int = 1,
     baseline: Optional[str] = None,
+    max_tokens: Optional[int] = None,
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
@@ -278,6 +286,9 @@ def simple_evaluate(
     from lmms_eval.models.model_utils.gen_metrics import reset_logged_metrics
 
     reset_logged_metrics()
+    reset_usage_metrics()
+    if max_tokens is not None:
+        set_budget(max_tokens=max_tokens)
 
     # Getting the rank settings
     local_rank = int(os.environ.get("LOCAL_RANK", 0))
@@ -369,6 +380,9 @@ def simple_evaluate(
         throughput_summary = summarize_logged_metrics()
         if throughput_summary:
             results["throughput"] = throughput_summary
+        usage_summary = summarize_usage_metrics()
+        if usage_summary:
+            results["usage"] = usage_summary
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
 
@@ -626,6 +640,10 @@ def evaluate(
         for x, req in zip(resps, cloned_reqs):
             req.resps.append(x)
 
+        if is_budget_exceeded():
+            eval_logger.warning("Token budget reached after '{}' requests. Skipping remaining request types.", reqtype)
+            break
+
         if world_size > 1:
             if distributed_executor_backend == "accelerate":
                 lm.accelerator.wait_for_everyone()
@@ -652,6 +670,7 @@ def evaluate(
     for task_output in eval_tasks:
         task = task_output.task
         task.apply_filters()
+        set_task_context(task_output.task_name)
 
         ### Collect values of metrics on all datapoints ###
         # # unpack results and sort back in order and return control to Task
@@ -753,6 +772,7 @@ def evaluate(
                 pbar.update(1)
 
             pbar.close()
+        set_task_context(None)
 
     if WORLD_SIZE > 1:
         # if multigpu, then gather data across all ranks to rank 0
