@@ -1,0 +1,35 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vending_bench2/data/vending_bench2_seed.jsonl
+task: "vending_bench2_seed"
+test_split: test
+output_type: generate_until_agentic
+doc_to_visual: !function utils.vending_doc_to_visual
+doc_to_text: !function utils.vending_doc_to_text
+doc_to_target: !function utils.vending_doc_to_target
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_agentic_steps: 10
+process_results: !function utils.vending_process_results
+metric_list:
+  - metric: vending_success
+    aggregation: !function utils.vending_aggregate_success
+    higher_is_better: true
+  - metric: vending_final_balance
+    aggregation: !function utils.vending_aggregate_final_balance
+    higher_is_better: true
+  - metric: vending_days_active
+    aggregation: !function utils.vending_aggregate_days_active
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.1
+    description: "Seed no-sandbox Vending-Bench 2 style agentic task with deterministic simulator"
