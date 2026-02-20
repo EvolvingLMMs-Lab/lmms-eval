@@ -57,6 +57,7 @@ ALL_OUTPUT_TYPES = [
     "multiple_choice",
     "generate_until",
     "generate_until_multi_round",
+    "generate_until_agentic",
 ]
 
 
@@ -1492,6 +1493,8 @@ class ConfigurableTask(Task):
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "generate_until_multi_round":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
+        elif self.OUTPUT_TYPE == "generate_until_agentic":
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
     # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
@@ -1644,7 +1647,7 @@ class ConfigurableTask(Task):
         else:
             raise ValueError(
                 f"Passed invalid output_type '{self.OUTPUT_TYPE}' ! Please use one of ",
-                "'loglikelihood','generate_until', 'generate_until_multi_round', or 'multiple_choice'",
+                "'loglikelihood','generate_until', 'generate_until_multi_round', 'generate_until_agentic', or 'multiple_choice'",
             )
 
         return result_dict
@@ -1707,9 +1710,20 @@ class ConfigurableMessagesTask(ConfigurableTask):
     def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
         split = kwargs.get("metadata").get("split")
         # kwargs.pop("split")
-        assert self.OUTPUT_TYPE == "generate_until", "Currently messages is used for generation only"
+        assert self.OUTPUT_TYPE in ["generate_until", "generate_until_agentic"], "Currently messages is used for generation only"
 
-        arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
+        if self.OUTPUT_TYPE == "generate_until_agentic":
+            arguments = (
+                ctx,
+                copy.deepcopy(self.config.generation_kwargs),
+                self.doc_to_visual,
+                partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs),
+                doc_id,
+                self.config.task,
+                split,
+            )
+        else:
+            arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, task_name=self.config.task, doc_id=doc_id, **kwargs)
 
     def __repr__(self):

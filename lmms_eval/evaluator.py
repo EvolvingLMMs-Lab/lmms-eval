@@ -1,4 +1,5 @@
 import collections
+import copy
 import itertools
 import json
 import os
@@ -17,7 +18,7 @@ import lmms_eval.api
 import lmms_eval.api.metrics
 import lmms_eval.api.registry
 from lmms_eval import models
-from lmms_eval.api.instance import unwrap_generation_output
+from lmms_eval.api.instance import Instance, unwrap_generation_output
 from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
 from lmms_eval.baselines import (
     BASELINE_REGISTRY,
@@ -462,6 +463,148 @@ def simple_evaluate(
 decontaminate_suffix = "_decontaminate"
 
 
+def _run_generate_until_agentic(lm, requests: list[Instance], agentic_trace_mode: str = "basic") -> list[str]:
+    responses: list[str] = []
+
+    for req in requests:
+        (
+            current_context,
+            generation_kwargs,
+            current_doc_to_visual,
+            doc_to_text,
+            doc_id,
+            task_name,
+            split,
+        ) = req.args
+
+        if not callable(doc_to_text):
+            raise ValueError("generate_until_agentic requires callable doc_to_text")
+
+        max_agentic_steps = int(generation_kwargs.get("max_agentic_steps", 12))
+        base_generation_kwargs = copy.deepcopy(generation_kwargs)
+        base_generation_kwargs.pop("max_agentic_steps", None)
+
+        model_outputs: list[str] = []
+        previous_round_info = None
+        final_response = ""
+        full_round_trace: list[dict] = []
+
+        for round_idx in range(max_agentic_steps):
+            round_input_context = current_context
+            if getattr(lm, "is_simple", False):
+                single_req = Instance(
+                    request_type="generate_until",
+                    arguments=(current_context, copy.deepcopy(base_generation_kwargs), current_doc_to_visual, doc_id, task_name, split),
+                    idx=0,
+                    metadata=req.metadata,
+                )
+            else:
+                current_doc = lm.task_dict[task_name][split][doc_id]
+
+                def _agentic_doc_to_messages(_doc):
+                    visuals = current_doc_to_visual(_doc)
+                    if visuals is None:
+                        visuals = []
+                    content = []
+                    for visual in visuals:
+                        if isinstance(visual, dict):
+                            content.append({"type": "audio", "url": visual})
+                        elif isinstance(visual, str):
+                            content.append({"type": "video", "url": visual})
+                        else:
+                            content.append({"type": "image", "url": visual})
+                    content.append({"type": "text", "text": current_context})
+                    return [{"role": "user", "content": content}]
+
+                single_req = Instance(
+                    request_type="generate_until",
+                    arguments=(current_context, _agentic_doc_to_messages, copy.deepcopy(base_generation_kwargs), doc_id, task_name, split),
+                    idx=0,
+                    metadata=req.metadata,
+                )
+            current_output = lm.generate_until([single_req])[0]
+            model_outputs.append(current_output)
+            final_response = current_output
+
+            step_payload = doc_to_text(
+                lm.task_dict[task_name][split][doc_id],
+                previous_output=model_outputs,
+                round_idx=round_idx + 1,
+                previous_round_info=previous_round_info,
+            )
+
+            if isinstance(step_payload, tuple) and len(step_payload) == 5:
+                visuals, next_context, terminal_signal, updated_outputs, next_round_info = step_payload
+                if updated_outputs is not None:
+                    model_outputs = list(updated_outputs)
+                    if model_outputs:
+                        final_response = model_outputs[-1]
+                previous_round_info = next_round_info
+
+                if agentic_trace_mode == "full":
+                    round_record = {
+                        "round_idx": round_idx + 1,
+                        "round_input": round_input_context,
+                        "model_output": current_output,
+                        "terminal": bool(terminal_signal),
+                    }
+                    if isinstance(next_round_info, dict):
+                        round_record["state"] = next_round_info.get("state")
+                        round_record["tool_result"] = next_round_info.get("last_tool_result")
+                        round_record["tool_calls"] = next_round_info.get("tool_calls")
+                        round_record["valid_tool_calls"] = next_round_info.get("valid_tool_calls")
+                        round_record["invalid_steps"] = next_round_info.get("invalid_steps")
+                    if next_context is not None:
+                        round_record["next_input"] = next_context
+                    full_round_trace.append(round_record)
+
+                if terminal_signal:
+                    break
+
+                if next_context is not None:
+                    current_context = next_context
+                if visuals is not None:
+                    current_doc_to_visual = lambda _doc, _visuals=visuals: _visuals
+            elif isinstance(step_payload, str):
+                current_context = step_payload
+            else:
+                break
+
+        if previous_round_info is not None and not (isinstance(final_response, str) and final_response.strip().startswith("{")):
+            state = previous_round_info.get("state", {}) if isinstance(previous_round_info, dict) else {}
+            valid_tool_calls = float(previous_round_info.get("valid_tool_calls", previous_round_info.get("tool_calls", 0))) if isinstance(previous_round_info, dict) else 0.0
+            invalid_steps = float(previous_round_info.get("invalid_steps", 0.0)) if isinstance(previous_round_info, dict) else 0.0
+            fallback_payload = {
+                "success": False,
+                "error": "max_agentic_steps_reached",
+                "tool_calls": float(previous_round_info.get("tool_calls", 0)) if isinstance(previous_round_info, dict) else 0.0,
+                "valid_tool_calls": valid_tool_calls,
+                "invalid_steps": invalid_steps,
+                "state": state,
+                "last_model_output": final_response,
+                "trace": model_outputs,
+            }
+            if isinstance(state, dict):
+                for key in ["cash", "days_elapsed", "inventory", "mobile_data_working"]:
+                    if key in state:
+                        fallback_payload[key] = state[key]
+            final_response = json.dumps(fallback_payload, ensure_ascii=False)
+
+        if agentic_trace_mode == "full":
+            try:
+                parsed_response = json.loads(final_response) if isinstance(final_response, str) else None
+                if isinstance(parsed_response, dict):
+                    parsed_response["agentic_trace_mode"] = "full"
+                    parsed_response["agentic_rounds"] = full_round_trace
+                    final_response = json.dumps(parsed_response, ensure_ascii=False)
+            except (TypeError, json.JSONDecodeError):
+                pass
+
+        responses.append(final_response)
+
+    return responses
+
+
 @positional_deprecated
 def evaluate(
     lm: "LM",
@@ -623,7 +766,7 @@ def evaluate(
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
             # "multiple_choice" task types dispatch (several) "loglikelihood" request types
-            reqtype = "loglikelihood" if task.OUTPUT_TYPE == "multiple_choice" else task.OUTPUT_TYPE
+            reqtype = task.instances[0].request_type
             # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
             numpad = max(gathered_item) - gathered_item[lm.rank]
             # todo: may not account for padding in cases like SquadV2 which has multiple req types
@@ -643,7 +786,12 @@ def evaluate(
                 cloned_reqs.extend([req] * req.repeats)
 
         # run requests through model (with optional response cache)
-        if response_cache is not None:
+        if reqtype == "generate_until_agentic":
+            trace_mode = "basic"
+            if cli_args is not None:
+                trace_mode = getattr(cli_args, "agentic_trace_mode", "basic")
+            resps = _run_generate_until_agentic(lm, cloned_reqs, agentic_trace_mode=trace_mode)
+        elif response_cache is not None:
             resps = response_cache.execute(lm, reqtype, cloned_reqs)
         else:
             resps = getattr(lm, reqtype)(cloned_reqs)
