@@ -10,7 +10,7 @@ from accelerate import Accelerator, DistributedType
 from PIL import Image
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
@@ -149,7 +149,7 @@ class Claude(lmms):
 
         return base64_frames
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         client = anthropic.Anthropic()
 
         res = []
@@ -172,7 +172,7 @@ class Claude(lmms):
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if is_budget_exceeded():
-                res.append("")
+                res.append(GenerationResult(text="", token_counts=None))
                 pbar.update(1)
                 continue
             ###################### CONTINUAL MODE ######################
@@ -181,7 +181,7 @@ class Claude(lmms):
                 if doc_uuid in self.response_cache:
                     response_text = self.response_cache[doc_uuid]
                     if response_text:
-                        res.append(response_text)
+                        res.append(GenerationResult(text=response_text, token_counts=None))
                         pbar.update(1)
                         continue
 
@@ -247,13 +247,14 @@ class Claude(lmms):
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
-                        res.append("")
+                        res.append(GenerationResult(text="", token_counts=None))
                         pbar.update(1)
                         continue
                 if not retry_flag:
                     break
                 eval_logger.info("Retrying...")
 
+            token_counts = None
             if hasattr(message, "usage") and message.usage:
                 log_usage(
                     model_name=self.model_version,
@@ -263,8 +264,12 @@ class Claude(lmms):
                     reasoning_tokens=0,
                     source="model",
                 )
+                token_counts = TokenCounts(
+                    input_tokens=getattr(message.usage, "input_tokens", 0) or 0,
+                    output_tokens=getattr(message.usage, "output_tokens", 0) or 0,
+                )
             response_text = message.content[0].text
-            res.append(message.content[0].text)
+            res.append(GenerationResult(text=response_text, token_counts=token_counts))
             pbar.update(1)
 
             ###################### CONTINUAL MODE ######################

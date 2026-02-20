@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from loguru import logger as eval_logger
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance
 
 CACHE_RELEVANT_KEYS = frozenset(
     {
@@ -332,10 +332,22 @@ class ResponseCache:
         self.db.commit()
 
     @staticmethod
+    def _extract_cacheable(response: Any) -> Any:
+        """Extract the cache-safe payload from a model response.
+
+        ``GenerationResult`` objects are reduced to their ``.text`` so that the
+        cache stores only plain strings (token counts are ephemeral).
+        """
+        if isinstance(response, GenerationResult):
+            return response.text
+        return response
+
+    @staticmethod
     def _is_valid_response(response: Any, request_type: str) -> bool:
-        """Reject None, empty strings, and malformed loglikelihood tuples to prevent cache poisoning."""
         if response is None:
             return False
+        if isinstance(response, GenerationResult):
+            return bool(response.text and response.text.strip())
         if request_type == "loglikelihood":
             return isinstance(response, (list, tuple)) and len(response) == 2
         if isinstance(response, str) and response.strip() == "":
@@ -391,14 +403,15 @@ class ResponseCache:
             new_resps = getattr(lm, reqtype)(uncached)
             for idx_pos, req, resp in zip(uncached_indices, uncached, new_resps):
                 results[idx_pos] = resp
+                cacheable = self._extract_cacheable(resp)
                 gen_kwargs = extract_gen_kwargs(req)
                 deterministic = is_deterministic(reqtype, gen_kwargs)
                 ch = _extract_content_hash(req) if reqtype == "loglikelihood" else ""
                 tf = self._task_fingerprints.get(req.task_name, "")
                 cache_key = compute_cache_key(request_type=reqtype, task_name=req.task_name, doc_id=req.doc_id, gen_kwargs=gen_kwargs, idx=req.idx, content_hash=ch, task_fingerprint=tf) if deterministic else ""
-                self._log_to_audit(reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, resp, cache_key=cache_key, deterministic=deterministic)
+                self._log_to_audit(reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable, cache_key=cache_key, deterministic=deterministic)
                 if deterministic and self._is_valid_response(resp, reqtype):
-                    self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, resp)
+                    self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable)
         else:
             eval_logger.info(f"ResponseCache: all {len(requests)} requests served from cache — skipping model inference")
 

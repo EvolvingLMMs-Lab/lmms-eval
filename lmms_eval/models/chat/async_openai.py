@@ -13,7 +13,7 @@ from loguru import logger as eval_logger
 from openai import AsyncOpenAI
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
@@ -198,6 +198,9 @@ class AsyncOpenAIChat(lmms):
         payload = {"messages": messages}
         payload["model"] = self.model_version
         all_response = ""
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_reasoning_tokens = 0
 
         if "max_new_tokens" not in gen_kwargs:
             gen_kwargs["max_new_tokens"] = 1024
@@ -228,6 +231,9 @@ class AsyncOpenAIChat(lmms):
             output_tokens = getattr(response.usage, "completion_tokens", 0) or 0
             if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details:
                 reasoning_tokens = getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0
+        total_input_tokens += input_tokens
+        total_output_tokens += output_tokens
+        total_reasoning_tokens += reasoning_tokens
         log_usage(
             model_name=self.model_version,
             task_name=task if "task" in locals() else None,
@@ -286,6 +292,9 @@ class AsyncOpenAIChat(lmms):
                 output_tokens = getattr(response.usage, "completion_tokens", 0) or 0
                 if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details:
                     reasoning_tokens = getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0
+            total_input_tokens += input_tokens
+            total_output_tokens += output_tokens
+            total_reasoning_tokens += reasoning_tokens
             log_usage(
                 model_name=self.model_version,
                 task_name=task if "task" in locals() else None,
@@ -299,13 +308,13 @@ class AsyncOpenAIChat(lmms):
                 all_response += last_response
             except Exception as e:
                 all_response += str(e)
-        return all_response, idx
+        return all_response, idx, TokenCounts(input_tokens=total_input_tokens, output_tokens=total_output_tokens, reasoning_tokens=total_reasoning_tokens)
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         results = []
 
         async def run():
-            res: List[Tuple[str, int]] = []
+            res: List[Tuple[GenerationResult, int]] = []
             pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
             current_concurrency = (
                 min(
@@ -331,15 +340,15 @@ class AsyncOpenAIChat(lmms):
 
             async def _process(req, idx):
                 if is_budget_exceeded():
-                    return "[LMMS_EVAL_BUDGET_EXCEEDED]", idx, True, False, 0.0
+                    return "[LMMS_EVAL_BUDGET_EXCEEDED]", idx, TokenCounts(), True, False, 0.0
                 started_at = time.time()
                 rate_limited = False
                 last_error_msg = "unknown error"
                 for attempt in range(self.max_retries):
                     try:
-                        content, original_idx = await self.maybe_forward_with_tool(req, idx)
+                        content, original_idx, token_counts = await self.maybe_forward_with_tool(req, idx)
                         elapsed = time.time() - started_at
-                        return content, original_idx, True, rate_limited, elapsed
+                        return content, original_idx, token_counts, True, rate_limited, elapsed
                     except Exception as exc:
                         error_msg = str(exc)
                         last_error_msg = error_msg
@@ -353,7 +362,7 @@ class AsyncOpenAIChat(lmms):
                 elapsed = time.time() - started_at
                 error_preview = last_error_msg.replace("\n", " ")[:200]
                 failure_content = f"[LMMS_EVAL_REQUEST_FAILED after {self.max_retries} retries] {error_preview}"
-                return failure_content, idx, False, rate_limited, elapsed
+                return failure_content, idx, TokenCounts(), False, rate_limited, elapsed
 
             failed_requests = 0
             rate_limited_requests = 0
@@ -416,11 +425,12 @@ class AsyncOpenAIChat(lmms):
                     (
                         content,
                         request_idx,
+                        token_counts,
                         success,
                         rate_limited,
                         elapsed,
                     ) = task.result()
-                    res.append((content, request_idx))
+                    res.append((GenerationResult(text=content, token_counts=token_counts), request_idx))
                     if not success:
                         failed_requests += 1
                     if rate_limited:

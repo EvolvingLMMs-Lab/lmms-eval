@@ -7,7 +7,7 @@ from loguru import logger as eval_logger
 from tqdm import tqdm
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
@@ -23,7 +23,7 @@ process_vision_info, _ = optional_import("qwen_vl_utils", "process_vision_info")
 class Llava_OneVision1_5(LlavaOneVisionSimple):
     is_simple = False
 
-    def generate_until(self, requests: List[Instance]) -> List[str]:
+    def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         assert process_vision_info is not None, "qwen_vl_utils is required. Please install it via `pip install qwen-vl-utils`"
 
         res = []
@@ -130,6 +130,7 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
                     top_p=float(gen_kwargs.get("top_p", 1.0)) if gen_kwargs.get("top_p") is not None else None,
                 )
 
+            generated_ids_trimmed = None
             try:
                 start_time = time.time()
                 with torch.inference_mode():
@@ -137,16 +138,16 @@ class Llava_OneVision1_5(LlavaOneVisionSimple):
                 end_time = time.time()
                 total_elapsed_time += end_time - start_time
 
-                # Remove prompt tokens
-                cont = cont[:, inputs["input_ids"].shape[-1] :]
-                total_tokens += cont.shape[-1] if cont.ndim > 1 else int(cont.shape[-1])
+                generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
+                total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
                 cont = torch.zeros((1, 0), dtype=torch.long, device=self.device)
 
-            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)
-            for text_output in text_outputs:
-                res.append(text_output)
+            text_outputs = self.tokenizer.batch_decode(generated_ids_trimmed if generated_ids_trimmed is not None else cont, skip_special_tokens=True)
+            for i, text_output in enumerate(text_outputs):
+                token_counts = TokenCounts(output_tokens=len(generated_ids_trimmed[i])) if generated_ids_trimmed is not None else None
+                res.append(GenerationResult(text=text_output, token_counts=token_counts))
                 self.cache_hook.add_partial("generate_until", (texts[0], gen_kwargs), text_output)
             pbar.update(1)
 

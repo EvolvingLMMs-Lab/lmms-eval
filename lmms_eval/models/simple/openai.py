@@ -15,7 +15,7 @@ from openai import AzureOpenAI, OpenAI
 from PIL import Image
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
@@ -242,7 +242,7 @@ class OpenAICompatible(lmms):
                 new_list.append(j)
         return new_list
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         def _collate(x):
             toks = self.tok_encode(x[0])
             return -len(toks), x[0]
@@ -262,7 +262,7 @@ class OpenAICompatible(lmms):
             disable=(self.rank != 0),
             desc="Model Responding",
         )
-        reordered_responses: List[Union[str, None]] = [None] * len(ordered_requests)
+        reordered_responses: List[Union[GenerationResult, None]] = [None] * len(ordered_requests)
         current_concurrency = min(
             self.num_concurrent,
             self.adaptive_config.max_concurrency,
@@ -296,6 +296,7 @@ class OpenAICompatible(lmms):
                 try:
                     response = self.client.chat.completions.create(**payload)
                     response_text = response.choices[0].message.content
+                    token_counts = None
                     if hasattr(response, "usage") and response.usage:
                         log_usage(
                             model_name=self.model_version,
@@ -305,8 +306,13 @@ class OpenAICompatible(lmms):
                             reasoning_tokens=(getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0) if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details else 0,
                             source="model",
                         )
+                        token_counts = TokenCounts(
+                            input_tokens=getattr(response.usage, "prompt_tokens", 0) or 0,
+                            output_tokens=getattr(response.usage, "completion_tokens", 0) or 0,
+                            reasoning_tokens=(getattr(response.usage.completion_tokens_details, "reasoning_tokens", 0) or 0) if hasattr(response.usage, "completion_tokens_details") and response.usage.completion_tokens_details else 0,
+                        )
                     latency = time.time() - started_at
-                    return response_text, local_index, True, rate_limited, latency
+                    return response_text, local_index, True, rate_limited, latency, token_counts
                 except Exception as exc:
                     error_msg = str(exc)
                     last_error_msg = error_msg
@@ -320,7 +326,7 @@ class OpenAICompatible(lmms):
             latency = time.time() - started_at
             error_preview = last_error_msg.replace("\n", " ")[:200]
             failure_content = f"[LMMS_EVAL_REQUEST_FAILED after {self.max_retries} retries] {error_preview}"
-            return failure_content, local_index, False, rate_limited, latency
+            return failure_content, local_index, False, rate_limited, latency, None
 
         def maybe_update_concurrency(force: bool = False) -> None:
             nonlocal current_concurrency
@@ -424,7 +430,7 @@ class OpenAICompatible(lmms):
             while cursor < len(dispatch_order) or in_flight:
                 while cursor < len(dispatch_order) and len(in_flight) < max(1, current_concurrency):
                     if is_budget_exceeded():
-                        reordered_responses[dispatch_order[cursor]] = ""
+                        reordered_responses[dispatch_order[cursor]] = GenerationResult(text="", token_counts=None)
                         pbar.update(1)
                         cursor += 1
                         continue
@@ -432,7 +438,7 @@ class OpenAICompatible(lmms):
                     doc_uuid, cached_response, payload = build_payload_for_index(request_index)
                     doc_uuids[request_index] = doc_uuid
                     if cached_response is not None:
-                        reordered_responses[request_index] = cached_response
+                        reordered_responses[request_index] = GenerationResult(text=cached_response, token_counts=None)
                         pbar.update(1)
                         cursor += 1
                         continue
@@ -451,9 +457,10 @@ class OpenAICompatible(lmms):
                         success,
                         rate_limited,
                         latency,
+                        token_counts,
                     ) = future.result()
                     in_flight.pop(future, None)
-                    reordered_responses[local_index] = response_text
+                    reordered_responses[local_index] = GenerationResult(text=response_text, token_counts=token_counts)
                     if not success:
                         failed_requests += 1
                     if rate_limited:
@@ -472,7 +479,7 @@ class OpenAICompatible(lmms):
                 json.dump(self.response_cache, f)
 
         pbar.close()
-        completed_responses = [response if response is not None else "" for response in reordered_responses]
+        completed_responses = [response if response is not None else GenerationResult(text="", token_counts=None) for response in reordered_responses]
         return re_ords.get_original(completed_responses)
 
     def generate_until_multi_round(self, requests) -> List[str]:

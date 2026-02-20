@@ -20,7 +20,7 @@ from sglang import Engine
 from tqdm import tqdm
 from transformers import AutoProcessor
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.mcp import MCPClient
@@ -292,7 +292,7 @@ class Sglang(lmms):
             video_token_id = self.tokenizer.convert_tokens_to_ids(video_token)
         return video_token_id
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
@@ -364,6 +364,7 @@ class Sglang(lmms):
             end_time = time.time()
 
             response_text = [o["text"] for o in outputs]
+            response_output_tokens = []
 
             # Calculate timing metrics for batch
             total_elapsed_time += end_time - start_time
@@ -375,13 +376,14 @@ class Sglang(lmms):
                 else:
                     output_tokens = len(output["text"].split())
 
+                response_output_tokens.append(output_tokens)
                 total_tokens += output_tokens
 
             if len(outputs) >= 1:
                 avg_speed = total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0
 
             assert len(response_text) == len(batch_requests)
-            res.extend(response_text)
+            res.extend(GenerationResult(text=text, token_counts=TokenCounts(output_tokens=output_tokens)) for text, output_tokens in zip(response_text, response_output_tokens))
             pbar.update(len(batch_requests))
         metric_dict = {
             "total_gen_tokens": total_tokens,

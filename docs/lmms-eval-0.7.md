@@ -364,7 +364,6 @@ The existing dedup logic (omit `resps` when identical to `filtered_resps`) conti
 ### 4.3 Implementation
 
 The flatten happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so that existing consumers (wandb logger, logging utilities) continue to work without changes.
-
 ---
 
 ## 5. Skill-Based Agent Workflows (New)
