@@ -19,7 +19,7 @@ echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} limit=${LIMIT} batch_size=${B
 echo "[INFO] output_path=${OUTPUT_PATH}"
 echo "[INFO] agentic_trace_mode=${AGENTIC_TRACE_MODE}"
 
-python3 -m lmms_eval \
+uv run python -m lmms_eval \
     --model openai_compatible \
     --model_args "model_version=${MODEL_VERSION}" \
     --tasks "${TASKS}" \
