@@ -283,6 +283,8 @@ python -m lmms_eval --tasks list_with_num
   - mvbench_fine_grained_action
   - mvbench_moving_attribute
   - mvbench_egocentric_navigation
+- [MotionBench](https://motion-bench.github.io/) (motionbench)
+  - motionbench_full
 - [NExT-QA](https://github.com/doc-doc/NExT-QA) (nextqa)
   - NExT-QA Multiple Choice Test (nextqa_mc_test)
   - NExT-QA Open Ended Validation (nextqa_oe_val)
