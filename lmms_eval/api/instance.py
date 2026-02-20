@@ -71,7 +71,7 @@ class Instance:
     request_type: Literal["loglikelihood", "generate_until", "generate_until_multi_round", "generate_until_agentic"]
     arguments: tuple
     idx: int
-    metadata: Tuple[str, int, int] = field(default_factory=lambda: (None, None, None))  # TODO: better typehints here
+    metadata: Dict[str, Union[str, int]] = field(default_factory=dict)
     resps: list = field(default_factory=list)
     filtered_resps: dict = field(default_factory=dict)
     raw_filtered_resps: dict = field(default_factory=dict)

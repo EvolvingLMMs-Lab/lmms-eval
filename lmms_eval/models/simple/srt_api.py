@@ -1,6 +1,4 @@
 import asyncio
-import json
-import os
 import time
 from multiprocessing import cpu_count
 from typing import List, Tuple
@@ -41,8 +39,6 @@ class SRT_API(lmms):
         mem_fraction_static: float = 0.83,
         tp: int = 8,
         chunked_prefill_size: int = 16384,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         num_processes: int = cpu_count() // 2,
         force_sample: bool = False,
         add_time_instruction: bool = False,
@@ -57,25 +53,9 @@ class SRT_API(lmms):
         self.max_frames_num = max_frames_num
         self.image_token = "<image>"
         self.timeout = timeout
-        self.continual_mode = continual_mode
         self.force_sample = force_sample
         self.add_time_instruction = add_time_instruction
         eval_logger.info(f"Force sample: {self.force_sample}")
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
 
         accelerator = Accelerator()
         self.model = model_version

@@ -6,7 +6,7 @@ Write order: JSONL append+fsync -> SQLite upsert (crash-safe).
 
 Activation: ``python -m lmms_eval --model ... --tasks ... --use_cache ./eval_cache``
 
-Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs).
+Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs, content_hash).
 Scoped per model: ``{use_cache}/{model_hash}/rank{N}.db``
 """
 
@@ -164,12 +164,14 @@ def fingerprint_callable(fn) -> str:
 
 
 def _extract_content_hash(instance: Instance) -> str:
-    """Hash the text content of loglikelihood args to prevent collisions.
+    """Hash leading text arguments to prevent cache-key collisions.
 
-    For multiple_choice with acc_mutual_info, conditional requests have
-    ``(ctx, continuation, ...)`` while unconditional have ``("", choice)``.
-    Both share the same (task_name, doc_id, idx) so we need this hash
-    to distinguish them.
+    Some flows can issue multiple deterministic requests that share the same
+    ``(task_name, doc_id, idx, gen_kwargs)`` while differing in prompt text.
+    This is common in multi-round / agentic generation loops.
+
+    We hash the leading consecutive string arguments (for example context and
+    continuation) so those requests do not alias to the same cache entry.
     """
     args = instance.args
     text_parts = []
@@ -375,7 +377,7 @@ class ResponseCache:
                 self._skipped += 1
                 continue
 
-            ch = _extract_content_hash(req) if reqtype == "loglikelihood" else ""
+            ch = _extract_content_hash(req)
             tf = self._task_fingerprints.get(req.task_name, "")
             cache_key = compute_cache_key(
                 request_type=reqtype,
@@ -406,7 +408,7 @@ class ResponseCache:
                 cacheable = self._extract_cacheable(resp)
                 gen_kwargs = extract_gen_kwargs(req)
                 deterministic = is_deterministic(reqtype, gen_kwargs)
-                ch = _extract_content_hash(req) if reqtype == "loglikelihood" else ""
+                ch = _extract_content_hash(req)
                 tf = self._task_fingerprints.get(req.task_name, "")
                 cache_key = compute_cache_key(request_type=reqtype, task_name=req.task_name, doc_id=req.doc_id, gen_kwargs=gen_kwargs, idx=req.idx, content_hash=ch, task_fingerprint=tf) if deterministic else ""
                 self._log_to_audit(reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable, cache_key=cache_key, deterministic=deterministic)
