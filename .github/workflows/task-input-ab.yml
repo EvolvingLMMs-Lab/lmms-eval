@@ -60,18 +60,21 @@ jobs:
         run: |
           BASE_CHECKER="${{ steps.base.outputs.base_worktree }}/tools/task_input_capture.py"
           BASE_SPEC="${{ steps.base.outputs.base_worktree }}/test/eval/task_input_specs/redundancy_refactor.yaml"
-          if [ ! -f "$BASE_CHECKER" ] || [ ! -f "$BASE_SPEC" ]; then
-            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-              CHECKER_PATH="tools/task_input_capture.py"
-              SPEC_PATH="test/eval/task_input_specs/redundancy_refactor.yaml"
-            else
-              echo "Pinned checker/spec missing in base revision: ${{ steps.base.outputs.base_sha }}"
-              exit 1
-            fi
-          else
+          if [ -f "$BASE_CHECKER" ] && [ -f "$BASE_SPEC" ]; then
             CHECKER_PATH="$BASE_CHECKER"
             SPEC_PATH="$BASE_SPEC"
+          else
+            echo "Pinned checker/spec missing in base revision: ${{ steps.base.outputs.base_sha }}"
+            echo "Bootstrap mode: use HEAD checker/spec for this run."
+            CHECKER_PATH="tools/task_input_capture.py"
+            SPEC_PATH="test/eval/task_input_specs/redundancy_refactor.yaml"
           fi
+
+          if [ ! -f "$CHECKER_PATH" ] || [ ! -f "$SPEC_PATH" ]; then
+            echo "Checker/spec not found in current checkout."
+            exit 1
+          fi
+
           echo "checker_path=${CHECKER_PATH}" >> "$GITHUB_OUTPUT"
           echo "spec_path=${SPEC_PATH}" >> "$GITHUB_OUTPUT"
 
