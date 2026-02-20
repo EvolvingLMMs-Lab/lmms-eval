@@ -34,7 +34,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Sync dependencies
-        run: uv sync --frozen
+        run: uv sync
 
       - name: Resolve BASE revision
         id: base
@@ -117,4 +117,7 @@ jobs:
 
       - name: Cleanup BASE worktree
         if: always()
-        run: git worktree remove --force "${{ steps.base.outputs.base_worktree }}"
+        run: |
+          if [ -n "${{ steps.base.outputs.base_worktree }}" ]; then
+            git worktree remove --force "${{ steps.base.outputs.base_worktree }}"
+          fi
