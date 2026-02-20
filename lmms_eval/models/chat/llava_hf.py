@@ -2,19 +2,17 @@ import time
 import warnings
 from typing import List
 
+from loguru import logger as eval_logger
 from tqdm import tqdm
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
+from lmms_eval.models.simple.llava_hf import LlavaHf as LlavaHfSimple
 from lmms_eval.protocol import ChatMessages
 
 warnings.filterwarnings("ignore")
-
-from loguru import logger as eval_logger
-
-from lmms_eval.models.simple.llava_hf import LlavaHf as LlavaHfSimple
 
 DEFAULT_IMAGE_TOKEN = "<image>"
 DEFAULT_VIDEO_TOKEN = "<video>"
@@ -27,7 +25,7 @@ VICUNA_CHAT_TEMPLATE = "{% for message in messages %}{% if loop.index0 == 0 %}A 
 class LlavaHf(LlavaHfSimple):
     is_simple = False
 
-    def generate_until(self, requests: List[Instance]) -> List[str]:
+    def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         res = []
 
         # A dummy collate here to sort by doc id
@@ -83,6 +81,8 @@ class LlavaHf(LlavaHfSimple):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
             do_sample = True if gen_kwargs["temperature"] > 0 else False
+            generated_ids_trimmed = None
+            text_output = ""
             try:
                 start_time = time.time()
                 cont = self.model.generate(
@@ -97,25 +97,24 @@ class LlavaHf(LlavaHfSimple):
                     eos_token_id=self.eot_token_id,
                 )
                 end_time = time.time()
-                cont = cont[:, inputs["input_ids"].shape[-1] :]
+                generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
+                text_output = self.tokenizer.batch_decode(generated_ids_trimmed, skip_special_tokens=True)[0]
 
                 # Calculate timing metrics
                 total_elapsed_time += end_time - start_time
-                total_tokens += cont.shape[-1] if len(cont.shape) > 1 else len(cont)
+                total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
 
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
-                cont = ""
                 total_elapsed_time += 0
                 total_tokens += 0
 
-            text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0] if cont != "" else ""
-
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
-                eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_outputs}\n")
+                eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{text_output}\n")
 
-            res.append(text_outputs)
-            self.cache_hook.add_partial("generate_until", (text, gen_kwargs), text_outputs)
+            token_counts = TokenCounts(output_tokens=len(generated_ids_trimmed[0])) if generated_ids_trimmed is not None else None
+            res.append(GenerationResult(text=text_output, token_counts=token_counts))
+            self.cache_hook.add_partial("generate_until", (text, gen_kwargs), text_output)
             pbar.update(1)
         # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)

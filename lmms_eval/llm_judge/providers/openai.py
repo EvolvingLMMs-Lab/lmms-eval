@@ -1,13 +1,11 @@
-import base64
 import os
 import time
-from io import BytesIO
 from typing import Dict, List, Optional, Union
 
 import requests
 from loguru import logger as eval_logger
-from PIL import Image
 
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..base import ServerInterface
@@ -142,7 +140,10 @@ class OpenAIProvider(ServerInterface):
 
     def _encode_image(self, image_path: str) -> str:
         """Encode image to base64"""
-        img = Image.open(image_path).convert("RGB")
-        buffered = BytesIO()
-        img.save(buffered, format="JPEG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+        return encode_image_to_base64(
+            image_path,
+            image_format="JPEG",
+            convert_rgb=True,
+            quality=85,
+            use_path_cache=True,
+        )

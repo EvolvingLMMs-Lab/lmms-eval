@@ -1,6 +1,4 @@
-import base64
 import json
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import decord
@@ -21,6 +19,7 @@ from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
@@ -178,6 +177,15 @@ class Qwen2_5_VL_Interleave(lmms):
             for j in i:
                 new_list.append(j)
         return new_list
+
+    def _encode_image_data_url(self, image: Image.Image) -> str:
+        return encode_image_to_data_url(
+            image,
+            image_format="JPEG",
+            mime_type="image/jpeg",
+            convert_rgb=True,
+            quality=85,
+        )
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
@@ -345,18 +353,13 @@ class Qwen2_5_VL_Interleave(lmms):
                                 }
                             )
                     elif isinstance(visual, Image.Image):  # Single image
-                        base64_image = visual.convert("RGB")
-                        buffer = BytesIO()
-                        base64_image.save(buffer, format="JPEG")
-                        base64_bytes = base64.b64encode(buffer.getvalue())
-                        base64_string = base64_bytes.decode("utf-8")
                         message.append(
                             {
                                 "role": "user",
                                 "content": [
                                     {
                                         "type": "image",
-                                        "image": f"data:image/jpeg;base64,{base64_string}",
+                                        "image": self._encode_image_data_url(visual),
                                     },
                                     {"type": "text", "text": context},
                                 ],
@@ -366,15 +369,10 @@ class Qwen2_5_VL_Interleave(lmms):
                         image_content = []
                         i = 0
                         for v in visual:
-                            base64_image = v.convert("RGB")
-                            buffer = BytesIO()
-                            base64_image.save(buffer, format="JPEG")
-                            base64_bytes = base64.b64encode(buffer.getvalue())
-                            base64_string = base64_bytes.decode("utf-8")
                             image_content.append(
                                 {
                                     "type": "image",
-                                    "image": f"data:image/jpeg;base64,{base64_string}",
+                                    "image": self._encode_image_data_url(v),
                                 }
                             )
                             v.save(f"test_{i}.jpg")

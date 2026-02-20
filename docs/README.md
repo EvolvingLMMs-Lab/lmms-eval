@@ -24,9 +24,13 @@ Majority of this documentation is adapted from [lm-eval-harness](https://github.
 * **[Run Examples](run_examples.md)** - Example commands for running evaluations
 * **[Caching](caching.md)** - Enable and reload results from the JSONL cache
 * **[Version 0.3 Features](lmms-eval-0.3.md)** - Audio evaluation and new features
+* **[Version 0.6 Features](lmms-eval-0.6.md)** - Eval-as-a-service, async pipeline, and statistical analysis
+* **[Version 0.7 Features](lmms-eval-0.7.md)** - YAML-first runs, reasoning-tag stripping, skill-based agent workflows
 * **[Throughput Metrics](throughput_metrics.md)** - Understanding performance metrics
 
 ## Additional Resources
 
 * For dataset formatting tools, see [lmms-eval tools](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/tools)
+* For agent orchestration and reference routing, see [lmms-eval skill guide](../skills/lmms-eval-guide/SKILL.md)
+* For non-blocking training integration via HTTP service, see [API server reference](../skills/lmms-eval-guide/references/api-server.md)
 * For the latest updates, visit our [GitHub repository](https://github.com/EvolvingLMMs-Lab/lmms-eval)

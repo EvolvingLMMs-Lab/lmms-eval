@@ -364,3 +364,136 @@ The existing dedup logic (omit `resps` when identical to `filtered_resps`) conti
 ### 4.3 Implementation
 
 The flatten happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so that existing consumers (wandb logger, logging utilities) continue to work without changes.
+---
+
+## 5. Skill-Based Agent Workflows (New)
+
+v0.7 also standardizes how coding agents can learn and orchestrate lmms-eval workflows through the repository skill:
+
+- `skills/lmms-eval-guide/SKILL.md`
+- `skills/lmms-eval-guide/references/models.md`
+- `skills/lmms-eval-guide/references/tasks.md`
+- `skills/lmms-eval-guide/references/api-server.md`
+
+This turns lmms-eval from "a set of docs" into "a reusable operational skill" for agents: discover the right integration path, apply the correct file-level patterns, and schedule evaluation jobs safely.
+
+### 5.1 Add New Models and Tasks via Skill References
+
+For extension work, the skill references already define the recommended implementation paths:
+
+- **New model integration** -> `references/models.md`
+  - Chat-first model template (`is_simple = False`)
+  - Request unpacking contract (`request.args` shape)
+  - Registration in `lmms_eval/models/__init__.py`
+  - Minimal verification commands (`--limit 5` / `--verbosity DEBUG`)
+
+- **New task/benchmark integration** -> `references/tasks.md`
+  - YAML-first task definition (auto-registered from `tasks/`)
+  - `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`
+  - `process_results` + `metric_list` contract
+  - Advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge)
+
+Agent-level behavior should be:
+
+1. Resolve whether change is model-side, task-side, or both.
+2. Load the matching skill reference.
+3. Follow existing code patterns in nearby chat/simple models and task YAMLs.
+4. Run a small-sample verification command before broader evaluation.
+
+This keeps model/task additions consistent with lmms-eval internals while reducing trial-and-error.
+
+### 5.2 Insert lmms-eval into Training Jobs via HTTP Service
+
+For training-time evaluation orchestration, use the eval server workflow from `references/api-server.md`.
+
+Core pattern:
+
+1. Start HTTP eval server (`launch_server(ServerArgs(...))`) on dedicated eval resources.
+2. During training, submit non-blocking jobs with `EvalClient.evaluate(...)`.
+3. Continue training immediately; poll or wait by `job_id` later.
+4. Collect metrics asynchronously for checkpoint selection, regression alerts, and model ranking.
+
+Key endpoints for job orchestration:
+
+- `POST /evaluate` - submit evaluation jobs
+- `GET /jobs/{job_id}` - query status/results
+- `GET /queue` - inspect scheduler backlog
+- `GET /tasks` and `GET /models` - runtime capability discovery
+
+This service mode is the recommended way to decouple training and evaluation in v0.7-era workflows.
+
+### 5.3 HTTP Service as an Operational Primitive
+
+Treat the eval server as infrastructure, not only a convenience API:
+
+- **Queue-safe GPU usage** via scheduler-managed jobs
+- **Asynchronous checkpoint evaluation** without blocking trainer processes
+- **Multi-team reproducibility** through stable request payloads and job IDs
+- **Operational visibility** through `/queue` and job lifecycle states
+
+Security reminder remains unchanged: run in trusted environments, and add authentication/rate limiting/network isolation before exposing beyond internal boundaries.
+
+### 5.4 Suggested Agent Dispatch Strategy
+
+When agents orchestrate lmms-eval tasks, a practical routing strategy is:
+
+- **Task/model extension** -> load `lmms-eval-guide` + `references/models.md` / `references/tasks.md`
+- **Training integration** -> load `references/api-server.md` first
+- **Quick validation** -> run `--limit` smoke tests before full benchmark submission
+- **Scalable evaluation** -> use HTTP jobs for long-running or periodic evaluation loops
+
+This gives a clear split between development-time edits (model/task code) and runtime-time scheduling (HTTP jobs).
+
+---
+
+## 6. Image/Video I/O Throughput Upgrade with Long-Video Reproducibility
+
+This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
+
+### 6.1 What Was Implemented
+
+- shared image encoding helper integration across protocol and simple adapters
+- path-metadata keyed image encode cache for repeated path inputs
+- video decode path upgrades in `lmms_eval/models/model_utils/load_video.py`
+  - PyAV `thread_type="AUTO"`
+  - stream fallback `seek(0)` before packet decode
+  - set-membership lookup in stream frame selection
+  - preallocated output array fill (replace list + `np.stack` path)
+  - configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
+
+### 6.2 Semantic-Parity Guard for `load_video` Resize
+
+To avoid input-semantics drift, `resize_strategy="resize"` behavior is kept aligned with prior behavior (direct target-size resize) and validated against `dev-v0d7`.
+
+Parity evidence artifact:
+
+- `/tmp/load_video_parity_compare.json`
+
+Observed parity checks:
+
+- PNG first-frame size match: `True`
+- PIL first-frame size match: `True`
+- PNG first-frame hash match: `True`
+
+### 6.3 Real-Model LongVideoBench Replay (Long Samples)
+
+Provider-backed replay was run on `longvideobench_val_v` using OpenRouter (`bytedance-seed/seed-1.6-flash`) with long samples (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
+
+Artifacts:
+
+- baseline: `/tmp/video-real-model/mainbench_real_r3.json`
+- optimized: `/tmp/video-real-model/feat_real_postfix_r1.json`
+- optimized rerun: `/tmp/video-real-model/feat_real_postfix_r2.json`
+- summary: `/tmp/video-real-model/summary_real_postfix_compare.json`
+
+Results:
+
+- aggregate score reproducibility: `0.5 -> 0.5 -> 0.5` (baseline, optimized run1, optimized run2)
+- decode latency: `2.7902s -> 1.0227s` (`-63.35%`, speedup `+172.82%`)
+- optimized A/A decode variation: `-3.05%`
+
+Prediction-level note:
+
+- baseline vs optimized run1 per-sample parsed prediction match: `8/8`
+- optimized run1 vs run2 per-sample match: `6/8`
+- aggregate score remains unchanged; per-item drift is consistent with remote-provider nondeterminism

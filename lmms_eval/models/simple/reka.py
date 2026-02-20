@@ -1,8 +1,6 @@
-import base64
 import json
 import os
 import time
-from io import BytesIO
 from typing import List, Tuple
 
 import numpy as np
@@ -10,10 +8,11 @@ from accelerate import Accelerator, DistributedType
 from PIL import Image
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
 
 NUM_SECONDS_TO_SLEEP = 30
@@ -86,22 +85,25 @@ class Reka(lmms):
         self.device = self.accelerator.device
 
     def encode_image(self, image):
-        if type(image) == list:
+        if isinstance(image, list):
             media_urls = []
             for img in image:
-                output_buffer = BytesIO()
-                img.save(output_buffer, format="PNG")
-                byte_data = output_buffer.getvalue()
-                base64_str = base64.b64encode(byte_data).decode("utf-8")
+                base64_str = encode_image_to_base64(
+                    img,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
+                )
                 media_urls.append(f"data:image/jpeg;base64,{base64_str}")
             return media_urls
-        else:
-            output_buffer = BytesIO()
-            image.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
 
-            return f"data:image/jpeg;base64,{base64_str}"
+        base64_str = encode_image_to_base64(
+            image,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
+        )
+        return f"data:image/jpeg;base64,{base64_str}"
 
     def encode_video(self, video_path):
         vr = VideoReader(video_path, ctx=cpu(0))
@@ -113,21 +115,23 @@ class Reka(lmms):
         base64_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
+            base64_str = encode_image_to_base64(
+                img,
+                image_format="PNG",
+                convert_rgb=False,
+                quality=None,
+            )
             base64_frames.append(f"data:image/jpeg;base64,{base64_str}")
 
         return base64_frames
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for context, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if is_budget_exceeded():
-                res.append("")
+                res.append(GenerationResult(text="", token_counts=None))
                 pbar.update(1)
                 continue
             if self.continual_mode is True and self.cache_mode == "resume":
@@ -135,7 +139,7 @@ class Reka(lmms):
                 if doc_uuid in self.response_cache:
                     response_text = self.response_cache[doc_uuid]
                     if response_text:
-                        res.append(response_text)
+                        res.append(GenerationResult(text=response_text, token_counts=None))
                         pbar.update(1)
                         continue
 
@@ -165,6 +169,7 @@ class Reka(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
 
+            token_counts = None
             for attempt in range(5):
                 try:
                     response = self.reka.chat.create(
@@ -185,6 +190,10 @@ class Reka(lmms):
                             reasoning_tokens=0,
                             source="model",
                         )
+                        token_counts = TokenCounts(
+                            input_tokens=getattr(response.usage, "input_tokens", 0) or 0,
+                            output_tokens=getattr(response.usage, "output_tokens", 0) or 0,
+                        )
                     response_text = response.responses[0].message.content.strip()
                     break  # If successful, break out of the loop
 
@@ -196,7 +205,7 @@ class Reka(lmms):
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
                         response_text = ""
 
-            res.append(response_text)
+            res.append(GenerationResult(text=response_text, token_counts=token_counts))
             pbar.update(1)
             if self.continual_mode is True:  # Cache the response
                 doc_uuid = f"{task}___{split}___{doc_id}"
