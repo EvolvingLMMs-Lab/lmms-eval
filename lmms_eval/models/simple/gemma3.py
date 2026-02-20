@@ -1,7 +1,5 @@
-import base64
 import os
 import warnings
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -15,6 +13,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 warnings.simplefilter("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
@@ -174,6 +173,15 @@ class Gemma3(lmms):
                 new_list.append(j)
         return new_list
 
+    def _encode_image_data_url(self, image: Image.Image) -> str:
+        return encode_image_to_data_url(
+            image,
+            image_format="JPEG",
+            mime_type="image/jpeg",
+            convert_rgb=True,
+            quality=85,
+        )
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """Generate text completions for given requests.
 
@@ -246,12 +254,7 @@ class Gemma3(lmms):
                                 continue
                             processed_visuals.append({"type": "video", "video": visual, "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                            base64_image = visual.convert("RGB")
-                            buffer = BytesIO()
-                            base64_image.save(buffer, format="JPEG")
-                            base64_bytes = base64.b64encode(buffer.getvalue())
-                            base64_string = base64_bytes.decode("utf-8")
-                            processed_visuals.append({"type": "image", "image": f"data:image/jpeg;base64,{base64_string}", "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
+                            processed_visuals.append({"type": "image", "image": self._encode_image_data_url(visual), "max_pixels": self.max_pixels, "min_pixels": self.min_pixels})
                     except Exception as e:
                         eval_logger.error(f"Failed to process visual: {e}")
                         continue

@@ -1,5 +1,3 @@
-import base64
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -18,6 +16,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 try:
     from transformers import Llama4ForConditionalGeneration
@@ -200,12 +199,13 @@ class Llama4Scout(lmms):
 
     def _image_to_base64(self, image: Image.Image) -> str:
         """Convert PIL Image to base64 data URL."""
-        base64_image = image.convert("RGB")
-        buffer = BytesIO()
-        base64_image.save(buffer, format="JPEG")
-        base64_bytes = base64.b64encode(buffer.getvalue())
-        base64_string = base64_bytes.decode("utf-8")
-        return f"data:image/jpeg;base64,{base64_string}"
+        return encode_image_to_data_url(
+            image,
+            image_format="JPEG",
+            mime_type="image/jpeg",
+            convert_rgb=True,
+            quality=85,
+        )
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []

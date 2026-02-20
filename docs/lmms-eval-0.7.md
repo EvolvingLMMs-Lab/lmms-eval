@@ -443,3 +443,57 @@ When agents orchestrate lmms-eval tasks, a practical routing strategy is:
 - **Scalable evaluation** -> use HTTP jobs for long-running or periodic evaluation loops
 
 This gives a clear split between development-time edits (model/task code) and runtime-time scheduling (HTTP jobs).
+
+---
+
+## 6. Image/Video I/O Throughput Upgrade with Long-Video Reproducibility
+
+This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
+
+### 6.1 What Was Implemented
+
+- shared image encoding helper integration across protocol and simple adapters
+- path-metadata keyed image encode cache for repeated path inputs
+- video decode path upgrades in `lmms_eval/models/model_utils/load_video.py`
+  - PyAV `thread_type="AUTO"`
+  - stream fallback `seek(0)` before packet decode
+  - set-membership lookup in stream frame selection
+  - preallocated output array fill (replace list + `np.stack` path)
+  - configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
+
+### 6.2 Semantic-Parity Guard for `load_video` Resize
+
+To avoid input-semantics drift, `resize_strategy="resize"` behavior is kept aligned with prior behavior (direct target-size resize) and validated against `dev-v0d7`.
+
+Parity evidence artifact:
+
+- `/tmp/load_video_parity_compare.json`
+
+Observed parity checks:
+
+- PNG first-frame size match: `True`
+- PIL first-frame size match: `True`
+- PNG first-frame hash match: `True`
+
+### 6.3 Real-Model LongVideoBench Replay (Long Samples)
+
+Provider-backed replay was run on `longvideobench_val_v` using OpenRouter (`bytedance-seed/seed-1.6-flash`) with long samples (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
+
+Artifacts:
+
+- baseline: `/tmp/video-real-model/mainbench_real_r3.json`
+- optimized: `/tmp/video-real-model/feat_real_postfix_r1.json`
+- optimized rerun: `/tmp/video-real-model/feat_real_postfix_r2.json`
+- summary: `/tmp/video-real-model/summary_real_postfix_compare.json`
+
+Results:
+
+- aggregate score reproducibility: `0.5 -> 0.5 -> 0.5` (baseline, optimized run1, optimized run2)
+- decode latency: `2.7902s -> 1.0227s` (`-63.35%`, speedup `+172.82%`)
+- optimized A/A decode variation: `-3.05%`
+
+Prediction-level note:
+
+- baseline vs optimized run1 per-sample parsed prediction match: `8/8`
+- optimized run1 vs run2 per-sample match: `6/8`
+- aggregate score remains unchanged; per-item drift is consistent with remote-provider nondeterminism

@@ -1,9 +1,7 @@
 import asyncio
-import base64
 import json
 import os
 import time
-from io import BytesIO
 from multiprocessing import cpu_count
 from typing import List, Tuple
 
@@ -23,6 +21,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -118,17 +117,18 @@ class SRT_API(lmms):
         self.device = self.accelerator.device
 
     # Function to encode the image
-    def encode_image(self, image: Image):
-        output_buffer = BytesIO()
-        image.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+    def encode_image(self, image: Image.Image):
+        return encode_image_to_base64(
+            image,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
+        )
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
         # import pdb; pdb.set_trace()
-        if type(video_path) == str:
+        if isinstance(video_path, str):
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))
@@ -148,11 +148,14 @@ class SRT_API(lmms):
         base64_frames = []
         for frame in spare_frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
+            base64_frames.append(
+                encode_image_to_base64(
+                    img,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
+                )
+            )
 
         return base64_frames, frame_time, video_time
 

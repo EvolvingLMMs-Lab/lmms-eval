@@ -1,9 +1,7 @@
-import base64
 import json
 import os
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from io import BytesIO
 from typing import List, Tuple, Union
 from urllib.parse import unquote
 
@@ -25,6 +23,10 @@ from lmms_eval.models.model_utils.concurrency_control import (
     is_rate_limit_error,
     make_prefix_hash,
     parse_bool,
+)
+from lmms_eval.models.model_utils.media_encoder import (
+    encode_image_to_base64,
+    encode_image_to_base64_with_size_limit,
 )
 from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
 
@@ -189,27 +191,30 @@ class OpenAICompatible(lmms):
 
     # Function to encode the image
     def encode_image(self, image: Union[Image.Image, str]):
-        max_size = self.max_size_in_mb * 1024 * 1024  # 20MB in bytes
         if isinstance(image, str):
-            img = Image.open(image).convert("RGB")
-        else:
-            img = image.copy()
-
-        output_buffer = BytesIO()
-        img.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-
-        # If image is too large, resize it while maintaining aspect ratio
-        while len(byte_data) > max_size and img.size[0] > 100 and img.size[1] > 100:
-            new_size = (int(img.size[0] * 0.75), int(img.size[1] * 0.75))
-            img = img.resize(new_size, Image.Resampling.LANCZOS)
-
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+            with Image.open(image) as loaded_image:
+                return encode_image_to_base64_with_size_limit(
+                    loaded_image.convert("RGB"),
+                    max_size_bytes=self.max_size_in_mb * 1024 * 1024,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
+                    copy_if_pil=False,
+                    resize_factor=0.75,
+                    min_side=100,
+                    resample=Image.Resampling.LANCZOS,
+                )
+        return encode_image_to_base64_with_size_limit(
+            image,
+            max_size_bytes=self.max_size_in_mb * 1024 * 1024,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
+            copy_if_pil=False,
+            resize_factor=0.75,
+            min_side=100,
+            resample=Image.Resampling.LANCZOS,
+        )
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
@@ -227,11 +232,14 @@ class OpenAICompatible(lmms):
         base64_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
+            base64_frames.append(
+                encode_image_to_base64(
+                    img,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
+                )
+            )
 
         return base64_frames
 
