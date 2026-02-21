@@ -497,3 +497,138 @@ Prediction-level note:
 - baseline vs optimized run1 per-sample parsed prediction match: `8/8`
 - optimized run1 vs run2 per-sample match: `6/8`
 - aggregate score remains unchanged; per-item drift is consistent with remote-provider nondeterminism
+
+---
+
+## 7. Lance-Backed Video Mode for MINERVA
+
+v0.7 adds an optional Lance-backed video path for the MINERVA task so metadata and videos can be distributed through Hugging Face in a single reproducible package.
+
+### 7.1 Dataset Package on Hugging Face
+
+MINERVA is published as:
+
+- `lmms-lab-eval/minerva`
+
+with two key assets:
+
+- `minerva.json` - task metadata used by `minerva.yaml`
+- `data/train.lance` - Lance table with one row per `video_id`
+
+The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`.
+
+### 7.2 Build Lance Table from Local Downloads
+
+Use the conversion script:
+
+```bash
+uv run --with pylance --with pyarrow python tools/minerva_to_lance.py \
+  --metadata-json data/minerva/minerva.json \
+  --videos-dir data/minerva/videos \
+  --output data/minerva_hf_package/data/train.lance \
+  --batch-size 6
+```
+
+This produces a Lance schema with:
+
+- `video_id`
+- `youtube_url`
+- `video_ext`
+- `video_size_bytes`
+- `video_blob`
+
+Dependency note: install `pylance` (module import name: `lance`) plus `pyarrow` for Lance-mode usage.
+
+### 7.3 Runtime Resolution Order in `lmms_eval/tasks/minerva/utils.py`
+
+At evaluation time, MINERVA video resolution now uses this priority:
+
+1. Local file lookup via `MINERVA_VIDEO_DIR`
+2. Lance blob lookup via `MINERVA_LANCE_VIDEO_URI`
+3. YouTube URL fallback (`https://www.youtube.com/watch?v=<video_id>`)
+
+Lance mode variables:
+
+```bash
+export MINERVA_LANCE_VIDEO_URI="hf://datasets/lmms-lab-eval/minerva/data/train.lance"
+export MINERVA_LANCE_VIDEO_ID_COLUMN="video_id"
+export MINERVA_LANCE_VIDEO_BLOB_COLUMN="video_blob"
+export MINERVA_LANCE_CACHE_DIR="~/.cache/lmms_eval/minerva_lance_videos"
+export LANCE_IO_THREADS="64"
+export LANCE_CPU_THREADS="8"
+```
+
+Optional local-first mode:
+
+```bash
+export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
+```
+
+### 7.4 Run Example
+
+```bash
+uv run --with pylance --with pyarrow python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+  --tasks minerva \
+  --batch_size 1 \
+  --limit 8
+```
+
+This setup keeps MINERVA reproducible in two modes: fully local video files or remote Lance blobs from the Hub.
+
+### 7.5 Measuring Absolute Video-Resolution Latency Gains
+
+To make Lance-mode improvements explicit, v0.7 includes a direct resolver benchmark:
+
+```bash
+uv run python tools/bench_minerva_video_resolution.py \
+  --metadata-json data/minerva/minerva.json \
+  --mode lance \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 200 \
+  --sample-unique-video
+```
+
+For local-file baseline:
+
+```bash
+uv run python tools/bench_minerva_video_resolution.py \
+  --metadata-json data/minerva/minerva.json \
+  --mode local \
+  --local-video-dir /absolute/path/to/minerva/videos \
+  --limit 200
+```
+
+The benchmark reports absolute latency distribution for `minerva_doc_to_visual`:
+
+- `startup_ms` (Lance resolver init cost)
+- `cold_*` metrics (first pass, cache-miss heavy)
+- `warm_*` metrics (second pass, cache-hit heavy)
+
+For strict storage-path comparison inside the same model pipeline (no decode backend switching), use:
+
+```bash
+uv run python tools/bench_minerva_pipeline_latency.py \
+  --local-video-dir /absolute/path/to/minerva/videos \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 100 \
+  --batch-size 1 \
+  --decode-num-frames 8
+```
+
+Practical interpretation:
+
+- This comparison isolates storage mode while keeping decode unchanged in the model pipeline.
+- On local pre-downloaded videos, local raw and Lance modes are often near-parity because decode cost dominates.
+- Lance advantages become clearer in remote/object-storage access, cross-machine reproducibility, and repeated subset evaluation workflows.
+
+Recommended reporting format for PRs and release notes:
+
+- environment (CPU/GPU, storage, network)
+- local mode vs Lance mode (both `cold_*` and `warm_*`)
+- sample count and random seed
+
+Implementation note: MINERVA Lance resolver now avoids eager full-table `video_id` scan at initialization and resolves rows via filtered scan on demand, which reduces startup overhead and better reflects real-world throughput in short eval runs.
+
+For large-blob dataset build, use blob-oriented write settings in `tools/minerva_to_lance.py` (smaller rows-per-file and stable storage version) to improve practical scan/read behavior during evaluation.
