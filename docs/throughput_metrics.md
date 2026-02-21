@@ -42,16 +42,27 @@ Batch summary - Total time: 2.145s, Total tokens: 128, Avg speed: 59.7 tokens/s
 Inference metrics - E2E: 1.823s, TTFT: 0.182s, TPOT: 0.052s, Speed: 19.2 tokens/s, Output tokens: 32
 ```
 
-## Supported Models
+## Backend Coverage
 
-The following chat models automatically log throughput metrics:
+All chat backends listed below log throughput-oriented metrics (`total_gen_tokens`, `total_elapsed_time`, `avg_speed`):
 
-- **sglang_runtime** (`/lmms_eval/models/chat/sglang.py`)
-- **vllm_chat** (`/lmms_eval/models/chat/vllm.py`) 
-- **llava_hf_chat** (`/lmms_eval/models/chat/llava_hf.py`)
-- **openai_compatible_chat** (`/lmms_eval/models/chat/openai_compatible.py`)
-- **qwen2_5_vl_chat** (`/lmms_eval/models/chat/qwen2_5_vl.py`)
-- **huggingface_chat** (`/lmms_eval/models/chat/huggingface.py`)
+- `vllm` (`/lmms_eval/models/chat/vllm.py`)
+- `vllm_generate` (`/lmms_eval/models/chat/vllm_generate.py`)
+- `sglang` (`/lmms_eval/models/chat/sglang.py`)
+- `openai` (`/lmms_eval/models/chat/openai.py`)
+- `async_openai` (`/lmms_eval/models/chat/async_openai.py`)
+- `huggingface` (`/lmms_eval/models/chat/huggingface.py`)
+- `qwen2_5_vl` (`/lmms_eval/models/chat/qwen2_5_vl.py`)
+- `qwen3_vl` (`/lmms_eval/models/chat/qwen3_vl.py`)
+- `llava_hf` (`/lmms_eval/models/chat/llava_hf.py`)
+- `internvl_hf` (`/lmms_eval/models/chat/internvl_hf.py`)
+- `llava_onevision1_5` (`/lmms_eval/models/chat/llava_onevision1_5.py`)
+- `thyme` (`/lmms_eval/models/chat/thyme.py`)
+
+TTFT/TPOT coverage is narrower:
+
+- **Native TTFT/TPOT in run summary**: `vllm`, `vllm_generate`
+- **Throughput-only (no native TTFT/TPOT in summary)**: `sglang`, `openai`, `async_openai`, `huggingface`, `qwen2_5_vl`, `qwen3_vl`, `llava_hf`, `internvl_hf`, `llava_onevision1_5`, `thyme`
 
 ## Usage
 
@@ -75,13 +86,12 @@ python -m lmms_eval \
 ## Metric Calculation Details
 
 ### TTFT Calculation
-- **Available from model**: Uses actual first token timestamp when provided
-- **Estimated**: When unavailable, estimated as 10% of total inference time
+- **Available from model runtime**: Uses actual first-token timing when backend exposes it (currently vLLM paths)
+- **Unavailable case**: Backends without first-token timing expose throughput metrics only
 
 ### TPOT Calculation  
-- **Formula**: `(E2E_latency - TTFT) / (output_tokens - 1)`
-- **Single token responses**: Uses full E2E latency as TPOT
-- **Batch processing**: Divides total batch time by number of outputs
+- **Native formula**: `(E2E_latency - TTFT) / (output_tokens - 1)` when TTFT and token-level timings are available
+- **Throughput proxy**: `total_elapsed_time / total_gen_tokens` can be derived from summary metrics as a coarse decode-time estimate
 
 ### Speed Calculation
 - **Formula**: `1 / TPOT` (when TPOT > 0)
@@ -109,15 +119,14 @@ python -m lmms_eval \
 - Check log level is set to INFO or lower
 - Verify model implementation includes timing instrumentation
 
-### Inaccurate Metrics  
-- TTFT estimates may be imprecise when actual timing unavailable
-- Batch metrics average across multiple outputs, individual variance not captured
-- Network latency may affect metrics for API-based models
+### Incomplete Metrics
+- TTFT is backend-dependent and may be unavailable for non-vLLM paths
+- Batch metrics average across multiple outputs, so individual request variance is not captured
+- API-backed latency includes network overhead
 
 ## Implementation Notes
 
-Throughput metrics are implemented consistently across chat models using:
-- `time.time()` for wall-clock timing measurements
-- Model-specific metadata when available (e.g., SGLang, VLLM native metrics)
-- Fallback estimation methods for missing timing data
-- Structured logging format for consistent parsing and analysis
+Throughput metrics are implemented across chat models using:
+- wall-clock timing for batch/request elapsed time
+- backend-specific metadata where available (for example, vLLM runtime metrics)
+- structured logging via `log_metrics()` and aggregation via `summarize_logged_metrics()`
