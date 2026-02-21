@@ -1,15 +1,22 @@
+import importlib
 import os
 from typing import Optional, Tuple, Union
 
 import av
 import numpy as np
-from decord import VideoReader, cpu
 from PIL import Image
 
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 
 def load_video_decord(video_path, max_frames_num):
+    try:
+        decord = importlib.import_module("decord")
+    except ModuleNotFoundError as exc:
+        raise ImportError("load_video_decord requires `decord`. Install decord to use this backend.") from exc
+
+    VideoReader = decord.VideoReader
+    cpu = decord.cpu
     num_threads = int(os.getenv("LMMS_VIDEO_DECORD_THREADS", "2"))
     if isinstance(video_path, str):
         vr = VideoReader(video_path, ctx=cpu(0), num_threads=num_threads)
@@ -153,7 +160,8 @@ def read_video_pyav_pil(
             target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
             return img.resize(target)
         if resize_strategy == "thumbnail":
-            img.thumbnail(max_image_size)
+            target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
+            img.thumbnail(target)
             return img
         raise ValueError(f"Unknown resize strategy: {resize_strategy}")
 
@@ -196,7 +204,8 @@ def read_video_pyav_base64(
             target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
             return img.resize(target)
         if resize_strategy == "thumbnail":
-            img.thumbnail(max_image_size)
+            target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
+            img.thumbnail(target)
             return img
         raise ValueError(f"Unknown resize strategy: {resize_strategy}")
 

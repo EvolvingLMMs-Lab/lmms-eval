@@ -28,6 +28,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
     "cambrians": "CambrianS",
+    "dummy_video_reader": "DummyVideoReader",
     "egogpt": "EgoGPT",
     "from_log": "FromLog",
     "fuyu": "Fuyu",

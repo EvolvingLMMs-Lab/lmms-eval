@@ -1,54 +1,21 @@
-import importlib
-import logging
 import os
 import random
 import re
+import threading
 from collections import defaultdict
 from pathlib import Path
 
+from lmms_eval.tasks._task_utils.lance_video_resolver import LanceVideoBlobResolver
 from lmms_eval.tasks._task_utils.video_loader import get_video
-
-eval_logger = logging.getLogger(__name__)
+from lmms_eval.utils import eval_logger
 
 OPTIONS = ["A", "B", "C", "D", "E"]
 _VIDEO_EXTENSIONS = ("mp4", "webm", "mkv", "mov")
 _LANCE_RESOLVER = None
+_LANCE_RESOLVER_LOCK = threading.Lock()
 
 
-class _MinervaLanceResolver:
-    def __init__(self, dataset_uri: str, id_column: str, blob_column: str, cache_dir: Path):
-        try:
-            lance = importlib.import_module("lance")
-        except ModuleNotFoundError as exc:
-            raise ImportError("MINERVA Lance support requires `pylance` and `pyarrow`. Install via: uv add pylance pyarrow") from exc
-
-        self._lance = lance
-        self._dataset_uri = dataset_uri
-        self._id_column = id_column
-        self._blob_column = blob_column
-        self._cache_dir = cache_dir
-        self._cache_dir.mkdir(parents=True, exist_ok=True)
-
-        self._dataset = self._lance.dataset(self._dataset_uri)
-        rows = self._dataset.scanner(columns=[self._id_column]).to_table().to_pylist()
-        self._row_idx_by_video_id = {str(row[self._id_column]): idx for idx, row in enumerate(rows)}
-
-    def resolve(self, video_id: str) -> str:
-        row_idx = self._row_idx_by_video_id.get(video_id)
-        if row_idx is None:
-            raise FileNotFoundError(f"Video ID {video_id} not found in Lance dataset: {self._dataset_uri}")
-
-        target_path = self._cache_dir / f"{video_id}.mp4"
-        if target_path.exists():
-            return str(target_path)
-
-        blob = self._dataset.take_blobs(self._blob_column, ids=[row_idx])[0]
-        with open(target_path, "wb") as f:
-            f.write(blob.read())
-        return str(target_path)
-
-
-def _get_lance_resolver() -> _MinervaLanceResolver | None:
+def _get_lance_resolver() -> LanceVideoBlobResolver | None:
     global _LANCE_RESOLVER
 
     dataset_uri = os.getenv("MINERVA_LANCE_VIDEO_URI", "").strip()
@@ -56,10 +23,20 @@ def _get_lance_resolver() -> _MinervaLanceResolver | None:
         return None
 
     if _LANCE_RESOLVER is None:
-        id_column = os.getenv("MINERVA_LANCE_VIDEO_ID_COLUMN", "video_id").strip()
-        blob_column = os.getenv("MINERVA_LANCE_VIDEO_BLOB_COLUMN", "video_blob").strip()
-        cache_dir = Path(os.path.expanduser(os.getenv("MINERVA_LANCE_CACHE_DIR", "~/.cache/lmms_eval/minerva_lance_videos")))
-        _LANCE_RESOLVER = _MinervaLanceResolver(dataset_uri=dataset_uri, id_column=id_column, blob_column=blob_column, cache_dir=cache_dir)
+        with _LANCE_RESOLVER_LOCK:
+            if _LANCE_RESOLVER is None:
+                id_column = os.getenv("MINERVA_LANCE_VIDEO_ID_COLUMN", "video_id").strip()
+                blob_column = os.getenv("MINERVA_LANCE_VIDEO_BLOB_COLUMN", "video_blob").strip()
+                cache_dir = Path(os.path.expanduser(os.getenv("MINERVA_LANCE_CACHE_DIR", "~/.cache/lmms_eval/minerva_lance_videos")))
+                _LANCE_RESOLVER = LanceVideoBlobResolver(
+                    dataset_uri=dataset_uri,
+                    id_column=id_column,
+                    blob_column=blob_column,
+                    cache_dir=cache_dir,
+                    ext_column="video_ext",
+                    source_name="MINERVA Lance",
+                    video_extensions=_VIDEO_EXTENSIONS,
+                )
 
     return _LANCE_RESOLVER
 
@@ -104,6 +81,12 @@ def _gold_letter(doc):
 
 def _extract_choice_letter(text):
     cleaned = str(text).strip()
+
+    explicit_pattern = re.compile(r"(?:answer|option)\s*(?:is|:)\s*([ABCDE])", re.IGNORECASE)
+    explicit_matches = list(explicit_pattern.finditer(cleaned))
+    if explicit_matches:
+        return explicit_matches[-1].group(1).upper()
+
     prefixes = [
         "The best answer is",
         "The correct answer is",
@@ -115,16 +98,17 @@ def _extract_choice_letter(text):
     for prefix in prefixes:
         cleaned = cleaned.replace(prefix, "")
 
-    match = re.search(r"[ABCDE]", cleaned)
-    if match is None:
+    matches = list(re.finditer(r"[ABCDE]", cleaned))
+    if not matches:
         return ""
-    return match.group(0)
+    return matches[-1].group(0)
 
 
 def minerva_doc_to_visual(doc):
     video_id = str(doc.get("video_id", "")).strip()
     if video_id == "":
-        return [video_id]
+        eval_logger.warning("minerva_doc_to_visual: document is missing valid 'video_id'; returning empty visual list")
+        return []
 
     local_video = _resolve_local_video(video_id)
     if local_video is not None:
@@ -164,9 +148,14 @@ def minerva_process_results(doc, results):
     gold_letter = _gold_letter(doc)
     score = 1.0 if pred_letter == gold_letter else 0.0
 
+    question_type = doc.get("question_type")
+    if question_type is None and "question type" in doc:
+        eval_logger.warning("MINERVA doc uses deprecated key 'question type'; prefer 'question_type'")
+        question_type = doc.get("question type")
+
     data_dict = {
         "id": doc.get("key", ""),
-        "question_type": doc.get("question_type", doc.get("question type", "UNKNOWN")),
+        "question_type": question_type if question_type is not None else "UNKNOWN",
         "split": doc.get("split", "UNKNOWN"),
         "category": doc.get("category", "UNKNOWN"),
         "pred_answer": pred_letter,
