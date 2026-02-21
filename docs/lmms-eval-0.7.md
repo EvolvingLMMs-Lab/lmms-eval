@@ -522,7 +522,7 @@ The Lance table stores video bytes in `video_blob` with blob encoding metadata (
 Use the conversion script:
 
 ```bash
-uv run --with pylance --with pyarrow python tools/minerva_to_lance.py \
+uv run --with lance --with pyarrow python tools/minerva_to_lance.py \
   --metadata-json data/minerva/minerva.json \
   --videos-dir data/minerva/videos \
   --output data/minerva_hf_package/data/train.lance \
@@ -537,7 +537,7 @@ This produces a Lance schema with:
 - `video_size_bytes`
 - `video_blob`
 
-Dependency note: install `pylance` (Python package exposing module name `lance`) plus `pyarrow` for Lance-mode usage.
+Dependency note: install `lance` plus `pyarrow` for Lance-mode usage.
 
 ### 7.3 Runtime Resolution Order in `lmms_eval/tasks/minerva/utils.py`
 
@@ -567,7 +567,7 @@ export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
 ### 7.4 Run Example
 
 ```bash
-uv run --with pylance --with pyarrow python -m lmms_eval \
+uv run --with lance --with pyarrow python -m lmms_eval \
   --model qwen2_5_vl \
   --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
   --tasks minerva \

@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 
 def _parse_args():
@@ -64,7 +65,7 @@ def _run_mode(mode: str, args, base_env: dict) -> dict:
         "uv",
         "run",
         "--with",
-        "pylance",
+        "lance",
         "--with",
         "pyarrow",
         "python",
@@ -93,7 +94,7 @@ def _run_mode(mode: str, args, base_env: dict) -> dict:
     return json.loads(metrics_path.read_text(encoding="utf-8"))
 
 
-def _extract_metric(metrics: dict, path: tuple, default=0.0):
+def _extract_metric(metrics: dict[str, Any], path: tuple[str, ...], default: Any = 0.0) -> Any:
     value = metrics
     for key in path:
         if not isinstance(value, dict) or key not in value:
@@ -102,10 +103,24 @@ def _extract_metric(metrics: dict, path: tuple, default=0.0):
     return value
 
 
-def _print_mode_summary(mode: str, metrics: dict):
-    total = _extract_metric(metrics, ("latency", "total"), {})
-    resolve_stats = _extract_metric(metrics, ("latency", "resolve"), {})
-    decode_stats = _extract_metric(metrics, ("latency", "decode"), {})
+def _extract_float(metrics: dict[str, Any], path: tuple[str, ...], default: float = 0.0) -> float:
+    value = _extract_metric(metrics, path, default)
+    if isinstance(value, (int, float)):
+        return float(value)
+    return default
+
+
+def _extract_dict(metrics: dict[str, Any], path: tuple[str, ...]) -> dict[str, Any]:
+    value = _extract_metric(metrics, path, {})
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _print_mode_summary(mode: str, metrics: dict[str, Any]):
+    total = _extract_dict(metrics, ("latency", "total"))
+    resolve_stats = _extract_dict(metrics, ("latency", "resolve"))
+    decode_stats = _extract_dict(metrics, ("latency", "decode"))
 
     print(f"{mode}_samples={total.get('samples', 0)}")
     print(f"{mode}_total_mean_ms={total.get('mean_ms', 0.0):.3f}")
@@ -117,11 +132,11 @@ def _print_mode_summary(mode: str, metrics: dict):
     print(f"{mode}_decode_frames_per_s={metrics.get('throughput_decode_frames_per_s', 0.0):.3f}")
 
 
-def _print_comparison(local_metrics: dict, lance_metrics: dict):
-    local_total_mean = _extract_metric(local_metrics, ("latency", "total", "mean_ms"), 0.0)
-    lance_total_mean = _extract_metric(lance_metrics, ("latency", "total", "mean_ms"), 0.0)
-    local_resolve_mean = _extract_metric(local_metrics, ("latency", "resolve", "mean_ms"), 0.0)
-    lance_resolve_mean = _extract_metric(lance_metrics, ("latency", "resolve", "mean_ms"), 0.0)
+def _print_comparison(local_metrics: dict[str, Any], lance_metrics: dict[str, Any]):
+    local_total_mean = _extract_float(local_metrics, ("latency", "total", "mean_ms"), 0.0)
+    lance_total_mean = _extract_float(lance_metrics, ("latency", "total", "mean_ms"), 0.0)
+    local_resolve_mean = _extract_float(local_metrics, ("latency", "resolve", "mean_ms"), 0.0)
+    lance_resolve_mean = _extract_float(lance_metrics, ("latency", "resolve", "mean_ms"), 0.0)
 
     if local_total_mean > 0:
         print(f"ratio_total_mean_lance_over_local={lance_total_mean / local_total_mean:.3f}")
