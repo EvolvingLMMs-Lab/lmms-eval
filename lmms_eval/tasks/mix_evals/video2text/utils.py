@@ -6,25 +6,16 @@ import random
 import re
 import sys
 import time
-from pathlib import Path
 
 import openai
-import yaml
 from loguru import logger as eval_logger
 from PIL import Image
 
 import lmms_eval.tasks._task_utils.file_utils as file_utils
 from lmms_eval.filters import Filter
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    config = yaml.safe_load("".join(safe_data))
+config = load_default_template_yaml(__file__)
 
 NUM_SECONDS_TO_SLEEP = 5
 API_TYPE = os.getenv("API_TYPE", "openai")
@@ -45,11 +36,12 @@ elif API_TYPE == "azure":
     client = openai.AzureOpenAI(api_key=API_KEY, azure_endpoint=API_URL)
 
 
-video2text_gpt_judge_for_closeended_freeform = lambda prompt, gold_ans, response: [
-    {"role": "system", "content": "In this task, I want you to act as a judge."},
-    {
-        "role": "user",
-        "content": f"""You will be provided with a question, its golden answer(s), and the model's answer, while the context of the question, which is one or more videos, is not given here. Your task is to judge how correct the model's answer is based on the golden answer(s), without seeing the input videos of the question, and then give a correctness score. The correctness score should be one of the below numbers: 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Your should first briefly give your reasoning process regarding how the model's answer conforms to or contradicts the golden answer(s), and then give the correctness score. The correctness score must strictly follow this format: \"[[score]]\", e.g., \"The correctness score: [[0.5]]\". Below are some examples. 
+def video2text_gpt_judge_for_closeended_freeform(prompt, gold_ans, response):
+    return [
+        {"role": "system", "content": "In this task, I want you to act as a judge."},
+        {
+            "role": "user",
+            "content": f"""You will be provided with a question, its golden answer(s), and the model's answer, while the context of the question, which is one or more videos, is not given here. Your task is to judge how correct the model's answer is based on the golden answer(s), without seeing the input videos of the question, and then give a correctness score. The correctness score should be one of the below numbers: 0.0 (totally wrong), 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, or 1.0 (totally right). Your should first briefly give your reasoning process regarding how the model's answer conforms to or contradicts the golden answer(s), and then give the correctness score. The correctness score must strictly follow this format: \"[[score]]\", e.g., \"The correctness score: [[0.5]]\". Below are some examples. 
 
 Example 1:
 Question: what does this video want to express
@@ -76,8 +68,8 @@ Golden Answer(s): {gold_ans}
 Model's Answer: {response}
 Your Judgment: 
 """,
-    },
-]
+        },
+    ]
 
 
 def get_score_from_judge(judge_response):
@@ -115,7 +107,6 @@ def get_eval(question, model_response: str, ground_truth: str, max_tokens: int, 
             # response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
             response = client.chat.completions.create(**payload)
             # response.raise_for_status()
-            response_data = response.json()
 
             # content = response_data["choices"][0]["message"]["content"].strip()
             content = response.choices[0].message.content.strip()
@@ -294,11 +285,12 @@ def mix_evals_video2text_aggregate_gen(results, args):
     mix_evals_video2text_aggregate_submissions(results, args, "OpenConvs")
 
 
-video2text_gpt_judge_for_closeended_multiplechoice = lambda prompt, options, response: [
-    {"role": "system", "content": "In this task, I want you to act as an option extractor."},
-    {
-        "role": "user",
-        "content": f"""You will be provided with a multiple-choice question, its options, and the model's answer, while the context of the question, which is one or more videos, is not given here. Your task is to extract or judge which option is chosen by the model based on its response, without seeing the context of the question. The extracted option should be one of the provided option letters. Your should first briefly give your reasoning process, and then give the extracted option letter. The extracted option must strictly follow this format: \"[[option letter]]\", e.g., \"The option chosen by the model: [[A]]\".
+def video2text_gpt_judge_for_closeended_multiplechoice(prompt, options, response):
+    return [
+        {"role": "system", "content": "In this task, I want you to act as an option extractor."},
+        {
+            "role": "user",
+            "content": f"""You will be provided with a multiple-choice question, its options, and the model's answer, while the context of the question, which is one or more videos, is not given here. Your task is to extract or judge which option is chosen by the model based on its response, without seeing the context of the question. The extracted option should be one of the provided option letters. Your should first briefly give your reasoning process, and then give the extracted option letter. The extracted option must strictly follow this format: \"[[option letter]]\", e.g., \"The option chosen by the model: [[A]]\".
 Below are some examples. 
 
 Example 1:
@@ -342,8 +334,8 @@ Options:
 Model's Answer: {response}
 Your Judgment: 
 """,
-    },
-]
+        },
+    ]
 
 
 class GPTMultiChoiceFilter(Filter):
