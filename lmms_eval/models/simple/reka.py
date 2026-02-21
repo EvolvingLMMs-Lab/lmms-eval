@@ -1,4 +1,3 @@
-import json
 import os
 import time
 from typing import List, Tuple
@@ -37,8 +36,6 @@ class Reka(lmms):
         modality: str = "image",
         max_frames_num: int = 5,
         timeout: int = 120,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,  # We will cache the Gemini API response in this path and use it for future requests
         **kwargs,
     ) -> None:
         super().__init__()
@@ -46,23 +43,6 @@ class Reka(lmms):
         self.modality = modality
         self.max_frames_num = max_frames_num
         self.timeout = timeout
-        self.continual_mode = continual_mode
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
-
         self.reka = RekaClient(api_key=os.getenv("REKA_API_KEY", "YOUR_API_KEY"))
 
         accelerator = Accelerator()
@@ -134,14 +114,6 @@ class Reka(lmms):
                 res.append(GenerationResult(text="", token_counts=None))
                 pbar.update(1)
                 continue
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                if doc_uuid in self.response_cache:
-                    response_text = self.response_cache[doc_uuid]
-                    if response_text:
-                        res.append(GenerationResult(text=response_text, token_counts=None))
-                        pbar.update(1)
-                        continue
 
             visual = doc_to_visual(self.task_dict[task][split][doc_id])
 
@@ -207,11 +179,6 @@ class Reka(lmms):
 
             res.append(GenerationResult(text=response_text, token_counts=token_counts))
             pbar.update(1)
-            if self.continual_mode is True:  # Cache the response
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                self.response_cache[doc_uuid] = response_text
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f)
 
         pbar.close()
         return res

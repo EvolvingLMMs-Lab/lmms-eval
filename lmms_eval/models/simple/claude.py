@@ -1,4 +1,3 @@
-import json
 import os
 import time
 from copy import deepcopy
@@ -43,8 +42,6 @@ class Claude(lmms):
         system_prompt: str = "",  # Whether you want some special system prompt here
         modality: str = "image",
         max_frames_num: int = 10,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -53,24 +50,6 @@ class Claude(lmms):
         self.system_prompt = system_prompt
         self.modality = modality
         self.max_frames_num = max_frames_num
-
-        self.continual_mode = continual_mode
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
-
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
@@ -174,16 +153,6 @@ class Claude(lmms):
                 res.append(GenerationResult(text="", token_counts=None))
                 pbar.update(1)
                 continue
-            ###################### CONTINUAL MODE ######################
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                if doc_uuid in self.response_cache:
-                    response_text = self.response_cache[doc_uuid]
-                    if response_text:
-                        res.append(GenerationResult(text=response_text, token_counts=None))
-                        pbar.update(1)
-                        continue
-
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             imgs = []
@@ -270,14 +239,6 @@ class Claude(lmms):
             response_text = message.content[0].text
             res.append(GenerationResult(text=response_text, token_counts=token_counts))
             pbar.update(1)
-
-            ###################### CONTINUAL MODE ######################
-            if self.continual_mode is True:  # Cache the response
-                response_text = message.content[0].text
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                self.response_cache[doc_uuid] = response_text
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f, indent=4)
 
         pbar.close()
 

@@ -1,8 +1,7 @@
-import json
 import os
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 from urllib.parse import unquote
 
 import numpy as np
@@ -46,14 +45,12 @@ class OpenAICompatible(lmms):
     def __init__(
         self,
         model_version: str = "grok-2-latest",
-        base_url: str = None,
-        api_key: str = None,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
         timeout: int = 10,
         retry_backoff_s: float = 1.0,
         max_retries: int = 5,
         max_size_in_mb: int = 20,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         azure_openai: bool = False,
         max_frames_num: int = 10,
         httpx_trust_env: bool = True,
@@ -83,7 +80,6 @@ class OpenAICompatible(lmms):
         self.retry_backoff_s = max(0.0, float(retry_backoff_s))
         self.max_retries = max_retries
         self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
-        self.continual_mode = continual_mode
         self.max_frames_num = max_frames_num
         self.num_concurrent = max(1, int(num_concurrent))
         self.adaptive_concurrency = parse_bool(adaptive_concurrency)
@@ -97,22 +93,6 @@ class OpenAICompatible(lmms):
         )
         self.prefix_aware_queue = parse_bool(prefix_aware_queue)
         self.prefix_hash_chars = max(32, int(prefix_hash_chars))
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
-
         # In China mainland, people usually use a VPN client to access international web
         # sites such as Google. Such a client usually configures macOS proxy server
         # settings. openai-python uses a httpx.Client with trust_env set to True. Such a
@@ -289,7 +269,6 @@ class OpenAICompatible(lmms):
         request_latencies: List[float] = []
         completed_since_adapt = 0
         in_flight = {}
-        doc_uuids: List[Union[str, None]] = [None] * len(ordered_requests)
         max_workers = max(
             1,
             self.adaptive_config.max_concurrency if self.adaptive_concurrency else current_concurrency,
@@ -384,13 +363,6 @@ class OpenAICompatible(lmms):
                 task_name,
                 split_name,
             ) = ordered_requests[global_index]
-            doc_uuid = f"{task_name}___{split_name}___{doc_id_single}"
-
-            if self.continual_mode and self.cache_mode == "resume":
-                cached_response = self.response_cache.get(doc_uuid)
-                if cached_response:
-                    return doc_uuid, cached_response, None
-
             visuals = [doc_to_visual_fn(self.task_dict[task_name][split_name][doc_id_single])]
             if None in visuals:
                 imgs = []
@@ -432,7 +404,7 @@ class OpenAICompatible(lmms):
                 payload.pop("max_tokens")
                 payload["max_completion_tokens"] = max_new_tokens
 
-            return doc_uuid, None, payload
+            return payload
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             while cursor < len(dispatch_order) or in_flight:
@@ -443,13 +415,7 @@ class OpenAICompatible(lmms):
                         cursor += 1
                         continue
                     request_index = dispatch_order[cursor]
-                    doc_uuid, cached_response, payload = build_payload_for_index(request_index)
-                    doc_uuids[request_index] = doc_uuid
-                    if cached_response is not None:
-                        reordered_responses[request_index] = GenerationResult(text=cached_response, token_counts=None)
-                        pbar.update(1)
-                        cursor += 1
-                        continue
+                    payload = build_payload_for_index(request_index)
                     future = executor.submit(process_single_request, request_index, payload)
                     in_flight[future] = request_index
                     cursor += 1
@@ -475,16 +441,10 @@ class OpenAICompatible(lmms):
                         rate_limited_requests += 1
                     request_latencies.append(latency)
                     completed_since_adapt += 1
-                    if self.continual_mode and doc_uuids[local_index] is not None:
-                        self.response_cache[doc_uuids[local_index]] = response_text
                     pbar.update(1)
                     maybe_update_concurrency(force=False)
 
         maybe_update_concurrency(force=True)
-
-        if self.continual_mode:
-            with open(self.response_persistent_file, "w") as f:
-                json.dump(self.response_cache, f)
 
         pbar.close()
         completed_responses = [response if response is not None else GenerationResult(text="", token_counts=None) for response in reordered_responses]

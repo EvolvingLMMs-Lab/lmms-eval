@@ -463,7 +463,12 @@ def simple_evaluate(
 decontaminate_suffix = "_decontaminate"
 
 
-def _run_generate_until_agentic(lm, requests: list[Instance], agentic_trace_mode: str = "basic") -> list[str]:
+def _run_generate_until_agentic(
+    lm,
+    requests: list[Instance],
+    agentic_trace_mode: str = "basic",
+    response_cache: Optional[ResponseCache] = None,
+) -> list[str]:
     responses: list[str] = []
 
     for req in requests:
@@ -522,7 +527,11 @@ def _run_generate_until_agentic(lm, requests: list[Instance], agentic_trace_mode
                     idx=0,
                     metadata=req.metadata,
                 )
-            current_output = lm.generate_until([single_req])[0]
+            if response_cache is not None:
+                current_raw_output = response_cache.execute(lm, "generate_until", [single_req])[0]
+            else:
+                current_raw_output = lm.generate_until([single_req])[0]
+            current_output, _ = unwrap_generation_output(current_raw_output)
             model_outputs.append(current_output)
             final_response = current_output
 
@@ -607,7 +616,7 @@ def _run_generate_until_agentic(lm, requests: list[Instance], agentic_trace_mode
 
 @positional_deprecated
 def evaluate(
-    lm: "LM",
+    lm,
     task_dict,
     limit: Optional[int] = None,
     offset: int = 0,
@@ -694,7 +703,7 @@ def evaluate(
         lm.accelerator = Accelerator()
 
     for task_output in eval_tasks:
-        task: Task = task_output.task
+        task = task_output.task
         task_name = task_output.task_name
         task.args = cli_args
 
@@ -790,7 +799,12 @@ def evaluate(
             trace_mode = "basic"
             if cli_args is not None:
                 trace_mode = getattr(cli_args, "agentic_trace_mode", "basic")
-            resps = _run_generate_until_agentic(lm, cloned_reqs, agentic_trace_mode=trace_mode)
+            resps = _run_generate_until_agentic(
+                lm,
+                cloned_reqs,
+                agentic_trace_mode=trace_mode,
+                response_cache=response_cache,
+            )
         elif response_cache is not None:
             resps = response_cache.execute(lm, reqtype, cloned_reqs)
         else:
