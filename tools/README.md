@@ -24,6 +24,46 @@ Run regression tests across git branches to compare model performance.
 python tools/regression.py --tasks ocrbench,mmmu_val --limit 8
 ```
 
+### `minerva_to_lance.py`
+
+Build MINERVA Lance dataset from metadata and local videos.
+
+```bash
+python tools/minerva_to_lance.py \
+  --metadata-json data/minerva/minerva.json \
+  --videos-dir data/minerva/videos \
+  --output data/minerva_hf_package/data/train.lance \
+  --mode overwrite
+```
+
+### `bench_minerva_video_resolution.py`
+
+Benchmark absolute latency of MINERVA video resolution (`minerva_doc_to_visual`).
+
+```bash
+python tools/bench_minerva_video_resolution.py \
+  --metadata-json data/minerva/minerva.json \
+  --mode lance \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 200 \
+  --sample-unique-video
+```
+
+### `bench_minerva_pipeline_latency.py`
+
+Benchmark end-to-end MINERVA pipeline latency for local raw storage vs Lance storage using the same decode path.
+
+```bash
+python tools/bench_minerva_pipeline_latency.py \
+  --local-video-dir /absolute/path/to/minerva/videos \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 100 \
+  --batch-size 1 \
+  --decode-num-frames 8
+```
+
+This benchmark keeps decode behavior fixed and compares only storage mode. On local disks it is often near-parity; Lance tends to help more in remote/object-storage and reproducible multi-machine setups.
+
 ## Notebooks
 
 ### `make_image_hf_dataset.ipynb`

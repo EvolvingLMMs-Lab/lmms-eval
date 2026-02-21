@@ -4,8 +4,14 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import numpy as np
 import yaml
+
+from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
+    get_multi_choice_info as shared_get_multi_choice_info,
+)
+from lmms_eval.tasks._task_utils.mmmu_mcq_utils import (
+    parse_videommmu_multi_choice_response,
+)
 
 with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
     raw_data = f.readlines()
@@ -79,7 +85,6 @@ def videommmu_doc_to_text_adaptation(doc, lmms_eval_specific_kwargs=None):
     if lmms_eval_specific_kwargs is None:
         lmms_eval_specific_kwargs = {}
     pre_prompt = ""
-    post_prompt = ""
 
     pre_prompt = lmms_eval_specific_kwargs["pre_prompt"]
     question = doc["question"]
@@ -327,85 +332,7 @@ def parse_multi_choice_response(response, all_choices, index2ans):
     Parse the prediction from the generated response.
     Return the predicted index e.g., A, B, C, D.
     """
-    if response == "API Error" or response == "":
-        return "API Error"
-
-    # Step 1: Clean up punctuation from the response
-    for char in [",", ".", "!", "?", ";", ":", "'"]:
-        response = response.strip(char)
-    response = " " + response + " "  # Add space to avoid partial match
-    # print(response)
-
-    index_ans = True
-    ans_with_brack = False
-    ans_with_period = False
-    ans_with_colon = False
-    candidates = []
-
-    # Step 2: If no candidates, look for choices with a period after (A. B. C. D.)
-    for choice in all_choices:  # e.g., A. B. C. D.
-        if f"{choice}." in response:
-            candidates.append(choice)
-            ans_with_period = True
-    # Step 2.1: If no candidates, look for choices with a colon after (A: B: C: D:)
-    for choice in all_choices:  # e.g., A: B: C: D:
-        if f"{choice}:" in response:
-            candidates.append(choice)
-            ans_with_colon = True
-    # Step 3: Look for choices with parentheses e.g., (A) (B) (C) (D)
-    if len(candidates) == 0:
-        for choice in all_choices:  # e.g., (A) (B) (C) (D)
-            if f"({choice})" in response:
-                candidates.append(choice)
-                ans_with_brack = True
-    # Step 4: If no candidates, look for choices with a space after (A B C D)
-    if len(candidates) == 0:
-        for choice in all_choices:  # e.g., A B C D
-            if f"{choice} " in response:
-                candidates.append(choice)
-
-    # Step 5: If no candidates and response has more than 5 tokens, try parsing based on content
-    if len(candidates) == 0 and len(response.split()) > 5:
-        for index, ans in index2ans.items():
-            if ans.lower() in response.lower():
-                candidates.append(index)
-                index_ans = False  # It's content answer, not an index
-
-    # Step 6: If still no candidates, randomly choose one
-    if len(candidates) == 0:
-        pred_index = "No Answer Found."
-
-    # Step 7: If multiple candidates found, use the one appearing last
-    elif len(candidates) > 1:
-        start_indexes = []
-        if index_ans:
-            if ans_with_period:
-                for can in candidates:
-                    index = response.rfind(f"{can}.")
-                    start_indexes.append(index)
-            elif ans_with_colon:
-                for can in candidates:
-                    index = response.rfind(f"{can}:")
-                    start_indexes.append(index)
-            elif ans_with_brack:
-                for can in candidates:
-                    index = response.rfind(f"({can})")
-                    start_indexes.append(index)
-            else:
-                for can in candidates:
-                    index = response.rfind(f" {can} ")
-                    start_indexes.append(index)
-        else:
-            for can in candidates:
-                index = response.lower().rfind(index2ans[can].lower())
-                start_indexes.append(index)
-        # Get the last one (max index)
-        pred_index = candidates[np.argmax(start_indexes)]
-    else:
-        # If only one candidate, use it
-        pred_index = candidates[0]
-
-    return pred_index
+    return parse_videommmu_multi_choice_response(response, all_choices, index2ans)
 
 
 # Exact all forms of numbers from a string with regex.
@@ -559,11 +486,4 @@ def get_multi_choice_info(options):
     Return the index2ans and all_choices
     """
 
-    start_chr = "A"
-    all_choices = []
-    index2ans = {}
-    for i, option in enumerate(options):
-        index2ans[chr(ord(start_chr) + i)] = option
-        all_choices.append(chr(ord(start_chr) + i))
-
-    return index2ans, all_choices
+    return shared_get_multi_choice_info(options)

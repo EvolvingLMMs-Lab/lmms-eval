@@ -288,6 +288,8 @@ python -m lmms_eval --tasks list_with_num
   - mvbench_fine_grained_action
   - mvbench_moving_attribute
   - mvbench_egocentric_navigation
+- [MotionBench](https://motion-bench.github.io/) (motionbench)
+  - motionbench_full
 - [NExT-QA](https://github.com/doc-doc/NExT-QA) (nextqa)
   - NExT-QA Multiple Choice Test (nextqa_mc_test)
   - NExT-QA Open Ended Validation (nextqa_oe_val)
@@ -301,6 +303,7 @@ python -m lmms_eval --tasks list_with_num
     - perceptiontest_val_mcppl
 - [PLM VideoBench](https://github.com/PLM-VideoBench/PLM-VideoBench) (plm_videobench)
 - [SciVideoBench](https://scivideobench.github.io/) (scivideobench)
+- [MINERVA](https://arxiv.org/abs/2505.00681) (minerva)
 - [Video-ChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT) (videochatgpt)
   - Video-ChatGPT Generic (videochatgpt_gen)
   - Video-ChatGPT Temporal (videochatgpt_temporal)
@@ -574,7 +577,6 @@ python -m lmms_eval --tasks list_with_num
 | `qwen_vl` | Qwen_VL | Image |
 | `qwen_vl_api` | Qwen_VL_API | API |
 | `qwen2_5_omni` | Qwen2_5_Omni | Image, Video, Audio |
-| `qwen2_5_vl_interleave` | Qwen2_5_VL_Interleave | Interleaved |
 | `qwen2_audio` | Qwen2_Audio | Audio |
 | `qwen2_vl` | Qwen2_VL | Image, Video |
 | `reka` | Reka | Multimodal API |

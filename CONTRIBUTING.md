@@ -63,6 +63,21 @@ Target response times:
 - Triage first response: within 48 hours
 - First PR review: within 72 hours
 
+### Issue Writing Standard (aligned with PR template)
+
+For design-heavy or follow-up issues, use the same structure as PRs for consistency:
+
+1. **Summary** - max 3 bullets (problem, impact, desired outcome)
+2. **In scope** - explicit list of intended changes
+3. **Out of scope** - explicit list of excluded work
+4. **Proposed plan** - 3-6 concrete implementation steps
+5. **Validation plan** - commands/benchmarks and expected pass criteria
+6. **Risk / Compatibility** - behavior changes, migration risk, blockers
+7. **Acceptance criteria** - objective done conditions (checkbox style)
+
+GitHub supports this via `.github/ISSUE_TEMPLATE/design_proposal.yml`.
+For Linear tickets, use the same headings and keep each section concise.
+
 ### Commit Style
 
 Use conventional commit prefixes:

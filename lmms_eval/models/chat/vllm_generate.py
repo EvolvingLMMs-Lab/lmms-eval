@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 from tqdm import tqdm
 from transformers import AutoProcessor
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.chat.vllm import VLLM as VLLMChat
@@ -152,13 +152,14 @@ class VLLMGenerate(VLLMChat):
 
         return vllm_inputs, params
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         total_elapsed_time = 0
+        sample_token_counts: Optional[TokenCounts] = None
         for batch_requests in batched_requests:
             batched_vllm_inputs = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
@@ -178,7 +179,7 @@ class VLLMGenerate(VLLMChat):
             total_elapsed_time += end_time - start_time
 
             assert len(response_text) == len(batch_requests)
-            res.extend(response_text)
+            res.extend([GenerationResult(text=resp_text, token_counts=sample_token_counts) for resp_text in response_text])
             pbar.update(len(batch_requests))
 
         if not self.disable_log_stats:

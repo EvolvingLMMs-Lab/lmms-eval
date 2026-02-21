@@ -364,7 +364,6 @@ The existing dedup logic (omit `resps` when identical to `filtered_resps`) conti
 ### 4.3 Implementation
 
 The flatten happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so that existing consumers (wandb logger, logging utilities) continue to work without changes.
-
 ---
 
 ## 5. Safety and Red-Teaming Baseline (JailbreakBench)
@@ -417,3 +416,272 @@ python -m lmms_eval \
   --batch_size 1 \
   --limit 20
 ```
+
+---
+
+## 6. Skill-Based Agent Workflows (New)
+
+v0.7 also standardizes how coding agents can learn and orchestrate lmms-eval workflows through the repository skill:
+
+- `skills/lmms-eval-guide/SKILL.md`
+- `skills/lmms-eval-guide/references/models.md`
+- `skills/lmms-eval-guide/references/tasks.md`
+- `skills/lmms-eval-guide/references/api-server.md`
+
+This turns lmms-eval from "a set of docs" into "a reusable operational skill" for agents: discover the right integration path, apply the correct file-level patterns, and schedule evaluation jobs safely.
+
+### 6.1 Add New Models and Tasks via Skill References
+
+For extension work, the skill references already define the recommended implementation paths:
+
+- **New model integration** -> `references/models.md`
+  - Chat-first model template (`is_simple = False`)
+  - Request unpacking contract (`request.args` shape)
+  - Registration in `lmms_eval/models/__init__.py`
+  - Minimal verification commands (`--limit 5` / `--verbosity DEBUG`)
+
+- **New task/benchmark integration** -> `references/tasks.md`
+  - YAML-first task definition (auto-registered from `tasks/`)
+  - `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`
+  - `process_results` + `metric_list` contract
+  - Advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge)
+
+Agent-level behavior should be:
+
+1. Resolve whether change is model-side, task-side, or both.
+2. Load the matching skill reference.
+3. Follow existing code patterns in nearby chat/simple models and task YAMLs.
+4. Run a small-sample verification command before broader evaluation.
+
+This keeps model/task additions consistent with lmms-eval internals while reducing trial-and-error.
+
+### 6.2 Insert lmms-eval into Training Jobs via HTTP Service
+
+For training-time evaluation orchestration, use the eval server workflow from `references/api-server.md`.
+
+Core pattern:
+
+1. Start HTTP eval server (`launch_server(ServerArgs(...))`) on dedicated eval resources.
+2. During training, submit non-blocking jobs with `EvalClient.evaluate(...)`.
+3. Continue training immediately; poll or wait by `job_id` later.
+4. Collect metrics asynchronously for checkpoint selection, regression alerts, and model ranking.
+
+Key endpoints for job orchestration:
+
+- `POST /evaluate` - submit evaluation jobs
+- `GET /jobs/{job_id}` - query status/results
+- `GET /queue` - inspect scheduler backlog
+- `GET /tasks` and `GET /models` - runtime capability discovery
+
+This service mode is the recommended way to decouple training and evaluation in v0.7-era workflows.
+
+### 6.3 HTTP Service as an Operational Primitive
+
+Treat the eval server as infrastructure, not only a convenience API:
+
+- **Queue-safe GPU usage** via scheduler-managed jobs
+- **Asynchronous checkpoint evaluation** without blocking trainer processes
+- **Multi-team reproducibility** through stable request payloads and job IDs
+- **Operational visibility** through `/queue` and job lifecycle states
+
+Security reminder remains unchanged: run in trusted environments, and add authentication/rate limiting/network isolation before exposing beyond internal boundaries.
+
+### 6.4 Suggested Agent Dispatch Strategy
+
+When agents orchestrate lmms-eval tasks, a practical routing strategy is:
+
+- **Task/model extension** -> load `lmms-eval-guide` + `references/models.md` / `references/tasks.md`
+- **Training integration** -> load `references/api-server.md` first
+- **Quick validation** -> run `--limit` smoke tests before full benchmark submission
+- **Scalable evaluation** -> use HTTP jobs for long-running or periodic evaluation loops
+
+This gives a clear split between development-time edits (model/task code) and runtime-time scheduling (HTTP jobs).
+
+---
+
+## 7. Image/Video I/O Throughput Upgrade with Long-Video Reproducibility
+
+This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
+
+### 7.1 What Was Implemented
+
+- shared image encoding helper integration across protocol and simple adapters
+- path-metadata keyed image encode cache for repeated path inputs
+- video decode path upgrades in `lmms_eval/models/model_utils/load_video.py`
+  - PyAV `thread_type="AUTO"`
+  - stream fallback `seek(0)` before packet decode
+  - set-membership lookup in stream frame selection
+  - preallocated output array fill (replace list + `np.stack` path)
+  - configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
+
+### 7.2 Semantic-Parity Guard for `load_video` Resize
+
+To avoid input-semantics drift, `resize_strategy="resize"` behavior is kept aligned with prior behavior (direct target-size resize) and validated against `dev-v0d7`.
+
+Parity evidence artifact:
+
+- `/tmp/load_video_parity_compare.json`
+
+Observed parity checks:
+
+- PNG first-frame size match: `True`
+- PIL first-frame size match: `True`
+- PNG first-frame hash match: `True`
+
+### 7.3 Real-Model LongVideoBench Replay (Long Samples)
+
+Provider-backed replay was run on `longvideobench_val_v` using OpenRouter (`bytedance-seed/seed-1.6-flash`) with long samples (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
+
+Artifacts:
+
+- baseline: `/tmp/video-real-model/mainbench_real_r3.json`
+- optimized: `/tmp/video-real-model/feat_real_postfix_r1.json`
+- optimized rerun: `/tmp/video-real-model/feat_real_postfix_r2.json`
+- summary: `/tmp/video-real-model/summary_real_postfix_compare.json`
+
+Results:
+
+- aggregate score reproducibility: `0.5 -> 0.5 -> 0.5` (baseline, optimized run1, optimized run2)
+- decode latency: `2.7902s -> 1.0227s` (`-63.35%`, speedup `+172.82%`)
+- optimized A/A decode variation: `-3.05%`
+
+Prediction-level note:
+
+- baseline vs optimized run1 per-sample parsed prediction match: `8/8`
+- optimized run1 vs run2 per-sample match: `6/8`
+- aggregate score remains unchanged; per-item drift is consistent with remote-provider nondeterminism
+
+---
+
+## 8. Lance-Backed Video Mode for MINERVA
+
+v0.7 adds an optional Lance-backed video path for the MINERVA task so metadata and videos can be distributed through Hugging Face in a single reproducible package.
+
+### 8.1 Dataset Package on Hugging Face
+
+MINERVA is published as:
+
+- `lmms-lab-eval/minerva`
+
+with two key assets:
+
+- `minerva.json` - task metadata used by `minerva.yaml`
+- `data/train.lance` - Lance table with one row per `video_id`
+
+The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`.
+
+### 8.2 Build Lance Table from Local Downloads
+
+Use the conversion script:
+
+```bash
+uv run --with pylance --with pyarrow python tools/minerva_to_lance.py \
+  --metadata-json data/minerva/minerva.json \
+  --videos-dir data/minerva/videos \
+  --output data/minerva_hf_package/data/train.lance \
+  --batch-size 6
+```
+
+This produces a Lance schema with:
+
+- `video_id`
+- `youtube_url`
+- `video_ext`
+- `video_size_bytes`
+- `video_blob`
+
+Dependency note: install `pylance` (module import name: `lance`) plus `pyarrow` for Lance-mode usage.
+
+### 8.3 Runtime Resolution Order in `lmms_eval/tasks/minerva/utils.py`
+
+At evaluation time, MINERVA video resolution now uses this priority:
+
+1. Local file lookup via `MINERVA_VIDEO_DIR`
+2. Lance blob lookup via `MINERVA_LANCE_VIDEO_URI`
+3. YouTube URL fallback (`https://www.youtube.com/watch?v=<video_id>`)
+
+Lance mode variables:
+
+```bash
+export MINERVA_LANCE_VIDEO_URI="hf://datasets/lmms-lab-eval/minerva/data/train.lance"
+export MINERVA_LANCE_VIDEO_ID_COLUMN="video_id"
+export MINERVA_LANCE_VIDEO_BLOB_COLUMN="video_blob"
+export MINERVA_LANCE_CACHE_DIR="~/.cache/lmms_eval/minerva_lance_videos"
+export LANCE_IO_THREADS="64"
+export LANCE_CPU_THREADS="8"
+```
+
+Optional local-first mode:
+
+```bash
+export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
+```
+
+### 8.4 Run Example
+
+```bash
+uv run --with pylance --with pyarrow python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+  --tasks minerva \
+  --batch_size 1 \
+  --limit 8
+```
+
+This setup keeps MINERVA reproducible in two modes: fully local video files or remote Lance blobs from the Hub.
+
+### 8.5 Measuring Absolute Video-Resolution Latency Gains
+
+To make Lance-mode improvements explicit, v0.7 includes a direct resolver benchmark:
+
+```bash
+uv run python tools/bench_minerva_video_resolution.py \
+  --metadata-json data/minerva/minerva.json \
+  --mode lance \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 200 \
+  --sample-unique-video
+```
+
+For local-file baseline:
+
+```bash
+uv run python tools/bench_minerva_video_resolution.py \
+  --metadata-json data/minerva/minerva.json \
+  --mode local \
+  --local-video-dir /absolute/path/to/minerva/videos \
+  --limit 200
+```
+
+The benchmark reports absolute latency distribution for `minerva_doc_to_visual`:
+
+- `startup_ms` (Lance resolver init cost)
+- `cold_*` metrics (first pass, cache-miss heavy)
+- `warm_*` metrics (second pass, cache-hit heavy)
+
+For strict storage-path comparison inside the same model pipeline (no decode backend switching), use:
+
+```bash
+uv run python tools/bench_minerva_pipeline_latency.py \
+  --local-video-dir /absolute/path/to/minerva/videos \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 100 \
+  --batch-size 1 \
+  --decode-num-frames 8
+```
+
+Practical interpretation:
+
+- This comparison isolates storage mode while keeping decode unchanged in the model pipeline.
+- On local pre-downloaded videos, local raw and Lance modes are often near-parity because decode cost dominates.
+- Lance advantages become clearer in remote/object-storage access, cross-machine reproducibility, and repeated subset evaluation workflows.
+
+Recommended reporting format for PRs and release notes:
+
+- environment (CPU/GPU, storage, network)
+- local mode vs Lance mode (both `cold_*` and `warm_*`)
+- sample count and random seed
+
+Implementation note: MINERVA Lance resolver now avoids eager full-table `video_id` scan at initialization and resolves rows via filtered scan on demand, which reduces startup overhead and better reflects real-world throughput in short eval runs.
+
+For large-blob dataset build, use blob-oriented write settings in `tools/minerva_to_lance.py` (smaller rows-per-file and stable storage version) to improve practical scan/read behavior during evaluation.

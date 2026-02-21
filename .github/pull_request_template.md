@@ -1,31 +1,35 @@
-## Description
+## Summary
+<!-- Max 3 bullets. -->
+- 
+- 
+- 
 
-<!-- Briefly describe what this PR does and why. Focus on the problem it solves. -->
+## In scope
+<!-- Explicitly list what this PR changes. -->
+- 
+
+## Out of scope
+<!-- Explicitly list what this PR does NOT change. -->
+- 
+
+## Validation
+<!--
+Max 3 bullets.
+Use this format:
+`<command>` | sample size: `N=<...>` | key metrics: `<...>` | result: `pass/fail`
+If you ran tests/benchmarks with metrics, include concrete numbers.
+-->
+- 
+
+## Risk / Compatibility
+<!-- 1-2 bullets. Note breaking changes, behavior changes, or migration impact. -->
+- 
 
 ## Type of Change
-
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
+- [ ] Bug fix (non-breaking change)
+- [ ] New feature
 - [ ] New benchmark/task
 - [ ] New model integration
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Breaking change
 - [ ] Documentation update
 - [ ] Refactoring (no functional changes)
-
-## Changes Made
-
-<!-- List the key changes. Keep it high-level; the diff tells the details. -->
-
--
-
-## Testing
-
-<!-- Describe how you tested your changes. -->
-
-- [ ] Tested locally with: `python -m lmms_eval --model <model> --tasks <task> --limit 8`
-- [ ] Ran pre-commit: `pre-commit run --all-files`
-- [ ] Added/updated tests (if applicable)
-
-## Additional Notes
-
-<!-- Any context, screenshots, or related issues. -->

@@ -1,0 +1,32 @@
+dataset_path: MMIE/MMIE
+dataset_kwargs:
+  token: True
+task: "mmie"
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: !function utils.doc_to_target
+process_results: !function utils.mmie_process_results
+
+metric_list:
+  - metric: mmie_f1
+    aggregation: !function utils.mmie_aggregate_f1
+    higher_is_better: true
+  - metric: mmie_exact_match
+    aggregation: !function utils.mmie_aggregate_exact_match
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  do_sample: false
+
+metadata:
+  version: 0.0
+  interleaved_format: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

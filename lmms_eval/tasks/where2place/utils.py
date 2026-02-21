@@ -1,24 +1,16 @@
 import re
-from pathlib import Path
 from typing import Any, Dict, List
 
 import numpy as np
-import yaml
+
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 
 PROMPT_SUFFIX_0_999 = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1), (x2, y2), ...], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be integers between 0 and 999, representing the pixel locations scaled to a 1000×1000 grid."
 PROMPT_SUFFIX_ORIGINAL = "Your answer should be formatted as a list of tuples, i.e. [(x1, y1), (x2, y2), ...], where each tuple contains the x and y coordinates of a point satisfying the conditions above. The coordinates should be between 0 and 1, indicating the normalized pixel locations of the points in the image."
 FORMAT = "Return only list of tuples, don't add anything else."
 
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    config = yaml.safe_load("".join(safe_data))
+config = load_default_template_yaml(__file__)
 
 
 def where2place_doc_to_text(doc: dict[str, Any]) -> str:

@@ -1,5 +1,4 @@
 import io
-import json
 import os
 import pathlib
 import re
@@ -11,7 +10,7 @@ from loguru import logger as eval_logger
 from PIL import Image
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
@@ -41,38 +40,17 @@ class GeminiAPI(lmms):
         model_version: str = "gemini-1.5-pro",
         # modality: str = "image",
         timeout: int = 120,
-        continual_mode: bool = True,
-        response_persistent_folder: str = "./logs/gemini_persistent_folder",
         interleave: bool = False,
-        # We will cache the Gemini API response in this path and use it for future requests
         **kwargs,
     ) -> None:
         super().__init__()
         self.model_version = model_version
         self.timeout = timeout
         self.model = genai.GenerativeModel(model_version)
-        self.continual_mode = continual_mode
-        self.response_persistent_file = ""
         self.interleave = interleave
-        # if self.continual_mode and response_persistent_folder is None:
-        #     raise ValueError("Continual mode requires a persistent path for the response. We will cache the Gemini API response in this path and use it for future requests. Please provide a valid path.")
-        if self.continual_mode:
-            self.response_persistent_folder = response_persistent_folder
-            if not os.path.exists(self.response_persistent_folder):
-                os.makedirs(self.response_persistent_folder)
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-        if os.path.exists(self.response_persistent_file):
-            with open(self.response_persistent_file, "r") as f:
-                self.response_cache = json.load(f)
-            self.cache_mode = "resume"
-        else:
-            self.response_cache = {}
-            self.cache_mode = "start"
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
-            assert self.continual_mode is False, "Continual mode is not supported with distributed inference."
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
@@ -151,7 +129,7 @@ class GeminiAPI(lmms):
 
         return result
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
@@ -160,18 +138,9 @@ class GeminiAPI(lmms):
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             if is_budget_exceeded():
-                res.append("")
+                res.append(GenerationResult(text="", token_counts=None))
                 pbar.update(1)
                 continue
-            if self.continual_mode and self.cache_mode == "resume":
-                doc_uuid = get_uuid(task, split, doc_id)
-                if doc_uuid in self.response_cache:
-                    content = self.response_cache[doc_uuid]
-                    if content:
-                        res.append(content)
-                        pbar.update(1)
-                        continue
-
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
             if "temperature" not in gen_kwargs:
@@ -191,6 +160,7 @@ class GeminiAPI(lmms):
             else:
                 message = [contexts] + visuals
 
+            token_counts = None
             for attempt in range(5):
                 try:
                     content = self.model.generate_content(
@@ -212,6 +182,10 @@ class GeminiAPI(lmms):
                             reasoning_tokens=0,
                             source="model",
                         )
+                        token_counts = TokenCounts(
+                            input_tokens=getattr(content.usage_metadata, "prompt_token_count", 0) or 0,
+                            output_tokens=getattr(content.usage_metadata, "candidates_token_count", 0) or 0,
+                        )
                     content = content.text
                     break
                 except Exception as e:
@@ -228,16 +202,11 @@ class GeminiAPI(lmms):
                     else:  # If this was the last attempt, log and return empty
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
                         content = ""
-            res.append(content)
+                        token_counts = None
+            res.append(GenerationResult(text=content, token_counts=token_counts))
             pbar.update(1)
 
             self.free_video()
-
-            if self.continual_mode is True:  # Cache the response
-                doc_uuid = get_uuid(task, split, doc_id)
-                self.response_cache[doc_uuid] = content
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f)
 
         pbar.close()
         return res

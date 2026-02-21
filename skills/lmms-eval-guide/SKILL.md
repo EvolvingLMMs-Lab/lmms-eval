@@ -1,12 +1,45 @@
 ---
 name: lmms-eval-guide
-version: v0.6
-description: Guides AI coding agents through the lmms-eval codebase - a unified evaluation framework for Large Multimodal Models (LMMs). Use when integrating new models, adding evaluation tasks/benchmarks, using the HTTP eval server, or navigating the evaluation pipeline architecture.
+version: v0.7
+description: Guides AI coding agents through the lmms-eval codebase - a unified evaluation framework for Large Multimodal Models (LMMs). Use when integrating new models, adding evaluation tasks/benchmarks, orchestrating non-blocking training-time evaluation via the HTTP eval server, or navigating the evaluation pipeline architecture.
 ---
 
 # lmms-eval Codebase Guide
 
 lmms-eval evaluates Large Multimodal Models across image, video, and audio tasks. 95 model backends (14 chat + 81 simple/legacy), 230 task directories, 1377 YAML configs.
+
+## Scope of This Skill
+
+This file is the **routing layer** for agents. It gives architecture context, decision points, and fast guardrails.
+
+Detailed implementation lives in `references/*.md`.
+
+Use this skill to cover end-to-end workflows:
+
+1. Add or update model backends.
+2. Add or update task/benchmark definitions.
+3. Insert lmms-eval into training jobs via async API server calls.
+4. Operate HTTP eval service (`/evaluate`, `/jobs/{job_id}`, `/queue`, `/tasks`, `/models`).
+5. Verify small-sample eval before large-scale runs.
+
+## When to Use This Skill
+
+Use this skill when requests include any of the following intents:
+
+- "Add a new model" / "integrate model backend"
+- "Add a new task/benchmark" / "write task yaml"
+- "Insert lmms-eval into training job"
+- "Run eval asynchronously without blocking training"
+- "Start or debug HTTP eval server"
+
+## Instructions (Execution Order)
+
+1. Classify the request into one of: model extension, task extension, training integration, service operations.
+2. Load the matching reference(s) from the routing matrix below.
+3. Follow existing patterns in neighboring files before writing new code/config.
+4. Validate with a smoke eval (`--limit 5` or `--limit 8`) before broad runs.
+5. For training loops, use async HTTP job submission and collect by `job_id`.
+6. For queue or failure issues, inspect `/queue` and `/jobs/{job_id}` and handle terminal states.
 
 ## Setup
 
@@ -37,7 +70,7 @@ lmms_eval/
 │   └── simple/               # Legacy models (81)
 ├── tasks/                    # Auto-registered from YAML (230 dirs, 1377 configs)
 ├── entrypoints/              # HTTP eval server (FastAPI)
-│   ├── http_server.py        # REST endpoints: /evaluate, /jobs/{id}, /queue, /tasks, /models
+│   ├── http_server.py        # REST endpoints: /evaluate, /jobs/{job_id}, /queue, /tasks, /models
 │   ├── client.py             # EvalClient (sync), AsyncEvalClient
 │   └── protocol.py           # EvaluateRequest, JobInfo
 ├── llm_judge/                # LLM-as-judge scoring
@@ -79,13 +112,23 @@ Models register in `models/__init__.py` via two dicts mapping `model_id -> Class
 
 `MODEL_ALIASES` provides backward-compatible name mappings. Registry prefers chat over simple when both exist.
 
-## When to Load References
+## Reference Routing Matrix
 
-| Task | Reference |
-|------|-----------|
-| Add a new model | [references/models.md](references/models.md) |
-| Add a new task/benchmark | [references/tasks.md](references/tasks.md) |
-| Use the HTTP eval server | [references/api-server.md](references/api-server.md) |
+| You need to do | Load this reference | Why |
+|----------------|---------------------|-----|
+| Add a new model backend | [references/models.md](references/models.md) | Model class template, registration, request args contract, validation commands |
+| Add a new benchmark/task | [references/tasks.md](references/tasks.md) | YAML schema, `utils.py` contracts, aggregation patterns |
+| Start/operate HTTP eval service | [references/api-server.md](references/api-server.md) | Server args, endpoints, client contracts |
+| Insert eval into training jobs (non-blocking) | [references/api-server.md](references/api-server.md) | Training-loop integration patterns using async job submission |
+| Diagnose queue/job states | [references/api-server.md](references/api-server.md) | Job lifecycle, polling, cancellation, queue inspection |
+
+## Multi-Track Requests
+
+For requests spanning multiple tracks (for example, new model + new task + training integration), combine relevant references and execute in this order:
+
+1. Model/task implementation.
+2. Smoke validation.
+3. HTTP service orchestration.
 
 ## Key CLI Flags
 

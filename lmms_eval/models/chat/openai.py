@@ -1,4 +1,3 @@
-import json
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import List, Union
@@ -7,6 +6,7 @@ from dotenv import load_dotenv
 from loguru import logger as eval_logger
 from tqdm import tqdm
 
+from lmms_eval.api.instance import GenerationResult, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.concurrency_control import (
@@ -34,7 +34,7 @@ load_dotenv(verbose=True)
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         if not requests:
             return []
 
@@ -45,7 +45,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
             desc="Model Responding",
         )
 
-        responses: List[Union[str, None]] = [None] * len(reordered_requests)
+        responses: List[Union[GenerationResult, None]] = [None] * len(reordered_requests)
         total_latency = 0.0
         total_tokens = 0
         current_concurrency = min(
@@ -70,13 +70,14 @@ class OpenAICompatible(OpenAICompatibleSimple):
         latencies: List[float] = []
         completed_since_adapt = 0
         in_flight = {}
-        doc_uuids: List[Union[str, None]] = [None] * len(reordered_requests)
         max_workers = max(
             1,
             self.adaptive_config.max_concurrency if self.adaptive_concurrency else current_concurrency,
         )
 
-        def process_single_request(local_index: int, payload: dict):
+        def process_single_request(local_index: int, payload: dict | None):
+            if payload is None:
+                return "", local_index, False, False, 0.0, 0, 0, 0
             started_at = time.time()
             rate_limited = False
             last_error_msg = "unknown error"
@@ -112,6 +113,8 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         rate_limited,
                         elapsed,
                         completion_tokens,
+                        input_tokens,
+                        reasoning_tokens,
                     )
                 except Exception as exc:
                     error_msg = str(exc)
@@ -126,7 +129,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
             elapsed = time.time() - started_at
             error_preview = last_error_msg.replace("\n", " ")[:200]
             failure_content = f"[LMMS_EVAL_REQUEST_FAILED after {self.max_retries} retries] {error_preview}"
-            return failure_content, local_index, False, rate_limited, elapsed, 0
+            return failure_content, local_index, False, rate_limited, elapsed, 0, 0, 0
 
         def maybe_update_concurrency(force: bool = False) -> None:
             nonlocal current_concurrency
@@ -167,15 +170,9 @@ class OpenAICompatible(OpenAICompatibleSimple):
             latencies = []
             completed_since_adapt = 0
 
-        def build_payload_for_index(global_index: int):
+        def build_payload_for_index(global_index: int) -> dict:
             req = reordered_requests[global_index]
             _, doc_to_messages, gen_kwargs, doc_id, task, split = req.args
-            doc_uuid = f"{task}___{split}___{doc_id}"
-
-            if self.continual_mode and self.cache_mode == "resume":
-                cached_response = self.response_cache.get(doc_uuid)
-                if cached_response:
-                    return doc_uuid, cached_response, None
 
             chat_messages_raw = doc_to_messages(self.task_dict[task][split][doc_id])
             chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages_raw})
@@ -196,22 +193,21 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 payload["response_format"] = {"type": "text"}
                 payload["max_completion_tokens"] = 5000
 
-            return doc_uuid, None, payload
+            return payload
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             while cursor < len(dispatch_order) or in_flight:
                 while cursor < len(dispatch_order) and len(in_flight) < max(1, current_concurrency):
                     request_index = dispatch_order[cursor]
-                    doc_uuid, cached_response, payload = build_payload_for_index(request_index)
-                    doc_uuids[request_index] = doc_uuid
-                    if cached_response is not None:
-                        responses[request_index] = cached_response
+                    payload = build_payload_for_index(request_index)
+                    if payload is None:
+                        responses[request_index] = GenerationResult(text="", token_counts=TokenCounts())
                         pbar.update(1)
                         cursor += 1
                         continue
 
                     if is_budget_exceeded():
-                        responses[request_index] = "[LMMS_EVAL_BUDGET_EXCEEDED]"
+                        responses[request_index] = GenerationResult(text="[LMMS_EVAL_BUDGET_EXCEEDED]", token_counts=TokenCounts())
                         pbar.update(1)
                         cursor += 1
                         continue
@@ -232,9 +228,18 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         rate_limited,
                         elapsed,
                         completion_tokens,
+                        input_tokens,
+                        reasoning_tokens,
                     ) = future.result()
                     in_flight.pop(future, None)
-                    responses[local_index] = response_text
+                    responses[local_index] = GenerationResult(
+                        text=response_text,
+                        token_counts=TokenCounts(
+                            input_tokens=input_tokens,
+                            output_tokens=completion_tokens,
+                            reasoning_tokens=reasoning_tokens,
+                        ),
+                    )
                     total_latency += elapsed
                     total_tokens += completion_tokens
                     latencies.append(elapsed)
@@ -243,18 +248,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     if rate_limited:
                         rate_limited_requests += 1
                     completed_since_adapt += 1
-                    if self.continual_mode and doc_uuids[local_index] is not None:
-                        self.response_cache[doc_uuids[local_index]] = response_text
                     totals = get_running_totals()
                     pbar.set_postfix({"tokens": f"{totals['total_tokens']:,}"}, refresh=False)
                     pbar.update(1)
                     maybe_update_concurrency(force=False)
 
         maybe_update_concurrency(force=True)
-
-        if self.continual_mode:
-            with open(self.response_persistent_file, "w") as f:
-                json.dump(self.response_cache, f)
 
         avg_speed = total_tokens / total_latency if total_latency > 0 else 0
         log_metrics(
@@ -264,4 +263,4 @@ class OpenAICompatible(OpenAICompatibleSimple):
         )
 
         pbar.close()
-        return [response if response is not None else "" for response in responses]
+        return [response if response is not None else GenerationResult(text="", token_counts=TokenCounts()) for response in responses]

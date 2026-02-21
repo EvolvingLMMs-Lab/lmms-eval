@@ -7,6 +7,7 @@ import torch
 from accelerate import Accelerator, DistributedType
 from accelerate.state import AcceleratorState
 from accelerate.utils import InitProcessGroupKwargs
+from loguru import logger as eval_logger
 from tqdm import tqdm
 from transformers import (
     AutoProcessor,
@@ -14,15 +15,13 @@ from transformers import (
 )
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.protocol import ChatMessages
 
 warnings.filterwarnings("ignore")
-
-from loguru import logger as eval_logger
 
 
 @register_model("internvl_hf_chat")
@@ -205,7 +204,7 @@ class InternVLHf(lmms):
                 new_list.append(j)
         return new_list
 
-    def generate_until(self, requests: List[Instance]) -> List[str]:
+    def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         """Generate responses for a list of requests.
 
         Args:
@@ -214,7 +213,7 @@ class InternVLHf(lmms):
         Returns:
             List of generated response strings.
         """
-        res: List[str] = []
+        res: List[GenerationResult] = []
 
         # A dummy collate here to sort by doc id
         def _collate(x):
@@ -286,6 +285,8 @@ class InternVLHf(lmms):
             if "num_beams" not in gen_kwargs:
                 gen_kwargs["num_beams"] = 1
             do_sample = True if gen_kwargs["temperature"] > 0 else False
+            generated_ids_trimmed = None
+            answers = [""]
             try:
                 start_time = time.time()
                 cont = self.model.generate(
@@ -313,15 +314,16 @@ class InternVLHf(lmms):
                 total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
-                cont = ""
                 total_elapsed_time += 0
                 total_tokens += 0
 
             if self.accelerator.is_main_process and doc_id[0] % 100 == 0:
                 eval_logger.debug(f"Generated text for doc ID {doc_id[0]}:\n\n{answers}\n")
 
-            res.append(answers)
-            self.cache_hook.add_partial("generate_until", (text, gen_kwargs), answers)
+            for i, answer in enumerate(answers):
+                token_counts = TokenCounts(output_tokens=len(generated_ids_trimmed[i])) if generated_ids_trimmed is not None else None
+                res.append(GenerationResult(text=answer, token_counts=token_counts))
+                self.cache_hook.add_partial("generate_until", (text, gen_kwargs), answer)
             pbar.update(1)
         # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
