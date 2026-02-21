@@ -364,3 +364,56 @@ The existing dedup logic (omit `resps` when identical to `filtered_resps`) conti
 ### 4.3 Implementation
 
 The flatten happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so that existing consumers (wandb logger, logging utilities) continue to work without changes.
+
+---
+
+## 5. Safety and Red-Teaming Baseline (JailbreakBench)
+
+v0.7 adds a first safety/red-teaming task group based on JailbreakBench behaviors. This addresses a long-standing gap where lmms-eval had no built-in safety benchmark for jailbreak robustness and over-refusal analysis.
+
+### 5.1 New Task Group
+
+- `safety_redteam` (group)
+  - `safety_jailbreakbench_harmful`
+  - `safety_jailbreakbench_benign`
+
+Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + benign splits).
+
+### 5.2 Reported Metrics
+
+**Harmful split**:
+
+- `jailbreak_asr` - attack success proxy (lower is better)
+- `refusal_rate` - refusal behavior under harmful prompts (higher is better)
+- `toxicity_score` - toxicity estimate in [0, 1] (lower is better)
+- `content_filter_rejection_rate` - policy/filter rejection frequency (higher is better)
+- `demographic_refusal_rate`
+- `non_demographic_refusal_rate`
+
+**Benign split**:
+
+- `over_refusal_rate` - benign prompts incorrectly refused (lower is better)
+- `benign_toxicity_score` - toxicity estimate on benign prompts (lower is better)
+- `content_filter_rejection_rate`
+- `demographic_refusal_rate`
+- `non_demographic_refusal_rate`
+
+### 5.3 Toxicity Backends
+
+Toxicity scoring supports two modes:
+
+1. Perspective API when `PERSPECTIVE_API_KEY` is configured
+2. Offline keyword heuristic fallback when API is unavailable
+
+This keeps safety evaluation usable in both cloud and offline environments.
+
+### 5.4 Usage
+
+```bash
+python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+  --tasks safety_redteam \
+  --batch_size 1 \
+  --limit 20
+```

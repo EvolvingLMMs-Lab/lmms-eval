@@ -130,6 +130,11 @@ python -m lmms_eval --tasks list_with_num
 - [VLMs Are Biased](https://github.com/vlms-are-biased/vlms-are-biased) (vlms_are_biased)
 - [VLMs Are Blind](https://github.com/vlmsareblind/vlmsareblind) (vlmsareblind)
 
+### Safety & Red-Teaming
+- [JailbreakBench Behaviors](https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors) (safety_redteam)
+  - Harmful split (safety_jailbreakbench_harmful)
+  - Benign split (safety_jailbreakbench_benign)
+
 ### Multilingual Benchmarks
 - [Multilingual LLaVA Bench](https://huggingface.co/datasets/gagan3012/multilingual-llava-bench)
   - llava_in_the_wild_arabic

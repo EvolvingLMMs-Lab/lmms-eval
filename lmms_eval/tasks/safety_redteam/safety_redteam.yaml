@@ -1,0 +1,4 @@
+group: safety_redteam
+task:
+  - safety_jailbreakbench_harmful
+  - safety_jailbreakbench_benign
