@@ -1,0 +1,11 @@
+dataset_path: lmms-lab-audio/europal-asr
+doc_to_target: "text_verbatim"
+doc_to_visual: !function utils.europal_asr_doc_to_audio
+doc_to_text: !function utils.europal_asr_doc_to_text
+generation_kwargs:
+  max_new_tokens: 4096
+  do_sample: false
+  temperature: 0.0
+
+metadata:
+  version: 0.0

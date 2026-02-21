@@ -1,0 +1,4 @@
+group: europal_asr
+task:
+  - europal_asr_validation
+  - europal_asr_test

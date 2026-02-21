@@ -1,0 +1,21 @@
+task: "song_describer_validation"
+test_split: validation
+include: _default_template_yaml
+output_type: generate_until
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    audio_column: "audio"
+    text_column: "text"
+
+process_results: !function utils.song_describer_process_results
+
+metric_list:
+  - metric: eval_score
+    aggregation: !function utils.song_describer_aggregate_results
+    higher_is_better: true
+
+metadata:
+  eval_model_name: Qwen/Qwen2.5-7B-Instruct
+  version: 0.1
