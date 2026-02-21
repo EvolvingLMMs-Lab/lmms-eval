@@ -317,6 +317,10 @@ python -m lmms_eval --tasks list_with_num
 - [LongTimescope](https://longtimescope.github.io/) (longtimescope)
 - [LongVT](https://longvt-bench.github.io/) (longvt) - Tool-based long video understanding
 - [LongVideoBench](https://github.com/longvideobench/LongVideoBench) (longvideobench)
+- [NEPTUNE](https://github.com/google-deepmind/neptune) (neptune)
+  - Video-path subsets: neptune_full_v, neptune_mma_v, neptune_mmh_v
+  - Frame-sampled subsets: neptune_full_i, neptune_mma_i, neptune_mmh_i
+  - Example: `python -m lmms_eval --model qwen2_5_vl --tasks neptune_full_v --limit 5 --batch_size 1`
 - [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
   - Global Mode for entire video (moviechat_global)
   - Breakpoint Mode for specific moments (moviechat_breakpoint)
