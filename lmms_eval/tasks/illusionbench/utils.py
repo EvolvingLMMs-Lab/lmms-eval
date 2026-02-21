@@ -1,18 +1,12 @@
 import re
 from collections import defaultdict
-from pathlib import Path
 from typing import Any
 
-import yaml
 from loguru import logger as eval_logger
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        if "!function" not in line:
-            safe_data.append(line)
-    config = yaml.safe_load("".join(safe_data))
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
+
+config = load_default_template_yaml(__file__)
 
 
 def illusionbench_doc_to_visual(doc: dict[str, Any]) -> list:
