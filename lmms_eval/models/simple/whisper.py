@@ -75,7 +75,7 @@ class Whisper(lmms):
         else:
             self.model.to(self._device)
             self._rank = 0
-            self._word_size = 1
+            self._world_size = 1
 
     @property
     def config(self):
@@ -176,7 +176,7 @@ class Whisper(lmms):
             sampling_rate = self.processor.feature_extractor.sampling_rate
             audios = [downsample_audio(audio["array"], audio["sampling_rate"], sampling_rate) for audio in flattened_audios]
             inputs = self.processor(audio=audios, return_tensors="pt", sampling_rate=sampling_rate)
-            
+
             # Convert inputs to the same dtype as the model
             model_dtype = self.model.dtype
             if self.device_map == "auto":
