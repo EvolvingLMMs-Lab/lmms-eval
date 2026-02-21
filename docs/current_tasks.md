@@ -571,7 +571,6 @@ python -m lmms_eval --tasks list_with_num
 | `qwen_vl` | Qwen_VL | Image |
 | `qwen_vl_api` | Qwen_VL_API | API |
 | `qwen2_5_omni` | Qwen2_5_Omni | Image, Video, Audio |
-| `qwen2_5_vl_interleave` | Qwen2_5_VL_Interleave | Interleaved |
 | `qwen2_audio` | Qwen2_Audio | Audio |
 | `qwen2_vl` | Qwen2_VL | Image, Video |
 | `reka` | Reka | Multimodal API |
