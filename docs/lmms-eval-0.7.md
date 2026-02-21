@@ -366,7 +366,60 @@ The existing dedup logic (omit `resps` when identical to `filtered_resps`) conti
 The flatten happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so that existing consumers (wandb logger, logging utilities) continue to work without changes.
 ---
 
-## 5. Skill-Based Agent Workflows (New)
+## 5. Safety and Red-Teaming Baseline (JailbreakBench)
+
+v0.7 adds a first safety/red-teaming task group based on JailbreakBench behaviors. This addresses a long-standing gap where lmms-eval had no built-in safety benchmark for jailbreak robustness and over-refusal analysis.
+
+### 5.1 New Task Group
+
+- `safety_redteam` (group)
+  - `safety_jailbreakbench_harmful`
+  - `safety_jailbreakbench_benign`
+
+Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + benign splits).
+
+### 5.2 Reported Metrics
+
+**Harmful split**:
+
+- `jailbreak_asr` - attack success proxy (lower is better)
+- `refusal_rate` - refusal behavior under harmful prompts (higher is better)
+- `toxicity_score` - toxicity estimate in [0, 1] (lower is better)
+- `content_filter_rejection_rate` - policy/filter rejection frequency (higher is better)
+- `demographic_refusal_rate`
+- `non_demographic_refusal_rate`
+
+**Benign split**:
+
+- `over_refusal_rate` - benign prompts incorrectly refused (lower is better)
+- `benign_toxicity_score` - toxicity estimate on benign prompts (lower is better)
+- `content_filter_rejection_rate`
+- `demographic_refusal_rate`
+- `non_demographic_refusal_rate`
+
+### 5.3 Toxicity Backends
+
+Toxicity scoring supports two modes:
+
+1. Perspective API when `PERSPECTIVE_API_KEY` is configured
+2. Offline keyword heuristic fallback when API is unavailable
+
+This keeps safety evaluation usable in both cloud and offline environments.
+
+### 5.4 Usage
+
+```bash
+python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+  --tasks safety_redteam \
+  --batch_size 1 \
+  --limit 20
+```
+
+---
+
+## 6. Skill-Based Agent Workflows (New)
 
 v0.7 also standardizes how coding agents can learn and orchestrate lmms-eval workflows through the repository skill:
 
@@ -377,7 +430,7 @@ v0.7 also standardizes how coding agents can learn and orchestrate lmms-eval wor
 
 This turns lmms-eval from "a set of docs" into "a reusable operational skill" for agents: discover the right integration path, apply the correct file-level patterns, and schedule evaluation jobs safely.
 
-### 5.1 Add New Models and Tasks via Skill References
+### 6.1 Add New Models and Tasks via Skill References
 
 For extension work, the skill references already define the recommended implementation paths:
 
@@ -402,7 +455,7 @@ Agent-level behavior should be:
 
 This keeps model/task additions consistent with lmms-eval internals while reducing trial-and-error.
 
-### 5.2 Insert lmms-eval into Training Jobs via HTTP Service
+### 6.2 Insert lmms-eval into Training Jobs via HTTP Service
 
 For training-time evaluation orchestration, use the eval server workflow from `references/api-server.md`.
 
@@ -422,7 +475,7 @@ Key endpoints for job orchestration:
 
 This service mode is the recommended way to decouple training and evaluation in v0.7-era workflows.
 
-### 5.3 HTTP Service as an Operational Primitive
+### 6.3 HTTP Service as an Operational Primitive
 
 Treat the eval server as infrastructure, not only a convenience API:
 
@@ -433,7 +486,7 @@ Treat the eval server as infrastructure, not only a convenience API:
 
 Security reminder remains unchanged: run in trusted environments, and add authentication/rate limiting/network isolation before exposing beyond internal boundaries.
 
-### 5.4 Suggested Agent Dispatch Strategy
+### 6.4 Suggested Agent Dispatch Strategy
 
 When agents orchestrate lmms-eval tasks, a practical routing strategy is:
 
@@ -446,11 +499,11 @@ This gives a clear split between development-time edits (model/task code) and ru
 
 ---
 
-## 6. Image/Video I/O Throughput Upgrade with Long-Video Reproducibility
+## 7. Image/Video I/O Throughput Upgrade with Long-Video Reproducibility
 
 This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
 
-### 6.1 What Was Implemented
+### 7.1 What Was Implemented
 
 - shared image encoding helper integration across protocol and simple adapters
 - path-metadata keyed image encode cache for repeated path inputs
@@ -461,7 +514,7 @@ This update consolidates image encoding in shared helpers and optimizes video de
   - preallocated output array fill (replace list + `np.stack` path)
   - configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
 
-### 6.2 Semantic-Parity Guard for `load_video` Resize
+### 7.2 Semantic-Parity Guard for `load_video` Resize
 
 To avoid input-semantics drift, `resize_strategy="resize"` behavior is kept aligned with prior behavior (direct target-size resize) and validated against `dev-v0d7`.
 
@@ -475,7 +528,7 @@ Observed parity checks:
 - PIL first-frame size match: `True`
 - PNG first-frame hash match: `True`
 
-### 6.3 Real-Model LongVideoBench Replay (Long Samples)
+### 7.3 Real-Model LongVideoBench Replay (Long Samples)
 
 Provider-backed replay was run on `longvideobench_val_v` using OpenRouter (`bytedance-seed/seed-1.6-flash`) with long samples (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
 
@@ -500,11 +553,11 @@ Prediction-level note:
 
 ---
 
-## 7. Lance-Backed Video Mode for MINERVA
+## 8. Lance-Backed Video Mode for MINERVA
 
 v0.7 adds an optional Lance-backed video path for the MINERVA task so metadata and videos can be distributed through Hugging Face in a single reproducible package.
 
-### 7.1 Dataset Package on Hugging Face
+### 8.1 Dataset Package on Hugging Face
 
 MINERVA is published as:
 
@@ -517,7 +570,7 @@ with two key assets:
 
 The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`.
 
-### 7.2 Build Lance Table from Local Downloads
+### 8.2 Build Lance Table from Local Downloads
 
 Use the conversion script:
 
@@ -539,7 +592,7 @@ This produces a Lance schema with:
 
 Dependency note: install `pylance` (module import name: `lance`) plus `pyarrow` for Lance-mode usage.
 
-### 7.3 Runtime Resolution Order in `lmms_eval/tasks/minerva/utils.py`
+### 8.3 Runtime Resolution Order in `lmms_eval/tasks/minerva/utils.py`
 
 At evaluation time, MINERVA video resolution now uses this priority:
 
@@ -564,7 +617,7 @@ Optional local-first mode:
 export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
 ```
 
-### 7.4 Run Example
+### 8.4 Run Example
 
 ```bash
 uv run --with pylance --with pyarrow python -m lmms_eval \
@@ -577,7 +630,7 @@ uv run --with pylance --with pyarrow python -m lmms_eval \
 
 This setup keeps MINERVA reproducible in two modes: fully local video files or remote Lance blobs from the Hub.
 
-### 7.5 Measuring Absolute Video-Resolution Latency Gains
+### 8.5 Measuring Absolute Video-Resolution Latency Gains
 
 To make Lance-mode improvements explicit, v0.7 includes a direct resolver benchmark:
 
