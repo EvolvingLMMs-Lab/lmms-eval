@@ -497,3 +497,78 @@ Prediction-level note:
 - baseline vs optimized run1 per-sample parsed prediction match: `8/8`
 - optimized run1 vs run2 per-sample match: `6/8`
 - aggregate score remains unchanged; per-item drift is consistent with remote-provider nondeterminism
+
+---
+
+## 7. Lance-Backed Video Mode for MINERVA
+
+v0.7 adds an optional Lance-backed video path for the MINERVA task so metadata and videos can be distributed through Hugging Face in a single reproducible package.
+
+### 7.1 Dataset Package on Hugging Face
+
+MINERVA is published as:
+
+- `lmms-lab-eval/minerva`
+
+with two key assets:
+
+- `minerva.json` - task metadata used by `minerva.yaml`
+- `data/train.lance` - Lance table with one row per `video_id`
+
+The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`.
+
+### 7.2 Build Lance Table from Local Downloads
+
+Use the conversion script:
+
+```bash
+uv run --with pylance --with pyarrow python tools/minerva_to_lance.py \
+  --metadata-json data/minerva/minerva.json \
+  --videos-dir data/minerva/videos \
+  --output data/minerva_hf_package/data/train.lance \
+  --batch-size 6
+```
+
+This produces a Lance schema with:
+
+- `video_id`
+- `youtube_url`
+- `video_ext`
+- `video_size_bytes`
+- `video_blob`
+
+### 7.3 Runtime Resolution Order in `lmms_eval/tasks/minerva/utils.py`
+
+At evaluation time, MINERVA video resolution now uses this priority:
+
+1. Local file lookup via `MINERVA_VIDEO_DIR`
+2. Lance blob lookup via `MINERVA_LANCE_VIDEO_URI`
+3. YouTube URL fallback (`https://www.youtube.com/watch?v=<video_id>`)
+
+Lance mode variables:
+
+```bash
+export MINERVA_LANCE_VIDEO_URI="hf://datasets/lmms-lab-eval/minerva/data/train.lance"
+export MINERVA_LANCE_VIDEO_ID_COLUMN="video_id"
+export MINERVA_LANCE_VIDEO_BLOB_COLUMN="video_blob"
+export MINERVA_LANCE_CACHE_DIR="~/.cache/lmms_eval/minerva_lance_videos"
+```
+
+Optional local-first mode:
+
+```bash
+export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
+```
+
+### 7.4 Run Example
+
+```bash
+uv run --with pylance --with pyarrow python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+  --tasks minerva \
+  --batch_size 1 \
+  --limit 8
+```
+
+This setup keeps MINERVA reproducible in two modes: fully local video files or remote Lance blobs from the Hub.

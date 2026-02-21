@@ -25,7 +25,7 @@ Majority of this documentation is adapted from [lm-eval-harness](https://github.
 * **[Caching](caching.md)** - Enable and reload results from the JSONL cache
 * **[Version 0.3 Features](lmms-eval-0.3.md)** - Audio evaluation and new features
 * **[Version 0.6 Features](lmms-eval-0.6.md)** - Eval-as-a-service, async pipeline, and statistical analysis
-* **[Version 0.7 Features](lmms-eval-0.7.md)** - YAML-first runs, reasoning-tag stripping, skill-based agent workflows
+* **[Version 0.7 Features](lmms-eval-0.7.md)** - YAML-first runs, reasoning-tag stripping, Lance-backed MINERVA video mode, and skill-based agent workflows
 * **[Throughput Metrics](throughput_metrics.md)** - Understanding performance metrics
 
 ## Additional Resources

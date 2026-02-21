@@ -296,6 +296,7 @@ python -m lmms_eval --tasks list_with_num
     - perceptiontest_val_mcppl
 - [PLM VideoBench](https://github.com/PLM-VideoBench/PLM-VideoBench) (plm_videobench)
 - [SciVideoBench](https://scivideobench.github.io/) (scivideobench)
+- [MINERVA](https://arxiv.org/abs/2505.00681) (minerva)
 - [Video-ChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT) (videochatgpt)
   - Video-ChatGPT Generic (videochatgpt_gen)
   - Video-ChatGPT Temporal (videochatgpt_temporal)
