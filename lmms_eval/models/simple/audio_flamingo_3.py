@@ -8,7 +8,13 @@ import torch
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from tqdm import tqdm
-from transformers import AudioFlamingo3ForConditionalGeneration, AutoProcessor
+import transformers
+from transformers import AutoProcessor
+
+try:
+    from transformers import AudioFlamingo3ForConditionalGeneration
+except ImportError:
+    AudioFlamingo3ForConditionalGeneration = None
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -45,6 +51,13 @@ class AudioFlamingo3(lmms):
         else:
             self._device = torch.device(f"cuda:{accelerator.local_process_index}")
             self.device_map = f"cuda:{accelerator.local_process_index}"
+
+        if AudioFlamingo3ForConditionalGeneration is None:
+            raise ImportError(
+                "AudioFlamingo3ForConditionalGeneration is not available in transformers "
+                f"{transformers.__version__}. Please upgrade transformers/accelerate in this env, e.g. "
+                "`pip install -U transformers accelerate`."
+            )
 
         self._model = AudioFlamingo3ForConditionalGeneration.from_pretrained(
             pretrained,
