@@ -22,7 +22,7 @@ class LanceVideoBlobResolver:
         try:
             lance = importlib.import_module("lance")
         except ModuleNotFoundError as exc:
-            raise ImportError("Lance video resolver requires Python package `lance` and `pyarrow`. Install via: uv add lance pyarrow") from exc
+            raise ImportError("Lance video resolver requires Python package `pylance` (module import name: `lance`) and `pyarrow`. Install via: uv add pylance pyarrow") from exc
 
         self._lance = lance
         self._dataset_uri = dataset_uri

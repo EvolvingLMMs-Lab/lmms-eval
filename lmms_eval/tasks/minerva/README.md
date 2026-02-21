@@ -44,8 +44,10 @@ export LANCE_CPU_THREADS="8"
 Install optional dependencies:
 
 ```bash
-uv add lance pyarrow
+uv add pylance pyarrow
 ```
+
+Note: this is the Python package `pylance` that exposes module name `lance` at runtime.
 
 ## Benchmark resolver latency
 
@@ -95,7 +97,7 @@ When Lance is likely to show stronger practical gains:
 Use `dummy_video_reader` to simulate request flow and local video reads without real model/API inference.
 
 ```bash
-uv run --with lance --with pyarrow python -m lmms_eval \
+uv run --with pylance --with pyarrow python -m lmms_eval \
   --model dummy_video_reader \
   --model_args "read_bytes=65536,response=A,allow_remote=false,fail_on_missing=true" \
   --tasks minerva \
@@ -110,7 +112,7 @@ For Lance mode, set `MINERVA_LANCE_VIDEO_URI` and related env vars first.
 ## Build Lance dataset with blob-oriented defaults
 
 ```bash
-uv run --with lance --with pyarrow python tools/minerva_to_lance.py \
+uv run --with pylance --with pyarrow python tools/minerva_to_lance.py \
   --metadata-json data/minerva/minerva.json \
   --videos-dir data/minerva/videos \
   --output data/minerva_hf_package/data/train.lance \

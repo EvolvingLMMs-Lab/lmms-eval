@@ -65,7 +65,7 @@ def _run_mode(mode: str, args, base_env: dict) -> dict:
         "uv",
         "run",
         "--with",
-        "lance",
+        "pylance",
         "--with",
         "pyarrow",
         "python",
