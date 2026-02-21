@@ -308,12 +308,27 @@ def simple_evaluate(
                 cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
                 cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
                 task_fingerprints[tname] = hash_string(cfg_str)[:16]
-        model_hash = hash_string(f"{model}|{model_args}")[:16]
+
+        if isinstance(model_args, dict):
+            model_args_fp = json.dumps(model_args, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+        elif isinstance(model_args, str):
+            try:
+                parsed_model_args = simple_parse_args_string(model_args)
+            except Exception:
+                parsed_model_args = model_args
+            if isinstance(parsed_model_args, dict):
+                model_args_fp = json.dumps(parsed_model_args, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+            else:
+                model_args_fp = str(model_args)
+        else:
+            model_args_fp = str(model_args)
+
+        model_fp = f"{model}|{model_args_fp}"
+        model_hash = hash_string(model_fp)[:16]
         cache_dir = os.path.join(use_cache, model_hash)
         os.makedirs(cache_dir, exist_ok=True)
         db_path = os.path.join(cache_dir, f"rank{global_rank}.db")
         audit_path = os.path.join(cache_dir, f"rank{global_rank}.jsonl")
-        model_fp = f"{model}|{model_args}"
         response_cache = ResponseCache(db_path=db_path, audit_path=audit_path, model_fingerprint=model_fp, task_fingerprints=task_fingerprints)
         eval_logger.info(f"ResponseCache initialized: {db_path}")
 
