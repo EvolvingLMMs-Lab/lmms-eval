@@ -47,6 +47,7 @@ python -m lmms_eval --tasks list_with_num
     - COCO 2017 Caption MiniVal (coco2017_cap_val)
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
 - [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
+- [CountBench](https://huggingface.co/datasets/vikhyatk/CountBenchQA) (countbench)
 - [CV-Bench](https://github.com/nyu-visionx/CV-Bench) (cv_bench)
 - [DetailCaps-4870](https://github.com/foundation-multimodal-models/CAPTURE) (detailcaps)
 - [Flickr30K](https://github.com/BryanPlummer/flickr30k_entities) (flickr30k)
