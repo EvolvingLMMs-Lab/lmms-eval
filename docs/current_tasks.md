@@ -437,6 +437,7 @@ python -m lmms_eval --tasks list_with_num
 - [AIME](https://artofproblemsolving.com/wiki/index.php/AIME_Problems_and_Solutions) (aime)
 - [DynaMath](https://dynamath.github.io/) (dynamath)
 - [GSM8K](https://github.com/openai/grade-school-math) (gsm8k)
+- [MathKangaroo](https://huggingface.co/datasets/dfkiuser/kangaroo_math_mc_questions) (mathkangaroo)
 - [MathVerse](https://github.com/ZrrSkywalker/MathVerse) (mathverse)
   - MathVerse Text Dominant (mathverse_testmini_text_dominant)
   - MathVerse Text Only (mathverse_testmini_text_only)
