@@ -1,0 +1,5 @@
+group: ami
+task:
+  - ami_train
+  - ami_validation
+  - ami_test
