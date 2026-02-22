@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: tvbench_scene_transition
+dataset_name: scene_transition
+test_split: train
