@@ -181,7 +181,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
             temperature = request_gen_kwargs.get("temperature", 0)
 
             payload = {
-                "messages": chat_messages.to_openai_messages(),
+                "messages": chat_messages.to_openai_messages(video_kwargs={"nframes": self.max_frames_num}),
                 "model": self.model_version,
                 "max_tokens": max_new_tokens,
                 "temperature": temperature,
@@ -212,6 +212,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         cursor += 1
                         continue
 
+                    assert payload is not None
                     future = executor.submit(process_single_request, request_index, payload)
                     in_flight[future] = request_index
                     cursor += 1
