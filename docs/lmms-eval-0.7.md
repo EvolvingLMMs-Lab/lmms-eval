@@ -685,3 +685,62 @@ Recommended reporting format for PRs and release notes:
 Implementation note: MINERVA Lance resolver now avoids eager full-table `video_id` scan at initialization and resolves rows via filtered scan on demand, which reduces startup overhead and better reflects real-world throughput in short eval runs.
 
 For large-blob dataset build, use blob-oriented write settings in `tools/minerva_to_lance.py` (smaller rows-per-file and stable storage version) to improve practical scan/read behavior during evaluation.
+
+---
+
+## 9. Efficiency Metrics Completion and TTFT Backend Coverage
+
+v0.7 improves efficiency observability, but not all efficiency metrics are equally available across backends. This section defines what is complete now, what is partial, and what requires additional instrumentation.
+
+### 9.1 Completion Definition (v0.7 Scope)
+
+For v0.7, "efficiency metrics complete" means:
+
+- per-sample token counts are available in evaluation outputs (`input_tokens`, `output_tokens`, `reasoning_tokens` when backend metadata exists)
+- run-level throughput metrics are available in results (`total_gen_tokens`, `total_elapsed_time`, `avg_speed`)
+- vLLM-backed chat paths can report TTFT/TPOT through native runtime metrics
+
+Out of scope in v0.7:
+
+- TTFT/TPOT parity across every backend
+
+### 9.2 TTFT/TPOT Coverage Matrix
+
+Current status by backend:
+
+| Backend family | TTFT | TPOT | Current implementation note |
+|---|---|---|---|
+| `vllm` chat backends | ✅ Native | ✅ Native | Reads runtime metrics and logs as `additional_metrics` |
+| `sglang` chat backend | ❌ Not exposed in summary | ❌ Not exposed in summary | Logs wall-clock throughput only |
+| OpenAI-compatible API backends (`openai`, `async_openai`) | ❌ Not exposed in summary | ❌ Not exposed in summary | Logs token usage + end-to-end latency, no first-token timestamp |
+| HuggingFace local generate backends | ❌ Not exposed in summary | ❌ Not exposed in summary | Uses `model.generate()` wall-clock timing only |
+
+Why this matters: TTFT is request-to-first-token latency, while throughput is aggregate speed. They answer different questions and should not be treated as interchangeable.
+
+### 9.3 Can We Extend TTFT Beyond vLLM?
+
+Yes, but with backend-specific implementation cost and caveats:
+
+- **OpenAI-compatible APIs**: feasible with streaming-first instrumentation and first chunk timestamp capture; measured TTFT includes network and client-side overhead.
+- **SGLang**: feasible if per-request first-token timing is exposed or instrumented in request-level generation path; batch-level timing alone is not sufficient for strict TTFT.
+- **HuggingFace local backends**: feasible with token streaming/generation callbacks; default `generate()` call path does not expose TTFT directly.
+
+If full parity cannot be implemented immediately, document the backend limitation explicitly in release notes and in any benchmark report that cites TTFT.
+
+### 9.4 Reporting Guidance
+
+For v0.7 users:
+
+- If TTFT/TPOT is critical, prefer `vllm` backends today.
+- If using API/SGLang/HF backends, report throughput and token usage, and treat TTFT as unavailable unless custom instrumentation is enabled.
+- Keep metric claims backend-qualified (for example, "TTFT measured on vLLM runtime metrics").
+
+### 9.5 Token-Based Efficiency in Results JSON
+
+When `--log_samples` is enabled, v0.7 now emits an `efficiency` section in aggregated results with:
+
+- `overall.tokens_per_correct_answer`
+- `overall.avg_output_tokens_per_sample`
+- per-task breakdown under `efficiency.by_task`
+
+The v0.7 efficiency output is token-based by design. It does not include price-derived cost fields, so metric comparability does not depend on provider-specific pricing tables.
