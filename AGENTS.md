@@ -91,7 +91,7 @@ Dataset --> doc_to_messages (or doc_to_visual + doc_to_text)
 3. Tasks auto-register from YAML - no manual registration needed
 4. Run OpenRouter smoke test: `TASKS=<name> MODEL_VERSION=bytedance-seed/seed-1.6-flash bash examples/models/openrouter.sh`
 5. Smoke test is only valid when output logs are complete: the run must produce both `*_results.json` and `*_samples_*.jsonl`, and the results log must include `results`, `configs`, `n-samples`, `config`, `usage`, and `usage.total.n_api_calls > 0`.
-6. MME smoke runs require an even `LIMIT` (pairwise eval). `examples/models/openrouter.sh` auto-adjusts odd values to the next even number.
+6. MME smoke runs require an even `LIMIT` (pairwise eval).
 7. Local fallback test: `python -m lmms_eval --model qwen2_5_vl --tasks <name> --limit 8`
 
 #### Task YAML Advanced Features
