@@ -404,6 +404,7 @@ python -m lmms_eval --tasks list_with_num
   - Infographic VQA Test (infovqa_test)
 - [OCRBench](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench)
 - [OCRBench v2](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench_v2)
+- [OmniDocBench](https://github.com/opendatalab/OmniDocBench) (omnidocbench)
 - [PRISMM-Bench](https://arxiv.org/abs/2510.16505) (prismm_bench)
   - PRISMM-Bench Identification (prismm_bench_identification)
   - PRISMM-Bench Identification Whole Page Context (prismm_bench_identification_whole_page)
