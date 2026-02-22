@@ -76,6 +76,7 @@ python -m lmms_eval --tasks list_with_num
 - [SeedBench 2](https://github.com/AILab-CVC/SEED-Bench) (seedbench_2)
 - [SeedBench 2 Plus](https://huggingface.co/datasets/AILab-CVC/SEED-Bench-2-plus) (seedbench_2_plus)
 - [VibeEval](https://github.com/reka-ai/reka-vibe-eval) (vibe_eval)
+- [VisuLogic](https://visulogic-benchmark.github.io/VisuLogic/) (visulogic)
 - [VizWizVQA](https://vizwiz.org/tasks-and-datasets/vqa/) (vizwiz_vqa)
   - VizWizVQA Validation (vizwiz_vqa_val)
   - VizWizVQA Test (vizwiz_vqa_test)
