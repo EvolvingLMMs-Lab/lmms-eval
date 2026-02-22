@@ -1,0 +1,3 @@
+include: _default_template_yaml
+task: mathcanvas_analytic_geometry
+dataset_name: Analytic_Geometry
