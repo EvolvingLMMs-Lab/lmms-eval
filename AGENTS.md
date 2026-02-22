@@ -1,188 +1,137 @@
 # Agent Guidelines for lmms-eval
 
-This file provides context for AI coding agents (Codex, Devin, SWE-Agent, etc.) working on this codebase.
+This file is the working memory for coding agents in this repository.  
+Goal: make safe, minimal, correct changes quickly.
 
-For detailed development guidelines, see [CLAUDE.md](CLAUDE.md).
+## 1) Quick Start
 
-## Quick Reference
+**Environment**
+- Setup: `uv sync && pre-commit install && source .venv/bin/activate`
+- Lint/format gate: `pre-commit run --all-files`
+- Package manager rule: **use `uv`, never `pip`**
 
-**Setup**: `uv sync && pre-commit install`
-**Run eval**: `python -m lmms_eval --model qwen2_5_vl --tasks mme --limit 5 --batch_size 1`
-**Lint**: `pre-commit run --all-files`
-**Test registry**: `uv run python -m unittest discover -s test/eval -p "test_model_registry_v2.py"`
-
-### Useful CLI Flags
-
-| Flag | Description |
-|------|-------------|
-| `--model` | Model backend name (e.g., `qwen2_5_vl`, `openai`, `vllm`) |
-| `--model_args` | Comma-separated key=value pairs (e.g., `pretrained=org/model,device_map=auto`) |
-| `--tasks` | Comma-separated task names |
-| `--limit N` | Only evaluate first N samples (use for quick testing) |
-| `--batch_size N` | Batch size for inference |
-| `--num_fewshot N` | Number of fewshot examples |
-| `--device cuda:0` | Device for local models |
-| `--output_path dir/` | Directory for result output |
-| `--log_samples` | Save per-sample predictions to output |
-| `--verbosity DEBUG` | Set log level (DEBUG, INFO, WARNING, ERROR) |
-
-### Environment Variables
-
+**Fast sanity command**
 ```bash
-export OPENAI_API_KEY="..."      # Required for OpenAI/API-backed models
-export HF_TOKEN="..."            # Required for gated HuggingFace datasets
-export HF_HOME="/path/to/cache"  # HuggingFace cache directory
-export HF_HUB_ENABLE_HF_TRANSFER="1"  # Faster downloads
+bash examples/models/local_qwen3_vl.sh
 ```
 
-## Project Overview
+## 2) Codebase Mental Model
 
-lmms-eval evaluates Large Multimodal Models (LMMs) across image, video, and audio tasks. It supports 100+ benchmarks and 30+ model backends.
+lmms-eval runs a simple pipeline:
+1. Parse CLI args and config.
+2. Resolve tasks through `TaskManager`.
+3. Resolve model class via registry (`ModelRegistryV2`), instantiate model.
+4. Build per-doc `Instance` requests from task config.
+5. Run model methods (`generate_until` / `loglikelihood` / multi-round).
+6. Call `process_results`, aggregate metrics.
+7. Save aggregated and sample-level outputs.
 
-### Key Directories
+Key flow anchors:
+- CLI: `lmms_eval/__main__.py` (`parse_eval_args`, `cli_evaluate`, `cli_evaluate_single`)
+- Evaluator: `lmms_eval/evaluator.py` (`simple_evaluate`, `evaluate`)
+- Task indexing/loading: `lmms_eval/tasks/__init__.py` (`TaskManager`, `get_task_dict`)
+- Model resolution: `lmms_eval/models/__init__.py`, `lmms_eval/models/registry_v2.py`
+- Output writing: `lmms_eval/loggers/evaluation_tracker.py`
 
-| Path | Purpose |
-|------|---------|
-| `lmms_eval/models/chat/` | Chat model wrappers (recommended for new models) |
-| `lmms_eval/models/simple/` | Legacy model wrappers |
-| `lmms_eval/models/__init__.py` | Model registry: `AVAILABLE_SIMPLE_MODELS`, `AVAILABLE_CHAT_TEMPLATE_MODELS`, `MODEL_ALIASES` |
-| `lmms_eval/models/registry_v2.py` | `ModelManifest`, `ModelRegistryV2` - aliasing and resolution |
-| `lmms_eval/tasks/<task_name>/` | Task configs (YAML) + helper functions (utils.py) |
-| `lmms_eval/protocol.py` | `ChatMessages` - structured multimodal message protocol |
-| `lmms_eval/api/model.py` | Base class `lmms` - all models subclass this |
-| `lmms_eval/api/instance.py` | `Instance` - request object passed to models |
-| `lmms_eval/entrypoints/` | HTTP eval server (EvalClient, ServerArgs) |
-| `lmms_eval/llm_judge/` | LLM-as-judge scoring providers |
+## 3) Where To Edit (By Intent)
 
-### Model Registry V2
+### Add/fix a model backend
+- Implement in `lmms_eval/models/chat/<name>.py` (preferred) or `lmms_eval/models/simple/<name>.py`.
+- Register in `lmms_eval/models/__init__.py`:
+  - `AVAILABLE_CHAT_TEMPLATE_MODELS` for chat
+  - `AVAILABLE_SIMPLE_MODELS` for simple
+  - optional aliases in `MODEL_ALIASES`
+- Ensure class inherits `lmms_eval.api.model.lmms`.
+- `is_simple` contract:
+  - chat backend: `is_simple = False`
+  - simple backend: `is_simple = True` (default)
 
-Models are registered via two dicts in `__init__.py` that map `model_id` -> `ClassName`:
+### Add/fix a task
+- Files live in `lmms_eval/tasks/<task_name>/`:
+  - `<task_name>.yaml` for declarative config
+  - `utils.py` for `doc_to_messages` / `doc_to_text` / `process_results` / aggregation fns
+- Tasks are auto-discovered from YAML. No manual registry update needed.
 
-- `AVAILABLE_CHAT_TEMPLATE_MODELS` - chat models in `models/chat/`
-- `AVAILABLE_SIMPLE_MODELS` - simple models in `models/simple/`
+### Debug evaluator/output logic
+- Request build + execution + metric plumbing:
+  - `lmms_eval/api/task.py`
+  - `lmms_eval/evaluator.py`
+  - `lmms_eval/evaluator_utils.py`
+- Persistence and output shape:
+  - `lmms_eval/loggers/evaluation_tracker.py`
 
-If the same `model_id` exists in both, the registry creates one `ModelManifest` with both paths. Resolution prefers chat over simple.
+## 4) Model Backend Contract (Important)
 
-`MODEL_ALIASES` provides backward-compatible name mappings: `{"new_name": ("old_name_1", "old_name_2")}`.
+`ModelRegistryV2` resolves user model names (including aliases) to a specific chat/simple class path and validates `is_simple`.
 
-### Pipeline
+Common failure cause: backend type mismatch.
+- If resolved as chat but class has `is_simple=True`, load fails.
+- If resolved as simple but class has `is_simple=False`, load fails.
 
-```
-Dataset --> doc_to_messages (or doc_to_visual + doc_to_text)
-        --> Model.generate_until() or Model.loglikelihood()
-        --> process_results()
-        --> metric aggregation
-```
+### `req.args` shape differs by task/model path
+- For `ConfigurableMessagesTask` `generate_until`: `(ctx, doc_to_messages, gen_kwargs, doc_id, task, split)` (6 elements, but second is message builder)
+- For `ConfigurableTask` `generate_until`: `(ctx, gen_kwargs, doc_to_visual, doc_id, task, split)` (6 elements)
+- For `ConfigurableTask` `loglikelihood`: `(ctx, doc_to_target, doc_to_visual, doc_id, task, split)` (6 elements)
 
-## Common Tasks
+Do not guess tuple order. Confirm in `lmms_eval/api/task.py` `construct_requests`.
 
-### Adding a New Model
+## 5) Task YAML Contract
 
-1. Create `lmms_eval/models/chat/<name>.py`
-2. Subclass `lmms`, set `is_simple = False`, implement `generate_until`
-3. Use `@register_model("<name>")` decorator
-4. Add `"<name>": "ClassName"` to `AVAILABLE_CHAT_TEMPLATE_MODELS` in `__init__.py`
-5. Test: `python -m lmms_eval --model <name> --model_args pretrained=org/model --tasks mme --limit 5`
+Typical required fields:
+- `task`
+- `dataset_path`
+- split config (usually `test_split` or equivalent)
+- `output_type`
+- input formatter (`doc_to_messages` preferred; or `doc_to_text` + `doc_to_visual`)
+- `process_results`
+- `metric_list`
 
-### Adding a New Task
+High-value advanced fields:
+- `lmms_eval_specific_kwargs`: model-specific prompt variants (default + per-model override)
+- `include`: share common template YAML
+- `group` + list under `task`: define task families
 
-1. Create `lmms_eval/tasks/<name>/<name>.yaml` + `utils.py`
-2. YAML needs: `task`, `dataset_path`, `test_split`, `output_type`, `doc_to_messages`, `process_results`, `metric_list`
-3. Tasks auto-register from YAML - no manual registration needed
-4. Run OpenRouter smoke test: `TASKS=<name> MODEL_VERSION=bytedance-seed/seed-1.6-flash bash examples/models/openrouter.sh`
-5. Smoke test is only valid when output logs are complete: the run must produce both `*_results.json` and `*_samples_*.jsonl`, and the results log must include `results`, `configs`, `n-samples`, `config`, `usage`, and `usage.total.n_api_calls > 0`.
-6. MME smoke runs require an even `LIMIT` (pairwise eval).
-7. Local fallback test: `python -m lmms_eval --model qwen2_5_vl --tasks <name> --limit 8`
+`output_type` options used in this repo:
+- `generate_until`
+- `loglikelihood`
+- `generate_until_multi_round`
+- `generate_until_agentic` (specialized flows)
 
-#### Task YAML Advanced Features
+## 6) Smoke Test Recipes
 
-**`lmms_eval_specific_kwargs`** - Model-specific prompt overrides. Framework selects matching key based on model, falls back to `default`:
+- **Local model (Qwen3-VL)**: `bash examples/models/local_qwen3_vl.sh`
+- **vLLM backend (Qwen3-VL)**: `bash examples/models/vllm_qwen3_vl.sh`
+- **API backend (OpenRouter/OpenAI-compatible)**: `bash examples/models/openrouter_api.sh`
 
-```yaml
-lmms_eval_specific_kwargs:
-  default:
-    pre_prompt: ""
-    post_prompt: "\nAnswer directly."
-  qwen3_vl:
-    format: "qwen3_vl"
-    pre_prompt: "Question: "
-    post_prompt: "Answer with the option letter only."
-```
+The standard smoke test is to run the script and check if it generates metrics and sample outputs successfully. You can also check the saved samples to see if the model generations are valid.
 
-These kwargs are passed to `doc_to_messages(doc, lmms_eval_specific_kwargs=...)`.
+## 7) Full Run Recipes
 
-**`include`** - Inherit shared config from a template file (avoids duplication across variants):
+Smoke tests are for fast validation during development and testing. Full runs are different:
+- usually full dataset (`--limit` omitted or `-1`)
+- explicit seed control when needed
+- larger batch settings for throughput (usually `8` or `16`), or adaptive concurrency control for API-backed models.
+- stable output path naming and optional sample suffixes for easier identification.
+- cache strategy should follow user intent:
+  - use `--use_cache <dir>` only when the user wants response reuse across runs.
+  - use `--cache_requests true` to reuse request-building cache for speed.
+  - use `--cache_requests refresh` or `--cache_requests delete` only when the user explicitly wants cache invalidation (e.g., task/model args changed and stale cache is not acceptable).
 
-```yaml
-include: _default_template_yaml
-```
+## 8) Recommended Debug Workflow
 
-**`group` + `task` list** - Define task families:
+1. Reproduce with `--limit 8 --verbosity DEBUG --log_samples`.
+2. Check whether failure is in task loading, model init, request build, generation, or metric aggregation.
+3. Inspect task YAML and `utils.py` contract first for task bugs.
+4. Inspect model class `generate_until` and tuple unpacking for model bugs.
+5. Only after smoke passes, increase scale.
 
-```yaml
-group: mmmu
-task:
-- mmmu_val
-- mmmu_test
-```
+Useful checks:
+- List tasks: `uv run python -m lmms_eval --tasks list`
+- Model list/alias checks: inspect `lmms_eval/models/__init__.py`
 
-**`output_type`** options: `generate_until` (free-form), `loglikelihood` (multiple-choice), `generate_until_multi_round` (multi-turn conversation)
+## 9) Constraints For Agents
 
-### Fixing a Model Bug
-
-1. Find the model file in `models/chat/` or `models/simple/`
-2. Check `generate_until` for generation issues, `loglikelihood` for multiple-choice
-3. Look at `req.args` unpacking - chat models get 5 elements, simple get 6
-4. Run with `--limit 5` to verify the fix quickly
-
-### Fixing a Task Bug
-
-1. Task YAML is in `lmms_eval/tasks/<task_name>/`
-2. Helper functions are in `utils.py` next to the YAML
-3. `process_results` handles scoring, `doc_to_messages` handles input formatting
-4. Test with `--limit 8` to verify
-
-## Debugging
-
-### Quick Diagnostics
-
-- **Verbose logging**: `python -m lmms_eval --model ... --verbosity DEBUG` - shows detailed traces
-- **Small test run**: `--limit 5` evaluates only 5 samples - always use this when testing changes
-- **Log samples**: `--log_samples` saves per-sample predictions to output directory for inspection
-
-### Common Errors and Fixes
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `ValueError: gen_kwargs['until']` | Wrong type for `until` in generation_kwargs | Must be `str` or `list[str]` |
-| `NotImplementedError: loglikelihood` | Model doesn't support multiple-choice | Implement `loglikelihood()` or use `generate_until` tasks only |
-| `AttributeError: '_max_length'` | Missing initialization in model `__init__` | Set `self._max_length` in constructor |
-| Visual is `None` or `[]` | Dataset sample has no image/video | Guard with `if visual is not None and len(visual) > 0` |
-| API timeout/rate limit | API model hitting limits | Use `max_retries` and `retry_backoff_s` in model_args |
-
-### Logging
-
-The codebase uses `eval_logger` from loguru. To add debug logging in your code:
-
-```python
-from lmms_eval.utils import eval_logger
-eval_logger.debug("Processing batch of {} samples", len(batch))
-eval_logger.warning("Missing visual for doc_id={}", doc_id)
-```
-
-### Retry Patterns (API Models)
-
-API-backed models (openai, gemini, etc.) support retry configuration:
-
-```bash
-python -m lmms_eval --model openai --model_args pretrained=gpt-4o,max_retries=5,retry_backoff_s=2.0 --tasks mme
-```
-
-## Constraints
-
-- **Package manager**: uv only, never pip
-- **Formatting**: Black (line-length=240) + isort (profile=black). Run `pre-commit run --all-files` before committing.
-- **No type suppression**: Never use `as any`, `@ts-ignore`, `type: ignore` to suppress type errors
-- **Commits**: Never mention co-authored-by or AI tools
-- **Minimal changes**: Fix the specific issue, don't refactor unrelated code
-- **Follow patterns**: Match the style of neighboring files exactly
+- Make minimal, scoped changes. Avoid unrelated refactors.
+- Match neighboring style and existing patterns.
+- No type-suppression shortcuts (`as any`, `@ts-ignore`, `type: ignore`).
+- Run `pre-commit run --all-files` before final handoff when touching code.
