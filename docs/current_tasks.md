@@ -186,6 +186,7 @@ python -m lmms_eval --tasks list_with_num
 - [SNS-Bench](https://github.com/SNS-Bench/SNS-Bench) (snsbench)
 - [TOMATO](https://github.com/TOMATO-Lab/TOMATO) (tomato)
 - [VMC-Bench](https://github.com/VMC-Bench/VMC-Bench) (vmcbench)
+- [ViVerBench](https://huggingface.co/datasets/comin/ViVerBench) (viverbench)
 - [Visual Puzzles](https://github.com/VisualPuzzles/VisualPuzzles) (VisualPuzzles)
 - [VisualWebBench](https://visualwebbench.github.io/) (visualwebbench)
 - [V*-Bench](https://github.com/V-Bench/V-Bench) (vstar_bench)
