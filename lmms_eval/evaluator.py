@@ -19,7 +19,9 @@ import lmms_eval.api.metrics
 import lmms_eval.api.registry
 from lmms_eval import models
 from lmms_eval.api.instance import Instance, unwrap_generation_output
+from lmms_eval.api.model import lmms
 from lmms_eval.api.reasoning import parse_reasoning_tags_config, strip_reasoning_tags
+from lmms_eval.api.task import Task
 from lmms_eval.baselines import (
     BASELINE_REGISTRY,
     get_baseline_display_name,
@@ -39,6 +41,7 @@ from lmms_eval.evaluator_utils import (
 )
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
+from lmms_eval.models.model_utils.efficiency_metrics import build_efficiency_summary
 from lmms_eval.models.model_utils.usage_metrics import (
     is_budget_exceeded,
     reset_usage_metrics,
@@ -411,6 +414,9 @@ def simple_evaluate(
             results["throughput"] = throughput_summary
         usage_summary = summarize_usage_metrics()
         results["usage"] = usage_summary
+        efficiency_summary = build_efficiency_summary(results)
+        if efficiency_summary:
+            results["efficiency"] = efficiency_summary
         # add_env_info(results)  # additional environment info to results
         # add_tokenizer_info(results, lm)  # additional info about tokenizer
 
