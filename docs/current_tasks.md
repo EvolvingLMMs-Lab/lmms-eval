@@ -122,6 +122,7 @@ python -m lmms_eval --tasks list_with_num
 - [MMVet v2](https://github.com/yuweihao/MM-Vet) (mmvetv2)
 - [MMVU](https://mmvu-bench.github.io/) (mmvu)
 - [MMWorld](https://mmworld-bench.github.io/) (mmworld)
+- [MTVQA](https://huggingface.co/datasets/ByteDance/MTVQA) (mtvqa)
 - [MMSI-Bench](https://github.com/MMSI-Bench/MMSI-Bench) (mmsi_bench)
 - [MMSearch](https://mmsearch.github.io/) (mmsearch)
 
