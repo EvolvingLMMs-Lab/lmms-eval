@@ -83,6 +83,17 @@ def _point_in_bbox(point_xy: Tuple[float, float], bbox_xywh: List[float]) -> boo
 
 def _point_in_polygon(point_xy: Tuple[float, float], polygon: List[float]) -> bool:
     x, y = point_xy
+    if len(polygon) == 4:
+        left, top, right, bottom = polygon
+        if left > right:
+            left, right = right, left
+        if top > bottom:
+            top, bottom = bottom, top
+        return left <= x <= right and top <= y <= bottom
+
+    if len(polygon) % 2 != 0:
+        return False
+
     n = len(polygon) // 2
     if n < 3:
         return False
