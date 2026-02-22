@@ -32,6 +32,43 @@ python -m lmms_eval --tasks list_with_num
 
 ---
 
+## Benchmark Gap Triage (LMM-299)
+
+Last verified: 2026-02-22.
+
+Evidence basis:
+- Local task registry check (`TaskManager`): `vpct`, `zerobench`, `arcagi`, `visfactor`, `simplevqa`, `mme_cc`, and `hipho` all returned 0 matches; `treebench` returned `spatialtreebench`.
+- Local task path scan under `lmms_eval/tasks/`: only TreeBench-name matches were under `lmms_eval/tasks/spatialtreebench/`.
+- External references are linked per row (official pages when available, otherwise widely used benchmark integrations).
+
+| Candidate from LMM-299 | Classification | Verifiable evidence | Recommended next step |
+|---|---|---|---|
+| VPCT | Confirmed missing task | Not present in local task registry/path scan. Public benchmark runner and dataset references exist: [camelCase12/vpct-runner](https://github.com/camelCase12/vpct-runner), [VPCT-1 dataset](https://huggingface.co/datasets/camelCase12/vpct-1). | Open implementation issue: `Add VPCT benchmark task`. |
+| ZeroBench | Confirmed missing task | Not present in local task registry/path scan. Benchmark appears in external eval toolkit with dataset URLs: [VLMEvalKit image_vqa.py (ZEROBench)](https://github.com/open-compass/VLMEvalKit/blob/main/vlmeval/dataset/image_vqa.py). | Open implementation issue: `Add ZeroBench benchmark task`. |
+| ArcAGI1-Image | Ambiguous | No local match. Official source uses `ARC-AGI-1` naming, not `ArcAGI1-Image`: [ARC Prize ARC-AGI-1](https://arcprize.org/arc-agi/1/). | Open clarification issue: confirm whether model-card label maps to ARC-AGI-1 rendered-as-image evaluation or a distinct benchmark. |
+| ArcAGI2-Image | Ambiguous | No local match. Official source uses `ARC-AGI-2` naming, not `ArcAGI2-Image`: [ARC Prize ARC-AGI-2](https://arcprize.org/arc-agi/2/). | Open clarification issue: confirm whether model-card label maps to ARC-AGI-2 rendered-as-image evaluation or a distinct benchmark. |
+| VisFactor | Confirmed missing task | Not present in local task registry/path scan. Benchmark appears in external eval toolkit with dataset URLs: [VLMEvalKit visfactor.py](https://github.com/open-compass/VLMEvalKit/blob/main/vlmeval/dataset/visfactor.py). | Open implementation issue: `Add VisFactor benchmark task`. |
+| SimpleVQA | Confirmed missing task | Not present in local task registry/path scan. Public dataset exists: [m-a-p/SimpleVQA](https://huggingface.co/datasets/m-a-p/SimpleVQA). Also present in external eval toolkit: [VLMEvalKit simplevqa.py](https://github.com/open-compass/VLMEvalKit/blob/main/vlmeval/dataset/simplevqa.py). | Open implementation issue: `Add SimpleVQA benchmark task`. |
+| MME-CC | Confirmed missing task | Not present in local task registry/path scan. Public benchmark paper exists: [MME-CC arXiv:2511.03146](https://arxiv.org/abs/2511.03146). | Open implementation issue: `Add MME-CC benchmark task family`. |
+| HiPhO | Confirmed missing task | Not present in local task registry/path scan. Benchmark appears in external eval toolkit: [VLMEvalKit hipho.py](https://github.com/open-compass/VLMEvalKit/blob/main/vlmeval/dataset/hipho.py). | Open implementation issue: `Add HiPhO benchmark task`. |
+| TreeBench-name variants | Already covered | Local registry includes `spatialtreebench`; task config exists at `lmms_eval/tasks/spatialtreebench/spatialtreebench.yaml`. Also listed in changelog as added (`SpatialTreeBench`, #994): [CHANGELOG](../CHANGELOG.md). | No new benchmark issue needed. Optionally open docs/alias issue to document `TreeBench` vs `spatialtreebench` naming. |
+
+### Recommended Follow-up Issue Queue
+
+1. `Add VPCT benchmark task` (confirmed missing)
+2. `Add ZeroBench benchmark task` (confirmed missing)
+3. `Add VisFactor benchmark task` (confirmed missing)
+4. `Add SimpleVQA benchmark task` (confirmed missing)
+5. `Add MME-CC benchmark task family` (confirmed missing)
+6. `Add HiPhO benchmark task` (confirmed missing)
+7. `Clarify ArcAGI1-Image / ArcAGI2-Image naming and scope` (ambiguous)
+
+Each issue should include:
+- source-of-truth dataset/repo link,
+- exact target task id(s),
+- metric definition and evaluation protocol,
+- smoke command (`--limit 8`) and expected artifacts.
+
 ## 1. Image Tasks
 
 ### Core VQA & Understanding Benchmarks
