@@ -1,0 +1,4 @@
+include: _default_template_yaml
+
+task: capability_camera_angle
+dataset_name: camera_angle

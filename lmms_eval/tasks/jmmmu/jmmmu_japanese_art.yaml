@@ -1,0 +1,4 @@
+dataset_name: Japanese_Art
+tag: "jmmmu_culture_specific"
+task: "jmmmu_japanese_art"
+include: _default_template_yaml

@@ -1,0 +1,201 @@
+[tool.black]
+line-length = 240
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lmms_eval"
+version = "0.6.1"
+authors = [
+    { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
+]
+description = "A framework for evaluating large multi-modality language models"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "accelerate>=0.29.1",
+    "black>=24.1.0",
+    "isort>=5.13.2",
+    "datasets>=2.19.0",
+    "evaluate>=0.4.0",
+    "httpx>=0.23.3",
+    "jsonlines",
+    "aiohttp",
+    "numexpr",
+    "numpy>=1.26.4",
+    "peft>=0.2.0",
+    "pybind11>=2.6.2",
+    "pytablewriter",
+    "sacrebleu>=1.5.0",
+    "scikit-learn>=0.24.1",
+    "torch>=2.1.0", # to enable sdpa mode for running 34B model on one 80GB GPU
+    "torchvision>=0.16.0",
+    "timm",
+    "einops",
+    "ftfy",
+    "openai",
+    "opencv-python-headless",
+    "av<16.0.0",
+    "hf_transfer",
+    "nltk",
+    "sentencepiece",
+    "yt-dlp",
+    "pycocoevalcap",
+    "tqdm-multiprocess",
+    "transformers>=4.39.2",
+    "transformers-stream-generator",
+    "zstandard",
+    "pillow",
+    "pyyaml",
+    "sympy",
+    "latex2sympy2",
+    "mpmath",
+    "Jinja2",
+    "openpyxl",
+    "loguru",
+    "hf_transfer",
+    "tenacity>=8.3.0",
+    "wandb>=0.16.0",
+    "tiktoken",
+    "pre-commit",
+    "pydantic",
+    "packaging",
+    "zss",
+    "protobuf",
+    "sentence_transformers",
+    "python-dotenv",
+    "qwen-vl-utils>=0.0.14",
+    "math-verify",
+]
+
+[project.optional-dependencies]
+core = [
+    "lmms_eval[server]",
+    "lmms_eval[audio]",
+    "lmms_eval[metrics]",
+]
+server = [
+    "fastapi",
+    "uvicorn",
+]
+audio = [
+    "more-itertools",
+    "editdistance",
+    "zhconv",
+    "librosa",
+    "soundfile"
+]
+metrics = [
+    "pywsd",
+    "spacy",
+    "anls",
+    "rouge",
+    "capture_metric",
+    "Levenshtein",
+]
+gemini = [
+    "google-generativeai",
+]
+reka = [
+    "httpx>=0.23.3",
+    "reka-api",
+]
+qwen = [
+    "decord",
+    "qwen_vl_utils",
+]
+mmsearch = [
+    "playwright",
+    "requests",
+    "matplotlib",
+    "duckduckgo_search",
+    "langchain",
+    "langchain-community",
+    "beautifulsoup4",
+    "FlagEmbedding",
+    "rouge",
+]
+prismmbench = [
+    "pdf2image>=1.17.0",
+    "pdfplumber>=0.11.9"
+]
+tui = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+]
+video = [
+    "decord; platform_system != 'Darwin'",
+    "eva-decord; platform_system == 'Darwin' and python_version < '3.12'",
+]
+all = [
+    "lmms_eval[core]",
+    "lmms_eval[gemini]",
+    "lmms_eval[reka]",
+    "lmms_eval[qwen]",
+    "lmms_eval[mmsearch]",
+    "lmms_eval[tui]",
+    "lmms_eval[video]",
+]
+
+[tool.setuptools.package-data]
+"lmms_eval.tui.web.dist" = ["**/*"]
+"lmms_eval.tui.web.dist.assets" = ["**/*"]
+
+[tool.setuptools.packages.find]
+include = ["lmms_eval*"]
+exclude = [
+    "assets*",
+    "benchmark*",
+    "docs",
+    "dist*",
+    "playground*",
+    "scripts*",
+    "tests*",
+    "checkpoints*",
+    "project_checkpoints*",
+    "debug_checkpoints*",
+    "mlx_configs*",
+    "wandb*",
+    "notebooks*",
+    "logs*",
+]
+
+[tool.wheel]
+exclude = [
+    "assets*",
+    "benchmark*",
+    "docs",
+    "dist*",
+    "playground*",
+    "scripts*",
+    "tests*",
+    "checkpoints*",
+    "project_checkpoints*",
+    "debug_checkpoints*",
+    "mlx_configs*",
+    "wandb*",
+    "notebooks*",
+    "logs*",
+]
+
+[project.scripts]
+lmms-eval = "lmms_eval.__main__:cli_evaluate"
+lmms-eval-ui = "lmms_eval.tui.cli:main"
+
+[project.urls]
+Homepage = "https://lmms-lab.github.io"
+Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
+
+[dependency-groups]
+dev = [
+    "textual>=7.2.0",
+    "textual-dev>=1.8.0",
+]

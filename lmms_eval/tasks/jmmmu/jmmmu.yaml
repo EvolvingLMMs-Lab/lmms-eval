@@ -1,0 +1,18 @@
+group: jmmmu
+group_alias: jmmmu_all
+task:
+  - group: culture_agnostic
+    task:
+      - jmmmu_culture_agnostic
+    aggregate_metric_list:
+      - metric: jmmmu_acc
+        weight_by_size: True
+  - group: culture_specific
+    task:
+      - jmmmu_culture_specific
+    aggregate_metric_list:
+      - metric: jmmmu_acc
+        weight_by_size: True
+aggregate_metric_list:
+  - metric: jmmmu_acc
+    weight_by_size: True

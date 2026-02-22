@@ -1,0 +1,4 @@
+dataset_name: "Forensic_Detection"
+tag: "blink_groups"
+task: "blink_forensic_detection"
+include: _default_template_yaml

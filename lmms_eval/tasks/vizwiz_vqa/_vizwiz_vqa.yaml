@@ -1,0 +1,4 @@
+group: vizwiz_vqa
+task:
+- vizwiz_vqa_val
+- vizwiz_vqa_test

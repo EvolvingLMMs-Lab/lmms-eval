@@ -1,0 +1,10 @@
+dataset_kwargs:
+  token: true
+dataset_path: lmms-lab/MixEval-X-audio2text
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: ""
+    pre_prompt: ""
+metadata:
+  gpt_eval_model_name: gpt-4o-mini
+  version: 0

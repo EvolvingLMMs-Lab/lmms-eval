@@ -1,0 +1,4 @@
+group: websrc
+task:
+- websrc_val
+- websrc_test

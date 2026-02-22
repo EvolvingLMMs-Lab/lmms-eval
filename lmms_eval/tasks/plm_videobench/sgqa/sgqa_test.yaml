@@ -1,0 +1,27 @@
+dataset_path: facebook/PLM-VideoBench
+dataset_name: sgqa
+task: sgqa_test
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function sgqa_utils.plm_sgqa_doc_to_visual
+doc_to_text: !function sgqa_utils.plm_sgqa_doc_to_text
+doc_to_target: "answer"
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+
+process_results: !function sgqa_utils.plm_sgqa_process_results
+
+metric_list:
+  - metric: plm_sgqa_scores
+    aggregation: !function sgqa_utils.plm_sgqa_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "The following question is asked by the camera wearer at the end of the video.  Provide a detailed answer even if unsure.  Try to answer in around 20-30 words.  Now answer the following question based on the video content: {question}{answer}"
+
+metadata:
+  - version: 0.0

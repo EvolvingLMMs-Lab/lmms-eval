@@ -1,0 +1,86 @@
+# OSI-Bench shared configuration
+# https://huggingface.co/datasets/HarmlessSR07/OSI-Bench
+
+dataset_path: HarmlessSR07/OSI-Bench
+
+output_type: generate_until
+doc_to_target: "answer"
+process_results: !function utils.osi_bench_process_results
+
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  top_k: 1
+  num_beams: 1
+  do_sample: false
+
+dataset_kwargs:
+  token: True
+  cache_dir: osi_bench
+  video: True
+
+metric_list:
+  # Overall
+  - metric: overall
+    aggregation: !function utils.aggregate_overall
+    higher_is_better: true
+  # NA categories (MRA)
+  - metric: absolute_distance_mra
+    aggregation: !function utils.aggregate_absolute_distance_mra
+    higher_is_better: true
+  - metric: relative_direction_angular_mra
+    aggregation: !function utils.aggregate_relative_direction_angular_mra
+    higher_is_better: true
+  - metric: trajectory_length_mra
+    aggregation: !function utils.aggregate_trajectory_length_mra
+    higher_is_better: true
+  - metric: absolute_speed_mra
+    aggregation: !function utils.aggregate_absolute_speed_mra
+    higher_is_better: true
+  - metric: absolute_displacement_mra
+    aggregation: !function utils.aggregate_absolute_displacement_mra
+    higher_is_better: true
+  - metric: object_3d_localization_mra
+    aggregation: !function utils.aggregate_object_3d_localization_mra
+    higher_is_better: true
+  - metric: depth_aware_counting_mra
+    aggregation: !function utils.aggregate_depth_aware_counting_mra
+    higher_is_better: true
+  # MCQ categories (accuracy)
+  - metric: relative_distance_acc
+    aggregation: !function utils.aggregate_relative_distance_acc
+    higher_is_better: true
+  - metric: relative_direction_categorical_acc
+    aggregation: !function utils.aggregate_relative_direction_categorical_acc
+    higher_is_better: true
+  - metric: relative_direction_categorical_cardinal_acc
+    aggregation: !function utils.aggregate_relative_direction_categorical_cardinal_acc
+    higher_is_better: true
+  - metric: relative_direction_categorical_ordinal_acc
+    aggregation: !function utils.aggregate_relative_direction_categorical_ordinal_acc
+    higher_is_better: true
+  - metric: relative_direction_avg  # aggregate of above 4 metrics
+    aggregation: !function utils.aggregate_relative_direction_avg
+    higher_is_better: true
+  - metric: trajectory_description_acc
+    aggregation: !function utils.aggregate_trajectory_description_acc
+    higher_is_better: true
+  
+
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: ""
+    num_frames: 32
+    visual_first: True  # use true if you want prompt format to be [time_context] -> [frames] -> [text_prompt], official prompt format use false
+  gemini_api:
+    post_prompt: ""
+    num_frames: 32
+    visual_first: false
+  gpt4v:
+    post_prompt: ""
+    num_frames: 32
+    visual_first: false
+
+metadata:
+  version: 0.1

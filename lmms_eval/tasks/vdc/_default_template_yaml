@@ -1,0 +1,9 @@
+dataset_path: wchai/lmms_VDC_test
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: vdc_test
+
+metadata:
+  version: 0.0
+  gpt_eval_model_name: gpt-4o-mini

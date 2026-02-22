@@ -1,0 +1,8 @@
+group: refcoco+
+task:
+- refcoco+_seg_val
+- refcoco+_seg_testA
+- refcoco+_seg_testB
+- refcoco+_bbox_val
+- refcoco+_bbox_testA
+- refcoco+_bbox_testB

@@ -1,0 +1,12 @@
+task: wildvision_0630
+dataset_name: release_bench_0630_with_modelresponse 
+test_split: test500
+output_type: generate_until
+include: _default_template_yaml
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+  aria:
+    pre_prompt: "Please provide a detailed answer on the following user instruction:\n"
+    post_prompt: ""

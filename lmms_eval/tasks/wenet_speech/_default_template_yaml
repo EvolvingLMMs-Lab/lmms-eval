@@ -1,0 +1,13 @@
+dataset_path: lmms-lab/WenetSpeech
+dataset_kwargs:
+  token: True
+doc_to_target: "text"
+doc_to_visual: !function utils.wenet_speech_doc_to_audio
+doc_to_text: !function utils.wenet_speech_doc_to_text
+generation_kwargs:
+  max_new_tokens: 256
+  do_sample: false
+  temperature: 0.0
+
+metadata:
+  version: 0.0

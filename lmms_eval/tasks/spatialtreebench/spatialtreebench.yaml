@@ -1,0 +1,23 @@
+dataset_path: LongfeiLi/SpatialTree-Bench
+dataset_kwargs:
+  cache_dir: SpatialTreeBench
+  video: True
+task: spatialtreebench
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.spatialtreebench_doc_to_visual
+doc_to_text: !function utils.spatialtreebench_doc_to_text
+doc_to_target: !function utils.spatialtreebench_doc_to_target
+generation_kwargs:
+  max_new_tokens: 16000
+  temperature: 0.5
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.spatialtreebench_process_results
+metric_list:
+  - metric: SpaTreeBench
+    aggregation: !function utils.spatialtreebench_aggregate_results
+    higher_is_better: true
+metadata:
+  - version: 0.0

@@ -1,0 +1,9 @@
+group: spatial457
+task:
+  - spatial457_l1_single
+  - spatial457_l2_objects
+  - spatial457_l3_2d_spatial
+  - spatial457_l4_occ
+  - spatial457_l4_pose
+  - spatial457_l5_6d_spatial
+  - spatial457_l5_collision

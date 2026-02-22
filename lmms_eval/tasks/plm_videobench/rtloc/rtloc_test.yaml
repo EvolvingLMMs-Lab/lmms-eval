@@ -1,0 +1,27 @@
+dataset_path: facebook/PLM-VideoBench
+dataset_name: rtloc
+task: rtloc_test
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function rtloc_utils.plm_rtloc_doc_to_visual
+doc_to_text: !function rtloc_utils.plm_rtloc_doc_to_text
+doc_to_target: !function rtloc_utils.plm_rtloc_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+
+process_results: !function rtloc_utils.plm_rtloc_process_results
+
+metric_list:
+  - metric: plm_rtloc_scores
+    aggregation: !function rtloc_utils.plm_rtloc_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "Given the region marked by the red rectangle in the video, please provide the start and end frame of when '{caption}' happens. Use the format [start, end] where start and end are frame numbers between {min_frame_idx} and {max_frame_idx} in this {num_frames} frame video."
+
+metadata:
+  - version: 0.0

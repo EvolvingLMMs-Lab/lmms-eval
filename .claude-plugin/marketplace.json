@@ -1,0 +1,22 @@
+{
+  "name": "lmms-eval",
+  "owner": {
+    "name": "EvolvingLMMs-Lab",
+    "email": "contact@lmms-lab.com"
+  },
+  "metadata": {
+    "description": "Agent skills for the lmms-eval multimodal evaluation framework",
+    "version": "0.6.0"
+  },
+  "plugins": [
+    {
+      "name": "lmms-eval-guide",
+      "description": "Codebase guide for integrating new models, tasks, and using the HTTP eval server in lmms-eval",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/lmms-eval-guide"
+      ]
+    }
+  ]
+}

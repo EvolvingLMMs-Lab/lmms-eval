@@ -1,0 +1,8 @@
+include: _default_template_yaml
+task: mvbench_moving_attribute
+dataset_name: moving_attribute
+test_split: train
+lmms_eval_specific_kwargs:
+  default:
+    sub_task: moving_attribute
+    post_prompt: "Only give the best option.\n"

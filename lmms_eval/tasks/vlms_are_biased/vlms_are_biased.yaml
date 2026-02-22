@@ -1,0 +1,40 @@
+dataset_path: anvo25/vlms-are-biased
+task: "vlms_are_biased"
+test_split: main
+output_type: generate_until
+
+doc_to_visual: !function utils.vlms_are_biased_doc_to_visual
+doc_to_text: !function utils.vlms_are_biased_doc_to_text
+doc_to_target: "ground_truth"
+
+process_results: !function utils.vlms_are_biased_process_results
+
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metric_list:
+  - metric: accuracy
+    aggregation: mean
+    higher_is_better: true
+  - metric: bias_ratio
+    aggregation: mean
+    higher_is_better: false
+  - metric: accuracy_by_topic
+    aggregation: !function utils.vlms_are_biased_aggregate_by_topic
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+    use_dataset_prompt: true  # Use the prompt field directly from dataset
+
+metadata:
+  version: 1.0
+  description: "Vision Language Models are Biased benchmark"
+  paper_url: "https://arxiv.org/abs/2505.23941"
+  project_page: "https://vlmsarebiased.github.io"

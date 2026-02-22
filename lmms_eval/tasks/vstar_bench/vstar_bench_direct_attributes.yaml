@@ -1,0 +1,8 @@
+include: _default_template_yaml
+task: "vstar_bench_direct_attributes"
+dataset_kwargs:
+  category: "direct_attributes"
+metric_list:
+  - metric: vstar_direct_attributes_acc
+    aggregation: !function utils.vstar_aggregate_results
+    higher_is_better: true

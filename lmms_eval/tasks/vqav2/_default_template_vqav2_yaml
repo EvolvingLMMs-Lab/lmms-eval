@@ -1,0 +1,15 @@
+dataset_path: lmms-lab/VQAv2
+dataset_kwargs:
+  token: True
+output_type: generate_until
+doc_to_visual: !function utils.vqav2_doc_to_visual
+doc_to_text: !function utils.vqav2_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a single word or phrase."

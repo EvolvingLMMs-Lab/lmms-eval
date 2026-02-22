@@ -1,0 +1,35 @@
+dataset_path: RekaAI/VibeEval
+dataset_kwargs:
+  token: True
+task: "vibe_eval"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.vibe_doc_to_visual
+doc_to_text: !function utils.vibe_doc_to_text
+doc_to_target: "reference"
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+# The return value of process_results will be used by metrics
+process_results: !function utils.vibe_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: hard
+    aggregation: !function utils.vibe_aggregation_results_hard
+    higher_is_better: true
+  - metric: normal
+    aggregation: !function utils.vibe_aggregation_results_normal
+    higher_is_better: true
+  - metric: all
+    aggregation: !function utils.vibe_aggregation_results_all
+    higher_is_better: true
+metadata:
+  evaluator: "reka-core-text"
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

@@ -1,0 +1,203 @@
+{
+  "name": "SpaTree",
+  "children": [
+    {
+      "name": "L1",
+      "weight": 0.25,
+      "children": [
+        {
+          "name": "Geometry",
+          "weight": 0.5,
+          "children": [
+            {
+              "name": "Distance",
+              "weight": 0.65
+            },
+            {
+              "name": "Shape",
+              "weight": 0.1
+            },
+            {
+              "name": "Size",
+              "weight": 0.25
+            }
+          ]
+        },
+        {
+          "name": "Localization",
+          "weight": 0.2,
+          "children": [
+            {
+              "name": "3D Detection",
+              "weight": 0.65
+            },
+            {
+              "name": "3D Grounding",
+              "weight": 0.35
+            }
+          ]
+        },
+        {
+          "name": "Motion",
+          "weight": 0.05,
+          "children": [
+            {
+              "name": "Allo",
+              "weight": 0.5
+            },
+            {
+              "name": "Ego",
+              "weight": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Orientation",
+          "weight": 0.1,
+          "children": [
+            {
+              "name": "Gravity",
+              "weight": 0.4
+            },
+            {
+              "name": "Object Orientation",
+              "weight": 0.6
+            }
+          ]
+        },
+        {
+          "name": "Relation",
+          "weight": 0.15,
+          "children": [
+            {
+              "name": "Correspondence",
+              "weight": 0.5
+            },
+            {
+              "name": "Relative Direction",
+              "weight": 0.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "L2",
+      "weight": 0.25,
+      "children": [
+        {
+          "name": "Memory",
+          "weight": 1,
+          "children": [
+            {
+              "name": "Cognitive Map",
+              "weight": 0.7
+            },
+            {
+              "name": "Memory Retrieval",
+              "weight": 0.3
+            }
+          ]
+        },
+        {
+          "name": "Underst.",
+          "weight": 1,
+          "children": [
+            {
+              "name": "Affordance",
+              "weight": 0.25
+            },
+            {
+              "name": "Motion Understanding",
+              "weight": 0.25
+            },
+            {
+              "name": "Perspective Taking",
+              "weight": 0.05
+            },
+            {
+              "name": "Relation Understanding",
+              "weight": 0.35
+            },
+            {
+              "name": "Spatial Caption",
+              "weight": 0.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "L3",
+      "weight": 0.25,
+      "children": [
+        {
+          "name": "Caus. Reas.",
+          "weight": 0.65,
+          "children": [
+            {
+              "name": "Dynamics",
+              "weight": 0.3
+            },
+            {
+              "name": "Geometry Puzzles",
+              "weight": 0.55
+            },
+            {
+              "name": "Relation",
+              "weight": 0.15
+            }
+          ]
+        },
+        {
+          "name": "Seq. Plan.",
+          "weight": 0.35,
+          "children": [
+            {
+              "name": "Operation",
+              "weight": 0.6
+            },
+            {
+              "name": "Route",
+              "weight": 0.4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "L4",
+      "weight": 0.25,
+      "children": [
+        {
+          "name": "Goal-Driven Execution",
+          "weight": 0.5,
+          "children": [
+            {
+              "name": "Agentic Navigation",
+              "weight": 0.5
+            },
+            {
+              "name": "Robotic Arm",
+              "weight": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Open-world Exploration",
+          "weight": 0.5,
+          "children": [
+            {
+              "name": "Knowledge Acquisition",
+              "weight": 0.7
+            },
+            {
+              "name": "Self-Goaling",
+              "weight": 0.3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+# AMBER-G (Generative Task) Evaluation Configuration
+# Based on: https://github.com/junyangwang0410/AMBER
+# Dataset includes: images, questions, and complete ground truth annotations
+
+dataset_path: Kyunnilee/amber_g  # use this dataset
+dataset_kwargs:
+  trust_remote_code: true
+task: "amber_g"
+output_type: generate_until
+
+doc_to_visual: !function utils.amber_g_doc_to_visual
+doc_to_text: !function utils.amber_g_doc_to_text
+doc_to_target: "truth" 
+test_split: train
+
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  until: [] # really important!!! the default would be ["\n\n"] and that will cause truncation
+
+process_results: !function utils.amber_g_process_result
+
+# AMBER-G Metrics:
+metric_list:
+  - metric: amber_chair
+    aggregation: !function utils.amber_g_aggregate_chair
+    higher_is_better: false
+  - metric: amber_cover
+    aggregation: !function utils.amber_g_aggregate_cover
+    higher_is_better: true
+  - metric: amber_hal
+    aggregation: !function utils.amber_g_aggregate_hal
+    higher_is_better: false
+  - metric: amber_cog
+    aggregation: !function utils.amber_g_aggregate_cog
+    higher_is_better: true
+
+metadata:
+  - version: 0.0

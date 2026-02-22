@@ -1,0 +1,50 @@
+dataset_path: yasserDahou/saco-gold
+dataset_kwargs:
+  token: True
+output_type: generate_until
+doc_to_visual: !function utils.saco_doc_to_visual
+doc_to_text: !function utils.saco_doc_to_text
+doc_to_target: !function utils.saco_doc_to_target
+process_results: !function utils.saco_process_results
+generation_kwargs:
+  max_new_tokens: 2048
+  temperature: 0.0
+  do_sample: false
+metric_list:
+  # ===== Classification signals (summed → used to compute MCC) =====
+  - metric: IL_TP
+    aggregation: !function utils.IL_TP
+    higher_is_better: true
+
+  - metric: IL_TN
+    aggregation: !function utils.IL_TN
+    higher_is_better: true
+
+  - metric: IL_FP
+    aggregation: !function utils.IL_FP
+    higher_is_better: false
+
+  - metric: IL_FN
+    aggregation: !function utils.IL_FN
+    higher_is_better: false
+
+  # ===== Count accuracy =====
+  - metric: count_accuracy
+    aggregation: !function utils.count_accuracy
+    higher_is_better: true
+
+  # ===== Macro F1 (avg of per-sample F1 across 10 IoU thresholds) =====
+  - metric: sample_f1
+    aggregation: !function utils.sample_f1
+    higher_is_better: true
+
+  # ===== Localization counts (TP/FP/FN at 10 thresholds, packed) =====
+  - metric: loc_counts
+    aggregation: !function utils.loc_counts
+    higher_is_better: true
+
+metadata:
+  version: 4.0
+  description: >
+    SaCO-gold segmentation benchmark with SAM3-style cgF1 metrics.
+    Run compute_metrics.py on the results JSON to derive MCC, pmF1, cgF1.

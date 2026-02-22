@@ -1,0 +1,59 @@
+dataset_path: pangyyyyy/OmniSpatial
+
+generation_kwargs:
+  max_new_tokens: 8192
+  temperature: 0.0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+output_type: generate_until
+doc_to_visual: !function utils.omnispatial_doc_to_visual
+doc_to_text: !function utils.omnispatial_doc_to_text
+doc_to_target: "gt"
+process_results: !function utils.omnispatial_process_results
+
+metric_list:
+  - metric: omnispatial
+    aggregation: !function utils.omnispatial_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_motion_analysis
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_manipulation
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_traffic_analysis
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_localization
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_geospatial_strategy
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_geometric_reasoning
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_pattern_recognition
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_allocentric
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_hypothetical
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+  - metric: omnispatial_egocentric
+    aggregation: !function utils.omnispatial_group_aggregate_results
+    higher_is_better: true
+
+
+dataset_kwargs:
+  token: True
+  cache_dir: omnispatial
+  force_download: true
+
+metadata:
+  prompt_type: manual_cot # ["none", "zeroshot_cot", "manual_cot"]
+  eval_type: re # ["direct", "re", "json", "llm"]

@@ -1,0 +1,4 @@
+group: iconqa
+task:
+- iconqa_val
+- iconqa_test

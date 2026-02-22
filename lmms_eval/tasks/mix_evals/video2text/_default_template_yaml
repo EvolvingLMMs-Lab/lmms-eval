@@ -1,0 +1,15 @@
+dataset_kwargs:
+  cache_dir: mix_evals_video2text
+  token: true
+  video: true
+dataset_path: MixEval/MixEval-X
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: ""
+    pre_prompt: ""
+  gpt4v:
+    post_prompt: ""
+    pre_prompt: These are frames from a video. Please answer the following questions about the video.
+metadata:
+  gpt_eval_model_name: gpt-4o-mini
+  version: 0

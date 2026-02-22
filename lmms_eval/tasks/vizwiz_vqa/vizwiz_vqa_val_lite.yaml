@@ -1,0 +1,28 @@
+task: vizwiz_vqa_val_lite
+test_split: lite 
+dataset_path: lmms-lab/LMMs-Eval-Lite
+dataset_name: vizwiz_vqa_val
+output_type: generate_until
+doc_to_visual: !function utils.vizwiz_vqa_doc_to_visual
+doc_to_text: !function utils.vizwiz_vqa_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nWhen the provided information is insufficient, respond with 'Unanswerable'.\nAnswer the question using a single word or phrase."
+process_results: !function utils.vizwiz_vqa_process_results
+
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  # - metric: submission
+  #   aggregation: !function utils.vizwiz_vqa_aggregate_submissions
+  #   higher_is_better: true

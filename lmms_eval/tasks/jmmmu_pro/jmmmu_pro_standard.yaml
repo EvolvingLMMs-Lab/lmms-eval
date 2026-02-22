@@ -1,0 +1,22 @@
+task: "jmmmu_pro_standard"
+dataset_path: JMMMU/JMMMU-Pro
+dataset_name: standard
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.jmmmu_pro_doc_to_visual
+doc_to_text: !function utils.jmmmu_pro_doc_to_text
+doc_to_target: "{{answer}}"
+# The return value of process_results will be used by metrics
+process_results: !function utils.jmmmu_pro_process_results
+
+metric_list:
+  - metric: jmmmu_pro_acc
+    aggregation: !function utils.jmmmu_pro_aggregate_results
+    higher_is_better: true
+
+include: _default_template_yaml
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "与えられた選択肢の中から最も適切な回答のアルファベットを直接記入してください。"

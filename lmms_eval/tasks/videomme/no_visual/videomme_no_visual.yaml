@@ -1,0 +1,18 @@
+# VideoMME No Visual Setting
+# Evaluate model's ability to answer questions without video content
+# This tests if the model relies on prior knowledge rather than visual understanding
+
+task: videomme_no_visual
+include: ../_default_template_yaml
+doc_to_text: !function utils.videomme_doc_to_text
+doc_to_target: "answer"
+doc_to_visual: !function utils.videomme_doc_to_visual_empty
+process_results: !function utils.videomme_process_results
+metric_list:
+  - metric: videomme_perception_score
+    aggregation: !function utils.videomme_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."

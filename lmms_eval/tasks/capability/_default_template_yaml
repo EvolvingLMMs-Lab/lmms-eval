@@ -1,0 +1,52 @@
+dataset_path: lntzm/CAPability
+dataset_kwargs:
+  token: True
+  cache_dir: capability
+  video: True
+
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+test_split: test
+output_type: generate_until
+
+lmms_eval_specific_kwargs:
+  default:
+    # image_prompt: "Please describe the image in detail."
+    # video_prompt: "Please describe the video in detail."
+    image_prompt: "Please describe the image in detail. Your description should follow these rules:\na) You should describe each object in the image in detail, including its name, number, color, and spatial relationship between objects.\nb) You should describe the scene of the image.\nc) You should describe the camera angle when shooting this image, such as level angle, high angle, low angle, or dutch angle.\nd) You should describe the style of the image, such as realistic, animated, special-effect, old-fashioned and so on.\ne) If there are any texts in the image, you should describe the text content.\nf) If you know the character in the image, you should tell his or her name.\nDirectly output your detailed description in a elaborate paragraph, instead of itemizing them in list form. Your description: "
+    video_prompt: "Please describe the video in detail. Your description should follow these rules:\na) You should describe each events in the video in order, especially focusing on the behavior and action of characters, including people, animals.\nb) You should describe each object in the video in detail, including its name, number, color, and spatial relationship between objects.\nc) You should describe the scene of the video.\nd) You should describe the camera movement when shooting this video, especially the direction, such as pan left, track right, tilt up, boom down, zoom in, dolly out, and so on.\ne) You should describe the style of the video, such as realistic, animated, special-effect, old-fashioned and so on.\nf) If there are any texts in the video, you should describe the text content.\ng) If you know the character in the video, you should tell his or her name.\nDirectly output your detailed description in a elaborate paragraph, instead of itemizing them in list form. Your description: "
+
+doc_to_visual: !function utils.capability_doc_to_visual
+doc_to_text: !function utils.capability_doc_to_text
+doc_to_target: "annotation"
+# The return value of process_results will be used by metrics
+process_results: !function utils.capability_process_results
+
+metric_list:
+  - metric: capability_inference_result
+    aggregation: !function utils.capability_aggregate_inference_result
+    higher_is_better: null
+  - metric: capability_precision
+    aggregation: !function utils.capability_aggregate_precision
+    higher_is_better: true
+  - metric: capability_recall
+    aggregation: !function utils.capability_aggregate_recall
+    higher_is_better: true
+  - metric: capability_f1_score
+    aggregation: !function utils.capability_aggregate_f1score
+    higher_is_better: true
+
+metadata:
+  version: 0.1
+  eval_save_path: null
+  eval_model_name: "gpt-4.1-2025-04-14"
+  eval_num_process: 20
+  eval_max_allow_missing: 5
+  eval_max_retry_times: 10
+  eval_auto_resume: true
+  eval_strict_match: false

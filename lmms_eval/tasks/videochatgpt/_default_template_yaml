@@ -1,0 +1,13 @@
+dataset_path: lmms-lab/VideoChatGPT
+dataset_kwargs:
+  token: True
+  video: True
+  cache_dir: videochatgpt
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  version: 0.0
+  gpt_eval_model_name: gpt-3.5-turbo-0613

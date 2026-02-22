@@ -1,0 +1,36 @@
+dataset_path: lmms-lab/RefCOCOplus
+output_type: generate_until
+doc_to_visual: !function utils.refcoco_bbox_doc_to_visual
+doc_to_text: !function utils.refcoco_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+process_results: !function utils.refcoco_process_result
+metric_list:
+  - metric: refcoco_Bleu_4 
+    aggregation : !function utils.refcoco_bleu4
+    higher_is_better : true
+  - metric: refcoco_Bleu_3
+    aggregation : !function utils.refcoco_bleu3
+    higher_is_better : true
+  - metric: refcoco_Bleu_2
+    aggregation : !function utils.refcoco_bleu2
+    higher_is_better : true
+  - metric: refcoco_Bleu_1
+    aggregation : !function utils.refcoco_bleu1
+    higher_is_better : true
+  - metric: refcoco_METEOR
+    aggregation : !function utils.refcoco_meteor
+    higher_is_better : true
+  - metric: refcoco_ROUGE_L
+    aggregation : !function utils.refcoco_rougel
+    higher_is_better : true
+  - metric: refcoco_CIDEr
+    aggregation : !function utils.refcoco_cider
+    higher_is_better : true
+  #- metric: refcoco_SPICE
+  #  aggregation : !function utils.refcoco_spice
+  #  higher_is_better : true
+metadata:
+  version: '0.0'

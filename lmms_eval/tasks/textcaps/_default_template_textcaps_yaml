@@ -1,0 +1,3 @@
+lmms_eval_specific_kwargs:
+  default:
+    prompt: Provide a one-sentence caption for the provided image.

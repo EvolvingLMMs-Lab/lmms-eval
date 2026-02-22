@@ -1,0 +1,19 @@
+dataset_path: daluggas/PRISMM-Bench
+dataset_kwargs:
+  token: True
+test_split: test
+output_type: generate_until
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: False
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  - version: 0.0
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nOutput only a single letter corresponding to the correct answer. Do not output any explanation or text of the question again."

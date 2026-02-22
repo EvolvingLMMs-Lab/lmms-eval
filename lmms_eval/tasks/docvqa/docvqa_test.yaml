@@ -1,0 +1,8 @@
+task: "docvqa_test"
+test_split: test
+process_results: !function utils.docvqa_test_process_results
+metric_list:
+  - metric: submission
+    aggregation: !function utils.docvqa_test_aggregate_results
+    higher_is_better: true
+include: _default_template_docvqa_yaml

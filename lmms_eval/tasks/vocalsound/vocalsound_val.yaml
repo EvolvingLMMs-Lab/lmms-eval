@@ -1,0 +1,13 @@
+task: "vocalsound_val"
+test_split: val
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.vocalsound_aggregate_results
+    higher_is_better: true
+  # - metric: submission
+  #   aggregation: !function utils.vocalsound_aggregate_results_for_submission
+  #   higher_is_better: true
+
+process_results: !function utils.vocalsound_process_results
+
+include: _default_template_yaml

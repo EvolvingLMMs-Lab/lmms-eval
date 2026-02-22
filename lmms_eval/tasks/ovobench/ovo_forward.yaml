@@ -1,0 +1,28 @@
+dataset_path: lmms_eval/tasks/ovobench/ovobench_data
+dataset_name: forward
+task: "ovo_forward"
+test_split: test
+output_type: generate_until_multi_round
+doc_to_text: !function utils.ovo_forward_doc_to_text
+doc_to_visual: !function utils.ovo_doc_to_visual
+doc_to_target: "answer"
+process_results: !function utils.ovo_forward_process_results
+
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  do_sample: false
+
+metric_list:
+  - metric: forward_acc
+    aggregation: !function utils.ovo_forward_acc
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    # specify path to the directory with unzipped chuncks from https://huggingface.co/datasets/JoeLeelyf/OVO-Bench
+    # to prepare data properly follow oficial instruction: https://github.com/JoeLeelyf/OVO-Bench/tree/main#data-preparation
+    data_dir: 
+
+metadata:
+  version: 0.0

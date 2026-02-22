@@ -1,0 +1,6 @@
+dataset_path: princeton-nlp/CharXiv
+output_type: generate_until
+doc_to_visual: !function utils.charxiv_doc_to_visual
+doc_to_messages: !function utils.charxiv_reasoning_doc_to_messages_cot
+generation_kwargs:
+  max_new_tokens: 32768

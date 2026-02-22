@@ -1,0 +1,4 @@
+group: covost2
+task:
+  - covost2_en_zh
+  - covost2_zh_en

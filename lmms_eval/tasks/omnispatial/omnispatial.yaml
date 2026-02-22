@@ -1,0 +1,5 @@
+# Official STARE paper use this configuration
+dataset_name: null
+test_split: test
+task: "omnispatial_test"
+include: _default_template_yaml

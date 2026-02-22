@@ -1,0 +1,36 @@
+dataset_path: lmms-lab/ScienceQA
+dataset_name: ScienceQA-FULL
+task: "scienceqa"
+dataset_kwargs:
+  token: True
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.sqa_doc_to_visual
+doc_to_text: !function utils.sqa_doc_to_text
+doc_to_target: !function utils.sqa_doc_to_target
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: False
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+process_results: !function utils.sqa_process_results
+metadata:
+  - version: 0.0
+
+lmms_eval_specific_kwargs:
+  default:
+    format: default
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  qwen_vl:
+    format: qwen_vl
+  
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
+  

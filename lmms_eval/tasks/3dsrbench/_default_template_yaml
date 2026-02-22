@@ -1,0 +1,21 @@
+dataset_path: oscarqjh/3DSRBench_lmmseval
+
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0.0
+  top_p: 1.0
+  do_sample: false
+
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.process_results
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Please select the correct answer from the options above. \n"
+
+metadata:
+  - version: 0.0

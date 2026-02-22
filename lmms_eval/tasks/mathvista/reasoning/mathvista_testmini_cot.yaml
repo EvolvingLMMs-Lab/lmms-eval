@@ -1,0 +1,29 @@
+dataset_path: AI4Math/MathVista
+dataset_kwargs:
+  token: True
+task: "mathvista_testmini_cot_reasoning"
+test_split: testmini
+output_type: generate_until
+doc_to_visual: !function utils.mathvista_doc_to_visual
+doc_to_text: !function utils.mathvista_doc_to_text
+doc_to_messages: !function utils.mathvista_doc_to_messages
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 49152
+process_results: !function utils.mathvista_process_results
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: format_score
+    aggregation: mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    shot_type: "step-by-step" # can be "reason-first", "solution", "step-by-step"
+    shot: 0
+    use_caption: False
+    use_ocr: False
+  phi3v:
+    shot_type: "solution"

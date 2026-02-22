@@ -1,0 +1,32 @@
+dataset_path: longvideotool/VideoSIAH-Eval
+dataset_kwargs:
+  token: True
+  cache_dir: longvt_benchmark
+  video: True
+  # From_YouTube: True
+test_split: test
+task: longvt
+output_type: generate_until
+doc_to_visual: !function utils.longvt_doc_to_visual
+doc_to_text: !function utils.longvt_doc_to_text
+doc_to_messages: !function utils.longvt_tool_doc_to_messages
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 4096
+# The return value of process_results will be used by metrics
+process_results: !function utils.longvt_process_results
+# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: format_score
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0
+

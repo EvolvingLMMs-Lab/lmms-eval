@@ -1,0 +1,29 @@
+dataset_path: microsoft/TemporalBench
+
+
+dataset_kwargs:
+  token: True
+  cache_dir: temporalbench
+  video: True
+
+task: temporalbench_short_qa
+test_split: test_short_qa
+output_type: generate_until
+doc_to_visual: !function utils.temporalbench_doc_to_visual
+doc_to_text: !function utils.temporalbench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+#   temperature: 0
+#   top_p: 1.0
+#   num_beams: 1
+#   do_sample: false
+
+process_results: !function utils.temporalbench_process_results
+
+metric_list:
+  - metric: temporalbench_score
+    aggregation: !function utils.temporalbench_aggregate_results
+    higher_is_better: true
+metadata:
+  - version: 1.0

@@ -1,0 +1,4 @@
+group: refcocog_bbox_rec
+task: refcocog_bbox_rec_val
+include: _default_template_bbox_rec_yaml
+test_split: val

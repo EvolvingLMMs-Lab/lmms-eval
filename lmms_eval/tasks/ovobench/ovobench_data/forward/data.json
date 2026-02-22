@@ -1,0 +1,10092 @@
+[
+  {
+    "id": 1468,
+    "task": "CRR",
+    "video": "MovieNet/tt0048028.mp4",
+    "question": "The woman in a black coat walks towards the direction of the black car, what action does she take to the car?",
+    "answer": "She walks past the car.",
+    "ask_time": 297,
+    "clue_time": 308,
+    "test_info": [
+      {
+        "realtime": 297,
+        "type": 0
+      },
+      {
+        "realtime": 302,
+        "type": 0
+      },
+      {
+        "realtime": 310,
+        "type": 1
+      },
+      {
+        "realtime": 318,
+        "type": 1
+      },
+      {
+        "realtime": 338,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1469,
+    "task": "CRR",
+    "video": "MovieNet/tt0048028.mp4",
+    "question": "The woman in the black coat walks towards the direction of the man in yellow, what action does she do with the man?",
+    "answer": "She walks past him.",
+    "ask_time": 310,
+    "clue_time": 317,
+    "test_info": [
+      {
+        "realtime": 310,
+        "type": 0
+      },
+      {
+        "realtime": 313,
+        "type": 0
+      },
+      {
+        "realtime": 319,
+        "type": 1
+      },
+      {
+        "realtime": 327,
+        "type": 1
+      },
+      {
+        "realtime": 347,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1470,
+    "task": "CRR",
+    "video": "MovieNet/tt0048028.mp4",
+    "question": "The man looks to the direction of the woman, what does he do next?",
+    "answer": "He tailed after the woman.",
+    "ask_time": 323,
+    "clue_time": 398,
+    "test_info": [
+      {
+        "realtime": 323,
+        "type": 0
+      },
+      {
+        "realtime": 360,
+        "type": 0
+      },
+      {
+        "realtime": 400,
+        "type": 1
+      },
+      {
+        "realtime": 408,
+        "type": 1
+      },
+      {
+        "realtime": 428,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1471,
+    "task": "CRR",
+    "video": "MovieNet/tt0048028.mp4",
+    "question": "The man is writing on a piece of paper, what does he do with the paper?",
+    "answer": "He gives it to the lady.",
+    "ask_time": 361,
+    "clue_time": 367,
+    "test_info": [
+      {
+        "realtime": 361,
+        "type": 0
+      },
+      {
+        "realtime": 364,
+        "type": 0
+      },
+      {
+        "realtime": 369,
+        "type": 1
+      },
+      {
+        "realtime": 377,
+        "type": 1
+      },
+      {
+        "realtime": 397,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1472,
+    "task": "CRR",
+    "video": "MovieNet/tt0048028.mp4",
+    "question": "The man is waiting near a tree, what does he want do next?",
+    "answer": "He follows the couple and harasses them.",
+    "ask_time": 696,
+    "clue_time": 754,
+    "test_info": [
+      {
+        "realtime": 696,
+        "type": 0
+      },
+      {
+        "realtime": 725,
+        "type": 0
+      },
+      {
+        "realtime": 756,
+        "type": 1
+      },
+      {
+        "realtime": 764,
+        "type": 1
+      },
+      {
+        "realtime": 784,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1473,
+    "task": "CRR",
+    "video": "MovieNet/tt0048028.mp4",
+    "question": "The woman in red is walking towards the man, what does she do next?",
+    "answer": "She walks near the man and put the things she holds on the table.",
+    "ask_time": 1565,
+    "clue_time": 1570,
+    "test_info": [
+      {
+        "realtime": 1565,
+        "type": 0
+      },
+      {
+        "realtime": 1567,
+        "type": 0
+      },
+      {
+        "realtime": 1572,
+        "type": 1
+      },
+      {
+        "realtime": 1580,
+        "type": 1
+      },
+      {
+        "realtime": 1600,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1474,
+    "task": "CRR",
+    "video": "MovieNet/tt0048028.mp4",
+    "question": "The two people, one man and one woman, are talking. Where they go and stay for a while next?",
+    "answer": "They went to a dark corridor.",
+    "ask_time": 1670,
+    "clue_time": 1755,
+    "test_info": [
+      {
+        "realtime": 1670,
+        "type": 0
+      },
+      {
+        "realtime": 1712,
+        "type": 0
+      },
+      {
+        "realtime": 1757,
+        "type": 1
+      },
+      {
+        "realtime": 1765,
+        "type": 1
+      },
+      {
+        "realtime": 1785,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1475,
+    "task": "CRR",
+    "video": "MovieNet/tt0049470.mp4",
+    "question": "The three people are sitting at the back of the bus. What do they see outside the window next?",
+    "answer": "Camels walking by.",
+    "ask_time": 200,
+    "clue_time": 220,
+    "test_info": [
+      {
+        "realtime": 200,
+        "type": 0
+      },
+      {
+        "realtime": 210,
+        "type": 0
+      },
+      {
+        "realtime": 222,
+        "type": 1
+      },
+      {
+        "realtime": 230,
+        "type": 1
+      },
+      {
+        "realtime": 250,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1476,
+    "task": "CRR",
+    "video": "MovieNet/tt0049470.mp4",
+    "question": "The man in a white turban stands up. What does he do next?",
+    "answer": "He walks to the back of the bus and argued with the kid's parents.",
+    "ask_time": 277,
+    "clue_time": 281,
+    "test_info": [
+      {
+        "realtime": 277,
+        "type": 0
+      },
+      {
+        "realtime": 279,
+        "type": 0
+      },
+      {
+        "realtime": 283,
+        "type": 1
+      },
+      {
+        "realtime": 291,
+        "type": 1
+      },
+      {
+        "realtime": 311,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1477,
+    "task": "CRR",
+    "video": "MovieNet/tt0049470.mp4",
+    "question": "The family get out of the bus. What is their next vehicle?",
+    "answer": "A carriage.",
+    "ask_time": 516,
+    "clue_time": 570,
+    "test_info": [
+      {
+        "realtime": 516,
+        "type": 0
+      },
+      {
+        "realtime": 543,
+        "type": 0
+      },
+      {
+        "realtime": 572,
+        "type": 1
+      },
+      {
+        "realtime": 580,
+        "type": 1
+      },
+      {
+        "realtime": 600,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1478,
+    "task": "CRR",
+    "video": "MovieNet/tt0049470.mp4",
+    "question": "The woman is walking away. What does she do next?",
+    "answer": "She opens the door.",
+    "ask_time": 937,
+    "clue_time": 944,
+    "test_info": [
+      {
+        "realtime": 937,
+        "type": 0
+      },
+      {
+        "realtime": 940,
+        "type": 0
+      },
+      {
+        "realtime": 946,
+        "type": 1
+      },
+      {
+        "realtime": 954,
+        "type": 1
+      },
+      {
+        "realtime": 974,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1479,
+    "task": "CRR",
+    "video": "MovieNet/tt0050419.mp4",
+    "question": "Women came out of different colors of doors and went into the center door. What is they purpose of doing so?",
+    "answer": "To listen to the old woman talking.",
+    "ask_time": 145,
+    "clue_time": 205,
+    "test_info": [
+      {
+        "realtime": 145,
+        "type": 0
+      },
+      {
+        "realtime": 175,
+        "type": 0
+      },
+      {
+        "realtime": 207,
+        "type": 1
+      },
+      {
+        "realtime": 215,
+        "type": 1
+      },
+      {
+        "realtime": 235,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1480,
+    "task": "CRR",
+    "video": "MovieNet/tt0050419.mp4",
+    "question": "The man picked up several books from the ground. What does the man do with the books he picked up?",
+    "answer": "He handed these book to the woman.",
+    "ask_time": 870,
+    "clue_time": 880,
+    "test_info": [
+      {
+        "realtime": 870,
+        "type": 0
+      },
+      {
+        "realtime": 875,
+        "type": 0
+      },
+      {
+        "realtime": 882,
+        "type": 1
+      },
+      {
+        "realtime": 890,
+        "type": 1
+      },
+      {
+        "realtime": 910,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1481,
+    "task": "CRR",
+    "video": "MovieNet/tt0052357.mp4",
+    "question": "The man whose suit is has deeper color turn his head and look at some, what is he looking at?",
+    "answer": "A painting on the wall.",
+    "ask_time": 740,
+    "clue_time": 746,
+    "test_info": [
+      {
+        "realtime": 740,
+        "type": 0
+      },
+      {
+        "realtime": 743,
+        "type": 0
+      },
+      {
+        "realtime": 748,
+        "type": 1
+      },
+      {
+        "realtime": 756,
+        "type": 1
+      },
+      {
+        "realtime": 776,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1482,
+    "task": "CRR",
+    "video": "MovieNet/tt0052357.mp4",
+    "question": "The man is walking in the garden. Who does he come across?",
+    "answer": "A woman with gray suit and golden hair.",
+    "ask_time": 1465,
+    "clue_time": 1469,
+    "test_info": [
+      {
+        "realtime": 1465,
+        "type": 0
+      },
+      {
+        "realtime": 1467,
+        "type": 0
+      },
+      {
+        "realtime": 1471,
+        "type": 1
+      },
+      {
+        "realtime": 1479,
+        "type": 1
+      },
+      {
+        "realtime": 1499,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1483,
+    "task": "CRR",
+    "video": "MovieNet/tt0061811.mp4",
+    "question": "A policeman is driving the car away, what is his destination?",
+    "answer": "A residential house with a woman inside.",
+    "ask_time": 242,
+    "clue_time": 315,
+    "test_info": [
+      {
+        "realtime": 242,
+        "type": 0
+      },
+      {
+        "realtime": 278,
+        "type": 0
+      },
+      {
+        "realtime": 317,
+        "type": 1
+      },
+      {
+        "realtime": 325,
+        "type": 1
+      },
+      {
+        "realtime": 345,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1484,
+    "task": "CRR",
+    "video": "MovieNet/tt0061811.mp4",
+    "question": "The policeman stops his car and get off his car, what does he see?",
+    "answer": "A man lying on the ground.",
+    "ask_time": 408,
+    "clue_time": 418,
+    "test_info": [
+      {
+        "realtime": 408,
+        "type": 0
+      },
+      {
+        "realtime": 413,
+        "type": 0
+      },
+      {
+        "realtime": 420,
+        "type": 1
+      },
+      {
+        "realtime": 428,
+        "type": 1
+      },
+      {
+        "realtime": 448,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1485,
+    "task": "CRR",
+    "video": "MovieNet/tt0061811.mp4",
+    "question": "The policeman is stepping into a wooden house, what does the police see?",
+    "answer": "A black man sitting on a bench.",
+    "ask_time": 619,
+    "clue_time": 626,
+    "test_info": [
+      {
+        "realtime": 619,
+        "type": 0
+      },
+      {
+        "realtime": 622,
+        "type": 0
+      },
+      {
+        "realtime": 628,
+        "type": 1
+      },
+      {
+        "realtime": 636,
+        "type": 1
+      },
+      {
+        "realtime": 656,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1486,
+    "task": "CRR",
+    "video": "MovieNet/tt0063442.mp4",
+    "question": "The man is looking into the window, what does he see?",
+    "answer": "A woman lying in the bed.",
+    "ask_time": 164,
+    "clue_time": 170,
+    "test_info": [
+      {
+        "realtime": 164,
+        "type": 0
+      },
+      {
+        "realtime": 167,
+        "type": 0
+      },
+      {
+        "realtime": 172,
+        "type": 1
+      },
+      {
+        "realtime": 180,
+        "type": 1
+      },
+      {
+        "realtime": 200,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1487,
+    "task": "CRR",
+    "video": "MovieNet/tt0063442.mp4",
+    "question": "The astronauts wake up after a long space journey, what abnormal thing do they find?",
+    "answer": "One of the astronauts turns into a strange creature.",
+    "ask_time": 426,
+    "clue_time": 453,
+    "test_info": [
+      {
+        "realtime": 426,
+        "type": 0
+      },
+      {
+        "realtime": 439,
+        "type": 0
+      },
+      {
+        "realtime": 455,
+        "type": 1
+      },
+      {
+        "realtime": 463,
+        "type": 1
+      },
+      {
+        "realtime": 483,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1488,
+    "task": "CRR",
+    "video": "MovieNet/tt0063442.mp4",
+    "question": "The man throw the yellow life float into the sea, what action does he take next with it?",
+    "answer": "He jumps to the sea and climb to the yellow life float.",
+    "ask_time": 575,
+    "clue_time": 595,
+    "test_info": [
+      {
+        "realtime": 575,
+        "type": 0
+      },
+      {
+        "realtime": 585,
+        "type": 0
+      },
+      {
+        "realtime": 597,
+        "type": 1
+      },
+      {
+        "realtime": 605,
+        "type": 1
+      },
+      {
+        "realtime": 625,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1489,
+    "task": "CRR",
+    "video": "MovieNet/tt0063442.mp4",
+    "question": "The three people are paddling the life raft, what is their destination?",
+    "answer": "The shore.",
+    "ask_time": 703,
+    "clue_time": 759,
+    "test_info": [
+      {
+        "realtime": 703,
+        "type": 0
+      },
+      {
+        "realtime": 731,
+        "type": 0
+      },
+      {
+        "realtime": 761,
+        "type": 1
+      },
+      {
+        "realtime": 769,
+        "type": 1
+      },
+      {
+        "realtime": 789,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1490,
+    "task": "CRR",
+    "video": "MovieNet/tt0070291.mp4",
+    "question": "The woman with the gray dress is stepping into the room, what does she do in the room?",
+    "answer": "She talks to the man.",
+    "ask_time": 203,
+    "clue_time": 207,
+    "test_info": [
+      {
+        "realtime": 203,
+        "type": 0
+      },
+      {
+        "realtime": 205,
+        "type": 0
+      },
+      {
+        "realtime": 209,
+        "type": 1
+      },
+      {
+        "realtime": 217,
+        "type": 1
+      },
+      {
+        "realtime": 237,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1491,
+    "task": "CRR",
+    "video": "MovieNet/tt0070291.mp4",
+    "question": "The couple are sitting on their trunks, who do they meet then?",
+    "answer": "A group of friends.",
+    "ask_time": 487,
+    "clue_time": 508,
+    "test_info": [
+      {
+        "realtime": 487,
+        "type": 0
+      },
+      {
+        "realtime": 497,
+        "type": 0
+      },
+      {
+        "realtime": 510,
+        "type": 1
+      },
+      {
+        "realtime": 518,
+        "type": 1
+      },
+      {
+        "realtime": 538,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1492,
+    "task": "CRR",
+    "video": "MovieNet/tt0070511.mp4",
+    "question": "Three men wearing black coat are walking fast, what is their destination?",
+    "answer": "In front of a iron gate of a stone house.",
+    "ask_time": 28,
+    "clue_time": 40,
+    "test_info": [
+      {
+        "realtime": 28,
+        "type": 0
+      },
+      {
+        "realtime": 34,
+        "type": 0
+      },
+      {
+        "realtime": 42,
+        "type": 1
+      },
+      {
+        "realtime": 50,
+        "type": 1
+      },
+      {
+        "realtime": 70,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1493,
+    "task": "CRR",
+    "video": "MovieNet/tt0070511.mp4",
+    "question": "Soldiers holding guns are driving a group of people across the narrow alley, what is their destination?",
+    "answer": "A room with metal walls.",
+    "ask_time": 128,
+    "clue_time": 242,
+    "test_info": [
+      {
+        "realtime": 128,
+        "type": 0
+      },
+      {
+        "realtime": 185,
+        "type": 0
+      },
+      {
+        "realtime": 244,
+        "type": 1
+      },
+      {
+        "realtime": 252,
+        "type": 1
+      },
+      {
+        "realtime": 272,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1494,
+    "task": "CRR",
+    "video": "MovieNet/tt0070511.mp4",
+    "question": "The guards with guns are watching after prisoners on the platform, what are these prisoners doing?",
+    "answer": "They are queuing for meal.",
+    "ask_time": 508,
+    "clue_time": 511,
+    "test_info": [
+      {
+        "realtime": 508,
+        "type": 0
+      },
+      {
+        "realtime": 509,
+        "type": 0
+      },
+      {
+        "realtime": 513,
+        "type": 1
+      },
+      {
+        "realtime": 521,
+        "type": 1
+      },
+      {
+        "realtime": 541,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1495,
+    "task": "CRR",
+    "video": "MovieNet/tt0070511.mp4",
+    "question": "The man who had just be given his meal is heading toward somewhere, who is the man going to find?",
+    "answer": "A man with glasses.",
+    "ask_time": 524,
+    "clue_time": 531,
+    "test_info": [
+      {
+        "realtime": 524,
+        "type": 0
+      },
+      {
+        "realtime": 527,
+        "type": 0
+      },
+      {
+        "realtime": 533,
+        "type": 1
+      },
+      {
+        "realtime": 541,
+        "type": 1
+      },
+      {
+        "realtime": 561,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1496,
+    "task": "CRR",
+    "video": "MovieNet/tt0070511.mp4",
+    "question": "The group of prisoners are excited and rise up, why are they excited?",
+    "answer": "A guard came and spray water to them.",
+    "ask_time": 647,
+    "clue_time": 654,
+    "test_info": [
+      {
+        "realtime": 647,
+        "type": 0
+      },
+      {
+        "realtime": 650,
+        "type": 0
+      },
+      {
+        "realtime": 656,
+        "type": 1
+      },
+      {
+        "realtime": 664,
+        "type": 1
+      },
+      {
+        "realtime": 684,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1497,
+    "task": "CRR",
+    "video": "MovieNet/tt0070511.mp4",
+    "question": "The man wearing glass is looking toward something, what does he find?",
+    "answer": "A man resting on the deck.",
+    "ask_time": 803,
+    "clue_time": 805,
+    "test_info": [
+      {
+        "realtime": 803,
+        "type": 0
+      },
+      {
+        "realtime": 804,
+        "type": 0
+      },
+      {
+        "realtime": 807,
+        "type": 1
+      },
+      {
+        "realtime": 815,
+        "type": 1
+      },
+      {
+        "realtime": 835,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1498,
+    "task": "CRR",
+    "video": "MovieNet/tt0070511.mp4",
+    "question": "The prisoners are about to get off the ship, what accident happen during this process?",
+    "answer": "A man slipped and rolled down the slope",
+    "ask_time": 1230,
+    "clue_time": 1242,
+    "test_info": [
+      {
+        "realtime": 1230,
+        "type": 0
+      },
+      {
+        "realtime": 1236,
+        "type": 0
+      },
+      {
+        "realtime": 1244,
+        "type": 1
+      },
+      {
+        "realtime": 1252,
+        "type": 1
+      },
+      {
+        "realtime": 1272,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1499,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "A girl with a big bag on her back is walking on a road, what is the first creature that she meet?",
+    "answer": "A dog in black and white.",
+    "ask_time": 397,
+    "clue_time": 428,
+    "test_info": [
+      {
+        "realtime": 397,
+        "type": 0
+      },
+      {
+        "realtime": 412,
+        "type": 0
+      },
+      {
+        "realtime": 430,
+        "type": 1
+      },
+      {
+        "realtime": 438,
+        "type": 1
+      },
+      {
+        "realtime": 458,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1500,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "The girl is having fun with the dog, who does she meet after having fun with it?",
+    "answer": "Several people in a store.",
+    "ask_time": 443,
+    "clue_time": 484,
+    "test_info": [
+      {
+        "realtime": 443,
+        "type": 0
+      },
+      {
+        "realtime": 463,
+        "type": 0
+      },
+      {
+        "realtime": 486,
+        "type": 1
+      },
+      {
+        "realtime": 494,
+        "type": 1
+      },
+      {
+        "realtime": 514,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1501,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "The boy wearing a red T-shirt a talking with others, what does he do after his leaving?",
+    "answer": "He shoots an arrow.",
+    "ask_time": 1080,
+    "clue_time": 1101,
+    "test_info": [
+      {
+        "realtime": 1080,
+        "type": 0
+      },
+      {
+        "realtime": 1090,
+        "type": 0
+      },
+      {
+        "realtime": 1103,
+        "type": 1
+      },
+      {
+        "realtime": 1111,
+        "type": 1
+      },
+      {
+        "realtime": 1131,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1502,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "The woman is walking on the road. What does she come across next?",
+    "answer": "She come across a green Jeep and get a ride.",
+    "ask_time": 1149,
+    "clue_time": 1226,
+    "test_info": [
+      {
+        "realtime": 1149,
+        "type": 0
+      },
+      {
+        "realtime": 1187,
+        "type": 0
+      },
+      {
+        "realtime": 1228,
+        "type": 1
+      },
+      {
+        "realtime": 1236,
+        "type": 1
+      },
+      {
+        "realtime": 1256,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1503,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "A girl and two boys are lying, what does the woman do with the man lying near her?",
+    "answer": "She pushed the man down the water.",
+    "ask_time": 1382,
+    "clue_time": 1388,
+    "test_info": [
+      {
+        "realtime": 1382,
+        "type": 0
+      },
+      {
+        "realtime": 1385,
+        "type": 0
+      },
+      {
+        "realtime": 1390,
+        "type": 1
+      },
+      {
+        "realtime": 1398,
+        "type": 1
+      },
+      {
+        "realtime": 1418,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1504,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "The woman returned home. What does she find in her room that frighten her?",
+    "answer": "A snake.",
+    "ask_time": 1529,
+    "clue_time": 1549,
+    "test_info": [
+      {
+        "realtime": 1529,
+        "type": 0
+      },
+      {
+        "realtime": 1539,
+        "type": 0
+      },
+      {
+        "realtime": 1551,
+        "type": 1
+      },
+      {
+        "realtime": 1559,
+        "type": 1
+      },
+      {
+        "realtime": 1579,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1505,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "The woman is greatly frightened by the snake, what action does she take to deal with the snake?",
+    "answer": "She called a friend to help her catch the snake.",
+    "ask_time": 1552,
+    "clue_time": 1575,
+    "test_info": [
+      {
+        "realtime": 1552,
+        "type": 0
+      },
+      {
+        "realtime": 1563,
+        "type": 0
+      },
+      {
+        "realtime": 1577,
+        "type": 1
+      },
+      {
+        "realtime": 1585,
+        "type": 1
+      },
+      {
+        "realtime": 1605,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1506,
+    "task": "CRR",
+    "video": "MovieNet/tt0080761.mp4",
+    "question": "More and more people are stepping into the room. How many people are there in the room after the door is closed?",
+    "answer": "6.",
+    "ask_time": 1586,
+    "clue_time": 1593,
+    "test_info": [
+      {
+        "realtime": 1586,
+        "type": 0
+      },
+      {
+        "realtime": 1589,
+        "type": 0
+      },
+      {
+        "realtime": 1595,
+        "type": 1
+      },
+      {
+        "realtime": 1603,
+        "type": 1
+      },
+      {
+        "realtime": 1623,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1507,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The two cars, one yellow and the other one red, are driving into the direction of each other. What happened next?",
+    "answer": "They go past each other.",
+    "ask_time": 111,
+    "clue_time": 119,
+    "test_info": [
+      {
+        "realtime": 111,
+        "type": 0
+      },
+      {
+        "realtime": 115,
+        "type": 0
+      },
+      {
+        "realtime": 121,
+        "type": 1
+      },
+      {
+        "realtime": 129,
+        "type": 1
+      },
+      {
+        "realtime": 149,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1508,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The clock is swinging. Who is sitting against it?",
+    "answer": "A woman who is drawing the clock.",
+    "ask_time": 453,
+    "clue_time": 460,
+    "test_info": [
+      {
+        "realtime": 453,
+        "type": 0
+      },
+      {
+        "realtime": 456,
+        "type": 0
+      },
+      {
+        "realtime": 462,
+        "type": 1
+      },
+      {
+        "realtime": 470,
+        "type": 1
+      },
+      {
+        "realtime": 490,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1509,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The people are having party, what do the people do next?",
+    "answer": "They go to check the hole on the floor.",
+    "ask_time": 595,
+    "clue_time": 615,
+    "test_info": [
+      {
+        "realtime": 595,
+        "type": 0
+      },
+      {
+        "realtime": 605,
+        "type": 0
+      },
+      {
+        "realtime": 617,
+        "type": 1
+      },
+      {
+        "realtime": 625,
+        "type": 1
+      },
+      {
+        "realtime": 645,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1510,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The people are watching the hole on the wooden floor, what do the people do with the hole next?",
+    "answer": "They send one man to explore.",
+    "ask_time": 615,
+    "clue_time": 668,
+    "test_info": [
+      {
+        "realtime": 615,
+        "type": 0
+      },
+      {
+        "realtime": 641,
+        "type": 0
+      },
+      {
+        "realtime": 670,
+        "type": 1
+      },
+      {
+        "realtime": 678,
+        "type": 1
+      },
+      {
+        "realtime": 698,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1511,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The man holding the lantern is exploring the room, who does he meet in the room?",
+    "answer": "He meet another friend.",
+    "ask_time": 875,
+    "clue_time": 886,
+    "test_info": [
+      {
+        "realtime": 875,
+        "type": 0
+      },
+      {
+        "realtime": 880,
+        "type": 0
+      },
+      {
+        "realtime": 888,
+        "type": 1
+      },
+      {
+        "realtime": 896,
+        "type": 1
+      },
+      {
+        "realtime": 916,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1512,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The man is holding a blue box in his hand, what's in the blue box?",
+    "answer": "A necklace.",
+    "ask_time": 1220,
+    "clue_time": 1262,
+    "test_info": [
+      {
+        "realtime": 1220,
+        "type": 0
+      },
+      {
+        "realtime": 1241,
+        "type": 0
+      },
+      {
+        "realtime": 1264,
+        "type": 1
+      },
+      {
+        "realtime": 1272,
+        "type": 1
+      },
+      {
+        "realtime": 1292,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1513,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The man and the woman are holding the necklace in their hands, what do they do with the necklace next?",
+    "answer": "The man put it on the woman's neck.",
+    "ask_time": 1263,
+    "clue_time": 1276,
+    "test_info": [
+      {
+        "realtime": 1263,
+        "type": 0
+      },
+      {
+        "realtime": 1269,
+        "type": 0
+      },
+      {
+        "realtime": 1278,
+        "type": 1
+      },
+      {
+        "realtime": 1286,
+        "type": 1
+      },
+      {
+        "realtime": 1306,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1514,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The man put the necklace on the woman's neck, what do the woman do after putting on the necklace?",
+    "answer": "She rise and checks herself in the mirror.",
+    "ask_time": 1277,
+    "clue_time": 1288,
+    "test_info": [
+      {
+        "realtime": 1277,
+        "type": 0
+      },
+      {
+        "realtime": 1282,
+        "type": 0
+      },
+      {
+        "realtime": 1290,
+        "type": 1
+      },
+      {
+        "realtime": 1298,
+        "type": 1
+      },
+      {
+        "realtime": 1318,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1515,
+    "task": "CRR",
+    "video": "MovieNet/tt0083907.mp4",
+    "question": "The woman is checking herself in the mirror, what action does the woman take next?",
+    "answer": "She kissed the man.",
+    "ask_time": 1290,
+    "clue_time": 1300,
+    "test_info": [
+      {
+        "realtime": 1290,
+        "type": 0
+      },
+      {
+        "realtime": 1295,
+        "type": 0
+      },
+      {
+        "realtime": 1302,
+        "type": 1
+      },
+      {
+        "realtime": 1310,
+        "type": 1
+      },
+      {
+        "realtime": 1330,
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1516,
+    "task": "SSR",
+    "video": "COIN/xZecGPPhbHE.mp4",
+    "tutorial": "PutOnHairExtensions",
+    "all_steps": [
+      "pull up the hair to reserve place for the hair extensions",
+      "put on the hair extensions",
+      "put down the hair and comb"
+    ],
+    "start_time": [
+      25,
+      31,
+      107
+    ],
+    "end_time": [
+      30,
+      49,
+      117
+    ],
+    "test_info": [
+      {
+        "realtime": 27,
+        "step": "pull up the hair to reserve place for the hair extensions",
+        "type": 1
+      },
+      {
+        "realtime": 30,
+        "step": "pull up the hair to reserve place for the hair extensions",
+        "type": 1
+      },
+      {
+        "realtime": 26,
+        "step": "put on the hair extensions",
+        "type": 0
+      },
+      {
+        "realtime": 29,
+        "step": "put on the hair extensions",
+        "type": 0
+      },
+      {
+        "realtime": 33,
+        "step": "put on the hair extensions",
+        "type": 1
+      },
+      {
+        "realtime": 36,
+        "step": "put on the hair extensions",
+        "type": 1
+      },
+      {
+        "realtime": 49,
+        "step": "put on the hair extensions",
+        "type": 1
+      },
+      {
+        "realtime": 102,
+        "step": "put down the hair and comb",
+        "type": 0
+      },
+      {
+        "realtime": 105,
+        "step": "put down the hair and comb",
+        "type": 0
+      },
+      {
+        "realtime": 109,
+        "step": "put down the hair and comb",
+        "type": 1
+      },
+      {
+        "realtime": 112,
+        "step": "put down the hair and comb",
+        "type": 1
+      },
+      {
+        "realtime": 117,
+        "step": "put down the hair and comb",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1517,
+    "task": "SSR",
+    "video": "COIN/9eR7x93WqA8.mp4",
+    "tutorial": "CookOmelet",
+    "all_steps": [
+      "pour the egg into the bowl",
+      "pour the egg into the pot",
+      "fry eggs",
+      "pour the egg onto the plate"
+    ],
+    "start_time": [
+      41,
+      67,
+      72,
+      102
+    ],
+    "end_time": [
+      49,
+      71,
+      93,
+      112
+    ],
+    "test_info": [
+      {
+        "realtime": 43,
+        "step": "pour the egg into the bowl",
+        "type": 1
+      },
+      {
+        "realtime": 46,
+        "step": "pour the egg into the bowl",
+        "type": 1
+      },
+      {
+        "realtime": 49,
+        "step": "pour the egg into the bowl",
+        "type": 1
+      },
+      {
+        "realtime": 62,
+        "step": "pour the egg into the pot",
+        "type": 0
+      },
+      {
+        "realtime": 65,
+        "step": "pour the egg into the pot",
+        "type": 0
+      },
+      {
+        "realtime": 69,
+        "step": "pour the egg into the pot",
+        "type": 1
+      },
+      {
+        "realtime": 71,
+        "step": "pour the egg into the pot",
+        "type": 1
+      },
+      {
+        "realtime": 67,
+        "step": "fry eggs",
+        "type": 0
+      },
+      {
+        "realtime": 70,
+        "step": "fry eggs",
+        "type": 0
+      },
+      {
+        "realtime": 74,
+        "step": "fry eggs",
+        "type": 1
+      },
+      {
+        "realtime": 77,
+        "step": "fry eggs",
+        "type": 1
+      },
+      {
+        "realtime": 93,
+        "step": "fry eggs",
+        "type": 1
+      },
+      {
+        "realtime": 97,
+        "step": "pour the egg onto the plate",
+        "type": 0
+      },
+      {
+        "realtime": 100,
+        "step": "pour the egg onto the plate",
+        "type": 0
+      },
+      {
+        "realtime": 104,
+        "step": "pour the egg onto the plate",
+        "type": 1
+      },
+      {
+        "realtime": 107,
+        "step": "pour the egg onto the plate",
+        "type": 1
+      },
+      {
+        "realtime": 112,
+        "step": "pour the egg onto the plate",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1518,
+    "task": "SSR",
+    "video": "COIN/C4P8VCekA3Y.mp4",
+    "tutorial": "PatchBikeInnerTube",
+    "all_steps": [
+      "look for leaks",
+      "use sandpaper/metal to polish rubber near leak",
+      "apply glue",
+      "paste patch",
+      "put inner tube back"
+    ],
+    "start_time": [
+      0,
+      31,
+      51,
+      66,
+      105
+    ],
+    "end_time": [
+      22,
+      50,
+      65,
+      93,
+      132
+    ],
+    "test_info": [
+      {
+        "realtime": 2,
+        "step": "look for leaks",
+        "type": 1
+      },
+      {
+        "realtime": 5,
+        "step": "look for leaks",
+        "type": 1
+      },
+      {
+        "realtime": 22,
+        "step": "look for leaks",
+        "type": 1
+      },
+      {
+        "realtime": 26,
+        "step": "use sandpaper/metal to polish rubber near leak",
+        "type": 0
+      },
+      {
+        "realtime": 29,
+        "step": "use sandpaper/metal to polish rubber near leak",
+        "type": 0
+      },
+      {
+        "realtime": 33,
+        "step": "use sandpaper/metal to polish rubber near leak",
+        "type": 1
+      },
+      {
+        "realtime": 36,
+        "step": "use sandpaper/metal to polish rubber near leak",
+        "type": 1
+      },
+      {
+        "realtime": 50,
+        "step": "use sandpaper/metal to polish rubber near leak",
+        "type": 1
+      },
+      {
+        "realtime": 46,
+        "step": "apply glue",
+        "type": 0
+      },
+      {
+        "realtime": 49,
+        "step": "apply glue",
+        "type": 0
+      },
+      {
+        "realtime": 53,
+        "step": "apply glue",
+        "type": 1
+      },
+      {
+        "realtime": 56,
+        "step": "apply glue",
+        "type": 1
+      },
+      {
+        "realtime": 65,
+        "step": "apply glue",
+        "type": 1
+      },
+      {
+        "realtime": 61,
+        "step": "paste patch",
+        "type": 0
+      },
+      {
+        "realtime": 64,
+        "step": "paste patch",
+        "type": 0
+      },
+      {
+        "realtime": 68,
+        "step": "paste patch",
+        "type": 1
+      },
+      {
+        "realtime": 71,
+        "step": "paste patch",
+        "type": 1
+      },
+      {
+        "realtime": 93,
+        "step": "paste patch",
+        "type": 1
+      },
+      {
+        "realtime": 100,
+        "step": "put inner tube back",
+        "type": 0
+      },
+      {
+        "realtime": 103,
+        "step": "put inner tube back",
+        "type": 0
+      },
+      {
+        "realtime": 107,
+        "step": "put inner tube back",
+        "type": 1
+      },
+      {
+        "realtime": 110,
+        "step": "put inner tube back",
+        "type": 1
+      },
+      {
+        "realtime": 132,
+        "step": "put inner tube back",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1519,
+    "task": "SSR",
+    "video": "COIN/Th3xK0rAJB8.mp4",
+    "tutorial": "MakeSugarCoatedHaws",
+    "all_steps": [
+      "string the fruit together",
+      "melt the sugar",
+      "soak sugar gourd in sugar"
+    ],
+    "start_time": [
+      44,
+      82,
+      111
+    ],
+    "end_time": [
+      67,
+      106,
+      131
+    ],
+    "test_info": [
+      {
+        "realtime": 46,
+        "step": "string the fruit together",
+        "type": 1
+      },
+      {
+        "realtime": 49,
+        "step": "string the fruit together",
+        "type": 1
+      },
+      {
+        "realtime": 67,
+        "step": "string the fruit together",
+        "type": 1
+      },
+      {
+        "realtime": 77,
+        "step": "melt the sugar",
+        "type": 0
+      },
+      {
+        "realtime": 80,
+        "step": "melt the sugar",
+        "type": 0
+      },
+      {
+        "realtime": 84,
+        "step": "melt the sugar",
+        "type": 1
+      },
+      {
+        "realtime": 87,
+        "step": "melt the sugar",
+        "type": 1
+      },
+      {
+        "realtime": 106,
+        "step": "melt the sugar",
+        "type": 1
+      },
+      {
+        "realtime": 106,
+        "step": "soak sugar gourd in sugar",
+        "type": 0
+      },
+      {
+        "realtime": 109,
+        "step": "soak sugar gourd in sugar",
+        "type": 0
+      },
+      {
+        "realtime": 113,
+        "step": "soak sugar gourd in sugar",
+        "type": 1
+      },
+      {
+        "realtime": 116,
+        "step": "soak sugar gourd in sugar",
+        "type": 1
+      },
+      {
+        "realtime": 131,
+        "step": "soak sugar gourd in sugar",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1520,
+    "task": "SSR",
+    "video": "COIN/UBq35JWbBG0.mp4",
+    "tutorial": "MakeHummus",
+    "all_steps": [
+      "add raw materials",
+      "mix raw materials",
+      "pour bean paste into plate"
+    ],
+    "start_time": [
+      35,
+      159,
+      169
+    ],
+    "end_time": [
+      158,
+      168,
+      217
+    ],
+    "test_info": [
+      {
+        "realtime": 37,
+        "step": "add raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 40,
+        "step": "add raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 158,
+        "step": "add raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 154,
+        "step": "mix raw materials",
+        "type": 0
+      },
+      {
+        "realtime": 157,
+        "step": "mix raw materials",
+        "type": 0
+      },
+      {
+        "realtime": 161,
+        "step": "mix raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 164,
+        "step": "mix raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 168,
+        "step": "mix raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 164,
+        "step": "pour bean paste into plate",
+        "type": 0
+      },
+      {
+        "realtime": 167,
+        "step": "pour bean paste into plate",
+        "type": 0
+      },
+      {
+        "realtime": 171,
+        "step": "pour bean paste into plate",
+        "type": 1
+      },
+      {
+        "realtime": 174,
+        "step": "pour bean paste into plate",
+        "type": 1
+      },
+      {
+        "realtime": 217,
+        "step": "pour bean paste into plate",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1521,
+    "task": "SSR",
+    "video": "COIN/RJZgFfRv17M.mp4",
+    "tutorial": "MakePickles",
+    "all_steps": [
+      "put the ingredients into the can",
+      "pour the soup in",
+      "close cans"
+    ],
+    "start_time": [
+      124,
+      149,
+      165
+    ],
+    "end_time": [
+      148,
+      160,
+      185
+    ],
+    "test_info": [
+      {
+        "realtime": 126,
+        "step": "put the ingredients into the can",
+        "type": 1
+      },
+      {
+        "realtime": 129,
+        "step": "put the ingredients into the can",
+        "type": 1
+      },
+      {
+        "realtime": 148,
+        "step": "put the ingredients into the can",
+        "type": 1
+      },
+      {
+        "realtime": 144,
+        "step": "pour the soup in",
+        "type": 0
+      },
+      {
+        "realtime": 147,
+        "step": "pour the soup in",
+        "type": 0
+      },
+      {
+        "realtime": 151,
+        "step": "pour the soup in",
+        "type": 1
+      },
+      {
+        "realtime": 154,
+        "step": "pour the soup in",
+        "type": 1
+      },
+      {
+        "realtime": 160,
+        "step": "pour the soup in",
+        "type": 1
+      },
+      {
+        "realtime": 160,
+        "step": "close cans",
+        "type": 0
+      },
+      {
+        "realtime": 163,
+        "step": "close cans",
+        "type": 0
+      },
+      {
+        "realtime": 167,
+        "step": "close cans",
+        "type": 1
+      },
+      {
+        "realtime": 170,
+        "step": "close cans",
+        "type": 1
+      },
+      {
+        "realtime": 185,
+        "step": "close cans",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1522,
+    "task": "SSR",
+    "video": "COIN/zDIu724WMIU.mp4",
+    "tutorial": "AssembleDesktopPC",
+    "all_steps": [
+      "install the motherboard",
+      "plug cable and wire",
+      "install peripherals inside the case"
+    ],
+    "start_time": [
+      56,
+      110,
+      138
+    ],
+    "end_time": [
+      85,
+      136,
+      151
+    ],
+    "test_info": [
+      {
+        "realtime": 58,
+        "step": "install the motherboard",
+        "type": 1
+      },
+      {
+        "realtime": 61,
+        "step": "install the motherboard",
+        "type": 1
+      },
+      {
+        "realtime": 85,
+        "step": "install the motherboard",
+        "type": 1
+      },
+      {
+        "realtime": 105,
+        "step": "plug cable and wire",
+        "type": 0
+      },
+      {
+        "realtime": 108,
+        "step": "plug cable and wire",
+        "type": 0
+      },
+      {
+        "realtime": 112,
+        "step": "plug cable and wire",
+        "type": 1
+      },
+      {
+        "realtime": 115,
+        "step": "plug cable and wire",
+        "type": 1
+      },
+      {
+        "realtime": 136,
+        "step": "plug cable and wire",
+        "type": 1
+      },
+      {
+        "realtime": 133,
+        "step": "install peripherals inside the case",
+        "type": 0
+      },
+      {
+        "realtime": 136,
+        "step": "install peripherals inside the case",
+        "type": 0
+      },
+      {
+        "realtime": 140,
+        "step": "install peripherals inside the case",
+        "type": 1
+      },
+      {
+        "realtime": 143,
+        "step": "install peripherals inside the case",
+        "type": 1
+      },
+      {
+        "realtime": 151,
+        "step": "install peripherals inside the case",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1523,
+    "task": "SSR",
+    "video": "COIN/FbSLCfEiZHE.mp4",
+    "tutorial": "MakeYoutiao",
+    "all_steps": [
+      "stir raw materials",
+      "knead together",
+      "flatten the dough",
+      "cut into strips"
+    ],
+    "start_time": [
+      7,
+      24,
+      103,
+      150
+    ],
+    "end_time": [
+      23,
+      53,
+      135,
+      157
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "step": "stir raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 12,
+        "step": "stir raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 23,
+        "step": "stir raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 19,
+        "step": "knead together",
+        "type": 0
+      },
+      {
+        "realtime": 22,
+        "step": "knead together",
+        "type": 0
+      },
+      {
+        "realtime": 26,
+        "step": "knead together",
+        "type": 1
+      },
+      {
+        "realtime": 29,
+        "step": "knead together",
+        "type": 1
+      },
+      {
+        "realtime": 53,
+        "step": "knead together",
+        "type": 1
+      },
+      {
+        "realtime": 98,
+        "step": "flatten the dough",
+        "type": 0
+      },
+      {
+        "realtime": 101,
+        "step": "flatten the dough",
+        "type": 0
+      },
+      {
+        "realtime": 105,
+        "step": "flatten the dough",
+        "type": 1
+      },
+      {
+        "realtime": 108,
+        "step": "flatten the dough",
+        "type": 1
+      },
+      {
+        "realtime": 135,
+        "step": "flatten the dough",
+        "type": 1
+      },
+      {
+        "realtime": 145,
+        "step": "cut into strips",
+        "type": 0
+      },
+      {
+        "realtime": 148,
+        "step": "cut into strips",
+        "type": 0
+      },
+      {
+        "realtime": 152,
+        "step": "cut into strips",
+        "type": 1
+      },
+      {
+        "realtime": 155,
+        "step": "cut into strips",
+        "type": 1
+      },
+      {
+        "realtime": 157,
+        "step": "cut into strips",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1524,
+    "task": "SSR",
+    "video": "COIN/KBbeGO5qRpE.mp4",
+    "tutorial": "CutMango",
+    "all_steps": [
+      "peel",
+      "cut into strips and pieces",
+      "remove the core"
+    ],
+    "start_time": [
+      24,
+      99,
+      180
+    ],
+    "end_time": [
+      89,
+      171,
+      186
+    ],
+    "test_info": [
+      {
+        "realtime": 26,
+        "step": "peel",
+        "type": 1
+      },
+      {
+        "realtime": 29,
+        "step": "peel",
+        "type": 1
+      },
+      {
+        "realtime": 89,
+        "step": "peel",
+        "type": 1
+      },
+      {
+        "realtime": 94,
+        "step": "cut into strips and pieces",
+        "type": 0
+      },
+      {
+        "realtime": 97,
+        "step": "cut into strips and pieces",
+        "type": 0
+      },
+      {
+        "realtime": 101,
+        "step": "cut into strips and pieces",
+        "type": 1
+      },
+      {
+        "realtime": 104,
+        "step": "cut into strips and pieces",
+        "type": 1
+      },
+      {
+        "realtime": 171,
+        "step": "cut into strips and pieces",
+        "type": 1
+      },
+      {
+        "realtime": 175,
+        "step": "remove the core",
+        "type": 0
+      },
+      {
+        "realtime": 178,
+        "step": "remove the core",
+        "type": 0
+      },
+      {
+        "realtime": 182,
+        "step": "remove the core",
+        "type": 1
+      },
+      {
+        "realtime": 185,
+        "step": "remove the core",
+        "type": 1
+      },
+      {
+        "realtime": 186,
+        "step": "remove the core",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1525,
+    "task": "SSR",
+    "video": "COIN/Vaapvds7D40.mp4",
+    "tutorial": "InstallBicycleRack",
+    "all_steps": [
+      "mount the bracket to the back of the car",
+      "place the bicycle on the bracket",
+      "fasten the strap"
+    ],
+    "start_time": [
+      22,
+      73,
+      83
+    ],
+    "end_time": [
+      34,
+      82,
+      100
+    ],
+    "test_info": [
+      {
+        "realtime": 24,
+        "step": "mount the bracket to the back of the car",
+        "type": 1
+      },
+      {
+        "realtime": 27,
+        "step": "mount the bracket to the back of the car",
+        "type": 1
+      },
+      {
+        "realtime": 34,
+        "step": "mount the bracket to the back of the car",
+        "type": 1
+      },
+      {
+        "realtime": 68,
+        "step": "place the bicycle on the bracket",
+        "type": 0
+      },
+      {
+        "realtime": 71,
+        "step": "place the bicycle on the bracket",
+        "type": 0
+      },
+      {
+        "realtime": 75,
+        "step": "place the bicycle on the bracket",
+        "type": 1
+      },
+      {
+        "realtime": 78,
+        "step": "place the bicycle on the bracket",
+        "type": 1
+      },
+      {
+        "realtime": 82,
+        "step": "place the bicycle on the bracket",
+        "type": 1
+      },
+      {
+        "realtime": 78,
+        "step": "fasten the strap",
+        "type": 0
+      },
+      {
+        "realtime": 81,
+        "step": "fasten the strap",
+        "type": 0
+      },
+      {
+        "realtime": 85,
+        "step": "fasten the strap",
+        "type": 1
+      },
+      {
+        "realtime": 88,
+        "step": "fasten the strap",
+        "type": 1
+      },
+      {
+        "realtime": 100,
+        "step": "fasten the strap",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1526,
+    "task": "SSR",
+    "video": "COIN/Yc1YYQWzLfE.mp4",
+    "tutorial": "CutGrapeFruit",
+    "all_steps": [
+      "cut both ends and remove fruit seeds",
+      "cut in half",
+      "remove the peel"
+    ],
+    "start_time": [
+      22,
+      37,
+      51
+    ],
+    "end_time": [
+      30,
+      45,
+      71
+    ],
+    "test_info": [
+      {
+        "realtime": 24,
+        "step": "cut both ends and remove fruit seeds",
+        "type": 1
+      },
+      {
+        "realtime": 27,
+        "step": "cut both ends and remove fruit seeds",
+        "type": 1
+      },
+      {
+        "realtime": 30,
+        "step": "cut both ends and remove fruit seeds",
+        "type": 1
+      },
+      {
+        "realtime": 32,
+        "step": "cut in half",
+        "type": 0
+      },
+      {
+        "realtime": 35,
+        "step": "cut in half",
+        "type": 0
+      },
+      {
+        "realtime": 39,
+        "step": "cut in half",
+        "type": 1
+      },
+      {
+        "realtime": 42,
+        "step": "cut in half",
+        "type": 1
+      },
+      {
+        "realtime": 45,
+        "step": "cut in half",
+        "type": 1
+      },
+      {
+        "realtime": 46,
+        "step": "remove the peel",
+        "type": 0
+      },
+      {
+        "realtime": 49,
+        "step": "remove the peel",
+        "type": 0
+      },
+      {
+        "realtime": 53,
+        "step": "remove the peel",
+        "type": 1
+      },
+      {
+        "realtime": 56,
+        "step": "remove the peel",
+        "type": 1
+      },
+      {
+        "realtime": 71,
+        "step": "remove the peel",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1527,
+    "task": "SSR",
+    "video": "COIN/MDI_R2sIZDk.mp4",
+    "tutorial": "MakePaperDice",
+    "all_steps": [
+      "fold or bent paper",
+      "put paper together",
+      "paint on the paper"
+    ],
+    "start_time": [
+      20,
+      145,
+      288
+    ],
+    "end_time": [
+      129,
+      271,
+      323
+    ],
+    "test_info": [
+      {
+        "realtime": 22,
+        "step": "fold or bent paper",
+        "type": 1
+      },
+      {
+        "realtime": 25,
+        "step": "fold or bent paper",
+        "type": 1
+      },
+      {
+        "realtime": 129,
+        "step": "fold or bent paper",
+        "type": 1
+      },
+      {
+        "realtime": 140,
+        "step": "put paper together",
+        "type": 0
+      },
+      {
+        "realtime": 143,
+        "step": "put paper together",
+        "type": 0
+      },
+      {
+        "realtime": 147,
+        "step": "put paper together",
+        "type": 1
+      },
+      {
+        "realtime": 150,
+        "step": "put paper together",
+        "type": 1
+      },
+      {
+        "realtime": 271,
+        "step": "put paper together",
+        "type": 1
+      },
+      {
+        "realtime": 283,
+        "step": "paint on the paper",
+        "type": 0
+      },
+      {
+        "realtime": 286,
+        "step": "paint on the paper",
+        "type": 0
+      },
+      {
+        "realtime": 290,
+        "step": "paint on the paper",
+        "type": 1
+      },
+      {
+        "realtime": 293,
+        "step": "paint on the paper",
+        "type": 1
+      },
+      {
+        "realtime": 323,
+        "step": "paint on the paper",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1528,
+    "task": "SSR",
+    "video": "COIN/2ePP3hLkfE0.mp4",
+    "tutorial": "CarvePumpkin",
+    "all_steps": [
+      "remove pumpkin pedicle",
+      "clean up the interior of thepumpkin",
+      "carve along the outline"
+    ],
+    "start_time": [
+      70,
+      78,
+      113
+    ],
+    "end_time": [
+      77,
+      86,
+      167
+    ],
+    "test_info": [
+      {
+        "realtime": 72,
+        "step": "remove pumpkin pedicle",
+        "type": 1
+      },
+      {
+        "realtime": 75,
+        "step": "remove pumpkin pedicle",
+        "type": 1
+      },
+      {
+        "realtime": 77,
+        "step": "remove pumpkin pedicle",
+        "type": 1
+      },
+      {
+        "realtime": 73,
+        "step": "clean up the interior of thepumpkin",
+        "type": 0
+      },
+      {
+        "realtime": 76,
+        "step": "clean up the interior of thepumpkin",
+        "type": 0
+      },
+      {
+        "realtime": 80,
+        "step": "clean up the interior of thepumpkin",
+        "type": 1
+      },
+      {
+        "realtime": 83,
+        "step": "clean up the interior of thepumpkin",
+        "type": 1
+      },
+      {
+        "realtime": 86,
+        "step": "clean up the interior of thepumpkin",
+        "type": 1
+      },
+      {
+        "realtime": 108,
+        "step": "carve along the outline",
+        "type": 0
+      },
+      {
+        "realtime": 111,
+        "step": "carve along the outline",
+        "type": 0
+      },
+      {
+        "realtime": 115,
+        "step": "carve along the outline",
+        "type": 1
+      },
+      {
+        "realtime": 118,
+        "step": "carve along the outline",
+        "type": 1
+      },
+      {
+        "realtime": 167,
+        "step": "carve along the outline",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1529,
+    "task": "SSR",
+    "video": "COIN/zV8ruZtvXyI.mp4",
+    "tutorial": "MakePaperWindMill",
+    "all_steps": [
+      "fold the edges of the paper",
+      "cut along the edges",
+      "fold the squares inward and fix them",
+      "fix the wind mill on the bracket"
+    ],
+    "start_time": [
+      42,
+      55,
+      88,
+      178
+    ],
+    "end_time": [
+      54,
+      69,
+      127,
+      205
+    ],
+    "test_info": [
+      {
+        "realtime": 44,
+        "step": "fold the edges of the paper",
+        "type": 1
+      },
+      {
+        "realtime": 47,
+        "step": "fold the edges of the paper",
+        "type": 1
+      },
+      {
+        "realtime": 54,
+        "step": "fold the edges of the paper",
+        "type": 1
+      },
+      {
+        "realtime": 50,
+        "step": "cut along the edges",
+        "type": 0
+      },
+      {
+        "realtime": 53,
+        "step": "cut along the edges",
+        "type": 0
+      },
+      {
+        "realtime": 57,
+        "step": "cut along the edges",
+        "type": 1
+      },
+      {
+        "realtime": 60,
+        "step": "cut along the edges",
+        "type": 1
+      },
+      {
+        "realtime": 69,
+        "step": "cut along the edges",
+        "type": 1
+      },
+      {
+        "realtime": 83,
+        "step": "fold the squares inward and fix them",
+        "type": 0
+      },
+      {
+        "realtime": 86,
+        "step": "fold the squares inward and fix them",
+        "type": 0
+      },
+      {
+        "realtime": 90,
+        "step": "fold the squares inward and fix them",
+        "type": 1
+      },
+      {
+        "realtime": 93,
+        "step": "fold the squares inward and fix them",
+        "type": 1
+      },
+      {
+        "realtime": 127,
+        "step": "fold the squares inward and fix them",
+        "type": 1
+      },
+      {
+        "realtime": 173,
+        "step": "fix the wind mill on the bracket",
+        "type": 0
+      },
+      {
+        "realtime": 176,
+        "step": "fix the wind mill on the bracket",
+        "type": 0
+      },
+      {
+        "realtime": 180,
+        "step": "fix the wind mill on the bracket",
+        "type": 1
+      },
+      {
+        "realtime": 183,
+        "step": "fix the wind mill on the bracket",
+        "type": 1
+      },
+      {
+        "realtime": 205,
+        "step": "fix the wind mill on the bracket",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1530,
+    "task": "SSR",
+    "video": "COIN/W1TGAer5z0g.mp4",
+    "tutorial": "DrawBlood",
+    "all_steps": [
+      "tie the tourniquet",
+      "collect blood",
+      "pull out the needle and press with cotton"
+    ],
+    "start_time": [
+      45,
+      69,
+      86
+    ],
+    "end_time": [
+      53,
+      83,
+      90
+    ],
+    "test_info": [
+      {
+        "realtime": 47,
+        "step": "tie the tourniquet",
+        "type": 1
+      },
+      {
+        "realtime": 50,
+        "step": "tie the tourniquet",
+        "type": 1
+      },
+      {
+        "realtime": 53,
+        "step": "tie the tourniquet",
+        "type": 1
+      },
+      {
+        "realtime": 64,
+        "step": "collect blood",
+        "type": 0
+      },
+      {
+        "realtime": 67,
+        "step": "collect blood",
+        "type": 0
+      },
+      {
+        "realtime": 71,
+        "step": "collect blood",
+        "type": 1
+      },
+      {
+        "realtime": 74,
+        "step": "collect blood",
+        "type": 1
+      },
+      {
+        "realtime": 83,
+        "step": "collect blood",
+        "type": 1
+      },
+      {
+        "realtime": 81,
+        "step": "pull out the needle and press with cotton",
+        "type": 0
+      },
+      {
+        "realtime": 84,
+        "step": "pull out the needle and press with cotton",
+        "type": 0
+      },
+      {
+        "realtime": 88,
+        "step": "pull out the needle and press with cotton",
+        "type": 1
+      },
+      {
+        "realtime": 90,
+        "step": "pull out the needle and press with cotton",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1531,
+    "task": "SSR",
+    "video": "COIN/WGuwhJzcvSg.mp4",
+    "tutorial": "DoLinoPrinting",
+    "all_steps": [
+      "scrape tarpaulin without ink",
+      "ink the marked area",
+      "transfer print"
+    ],
+    "start_time": [
+      20,
+      108,
+      113
+    ],
+    "end_time": [
+      90,
+      112,
+      129
+    ],
+    "test_info": [
+      {
+        "realtime": 22,
+        "step": "scrape tarpaulin without ink",
+        "type": 1
+      },
+      {
+        "realtime": 25,
+        "step": "scrape tarpaulin without ink",
+        "type": 1
+      },
+      {
+        "realtime": 90,
+        "step": "scrape tarpaulin without ink",
+        "type": 1
+      },
+      {
+        "realtime": 103,
+        "step": "ink the marked area",
+        "type": 0
+      },
+      {
+        "realtime": 106,
+        "step": "ink the marked area",
+        "type": 0
+      },
+      {
+        "realtime": 110,
+        "step": "ink the marked area",
+        "type": 1
+      },
+      {
+        "realtime": 112,
+        "step": "ink the marked area",
+        "type": 1
+      },
+      {
+        "realtime": 108,
+        "step": "transfer print",
+        "type": 0
+      },
+      {
+        "realtime": 111,
+        "step": "transfer print",
+        "type": 0
+      },
+      {
+        "realtime": 115,
+        "step": "transfer print",
+        "type": 1
+      },
+      {
+        "realtime": 118,
+        "step": "transfer print",
+        "type": 1
+      },
+      {
+        "realtime": 129,
+        "step": "transfer print",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1532,
+    "task": "SSR",
+    "video": "COIN/-vhwlGY6CGg.mp4",
+    "tutorial": "UseSoyMilkMaker",
+    "all_steps": [
+      "pour some water to the soy milk maker",
+      "run the soy milk maker",
+      "filtrate with a filter",
+      "pour into a glass"
+    ],
+    "start_time": [
+      113,
+      133,
+      214,
+      301
+    ],
+    "end_time": [
+      121,
+      142,
+      228,
+      347
+    ],
+    "test_info": [
+      {
+        "realtime": 115,
+        "step": "pour some water to the soy milk maker",
+        "type": 1
+      },
+      {
+        "realtime": 118,
+        "step": "pour some water to the soy milk maker",
+        "type": 1
+      },
+      {
+        "realtime": 121,
+        "step": "pour some water to the soy milk maker",
+        "type": 1
+      },
+      {
+        "realtime": 128,
+        "step": "run the soy milk maker",
+        "type": 0
+      },
+      {
+        "realtime": 131,
+        "step": "run the soy milk maker",
+        "type": 0
+      },
+      {
+        "realtime": 135,
+        "step": "run the soy milk maker",
+        "type": 1
+      },
+      {
+        "realtime": 138,
+        "step": "run the soy milk maker",
+        "type": 1
+      },
+      {
+        "realtime": 142,
+        "step": "run the soy milk maker",
+        "type": 1
+      },
+      {
+        "realtime": 209,
+        "step": "filtrate with a filter",
+        "type": 0
+      },
+      {
+        "realtime": 212,
+        "step": "filtrate with a filter",
+        "type": 0
+      },
+      {
+        "realtime": 216,
+        "step": "filtrate with a filter",
+        "type": 1
+      },
+      {
+        "realtime": 219,
+        "step": "filtrate with a filter",
+        "type": 1
+      },
+      {
+        "realtime": 228,
+        "step": "filtrate with a filter",
+        "type": 1
+      },
+      {
+        "realtime": 296,
+        "step": "pour into a glass",
+        "type": 0
+      },
+      {
+        "realtime": 299,
+        "step": "pour into a glass",
+        "type": 0
+      },
+      {
+        "realtime": 303,
+        "step": "pour into a glass",
+        "type": 1
+      },
+      {
+        "realtime": 306,
+        "step": "pour into a glass",
+        "type": 1
+      },
+      {
+        "realtime": 347,
+        "step": "pour into a glass",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1533,
+    "task": "SSR",
+    "video": "COIN/BM8H9eE6jhI.mp4",
+    "tutorial": "MakeOrangeJuice",
+    "all_steps": [
+      "cut oranges",
+      "juice the oranges",
+      "pour the orange juice into the cup"
+    ],
+    "start_time": [
+      42,
+      93,
+      116
+    ],
+    "end_time": [
+      47,
+      109,
+      159
+    ],
+    "test_info": [
+      {
+        "realtime": 44,
+        "step": "cut oranges",
+        "type": 1
+      },
+      {
+        "realtime": 47,
+        "step": "cut oranges",
+        "type": 1
+      },
+      {
+        "realtime": 88,
+        "step": "juice the oranges",
+        "type": 0
+      },
+      {
+        "realtime": 91,
+        "step": "juice the oranges",
+        "type": 0
+      },
+      {
+        "realtime": 95,
+        "step": "juice the oranges",
+        "type": 1
+      },
+      {
+        "realtime": 98,
+        "step": "juice the oranges",
+        "type": 1
+      },
+      {
+        "realtime": 109,
+        "step": "juice the oranges",
+        "type": 1
+      },
+      {
+        "realtime": 111,
+        "step": "pour the orange juice into the cup",
+        "type": 0
+      },
+      {
+        "realtime": 114,
+        "step": "pour the orange juice into the cup",
+        "type": 0
+      },
+      {
+        "realtime": 118,
+        "step": "pour the orange juice into the cup",
+        "type": 1
+      },
+      {
+        "realtime": 121,
+        "step": "pour the orange juice into the cup",
+        "type": 1
+      },
+      {
+        "realtime": 159,
+        "step": "pour the orange juice into the cup",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1534,
+    "task": "SSR",
+    "video": "COIN/8tZUVfEyytY.mp4",
+    "tutorial": "ChangeBatteryOfWatch",
+    "all_steps": [
+      "check the type of the back cover",
+      "open the back cover",
+      "replace the battery",
+      "install the back cover and waterproof ring"
+    ],
+    "start_time": [
+      6,
+      13,
+      39,
+      110
+    ],
+    "end_time": [
+      12,
+      28,
+      109,
+      122
+    ],
+    "test_info": [
+      {
+        "realtime": 8,
+        "step": "check the type of the back cover",
+        "type": 1
+      },
+      {
+        "realtime": 11,
+        "step": "check the type of the back cover",
+        "type": 1
+      },
+      {
+        "realtime": 12,
+        "step": "check the type of the back cover",
+        "type": 1
+      },
+      {
+        "realtime": 8,
+        "step": "open the back cover",
+        "type": 0
+      },
+      {
+        "realtime": 11,
+        "step": "open the back cover",
+        "type": 0
+      },
+      {
+        "realtime": 15,
+        "step": "open the back cover",
+        "type": 1
+      },
+      {
+        "realtime": 18,
+        "step": "open the back cover",
+        "type": 1
+      },
+      {
+        "realtime": 28,
+        "step": "open the back cover",
+        "type": 1
+      },
+      {
+        "realtime": 34,
+        "step": "replace the battery",
+        "type": 0
+      },
+      {
+        "realtime": 37,
+        "step": "replace the battery",
+        "type": 0
+      },
+      {
+        "realtime": 41,
+        "step": "replace the battery",
+        "type": 1
+      },
+      {
+        "realtime": 44,
+        "step": "replace the battery",
+        "type": 1
+      },
+      {
+        "realtime": 109,
+        "step": "replace the battery",
+        "type": 1
+      },
+      {
+        "realtime": 105,
+        "step": "install the back cover and waterproof ring",
+        "type": 0
+      },
+      {
+        "realtime": 108,
+        "step": "install the back cover and waterproof ring",
+        "type": 0
+      },
+      {
+        "realtime": 112,
+        "step": "install the back cover and waterproof ring",
+        "type": 1
+      },
+      {
+        "realtime": 115,
+        "step": "install the back cover and waterproof ring",
+        "type": 1
+      },
+      {
+        "realtime": 122,
+        "step": "install the back cover and waterproof ring",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1535,
+    "task": "SSR",
+    "video": "COIN/XAYewYkAr-M.mp4",
+    "tutorial": "AssembleBed",
+    "all_steps": [
+      "place the board on each side",
+      "place the bed board",
+      "place mattress on the bed"
+    ],
+    "start_time": [
+      40,
+      203,
+      213
+    ],
+    "end_time": [
+      114,
+      211,
+      224
+    ],
+    "test_info": [
+      {
+        "realtime": 42,
+        "step": "place the board on each side",
+        "type": 1
+      },
+      {
+        "realtime": 45,
+        "step": "place the board on each side",
+        "type": 1
+      },
+      {
+        "realtime": 114,
+        "step": "place the board on each side",
+        "type": 1
+      },
+      {
+        "realtime": 198,
+        "step": "place the bed board",
+        "type": 0
+      },
+      {
+        "realtime": 201,
+        "step": "place the bed board",
+        "type": 0
+      },
+      {
+        "realtime": 205,
+        "step": "place the bed board",
+        "type": 1
+      },
+      {
+        "realtime": 208,
+        "step": "place the bed board",
+        "type": 1
+      },
+      {
+        "realtime": 211,
+        "step": "place the bed board",
+        "type": 1
+      },
+      {
+        "realtime": 208,
+        "step": "place mattress on the bed",
+        "type": 0
+      },
+      {
+        "realtime": 211,
+        "step": "place mattress on the bed",
+        "type": 0
+      },
+      {
+        "realtime": 215,
+        "step": "place mattress on the bed",
+        "type": 1
+      },
+      {
+        "realtime": 218,
+        "step": "place mattress on the bed",
+        "type": 1
+      },
+      {
+        "realtime": 224,
+        "step": "place mattress on the bed",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1536,
+    "task": "SSR",
+    "video": "COIN/P6A_Hatooc8.mp4",
+    "tutorial": "UseRiceCookerToCookRice",
+    "all_steps": [
+      "take out some rice",
+      "soak and wash the rice",
+      "put the washed rice into the rice cooker",
+      "cook the rice by rice cooker"
+    ],
+    "start_time": [
+      10,
+      15,
+      61,
+      91
+    ],
+    "end_time": [
+      15,
+      21,
+      77,
+      122
+    ],
+    "test_info": [
+      {
+        "realtime": 12,
+        "step": "take out some rice",
+        "type": 1
+      },
+      {
+        "realtime": 15,
+        "step": "take out some rice",
+        "type": 1
+      },
+      {
+        "realtime": 10,
+        "step": "soak and wash the rice",
+        "type": 0
+      },
+      {
+        "realtime": 13,
+        "step": "soak and wash the rice",
+        "type": 0
+      },
+      {
+        "realtime": 17,
+        "step": "soak and wash the rice",
+        "type": 1
+      },
+      {
+        "realtime": 20,
+        "step": "soak and wash the rice",
+        "type": 1
+      },
+      {
+        "realtime": 21,
+        "step": "soak and wash the rice",
+        "type": 1
+      },
+      {
+        "realtime": 56,
+        "step": "put the washed rice into the rice cooker",
+        "type": 0
+      },
+      {
+        "realtime": 59,
+        "step": "put the washed rice into the rice cooker",
+        "type": 0
+      },
+      {
+        "realtime": 63,
+        "step": "put the washed rice into the rice cooker",
+        "type": 1
+      },
+      {
+        "realtime": 66,
+        "step": "put the washed rice into the rice cooker",
+        "type": 1
+      },
+      {
+        "realtime": 77,
+        "step": "put the washed rice into the rice cooker",
+        "type": 1
+      },
+      {
+        "realtime": 86,
+        "step": "cook the rice by rice cooker",
+        "type": 0
+      },
+      {
+        "realtime": 89,
+        "step": "cook the rice by rice cooker",
+        "type": 0
+      },
+      {
+        "realtime": 93,
+        "step": "cook the rice by rice cooker",
+        "type": 1
+      },
+      {
+        "realtime": 96,
+        "step": "cook the rice by rice cooker",
+        "type": 1
+      },
+      {
+        "realtime": 122,
+        "step": "cook the rice by rice cooker",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1537,
+    "task": "SSR",
+    "video": "COIN/ZhG1Woz7hZE.mp4",
+    "tutorial": "AssembleSofa",
+    "all_steps": [
+      "install legs of sofa",
+      "put every parts mentioned together",
+      "put on sofa cover"
+    ],
+    "start_time": [
+      0,
+      15,
+      161
+    ],
+    "end_time": [
+      10,
+      137,
+      194
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "step": "install legs of sofa",
+        "type": 1
+      },
+      {
+        "realtime": 10,
+        "step": "install legs of sofa",
+        "type": 1
+      },
+      {
+        "realtime": 10,
+        "step": "put every parts mentioned together",
+        "type": 0
+      },
+      {
+        "realtime": 13,
+        "step": "put every parts mentioned together",
+        "type": 0
+      },
+      {
+        "realtime": 17,
+        "step": "put every parts mentioned together",
+        "type": 1
+      },
+      {
+        "realtime": 20,
+        "step": "put every parts mentioned together",
+        "type": 1
+      },
+      {
+        "realtime": 137,
+        "step": "put every parts mentioned together",
+        "type": 1
+      },
+      {
+        "realtime": 156,
+        "step": "put on sofa cover",
+        "type": 0
+      },
+      {
+        "realtime": 159,
+        "step": "put on sofa cover",
+        "type": 0
+      },
+      {
+        "realtime": 163,
+        "step": "put on sofa cover",
+        "type": 1
+      },
+      {
+        "realtime": 166,
+        "step": "put on sofa cover",
+        "type": 1
+      },
+      {
+        "realtime": 194,
+        "step": "put on sofa cover",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1538,
+    "task": "SSR",
+    "video": "COIN/Ggg-v-F_fRM.mp4",
+    "tutorial": "RewrapBattery",
+    "all_steps": [
+      "remove the old wrapper",
+      "wrap with the new wrapper",
+      "install the insulated shim",
+      "use the air pressure gun or hair drier to flatten the wrapper"
+    ],
+    "start_time": [
+      309,
+      390,
+      444,
+      484
+    ],
+    "end_time": [
+      320,
+      423,
+      449,
+      538
+    ],
+    "test_info": [
+      {
+        "realtime": 311,
+        "step": "remove the old wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 314,
+        "step": "remove the old wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 320,
+        "step": "remove the old wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 385,
+        "step": "wrap with the new wrapper",
+        "type": 0
+      },
+      {
+        "realtime": 388,
+        "step": "wrap with the new wrapper",
+        "type": 0
+      },
+      {
+        "realtime": 392,
+        "step": "wrap with the new wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 395,
+        "step": "wrap with the new wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 423,
+        "step": "wrap with the new wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 439,
+        "step": "install the insulated shim",
+        "type": 0
+      },
+      {
+        "realtime": 442,
+        "step": "install the insulated shim",
+        "type": 0
+      },
+      {
+        "realtime": 446,
+        "step": "install the insulated shim",
+        "type": 1
+      },
+      {
+        "realtime": 449,
+        "step": "install the insulated shim",
+        "type": 1
+      },
+      {
+        "realtime": 479,
+        "step": "use the air pressure gun or hair drier to flatten the wrapper",
+        "type": 0
+      },
+      {
+        "realtime": 482,
+        "step": "use the air pressure gun or hair drier to flatten the wrapper",
+        "type": 0
+      },
+      {
+        "realtime": 486,
+        "step": "use the air pressure gun or hair drier to flatten the wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 489,
+        "step": "use the air pressure gun or hair drier to flatten the wrapper",
+        "type": 1
+      },
+      {
+        "realtime": 538,
+        "step": "use the air pressure gun or hair drier to flatten the wrapper",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1539,
+    "task": "SSR",
+    "video": "COIN/0R-MCN4gHT4.mp4",
+    "tutorial": "MakeBed",
+    "all_steps": [
+      "put the sheet on the bed",
+      "insert the pillow into the pillow cover",
+      "put the pillow on the bed"
+    ],
+    "start_time": [
+      2,
+      182,
+      220
+    ],
+    "end_time": [
+      181,
+      219,
+      233
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "step": "put the sheet on the bed",
+        "type": 1
+      },
+      {
+        "realtime": 181,
+        "step": "put the sheet on the bed",
+        "type": 1
+      },
+      {
+        "realtime": 177,
+        "step": "insert the pillow into the pillow cover",
+        "type": 0
+      },
+      {
+        "realtime": 180,
+        "step": "insert the pillow into the pillow cover",
+        "type": 0
+      },
+      {
+        "realtime": 184,
+        "step": "insert the pillow into the pillow cover",
+        "type": 1
+      },
+      {
+        "realtime": 187,
+        "step": "insert the pillow into the pillow cover",
+        "type": 1
+      },
+      {
+        "realtime": 219,
+        "step": "insert the pillow into the pillow cover",
+        "type": 1
+      },
+      {
+        "realtime": 215,
+        "step": "put the pillow on the bed",
+        "type": 0
+      },
+      {
+        "realtime": 218,
+        "step": "put the pillow on the bed",
+        "type": 0
+      },
+      {
+        "realtime": 222,
+        "step": "put the pillow on the bed",
+        "type": 1
+      },
+      {
+        "realtime": 225,
+        "step": "put the pillow on the bed",
+        "type": 1
+      },
+      {
+        "realtime": 233,
+        "step": "put the pillow on the bed",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1540,
+    "task": "SSR",
+    "video": "COIN/Hf29pcX-B3M.mp4",
+    "tutorial": "ReplaceTyreValveStem",
+    "all_steps": [
+      "remove the air nozzle",
+      "install the new air nozzle",
+      "inflate the tyre after replacement"
+    ],
+    "start_time": [
+      83,
+      121,
+      145
+    ],
+    "end_time": [
+      107,
+      144,
+      159
+    ],
+    "test_info": [
+      {
+        "realtime": 85,
+        "step": "remove the air nozzle",
+        "type": 1
+      },
+      {
+        "realtime": 88,
+        "step": "remove the air nozzle",
+        "type": 1
+      },
+      {
+        "realtime": 107,
+        "step": "remove the air nozzle",
+        "type": 1
+      },
+      {
+        "realtime": 116,
+        "step": "install the new air nozzle",
+        "type": 0
+      },
+      {
+        "realtime": 119,
+        "step": "install the new air nozzle",
+        "type": 0
+      },
+      {
+        "realtime": 123,
+        "step": "install the new air nozzle",
+        "type": 1
+      },
+      {
+        "realtime": 126,
+        "step": "install the new air nozzle",
+        "type": 1
+      },
+      {
+        "realtime": 144,
+        "step": "install the new air nozzle",
+        "type": 1
+      },
+      {
+        "realtime": 140,
+        "step": "inflate the tyre after replacement",
+        "type": 0
+      },
+      {
+        "realtime": 143,
+        "step": "inflate the tyre after replacement",
+        "type": 0
+      },
+      {
+        "realtime": 147,
+        "step": "inflate the tyre after replacement",
+        "type": 1
+      },
+      {
+        "realtime": 150,
+        "step": "inflate the tyre after replacement",
+        "type": 1
+      },
+      {
+        "realtime": 159,
+        "step": "inflate the tyre after replacement",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1541,
+    "task": "SSR",
+    "video": "COIN/QInuE1KwCZM.mp4",
+    "tutorial": "ReplaceFilterForAirPurifier",
+    "all_steps": [
+      "take out the shell",
+      "take out the filter",
+      "fit on the filter",
+      "fit on the shell"
+    ],
+    "start_time": [
+      4,
+      22,
+      59,
+      87
+    ],
+    "end_time": [
+      11,
+      51,
+      86,
+      99
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "step": "take out the shell",
+        "type": 1
+      },
+      {
+        "realtime": 9,
+        "step": "take out the shell",
+        "type": 1
+      },
+      {
+        "realtime": 11,
+        "step": "take out the shell",
+        "type": 1
+      },
+      {
+        "realtime": 17,
+        "step": "take out the filter",
+        "type": 0
+      },
+      {
+        "realtime": 20,
+        "step": "take out the filter",
+        "type": 0
+      },
+      {
+        "realtime": 24,
+        "step": "take out the filter",
+        "type": 1
+      },
+      {
+        "realtime": 27,
+        "step": "take out the filter",
+        "type": 1
+      },
+      {
+        "realtime": 51,
+        "step": "take out the filter",
+        "type": 1
+      },
+      {
+        "realtime": 54,
+        "step": "fit on the filter",
+        "type": 0
+      },
+      {
+        "realtime": 57,
+        "step": "fit on the filter",
+        "type": 0
+      },
+      {
+        "realtime": 61,
+        "step": "fit on the filter",
+        "type": 1
+      },
+      {
+        "realtime": 64,
+        "step": "fit on the filter",
+        "type": 1
+      },
+      {
+        "realtime": 86,
+        "step": "fit on the filter",
+        "type": 1
+      },
+      {
+        "realtime": 82,
+        "step": "fit on the shell",
+        "type": 0
+      },
+      {
+        "realtime": 85,
+        "step": "fit on the shell",
+        "type": 0
+      },
+      {
+        "realtime": 89,
+        "step": "fit on the shell",
+        "type": 1
+      },
+      {
+        "realtime": 92,
+        "step": "fit on the shell",
+        "type": 1
+      },
+      {
+        "realtime": 99,
+        "step": "fit on the shell",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1542,
+    "task": "SSR",
+    "video": "COIN/9c60oL-JKd0.mp4",
+    "tutorial": "ReplaceRefrigeratorWaterFilter",
+    "all_steps": [
+      "take out the old filter",
+      "remove the cap of the new filter",
+      "install the new filter"
+    ],
+    "start_time": [
+      47,
+      66,
+      75
+    ],
+    "end_time": [
+      63,
+      74,
+      94
+    ],
+    "test_info": [
+      {
+        "realtime": 49,
+        "step": "take out the old filter",
+        "type": 1
+      },
+      {
+        "realtime": 52,
+        "step": "take out the old filter",
+        "type": 1
+      },
+      {
+        "realtime": 63,
+        "step": "take out the old filter",
+        "type": 1
+      },
+      {
+        "realtime": 61,
+        "step": "remove the cap of the new filter",
+        "type": 0
+      },
+      {
+        "realtime": 64,
+        "step": "remove the cap of the new filter",
+        "type": 0
+      },
+      {
+        "realtime": 68,
+        "step": "remove the cap of the new filter",
+        "type": 1
+      },
+      {
+        "realtime": 71,
+        "step": "remove the cap of the new filter",
+        "type": 1
+      },
+      {
+        "realtime": 74,
+        "step": "remove the cap of the new filter",
+        "type": 1
+      },
+      {
+        "realtime": 70,
+        "step": "install the new filter",
+        "type": 0
+      },
+      {
+        "realtime": 73,
+        "step": "install the new filter",
+        "type": 0
+      },
+      {
+        "realtime": 77,
+        "step": "install the new filter",
+        "type": 1
+      },
+      {
+        "realtime": 80,
+        "step": "install the new filter",
+        "type": 1
+      },
+      {
+        "realtime": 94,
+        "step": "install the new filter",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1543,
+    "task": "SSR",
+    "video": "COIN/RmiuR14GDsI.mp4",
+    "tutorial": "PutOnQuiltCover",
+    "all_steps": [
+      "put nicely and align the quilt and the cover",
+      "roll the quilt cover and the quilt together",
+      "take out the quilt cover from another side",
+      "put and arrange nicely"
+    ],
+    "start_time": [
+      11,
+      32,
+      79,
+      121
+    ],
+    "end_time": [
+      24,
+      78,
+      114,
+      211
+    ],
+    "test_info": [
+      {
+        "realtime": 13,
+        "step": "put nicely and align the quilt and the cover",
+        "type": 1
+      },
+      {
+        "realtime": 16,
+        "step": "put nicely and align the quilt and the cover",
+        "type": 1
+      },
+      {
+        "realtime": 24,
+        "step": "put nicely and align the quilt and the cover",
+        "type": 1
+      },
+      {
+        "realtime": 27,
+        "step": "roll the quilt cover and the quilt together",
+        "type": 0
+      },
+      {
+        "realtime": 30,
+        "step": "roll the quilt cover and the quilt together",
+        "type": 0
+      },
+      {
+        "realtime": 34,
+        "step": "roll the quilt cover and the quilt together",
+        "type": 1
+      },
+      {
+        "realtime": 37,
+        "step": "roll the quilt cover and the quilt together",
+        "type": 1
+      },
+      {
+        "realtime": 78,
+        "step": "roll the quilt cover and the quilt together",
+        "type": 1
+      },
+      {
+        "realtime": 74,
+        "step": "take out the quilt cover from another side",
+        "type": 0
+      },
+      {
+        "realtime": 77,
+        "step": "take out the quilt cover from another side",
+        "type": 0
+      },
+      {
+        "realtime": 81,
+        "step": "take out the quilt cover from another side",
+        "type": 1
+      },
+      {
+        "realtime": 84,
+        "step": "take out the quilt cover from another side",
+        "type": 1
+      },
+      {
+        "realtime": 114,
+        "step": "take out the quilt cover from another side",
+        "type": 1
+      },
+      {
+        "realtime": 116,
+        "step": "put and arrange nicely",
+        "type": 0
+      },
+      {
+        "realtime": 119,
+        "step": "put and arrange nicely",
+        "type": 0
+      },
+      {
+        "realtime": 123,
+        "step": "put and arrange nicely",
+        "type": 1
+      },
+      {
+        "realtime": 126,
+        "step": "put and arrange nicely",
+        "type": 1
+      },
+      {
+        "realtime": 211,
+        "step": "put and arrange nicely",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1544,
+    "task": "SSR",
+    "video": "COIN/2EyeP_aSKY4.mp4",
+    "tutorial": "InstallCeilingFan",
+    "all_steps": [
+      "install fan tray",
+      "install fan frame",
+      "install fans and lights"
+    ],
+    "start_time": [
+      83,
+      114,
+      135
+    ],
+    "end_time": [
+      113,
+      130,
+      163
+    ],
+    "test_info": [
+      {
+        "realtime": 85,
+        "step": "install fan tray",
+        "type": 1
+      },
+      {
+        "realtime": 88,
+        "step": "install fan tray",
+        "type": 1
+      },
+      {
+        "realtime": 113,
+        "step": "install fan tray",
+        "type": 1
+      },
+      {
+        "realtime": 109,
+        "step": "install fan frame",
+        "type": 0
+      },
+      {
+        "realtime": 112,
+        "step": "install fan frame",
+        "type": 0
+      },
+      {
+        "realtime": 116,
+        "step": "install fan frame",
+        "type": 1
+      },
+      {
+        "realtime": 119,
+        "step": "install fan frame",
+        "type": 1
+      },
+      {
+        "realtime": 130,
+        "step": "install fan frame",
+        "type": 1
+      },
+      {
+        "realtime": 130,
+        "step": "install fans and lights",
+        "type": 0
+      },
+      {
+        "realtime": 133,
+        "step": "install fans and lights",
+        "type": 0
+      },
+      {
+        "realtime": 137,
+        "step": "install fans and lights",
+        "type": 1
+      },
+      {
+        "realtime": 140,
+        "step": "install fans and lights",
+        "type": 1
+      },
+      {
+        "realtime": 163,
+        "step": "install fans and lights",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1545,
+    "task": "SSR",
+    "video": "COIN/va1W1yeLVWI.mp4",
+    "tutorial": "InstallShowerHead",
+    "all_steps": [
+      "replace the old shower head",
+      "wrap the pipe band",
+      "install the new shower head"
+    ],
+    "start_time": [
+      38,
+      105,
+      127
+    ],
+    "end_time": [
+      44,
+      126,
+      193
+    ],
+    "test_info": [
+      {
+        "realtime": 40,
+        "step": "replace the old shower head",
+        "type": 1
+      },
+      {
+        "realtime": 43,
+        "step": "replace the old shower head",
+        "type": 1
+      },
+      {
+        "realtime": 44,
+        "step": "replace the old shower head",
+        "type": 1
+      },
+      {
+        "realtime": 100,
+        "step": "wrap the pipe band",
+        "type": 0
+      },
+      {
+        "realtime": 103,
+        "step": "wrap the pipe band",
+        "type": 0
+      },
+      {
+        "realtime": 107,
+        "step": "wrap the pipe band",
+        "type": 1
+      },
+      {
+        "realtime": 110,
+        "step": "wrap the pipe band",
+        "type": 1
+      },
+      {
+        "realtime": 126,
+        "step": "wrap the pipe band",
+        "type": 1
+      },
+      {
+        "realtime": 122,
+        "step": "install the new shower head",
+        "type": 0
+      },
+      {
+        "realtime": 125,
+        "step": "install the new shower head",
+        "type": 0
+      },
+      {
+        "realtime": 129,
+        "step": "install the new shower head",
+        "type": 1
+      },
+      {
+        "realtime": 132,
+        "step": "install the new shower head",
+        "type": 1
+      },
+      {
+        "realtime": 193,
+        "step": "install the new shower head",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1546,
+    "task": "SSR",
+    "video": "COIN/fYTcH6fSHFM.mp4",
+    "tutorial": "MakeSlimeWithGlue",
+    "all_steps": [
+      "add different kinds of ingredients",
+      "mix the raw materials",
+      "rub and drag the materials"
+    ],
+    "start_time": [
+      5,
+      18,
+      41
+    ],
+    "end_time": [
+      17,
+      37,
+      69
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "step": "add different kinds of ingredients",
+        "type": 1
+      },
+      {
+        "realtime": 10,
+        "step": "add different kinds of ingredients",
+        "type": 1
+      },
+      {
+        "realtime": 17,
+        "step": "add different kinds of ingredients",
+        "type": 1
+      },
+      {
+        "realtime": 13,
+        "step": "mix the raw materials",
+        "type": 0
+      },
+      {
+        "realtime": 16,
+        "step": "mix the raw materials",
+        "type": 0
+      },
+      {
+        "realtime": 20,
+        "step": "mix the raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 23,
+        "step": "mix the raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 37,
+        "step": "mix the raw materials",
+        "type": 1
+      },
+      {
+        "realtime": 36,
+        "step": "rub and drag the materials",
+        "type": 0
+      },
+      {
+        "realtime": 39,
+        "step": "rub and drag the materials",
+        "type": 0
+      },
+      {
+        "realtime": 43,
+        "step": "rub and drag the materials",
+        "type": 1
+      },
+      {
+        "realtime": 46,
+        "step": "rub and drag the materials",
+        "type": 1
+      },
+      {
+        "realtime": 69,
+        "step": "rub and drag the materials",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1547,
+    "task": "SSR",
+    "video": "COIN/Hf2AisK1wHY.mp4",
+    "tutorial": "ChangeBikeTires",
+    "all_steps": [
+      "unload the wheel",
+      "remove the tire",
+      "load the inner tube",
+      "load the tire",
+      "load the wheel",
+      "pump up the tire"
+    ],
+    "start_time": [
+      34,
+      66,
+      106,
+      118,
+      136,
+      168
+    ],
+    "end_time": [
+      64,
+      102,
+      112,
+      134,
+      166,
+      208
+    ],
+    "test_info": [
+      {
+        "realtime": 36,
+        "step": "unload the wheel",
+        "type": 1
+      },
+      {
+        "realtime": 39,
+        "step": "unload the wheel",
+        "type": 1
+      },
+      {
+        "realtime": 64,
+        "step": "unload the wheel",
+        "type": 1
+      },
+      {
+        "realtime": 61,
+        "step": "remove the tire",
+        "type": 0
+      },
+      {
+        "realtime": 64,
+        "step": "remove the tire",
+        "type": 0
+      },
+      {
+        "realtime": 68,
+        "step": "remove the tire",
+        "type": 1
+      },
+      {
+        "realtime": 71,
+        "step": "remove the tire",
+        "type": 1
+      },
+      {
+        "realtime": 102,
+        "step": "remove the tire",
+        "type": 1
+      },
+      {
+        "realtime": 101,
+        "step": "load the inner tube",
+        "type": 0
+      },
+      {
+        "realtime": 104,
+        "step": "load the inner tube",
+        "type": 0
+      },
+      {
+        "realtime": 108,
+        "step": "load the inner tube",
+        "type": 1
+      },
+      {
+        "realtime": 111,
+        "step": "load the inner tube",
+        "type": 1
+      },
+      {
+        "realtime": 112,
+        "step": "load the inner tube",
+        "type": 1
+      },
+      {
+        "realtime": 113,
+        "step": "load the tire",
+        "type": 0
+      },
+      {
+        "realtime": 116,
+        "step": "load the tire",
+        "type": 0
+      },
+      {
+        "realtime": 120,
+        "step": "load the tire",
+        "type": 1
+      },
+      {
+        "realtime": 123,
+        "step": "load the tire",
+        "type": 1
+      },
+      {
+        "realtime": 134,
+        "step": "load the tire",
+        "type": 1
+      },
+      {
+        "realtime": 131,
+        "step": "load the wheel",
+        "type": 0
+      },
+      {
+        "realtime": 134,
+        "step": "load the wheel",
+        "type": 0
+      },
+      {
+        "realtime": 138,
+        "step": "load the wheel",
+        "type": 1
+      },
+      {
+        "realtime": 141,
+        "step": "load the wheel",
+        "type": 1
+      },
+      {
+        "realtime": 166,
+        "step": "load the wheel",
+        "type": 1
+      },
+      {
+        "realtime": 163,
+        "step": "pump up the tire",
+        "type": 0
+      },
+      {
+        "realtime": 166,
+        "step": "pump up the tire",
+        "type": 0
+      },
+      {
+        "realtime": 170,
+        "step": "pump up the tire",
+        "type": 1
+      },
+      {
+        "realtime": 173,
+        "step": "pump up the tire",
+        "type": 1
+      },
+      {
+        "realtime": 208,
+        "step": "pump up the tire",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1548,
+    "task": "SSR",
+    "video": "COIN/V7SKv1tHWZ4.mp4",
+    "tutorial": "ReplaceBatteryOnTVControl",
+    "all_steps": [
+      "open cover",
+      "remove battery",
+      "put battery in",
+      "close cover"
+    ],
+    "start_time": [
+      87,
+      101,
+      135,
+      143
+    ],
+    "end_time": [
+      96,
+      107,
+      139,
+      149
+    ],
+    "test_info": [
+      {
+        "realtime": 89,
+        "step": "open cover",
+        "type": 1
+      },
+      {
+        "realtime": 92,
+        "step": "open cover",
+        "type": 1
+      },
+      {
+        "realtime": 96,
+        "step": "open cover",
+        "type": 1
+      },
+      {
+        "realtime": 96,
+        "step": "remove battery",
+        "type": 0
+      },
+      {
+        "realtime": 99,
+        "step": "remove battery",
+        "type": 0
+      },
+      {
+        "realtime": 103,
+        "step": "remove battery",
+        "type": 1
+      },
+      {
+        "realtime": 106,
+        "step": "remove battery",
+        "type": 1
+      },
+      {
+        "realtime": 107,
+        "step": "remove battery",
+        "type": 1
+      },
+      {
+        "realtime": 130,
+        "step": "put battery in",
+        "type": 0
+      },
+      {
+        "realtime": 133,
+        "step": "put battery in",
+        "type": 0
+      },
+      {
+        "realtime": 137,
+        "step": "put battery in",
+        "type": 1
+      },
+      {
+        "realtime": 139,
+        "step": "put battery in",
+        "type": 1
+      },
+      {
+        "realtime": 138,
+        "step": "close cover",
+        "type": 0
+      },
+      {
+        "realtime": 141,
+        "step": "close cover",
+        "type": 0
+      },
+      {
+        "realtime": 145,
+        "step": "close cover",
+        "type": 1
+      },
+      {
+        "realtime": 148,
+        "step": "close cover",
+        "type": 1
+      },
+      {
+        "realtime": 149,
+        "step": "close cover",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1549,
+    "task": "SSR",
+    "video": "COIN/iPhI5xRvJHM.mp4",
+    "tutorial": "WrapZongzi",
+    "all_steps": [
+      "add ingredients into cone",
+      "fold the leaves",
+      "tie the zongzi tightly"
+    ],
+    "start_time": [
+      100,
+      138,
+      144
+    ],
+    "end_time": [
+      137,
+      142,
+      155
+    ],
+    "test_info": [
+      {
+        "realtime": 102,
+        "step": "add ingredients into cone",
+        "type": 1
+      },
+      {
+        "realtime": 105,
+        "step": "add ingredients into cone",
+        "type": 1
+      },
+      {
+        "realtime": 137,
+        "step": "add ingredients into cone",
+        "type": 1
+      },
+      {
+        "realtime": 133,
+        "step": "fold the leaves",
+        "type": 0
+      },
+      {
+        "realtime": 136,
+        "step": "fold the leaves",
+        "type": 0
+      },
+      {
+        "realtime": 140,
+        "step": "fold the leaves",
+        "type": 1
+      },
+      {
+        "realtime": 142,
+        "step": "fold the leaves",
+        "type": 1
+      },
+      {
+        "realtime": 139,
+        "step": "tie the zongzi tightly",
+        "type": 0
+      },
+      {
+        "realtime": 142,
+        "step": "tie the zongzi tightly",
+        "type": 0
+      },
+      {
+        "realtime": 146,
+        "step": "tie the zongzi tightly",
+        "type": 1
+      },
+      {
+        "realtime": 149,
+        "step": "tie the zongzi tightly",
+        "type": 1
+      },
+      {
+        "realtime": 155,
+        "step": "tie the zongzi tightly",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1550,
+    "task": "SSR",
+    "video": "COIN/_wanp-a6MEk.mp4",
+    "tutorial": "OpenChampagneBottle",
+    "all_steps": [
+      "tear out the foil",
+      "turn the suspension link",
+      "open the bottle carefully"
+    ],
+    "start_time": [
+      18,
+      28,
+      47
+    ],
+    "end_time": [
+      27,
+      42,
+      56
+    ],
+    "test_info": [
+      {
+        "realtime": 20,
+        "step": "tear out the foil",
+        "type": 1
+      },
+      {
+        "realtime": 23,
+        "step": "tear out the foil",
+        "type": 1
+      },
+      {
+        "realtime": 27,
+        "step": "tear out the foil",
+        "type": 1
+      },
+      {
+        "realtime": 23,
+        "step": "turn the suspension link",
+        "type": 0
+      },
+      {
+        "realtime": 26,
+        "step": "turn the suspension link",
+        "type": 0
+      },
+      {
+        "realtime": 30,
+        "step": "turn the suspension link",
+        "type": 1
+      },
+      {
+        "realtime": 33,
+        "step": "turn the suspension link",
+        "type": 1
+      },
+      {
+        "realtime": 42,
+        "step": "turn the suspension link",
+        "type": 1
+      },
+      {
+        "realtime": 42,
+        "step": "open the bottle carefully",
+        "type": 0
+      },
+      {
+        "realtime": 45,
+        "step": "open the bottle carefully",
+        "type": 0
+      },
+      {
+        "realtime": 49,
+        "step": "open the bottle carefully",
+        "type": 1
+      },
+      {
+        "realtime": 52,
+        "step": "open the bottle carefully",
+        "type": 1
+      },
+      {
+        "realtime": 56,
+        "step": "open the bottle carefully",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1551,
+    "task": "SSR",
+    "video": "COIN/2uKIUxlomWg.mp4",
+    "tutorial": "AssembleOfficeChair",
+    "all_steps": [
+      "install the wheels for the base",
+      "assemble the cushion and the backrest",
+      "connect the chair and the base"
+    ],
+    "start_time": [
+      15,
+      51,
+      194
+    ],
+    "end_time": [
+      38,
+      194,
+      201
+    ],
+    "test_info": [
+      {
+        "realtime": 17,
+        "step": "install the wheels for the base",
+        "type": 1
+      },
+      {
+        "realtime": 20,
+        "step": "install the wheels for the base",
+        "type": 1
+      },
+      {
+        "realtime": 38,
+        "step": "install the wheels for the base",
+        "type": 1
+      },
+      {
+        "realtime": 46,
+        "step": "assemble the cushion and the backrest",
+        "type": 0
+      },
+      {
+        "realtime": 49,
+        "step": "assemble the cushion and the backrest",
+        "type": 0
+      },
+      {
+        "realtime": 53,
+        "step": "assemble the cushion and the backrest",
+        "type": 1
+      },
+      {
+        "realtime": 56,
+        "step": "assemble the cushion and the backrest",
+        "type": 1
+      },
+      {
+        "realtime": 194,
+        "step": "assemble the cushion and the backrest",
+        "type": 1
+      },
+      {
+        "realtime": 189,
+        "step": "connect the chair and the base",
+        "type": 0
+      },
+      {
+        "realtime": 192,
+        "step": "connect the chair and the base",
+        "type": 0
+      },
+      {
+        "realtime": 196,
+        "step": "connect the chair and the base",
+        "type": 1
+      },
+      {
+        "realtime": 199,
+        "step": "connect the chair and the base",
+        "type": 1
+      },
+      {
+        "realtime": 201,
+        "step": "connect the chair and the base",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1552,
+    "task": "SSR",
+    "video": "COIN/2vzC30892IE.mp4",
+    "tutorial": "ReplaceMemoryChip",
+    "all_steps": [
+      "take out the shell",
+      "remove the old memory chip",
+      "install the new memory chip",
+      "fit on the shell"
+    ],
+    "start_time": [
+      5,
+      133,
+      141,
+      184
+    ],
+    "end_time": [
+      124,
+      140,
+      183,
+      228
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "step": "take out the shell",
+        "type": 1
+      },
+      {
+        "realtime": 10,
+        "step": "take out the shell",
+        "type": 1
+      },
+      {
+        "realtime": 124,
+        "step": "take out the shell",
+        "type": 1
+      },
+      {
+        "realtime": 128,
+        "step": "remove the old memory chip",
+        "type": 0
+      },
+      {
+        "realtime": 131,
+        "step": "remove the old memory chip",
+        "type": 0
+      },
+      {
+        "realtime": 135,
+        "step": "remove the old memory chip",
+        "type": 1
+      },
+      {
+        "realtime": 138,
+        "step": "remove the old memory chip",
+        "type": 1
+      },
+      {
+        "realtime": 140,
+        "step": "remove the old memory chip",
+        "type": 1
+      },
+      {
+        "realtime": 136,
+        "step": "install the new memory chip",
+        "type": 0
+      },
+      {
+        "realtime": 139,
+        "step": "install the new memory chip",
+        "type": 0
+      },
+      {
+        "realtime": 143,
+        "step": "install the new memory chip",
+        "type": 1
+      },
+      {
+        "realtime": 146,
+        "step": "install the new memory chip",
+        "type": 1
+      },
+      {
+        "realtime": 183,
+        "step": "install the new memory chip",
+        "type": 1
+      },
+      {
+        "realtime": 179,
+        "step": "fit on the shell",
+        "type": 0
+      },
+      {
+        "realtime": 182,
+        "step": "fit on the shell",
+        "type": 0
+      },
+      {
+        "realtime": 186,
+        "step": "fit on the shell",
+        "type": 1
+      },
+      {
+        "realtime": 189,
+        "step": "fit on the shell",
+        "type": 1
+      },
+      {
+        "realtime": 228,
+        "step": "fit on the shell",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1553,
+    "task": "SSR",
+    "video": "COIN/5OSRrZ15R1E.mp4",
+    "tutorial": "MakeCandle",
+    "all_steps": [
+      "melt the wax with water",
+      "put the candle wick into a vessel",
+      "pour the wax into the vessel",
+      "wait for the candle until concretion"
+    ],
+    "start_time": [
+      98,
+      119,
+      133,
+      176
+    ],
+    "end_time": [
+      118,
+      132,
+      175,
+      185
+    ],
+    "test_info": [
+      {
+        "realtime": 100,
+        "step": "melt the wax with water",
+        "type": 1
+      },
+      {
+        "realtime": 103,
+        "step": "melt the wax with water",
+        "type": 1
+      },
+      {
+        "realtime": 118,
+        "step": "melt the wax with water",
+        "type": 1
+      },
+      {
+        "realtime": 114,
+        "step": "put the candle wick into a vessel",
+        "type": 0
+      },
+      {
+        "realtime": 117,
+        "step": "put the candle wick into a vessel",
+        "type": 0
+      },
+      {
+        "realtime": 121,
+        "step": "put the candle wick into a vessel",
+        "type": 1
+      },
+      {
+        "realtime": 124,
+        "step": "put the candle wick into a vessel",
+        "type": 1
+      },
+      {
+        "realtime": 132,
+        "step": "put the candle wick into a vessel",
+        "type": 1
+      },
+      {
+        "realtime": 128,
+        "step": "pour the wax into the vessel",
+        "type": 0
+      },
+      {
+        "realtime": 131,
+        "step": "pour the wax into the vessel",
+        "type": 0
+      },
+      {
+        "realtime": 135,
+        "step": "pour the wax into the vessel",
+        "type": 1
+      },
+      {
+        "realtime": 138,
+        "step": "pour the wax into the vessel",
+        "type": 1
+      },
+      {
+        "realtime": 175,
+        "step": "pour the wax into the vessel",
+        "type": 1
+      },
+      {
+        "realtime": 171,
+        "step": "wait for the candle until concretion",
+        "type": 0
+      },
+      {
+        "realtime": 174,
+        "step": "wait for the candle until concretion",
+        "type": 0
+      },
+      {
+        "realtime": 178,
+        "step": "wait for the candle until concretion",
+        "type": 1
+      },
+      {
+        "realtime": 181,
+        "step": "wait for the candle until concretion",
+        "type": 1
+      },
+      {
+        "realtime": 185,
+        "step": "wait for the candle until concretion",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1554,
+    "task": "SSR",
+    "video": "COIN/OvsX3KHPxNU.mp4",
+    "tutorial": "ReplaceBladeOfASaw",
+    "all_steps": [
+      "turn off the balde screw",
+      "install the new blade",
+      "tighten the blade screw"
+    ],
+    "start_time": [
+      89,
+      126,
+      148
+    ],
+    "end_time": [
+      125,
+      147,
+      207
+    ],
+    "test_info": [
+      {
+        "realtime": 91,
+        "step": "turn off the balde screw",
+        "type": 1
+      },
+      {
+        "realtime": 94,
+        "step": "turn off the balde screw",
+        "type": 1
+      },
+      {
+        "realtime": 125,
+        "step": "turn off the balde screw",
+        "type": 1
+      },
+      {
+        "realtime": 121,
+        "step": "install the new blade",
+        "type": 0
+      },
+      {
+        "realtime": 124,
+        "step": "install the new blade",
+        "type": 0
+      },
+      {
+        "realtime": 128,
+        "step": "install the new blade",
+        "type": 1
+      },
+      {
+        "realtime": 131,
+        "step": "install the new blade",
+        "type": 1
+      },
+      {
+        "realtime": 147,
+        "step": "install the new blade",
+        "type": 1
+      },
+      {
+        "realtime": 143,
+        "step": "tighten the blade screw",
+        "type": 0
+      },
+      {
+        "realtime": 146,
+        "step": "tighten the blade screw",
+        "type": 0
+      },
+      {
+        "realtime": 150,
+        "step": "tighten the blade screw",
+        "type": 1
+      },
+      {
+        "realtime": 153,
+        "step": "tighten the blade screw",
+        "type": 1
+      },
+      {
+        "realtime": 207,
+        "step": "tighten the blade screw",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1555,
+    "task": "SSR",
+    "video": "COIN/KlLCIDY3I8g.mp4",
+    "tutorial": "Sow",
+    "all_steps": [
+      "prepare the soil carefully",
+      "sow on the soil",
+      "cover with some soil",
+      "apply a cover on the soil"
+    ],
+    "start_time": [
+      22,
+      53,
+      96,
+      188
+    ],
+    "end_time": [
+      48,
+      94,
+      118,
+      209
+    ],
+    "test_info": [
+      {
+        "realtime": 24,
+        "step": "prepare the soil carefully",
+        "type": 1
+      },
+      {
+        "realtime": 27,
+        "step": "prepare the soil carefully",
+        "type": 1
+      },
+      {
+        "realtime": 48,
+        "step": "prepare the soil carefully",
+        "type": 1
+      },
+      {
+        "realtime": 48,
+        "step": "sow on the soil",
+        "type": 0
+      },
+      {
+        "realtime": 51,
+        "step": "sow on the soil",
+        "type": 0
+      },
+      {
+        "realtime": 55,
+        "step": "sow on the soil",
+        "type": 1
+      },
+      {
+        "realtime": 58,
+        "step": "sow on the soil",
+        "type": 1
+      },
+      {
+        "realtime": 94,
+        "step": "sow on the soil",
+        "type": 1
+      },
+      {
+        "realtime": 91,
+        "step": "cover with some soil",
+        "type": 0
+      },
+      {
+        "realtime": 94,
+        "step": "cover with some soil",
+        "type": 0
+      },
+      {
+        "realtime": 98,
+        "step": "cover with some soil",
+        "type": 1
+      },
+      {
+        "realtime": 101,
+        "step": "cover with some soil",
+        "type": 1
+      },
+      {
+        "realtime": 118,
+        "step": "cover with some soil",
+        "type": 1
+      },
+      {
+        "realtime": 183,
+        "step": "apply a cover on the soil",
+        "type": 0
+      },
+      {
+        "realtime": 186,
+        "step": "apply a cover on the soil",
+        "type": 0
+      },
+      {
+        "realtime": 190,
+        "step": "apply a cover on the soil",
+        "type": 1
+      },
+      {
+        "realtime": 193,
+        "step": "apply a cover on the soil",
+        "type": 1
+      },
+      {
+        "realtime": 209,
+        "step": "apply a cover on the soil",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1556,
+    "task": "SSR",
+    "video": "COIN/LLwIkpiViak.mp4",
+    "tutorial": "UseNetiPot",
+    "all_steps": [
+      "add a small amount of salt to Neti Pot",
+      "shake and stir",
+      "fill a nostril with saline and do the same to the other nostril",
+      "wipe nose"
+    ],
+    "start_time": [
+      57,
+      63,
+      75,
+      167
+    ],
+    "end_time": [
+      61,
+      70,
+      154,
+      173
+    ],
+    "test_info": [
+      {
+        "realtime": 59,
+        "step": "add a small amount of salt to Neti Pot",
+        "type": 1
+      },
+      {
+        "realtime": 61,
+        "step": "add a small amount of salt to Neti Pot",
+        "type": 1
+      },
+      {
+        "realtime": 58,
+        "step": "shake and stir",
+        "type": 0
+      },
+      {
+        "realtime": 61,
+        "step": "shake and stir",
+        "type": 0
+      },
+      {
+        "realtime": 65,
+        "step": "shake and stir",
+        "type": 1
+      },
+      {
+        "realtime": 68,
+        "step": "shake and stir",
+        "type": 1
+      },
+      {
+        "realtime": 70,
+        "step": "shake and stir",
+        "type": 1
+      },
+      {
+        "realtime": 70,
+        "step": "fill a nostril with saline and do the same to the other nostril",
+        "type": 0
+      },
+      {
+        "realtime": 73,
+        "step": "fill a nostril with saline and do the same to the other nostril",
+        "type": 0
+      },
+      {
+        "realtime": 77,
+        "step": "fill a nostril with saline and do the same to the other nostril",
+        "type": 1
+      },
+      {
+        "realtime": 80,
+        "step": "fill a nostril with saline and do the same to the other nostril",
+        "type": 1
+      },
+      {
+        "realtime": 154,
+        "step": "fill a nostril with saline and do the same to the other nostril",
+        "type": 1
+      },
+      {
+        "realtime": 162,
+        "step": "wipe nose",
+        "type": 0
+      },
+      {
+        "realtime": 165,
+        "step": "wipe nose",
+        "type": 0
+      },
+      {
+        "realtime": 169,
+        "step": "wipe nose",
+        "type": 1
+      },
+      {
+        "realtime": 172,
+        "step": "wipe nose",
+        "type": 1
+      },
+      {
+        "realtime": 173,
+        "step": "wipe nose",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1557,
+    "task": "SSR",
+    "video": "COIN/N_qj_iSrF64.mp4",
+    "tutorial": "RemoveBlackheadsWithGlue",
+    "all_steps": [
+      "pour some glue to the face",
+      "wipe the glue to a layer",
+      "reveal the glue from the face"
+    ],
+    "start_time": [
+      51,
+      82,
+      108
+    ],
+    "end_time": [
+      81,
+      107,
+      135
+    ],
+    "test_info": [
+      {
+        "realtime": 53,
+        "step": "pour some glue to the face",
+        "type": 1
+      },
+      {
+        "realtime": 56,
+        "step": "pour some glue to the face",
+        "type": 1
+      },
+      {
+        "realtime": 81,
+        "step": "pour some glue to the face",
+        "type": 1
+      },
+      {
+        "realtime": 77,
+        "step": "wipe the glue to a layer",
+        "type": 0
+      },
+      {
+        "realtime": 80,
+        "step": "wipe the glue to a layer",
+        "type": 0
+      },
+      {
+        "realtime": 84,
+        "step": "wipe the glue to a layer",
+        "type": 1
+      },
+      {
+        "realtime": 87,
+        "step": "wipe the glue to a layer",
+        "type": 1
+      },
+      {
+        "realtime": 107,
+        "step": "wipe the glue to a layer",
+        "type": 1
+      },
+      {
+        "realtime": 103,
+        "step": "reveal the glue from the face",
+        "type": 0
+      },
+      {
+        "realtime": 106,
+        "step": "reveal the glue from the face",
+        "type": 0
+      },
+      {
+        "realtime": 110,
+        "step": "reveal the glue from the face",
+        "type": 1
+      },
+      {
+        "realtime": 113,
+        "step": "reveal the glue from the face",
+        "type": 1
+      },
+      {
+        "realtime": 135,
+        "step": "reveal the glue from the face",
+        "type": 1
+      }
+    ]
+  },
+  {
+    "id": 1558,
+    "task": "REC",
+    "video": "perception_test/video_4017.mp4",
+    "activity": "breaking something",
+    "start_times": [
+      6
+    ],
+    "end_times": [
+      17
+    ],
+    "test_info": [
+      {
+        "realtime": 17,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 1
+      },
+      {
+        "realtime": 32.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1559,
+    "task": "REC",
+    "video": "perception_test/video_2618.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      0,
+      6,
+      15
+    ],
+    "end_times": [
+      5,
+      13,
+      18
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 1
+      },
+      {
+        "realtime": 13,
+        "count": 2
+      },
+      {
+        "realtime": 18,
+        "count": 3
+      },
+      {
+        "realtime": 20.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1560,
+    "task": "REC",
+    "video": "perception_test/video_9373.mp4",
+    "activity": "opening something",
+    "start_times": [
+      1
+    ],
+    "end_times": [
+      4
+    ],
+    "test_info": [
+      {
+        "realtime": 14,
+        "count": 1
+      },
+      {
+        "realtime": 22.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1561,
+    "task": "REC",
+    "video": "perception_test/video_9200.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      21
+    ],
+    "end_times": [
+      26
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 10.0,
+        "count": 0
+      },
+      {
+        "realtime": 26,
+        "count": 1
+      },
+      {
+        "realtime": 33,
+        "count": 1
+      },
+      {
+        "realtime": 34.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1562,
+    "task": "REC",
+    "video": "perception_test/video_10889.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      0,
+      7,
+      17,
+      25
+    ],
+    "end_times": [
+      6,
+      14,
+      24,
+      34
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 1
+      },
+      {
+        "realtime": 14,
+        "count": 2
+      },
+      {
+        "realtime": 24,
+        "count": 3
+      },
+      {
+        "realtime": 34,
+        "count": 4
+      },
+      {
+        "realtime": 35.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1563,
+    "task": "REC",
+    "video": "perception_test/video_6713.mp4",
+    "activity": "opening something",
+    "start_times": [
+      0,
+      18
+    ],
+    "end_times": [
+      1,
+      20
+    ],
+    "test_info": [
+      {
+        "realtime": 8,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 2
+      },
+      {
+        "realtime": 32,
+        "count": 2
+      },
+      {
+        "realtime": 34.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1564,
+    "task": "REC",
+    "video": "perception_test/video_3161.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      5,
+      10,
+      17,
+      24,
+      30
+    ],
+    "end_times": [
+      10,
+      18,
+      24,
+      27,
+      34
+    ],
+    "test_info": [
+      {
+        "realtime": 10,
+        "count": 1
+      },
+      {
+        "realtime": 18,
+        "count": 2
+      },
+      {
+        "realtime": 24,
+        "count": 3
+      },
+      {
+        "realtime": 27,
+        "count": 4
+      },
+      {
+        "realtime": 34,
+        "count": 5
+      },
+      {
+        "realtime": 34.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1565,
+    "task": "REC",
+    "video": "perception_test/video_5432.mp4",
+    "activity": "taking something out of something",
+    "start_times": [
+      11,
+      13,
+      14,
+      15
+    ],
+    "end_times": [
+      13,
+      14,
+      15,
+      17
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 0
+      },
+      {
+        "realtime": 13,
+        "count": 1
+      },
+      {
+        "realtime": 14,
+        "count": 2
+      },
+      {
+        "realtime": 15,
+        "count": 3
+      },
+      {
+        "realtime": 17,
+        "count": 4
+      },
+      {
+        "realtime": 27,
+        "count": 4
+      },
+      {
+        "realtime": 33.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1566,
+    "task": "REC",
+    "video": "perception_test/video_7380.mp4",
+    "activity": "hitting something against/with something",
+    "start_times": [
+      8,
+      9,
+      9,
+      10,
+      11
+    ],
+    "end_times": [
+      9,
+      9,
+      10,
+      11,
+      11
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 9,
+        "count": 2
+      },
+      {
+        "realtime": 10,
+        "count": 3
+      },
+      {
+        "realtime": 11,
+        "count": 4
+      },
+      {
+        "realtime": 11,
+        "count": 5
+      },
+      {
+        "realtime": 20,
+        "count": 5
+      },
+      {
+        "realtime": 20.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1567,
+    "task": "REC",
+    "video": "perception_test/video_5752.mp4",
+    "activity": "closing something",
+    "start_times": [
+      15
+    ],
+    "end_times": [
+      19
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 0
+      },
+      {
+        "realtime": 19,
+        "count": 1
+      },
+      {
+        "realtime": 22.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1568,
+    "task": "REC",
+    "video": "perception_test/video_9879.mp4",
+    "activity": "trying to close something but something prevents that",
+    "start_times": [
+      22
+    ],
+    "end_times": [
+      26
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 11.0,
+        "count": 0
+      },
+      {
+        "realtime": 26,
+        "count": 1
+      },
+      {
+        "realtime": 30,
+        "count": 1
+      },
+      {
+        "realtime": 33.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1569,
+    "task": "REC",
+    "video": "perception_test/video_3098.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      1,
+      7,
+      14
+    ],
+    "end_times": [
+      4,
+      11,
+      19
+    ],
+    "test_info": [
+      {
+        "realtime": 11,
+        "count": 2
+      },
+      {
+        "realtime": 19,
+        "count": 3
+      },
+      {
+        "realtime": 21.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1570,
+    "task": "REC",
+    "video": "perception_test/video_1696.mp4",
+    "activity": "hitting something against/with something",
+    "start_times": [
+      14,
+      15,
+      15,
+      16,
+      16
+    ],
+    "end_times": [
+      15,
+      15,
+      16,
+      16,
+      18
+    ],
+    "test_info": [
+      {
+        "realtime": 8,
+        "count": 0
+      },
+      {
+        "realtime": 15,
+        "count": 1
+      },
+      {
+        "realtime": 15,
+        "count": 2
+      },
+      {
+        "realtime": 16,
+        "count": 3
+      },
+      {
+        "realtime": 16,
+        "count": 4
+      },
+      {
+        "realtime": 18,
+        "count": 5
+      },
+      {
+        "realtime": 21.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1571,
+    "task": "REC",
+    "video": "perception_test/video_4242.mp4",
+    "activity": "lifting something and placing it back down",
+    "start_times": [
+      0,
+      1,
+      2,
+      18,
+      19,
+      21
+    ],
+    "end_times": [
+      1,
+      2,
+      4,
+      19,
+      20,
+      23
+    ],
+    "test_info": [
+      {
+        "realtime": 10,
+        "count": 3
+      },
+      {
+        "realtime": 19,
+        "count": 4
+      },
+      {
+        "realtime": 20,
+        "count": 5
+      },
+      {
+        "realtime": 23,
+        "count": 6
+      },
+      {
+        "realtime": 24.0,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": 1572,
+    "task": "REC",
+    "video": "perception_test/video_2172.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      4,
+      12
+    ],
+    "end_times": [
+      9,
+      18
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 18,
+        "count": 2
+      },
+      {
+        "realtime": 18,
+        "count": 2
+      },
+      {
+        "realtime": 23.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1573,
+    "task": "REC",
+    "video": "perception_test/video_7923.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      3,
+      9,
+      15
+    ],
+    "end_times": [
+      7,
+      14,
+      19
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 14,
+        "count": 2
+      },
+      {
+        "realtime": 19,
+        "count": 3
+      },
+      {
+        "realtime": 23.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1574,
+    "task": "REC",
+    "video": "perception_test/video_11383.mp4",
+    "activity": "covering something with something",
+    "start_times": [
+      1,
+      4,
+      9,
+      16
+    ],
+    "end_times": [
+      4,
+      9,
+      15,
+      21
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 2
+      },
+      {
+        "realtime": 15,
+        "count": 3
+      },
+      {
+        "realtime": 21,
+        "count": 4
+      },
+      {
+        "realtime": 26,
+        "count": 4
+      },
+      {
+        "realtime": 26.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1575,
+    "task": "REC",
+    "video": "perception_test/video_10074.mp4",
+    "activity": "tearing something into pieces",
+    "start_times": [
+      2,
+      5,
+      8,
+      12,
+      15,
+      17,
+      20
+    ],
+    "end_times": [
+      5,
+      8,
+      10,
+      15,
+      17,
+      19,
+      21
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 1
+      },
+      {
+        "realtime": 8,
+        "count": 2
+      },
+      {
+        "realtime": 10,
+        "count": 3
+      },
+      {
+        "realtime": 15,
+        "count": 4
+      },
+      {
+        "realtime": 17,
+        "count": 5
+      },
+      {
+        "realtime": 19,
+        "count": 6
+      },
+      {
+        "realtime": 21,
+        "count": 7
+      },
+      {
+        "realtime": 24.0,
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": 1576,
+    "task": "REC",
+    "video": "perception_test/video_9526.mp4",
+    "activity": "closing something",
+    "start_times": [
+      3,
+      6,
+      8,
+      11,
+      14,
+      17
+    ],
+    "end_times": [
+      4,
+      7,
+      9,
+      12,
+      15,
+      19
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 2
+      },
+      {
+        "realtime": 9,
+        "count": 3
+      },
+      {
+        "realtime": 12,
+        "count": 4
+      },
+      {
+        "realtime": 15,
+        "count": 5
+      },
+      {
+        "realtime": 19,
+        "count": 6
+      },
+      {
+        "realtime": 22.0,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": 1577,
+    "task": "REC",
+    "video": "perception_test/video_8447.mp4",
+    "activity": "lifting something and placing it back down",
+    "start_times": [
+      0,
+      3,
+      5,
+      19,
+      22,
+      25
+    ],
+    "end_times": [
+      3,
+      5,
+      7,
+      22,
+      25,
+      27
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 2
+      },
+      {
+        "realtime": 7,
+        "count": 3
+      },
+      {
+        "realtime": 10,
+        "count": 3
+      },
+      {
+        "realtime": 22,
+        "count": 4
+      },
+      {
+        "realtime": 25,
+        "count": 5
+      },
+      {
+        "realtime": 27,
+        "count": 6
+      },
+      {
+        "realtime": 29.0,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": 1578,
+    "task": "REC",
+    "video": "perception_test/video_5670.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      0,
+      9,
+      21,
+      27
+    ],
+    "end_times": [
+      7,
+      19,
+      25,
+      34
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 2
+      },
+      {
+        "realtime": 25,
+        "count": 3
+      },
+      {
+        "realtime": 34,
+        "count": 4
+      },
+      {
+        "realtime": 34.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1579,
+    "task": "REC",
+    "video": "perception_test/video_5495.mp4",
+    "activity": "breaking something",
+    "start_times": [
+      3
+    ],
+    "end_times": [
+      9
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 11,
+        "count": 1
+      },
+      {
+        "realtime": 14,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 1
+      },
+      {
+        "realtime": 32.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1580,
+    "task": "REC",
+    "video": "perception_test/video_4465.mp4",
+    "activity": "opening something",
+    "start_times": [
+      0
+    ],
+    "end_times": [
+      2
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 18,
+        "count": 1
+      },
+      {
+        "realtime": 35.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1581,
+    "task": "REC",
+    "video": "perception_test/video_6441.mp4",
+    "activity": "hitting something against/with something",
+    "start_times": [
+      6,
+      6,
+      7,
+      8,
+      9,
+      9
+    ],
+    "end_times": [
+      6,
+      7,
+      8,
+      9,
+      9,
+      10
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 1
+      },
+      {
+        "realtime": 7,
+        "count": 2
+      },
+      {
+        "realtime": 8,
+        "count": 3
+      },
+      {
+        "realtime": 9,
+        "count": 4
+      },
+      {
+        "realtime": 9,
+        "count": 5
+      },
+      {
+        "realtime": 10,
+        "count": 6
+      },
+      {
+        "realtime": 12,
+        "count": 6
+      },
+      {
+        "realtime": 15,
+        "count": 6
+      },
+      {
+        "realtime": 22,
+        "count": 6
+      },
+      {
+        "realtime": 35.0,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": 1582,
+    "task": "REC",
+    "video": "perception_test/video_6564.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      15
+    ],
+    "end_times": [
+      22
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 0
+      },
+      {
+        "realtime": 22,
+        "count": 1
+      },
+      {
+        "realtime": 24,
+        "count": 1
+      },
+      {
+        "realtime": 34.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1583,
+    "task": "REC",
+    "video": "perception_test/video_11554.mp4",
+    "activity": "plugging something into something",
+    "start_times": [
+      4
+    ],
+    "end_times": [
+      7
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 12,
+        "count": 1
+      },
+      {
+        "realtime": 17,
+        "count": 1
+      },
+      {
+        "realtime": 28.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1584,
+    "task": "REC",
+    "video": "perception_test/video_4410.mp4",
+    "activity": "tying something",
+    "start_times": [
+      5,
+      12
+    ],
+    "end_times": [
+      11,
+      19
+    ],
+    "test_info": [
+      {
+        "realtime": 11,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 2
+      },
+      {
+        "realtime": 22,
+        "count": 2
+      },
+      {
+        "realtime": 24.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1585,
+    "task": "REC",
+    "video": "perception_test/video_6933.mp4",
+    "activity": "turning something off",
+    "start_times": [
+      9
+    ],
+    "end_times": [
+      12
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 12,
+        "count": 1
+      },
+      {
+        "realtime": 25,
+        "count": 1
+      },
+      {
+        "realtime": 25.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1586,
+    "task": "REC",
+    "video": "perception_test/video_9752.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      13,
+      18,
+      20,
+      22
+    ],
+    "end_times": [
+      17,
+      19,
+      22,
+      24
+    ],
+    "test_info": [
+      {
+        "realtime": 10,
+        "count": 0
+      },
+      {
+        "realtime": 17,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 2
+      },
+      {
+        "realtime": 22,
+        "count": 3
+      },
+      {
+        "realtime": 24,
+        "count": 4
+      },
+      {
+        "realtime": 26.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1587,
+    "task": "REC",
+    "video": "perception_test/video_10254.mp4",
+    "activity": "folding something",
+    "start_times": [
+      3,
+      9,
+      16,
+      23
+    ],
+    "end_times": [
+      8,
+      15,
+      22,
+      29
+    ],
+    "test_info": [
+      {
+        "realtime": 8,
+        "count": 1
+      },
+      {
+        "realtime": 15,
+        "count": 2
+      },
+      {
+        "realtime": 22,
+        "count": 3
+      },
+      {
+        "realtime": 29,
+        "count": 4
+      },
+      {
+        "realtime": 32.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1588,
+    "task": "REC",
+    "video": "perception_test/video_10880.mp4",
+    "activity": "hitting something against/with something",
+    "start_times": [
+      1,
+      2,
+      2,
+      3
+    ],
+    "end_times": [
+      2,
+      2,
+      3,
+      4
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 4
+      },
+      {
+        "realtime": 9,
+        "count": 4
+      },
+      {
+        "realtime": 18,
+        "count": 4
+      },
+      {
+        "realtime": 33.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1589,
+    "task": "REC",
+    "video": "perception_test/video_6746.mp4",
+    "activity": "putting something into something",
+    "start_times": [
+      2,
+      6,
+      8,
+      10,
+      12
+    ],
+    "end_times": [
+      4,
+      7,
+      9,
+      12,
+      14
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 2
+      },
+      {
+        "realtime": 9,
+        "count": 3
+      },
+      {
+        "realtime": 12,
+        "count": 4
+      },
+      {
+        "realtime": 14,
+        "count": 5
+      },
+      {
+        "realtime": 23,
+        "count": 5
+      },
+      {
+        "realtime": 23.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1590,
+    "task": "REC",
+    "video": "perception_test/video_5225.mp4",
+    "activity": "putting something into something",
+    "start_times": [
+      0,
+      0,
+      3,
+      4,
+      7,
+      8,
+      12
+    ],
+    "end_times": [
+      0,
+      2,
+      4,
+      6,
+      7,
+      10,
+      15
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 4
+      },
+      {
+        "realtime": 7,
+        "count": 5
+      },
+      {
+        "realtime": 10,
+        "count": 6
+      },
+      {
+        "realtime": 15,
+        "count": 7
+      },
+      {
+        "realtime": 19,
+        "count": 7
+      },
+      {
+        "realtime": 20.0,
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": 1591,
+    "task": "REC",
+    "video": "perception_test/video_10064.mp4",
+    "activity": "putting something into something",
+    "start_times": [
+      7,
+      10
+    ],
+    "end_times": [
+      9,
+      16
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 0
+      },
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 16,
+        "count": 2
+      },
+      {
+        "realtime": 18,
+        "count": 2
+      },
+      {
+        "realtime": 22.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1592,
+    "task": "REC",
+    "video": "perception_test/video_1590.mp4",
+    "activity": "putting something into something",
+    "start_times": [
+      0,
+      2,
+      4,
+      7,
+      8
+    ],
+    "end_times": [
+      2,
+      4,
+      6,
+      8,
+      10
+    ],
+    "test_info": [
+      {
+        "realtime": 2,
+        "count": 1
+      },
+      {
+        "realtime": 4,
+        "count": 2
+      },
+      {
+        "realtime": 6,
+        "count": 3
+      },
+      {
+        "realtime": 8,
+        "count": 4
+      },
+      {
+        "realtime": 10,
+        "count": 5
+      },
+      {
+        "realtime": 19,
+        "count": 5
+      },
+      {
+        "realtime": 21.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1593,
+    "task": "REC",
+    "video": "perception_test/video_9560.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      3,
+      11,
+      22
+    ],
+    "end_times": [
+      6,
+      17,
+      26
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 1
+      },
+      {
+        "realtime": 11,
+        "count": 1
+      },
+      {
+        "realtime": 17,
+        "count": 2
+      },
+      {
+        "realtime": 21,
+        "count": 2
+      },
+      {
+        "realtime": 26,
+        "count": 3
+      },
+      {
+        "realtime": 30,
+        "count": 3
+      },
+      {
+        "realtime": 31.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1594,
+    "task": "REC",
+    "video": "perception_test/video_4917.mp4",
+    "activity": "opening something",
+    "start_times": [
+      1
+    ],
+    "end_times": [
+      3
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 1
+      },
+      {
+        "realtime": 8,
+        "count": 1
+      },
+      {
+        "realtime": 16,
+        "count": 1
+      },
+      {
+        "realtime": 30.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1595,
+    "task": "REC",
+    "video": "perception_test/video_9789.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      0,
+      11,
+      19
+    ],
+    "end_times": [
+      9,
+      20,
+      27
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 2
+      },
+      {
+        "realtime": 27,
+        "count": 3
+      },
+      {
+        "realtime": 29.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1596,
+    "task": "REC",
+    "video": "perception_test/video_2669.mp4",
+    "activity": "showing something to the camera",
+    "start_times": [
+      4,
+      9,
+      15
+    ],
+    "end_times": [
+      7,
+      13,
+      19
+    ],
+    "test_info": [
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 13,
+        "count": 2
+      },
+      {
+        "realtime": 19,
+        "count": 3
+      },
+      {
+        "realtime": 22.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1597,
+    "task": "REC",
+    "video": "perception_test/video_1892.mp4",
+    "activity": "buttoning up a button",
+    "start_times": [
+      3,
+      9,
+      12,
+      15
+    ],
+    "end_times": [
+      9,
+      12,
+      15,
+      25
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 12,
+        "count": 2
+      },
+      {
+        "realtime": 15,
+        "count": 3
+      },
+      {
+        "realtime": 25,
+        "count": 4
+      },
+      {
+        "realtime": 30,
+        "count": 4
+      },
+      {
+        "realtime": 30.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1598,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001334.mp4",
+    "activity": "pole vault",
+    "start_times": [
+      57,
+      110,
+      115,
+      121
+    ],
+    "end_times": [
+      65,
+      115,
+      120,
+      130
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 28.0,
+        "count": 0
+      },
+      {
+        "realtime": 65,
+        "count": 1
+      },
+      {
+        "realtime": 67,
+        "count": 1
+      },
+      {
+        "realtime": 70,
+        "count": 1
+      },
+      {
+        "realtime": 87,
+        "count": 1
+      },
+      {
+        "realtime": 115,
+        "count": 2
+      },
+      {
+        "realtime": 120,
+        "count": 3
+      },
+      {
+        "realtime": 130,
+        "count": 4
+      },
+      {
+        "realtime": 132,
+        "count": 4
+      },
+      {
+        "realtime": 135,
+        "count": 4
+      },
+      {
+        "realtime": 149,
+        "count": 4
+      },
+      {
+        "realtime": 168.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1599,
+    "task": "REC",
+    "video": "thumos/video_test_0001209.mp4",
+    "activity": "javelin throw",
+    "start_times": [
+      61,
+      77,
+      156,
+      187,
+      222,
+      250,
+      267,
+      283,
+      311
+    ],
+    "end_times": [
+      66,
+      81,
+      164,
+      197,
+      225,
+      258,
+      273,
+      286,
+      316
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 30.0,
+        "count": 0
+      },
+      {
+        "realtime": 66,
+        "count": 1
+      },
+      {
+        "realtime": 69,
+        "count": 1
+      },
+      {
+        "realtime": 81,
+        "count": 2
+      },
+      {
+        "realtime": 83,
+        "count": 2
+      },
+      {
+        "realtime": 86,
+        "count": 2
+      },
+      {
+        "realtime": 118,
+        "count": 2
+      },
+      {
+        "realtime": 164,
+        "count": 3
+      },
+      {
+        "realtime": 166,
+        "count": 3
+      },
+      {
+        "realtime": 169,
+        "count": 3
+      },
+      {
+        "realtime": 175,
+        "count": 3
+      },
+      {
+        "realtime": 197,
+        "count": 4
+      },
+      {
+        "realtime": 199,
+        "count": 4
+      },
+      {
+        "realtime": 202,
+        "count": 4
+      },
+      {
+        "realtime": 209,
+        "count": 4
+      },
+      {
+        "realtime": 225,
+        "count": 5
+      },
+      {
+        "realtime": 227,
+        "count": 5
+      },
+      {
+        "realtime": 230,
+        "count": 5
+      },
+      {
+        "realtime": 237,
+        "count": 5
+      },
+      {
+        "realtime": 258,
+        "count": 6
+      },
+      {
+        "realtime": 260,
+        "count": 6
+      },
+      {
+        "realtime": 273,
+        "count": 7
+      },
+      {
+        "realtime": 278,
+        "count": 7
+      },
+      {
+        "realtime": 286,
+        "count": 8
+      },
+      {
+        "realtime": 288,
+        "count": 8
+      },
+      {
+        "realtime": 291,
+        "count": 8
+      },
+      {
+        "realtime": 298,
+        "count": 8
+      },
+      {
+        "realtime": 316,
+        "count": 9
+      },
+      {
+        "realtime": 318,
+        "count": 9
+      },
+      {
+        "realtime": 321,
+        "count": 9
+      },
+      {
+        "realtime": 333,
+        "count": 9
+      },
+      {
+        "realtime": 351.0,
+        "count": 9
+      }
+    ]
+  },
+  {
+    "id": 1600,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000999.mp4",
+    "activity": "long jump",
+    "start_times": [
+      53,
+      79,
+      89
+    ],
+    "end_times": [
+      70,
+      89,
+      94
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 26.0,
+        "count": 0
+      },
+      {
+        "realtime": 70,
+        "count": 1
+      },
+      {
+        "realtime": 75,
+        "count": 1
+      },
+      {
+        "realtime": 89,
+        "count": 2
+      },
+      {
+        "realtime": 94,
+        "count": 3
+      },
+      {
+        "realtime": 96,
+        "count": 3
+      },
+      {
+        "realtime": 99,
+        "count": 3
+      },
+      {
+        "realtime": 107,
+        "count": 3
+      },
+      {
+        "realtime": 120.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1601,
+    "task": "REC",
+    "video": "thumos/video_test_0001452.mp4",
+    "activity": "volleyball spiking",
+    "start_times": [
+      7,
+      17,
+      26,
+      41,
+      54
+    ],
+    "end_times": [
+      9,
+      19,
+      28,
+      43,
+      56
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 15,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 2
+      },
+      {
+        "realtime": 24,
+        "count": 2
+      },
+      {
+        "realtime": 28,
+        "count": 3
+      },
+      {
+        "realtime": 37,
+        "count": 3
+      },
+      {
+        "realtime": 43,
+        "count": 4
+      },
+      {
+        "realtime": 53,
+        "count": 4
+      },
+      {
+        "realtime": 56,
+        "count": 5
+      },
+      {
+        "realtime": 69,
+        "count": 5
+      },
+      {
+        "realtime": 72.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1602,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000889.mp4",
+    "activity": "javelin throw",
+    "start_times": [
+      31,
+      40,
+      61,
+      124,
+      132,
+      161,
+      167,
+      187
+    ],
+    "end_times": [
+      39,
+      46,
+      69,
+      131,
+      139,
+      164,
+      174,
+      194
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 15.0,
+        "count": 0
+      },
+      {
+        "realtime": 39,
+        "count": 1
+      },
+      {
+        "realtime": 46,
+        "count": 2
+      },
+      {
+        "realtime": 46,
+        "count": 2
+      },
+      {
+        "realtime": 69,
+        "count": 3
+      },
+      {
+        "realtime": 71,
+        "count": 3
+      },
+      {
+        "realtime": 74,
+        "count": 3
+      },
+      {
+        "realtime": 96,
+        "count": 3
+      },
+      {
+        "realtime": 131,
+        "count": 4
+      },
+      {
+        "realtime": 139,
+        "count": 5
+      },
+      {
+        "realtime": 141,
+        "count": 5
+      },
+      {
+        "realtime": 144,
+        "count": 5
+      },
+      {
+        "realtime": 150,
+        "count": 5
+      },
+      {
+        "realtime": 164,
+        "count": 6
+      },
+      {
+        "realtime": 174,
+        "count": 7
+      },
+      {
+        "realtime": 184,
+        "count": 7
+      },
+      {
+        "realtime": 194,
+        "count": 8
+      },
+      {
+        "realtime": 195.0,
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": 1603,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001344.mp4",
+    "activity": "pole vault",
+    "start_times": [
+      12,
+      36,
+      55,
+      77,
+      94,
+      113,
+      129
+    ],
+    "end_times": [
+      22,
+      42,
+      63,
+      85,
+      105,
+      118,
+      138
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 0
+      },
+      {
+        "realtime": 22,
+        "count": 1
+      },
+      {
+        "realtime": 34,
+        "count": 1
+      },
+      {
+        "realtime": 42,
+        "count": 2
+      },
+      {
+        "realtime": 51,
+        "count": 2
+      },
+      {
+        "realtime": 63,
+        "count": 3
+      },
+      {
+        "realtime": 69,
+        "count": 3
+      },
+      {
+        "realtime": 85,
+        "count": 4
+      },
+      {
+        "realtime": 92,
+        "count": 4
+      },
+      {
+        "realtime": 105,
+        "count": 5
+      },
+      {
+        "realtime": 109,
+        "count": 5
+      },
+      {
+        "realtime": 118,
+        "count": 6
+      },
+      {
+        "realtime": 126,
+        "count": 6
+      },
+      {
+        "realtime": 138,
+        "count": 7
+      },
+      {
+        "realtime": 145,
+        "count": 7
+      },
+      {
+        "realtime": 157.0,
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": 1604,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000478.mp4",
+    "activity": "cricket shot",
+    "start_times": [
+      8,
+      13,
+      17,
+      21,
+      26,
+      33,
+      41,
+      47
+    ],
+    "end_times": [
+      10,
+      15,
+      19,
+      23,
+      27,
+      35,
+      43,
+      48
+    ],
+    "test_info": [
+      {
+        "realtime": 10,
+        "count": 1
+      },
+      {
+        "realtime": 15,
+        "count": 2
+      },
+      {
+        "realtime": 19,
+        "count": 3
+      },
+      {
+        "realtime": 23,
+        "count": 4
+      },
+      {
+        "realtime": 27,
+        "count": 5
+      },
+      {
+        "realtime": 29,
+        "count": 5
+      },
+      {
+        "realtime": 35,
+        "count": 6
+      },
+      {
+        "realtime": 41,
+        "count": 6
+      },
+      {
+        "realtime": 43,
+        "count": 7
+      },
+      {
+        "realtime": 48,
+        "count": 8
+      },
+      {
+        "realtime": 55,
+        "count": 8
+      },
+      {
+        "realtime": 62.0,
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": 1605,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000238.mp4",
+    "activity": "billiards",
+    "start_times": [
+      85
+    ],
+    "end_times": [
+      92
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 42.0,
+        "count": 0
+      },
+      {
+        "realtime": 92,
+        "count": 1
+      },
+      {
+        "realtime": 93.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1606,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001920.mp4",
+    "activity": "throw discus",
+    "start_times": [
+      5,
+      14,
+      26,
+      63,
+      70
+    ],
+    "end_times": [
+      12,
+      20,
+      29,
+      69,
+      75
+    ],
+    "test_info": [
+      {
+        "realtime": 12,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 2
+      },
+      {
+        "realtime": 22,
+        "count": 2
+      },
+      {
+        "realtime": 29,
+        "count": 3
+      },
+      {
+        "realtime": 31,
+        "count": 3
+      },
+      {
+        "realtime": 34,
+        "count": 3
+      },
+      {
+        "realtime": 46,
+        "count": 3
+      },
+      {
+        "realtime": 69,
+        "count": 4
+      },
+      {
+        "realtime": 75,
+        "count": 5
+      },
+      {
+        "realtime": 77,
+        "count": 5
+      },
+      {
+        "realtime": 80,
+        "count": 5
+      },
+      {
+        "realtime": 91,
+        "count": 5
+      },
+      {
+        "realtime": 108.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1607,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000435.mp4",
+    "activity": "diving",
+    "start_times": [
+      3,
+      43
+    ],
+    "end_times": [
+      5,
+      45
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 1
+      },
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 10,
+        "count": 1
+      },
+      {
+        "realtime": 24,
+        "count": 1
+      },
+      {
+        "realtime": 45,
+        "count": 2
+      },
+      {
+        "realtime": 47,
+        "count": 2
+      },
+      {
+        "realtime": 50,
+        "count": 2
+      },
+      {
+        "realtime": 66,
+        "count": 2
+      },
+      {
+        "realtime": 87.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1608,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000399.mp4",
+    "activity": "clean and jerk",
+    "start_times": [
+      35
+    ],
+    "end_times": [
+      45
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 17.0,
+        "count": 0
+      },
+      {
+        "realtime": 45,
+        "count": 1
+      },
+      {
+        "realtime": 47,
+        "count": 1
+      },
+      {
+        "realtime": 50,
+        "count": 1
+      },
+      {
+        "realtime": 60,
+        "count": 1
+      },
+      {
+        "realtime": 75.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1609,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000405.mp4",
+    "activity": "clean and jerk",
+    "start_times": [
+      1,
+      27
+    ],
+    "end_times": [
+      26,
+      113
+    ],
+    "test_info": [
+      {
+        "realtime": 26,
+        "count": 1
+      },
+      {
+        "realtime": 113,
+        "count": 2
+      },
+      {
+        "realtime": 114.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1610,
+    "task": "REC",
+    "video": "thumos/video_test_0000897.mp4",
+    "activity": "cricket bowling",
+    "start_times": [
+      10,
+      17,
+      33,
+      52,
+      65,
+      88,
+      97,
+      103,
+      105
+    ],
+    "end_times": [
+      13,
+      21,
+      37,
+      56,
+      67,
+      91,
+      103,
+      105,
+      107
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 0
+      },
+      {
+        "realtime": 13,
+        "count": 1
+      },
+      {
+        "realtime": 21,
+        "count": 2
+      },
+      {
+        "realtime": 29,
+        "count": 2
+      },
+      {
+        "realtime": 37,
+        "count": 3
+      },
+      {
+        "realtime": 48,
+        "count": 3
+      },
+      {
+        "realtime": 56,
+        "count": 4
+      },
+      {
+        "realtime": 56,
+        "count": 4
+      },
+      {
+        "realtime": 67,
+        "count": 5
+      },
+      {
+        "realtime": 69,
+        "count": 5
+      },
+      {
+        "realtime": 72,
+        "count": 5
+      },
+      {
+        "realtime": 77,
+        "count": 5
+      },
+      {
+        "realtime": 91,
+        "count": 6
+      },
+      {
+        "realtime": 93,
+        "count": 6
+      },
+      {
+        "realtime": 103,
+        "count": 7
+      },
+      {
+        "realtime": 105,
+        "count": 8
+      },
+      {
+        "realtime": 107,
+        "count": 9
+      },
+      {
+        "realtime": 117,
+        "count": 9
+      },
+      {
+        "realtime": 120.0,
+        "count": 9
+      }
+    ]
+  },
+  {
+    "id": 1611,
+    "task": "REC",
+    "video": "thumos/video_test_0001168.mp4",
+    "activity": "tennis swing",
+    "start_times": [
+      79,
+      98,
+      103
+    ],
+    "end_times": [
+      81,
+      99,
+      104
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 39.0,
+        "count": 0
+      },
+      {
+        "realtime": 81,
+        "count": 1
+      },
+      {
+        "realtime": 95,
+        "count": 1
+      },
+      {
+        "realtime": 99,
+        "count": 2
+      },
+      {
+        "realtime": 104,
+        "count": 3
+      },
+      {
+        "realtime": 108,
+        "count": 3
+      },
+      {
+        "realtime": 109.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1612,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000398.mp4",
+    "activity": "clean and jerk",
+    "start_times": [
+      5,
+      13,
+      21
+    ],
+    "end_times": [
+      11,
+      19,
+      29
+    ],
+    "test_info": [
+      {
+        "realtime": 11,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 2
+      },
+      {
+        "realtime": 29,
+        "count": 3
+      },
+      {
+        "realtime": 31,
+        "count": 3
+      },
+      {
+        "realtime": 34,
+        "count": 3
+      },
+      {
+        "realtime": 40,
+        "count": 3
+      },
+      {
+        "realtime": 52.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1613,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001749.mp4",
+    "activity": "soccer penalty",
+    "start_times": [
+      11,
+      17
+    ],
+    "end_times": [
+      15,
+      20
+    ],
+    "test_info": [
+      {
+        "realtime": 15,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 2
+      },
+      {
+        "realtime": 21,
+        "count": 2
+      },
+      {
+        "realtime": 31.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1614,
+    "task": "REC",
+    "video": "thumos/video_test_0000324.mp4",
+    "activity": "baseball pitch",
+    "start_times": [
+      49,
+      116
+    ],
+    "end_times": [
+      53,
+      122
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 24.0,
+        "count": 0
+      },
+      {
+        "realtime": 53,
+        "count": 1
+      },
+      {
+        "realtime": 55,
+        "count": 1
+      },
+      {
+        "realtime": 58,
+        "count": 1
+      },
+      {
+        "realtime": 84,
+        "count": 1
+      },
+      {
+        "realtime": 122,
+        "count": 2
+      },
+      {
+        "realtime": 124,
+        "count": 2
+      },
+      {
+        "realtime": 127,
+        "count": 2
+      },
+      {
+        "realtime": 135,
+        "count": 2
+      },
+      {
+        "realtime": 149.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1615,
+    "task": "REC",
+    "video": "thumos/video_test_0000242.mp4",
+    "activity": "long jump",
+    "start_times": [
+      0,
+      11
+    ],
+    "end_times": [
+      6,
+      20
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 1
+      },
+      {
+        "realtime": 10,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 2
+      },
+      {
+        "realtime": 22,
+        "count": 2
+      },
+      {
+        "realtime": 25,
+        "count": 2
+      },
+      {
+        "realtime": 33,
+        "count": 2
+      },
+      {
+        "realtime": 46.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1616,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001004.mp4",
+    "activity": "long jump",
+    "start_times": [
+      15,
+      27,
+      44,
+      51,
+      67,
+      82,
+      91
+    ],
+    "end_times": [
+      27,
+      36,
+      51,
+      66,
+      82,
+      90,
+      106
+    ],
+    "test_info": [
+      {
+        "realtime": 13,
+        "count": 0
+      },
+      {
+        "realtime": 27,
+        "count": 1
+      },
+      {
+        "realtime": 36,
+        "count": 2
+      },
+      {
+        "realtime": 38,
+        "count": 2
+      },
+      {
+        "realtime": 51,
+        "count": 3
+      },
+      {
+        "realtime": 66,
+        "count": 4
+      },
+      {
+        "realtime": 82,
+        "count": 5
+      },
+      {
+        "realtime": 90,
+        "count": 6
+      },
+      {
+        "realtime": 106,
+        "count": 7
+      },
+      {
+        "realtime": 111,
+        "count": 7
+      },
+      {
+        "realtime": 112.0,
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": 1617,
+    "task": "REC",
+    "video": "thumos/video_test_0000691.mp4",
+    "activity": "shotput",
+    "start_times": [
+      84,
+      99,
+      117,
+      156,
+      160
+    ],
+    "end_times": [
+      88,
+      105,
+      123,
+      160,
+      161
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 42.0,
+        "count": 0
+      },
+      {
+        "realtime": 88,
+        "count": 1
+      },
+      {
+        "realtime": 99,
+        "count": 1
+      },
+      {
+        "realtime": 105,
+        "count": 2
+      },
+      {
+        "realtime": 117,
+        "count": 2
+      },
+      {
+        "realtime": 123,
+        "count": 3
+      },
+      {
+        "realtime": 125,
+        "count": 3
+      },
+      {
+        "realtime": 128,
+        "count": 3
+      },
+      {
+        "realtime": 139,
+        "count": 3
+      },
+      {
+        "realtime": 160,
+        "count": 4
+      },
+      {
+        "realtime": 161,
+        "count": 5
+      },
+      {
+        "realtime": 177,
+        "count": 5
+      },
+      {
+        "realtime": 177.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1618,
+    "task": "REC",
+    "video": "thumos/video_test_0000129.mp4",
+    "activity": "shotput",
+    "start_times": [
+      3,
+      11,
+      24,
+      33,
+      59,
+      78,
+      113,
+      141,
+      146,
+      173
+    ],
+    "end_times": [
+      9,
+      16,
+      29,
+      49,
+      70,
+      94,
+      129,
+      145,
+      148,
+      178
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 16,
+        "count": 2
+      },
+      {
+        "realtime": 24,
+        "count": 2
+      },
+      {
+        "realtime": 29,
+        "count": 3
+      },
+      {
+        "realtime": 49,
+        "count": 4
+      },
+      {
+        "realtime": 50,
+        "count": 4
+      },
+      {
+        "realtime": 70,
+        "count": 5
+      },
+      {
+        "realtime": 71,
+        "count": 5
+      },
+      {
+        "realtime": 94,
+        "count": 6
+      },
+      {
+        "realtime": 96,
+        "count": 6
+      },
+      {
+        "realtime": 129,
+        "count": 7
+      },
+      {
+        "realtime": 139,
+        "count": 7
+      },
+      {
+        "realtime": 145,
+        "count": 8
+      },
+      {
+        "realtime": 148,
+        "count": 9
+      },
+      {
+        "realtime": 150,
+        "count": 9
+      },
+      {
+        "realtime": 153,
+        "count": 9
+      },
+      {
+        "realtime": 160,
+        "count": 9
+      },
+      {
+        "realtime": 178,
+        "count": 10
+      },
+      {
+        "realtime": 184,
+        "count": 10
+      },
+      {
+        "realtime": 191.0,
+        "count": 10
+      }
+    ]
+  },
+  {
+    "id": 1619,
+    "task": "REC",
+    "video": "thumos/video_test_0000504.mp4",
+    "activity": "clean and jerk",
+    "start_times": [
+      0
+    ],
+    "end_times": [
+      66
+    ],
+    "test_info": [
+      {
+        "realtime": 66,
+        "count": 1
+      },
+      {
+        "realtime": 70,
+        "count": 1
+      },
+      {
+        "realtime": 72.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1620,
+    "task": "REC",
+    "video": "thumos/video_test_0001309.mp4",
+    "activity": "diving",
+    "start_times": [
+      2,
+      6,
+      20,
+      29,
+      44
+    ],
+    "end_times": [
+      4,
+      13,
+      23,
+      41,
+      52
+    ],
+    "test_info": [
+      {
+        "realtime": 13,
+        "count": 2
+      },
+      {
+        "realtime": 13,
+        "count": 2
+      },
+      {
+        "realtime": 23,
+        "count": 3
+      },
+      {
+        "realtime": 26,
+        "count": 3
+      },
+      {
+        "realtime": 41,
+        "count": 4
+      },
+      {
+        "realtime": 52,
+        "count": 5
+      },
+      {
+        "realtime": 54,
+        "count": 5
+      },
+      {
+        "realtime": 57,
+        "count": 5
+      },
+      {
+        "realtime": 68,
+        "count": 5
+      },
+      {
+        "realtime": 84.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1621,
+    "task": "REC",
+    "video": "thumos/video_test_0001129.mp4",
+    "activity": "shotput",
+    "start_times": [
+      19,
+      41,
+      44,
+      50,
+      54,
+      61
+    ],
+    "end_times": [
+      32,
+      43,
+      45,
+      53,
+      56,
+      64
+    ],
+    "test_info": [
+      {
+        "realtime": 18,
+        "count": 0
+      },
+      {
+        "realtime": 32,
+        "count": 1
+      },
+      {
+        "realtime": 32,
+        "count": 1
+      },
+      {
+        "realtime": 43,
+        "count": 2
+      },
+      {
+        "realtime": 45,
+        "count": 3
+      },
+      {
+        "realtime": 48,
+        "count": 3
+      },
+      {
+        "realtime": 53,
+        "count": 4
+      },
+      {
+        "realtime": 56,
+        "count": 5
+      },
+      {
+        "realtime": 60,
+        "count": 5
+      },
+      {
+        "realtime": 64,
+        "count": 6
+      },
+      {
+        "realtime": 67.0,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": 1622,
+    "task": "REC",
+    "video": "thumos/video_test_0000569.mp4",
+    "activity": "cricket bowling",
+    "start_times": [
+      2,
+      13,
+      48
+    ],
+    "end_times": [
+      3,
+      14,
+      49
+    ],
+    "test_info": [
+      {
+        "realtime": 10,
+        "count": 1
+      },
+      {
+        "realtime": 14,
+        "count": 2
+      },
+      {
+        "realtime": 16,
+        "count": 2
+      },
+      {
+        "realtime": 19,
+        "count": 2
+      },
+      {
+        "realtime": 31,
+        "count": 2
+      },
+      {
+        "realtime": 49,
+        "count": 3
+      },
+      {
+        "realtime": 51,
+        "count": 3
+      },
+      {
+        "realtime": 54,
+        "count": 3
+      },
+      {
+        "realtime": 68,
+        "count": 3
+      },
+      {
+        "realtime": 88.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1623,
+    "task": "REC",
+    "video": "thumos/video_test_0000541.mp4",
+    "activity": "soccer penalty",
+    "start_times": [
+      1,
+      10
+    ],
+    "end_times": [
+      4,
+      12
+    ],
+    "test_info": [
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 12,
+        "count": 2
+      },
+      {
+        "realtime": 24,
+        "count": 2
+      },
+      {
+        "realtime": 29.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1624,
+    "task": "REC",
+    "video": "thumos/video_test_0001072.mp4",
+    "activity": "hammer throw",
+    "start_times": [
+      6,
+      38,
+      62,
+      93,
+      116,
+      154,
+      181,
+      247
+    ],
+    "end_times": [
+      14,
+      44,
+      76,
+      100,
+      131,
+      160,
+      194,
+      255
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 14,
+        "count": 1
+      },
+      {
+        "realtime": 16,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 1
+      },
+      {
+        "realtime": 26,
+        "count": 1
+      },
+      {
+        "realtime": 44,
+        "count": 2
+      },
+      {
+        "realtime": 50,
+        "count": 2
+      },
+      {
+        "realtime": 76,
+        "count": 3
+      },
+      {
+        "realtime": 93,
+        "count": 3
+      },
+      {
+        "realtime": 100,
+        "count": 4
+      },
+      {
+        "realtime": 111,
+        "count": 4
+      },
+      {
+        "realtime": 131,
+        "count": 5
+      },
+      {
+        "realtime": 133,
+        "count": 5
+      },
+      {
+        "realtime": 136,
+        "count": 5
+      },
+      {
+        "realtime": 142,
+        "count": 5
+      },
+      {
+        "realtime": 160,
+        "count": 6
+      },
+      {
+        "realtime": 162,
+        "count": 6
+      },
+      {
+        "realtime": 165,
+        "count": 6
+      },
+      {
+        "realtime": 170,
+        "count": 6
+      },
+      {
+        "realtime": 194,
+        "count": 7
+      },
+      {
+        "realtime": 196,
+        "count": 7
+      },
+      {
+        "realtime": 199,
+        "count": 7
+      },
+      {
+        "realtime": 220,
+        "count": 7
+      },
+      {
+        "realtime": 255,
+        "count": 8
+      },
+      {
+        "realtime": 257,
+        "count": 8
+      },
+      {
+        "realtime": 260,
+        "count": 8
+      },
+      {
+        "realtime": 269,
+        "count": 8
+      },
+      {
+        "realtime": 284.0,
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": 1625,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000232.mp4",
+    "activity": "billiards",
+    "start_times": [
+      4,
+      21,
+      33,
+      45,
+      62
+    ],
+    "end_times": [
+      5,
+      22,
+      35,
+      50,
+      63
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 1
+      },
+      {
+        "realtime": 22,
+        "count": 2
+      },
+      {
+        "realtime": 33,
+        "count": 2
+      },
+      {
+        "realtime": 35,
+        "count": 3
+      },
+      {
+        "realtime": 43,
+        "count": 3
+      },
+      {
+        "realtime": 50,
+        "count": 4
+      },
+      {
+        "realtime": 61,
+        "count": 4
+      },
+      {
+        "realtime": 63,
+        "count": 5
+      },
+      {
+        "realtime": 67.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1626,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000469.mp4",
+    "activity": "cricket bowling",
+    "start_times": [
+      16,
+      47,
+      84,
+      117,
+      140,
+      160
+    ],
+    "end_times": [
+      17,
+      48,
+      86,
+      119,
+      141,
+      162
+    ],
+    "test_info": [
+      {
+        "realtime": 17,
+        "count": 1
+      },
+      {
+        "realtime": 19,
+        "count": 1
+      },
+      {
+        "realtime": 22,
+        "count": 1
+      },
+      {
+        "realtime": 32,
+        "count": 1
+      },
+      {
+        "realtime": 48,
+        "count": 2
+      },
+      {
+        "realtime": 50,
+        "count": 2
+      },
+      {
+        "realtime": 53,
+        "count": 2
+      },
+      {
+        "realtime": 66,
+        "count": 2
+      },
+      {
+        "realtime": 86,
+        "count": 3
+      },
+      {
+        "realtime": 88,
+        "count": 3
+      },
+      {
+        "realtime": 91,
+        "count": 3
+      },
+      {
+        "realtime": 101,
+        "count": 3
+      },
+      {
+        "realtime": 119,
+        "count": 4
+      },
+      {
+        "realtime": 121,
+        "count": 4
+      },
+      {
+        "realtime": 124,
+        "count": 4
+      },
+      {
+        "realtime": 129,
+        "count": 4
+      },
+      {
+        "realtime": 141,
+        "count": 5
+      },
+      {
+        "realtime": 157,
+        "count": 5
+      },
+      {
+        "realtime": 162,
+        "count": 6
+      },
+      {
+        "realtime": 170,
+        "count": 6
+      },
+      {
+        "realtime": 170.0,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": 1627,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001622.mp4",
+    "activity": "shotput",
+    "start_times": [
+      10,
+      26,
+      34,
+      55,
+      72,
+      87,
+      102
+    ],
+    "end_times": [
+      24,
+      30,
+      42,
+      70,
+      80,
+      93,
+      113
+    ],
+    "test_info": [
+      {
+        "realtime": 24,
+        "count": 1
+      },
+      {
+        "realtime": 30,
+        "count": 2
+      },
+      {
+        "realtime": 42,
+        "count": 3
+      },
+      {
+        "realtime": 51,
+        "count": 3
+      },
+      {
+        "realtime": 70,
+        "count": 4
+      },
+      {
+        "realtime": 80,
+        "count": 5
+      },
+      {
+        "realtime": 84,
+        "count": 5
+      },
+      {
+        "realtime": 93,
+        "count": 6
+      },
+      {
+        "realtime": 95,
+        "count": 6
+      },
+      {
+        "realtime": 113,
+        "count": 7
+      },
+      {
+        "realtime": 117.0,
+        "count": 7
+      }
+    ]
+  },
+  {
+    "id": 1628,
+    "task": "REC",
+    "video": "thumos/video_test_0001281.mp4",
+    "activity": "long jump",
+    "start_times": [
+      36,
+      40,
+      53
+    ],
+    "end_times": [
+      40,
+      52,
+      59
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 18.0,
+        "count": 0
+      },
+      {
+        "realtime": 40,
+        "count": 1
+      },
+      {
+        "realtime": 52,
+        "count": 2
+      },
+      {
+        "realtime": 59,
+        "count": 3
+      },
+      {
+        "realtime": 68,
+        "count": 3
+      },
+      {
+        "realtime": 70.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1629,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000172.mp4",
+    "activity": "basketball dunk",
+    "start_times": [
+      8,
+      20,
+      35
+    ],
+    "end_times": [
+      9,
+      20,
+      36
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 2
+      },
+      {
+        "realtime": 33,
+        "count": 2
+      },
+      {
+        "realtime": 36,
+        "count": 3
+      },
+      {
+        "realtime": 37,
+        "count": 3
+      },
+      {
+        "realtime": 50.0,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "id": 1630,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000450.mp4",
+    "activity": "cricket shot",
+    "start_times": [
+      39,
+      62,
+      74,
+      89,
+      101,
+      116,
+      145,
+      170
+    ],
+    "end_times": [
+      40,
+      63,
+      76,
+      90,
+      103,
+      117,
+      146,
+      171
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 19.0,
+        "count": 0
+      },
+      {
+        "realtime": 40,
+        "count": 1
+      },
+      {
+        "realtime": 42,
+        "count": 1
+      },
+      {
+        "realtime": 45,
+        "count": 1
+      },
+      {
+        "realtime": 51,
+        "count": 1
+      },
+      {
+        "realtime": 63,
+        "count": 2
+      },
+      {
+        "realtime": 72,
+        "count": 2
+      },
+      {
+        "realtime": 76,
+        "count": 3
+      },
+      {
+        "realtime": 85,
+        "count": 3
+      },
+      {
+        "realtime": 90,
+        "count": 4
+      },
+      {
+        "realtime": 90,
+        "count": 4
+      },
+      {
+        "realtime": 103,
+        "count": 5
+      },
+      {
+        "realtime": 106,
+        "count": 5
+      },
+      {
+        "realtime": 117,
+        "count": 6
+      },
+      {
+        "realtime": 119,
+        "count": 6
+      },
+      {
+        "realtime": 122,
+        "count": 6
+      },
+      {
+        "realtime": 131,
+        "count": 6
+      },
+      {
+        "realtime": 146,
+        "count": 7
+      },
+      {
+        "realtime": 148,
+        "count": 7
+      },
+      {
+        "realtime": 151,
+        "count": 7
+      },
+      {
+        "realtime": 158,
+        "count": 7
+      },
+      {
+        "realtime": 171,
+        "count": 8
+      },
+      {
+        "realtime": 179,
+        "count": 8
+      },
+      {
+        "realtime": 185.0,
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": 1631,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001752.mp4",
+    "activity": "soccer penalty",
+    "start_times": [
+      3
+    ],
+    "end_times": [
+      4
+    ],
+    "test_info": [
+      {
+        "realtime": 4,
+        "count": 1
+      },
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 16.0,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "id": 1632,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001932.mp4",
+    "activity": "throw discus",
+    "start_times": [
+      33,
+      45,
+      96,
+      107,
+      128,
+      161
+    ],
+    "end_times": [
+      39,
+      49,
+      102,
+      115,
+      132,
+      168
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 16.0,
+        "count": 0
+      },
+      {
+        "realtime": 39,
+        "count": 1
+      },
+      {
+        "realtime": 40,
+        "count": 1
+      },
+      {
+        "realtime": 49,
+        "count": 2
+      },
+      {
+        "realtime": 51,
+        "count": 2
+      },
+      {
+        "realtime": 54,
+        "count": 2
+      },
+      {
+        "realtime": 72,
+        "count": 2
+      },
+      {
+        "realtime": 102,
+        "count": 3
+      },
+      {
+        "realtime": 105,
+        "count": 3
+      },
+      {
+        "realtime": 115,
+        "count": 4
+      },
+      {
+        "realtime": 122,
+        "count": 4
+      },
+      {
+        "realtime": 132,
+        "count": 5
+      },
+      {
+        "realtime": 134,
+        "count": 5
+      },
+      {
+        "realtime": 137,
+        "count": 5
+      },
+      {
+        "realtime": 146,
+        "count": 5
+      },
+      {
+        "realtime": 168,
+        "count": 6
+      },
+      {
+        "realtime": 182,
+        "count": 6
+      },
+      {
+        "realtime": 184.0,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "id": 1633,
+    "task": "REC",
+    "video": "thumos/video_test_0001468.mp4",
+    "activity": "clean and jerk",
+    "start_times": [
+      137,
+      144
+    ],
+    "end_times": [
+      143,
+      153
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 68.0,
+        "count": 0
+      },
+      {
+        "realtime": 143,
+        "count": 1
+      },
+      {
+        "realtime": 153,
+        "count": 2
+      },
+      {
+        "realtime": 155,
+        "count": 2
+      },
+      {
+        "realtime": 158,
+        "count": 2
+      },
+      {
+        "realtime": 168,
+        "count": 2
+      },
+      {
+        "realtime": 184.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1634,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0001904.mp4",
+    "activity": "tennis swing",
+    "start_times": [
+      0,
+      19,
+      28,
+      37
+    ],
+    "end_times": [
+      6,
+      27,
+      32,
+      42
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 1
+      },
+      {
+        "realtime": 15,
+        "count": 1
+      },
+      {
+        "realtime": 27,
+        "count": 2
+      },
+      {
+        "realtime": 32,
+        "count": 3
+      },
+      {
+        "realtime": 32,
+        "count": 3
+      },
+      {
+        "realtime": 42,
+        "count": 4
+      },
+      {
+        "realtime": 42.0,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "id": 1635,
+    "task": "REC",
+    "video": "thumos/video_test_0000357.mp4",
+    "activity": "cliff diving",
+    "start_times": [
+      7,
+      19,
+      21,
+      24,
+      43,
+      61,
+      79,
+      86
+    ],
+    "end_times": [
+      10,
+      21,
+      24,
+      30,
+      46,
+      64,
+      82,
+      90
+    ],
+    "test_info": [
+      {
+        "realtime": 10,
+        "count": 1
+      },
+      {
+        "realtime": 12,
+        "count": 1
+      },
+      {
+        "realtime": 21,
+        "count": 2
+      },
+      {
+        "realtime": 24,
+        "count": 3
+      },
+      {
+        "realtime": 30,
+        "count": 4
+      },
+      {
+        "realtime": 42,
+        "count": 4
+      },
+      {
+        "realtime": 46,
+        "count": 5
+      },
+      {
+        "realtime": 60,
+        "count": 5
+      },
+      {
+        "realtime": 64,
+        "count": 6
+      },
+      {
+        "realtime": 71,
+        "count": 6
+      },
+      {
+        "realtime": 82,
+        "count": 7
+      },
+      {
+        "realtime": 90,
+        "count": 8
+      },
+      {
+        "realtime": 92,
+        "count": 8
+      },
+      {
+        "realtime": 95,
+        "count": 8
+      },
+      {
+        "realtime": 108,
+        "count": 8
+      },
+      {
+        "realtime": 126.0,
+        "count": 8
+      }
+    ]
+  },
+  {
+    "id": 1636,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000442.mp4",
+    "activity": "cricket shot",
+    "start_times": [
+      3,
+      83,
+      91,
+      102,
+      111
+    ],
+    "end_times": [
+      4,
+      85,
+      92,
+      102,
+      114
+    ],
+    "test_info": [
+      {
+        "realtime": 6,
+        "count": 1
+      },
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 43,
+        "count": 1
+      },
+      {
+        "realtime": 85,
+        "count": 2
+      },
+      {
+        "realtime": 86,
+        "count": 2
+      },
+      {
+        "realtime": 92,
+        "count": 3
+      },
+      {
+        "realtime": 92,
+        "count": 3
+      },
+      {
+        "realtime": 102,
+        "count": 4
+      },
+      {
+        "realtime": 102,
+        "count": 4
+      },
+      {
+        "realtime": 114,
+        "count": 5
+      },
+      {
+        "realtime": 116,
+        "count": 5
+      },
+      {
+        "realtime": 119,
+        "count": 5
+      },
+      {
+        "realtime": 133,
+        "count": 5
+      },
+      {
+        "realtime": 152.0,
+        "count": 5
+      }
+    ]
+  },
+  {
+    "id": 1637,
+    "task": "REC",
+    "video": "thumos/video_test_0000211.mp4",
+    "activity": "volleyball spiking",
+    "start_times": [
+      8,
+      10,
+      13,
+      17,
+      30,
+      43,
+      47,
+      50,
+      55
+    ],
+    "end_times": [
+      10,
+      12,
+      14,
+      19,
+      40,
+      44,
+      49,
+      52,
+      62
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 10,
+        "count": 1
+      },
+      {
+        "realtime": 12,
+        "count": 2
+      },
+      {
+        "realtime": 14,
+        "count": 3
+      },
+      {
+        "realtime": 19,
+        "count": 4
+      },
+      {
+        "realtime": 28,
+        "count": 4
+      },
+      {
+        "realtime": 40,
+        "count": 5
+      },
+      {
+        "realtime": 44,
+        "count": 6
+      },
+      {
+        "realtime": 49,
+        "count": 7
+      },
+      {
+        "realtime": 52,
+        "count": 8
+      },
+      {
+        "realtime": 62,
+        "count": 9
+      },
+      {
+        "realtime": 64,
+        "count": 9
+      },
+      {
+        "realtime": 67,
+        "count": 9
+      },
+      {
+        "realtime": 80,
+        "count": 9
+      },
+      {
+        "realtime": 98.0,
+        "count": 9
+      }
+    ]
+  },
+  {
+    "id": 1638,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000125.mp4",
+    "activity": "baseball pitch",
+    "start_times": [
+      5,
+      17
+    ],
+    "end_times": [
+      7,
+      20
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 0
+      },
+      {
+        "realtime": 7,
+        "count": 1
+      },
+      {
+        "realtime": 15,
+        "count": 1
+      },
+      {
+        "realtime": 20,
+        "count": 2
+      },
+      {
+        "realtime": 29,
+        "count": 2
+      },
+      {
+        "realtime": 32.0,
+        "count": 2
+      }
+    ]
+  },
+  {
+    "id": 1639,
+    "task": "REC",
+    "video": "thumos/thumos15_video_validation_0000648.mp4",
+    "activity": "golf swing",
+    "start_times": [
+      2,
+      10,
+      45,
+      55,
+      63
+    ],
+    "end_times": [
+      5,
+      43,
+      53,
+      60,
+      65
+    ],
+    "test_info": [
+      {
+        "realtime": 5,
+        "count": 1
+      },
+      {
+        "realtime": 9,
+        "count": 1
+      },
+      {
+        "realtime": 43,
+        "count": 2
+      },
+      {
+        "realtime": 53,
+        "count": 3
+      },
+      {
+        "realtime": 60,
+        "count": 4
+      },
+      {
+        "realtime": 65,
+        "count": 5
+      },
+      {
+        "realtime": 66.0,
+        "count": 5
+      }
+    ]
+  }
+]

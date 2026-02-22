@@ -1,0 +1,13 @@
+group: mathverse
+task:
+  - mathverse_testmini
+  - mathverse_testmini_text_only
+  - mathverse_testmini_text_lite
+  - mathverse_testmini_text_dominant
+  - mathverse_testmini_vision_intensive
+  - mathverse_testmini_vision_dominant
+  - mathverse_testmini_vision_only
+metadata:
+  version: 0.0
+  trunk_response: 30
+  quick_match: false

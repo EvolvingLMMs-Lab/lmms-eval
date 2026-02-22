@@ -1,0 +1,5 @@
+group: ovobench
+task:
+  - ovo_backward
+  - ovo_realtime
+  - ovo_forward

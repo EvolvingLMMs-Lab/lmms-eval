@@ -1,0 +1,4 @@
+group : coco2017_cap
+task:
+  - coco2017_cap_val
+  - coco2017_cap_test

@@ -1,0 +1,6 @@
+task: "captionqa_ecommerce"
+test_split: ecommerce
+include: _default_template_yaml
+
+
+

@@ -1,0 +1,15 @@
+dataset_path: lmms-lab/ActivityNetQA
+dataset_kwargs:
+  token: True
+  video: True
+  force_download: False
+  local_files_only: False
+  cache_dir: activitynetqa
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: " Answer the question using a single word or phrase."
+
+metadata:
+  version: 0.0
+  gpt_eval_model_name: gpt-3.5-turbo-0613

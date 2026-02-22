@@ -1,0 +1,5 @@
+group: mmmu_pro_reasoning
+task:
+- mmmu_pro_vision_cot_reasoning
+# - mmmu_pro_composite_cot
+- mmmu_pro_standard_cot_reasoning

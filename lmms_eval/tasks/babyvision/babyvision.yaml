@@ -1,0 +1,33 @@
+dataset_path: UnipatAI/BabyVision
+dataset_kwargs:
+  token: True
+task: "babyvision"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.babyvision_doc_to_visual
+doc_to_text: !function utils.babyvision_doc_to_text
+doc_to_target: !function utils.babyvision_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 8192
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.babyvision_process_results
+
+metric_list:
+  - metric: babyvision_overall_accuracy
+    aggregation: !function utils.babyvision_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nThink about the question and give your final answer in \\boxed{Answer} format."
+
+metadata:
+  version: 0.1
+  description: "BabyVision Benchmark - Visual Reasoning Beyond Language (LLM-as-Judge evaluation)"

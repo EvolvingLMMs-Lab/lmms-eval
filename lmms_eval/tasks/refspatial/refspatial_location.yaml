@@ -1,0 +1,4 @@
+test_split: location
+tag: "refspatial_groups"
+task: "refspatial_location"
+include: _default_template_yaml

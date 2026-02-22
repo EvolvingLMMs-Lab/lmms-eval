@@ -1,0 +1,14 @@
+group: egothink
+task:
+  - egothink_activity
+  - egothink_affordance
+  - egothink_assistance
+  - egothink_navigation
+  - egothink_attribute
+  - egothink_comparing
+  - egothink_counting
+  - egothink_existence
+  - egothink_forecasting
+  - egothink_location
+  - egothink_situated
+  - egothink_spatial

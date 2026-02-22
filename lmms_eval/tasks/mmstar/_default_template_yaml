@@ -1,0 +1,36 @@
+dataset_kwargs:
+  token: True
+test_split: val
+output_type: generate_until
+doc_to_target: "answer"
+metric_list:
+  - metric: coarse perception
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: fine-grained perception
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: instance reasoning
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: logical reasoning
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: science & technology
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: math
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+  - metric: average
+    aggregation: !function utils.mmstar_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly"
+  qwen3_vl:
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+metadata:
+  - version: 0.0

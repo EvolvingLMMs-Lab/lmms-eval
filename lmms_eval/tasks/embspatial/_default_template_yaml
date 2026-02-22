@@ -1,0 +1,21 @@
+dataset_path: FlagEval/EmbSpatial-Bench
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.embspatial_doc_to_visual
+doc_to_text: !function utils.embspatial_doc_to_text
+doc_to_target: "answer"
+
+process_results: !function utils.embspatial_process_results
+
+metric_list:
+  - metric: embspatial_acc
+    aggregation: !function utils.embspatial_aggregate_results
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Note: You only need to respond with A, B, C, D without providing any additional information.\n"
+    post_prompt: ""
+
+generation_kwargs:
+  max_new_tokens: 1024

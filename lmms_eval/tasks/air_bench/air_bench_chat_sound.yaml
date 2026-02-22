@@ -1,0 +1,25 @@
+task: "air_bench_chat_sound"
+dataset_name: "Chat"
+test_split: sound
+doc_to_target: "answer_gt"
+doc_to_visual: !function utils.air_bench_doc_to_audio
+doc_to_text: !function utils.air_bench_doc_to_text_chat
+
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0.2
+  top_p: 1.0
+  num_beams: 1
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Give a detail answer to the question in English."
+metric_list:
+  - metric: gpt_eval
+    aggregation: !function utils.air_bench_aggregate_results_chat
+    higher_is_better: true
+
+process_results: !function utils.air_bench_process_results_chat
+
+include: _default_template_yaml

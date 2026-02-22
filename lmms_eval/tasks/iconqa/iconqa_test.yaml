@@ -1,0 +1,3 @@
+task: "iconqa_test"
+test_split: test
+include: _default_template_docvqa_yaml

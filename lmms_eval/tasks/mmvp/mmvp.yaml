@@ -1,0 +1,3 @@
+dataset_path: MMVP/MMVP
+task: "mmvp"
+include: _default_template_yaml

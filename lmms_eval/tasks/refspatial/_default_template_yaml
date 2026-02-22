@@ -1,0 +1,18 @@
+dataset_path: BAAI/RefSpatial-Bench
+full_docs: true
+output_type: generate_until
+doc_to_visual: !function utils.refspatial_doc_to_visual
+doc_to_text: !function utils.refspatial_doc_to_text
+doc_to_target: ""
+process_results: !function utils.refspatial_process_results
+
+metric_list:
+  - metric: refspatial_acc
+    aggregation: !function utils.refspatial_aggregate_results
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 1024
+
+metadata:
+  prompt_suffix_type: original  # ["0_999", "original"]

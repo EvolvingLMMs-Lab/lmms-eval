@@ -1,0 +1,4 @@
+group: mmau
+task:
+  - mmau_test_mini
+  - mmau_test

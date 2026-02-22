@@ -1,0 +1,7 @@
+task: "mmbench_en_test"
+test_split: test
+include: _default_template_mmbench_en_yaml
+metric_list:
+  - metric: submission
+    aggregation: !function en_utils.mmbench_aggregate_test_results
+    higher_is_better: true

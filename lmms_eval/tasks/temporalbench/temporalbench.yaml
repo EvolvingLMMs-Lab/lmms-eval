@@ -1,0 +1,5 @@
+group: temporalbench
+task:
+- temporalbench_short_qa
+- temporalbench_long_qa
+- temporalbench_short_caption

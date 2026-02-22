@@ -1,0 +1,29 @@
+dataset_path: neulab/VisualPuzzles
+dataset_kwargs:
+  token: True
+task: "VisualPuzzles_direct"
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.VisualPuzzles_doc_to_visual
+doc_to_text: !function utils.VisualPuzzles_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+process_results: !function utils.VisualPuzzles_process_result
+metadata:
+  - version: 0.0
+  
+lmms_eval_specific_kwargs:
+  default:
+    prompt: "MULTI_CHOICE_DIRECT_PROMPT"
+    

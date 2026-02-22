@@ -1,0 +1,69 @@
+dataset_path: morpheushoc/SNS-Bench-VL
+dataset_kwargs:
+  token: True
+task: "snsbench"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 2048 # longest answer has 1769 chars
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.process_results
+metric_list:
+  - metric: average
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_mrc
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_hashtag_single
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_query_gen
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_taxonomy_three_levels
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_hashtag_multi
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_taxonomy_one_level
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_ocr
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_comment_sub_level
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_querycorr_two_levels
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_comment_primary
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_gender
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+  - metric: note_querycorr_five_levels
+    aggregation: !function utils.sns_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+  qwen3_vl:
+    format: "qwen3_vl"
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0
+
+
+

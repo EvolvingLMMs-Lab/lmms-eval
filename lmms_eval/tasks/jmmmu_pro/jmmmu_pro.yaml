@@ -1,0 +1,4 @@
+group: jmmmu_pro
+task:
+- jmmmu_pro_standard
+- jmmmu_pro_vision

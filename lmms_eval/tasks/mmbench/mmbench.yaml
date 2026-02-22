@@ -1,0 +1,12 @@
+group: mmbench
+task:
+  - mmbench_en_dev
+  - mmbench_en_test
+  - mmbench_cn_dev
+  - mmbench_cn_test
+  - mmbench_cn_cc
+  - mmbench_ru_dev
+metadata:
+  version: 0.0
+  sys_prompt: "There are several options:"
+  gpt_eval_model_name: "gpt-3.5-turbo-0613"

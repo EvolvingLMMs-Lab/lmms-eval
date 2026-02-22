@@ -1,0 +1,4 @@
+dataset_name: full
+test_split: around
+task: "mindcube_full_around"
+include: _default_template_yaml

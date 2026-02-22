@@ -1,0 +1,4 @@
+group: covost2_en_zh
+task:
+  - covost2_en_zh_test
+  - covost2_en_zh_dev

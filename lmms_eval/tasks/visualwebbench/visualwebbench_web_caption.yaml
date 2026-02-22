@@ -1,0 +1,33 @@
+dataset_kwargs:
+  token: true
+dataset_name: web_caption
+dataset_path: lmms-lab/VisualWebBench
+doc_to_target: !function utils.visualwebbench_doc_to_target
+doc_to_text: !function utils.visualwebbench_doc_to_text
+doc_to_visual: !function utils.visualwebbench_doc_to_visual
+generation_kwargs:
+  do_sample: false
+  max_new_tokens: 16
+  num_beams: 1
+  temperature: 0
+  top_p: 1.0
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: ''
+    pre_prompt: ''
+metadata:
+- version: 0.0
+metric_list:
+- metric: rouge_1
+  aggregation: !function utils.visualwebbench_rouge_1_aggregate
+  higher_is_better: true
+- metric: rouge_2
+  aggregation: !function utils.visualwebbench_rouge_2_aggregate
+  higher_is_better: true
+- metric: rouge_l
+  aggregation: !function utils.visualwebbench_rouge_l_aggregate
+  higher_is_better: true
+output_type: generate_until
+process_results: !function utils.visualwebbench_process_results_rouge
+task: visualwebbench_web_caption
+test_split: test

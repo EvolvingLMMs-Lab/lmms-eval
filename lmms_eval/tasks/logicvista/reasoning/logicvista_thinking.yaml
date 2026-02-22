@@ -1,0 +1,20 @@
+dataset_path: lscpku/LogicVista
+output_type: generate_until
+doc_to_target: "answer"
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: format_score
+    aggregation: mean
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 49152
+
+test_split: test
+doc_to_messages: !function utils.logicvista_doc_to_messages_cot
+doc_to_text: !function utils.logicvista_doc_to_text_cot
+doc_to_visual: !function utils.logicvista_doc_to_visual
+task: logicvista_reasoning
+process_results: !function utils.logicvista_reasoning_process_results

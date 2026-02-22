@@ -1,0 +1,21 @@
+dataset_name: 3dsr
+test_split: test
+task: "3dsrbench"
+include: _default_template_yaml
+
+metric_list:
+  - metric: vanilla_accuracy
+    aggregation: !function utils.aggregate_vanilla_accuracy
+    higher_is_better: true
+  - metric: height_accuracy
+    aggregation: !function utils.aggregate_height_accuracy
+    higher_is_better: true
+  - metric: location_accuracy
+    aggregation: !function utils.aggregate_location_accuracy
+    higher_is_better: true
+  - metric: orientation_accuracy
+    aggregation: !function utils.aggregate_orientation_accuracy
+    higher_is_better: true
+  - metric: multi_object_accuracy
+    aggregation: !function utils.aggregate_multi_object_accuracy
+    higher_is_better: true

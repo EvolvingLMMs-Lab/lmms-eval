@@ -1,0 +1,4 @@
+dataset_name: folding_nets_vsim
+test_split: test
+task: "stare_folding_nets_vsim"
+include: _default_template_yaml

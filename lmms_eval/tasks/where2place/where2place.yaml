@@ -1,0 +1,3 @@
+task: where2place
+test_split: test
+include: _default_template_yaml

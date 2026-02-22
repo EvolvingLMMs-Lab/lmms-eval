@@ -1,0 +1,15 @@
+dataset_path: princeton-nlp/CharXiv
+output_type: generate_until
+doc_to_visual: !function utils.charxiv_doc_to_visual
+doc_to_messages: !function utils.charxiv_reasoning_doc_to_messages_cot
+tag: verl_reasoning
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: format_score
+    aggregation: mean
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 49152

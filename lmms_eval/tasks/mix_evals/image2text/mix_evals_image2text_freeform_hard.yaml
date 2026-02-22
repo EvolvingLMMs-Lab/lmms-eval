@@ -1,0 +1,25 @@
+task: "mix_evals_image2text_freeform_hard"
+dataset_name: "image2text"
+test_split: free_form_hard
+output_type: generate_until
+doc_to_visual: !function utils.mix_evals_image2text_doc_to_visual
+doc_to_text: !function utils.mix_evals_image2text_doc_to_text
+doc_to_target: "{{reference_answer}}"
+process_results: !function utils.mix_evals_image2text_process_results_freeform
+metric_list:
+  - metric: gpt_eval
+    aggregation: !function utils.mix_evals_image2text_gpt_eval
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 1024
+
+include: _default_template_yaml
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Please answer the following questions about the image."
+    post_prompt: ""
+  gpt4v:
+    pre_prompt: "Please answer the following questions about the image."
+    post_prompt: ""

@@ -1,0 +1,33 @@
+# the final score is computed using the script lmms_eval/tasks/mmsearch/get_final_scores.py
+# the score file in the submission folder of the three task (end2end, rerank, summarization) should be input as args
+dataset_path: CaraJ/MMSearch
+dataset_name: summarization
+dataset_kwargs:
+  token: False
+task: "mmsearch_summarization"
+test_split: summarization
+output_type: generate_until
+doc_to_visual: !function lmms_eval_utils.mmsearch_summarization_doc_to_visual
+doc_to_text: !function lmms_eval_utils.mmsearch_summarization_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  until:
+    - "ASSISTANT:"
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 0
+  num_beams: 1
+  do_sample: false
+process_results: !function lmms_eval_utils.mmsearch_summarization_process_results
+metric_list:
+  - metric: summarization_f1_score
+    aggregation: !function lmms_eval_utils.mmsearch_aggregate_results_f1_score
+    higher_is_better: true
+  
+lmms_eval_specific_kwargs:
+  default:
+    shot_type: "format-prompt" # can also be "custom-prompt"
+    query_type: "query_wo" # now only support query_wo
+model_specific_generation_kwargs:
+  llava:
+    image_aspect_ratio: original
