@@ -398,6 +398,7 @@ python -m lmms_eval --tasks list_with_num
 - [DOCVQA](https://github.com/anisha2102/docvqa) (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
+- [DUDE](https://arxiv.org/abs/2305.08455) (dude)
 - [GEdit-Bench](https://github.com/GEdit-Bench/GEdit-Bench) (gedit_bench)
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
   - Infographic VQA Validation (infovqa_val)
