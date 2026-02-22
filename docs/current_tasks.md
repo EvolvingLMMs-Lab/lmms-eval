@@ -32,6 +32,26 @@ python -m lmms_eval --tasks list_with_num
 
 ---
 
+## Benchmark Backfill Tracking (LMM-299)
+
+Last verified: 2026-02-22.
+
+This section tracks whether each candidate benchmark listed in `LMM-299` has a dedicated Linear record.
+
+| Candidate from LMM-299 | Linear status | Tracking issue |
+|---|---|---|
+| VPCT | Recorded | [LMM-300](https://linear.app/lmms-lab/issue/LMM-300/benchmark-backfill-add-vpct-benchmark-task) |
+| ZeroBench | Recorded | [LMM-301](https://linear.app/lmms-lab/issue/LMM-301/benchmark-backfill-add-zerobench-benchmark-task) |
+| ArcAGI1-Image | Recorded (clarification) | [LMM-306](https://linear.app/lmms-lab/issue/LMM-306/benchmark-backfill-clarify-arcagi1-image-naming-and-scope) |
+| ArcAGI2-Image | Recorded (clarification) | [LMM-307](https://linear.app/lmms-lab/issue/LMM-307/benchmark-backfill-clarify-arcagi2-image-naming-and-scope) |
+| VisFactor | Recorded | [LMM-302](https://linear.app/lmms-lab/issue/LMM-302/benchmark-backfill-add-visfactor-benchmark-task) |
+| SimpleVQA | Recorded | [LMM-303](https://linear.app/lmms-lab/issue/LMM-303/benchmark-backfill-add-simplevqa-benchmark-task) |
+| MME-CC | Recorded | [LMM-304](https://linear.app/lmms-lab/issue/LMM-304/benchmark-backfill-add-mme-cc-benchmark-task-family) |
+| HiPhO | Recorded | [LMM-305](https://linear.app/lmms-lab/issue/LMM-305/benchmark-backfill-add-hipho-benchmark-task) |
+| TreeBench-name variants | Recorded (mapping docs) | [LMM-308](https://linear.app/lmms-lab/issue/LMM-308/benchmark-backfill-document-treebench-name-variant-mapping) |
+
+Parent issue: [LMM-299](https://linear.app/lmms-lab/issue/LMM-299/benchmark-backfill-triage-additional-candidate-benchmark-gaps-from).
+
 ## 1. Image Tasks
 
 ### Core VQA & Understanding Benchmarks
