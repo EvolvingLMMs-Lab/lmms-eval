@@ -210,6 +210,7 @@ python -m lmms_eval --tasks list_with_num
   - llava_interleave_bench_out_domain
   - llava_interleave_bench_multi_view
 - [MIRB](https://github.com/ys-zong/MIRB) (mirb)
+- [MMLongBench](https://zhaowei-wang-nlp.github.io/MMLongBench-page/) (mmlongbench)
 - [MMMU](https://mmmu-benchmark.github.io/) (mmmu)
   - MMMU Validation (mmmu_val)
   - MMMU Test (mmmu_test)
