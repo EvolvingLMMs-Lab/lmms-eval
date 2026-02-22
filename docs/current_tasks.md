@@ -403,6 +403,7 @@ python -m lmms_eval --tasks list_with_num
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
   - Infographic VQA Validation (infovqa_val)
   - Infographic VQA Test (infovqa_test)
+- [OfficeQA](https://github.com/databricks/officeqa) (officeqa)
 - [OCRBench](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench)
 - [OCRBench v2](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench_v2)
 - [OmniDocBench](https://github.com/opendatalab/OmniDocBench) (omnidocbench)
