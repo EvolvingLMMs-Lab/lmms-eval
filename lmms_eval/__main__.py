@@ -56,6 +56,7 @@ from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
+    get_eval_banner,
     make_table,
     simple_parse_args_string,
 )
@@ -590,6 +591,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
             print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), " f"limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
             print(make_table(results))
             if "groups" in results:
                 print(make_table(results, "groups"))
@@ -782,6 +784,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
 def print_results(args, results):
     print(f"{args.model} ({args.model_args}),\n" f"gen_kwargs: ({args.gen_kwargs}),\n" f"limit: {args.limit},\n" f"offset: {args.offset},\n" f"num_fewshot: {args.num_fewshot},\n" f"batch_size: {args.batch_size}")
+    print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))
