@@ -221,6 +221,19 @@ export default function LogViewer() {
 
   const metricRows = useMemo(() => extractMetricRows(runResults), [runResults])
 
+
+  const datasetEntries = useMemo(() => {
+    if (!runResults?.configs) return []
+    const entries: Array<{ task: string; path: string; url: string }> = []
+    for (const [taskName, cfg] of Object.entries(runResults.configs)) {
+      if (!isRecord(cfg)) continue
+      const dp = cfg.dataset_path
+      if (typeof dp !== 'string' || !dp.includes('/') || dp.startsWith('/') || dp.startsWith('.') || dp === 'json') continue
+      entries.push({ task: taskName, path: dp, url: `https://huggingface.co/datasets/${dp}` })
+    }
+    return entries
+  }, [runResults])
+
   const taskConfig = useMemo(() => {
     if (!runResults?.configs || !selectedTask) return null
     return runResults.configs[selectedTask] ?? null
@@ -414,7 +427,7 @@ export default function LogViewer() {
     <div className="flex flex-1 overflow-hidden">
       <div className="w-full md:w-[400px] lg:w-[450px] xl:w-[500px] 2xl:w-[550px] min-w-[320px] max-w-[600px] bg-white border-r border-neutral-200 flex flex-col flex-shrink-0">
         <div className="p-6 border-b border-neutral-100 space-y-3">
-          <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+          <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider">
             Logs Path
           </label>
           <div className="flex items-center gap-2">
@@ -427,12 +440,12 @@ export default function LogViewer() {
                 }
               }}
               placeholder="./logs/"
-              className="flex-1 bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors text-neutral-600"
+              className="flex-1 bg-white border border-neutral-200 px-3 py-2 text-sm font-mono focus:border-black focus:outline-none transition-colors text-neutral-600"
             />
             <button
               onClick={() => void scanRuns()}
               disabled={runsLoading}
-              className={`px-4 py-2 text-[10px] uppercase tracking-wider font-medium border transition-colors ${
+              className={`px-4 py-2 text-xs uppercase tracking-wider font-medium border transition-colors ${
                 runsLoading
                   ? 'text-neutral-300 border-neutral-200 cursor-not-allowed'
                   : 'text-neutral-500 border-neutral-200 hover:border-black hover:text-black'
@@ -441,21 +454,22 @@ export default function LogViewer() {
               {runsLoading ? 'Scanning...' : 'Scan'}
             </button>
           </div>
-          {runsError && <div className="text-[10px] font-mono text-red-600">{runsError}</div>}
-          <div className="text-[10px] uppercase tracking-wider text-neutral-400">
+          {runsError && <div className="text-xs font-mono text-red-600">{runsError}</div>}
+          <div className="text-xs uppercase tracking-wider text-neutral-400">
             {runs.length} run{runs.length === 1 ? '' : 's'}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-2 bg-white">
           {runs.length === 0 && !runsLoading ? (
-            <div className="p-3 text-xs text-neutral-400 italic">No runs found.</div>
+            <div className="p-3 text-sm text-neutral-400 italic">No runs found.</div>
           ) : (
             runs.map(run => (
               <button
                 key={run.run_id}
                 onClick={() => {
                   setSelectedRunId(run.run_id)
+                  setSelectedTask('')
                   setSampleOffset(0)
                 }}
                 className={`w-full text-left border px-3 py-3 transition-colors ${
@@ -464,24 +478,24 @@ export default function LogViewer() {
                     : 'border-neutral-200 bg-white hover:bg-neutral-50'
                 }`}
               >
-                <div className="text-xs font-bold text-neutral-900 break-all">{run.model_name || 'Unknown model'}</div>
-                <div className="mt-1 text-[10px] font-mono text-neutral-500">{formatDate(run.date)}</div>
+                <div className="text-sm font-bold text-neutral-900 break-all">{run.model_name || 'Unknown model'}</div>
+                <div className="mt-1 text-xs font-mono text-neutral-500">{formatDate(run.date)}</div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {run.tasks.slice(0, 6).map(task => (
                     <span
                       key={`${run.run_id}-${task}`}
-                      className="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-neutral-200 text-neutral-500"
+                      className="px-1.5 py-0.5 text-xs font-mono bg-white border border-neutral-200 text-neutral-500"
                     >
                       {task}
                     </span>
                   ))}
                   {run.tasks.length > 6 && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-neutral-200 text-neutral-400">
+                    <span className="px-1.5 py-0.5 text-xs font-mono bg-white border border-neutral-200 text-neutral-400">
                       +{run.tasks.length - 6} more
                     </span>
                   )}
                 </div>
-                <div className="mt-2 text-[10px] uppercase tracking-wider text-neutral-400">
+                <div className="mt-2 text-xs uppercase tracking-wider text-neutral-400">
                   Eval time: {formatDuration(run.total_evaluation_time_seconds)}
                 </div>
               </button>
@@ -492,50 +506,50 @@ export default function LogViewer() {
 
       <div className="flex-1 min-w-0 flex flex-col bg-neutral-50/30">
         {!selectedRun ? (
-          <div className="flex-1 flex items-center justify-center text-neutral-400 text-xs uppercase tracking-wider">
+          <div className="flex-1 flex items-center justify-center text-neutral-400 text-sm uppercase tracking-wider">
             Select a run to view details
           </div>
         ) : (
           <>
             <div className="h-[46%] min-h-[260px] border-b border-neutral-200 flex flex-col bg-white">
-              <div className="px-6 py-4 border-b border-neutral-100">
-                <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Results</h2>
+              <div className="px-4 py-3 border-b border-neutral-100">
+                <h2 className="text-sm font-bold text-neutral-400 uppercase tracking-widest">Results</h2>
               </div>
 
-              <div className="flex-1 overflow-auto p-6 space-y-4 scrollbar-thin">
+              <div className="flex-1 overflow-auto p-4 space-y-3 scrollbar-thin">
                 {runLoading ? (
-                  <div className="text-xs text-neutral-400 italic">Loading results...</div>
+                  <div className="text-sm text-neutral-400 italic">Loading results...</div>
                 ) : runError ? (
-                  <div className="text-xs text-red-600 font-mono">{runError}</div>
+                  <div className="text-sm text-red-600 font-mono">{runError}</div>
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                       <div className="border border-neutral-200 bg-neutral-50/70 p-3">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Model</div>
-                        <div className="text-xs font-mono text-neutral-700 break-all">{modelName || 'N/A'}</div>
+                        <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Model</div>
+                        <div className="text-sm font-mono text-neutral-700 break-all">{modelName || 'N/A'}</div>
                       </div>
                       <div className="border border-neutral-200 bg-neutral-50/70 p-3">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Date</div>
-                        <div className="text-xs font-mono text-neutral-700">{formatDate(runDate)}</div>
+                        <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Date</div>
+                        <div className="text-sm font-mono text-neutral-700">{formatDate(runDate)}</div>
                       </div>
                       <div className="border border-neutral-200 bg-neutral-50/70 p-3">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Evaluation Time</div>
-                        <div className="text-xs font-mono text-neutral-700">{formatDuration(evalTime)}</div>
+                        <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Evaluation Time</div>
+                        <div className="text-sm font-mono text-neutral-700">{formatDuration(evalTime)}</div>
                       </div>
                       <div className="border border-neutral-200 bg-neutral-50/70 p-3">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Tasks</div>
-                        <div className="text-xs font-mono text-neutral-700">{availableTasks.length}</div>
+                        <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Tasks</div>
+                        <div className="text-sm font-mono text-neutral-700">{availableTasks.length}</div>
                       </div>
                     </div>
 
                     {configEntries.length > 0 && (
                       <div className="border border-neutral-200 bg-white p-3">
-                        <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-2">Config</div>
+                        <div className="text-xs uppercase tracking-wider text-neutral-400 mb-2">Config</div>
                         <div className="flex flex-wrap gap-2">
                           {configEntries.map(([key, value]) => (
                             <span
                               key={key}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-mono border border-neutral-200 bg-neutral-50 text-neutral-600"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-mono border border-neutral-200 bg-neutral-50 text-neutral-600"
                               title={`${key}=${valueToText(value)}`}
                             >
                               <span className="text-neutral-400">{key}</span>
@@ -546,14 +560,37 @@ export default function LogViewer() {
                       </div>
                     )}
 
+
+                    {datasetEntries.length > 0 && (
+                      <div className="border border-neutral-200 bg-white p-3">
+                        <div className="text-xs uppercase tracking-wider text-neutral-400 mb-2">Dataset</div>
+                        <div className="flex flex-wrap gap-2">
+                          {datasetEntries.map(entry => (
+                            <a
+                              key={entry.task}
+                              href={entry.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-mono border border-neutral-200 bg-neutral-50 text-neutral-600 hover:border-violet-300 hover:text-violet-600 transition-colors"
+                              title={entry.url}
+                            >
+                              <span className="text-neutral-400">{entry.task}</span>
+                              <span className="text-violet-500">{entry.path}</span>
+                              <svg className="w-3 h-3 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="border border-neutral-200 overflow-hidden">
-                      <table className="min-w-full text-xs font-mono">
+                      <table className="min-w-full text-sm font-mono">
                         <thead className="bg-neutral-50 border-b border-neutral-200">
                           <tr>
-                            <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-400">Task</th>
-                            <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-400">Metric</th>
-                            <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-400">Value</th>
-                            <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-400">Stderr</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase tracking-wider text-neutral-400">Task</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase tracking-wider text-neutral-400">Metric</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase tracking-wider text-neutral-400">Value</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase tracking-wider text-neutral-400">Stderr</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -586,7 +623,7 @@ export default function LogViewer() {
 
             <div className="flex-1 min-h-0 flex flex-col bg-white">
               <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between gap-4">
-                <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Samples</h2>
+                <h2 className="text-sm font-bold text-neutral-400 uppercase tracking-widest">Samples</h2>
                 <div className="flex items-center gap-3">
                   {availableTasks.length > 1 && (
                     <select
@@ -595,7 +632,7 @@ export default function LogViewer() {
                         setSelectedTask(event.target.value)
                         setSampleOffset(0)
                       }}
-                      className="bg-white border border-neutral-200 px-2 py-1 text-xs font-mono text-neutral-600 focus:border-black focus:outline-none"
+                      className="bg-white border border-neutral-200 px-2 py-1 text-sm font-mono text-neutral-600 focus:border-black focus:outline-none"
                     >
                       {availableTasks.map(task => (
                         <option key={task} value={task}>
@@ -604,13 +641,13 @@ export default function LogViewer() {
                       ))}
                     </select>
                   )}
-                  <div className="text-[10px] uppercase tracking-wider text-neutral-400">
+                  <div className="text-xs uppercase tracking-wider text-neutral-400">
                     {sampleRangeStart}-{sampleRangeEnd} of {samplesResponse.total}
                   </div>
                   <button
                     onClick={() => setSampleOffset(Math.max(0, sampleOffset - SAMPLE_PAGE_SIZE))}
                     disabled={sampleOffset === 0 || samplesLoading}
-                    className={`px-2 py-1 text-[10px] uppercase tracking-wider font-medium border transition-colors ${
+                    className={`px-2 py-1 text-xs uppercase tracking-wider font-medium border transition-colors ${
                       sampleOffset === 0 || samplesLoading
                         ? 'text-neutral-300 border-neutral-200 cursor-not-allowed'
                         : 'text-neutral-500 border-neutral-200 hover:border-black hover:text-black'
@@ -621,7 +658,7 @@ export default function LogViewer() {
                   <button
                     onClick={() => setSampleOffset(sampleOffset + SAMPLE_PAGE_SIZE)}
                     disabled={samplesLoading || sampleOffset + SAMPLE_PAGE_SIZE >= samplesResponse.total}
-                    className={`px-2 py-1 text-[10px] uppercase tracking-wider font-medium border transition-colors ${
+                    className={`px-2 py-1 text-xs uppercase tracking-wider font-medium border transition-colors ${
                       samplesLoading || sampleOffset + SAMPLE_PAGE_SIZE >= samplesResponse.total
                         ? 'text-neutral-300 border-neutral-200 cursor-not-allowed'
                         : 'text-neutral-500 border-neutral-200 hover:border-black hover:text-black'
@@ -634,13 +671,13 @@ export default function LogViewer() {
 
               <div className="flex-1 min-h-0 overflow-auto p-4 space-y-3 bg-neutral-50/30 scrollbar-thin">
                 {!selectedTask ? (
-                  <div className="text-xs text-neutral-400 italic">No task selected for samples.</div>
+                  <div className="text-sm text-neutral-400 italic">No task selected for samples.</div>
                 ) : samplesLoading ? (
-                  <div className="text-xs text-neutral-400 italic">Loading samples...</div>
+                  <div className="text-sm text-neutral-400 italic">Loading samples...</div>
                 ) : samplesError ? (
-                  <div className="text-xs text-red-600 font-mono">{samplesError}</div>
+                  <div className="text-sm text-red-600 font-mono">{samplesError}</div>
                 ) : samplesResponse.samples.length === 0 ? (
-                  <div className="text-xs text-neutral-400 italic">No samples available.</div>
+                  <div className="text-sm text-neutral-400 italic">No samples available.</div>
                 ) : (
                   samplesResponse.samples.map((sample, index) => {
                     const badges = extractSampleBadges(sample)
@@ -652,16 +689,16 @@ export default function LogViewer() {
                     return (
                       <div key={`${samplesResponse.offset}-${index}`} className="border border-neutral-200 bg-white p-3 space-y-2">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-[10px] uppercase tracking-wider text-neutral-400">
+                          <div className="text-xs uppercase tracking-wider text-neutral-400">
                             doc_id
                             <span className="ml-1 text-neutral-700 font-mono normal-case">{valueToText(docId)}</span>
                           </div>
                           <div className="flex flex-wrap justify-end gap-1">
-                            {numericDocId !== null && !imageState?.images.length && (
+                            {numericDocId !== null && !imageState?.images.length && !imageState?.error && (
                               <button
                                 onClick={() => void loadSampleImage(numericDocId)}
                                 disabled={imageState?.loading}
-                                className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-medium border transition-colors ${
+                                className={`px-2 py-0.5 text-xs uppercase tracking-wider font-medium border transition-colors ${
                                   imageState?.loading
                                     ? 'text-neutral-300 border-neutral-200 cursor-not-allowed'
                                     : 'text-violet-500 border-violet-200 hover:border-violet-500 hover:bg-violet-50'
@@ -673,7 +710,7 @@ export default function LogViewer() {
                             {badges.map(([key, value]) => (
                               <span
                                 key={key}
-                                className="px-1.5 py-0.5 text-[10px] font-mono border border-neutral-200 bg-neutral-50 text-neutral-600"
+                                className="px-1.5 py-0.5 text-xs font-mono border border-neutral-200 bg-neutral-50 text-neutral-600"
                                 title={`${key}: ${valueToText(value)}`}
                               >
                                 {key}: {compactValue(value)}
@@ -682,15 +719,10 @@ export default function LogViewer() {
                           </div>
                         </div>
 
-                        {imageState?.error && (
-                          <div className="text-[10px] font-mono text-red-600 border border-red-200 bg-red-50 px-2 py-1">
-                            {imageState.error}
-                          </div>
-                        )}
 
                         {imageState?.images && imageState.images.length > 0 && (
                           <div className="space-y-1">
-                            <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Dataset Image</div>
+                            <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Dataset Image</div>
                             <div className="flex flex-wrap gap-2">
                               {imageState.images.map(img => (
                                 <div key={img.key} className="border border-neutral-200 bg-neutral-50 p-1">
@@ -700,7 +732,7 @@ export default function LogViewer() {
                                     className="max-w-full max-h-[300px] object-contain"
                                     loading="lazy"
                                   />
-                                  <div className="text-[10px] font-mono text-neutral-400 mt-1 text-center">{img.key}</div>
+                                  <div className="text-xs font-mono text-neutral-400 mt-1 text-center">{img.key}</div>
                                 </div>
                               ))}
                             </div>
@@ -709,22 +741,22 @@ export default function LogViewer() {
 
                         <div className="space-y-2">
                           <div>
-                            <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Input</div>
-                            <pre className="whitespace-pre-wrap break-words text-xs font-mono text-neutral-700 border border-neutral-200 bg-neutral-50 p-2">
+                            <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Input</div>
+                            <pre className="whitespace-pre-wrap break-words text-sm font-mono text-neutral-700 border border-neutral-200 bg-neutral-50 p-2">
                               {valueToText(sample.input) || 'N/A'}
                             </pre>
                           </div>
 
                           <div>
-                            <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Target</div>
-                            <pre className="whitespace-pre-wrap break-words text-xs font-mono text-green-900 border border-green-200 bg-green-50 p-2">
+                            <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Target</div>
+                            <pre className="whitespace-pre-wrap break-words text-sm font-mono text-green-900 border border-green-200 bg-green-50 p-2">
                               {valueToText(sample.target) || 'N/A'}
                             </pre>
                           </div>
 
                           <div>
-                            <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Filtered Responses</div>
-                            <pre className="whitespace-pre-wrap break-words text-xs font-mono text-blue-900 border border-blue-200 bg-blue-50 p-2">
+                            <div className="text-xs uppercase tracking-wider text-neutral-400 mb-1">Filtered Responses</div>
+                            <pre className="whitespace-pre-wrap break-words text-sm font-mono text-blue-900 border border-blue-200 bg-blue-50 p-2">
                               {filteredResponsesText(sample.filtered_resps) || 'N/A'}
                             </pre>
                           </div>
