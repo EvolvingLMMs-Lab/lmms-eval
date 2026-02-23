@@ -262,6 +262,7 @@ python -m lmms_eval --tasks list_with_num
   - egoschema_subset_mcppl
   - egoschema_subset
 - [EgoPlan](https://github.com/ChenYi99/EgoPlan) (egoplan)
+- [EgoTempo](https://github.com/google-research-datasets/egotempo) (egotempo)
 - [EgoThink](https://github.com/AdaCheng/EgoThink) (egothink)
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
 - [MMT-Bench](https://mmt-bench.github.io/) (mmt)
