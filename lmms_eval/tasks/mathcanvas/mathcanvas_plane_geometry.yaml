@@ -1,0 +1,3 @@
+include: _default_template_yaml
+task: mathcanvas_plane_geometry
+dataset_name: Plane_Geometry
