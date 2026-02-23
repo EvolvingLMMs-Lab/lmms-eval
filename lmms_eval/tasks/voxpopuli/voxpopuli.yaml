@@ -1,0 +1,19 @@
+group: voxpopuli
+task:
+  - voxpopuli_en
+  - voxpopuli_en_accented
+  - voxpopuli_de
+  - voxpopuli_fr
+  - voxpopuli_es
+  - voxpopuli_pl
+  - voxpopuli_it
+  - voxpopuli_ro
+  - voxpopuli_hu
+  - voxpopuli_cs
+  - voxpopuli_nl
+  - voxpopuli_fi
+  - voxpopuli_hr
+  - voxpopuli_sk
+  - voxpopuli_sl
+  - voxpopuli_et
+  - voxpopuli_lt

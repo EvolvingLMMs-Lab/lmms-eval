@@ -47,6 +47,7 @@ python -m lmms_eval --tasks list_with_num
     - COCO 2017 Caption MiniVal (coco2017_cap_val)
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
 - [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
+- [CountBench](https://huggingface.co/datasets/vikhyatk/CountBenchQA) (countbench)
 - [CV-Bench](https://github.com/nyu-visionx/CV-Bench) (cv_bench)
 - [DetailCaps-4870](https://github.com/foundation-multimodal-models/CAPTURE) (detailcaps)
 - [Flickr30K](https://github.com/BryanPlummer/flickr30k_entities) (flickr30k)
@@ -76,6 +77,7 @@ python -m lmms_eval --tasks list_with_num
 - [SeedBench 2](https://github.com/AILab-CVC/SEED-Bench) (seedbench_2)
 - [SeedBench 2 Plus](https://huggingface.co/datasets/AILab-CVC/SEED-Bench-2-plus) (seedbench_2_plus)
 - [VibeEval](https://github.com/reka-ai/reka-vibe-eval) (vibe_eval)
+- [VisuLogic](https://visulogic-benchmark.github.io/VisuLogic/) (visulogic)
 - [VizWizVQA](https://vizwiz.org/tasks-and-datasets/vqa/) (vizwiz_vqa)
   - VizWizVQA Validation (vizwiz_vqa_val)
   - VizWizVQA Test (vizwiz_vqa_test)
@@ -262,6 +264,7 @@ python -m lmms_eval --tasks list_with_num
   - egoschema_subset_mcppl
   - egoschema_subset
 - [EgoPlan](https://github.com/ChenYi99/EgoPlan) (egoplan)
+- [EgoTempo](https://github.com/google-research-datasets/egotempo) (egotempo)
 - [EgoThink](https://github.com/AdaCheng/EgoThink) (egothink)
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
 - [MMT-Bench](https://mmt-bench.github.io/) (mmt)
@@ -288,6 +291,17 @@ python -m lmms_eval --tasks list_with_num
   - mvbench_fine_grained_action
   - mvbench_moving_attribute
   - mvbench_egocentric_navigation
+- [TVBench](https://huggingface.co/datasets/FunAILab/TVBench) (tvbench)
+  - tvbench_action_antonym
+  - tvbench_action_count
+  - tvbench_action_localization
+  - tvbench_action_sequence
+  - tvbench_egocentric_sequence
+  - tvbench_moving_direction
+  - tvbench_object_count
+  - tvbench_object_shuffle
+  - tvbench_scene_transition
+  - tvbench_unexpected_action
 - [MotionBench](https://motion-bench.github.io/) (motionbench)
   - motionbench_full
 - [NExT-QA](https://github.com/doc-doc/NExT-QA) (nextqa)
@@ -403,8 +417,10 @@ python -m lmms_eval --tasks list_with_num
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
   - Infographic VQA Validation (infovqa_val)
   - Infographic VQA Test (infovqa_test)
+- [OfficeQA](https://github.com/databricks/officeqa) (officeqa)
 - [OCRBench](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench)
 - [OCRBench v2](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench_v2)
+- [OmniDocBench](https://github.com/opendatalab/OmniDocBench) (omnidocbench)
 - [PRISMM-Bench](https://arxiv.org/abs/2510.16505) (prismm_bench)
   - PRISMM-Bench Identification (prismm_bench_identification)
   - PRISMM-Bench Identification Whole Page Context (prismm_bench_identification_whole_page)
@@ -446,6 +462,7 @@ python -m lmms_eval --tasks list_with_num
   - MathCanvas Statistics (mathcanvas_statistics)
   - MathCanvas Transformational Geometry (mathcanvas_transformational_geometry)
   - MathCanvas Trigonometry (mathcanvas_trigonometry)
+- [MathKangaroo](https://huggingface.co/datasets/dfkiuser/kangaroo_math_mc_questions) (mathkangaroo)
 - [MathVerse](https://github.com/ZrrSkywalker/MathVerse) (mathverse)
   - MathVerse Text Dominant (mathverse_testmini_text_dominant)
   - MathVerse Text Only (mathverse_testmini_text_only)
@@ -489,6 +506,7 @@ python -m lmms_eval --tasks list_with_num
 - [EmbSpatial](https://github.com/EmbSpatial/EmbSpatial) (embspatial)
 - [ERQA](https://github.com/ERQA-Bench/ERQA) (erqa)
 - [OmniSpatial](https://omnispatial.github.io/) (omnispatial)
+- [Point-Bench](https://pointarena.github.io/) (pointbench)
 - [Where2Place](https://where2place.github.io/) (where2place)
 
 ---
