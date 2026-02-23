@@ -50,6 +50,7 @@ python -m lmms_eval --tasks list_with_num
 - [CountBench](https://huggingface.co/datasets/vikhyatk/CountBenchQA) (countbench)
 - [CV-Bench](https://github.com/nyu-visionx/CV-Bench) (cv_bench)
 - [DetailCaps-4870](https://github.com/foundation-multimodal-models/CAPTURE) (detailcaps)
+- [FSC-147](https://github.com/cvlab-stonybrook/LearningToCountEverything) (fsc147)
 - [Flickr30K](https://github.com/BryanPlummer/flickr30k_entities) (flickr30k)
   - Flickr30K Test (flickr30k_test)
 - [GQA](https://cs.stanford.edu/people/dorarad/gqa/index.html) (gqa)
