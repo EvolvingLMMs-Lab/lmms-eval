@@ -1,0 +1,12 @@
+group: mathcanvas
+task:
+  - mathcanvas_algebra
+  - mathcanvas_analytic_geometry
+  - mathcanvas_calculus_and_vector
+  - mathcanvas_plane_geometry
+  - mathcanvas_solid_geometry
+  - mathcanvas_statistics
+  - mathcanvas_transformational_geometry
+  - mathcanvas_trigonometry
+metadata:
+  - version: 0.0
