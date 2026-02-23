@@ -1,0 +1,30 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    train: hf://datasets/camelCase12/vpct-1/sim_*_results.json
+  token: false
+task: vpct
+test_split: train
+output_type: generate_until
+process_docs: !function utils.vpct_process_docs
+doc_to_visual: !function utils.vpct_doc_to_visual
+doc_to_text: !function utils.vpct_doc_to_text
+doc_to_target: !function utils.vpct_doc_to_target
+process_results: !function utils.vpct_process_results
+metric_list:
+  - metric: vpct_accuracy
+    aggregation: !function utils.vpct_aggregate_accuracy
+    higher_is_better: true
+  - metric: vpct_answered_rate
+    aggregation: !function utils.vpct_aggregate_answered_rate
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 32
+  temperature: 0
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nRespond with answer(X), where X is 1, 2, or 3."
+metadata:
+  version: 0.0
