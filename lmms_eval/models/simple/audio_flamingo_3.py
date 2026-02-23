@@ -5,10 +5,10 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import soundfile as sf
 import torch
+import transformers
 from accelerate import Accelerator, DistributedType
 from loguru import logger as eval_logger
 from tqdm import tqdm
-import transformers
 from transformers import AutoProcessor
 
 try:
@@ -53,11 +53,7 @@ class AudioFlamingo3(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
 
         if AudioFlamingo3ForConditionalGeneration is None:
-            raise ImportError(
-                "AudioFlamingo3ForConditionalGeneration is not available in transformers "
-                f"{transformers.__version__}. Please upgrade transformers/accelerate in this env, e.g. "
-                "`pip install -U transformers accelerate`."
-            )
+            raise ImportError("AudioFlamingo3ForConditionalGeneration is not available in transformers " f"{transformers.__version__}. Please upgrade transformers/accelerate in this env, e.g. " "`pip install -U transformers accelerate`.")
 
         self._model = AudioFlamingo3ForConditionalGeneration.from_pretrained(
             pretrained,
