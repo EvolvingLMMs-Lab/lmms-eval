@@ -333,6 +333,9 @@ python -m lmms_eval --tasks list_with_num
 - [WorldQA](https://zhangyuanhan-ai.github.io/WorldQA/) (worldqa)
   - WorldQA Generation (worldqa_gen)
   - WorldQA Multiple Choice (worldqa_mc)
+- [WorldVQA](https://huggingface.co/datasets/moonshotai/WorldVQA) (worldvqa)
+  - WorldQA Compatibility Generation (worldvqa_gen)
+  - WorldQA Compatibility Multiple Choice (worldvqa_mc)
 - [YouCook2](http://youcook2.eecs.umich.edu/) (youcook2_val)
 
 ### Long Video & Temporal Understanding
