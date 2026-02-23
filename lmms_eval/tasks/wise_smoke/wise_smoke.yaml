@@ -1,0 +1,28 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    train: lmms_eval/tasks/wise_smoke/data/wise_smoke.jsonl
+
+task: wise_smoke
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.wise_smoke_doc_to_visual
+doc_to_text: !function utils.wise_smoke_doc_to_text
+doc_to_target: "prompt"
+
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  do_sample: false
+
+process_results: !function utils.wise_smoke_process_results
+
+metric_list:
+  - metric: wise_smoke_success
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  - version: 0.1
+    description: "WISE smoke task with local fixture and image artifact validation"
