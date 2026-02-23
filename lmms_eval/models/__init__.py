@@ -66,6 +66,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "ola": "Ola",
     "omnivinci": "OmniVinci",
     "openai": "OpenAICompatible",
+    "openrouter_image_gen": "OpenRouterImageGen",
     "oryx": "Oryx",
     "phi3v": "Phi3v",
     "phi4_multimodal": "Phi4",
