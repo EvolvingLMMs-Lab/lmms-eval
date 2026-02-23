@@ -24,11 +24,11 @@ python -m lmms_eval --tasks list_with_num
 | Video Understanding | 25+ |
 | Long Video & Temporal | 10+ |
 | Audio & Speech | 20+ |
-| Document Understanding | 19+ |
+| Document Understanding | 20+ |
 | Mathematical Reasoning | 12+ |
 | Spatial & Grounding | 10+ |
 | Text-only Language Tasks | 15+ |
-| **Total** | **197+** |
+| **Total** | **198+** |
 
 ---
 
@@ -414,6 +414,7 @@ python -m lmms_eval --tasks list_with_num
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
 - [DUDE](https://arxiv.org/abs/2305.08455) (dude)
+- [MMLongBench-Doc](https://mayubo2333.github.io/MMLongBench-Doc/) (mmlongbench_doc)
 - [GEdit-Bench](https://github.com/GEdit-Bench/GEdit-Bench) (gedit_bench)
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
   - Infographic VQA Validation (infovqa_val)
