@@ -26,6 +26,7 @@ Majority of this documentation is adapted from [lm-eval-harness](https://github.
 * **[Version 0.3 Features](lmms-eval-0.3.md)** - Audio evaluation and new features
 * **[Version 0.6 Features](lmms-eval-0.6.md)** - Eval-as-a-service, async pipeline, and statistical analysis
 * **[Version 0.7 Features](lmms-eval-0.7.md)** - YAML-first runs, reasoning-tag stripping, Lance-backed MINERVA video mode, and skill-based agent workflows
+* **[Version 0.8 Features](lmms-eval-0.8.md)** - Unified model evaluation roadmap across understanding and generation for image/video/audio modalities
 * **[Throughput Metrics](throughput_metrics.md)** - Understanding performance metrics
 
 ## Additional Resources
