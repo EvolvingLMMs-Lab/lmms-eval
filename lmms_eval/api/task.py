@@ -1691,13 +1691,18 @@ class ConfigurableMessagesTask(ConfigurableTask):
                 text = self.doc_to_text(doc)
                 messages = [{"role": "user", "content": []}]
                 content = []
+                _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
                 for visual in visuals:
                     if isinstance(visual, PIL_Image.Image):
                         content.append({"type": "image", "url": visual})
                     elif isinstance(visual, dict):
                         content.append({"type": "audio", "url": visual})
                     elif isinstance(visual, str):
-                        content.append({"type": "video", "url": visual})
+                        ext = os.path.splitext(visual)[1].lower()
+                        if ext in _IMAGE_EXTS:
+                            content.append({"type": "image", "url": visual})
+                        else:
+                            content.append({"type": "video", "url": visual})
                 content.append({"type": "text", "text": text})
                 messages[0]["content"] = content
                 return messages
