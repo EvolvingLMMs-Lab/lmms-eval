@@ -1,0 +1,4 @@
+group: vbench_all
+task:
+  - vbench
+  - vbench2

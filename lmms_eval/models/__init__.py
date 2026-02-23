@@ -17,6 +17,7 @@ logger.add(sys.stdout, level="WARNING", format=log_format)
 
 AVAILABLE_SIMPLE_MODELS = {
     "aero": "Aero",
+    "api_gen": "ApiGen",
     "aria": "Aria",
     "audio_flamingo_3": "AudioFlamingo3",
     "glm4v": "GLM4V",

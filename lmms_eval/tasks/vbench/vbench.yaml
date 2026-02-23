@@ -1,0 +1,18 @@
+group: vbench
+task:
+  - vbench_subject_consistency
+  - vbench_background_consistency
+  - vbench_temporal_flickering
+  - vbench_motion_smoothness
+  - vbench_dynamic_degree
+  - vbench_aesthetic_quality
+  - vbench_imaging_quality
+  - vbench_object_class
+  - vbench_multiple_objects
+  - vbench_human_action
+  - vbench_color
+  - vbench_spatial_relationship
+  - vbench_scene
+  - vbench_appearance_style
+  - vbench_temporal_style
+  - vbench_overall_consistency
