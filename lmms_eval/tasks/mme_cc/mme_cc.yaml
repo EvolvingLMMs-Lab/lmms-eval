@@ -1,0 +1,44 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test:
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Chart_Modification.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Counterfactual_Instruction.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Finding_Wrong_Answer.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Gomoku_Variation.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Indoor_Deduplication_Counting.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Indoor_Directional_Reasoning.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Jigsaw_Puzzle.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Maze06.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Maze10.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Sandbagging.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Satellite_Image_Matching.json
+      - https://huggingface.co/datasets/MaxwellWen/MME-CC/resolve/main/Unblock_Me.json
+task: "mme_cc"
+test_split: test
+process_docs: !function utils.mme_cc_process_docs
+output_type: generate_until
+doc_to_visual: !function utils.mme_cc_doc_to_visual
+doc_to_text: !function utils.mme_cc_doc_to_text
+doc_to_messages: !function utils.mme_cc_doc_to_messages
+doc_to_target: !function utils.mme_cc_doc_to_target
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.mme_cc_process_results
+metric_list:
+  - metric: mme_cc_exact_match
+    aggregation: !function utils.mme_cc_aggregate_exact_match
+    higher_is_better: true
+  - metric: mme_cc_answered_rate
+    aggregation: !function utils.mme_cc_aggregate_answered_rate
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nReturn only your final answer with no explanation."
+metadata:
+  - version: 0.0
