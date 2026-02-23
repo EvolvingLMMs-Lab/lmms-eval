@@ -484,6 +484,7 @@ python -m lmms_eval --tasks list_with_num
 - [EmbSpatial](https://github.com/EmbSpatial/EmbSpatial) (embspatial)
 - [ERQA](https://github.com/ERQA-Bench/ERQA) (erqa)
 - [OmniSpatial](https://omnispatial.github.io/) (omnispatial)
+- [Point-Bench](https://pointarena.github.io/) (pointbench)
 - [Where2Place](https://where2place.github.io/) (where2place)
 
 ---
