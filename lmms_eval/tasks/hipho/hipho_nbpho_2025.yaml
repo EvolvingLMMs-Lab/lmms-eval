@@ -1,0 +1,3 @@
+include: _default_template_yaml
+task: hipho_nbpho_2025
+test_split: NBPhO_2025
