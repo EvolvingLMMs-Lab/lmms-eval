@@ -668,27 +668,38 @@ def get_dataset_row(
     """
     api_url = f"https://datasets-server.huggingface.co/rows" f"?dataset={quote(dataset_path, safe='')}" f"&config={quote(config, safe='')}" f"&split={quote(split, safe='')}" f"&offset={doc_id}" f"&length=1"
 
-    req = urllib.request.Request(api_url)
-    req.add_header("Accept", "application/json")
-
     hf_token = os.environ.get("HF_TOKEN", "")
-    if hf_token:
-        req.add_header("Authorization", f"Bearer {hf_token}")
+
+    def _fetch(use_token: bool) -> dict[str, Any]:
+        req = urllib.request.Request(api_url)
+        req.add_header("Accept", "application/json")
+        if use_token and hf_token:
+            req.add_header("Authorization", f"Bearer {hf_token}")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
 
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        data = _fetch(use_token=bool(hf_token))
     except urllib.error.HTTPError as exc:
-        if exc.code == 404:
+        if exc.code == 401 and hf_token:
+            # Token may be expired or invalid; retry without it for public datasets
+            try:
+                data = _fetch(use_token=False)
+            except urllib.error.HTTPError as exc2:
+                if exc2.code == 404:
+                    raise HTTPException(status_code=404, detail="Dataset or row not found on HuggingFace") from exc2
+                raise HTTPException(status_code=exc2.code, detail=f"HuggingFace API error: {exc2.reason}") from exc2
+            except (urllib.error.URLError, OSError) as exc2:
+                raise HTTPException(status_code=502, detail=f"Failed to reach HuggingFace API: {exc2}") from exc2
+        elif exc.code == 404:
             raise HTTPException(status_code=404, detail="Dataset or row not found on HuggingFace") from exc
-        raise HTTPException(status_code=exc.code, detail=f"HuggingFace API error: {exc.reason}") from exc
+        else:
+            raise HTTPException(status_code=exc.code, detail=f"HuggingFace API error: {exc.reason}") from exc
     except (urllib.error.URLError, OSError) as exc:
         raise HTTPException(status_code=502, detail=f"Failed to reach HuggingFace API: {exc}") from exc
-
     rows = data.get("rows", [])
     if not rows:
         raise HTTPException(status_code=404, detail="Row not found in dataset")
-
     row = rows[0].get("row", {})
     return {"row": row}
 
