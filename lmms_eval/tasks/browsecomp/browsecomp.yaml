@@ -1,0 +1,3 @@
+include: _default_template_yaml
+task: browsecomp
+test_split: test
