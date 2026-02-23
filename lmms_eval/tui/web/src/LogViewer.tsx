@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 const API_BASE = ''
 const DEFAULT_LOGS_PATH = './logs/'
@@ -17,6 +17,7 @@ interface LogRunSummary {
 
 interface RunResults {
   results?: Record<string, Record<string, unknown>>
+  configs?: Record<string, Record<string, unknown>>
   config?: Record<string, unknown>
   model_name?: string
   date?: string
@@ -37,6 +38,17 @@ interface MetricRow {
   metric: string
   value: unknown
   stderr: unknown
+}
+
+interface ImageEntry {
+  key: string
+  src: string
+}
+
+interface SampleImageState {
+  loading: boolean
+  images: ImageEntry[]
+  error?: string
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -192,6 +204,8 @@ export default function LogViewer() {
   const [samplesLoading, setSamplesLoading] = useState(false)
   const [samplesError, setSamplesError] = useState<string | null>(null)
 
+  const [sampleImages, setSampleImages] = useState<Record<string, SampleImageState>>({})
+
   const selectedRun = useMemo(
     () => runs.find(run => run.run_id === selectedRunId) ?? null,
     [runs, selectedRunId],
@@ -206,6 +220,58 @@ export default function LogViewer() {
   }, [runResults, selectedRun])
 
   const metricRows = useMemo(() => extractMetricRows(runResults), [runResults])
+
+  const taskConfig = useMemo(() => {
+    if (!runResults?.configs || !selectedTask) return null
+    return runResults.configs[selectedTask] ?? null
+  }, [runResults, selectedTask])
+
+  const loadSampleImage = useCallback(async (docId: number) => {
+    const cacheKey = `${selectedRunId}:${selectedTask}:${docId}`
+    const existing = sampleImages[cacheKey]
+    if (existing && (existing.loading || existing.images.length > 0)) return
+
+    if (!taskConfig) {
+      setSampleImages(prev => ({ ...prev, [cacheKey]: { loading: false, images: [], error: 'No dataset config found for this task' } }))
+      return
+    }
+
+    const datasetPath = taskConfig.dataset_path as string | undefined
+    const split = (taskConfig.test_split ?? taskConfig.validation_split ?? 'test') as string
+    const configName = (taskConfig.dataset_name ?? 'default') as string
+
+    if (!datasetPath) {
+      setSampleImages(prev => ({ ...prev, [cacheKey]: { loading: false, images: [], error: 'No dataset_path in task config' } }))
+      return
+    }
+
+    setSampleImages(prev => ({ ...prev, [cacheKey]: { loading: true, images: [] } }))
+
+    try {
+      const params = new URLSearchParams({
+        dataset_path: datasetPath,
+        split,
+        doc_id: String(docId),
+        config: configName,
+      })
+      const response = await fetch(`${API_BASE}/logs/dataset-row?${params}`)
+      if (!response.ok) {
+        const detail = await response.text()
+        throw new Error(`HTTP ${response.status}: ${detail}`)
+      }
+      const data = (await response.json()) as { row: Record<string, unknown> }
+      const images: ImageEntry[] = []
+      for (const [key, value] of Object.entries(data.row)) {
+        if (isRecord(value) && typeof value.src === 'string') {
+          images.push({ key, src: value.src })
+        }
+      }
+      setSampleImages(prev => ({ ...prev, [cacheKey]: { loading: false, images } }))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load image'
+      setSampleImages(prev => ({ ...prev, [cacheKey]: { loading: false, images: [], error: message } }))
+    }
+  }, [selectedRunId, selectedTask, taskConfig, sampleImages])
 
   const scanRuns = async () => {
     setRunsLoading(true)
@@ -579,6 +645,9 @@ export default function LogViewer() {
                   samplesResponse.samples.map((sample, index) => {
                     const badges = extractSampleBadges(sample)
                     const docId = sample.doc_id ?? sample.doc_hash ?? `${samplesResponse.offset + index}`
+                    const numericDocId = typeof sample.doc_id === 'number' ? sample.doc_id : null
+                    const imageCacheKey = `${selectedRunId}:${selectedTask}:${numericDocId}`
+                    const imageState = numericDocId !== null ? sampleImages[imageCacheKey] : undefined
 
                     return (
                       <div key={`${samplesResponse.offset}-${index}`} className="border border-neutral-200 bg-white p-3 space-y-2">
@@ -588,6 +657,19 @@ export default function LogViewer() {
                             <span className="ml-1 text-neutral-700 font-mono normal-case">{valueToText(docId)}</span>
                           </div>
                           <div className="flex flex-wrap justify-end gap-1">
+                            {numericDocId !== null && !imageState?.images.length && (
+                              <button
+                                onClick={() => void loadSampleImage(numericDocId)}
+                                disabled={imageState?.loading}
+                                className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-medium border transition-colors ${
+                                  imageState?.loading
+                                    ? 'text-neutral-300 border-neutral-200 cursor-not-allowed'
+                                    : 'text-violet-500 border-violet-200 hover:border-violet-500 hover:bg-violet-50'
+                                }`}
+                              >
+                                {imageState?.loading ? 'Loading...' : 'Load Image'}
+                              </button>
+                            )}
                             {badges.map(([key, value]) => (
                               <span
                                 key={key}
@@ -599,6 +681,31 @@ export default function LogViewer() {
                             ))}
                           </div>
                         </div>
+
+                        {imageState?.error && (
+                          <div className="text-[10px] font-mono text-red-600 border border-red-200 bg-red-50 px-2 py-1">
+                            {imageState.error}
+                          </div>
+                        )}
+
+                        {imageState?.images && imageState.images.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1">Dataset Image</div>
+                            <div className="flex flex-wrap gap-2">
+                              {imageState.images.map(img => (
+                                <div key={img.key} className="border border-neutral-200 bg-neutral-50 p-1">
+                                  <img
+                                    src={img.src}
+                                    alt={img.key}
+                                    className="max-w-full max-h-[300px] object-contain"
+                                    loading="lazy"
+                                  />
+                                  <div className="text-[10px] font-mono text-neutral-400 mt-1 text-center">{img.key}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="space-y-2">
                           <div>

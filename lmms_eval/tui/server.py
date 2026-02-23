@@ -11,6 +11,8 @@ import platform
 import signal
 import socket
 import subprocess
+import urllib.error
+import urllib.request
 import uuid
 from importlib.metadata import version as pkg_version
 from pathlib import Path
@@ -650,6 +652,45 @@ async def get_log_run_samples(
         raise HTTPException(status_code=404, detail="Samples file not found") from exc
 
     return LogSamplesResponse(samples=samples, total=total, offset=offset, limit=limit)
+
+
+@app.get("/logs/dataset-row")
+def get_dataset_row(
+    dataset_path: str = Query(..., description="HuggingFace dataset path, e.g. lmms-lab/MME"),
+    split: str = Query(..., description="Dataset split, e.g. test"),
+    doc_id: int = Query(..., ge=0, description="Document index in the dataset"),
+    config: str = Query("default", description="Dataset config name"),
+) -> dict[str, Any]:
+    """Fetch a single row from a HuggingFace dataset via the datasets server API.
+
+    Returns the row data including image URLs that can be rendered directly by the frontend.
+    Images appear as objects with a 'src' key pointing to a CDN URL.
+    """
+    api_url = f"https://datasets-server.huggingface.co/rows" f"?dataset={quote(dataset_path, safe='')}" f"&config={quote(config, safe='')}" f"&split={quote(split, safe='')}" f"&offset={doc_id}" f"&length=1"
+
+    req = urllib.request.Request(api_url)
+    req.add_header("Accept", "application/json")
+
+    hf_token = os.environ.get("HF_TOKEN", "")
+    if hf_token:
+        req.add_header("Authorization", f"Bearer {hf_token}")
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            raise HTTPException(status_code=404, detail="Dataset or row not found on HuggingFace") from exc
+        raise HTTPException(status_code=exc.code, detail=f"HuggingFace API error: {exc.reason}") from exc
+    except (urllib.error.URLError, OSError) as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to reach HuggingFace API: {exc}") from exc
+
+    rows = data.get("rows", [])
+    if not rows:
+        raise HTTPException(status_code=404, detail="Row not found in dataset")
+
+    row = rows[0].get("row", {})
+    return {"row": row}
 
 
 if STATIC_DIR.exists():
