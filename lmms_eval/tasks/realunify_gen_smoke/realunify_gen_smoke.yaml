@@ -1,0 +1,27 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    train: lmms_eval/tasks/realunify_gen_smoke/data/realunify_gen_smoke.jsonl
+task: realunify_gen_smoke
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.realunify_gen_doc_to_visual
+doc_to_text: !function utils.realunify_gen_doc_to_text
+doc_to_target: "answer"
+
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  do_sample: false
+
+process_results: !function utils.realunify_gen_process_results
+
+metric_list:
+  - metric: realunify_gen_smoke_success
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  - version: 0.1
+    description: "Unify generation smoke task with local fixture that validates local output image artifacts"
