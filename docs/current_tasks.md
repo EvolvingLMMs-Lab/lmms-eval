@@ -291,6 +291,17 @@ python -m lmms_eval --tasks list_with_num
   - mvbench_fine_grained_action
   - mvbench_moving_attribute
   - mvbench_egocentric_navigation
+- [TVBench](https://huggingface.co/datasets/FunAILab/TVBench) (tvbench)
+  - tvbench_action_antonym
+  - tvbench_action_count
+  - tvbench_action_localization
+  - tvbench_action_sequence
+  - tvbench_egocentric_sequence
+  - tvbench_moving_direction
+  - tvbench_object_count
+  - tvbench_object_shuffle
+  - tvbench_scene_transition
+  - tvbench_unexpected_action
 - [MotionBench](https://motion-bench.github.io/) (motionbench)
   - motionbench_full
 - [NExT-QA](https://github.com/doc-doc/NExT-QA) (nextqa)

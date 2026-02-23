@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: tvbench_object_count
+dataset_name: object_count
+test_split: train
