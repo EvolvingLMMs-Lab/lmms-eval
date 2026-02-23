@@ -53,7 +53,9 @@ from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
     get_datetime_str,
+    get_git_branch_name,
     get_git_commit_hash,
+    get_lmms_eval_version_string,
     handle_non_serializable,
     hash_string,
     is_multimodal_content,
@@ -408,6 +410,8 @@ def simple_evaluate(
             results["config"]["resolved_cli_args"] = resolved
 
         results["git_hash"] = get_git_commit_hash()
+        results["git_branch"] = get_git_branch_name()
+        results["lmms_eval_version"] = get_lmms_eval_version_string()
         results["date"] = datetime_str
         throughput_summary = summarize_logged_metrics()
         if throughput_summary:
