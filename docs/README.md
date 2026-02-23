@@ -25,6 +25,7 @@ Majority of this documentation is adapted from [lm-eval-harness](https://github.
 * **[Caching](caching.md)** - Enable and reload results from the JSONL cache
 * **[Version 0.3 Features](lmms-eval-0.3.md)** - Audio evaluation and new features
 * **[Throughput Metrics](throughput_metrics.md)** - Understanding performance metrics
+* **[MMMU Eval Discrepancy Analysis](mmmu-eval-discrepancy.md)** - Why lmms-eval and VLMEvalKit can report different MMMU scores
 
 ## Additional Resources
 
