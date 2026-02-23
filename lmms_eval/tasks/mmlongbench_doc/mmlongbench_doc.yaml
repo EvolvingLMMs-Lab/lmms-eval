@@ -1,0 +1,27 @@
+dataset_path: yubo2333/MMLongBench-Doc
+dataset_kwargs:
+  token: true
+task: mmlongbench_doc
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.mmlongbench_doc_to_visual
+doc_to_text: !function utils.mmlongbench_doc_to_text
+doc_to_target: !function utils.mmlongbench_doc_to_target
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  do_sample: false
+process_results: !function utils.mmlongbench_doc_process_results
+metric_list:
+  - metric: mmlongbench_doc_acc
+    aggregation: !function utils.mmlongbench_doc_aggregate_acc
+    higher_is_better: true
+  - metric: mmlongbench_doc_f1
+    aggregation: !function utils.mmlongbench_doc_aggregate_f1
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with a single word or phrase. If the answer is not in the document, answer 'Not answerable'."
+metadata:
+  - version: 0.0
