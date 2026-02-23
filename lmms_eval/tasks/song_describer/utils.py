@@ -20,22 +20,22 @@ def get_column_value(doc, candidates):
 
 def song_describer_doc_to_audio(doc):
     """Extract audio from song-describer dataset document
-    
+
     Returns audio array and sampling rate (16kHz for song-describer).
     """
     audio_file = doc.get("audio_path") or doc.get("audio")
-    
+
     if not audio_file:
         eval_logger.warning(f"No audio found in document. Available keys: {list(doc.keys())}")
         return []
-    
+
     try:
         # Handle different audio formats
         if hasattr(audio_file, "get_all_samples"):
             decoded_audio = audio_file.get_all_samples()
         else:
             decoded_audio = audio_file
-        
+
         # Extract array
         if hasattr(decoded_audio, "data"):
             audio_array = decoded_audio.data
@@ -49,13 +49,13 @@ def song_describer_doc_to_audio(doc):
                 audio_array = temp
         else:
             audio_array = decoded_audio
-        
+
         # Convert torch tensor to numpy if needed
         if hasattr(audio_array, "cpu") and hasattr(audio_array, "numpy"):
             audio_array = audio_array.cpu().numpy()
         elif hasattr(audio_array, "numpy"):
             audio_array = audio_array.numpy()
-        
+
         # Ensure it's a numpy array
         if not isinstance(audio_array, np.ndarray):
             try:
@@ -66,22 +66,22 @@ def song_describer_doc_to_audio(doc):
                     audio_array = np.array(audio_array.tolist())
                 else:
                     raise
-        
+
         # Ensure it's 1D array (flatten if multi-channel)
         if audio_array.ndim > 1:
             audio_array = audio_array.flatten()
-        
+
         # Ensure float32 dtype
         if audio_array.dtype != np.float32:
             audio_array = audio_array.astype(np.float32)
-        
+
         # Get sampling rate (song-describer is 16kHz)
         sampling_rate = getattr(audio_file, "_desired_sample_rate", 16000)
-        
+
         eval_logger.debug(f"Audio array shape: {audio_array.shape}, dtype: {audio_array.dtype}, sampling_rate: {sampling_rate}")
-        
+
         return [{"array": audio_array, "sampling_rate": sampling_rate}]
-        
+
     except Exception as e:
         eval_logger.error(f"Error extracting audio: {e}")
         eval_logger.error(f"Audio type: {type(audio_file)}, attributes: {dir(audio_file)}")
@@ -92,10 +92,10 @@ def song_describer_doc_to_text(doc, lmms_eval_specific_kwargs):
     """Generate prompt for music captioning"""
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
-    
+
     # Default prompt for music captioning
     default_prompt = "Listen to this music and describe what you hear. Include details about the instruments, genre, mood, and any distinctive musical elements."
-    
+
     return f"{pre_prompt}{default_prompt}{post_prompt}"
 
 
@@ -122,19 +122,15 @@ _eval_tokenizer = None
 def get_eval_model():
     """Lazy load evaluation model"""
     global _eval_model, _eval_tokenizer
-    
+
     if _eval_model is None:
         eval_logger.info(f"Loading evaluation model: {EVAL_MODEL_NAME}")
         _eval_tokenizer = AutoTokenizer.from_pretrained(EVAL_MODEL_NAME, trust_remote_code=True)
-        _eval_model = AutoModelForCausalLM.from_pretrained(
-            EVAL_MODEL_NAME,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            trust_remote_code=True
-        ).eval()
+        _eval_model = AutoModelForCausalLM.from_pretrained(EVAL_MODEL_NAME, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True).eval()
         eval_logger.info("Evaluation model loaded successfully")
-    
+
     return _eval_model, _eval_tokenizer
+
 
 eval_prompt = """
             [Music Description Task]
@@ -169,23 +165,19 @@ eval_prompt = """
 def get_eval(max_tokens: int, content: str):
     """Call local Qwen model for evaluation"""
     model, tokenizer = get_eval_model()
-    
+
     messages = [
         {"role": "system", "content": "You are a professional music critic and evaluator. Provide objective and detailed assessments."},
         {"role": "user", "content": content},
     ]
-    
+
     try:
         # Format messages using chat template
-        text = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )
-        
+        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
         # Tokenize and generate
         model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
-        
+
         with torch.no_grad():
             generated_ids = model.generate(
                 **model_inputs,
@@ -194,20 +186,18 @@ def get_eval(max_tokens: int, content: str):
                 do_sample=True,
                 top_p=0.9,
             )
-        
+
         # Decode only the generated part (excluding input)
-        generated_ids = [
-            output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
-        ]
-        
+        generated_ids = [output_ids[len(input_ids) :] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)]
+
         response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
-        
+
         if response:
             return response, EVAL_MODEL_NAME
-        
+
         eval_logger.warning("Empty response from evaluation model")
         return "", ""
-        
+
     except Exception as e:
         eval_logger.error(f"Error during evaluation: {e}")
         return "", ""
@@ -217,18 +207,15 @@ def song_describer_process_results(doc, results):
     """Process results for song-describer captioning task"""
     pred = results[0]
     ground_truth_str = get_column_value(doc, ["text", "caption", "description"])
-    
+
     if not ground_truth_str:
         eval_logger.warning("No ground truth text found in document")
         return {"eval_score": {"eval_answer": "", "model_name": ""}}
-    
-    content = eval_prompt.format(
-        model_response=pred,
-        ground_truth=ground_truth_str
-    )
-    
+
+    content = eval_prompt.format(model_response=pred, ground_truth=ground_truth_str)
+
     eval_answer, model_name = get_eval(max_tokens=1024, content=content)
-    
+
     return {
         "eval_score": {"eval_answer": eval_answer, "model_name": model_name},
     }
@@ -238,10 +225,10 @@ def song_describer_aggregate_results(results):
     """Aggregate evaluation scores from local model"""
     score = 0
     valid_count = 0
-    
+
     for result in results:
         eval_answer = result["eval_answer"]
-        
+
         if not eval_answer:
             continue
 
@@ -258,5 +245,5 @@ def song_describer_aggregate_results(results):
     if valid_count == 0:
         eval_logger.error("No valid evaluation scores found")
         return 0.0
-    
+
     return score / valid_count
