@@ -18,6 +18,7 @@ Majority of this documentation is adapted from [lm-eval-harness](https://github.
 
 * **[Commands Guide](commands.md)** - Learn about command line flags and options
 * **[Quick Start](quickstart.md)** - Evaluate your model in 5 minutes
+* **[External Usage](external_usage.md)** - CLI task browsing, Web UI, and Python library access to tasks, datasets, and evaluations
 * **[Model Guide](model_guide.md)** - How to add and integrate new models
 * **[Task Guide](task_guide.md)** - Create custom evaluation tasks
 * **[Current Tasks](current_tasks.md)** - List of all supported evaluation tasks

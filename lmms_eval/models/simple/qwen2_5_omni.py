@@ -15,7 +15,8 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.audio_processing import split_audio
-from lmms_eval.models.model_utils.load_video import read_video_pyav_base64
+from lmms_eval.models.model_utils.load_video import read_video
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 try:
     from qwen_omni_utils import process_mm_info
@@ -214,8 +215,12 @@ class Qwen2_5_Omni(lmms):
                     if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
                         current_use_audio = self._check_if_video_has_audio(visual)
                         if self.use_custom_video_loader:
-                            visual = read_video_pyav_base64(visual, num_frm=self.max_num_frames, fps=self.fps, img_format="JPEG", max_image_size=self.max_image_size)
-                            image_contents = list(map(lambda x: f"data:image/jpeg;base64,{x}", visual))
+                            frames = read_video(visual, num_frm=self.max_num_frames, fps=self.fps)
+                            image_contents = []
+                            for frame in frames:
+                                img = Image.fromarray(frame)
+                                b64 = encode_image_to_base64(img, image_format="JPEG", convert_rgb=True, quality=85)
+                                image_contents.append(f"data:image/jpeg;base64,{b64}")
                             message.append({"role": "user", "content": [{"type": "video", "video": image_contents}, {"type": "text", "text": context}]})
                         else:  # Model video loader
                             message.append({"role": "user", "content": [{"type": "video", "video": visual}, {"type": "text", "text": context}]})

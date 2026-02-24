@@ -50,9 +50,6 @@ class Huggingface(lmms):
         use_cache=True,
         attn_implementation: Optional[str] = None,
         max_num_frames: int = 32,
-        use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
-        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
@@ -66,14 +63,6 @@ class Huggingface(lmms):
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
             raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
-
-        self.use_custom_video_loader = use_custom_video_loader
-        self.fps = fps
-        # if self.fps and not self.use_custom_video_loader:
-        #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
-        self.max_image_size = max_image_size
-        if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         self.accelerator = accelerator

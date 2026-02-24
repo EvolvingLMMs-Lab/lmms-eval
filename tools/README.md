@@ -64,6 +64,21 @@ python tools/bench_minerva_pipeline_latency.py \
 
 This benchmark keeps decode behavior fixed and compares only storage mode. On local disks it is often near-parity; Lance tends to help more in remote/object-storage and reproducible multi-machine setups.
 
+### `bench_video_decode_backends.py`
+
+Benchmark video decode backend latency and throughput on the same local video file across `pyav`, `torchcodec`, and `dali`.
+
+```bash
+python tools/bench_video_decode_backends.py \
+  --video /absolute/path/to/video.mp4 \
+  --backends pyav,torchcodec,dali \
+  --num-frames 8 \
+  --iterations 30 \
+  --output /tmp/video_decode_backends.json
+```
+
+`pyav` is the default reference. If optional backends are not installed, the script records backend-specific errors in the JSON report without failing the whole run.
+
 ## Notebooks
 
 ### `make_image_hf_dataset.ipynb`

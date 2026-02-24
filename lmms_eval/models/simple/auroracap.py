@@ -21,7 +21,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
+from lmms_eval.models.model_utils.load_video import read_video
 
 try:
     from lmms_eval.models.aurora_xtuner.model.aurora import (
@@ -417,11 +417,11 @@ class AuroraCap(lmms):
                             if self.video_decode_backend == "decord":
                                 video = self.load_video(visuals[0], self.max_frames_num)
                             elif self.video_decode_backend == "pyav":
-                                video = read_video_pyav(visuals[0], num_frm=self.max_frames_num)
+                                video = read_video(visuals[0], num_frm=self.max_frames_num)
                             image_tensor = self.process_images(video, self._image_processor, self._config).to(self._device)
                         elif visuals[0].endswith("mkv"):
                             assert self.video_decode_backend == "pyav", "we only tested this case, decord may not work"
-                            video = read_video_pyav(visuals[0], num_frm=self.max_frames_num)
+                            video = read_video(visuals[0], num_frm=self.max_frames_num)
                             image_tensor = self.process_images(video, self._image_processor, self._config).to(self._device)
 
                 if type(image_tensor) is list:
