@@ -1,0 +1,23 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    train: /tmp/ice_bench_smoke.jsonl
+
+task: "ice_bench"
+test_split: train
+output_type: generate_until
+
+doc_to_visual: !function utils.ice_doc_to_visual
+doc_to_text: !function utils.ice_doc_to_text
+doc_to_target: !function utils.ice_doc_to_target
+
+process_results: !function utils.ice_process_results
+
+metric_list:
+  - metric: artifact_saved
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  - version: 0.1
+    description: "ICE-Bench single-sample smoke using official dataset payload"
