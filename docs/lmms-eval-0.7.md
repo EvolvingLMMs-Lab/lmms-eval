@@ -503,32 +503,42 @@ This gives a clear split between development-time edits (model/task code) and ru
 
 This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
 
-### 7.1 What Was Implemented
+### 7.1 `read_video` — Unified Video Decode Entry Point
 
-- shared image encoding helper integration across protocol and simple adapters
+`read_video` in `lmms_eval/models/model_utils/load_video.py` is the single entry point for video frame extraction across all model backends. It uniformly samples `num_frm` frames (or FPS-guided sampling when `fps` is set) and returns an `np.ndarray` of shape `(N, H, W, 3)` in `uint8`.
+
+**Signature:**
+
+```python
+read_video(
+    video_path,
+    *,
+    num_frm=8,
+    fps=None,
+    format="rgb24",
+    force_include_last_frame=False,
+    backend=None,
+) -> np.ndarray
+```
+
+**Supported decode backends** (selected via `backend` parameter or `LMMS_VIDEO_DECODE_BACKEND` env var):
+
+| Backend | Install requirement | Default | Notes |
+|---|---|---|---|
+| `pyav` | Included (PyAV) | ✅ | Stream-first decode for mp4; packet fallback for webm/mkv. `thread_type="AUTO"` enabled. |
+| `torchcodec` | `uv add torchcodec` | | Thread-tunable via `LMMS_VIDEO_TORCHCODEC_THREADS`. See Section 7.3 for benchmarks. |
+| `dali` | `nvidia-dali` (GPU) | | GPU-accelerated decode. Requires `LMMS_VIDEO_DALI_DEVICE=gpu`. |
+
+Additional I/O optimizations in this release:
+
+- shared image encoding helper (`encode_image_to_base64`) integration across protocol and simple adapters
 - path-metadata keyed image encode cache for repeated path inputs
-- video decode path upgrades in `lmms_eval/models/model_utils/load_video.py`
-  - PyAV `thread_type="AUTO"`
-  - stream fallback `seek(0)` before packet decode
-  - set-membership lookup in stream frame selection
-  - preallocated output array fill (replace list + `np.stack` path)
-  - configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
+- PyAV stream fallback: `seek(0)` before packet decode on stream failure
+- set-membership lookup in stream frame selection
+- preallocated output array fill (replaced list + `np.stack` path)
+- configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
 
-### 7.2 Semantic-Parity Guard for `load_video` Resize
-
-To avoid input-semantics drift, `resize_strategy="resize"` behavior is kept aligned with prior behavior (direct target-size resize) and validated against `dev-v0d7`.
-
-Parity evidence artifact:
-
-- `/tmp/load_video_parity_compare.json`
-
-Observed parity checks:
-
-- PNG first-frame size match: `True`
-- PIL first-frame size match: `True`
-- PNG first-frame hash match: `True`
-
-### 7.3 Real-Model LongVideoBench Replay (Long Samples)
+### 7.2 Real-Model LongVideoBench Replay (Long Samples)
 
 Provider-backed replay was run on `longvideobench_val_v` using OpenRouter (`bytedance-seed/seed-1.6-flash`) with long samples (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
 
@@ -550,6 +560,125 @@ Prediction-level note:
 - baseline vs optimized run1 per-sample parsed prediction match: `8/8`
 - optimized run1 vs run2 per-sample match: `6/8`
 - aggregate score remains unchanged; per-item drift is consistent with remote-provider nondeterminism
+
+### 7.3 TorchCodec Thread Tuning Evidence (Standard Video)
+
+To add reproducible pipeline-optimization evidence, we fixed one standard test video and ran multi-group thread-tuning benchmarks for `pyav` vs `torchcodec`.
+
+Standard test file:
+
+- alias: `/tmp/lmms_eval_standard_video.mp4`
+- backing file: `/tmp/IAk7udY0visIxbJZ.mp4`
+
+Benchmark setup:
+
+- decode API path: `read_video(..., backend=...)` in `lmms_eval/models/model_utils/load_video.py`
+- warmup: `5` iterations per config
+- measured iterations: `20` per config
+- frame groups: `num_frames = 8, 16, 32`
+- TorchCodec thread sweep: `LMMS_VIDEO_TORCHCODEC_THREADS = 0, 1, 2, 4, 8`
+- correctness guard: first-frame hash parity against PyAV is preserved in every group
+
+Environment note:
+
+- TorchCodec measurement was run with overlay dependencies `torch==2.10.0` and `torchcodec==0.10.0` due runtime compatibility constraints in the base env.
+
+Evidence artifact:
+
+- `/tmp/lmms_eval_standard_video_thread_tuning_matrix.json`
+
+Best thread per frame group:
+
+| `num_frames` | PyAV mean latency (ms) | Best TorchCodec threads | Best TorchCodec latency (ms) | Latency change vs PyAV | Speedup vs PyAV |
+|---|---:|---:|---:|---:|---:|
+| 8 | 196.638 | 8 | 54.883 | -72.09% | 3.583x |
+| 16 | 188.208 | 4 | 178.802 | -5.00% | 1.053x |
+| 32 | 415.755 | 8 | 213.447 | -48.66% | 1.948x |
+
+Thread-sweep detail by group:
+
+| `num_frames` | TorchCodec threads | TorchCodec mean latency (ms) | p50 (ms) | p95 (ms) | Latency change vs PyAV | Speedup vs PyAV |
+|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 0 | 197.407 | 197.036 | 199.471 | +0.39% | 0.996x |
+| 8 | 1 | 198.141 | 197.207 | 201.838 | +0.76% | 0.992x |
+| 8 | 2 | 121.424 | 121.431 | 123.079 | -38.25% | 1.619x |
+| 8 | 4 | 76.100 | 75.320 | 77.649 | -61.30% | 2.584x |
+| 8 | 8 | 54.883 | 54.847 | 55.430 | -72.09% | 3.583x |
+| 16 | 0 | 469.478 | 468.433 | 484.545 | +149.45% | 0.401x |
+| 16 | 1 | 470.140 | 470.325 | 474.793 | +149.80% | 0.400x |
+| 16 | 2 | 283.408 | 281.854 | 289.212 | +50.58% | 0.664x |
+| 16 | 4 | 178.802 | 178.286 | 183.463 | -5.00% | 1.053x |
+| 16 | 8 | 263.439 | 257.968 | 320.405 | +39.97% | 0.714x |
+| 32 | 0 | 828.361 | 803.065 | 930.321 | +99.24% | 0.502x |
+| 32 | 1 | 803.361 | 801.610 | 812.127 | +93.23% | 0.518x |
+| 32 | 2 | 474.246 | 471.480 | 487.577 | +14.07% | 0.877x |
+| 32 | 4 | 296.236 | 296.067 | 299.238 | -28.75% | 1.403x |
+| 32 | 8 | 213.447 | 213.086 | 216.769 | -48.66% | 1.948x |
+
+Interpretation for pipeline optimization claims:
+
+- TorchCodec is not uniformly faster at default thread settings (`0/1` can regress).
+- Thread tuning is material: in this test, `4` or `8` threads unlocks consistent wins.
+- Recommended release-note claim format should include thread setting, frame count, and hardware context to avoid over-generalized speedup claims.
+
+### 7.4 Large `num_frames` with FPS-Guided Sampling (`1 FPS` vs `30 FPS`)
+
+To test high-frame extraction behavior, we fixed `num_frm=4096` and controlled effective sample count with `fps`.
+
+Setup:
+
+- standard video: `/tmp/lmms_eval_standard_video.mp4` (`1280x720`, `54.633s`, source `30 FPS`, `1639` frames)
+- decode path: `read_video(..., backend=...)`
+- TorchCodec thread sweep: `0, 1, 2, 4, 8`
+- scenarios:
+  - `fps=1` -> sampled frames: `54`
+  - `fps=30` -> sampled frames: `1639`
+
+Evidence artifact:
+
+- `/tmp/lmms_eval_standard_video_numframe_fps_thread_sweep.json`
+
+Best-thread summary:
+
+| Scenario | Sampled frames | PyAV mean latency (ms) | Best TorchCodec threads | Best TorchCodec mean latency (ms) | Latency change vs PyAV | Speedup vs PyAV |
+|---|---:|---:|---:|---:|---:|---:|
+| `num_frm=4096, fps=1` | 54 | 208.651 | 8 | 228.492 | +9.51% | 0.913x |
+| `num_frm=4096, fps=30` | 1639 | 1676.292 | 4 | 1272.043 | -24.12% | 1.318x |
+
+Thread-sweep details (`num_frm=4096`):
+
+| FPS | TorchCodec threads | TorchCodec mean latency (ms) | p50 (ms) | p95 (ms) | Latency change vs PyAV | Speedup vs PyAV |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0 | 903.257 | 901.134 | 907.196 | +332.90% | 0.231x |
+| 1 | 1 | 902.294 | 899.927 | 908.651 | +332.44% | 0.231x |
+| 1 | 2 | 538.101 | 536.705 | 541.447 | +157.90% | 0.388x |
+| 1 | 4 | 332.795 | 330.591 | 334.536 | +59.50% | 0.627x |
+| 1 | 8 | 228.492 | 228.109 | 229.488 | +9.51% | 0.913x |
+| 30 | 0 | 2406.096 | 2409.458 | 2447.274 | +43.54% | 0.697x |
+| 30 | 1 | 2342.796 | 2348.750 | 2368.442 | +39.76% | 0.716x |
+| 30 | 2 | 1362.649 | 1379.990 | 1382.334 | -18.71% | 1.230x |
+| 30 | 4 | 1272.043 | 1284.776 | 1294.087 | -24.12% | 1.318x |
+| 30 | 8 | 1282.745 | 1294.946 | 1304.726 | -23.48% | 1.307x |
+
+Extended spot-check (`LMMS_VIDEO_TORCHCODEC_THREADS=16`):
+
+| Scenario | PyAV mean latency (ms) | TorchCodec mean latency (ms) | Latency change vs PyAV | Speedup vs PyAV |
+|---|---:|---:|---:|---:|
+| `num_frm=4096, fps=1` | 212.382 | 207.434 | -2.33% | 1.024x |
+| `num_frm=4096, fps=30` | 1491.254 | 1178.887 | -20.95% | 1.265x |
+
+Artifacts:
+
+- `/tmp/lmms_eval_standard_video_fps1_t16.json`
+- `/tmp/lmms_eval_standard_video_fps1_t16_v2.json`
+- `/tmp/lmms_eval_standard_video_fps30_t16.json`
+- `/tmp/lmms_eval_standard_video_fps30_t16_v2.json`
+
+Interpretation:
+
+- At low effective sampling density (`fps=1`), TorchCodec is slower for `threads=0..8`, and only reaches near-parity/slight win at `threads=16` (`~1.024x`).
+- At high sampling density (`fps=30`, near full-frame extraction), tuned TorchCodec (`threads=4/8/16`) outperforms PyAV.
+- Optimization claims should therefore be qualified by both thread configuration and sampling density.
 
 ---
 
