@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 
 _VIDEO_EXTENSIONS = ("mp4", "webm", "mkv", "mov", "avi", "flv", "wmv")
@@ -17,23 +18,22 @@ def _dedupe(items):
     return deduped
 
 
-def _hf_home_path():
-    return Path(os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface")))
+def _hf_home_path(hf_home_env_value=""):
+    return Path(os.path.expanduser(hf_home_env_value or "~/.cache/huggingface"))
 
 
-def _candidate_roots(cache_dir=None, env_vars=(), media_type="video"):
+@lru_cache(maxsize=256)
+def _candidate_roots_cached(cache_dir=None, media_type="video", env_values=(), global_media_root="", hf_home_env_value=""):
     roots = []
 
-    for env_name in env_vars:
-        env_value = os.getenv(env_name, "").strip()
+    for env_value in env_values:
         if env_value:
             roots.append(Path(os.path.expanduser(env_value)))
 
-    global_media_root = os.getenv("LMMS_EVAL_MEDIA_ROOT", "").strip()
     if global_media_root:
         roots.append(Path(os.path.expanduser(global_media_root)))
 
-    hf_home = _hf_home_path()
+    hf_home = _hf_home_path(hf_home_env_value)
     roots.append(hf_home)
 
     if cache_dir:
@@ -54,23 +54,38 @@ def _candidate_roots(cache_dir=None, env_vars=(), media_type="video"):
             roots.append((hf_home / "datasets" / cache_dir) / "video")
             roots.append((hf_home / "datasets" / cache_dir) / "videos")
 
-    return _dedupe(roots)
+    return tuple(_dedupe(roots))
 
 
+def _candidate_roots(cache_dir=None, env_vars=(), media_type="video"):
+    env_values = tuple(os.getenv(env_name, "").strip() for env_name in env_vars)
+    global_media_root = os.getenv("LMMS_EVAL_MEDIA_ROOT", "").strip()
+    hf_home_env_value = os.getenv("HF_HOME", "").strip()
+    return _candidate_roots_cached(
+        cache_dir=cache_dir,
+        media_type=media_type,
+        env_values=env_values,
+        global_media_root=global_media_root,
+        hf_home_env_value=hf_home_env_value,
+    )
+
+
+@lru_cache(maxsize=4096)
 def _extension_variants(path, media_type="video"):
+    path = path if isinstance(path, Path) else Path(path)
     variants = []
     suffix = path.suffix
     if suffix:
         variants.append(path)
         variants.append(path.with_suffix(suffix.lower()))
         variants.append(path.with_suffix(suffix.upper()))
-        return _dedupe(variants)
+        return tuple(_dedupe(variants))
 
     extensions = _AUDIO_EXTENSIONS if media_type == "audio" else _VIDEO_EXTENSIONS
     for ext in extensions:
         variants.append(path.with_suffix(f".{ext}"))
         variants.append(path.with_suffix(f".{ext.upper()}"))
-    return _dedupe(variants)
+    return tuple(_dedupe(variants))
 
 
 def resolve_media_reference(reference, media_type="video", cache_dir=None, env_vars=(), extra_subdirs=()):

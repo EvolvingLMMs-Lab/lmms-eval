@@ -638,6 +638,16 @@ Same video as Section 7.3, with `num_frm=4096`. `fps=1` yields 54 sampled frames
 **Dense sampling (fps≥30)**: Set `LMMS_VIDEO_TORCHCODEC_THREADS=4` for a 1.32x speedup. The backend advantage only materializes when enough frames are decoded to amortize setup overhead.
 ::
 
+### 7.5 Media Resolver LRU Caching
+
+The new benchmark tasks rely on `resolve_media_reference` to resolve media paths from local directories, task cache folders, and Hugging Face cache roots. In large runs, this repeats the same path-construction work many times.
+
+v0.7 adds in-process LRU caching for deterministic path-expansion helpers:
+
+- `_candidate_roots_cached(..., maxsize=256)` caches candidate root lists keyed by `cache_dir`, `media_type`, and current environment-derived root values.
+- `_extension_variants(..., maxsize=4096)` caches extension-normalized path variants for repeated basename/clip-id lookups.
+- `resolve_media_reference` still performs `Path.exists()` checks on every call, so newly downloaded media files are discovered immediately. Only pure path-derivation work is cached.
+
 ---
 
 ## 8. Lance-Backed Video Mode for MINERVA
