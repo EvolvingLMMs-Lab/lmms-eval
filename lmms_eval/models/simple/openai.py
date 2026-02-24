@@ -1,3 +1,4 @@
+import base64
 import os
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
@@ -53,6 +54,7 @@ class OpenAICompatible(lmms):
         max_size_in_mb: int = 20,
         azure_openai: bool = False,
         max_frames_num: int = 10,
+        video_fps: Optional[float] = None,
         httpx_trust_env: bool = True,
         batch_size: int = 64,
         num_concurrent: int = 32,
@@ -81,6 +83,7 @@ class OpenAICompatible(lmms):
         self.max_retries = max_retries
         self.max_size_in_mb = max_size_in_mb  # some models have a limit on the size of the image
         self.max_frames_num = max_frames_num
+        self.video_fps = float(video_fps) if video_fps is not None else None
         self.num_concurrent = max(1, int(num_concurrent))
         self.adaptive_concurrency = parse_bool(adaptive_concurrency)
         self.adaptive_config = AdaptiveConcurrencyConfig.from_raw(
@@ -200,13 +203,32 @@ class OpenAICompatible(lmms):
     def encode_video(self, video_path, for_get_frames_num):
         vr = VideoReader(video_path, ctx=cpu(0))
         total_frame_num = len(vr)
-        uniform_sampled_frames = np.linspace(0, total_frame_num - 1, for_get_frames_num, dtype=int)
+        if total_frame_num <= 0:
+            return []
 
-        # Ensure the last frame is included
-        if total_frame_num - 1 not in uniform_sampled_frames:
-            uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
+        frame_idx = []
 
-        frame_idx = uniform_sampled_frames.tolist()
+        if self.video_fps is not None and self.video_fps > 0:
+            source_fps = float(vr.get_avg_fps()) if hasattr(vr, "get_avg_fps") else 0.0
+            if source_fps > 0:
+                step = max(1, int(round(source_fps / self.video_fps)))
+                frame_idx = list(range(0, total_frame_num, step))
+                if frame_idx and frame_idx[-1] != total_frame_num - 1:
+                    frame_idx.append(total_frame_num - 1)
+
+        if not frame_idx:
+            sample_count = min(max(1, int(for_get_frames_num)), total_frame_num)
+            uniform_sampled_frames = np.linspace(0, total_frame_num - 1, sample_count, dtype=int)
+            if total_frame_num - 1 not in uniform_sampled_frames:
+                uniform_sampled_frames = np.append(uniform_sampled_frames, total_frame_num - 1)
+            frame_idx = uniform_sampled_frames.tolist()
+        elif for_get_frames_num and len(frame_idx) > int(for_get_frames_num):
+            keep = np.linspace(0, len(frame_idx) - 1, int(for_get_frames_num), dtype=int)
+            frame_idx = [frame_idx[i] for i in keep]
+            if frame_idx[-1] != total_frame_num - 1:
+                frame_idx.append(total_frame_num - 1)
+
+        frame_idx = sorted(set(frame_idx))
         frames = vr.get_batch(frame_idx).asnumpy()
 
         base64_frames = []
@@ -222,6 +244,13 @@ class OpenAICompatible(lmms):
             )
 
         return base64_frames
+
+    def encode_audio_file(self, audio_path: str):
+        ext = os.path.splitext(audio_path)[1].lower().lstrip(".")
+        audio_format = ext if ext in {"wav", "mp3", "flac", "aac", "ogg", "m4a"} else "wav"
+        with open(audio_path, "rb") as handle:
+            audio_b64 = base64.b64encode(handle.read()).decode("utf-8")
+        return audio_b64, audio_format
 
     def flatten(self, input):
         new_list = []
@@ -370,9 +399,12 @@ class OpenAICompatible(lmms):
                 visuals = self.flatten(visuals)
                 imgs = []
                 for visual in visuals:
-                    if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
+                    if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual or ".webm" in visual or ".mkv" in visual):
                         frames = self.encode_video(visual, self.max_frames_num)
                         imgs.extend(frames)
+                    elif isinstance(visual, str) and (".wav" in visual or ".mp3" in visual or ".flac" in visual or ".aac" in visual or ".ogg" in visual or ".m4a" in visual):
+                        audio_b64, audio_format = self.encode_audio_file(visual)
+                        imgs.append({"audio_b64": audio_b64, "audio_format": audio_format})
                     elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
                         imgs.append(self.encode_image(visual))
                     elif isinstance(visual, Image.Image):
@@ -390,12 +422,20 @@ class OpenAICompatible(lmms):
             }
             payload["messages"][0]["content"].append({"type": "text", "text": context})
             for img in imgs:
-                payload["messages"][0]["content"].append(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{img}"},
-                    }
-                )
+                if isinstance(img, dict) and "audio_b64" in img:
+                    payload["messages"][0]["content"].append(
+                        {
+                            "type": "input_audio",
+                            "input_audio": {"data": img["audio_b64"], "format": img["audio_format"]},
+                        }
+                    )
+                else:
+                    payload["messages"][0]["content"].append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{img}"},
+                        }
+                    )
 
             if "o1" in self.model_version or "o3" in self.model_version:
                 payload.pop("temperature")
