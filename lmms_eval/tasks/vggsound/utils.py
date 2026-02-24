@@ -1,15 +1,22 @@
 import re
 
+from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
+
 
 def _normalize_label(text):
     return re.sub(r"\s+", " ", str(text or "").strip().lower())
 
 
 def vggsound_doc_to_audio(doc):
-    for key in ["audio", "audio_path", "file", "path"]:
+    for key in ["audio", "audio_path", "media_path", "file", "path"]:
         value = doc.get(key)
         if value:
-            return [value]
+            return [resolve_media_reference(value, media_type="audio", cache_dir="vggsound", env_vars=("VGGSOUND_AUDIO_DIR",))]
+
+    for key in ["audio_id", "id", "clip_id"]:
+        value = doc.get(key)
+        if value:
+            return [resolve_media_reference(str(value), media_type="audio", cache_dir="vggsound", env_vars=("VGGSOUND_AUDIO_DIR",))]
     return []
 
 

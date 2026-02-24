@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
 from lmms_eval.utils import eval_logger
 
 _VIDEO_EXTENSIONS = ("mp4", "MP4", "mkv", "webm", "mov")
@@ -102,6 +103,10 @@ def _resolve_video_path(clip_id: str) -> str | None:
     if clip_id == "":
         return None
 
+    resolved = resolve_media_reference(clip_id, media_type="video", cache_dir="egotempo", env_vars=("EGOTEMPO_VIDEO_DIR", "EGOTEMPO_CACHE_DIR"))
+    if isinstance(resolved, str) and os.path.exists(resolved):
+        return resolved
+
     for root in _candidate_video_dirs():
         for extension in _VIDEO_EXTENSIONS:
             candidate = root / f"{clip_id}.{extension}"
@@ -111,6 +116,12 @@ def _resolve_video_path(clip_id: str) -> str | None:
 
 
 def egotempo_doc_to_visual(doc):
+    for key in ["video", "video_path", "media_path", "clip_path", "path", "file"]:
+        value = doc.get(key)
+        if value:
+            resolved = resolve_media_reference(value, media_type="video", cache_dir="egotempo", env_vars=("EGOTEMPO_VIDEO_DIR", "EGOTEMPO_CACHE_DIR"))
+            return [resolved]
+
     clip_id = str(doc.get("clip_id", "")).strip()
     video_path = _resolve_video_path(clip_id)
     if video_path is None:

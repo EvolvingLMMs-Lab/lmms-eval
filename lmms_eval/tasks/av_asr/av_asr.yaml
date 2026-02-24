@@ -1,7 +1,7 @@
-dataset_path: json
+dataset_path: lmms-lab-eval/av_asr
 dataset_kwargs:
-  data_files:
-    test: data/av_asr_test.json
+  token: True
+  cache_dir: av_asr
 task: av_asr
 test_split: test
 output_type: generate_until

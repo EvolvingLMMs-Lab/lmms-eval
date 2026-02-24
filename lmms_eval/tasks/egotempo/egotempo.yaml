@@ -1,8 +1,7 @@
-dataset_path: json
+dataset_path: lmms-lab-eval/egotempo
 dataset_kwargs:
-  data_files:
-    test: https://raw.githubusercontent.com/google-research-datasets/egotempo/main/egotempo_openQA.json
-  field: annotations
+  token: True
+  cache_dir: egotempo
 task: egotempo
 test_split: test
 output_type: generate_until

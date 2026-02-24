@@ -1,7 +1,7 @@
-dataset_path: json
+dataset_path: lmms-lab-eval/ovr_kinetics
 dataset_kwargs:
-  data_files:
-    test: data/ovr_kinetics_test.json
+  token: True
+  cache_dir: ovr_kinetics
 task: ovr_kinetics
 test_split: test
 output_type: generate_until

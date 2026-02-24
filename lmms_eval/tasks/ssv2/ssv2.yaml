@@ -1,7 +1,7 @@
-dataset_path: json
+dataset_path: lmms-lab-eval/ssv2
 dataset_kwargs:
-  data_files:
-    validation: data/ssv2_validation.json
+  token: True
+  cache_dir: ssv2
 task: ssv2
 test_split: validation
 output_type: generate_until

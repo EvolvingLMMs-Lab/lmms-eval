@@ -1,7 +1,7 @@
-dataset_path: json
+dataset_path: lmms-lab-eval/vggsound
 dataset_kwargs:
-  data_files:
-    test: data/vggsound_test.json
+  token: True
+  cache_dir: vggsound
 task: vggsound
 test_split: test
 output_type: generate_until
