@@ -1,5 +1,7 @@
 import re
 
+from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
+
 
 def _normalize(text):
     lowered = str(text or "").strip().lower()
@@ -40,13 +42,24 @@ def av_asr_doc_to_visual(doc):
     for key in ["audio", "audio_path"]:
         value = doc.get(key)
         if value:
-            visuals.append(value)
+            visuals.append(resolve_media_reference(value, media_type="audio", cache_dir="av_asr", env_vars=("AV_ASR_AUDIO_DIR", "AV_ASR_MEDIA_DIR")))
             break
     for key in ["video", "video_path", "file", "path"]:
         value = doc.get(key)
         if value:
-            visuals.append(value)
+            visuals.append(resolve_media_reference(value, media_type="video", cache_dir="av_asr", env_vars=("AV_ASR_VIDEO_DIR", "AV_ASR_MEDIA_DIR")))
             break
+
+    if not visuals:
+        for key in ["clip_id", "id", "sample_id"]:
+            value = doc.get(key)
+            if value:
+                clip_value = str(value)
+                visuals.append(resolve_media_reference(clip_value, media_type="audio", cache_dir="av_asr", env_vars=("AV_ASR_AUDIO_DIR", "AV_ASR_MEDIA_DIR")))
+                visuals.append(resolve_media_reference(clip_value, media_type="video", cache_dir="av_asr", env_vars=("AV_ASR_VIDEO_DIR", "AV_ASR_MEDIA_DIR")))
+                break
+
+    visuals = [item for item in visuals if item]
     return visuals
 
 

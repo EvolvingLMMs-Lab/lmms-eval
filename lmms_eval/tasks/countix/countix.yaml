@@ -1,7 +1,7 @@
-dataset_path: json
+dataset_path: lmms-lab-eval/countix
 dataset_kwargs:
-  data_files:
-    test: data/countix_test.json
+  token: True
+  cache_dir: countix
 task: countix
 test_split: test
 output_type: generate_until

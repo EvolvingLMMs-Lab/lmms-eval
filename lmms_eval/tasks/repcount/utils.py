@@ -1,5 +1,7 @@
 import re
 
+from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
+
 NUMBER_WORD_TO_NUMERAL = {
     "none": "0",
     "zero": "0",
@@ -47,10 +49,15 @@ def _get_target_count(doc):
 
 
 def repcount_doc_to_visual(doc):
-    for key in ["video", "video_path", "file", "path"]:
+    for key in ["video", "video_path", "media_path", "clip_path", "file", "path"]:
         value = doc.get(key)
         if value:
-            return [value]
+            return [resolve_media_reference(value, media_type="video", cache_dir="repcount", env_vars=("REPCOUNT_VIDEO_DIR",))]
+
+    for key in ["clip_id", "video_id", "id"]:
+        value = doc.get(key)
+        if value:
+            return [resolve_media_reference(str(value), media_type="video", cache_dir="repcount", env_vars=("REPCOUNT_VIDEO_DIR",))]
     return []
 
 

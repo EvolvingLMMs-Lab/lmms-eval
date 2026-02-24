@@ -1,4 +1,7 @@
 import unittest
+from pathlib import Path
+
+import yaml
 
 from lmms_eval.tasks import TaskManager
 from lmms_eval.tasks.av_asr import utils as av_asr_utils
@@ -62,6 +65,44 @@ class TestAVASRUtils(unittest.TestCase):
         self.assertIn("wer", processed)
         score = av_asr_utils.av_asr_wer([processed["wer"]])
         self.assertEqual(score, 0.0)
+
+
+class TestNewBenchmarkTaskConfigSources(unittest.TestCase):
+    class _FunctionTag:
+        def __init__(self, value):
+            self.value = value
+
+    @staticmethod
+    def _function_constructor(loader, node):
+        return TestNewBenchmarkTaskConfigSources._FunctionTag(loader.construct_scalar(node))
+
+    @staticmethod
+    def _load_yaml(file_path):
+        loader = yaml.SafeLoader
+        loader_copy = type("SafeLoaderCopy", (loader,), {})
+        loader_copy.add_constructor("!function", TestNewBenchmarkTaskConfigSources._function_constructor)
+        with file_path.open("r", encoding="utf-8") as handle:
+            return yaml.load(handle, Loader=loader_copy)
+
+    def test_fullset_dataset_paths(self):
+        root = Path(__file__).resolve().parents[2]
+        expected = {
+            "lmms_eval/tasks/egotempo/egotempo.yaml": "lmms-lab-eval/egotempo",
+            "lmms_eval/tasks/repcount/repcount.yaml": "lmms-lab-eval/repcount",
+            "lmms_eval/tasks/countix/countix.yaml": "lmms-lab-eval/countix",
+            "lmms_eval/tasks/ovr_kinetics/ovr_kinetics.yaml": "lmms-lab-eval/ovr_kinetics",
+            "lmms_eval/tasks/ssv2/ssv2.yaml": "lmms-lab-eval/ssv2",
+            "lmms_eval/tasks/vggsound/vggsound.yaml": "lmms-lab-eval/vggsound",
+            "lmms_eval/tasks/av_asr/av_asr.yaml": "lmms-lab-eval/av_asr",
+        }
+
+        for rel_path, dataset_path in expected.items():
+            path = root / rel_path
+            with self.subTest(task_yaml=str(path)):
+                content = self._load_yaml(path)
+                self.assertEqual(content.get("dataset_path"), dataset_path)
+                data_files = content.get("dataset_kwargs", {}).get("data_files")
+                self.assertFalse(data_files, f"{rel_path} still uses local data_files")
 
 
 if __name__ == "__main__":

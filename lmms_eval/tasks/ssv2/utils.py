@@ -1,5 +1,7 @@
 import re
 
+from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
+
 
 def _normalize_text(text):
     return re.sub(r"\s+", " ", str(text or "").strip().lower())
@@ -10,10 +12,15 @@ def _extract_predicted_label(prediction):
 
 
 def ssv2_doc_to_visual(doc):
-    for key in ["video", "video_path", "file", "path"]:
+    for key in ["video", "video_path", "media_path", "clip_path", "file", "path"]:
         value = doc.get(key)
         if value:
-            return [value]
+            return [resolve_media_reference(value, media_type="video", cache_dir="ssv2", env_vars=("SSV2_VIDEO_DIR",))]
+
+    for key in ["video_id", "id", "clip_id"]:
+        value = doc.get(key)
+        if value:
+            return [resolve_media_reference(str(value), media_type="video", cache_dir="ssv2", env_vars=("SSV2_VIDEO_DIR",))]
     return []
 
 
