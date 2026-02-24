@@ -11,13 +11,16 @@ import platform
 import signal
 import socket
 import subprocess
+import urllib.error
+import urllib.request
 import uuid
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote, unquote
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -157,6 +160,49 @@ class ImportYamlResponse(BaseModel):
     log_samples: bool = False
     verbosity: str = "INFO"
     device: str | None = None
+
+
+class LogRunSummary(BaseModel):
+    run_id: str
+    model_name: str
+    date: str
+    tasks: list[str]
+    metrics: dict[str, dict[str, Any]]
+    total_evaluation_time_seconds: Any | None = None
+    config: dict[str, Any]
+    n_samples: dict[str, Any]
+
+
+class LogSamplesResponse(BaseModel):
+    samples: list[dict[str, Any]]
+    total: int
+    offset: int
+    limit: int
+
+
+def _resolve_logs_root(logs_path: str) -> Path:
+    return Path(logs_path).expanduser().resolve()
+
+
+def _ensure_path_within_base(base_path: Path, target_path: Path) -> None:
+    try:
+        target_path.relative_to(base_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Path escapes logs directory") from exc
+
+
+def _resolve_run_results_path(logs_path: str, run_id: str) -> Path:
+    logs_root = _resolve_logs_root(logs_path)
+    if not logs_root.exists() or not logs_root.is_dir():
+        raise HTTPException(status_code=404, detail="Logs path not found")
+
+    decoded_run_id = Path(unquote(run_id))
+    if decoded_run_id.is_absolute():
+        raise HTTPException(status_code=400, detail="Invalid run_id")
+
+    run_path = (logs_root / decoded_run_id).resolve()
+    _ensure_path_within_base(logs_root, run_path)
+    return run_path
 
 
 # --- Endpoints ---
@@ -460,6 +506,202 @@ async def stop_eval(job_id: str) -> dict[str, str]:
                 pass
 
     return {"status": "stopped"}
+
+
+@app.get("/logs/runs", response_model=list[LogRunSummary])
+async def list_log_runs(logs_path: str = Query("./logs/")) -> list[LogRunSummary]:
+    logs_root = _resolve_logs_root(logs_path)
+    if not logs_root.exists() or not logs_root.is_dir():
+        return []
+
+    runs: list[LogRunSummary] = []
+
+    for results_file in logs_root.rglob("*_results.json"):
+        resolved_file = results_file.resolve()
+        try:
+            _ensure_path_within_base(logs_root, resolved_file)
+        except HTTPException:
+            continue
+
+        try:
+            with resolved_file.open("r", encoding="utf-8") as f:
+                result_data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            continue
+
+        if not isinstance(result_data, dict):
+            continue
+
+        task_results = result_data.get("results")
+        if not isinstance(task_results, dict):
+            task_results = {}
+
+        metrics: dict[str, dict[str, Any]] = {}
+        for task_name, task_metrics in task_results.items():
+            if not isinstance(task_metrics, dict):
+                continue
+            metrics[str(task_name)] = {str(metric_name): metric_value for metric_name, metric_value in task_metrics.items() if metric_name != "alias"}
+
+        config = result_data.get("config")
+        if not isinstance(config, dict):
+            config = {}
+
+        n_samples = result_data.get("n-samples")
+        if not isinstance(n_samples, dict):
+            n_samples = {}
+
+        date = result_data.get("date")
+        if date is None:
+            date = resolved_file.stem.removesuffix("_results")
+
+        model_name = result_data.get("model_name")
+        if model_name is None:
+            model_name = ""
+
+        relative_path = resolved_file.relative_to(logs_root).as_posix()
+
+        runs.append(
+            LogRunSummary(
+                run_id=quote(relative_path, safe=""),
+                model_name=str(model_name),
+                date=str(date),
+                tasks=[str(task_name) for task_name in task_results.keys()],
+                metrics=metrics,
+                total_evaluation_time_seconds=result_data.get("total_evaluation_time_seconds"),
+                config=config,
+                n_samples=n_samples,
+            )
+        )
+
+    runs.sort(key=lambda run: run.date, reverse=True)
+    return runs
+
+
+@app.get("/logs/runs/{run_id:path}/results")
+async def get_log_run_results(
+    run_id: str,
+    logs_path: str = Query("./logs/"),
+) -> dict[str, Any]:
+    run_path = _resolve_run_results_path(logs_path, run_id)
+    if not run_path.name.endswith("_results.json"):
+        raise HTTPException(status_code=404, detail="Run results not found")
+    if not run_path.exists() or not run_path.is_file():
+        raise HTTPException(status_code=404, detail="Run results not found")
+
+    try:
+        with run_path.open("r", encoding="utf-8") as f:
+            result_data = json.load(f)
+    except OSError as exc:
+        raise HTTPException(status_code=404, detail="Run results not found") from exc
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail="Run results JSON is invalid") from exc
+
+    if not isinstance(result_data, dict):
+        raise HTTPException(status_code=500, detail="Run results must be a JSON object")
+
+    return result_data
+
+
+@app.get("/logs/runs/{run_id:path}/samples/{task_name}", response_model=LogSamplesResponse)
+async def get_log_run_samples(
+    run_id: str,
+    task_name: str,
+    logs_path: str = Query("./logs/"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500),
+) -> LogSamplesResponse:
+    run_path = _resolve_run_results_path(logs_path, run_id)
+    if not run_path.name.endswith("_results.json"):
+        raise HTTPException(status_code=404, detail="Run results not found")
+    if not run_path.exists() or not run_path.is_file():
+        raise HTTPException(status_code=404, detail="Run results not found")
+    if "/" in task_name or "\\" in task_name:
+        raise HTTPException(status_code=400, detail="Invalid task name")
+
+    run_stem = run_path.stem
+    if not run_stem.endswith("_results"):
+        raise HTTPException(status_code=404, detail="Run results not found")
+
+    run_prefix = run_stem.removesuffix("_results")
+    samples_path = run_path.with_name(f"{run_prefix}_samples_{task_name}.jsonl")
+
+    if not samples_path.exists() or not samples_path.is_file():
+        raise HTTPException(status_code=404, detail="Samples file not found")
+
+    samples: list[dict[str, Any]] = []
+    total = 0
+
+    try:
+        with samples_path.open("r", encoding="utf-8") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    sample = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                if not isinstance(sample, dict):
+                    continue
+
+                if total >= offset and len(samples) < limit:
+                    samples.append(sample)
+                total += 1
+    except OSError as exc:
+        raise HTTPException(status_code=404, detail="Samples file not found") from exc
+
+    return LogSamplesResponse(samples=samples, total=total, offset=offset, limit=limit)
+
+
+@app.get("/logs/dataset-row")
+def get_dataset_row(
+    dataset_path: str = Query(..., description="HuggingFace dataset path, e.g. lmms-lab/MME"),
+    split: str = Query(..., description="Dataset split, e.g. test"),
+    doc_id: int = Query(..., ge=0, description="Document index in the dataset"),
+    config: str = Query("default", description="Dataset config name"),
+) -> dict[str, Any]:
+    """Fetch a single row from a HuggingFace dataset via the datasets server API.
+
+    Returns the row data including image URLs that can be rendered directly by the frontend.
+    Images appear as objects with a 'src' key pointing to a CDN URL.
+    """
+    api_url = f"https://datasets-server.huggingface.co/rows" f"?dataset={quote(dataset_path, safe='')}" f"&config={quote(config, safe='')}" f"&split={quote(split, safe='')}" f"&offset={doc_id}" f"&length=1"
+
+    hf_token = os.environ.get("HF_TOKEN", "")
+
+    def _fetch(use_token: bool) -> dict[str, Any]:
+        req = urllib.request.Request(api_url)
+        req.add_header("Accept", "application/json")
+        if use_token and hf_token:
+            req.add_header("Authorization", f"Bearer {hf_token}")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    try:
+        data = _fetch(use_token=bool(hf_token))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 401 and hf_token:
+            # Token may be expired or invalid; retry without it for public datasets
+            try:
+                data = _fetch(use_token=False)
+            except urllib.error.HTTPError as exc2:
+                if exc2.code == 404:
+                    raise HTTPException(status_code=404, detail="Dataset or row not found on HuggingFace") from exc2
+                raise HTTPException(status_code=exc2.code, detail=f"HuggingFace API error: {exc2.reason}") from exc2
+            except (urllib.error.URLError, OSError) as exc2:
+                raise HTTPException(status_code=502, detail=f"Failed to reach HuggingFace API: {exc2}") from exc2
+        elif exc.code == 404:
+            raise HTTPException(status_code=404, detail="Dataset or row not found on HuggingFace") from exc
+        else:
+            raise HTTPException(status_code=exc.code, detail=f"HuggingFace API error: {exc.reason}") from exc
+    except (urllib.error.URLError, OSError) as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to reach HuggingFace API: {exc}") from exc
+    rows = data.get("rows", [])
+    if not rows:
+        raise HTTPException(status_code=404, detail="Row not found in dataset")
+    row = rows[0].get("row", {})
+    return {"row": row}
 
 
 if STATIC_DIR.exists():
