@@ -180,8 +180,13 @@ class OpenAICompatible(OpenAICompatibleSimple):
             max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
             temperature = request_gen_kwargs.get("temperature", 0)
 
+            if self.video_fps is not None and self.video_fps > 0:
+                video_kwargs = {"fps": self.video_fps}
+            else:
+                video_kwargs = {"nframes": self.max_frames_num}
+
             payload = {
-                "messages": chat_messages.to_openai_messages(video_kwargs={"nframes": self.max_frames_num}),
+                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs),
                 "model": self.model_version,
                 "max_tokens": max_new_tokens,
                 "temperature": temperature,

@@ -1692,6 +1692,7 @@ class ConfigurableMessagesTask(ConfigurableTask):
                 messages = [{"role": "user", "content": []}]
                 content = []
                 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
+                _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".webm"}
                 for visual in visuals:
                     if isinstance(visual, PIL_Image.Image):
                         content.append({"type": "image", "url": visual})
@@ -1701,6 +1702,8 @@ class ConfigurableMessagesTask(ConfigurableTask):
                         ext = os.path.splitext(visual)[1].lower()
                         if ext in _IMAGE_EXTS:
                             content.append({"type": "image", "url": visual})
+                        elif ext in _AUDIO_EXTS:
+                            content.append({"type": "audio", "url": visual})
                         else:
                             content.append({"type": "video", "url": visual})
                 content.append({"type": "text", "text": text})
