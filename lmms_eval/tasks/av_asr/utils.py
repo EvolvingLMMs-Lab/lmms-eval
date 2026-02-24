@@ -37,12 +37,12 @@ def _word_error_rate(reference, hypothesis):
 
 def av_asr_doc_to_visual(doc):
     visuals = []
-    for key in ["video", "video_path", "file", "path"]:
+    for key in ["audio", "audio_path"]:
         value = doc.get(key)
         if value:
             visuals.append(value)
             break
-    for key in ["audio", "audio_path"]:
+    for key in ["video", "video_path", "file", "path"]:
         value = doc.get(key)
         if value:
             visuals.append(value)
