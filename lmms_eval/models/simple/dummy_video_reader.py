@@ -89,9 +89,9 @@ class DummyVideoReader(lmms):
 
     def _get_decode_fn(self) -> Callable:
         if self._decode_fn is None:
-            from lmms_eval.models.model_utils.load_video import read_video_pyav
+            from lmms_eval.models.model_utils.load_video import read_video
 
-            self._decode_fn = read_video_pyav
+            self._decode_fn = read_video
         return self._decode_fn
 
     def _touch_visual(self, visual: str) -> float:

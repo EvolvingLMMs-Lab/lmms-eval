@@ -14,7 +14,7 @@ from transformers import AutoConfig
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
+from lmms_eval.models.model_utils.load_video import read_video
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -352,7 +352,7 @@ class Oryx(lmms):
                             if self.video_decode_backend == "decord":
                                 video, modality = self.load_video(visual, self.max_frames_num)
                             elif self.video_decode_backend == "pyav":
-                                video, modality = read_video_pyav(visual, num_frm=self.max_frames_num)
+                                video, modality = read_video(visual, num_frm=self.max_frames_num)
                             # video = self.load_video(visual, self.max_frames_num)
                             frames = []
                             for frame in video:
