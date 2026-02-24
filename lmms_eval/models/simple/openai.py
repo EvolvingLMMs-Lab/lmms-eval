@@ -1,3 +1,4 @@
+import base64
 import os
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
@@ -223,6 +224,13 @@ class OpenAICompatible(lmms):
 
         return base64_frames
 
+    def encode_audio_file(self, audio_path: str):
+        ext = os.path.splitext(audio_path)[1].lower().lstrip(".")
+        audio_format = ext if ext in {"wav", "mp3", "flac", "aac", "ogg", "m4a"} else "wav"
+        with open(audio_path, "rb") as handle:
+            audio_b64 = base64.b64encode(handle.read()).decode("utf-8")
+        return audio_b64, audio_format
+
     def flatten(self, input):
         new_list = []
         for i in input:
@@ -373,6 +381,9 @@ class OpenAICompatible(lmms):
                     if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
                         frames = self.encode_video(visual, self.max_frames_num)
                         imgs.extend(frames)
+                    elif isinstance(visual, str) and (".wav" in visual or ".mp3" in visual or ".flac" in visual or ".aac" in visual or ".ogg" in visual or ".m4a" in visual):
+                        audio_b64, audio_format = self.encode_audio_file(visual)
+                        imgs.append({"audio_b64": audio_b64, "audio_format": audio_format})
                     elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
                         imgs.append(self.encode_image(visual))
                     elif isinstance(visual, Image.Image):
@@ -390,12 +401,20 @@ class OpenAICompatible(lmms):
             }
             payload["messages"][0]["content"].append({"type": "text", "text": context})
             for img in imgs:
-                payload["messages"][0]["content"].append(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{img}"},
-                    }
-                )
+                if isinstance(img, dict) and "audio_b64" in img:
+                    payload["messages"][0]["content"].append(
+                        {
+                            "type": "input_audio",
+                            "input_audio": {"data": img["audio_b64"], "format": img["audio_format"]},
+                        }
+                    )
+                else:
+                    payload["messages"][0]["content"].append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{img}"},
+                        }
+                    )
 
             if "o1" in self.model_version or "o3" in self.model_version:
                 payload.pop("temperature")
