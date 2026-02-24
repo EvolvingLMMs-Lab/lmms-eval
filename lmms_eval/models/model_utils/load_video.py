@@ -1,12 +1,9 @@
 import importlib
 import os
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import av
 import numpy as np
-from PIL import Image
-
-from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 
 def _resolve_video_path(video_path: Union[str, tuple, list]) -> str:
@@ -272,16 +269,22 @@ def read_video(
     backend: Optional[str] = None,
 ) -> np.ndarray:
     """
-    Read video using the PyAV library.
+    Read and uniformly sample video frames.
+
+    Dispatches to the decode backend selected by *backend* (or the
+    ``LMMS_VIDEO_DECODE_BACKEND`` env-var).  Supported backends:
+    ``pyav`` (default), ``torchcodec``, ``dali``.
 
     Args:
-        video_path (str): The path to the video file.
-        num_frm (int, optional): The maximum number of frames to extract. Defaults to 8.
-        fps (float, optional): The frames per second for extraction. If `None`, the maximum number of frames will be extracted. Defaults to None.
-        format (str, optional): The format of the extracted frames. Defaults to "rgb24".
-
+        video_path: Path to the video file.
+        num_frm: Maximum number of frames to extract.
+        fps: Target sample rate.  When *None*, *num_frm* frames are
+            sampled uniformly over the full duration.
+        format: Pixel format passed to the decoder (default ``rgb24``).
+        force_include_last_frame: Guarantee the last frame is included.
+        backend: Explicit backend override.
     Returns:
-        np.ndarray: A numpy array containing the extracted frames in RGB format.
+        np.ndarray: ``(N, H, W, 3)`` uint8 array of sampled frames.
     """
 
     resolved_path = _resolve_video_path(video_path)
@@ -329,58 +332,7 @@ def read_video(
         return output
     finally:
         container.close()  # Ensure container is closed to prevent resource leak
+
+
+# Backward-compat alias; will be removed in a future release.
 read_video_pyav = read_video
-
-
-def _resize_image(
-    img: Image.Image,
-    max_image_size: Optional[Union[Tuple[int, int], int]] = None,
-    resize_strategy: str = "resize",
-) -> Image.Image:
-    """Optionally resize a PIL image according to *max_image_size* and *resize_strategy*."""
-    if not max_image_size:
-        return img
-    if resize_strategy == "resize":
-        target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
-        return img.resize(target)
-    if resize_strategy == "thumbnail":
-        target = (max_image_size, max_image_size) if isinstance(max_image_size, int) else max_image_size
-        img.thumbnail(target)
-        return img
-    raise ValueError(f"Unknown resize strategy: {resize_strategy}")
-
-
-def read_video_pyav_base64(
-    video_path: Union[str, tuple, list],
-    *,
-    num_frm: int = 8,
-    fps: Optional[float] = None,
-    format="rgb24",
-    img_format="PNG",
-    max_image_size: Optional[Union[Tuple[int, int], int]] = None,
-    resize_strategy: str = "resize",
-    backend: Optional[str] = None,
-):
-    frames = read_video(
-        video_path,
-        num_frm=num_frm,
-        fps=fps,
-        format=format,
-        force_include_last_frame=False,
-        backend=backend,
-    )
-    base64_frames = []
-    for frame in frames:
-        img = Image.fromarray(frame if isinstance(frame, np.ndarray) else frame.to_ndarray(format=format))
-        img = _resize_image(img, max_image_size=max_image_size, resize_strategy=resize_strategy)
-        base64_frames.append(
-            encode_image_to_base64(
-                img,
-                image_format=img_format,
-                convert_rgb=img_format.upper() in {"JPEG", "JPG", "WEBP"},
-                quality=85 if img_format.upper() in {"JPEG", "JPG", "WEBP"} else None,
-                copy_if_pil=False,
-                use_path_cache=False,
-            )
-        )
-    return base64_frames
