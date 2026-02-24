@@ -15,7 +15,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
+from lmms_eval.models.model_utils.load_video import read_video
 
 try:
     from llamavid.constants import (
@@ -214,7 +214,7 @@ class LLaMAVid(lmms):
             visuals = self.flatten(visuals)
             videos = []
             for visual in visuals:
-                video = read_video_pyav(visual, num_frm=self.num_frames)
+                video = read_video(visual, num_frm=self.num_frames)
                 video = self.image_processor.preprocess(video, return_tensors="pt")["pixel_values"].half().cuda()
                 video = [video]
                 videos += video

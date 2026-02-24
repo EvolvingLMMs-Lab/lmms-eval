@@ -14,6 +14,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import require_package
+from lmms_eval.models.model_utils.load_video import read_video
 
 eval_logger = logging.getLogger("lmms-eval")
 
@@ -301,7 +302,7 @@ class VILA(lmms):
                     if self.video_decode_backend == "decord":
                         images = self.load_video(visual, num_video_frames)
                     elif self.video_decode_backend == "pyav":
-                        images = read_video_pyav(visual, num_frm=num_video_frames)
+                        images = read_video(visual, num_frm=num_video_frames)
                     video = process_images(images, self.model.image_processor, self.model.config).half().to(self._device)
                     videos.append(video)
 
