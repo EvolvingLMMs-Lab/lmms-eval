@@ -8,18 +8,18 @@ visual patterns including orientation, direction, color, counting, etc.
 The dataset contains 300 samples (150 pairs) where each pair consists of two images
 with the same question but opposite correct answers (A and B).
 
-Ground Truth Corrections:
+Ground Truth Corrections (applied in lmms-lab-eval/MMVP dataset):
 Based on verification in https://github.com/EvolvingLMMs-Lab/lmms-eval/issues/1018
-the following corrections are applied (using 0-based indexing):
-- Index 99 (row 100): Corrected from (b) to (a) (elephant tusks are clearly long, not short)
-- Index 279 (row 280): Corrected from (b) to (a) (person is standing, not sitting)
-
-Note: The HuggingFace dataset uses 1-based indexing in the 'Index' column.
-The corrections are applied using 0-based array indexing (row 100 = index 99).
+and the follow-up comment, the following corrections were applied directly to the
+dataset (using 1-based Index column values):
+- Index 99 (row 98, 0-based): Corrected from (a) to (b) (elephant has short tusks)
+- Index 100 (row 99, 0-based): Corrected from (b) to (a) (elephant has long tusks)
+- Index 279 (row 278, 0-based): Corrected from (a) to (b) (person is sitting)
+- Index 280 (row 279, 0-based): Corrected from (b) to (a) (person is standing)
 
 References:
 - Original MMVP: https://github.com/tsb0601/MMVP
-- HuggingFace Dataset: https://huggingface.co/datasets/MMVP/MMVP
+- HuggingFace Dataset: https://huggingface.co/datasets/lmms-lab-eval/MMVP
 - Original Issue: https://github.com/tsb0601/MMVP/issues/30
 """
 
@@ -27,33 +27,6 @@ import re
 from typing import Any, Dict, List, Optional
 
 from loguru import logger as eval_logger
-
-# Ground truth corrections for verified errors in the original dataset
-# Using 0-based indexing (dataset row 100 = index 99, row 280 = index 279)
-# See: https://github.com/EvolvingLMMs-Lab/lmms-eval/issues/1018
-GROUND_TRUTH_CORRECTIONS: Dict[int, str] = {
-    99: "A",  # Row 100: Elephant tusks are long (incorrectly labeled as (b)/Short)
-    279: "A",  # Row 280: Person is standing (incorrectly labeled as (b)/Sitting)
-}
-
-
-def _get_corrected_answer(index: int, original_answer: str) -> str:
-    """
-    Apply ground truth corrections for verified errors in the dataset.
-
-    Args:
-        index: The sample index in the dataset
-        original_answer: The original answer from the dataset
-
-    Returns:
-        The corrected answer if a correction exists, otherwise the original answer
-    """
-    if index in GROUND_TRUTH_CORRECTIONS:
-        corrected = GROUND_TRUTH_CORRECTIONS[index]
-        if corrected != original_answer:
-            eval_logger.debug(f"Applied ground truth correction for index {index}: " f"{original_answer} -> {corrected}")
-        return corrected
-    return original_answer
 
 
 def _extract_answer_letter(text: str) -> str:
@@ -162,22 +135,16 @@ def _normalize_answer(answer: str) -> str:
 
 def mmvp_doc_to_target(doc: Dict[str, Any]) -> str:
     """
-    Get the target answer for the document, with corrections applied.
+    Get the target answer for the document.
 
     Args:
         doc: A sample from the MMVP dataset
 
     Returns:
-        The corrected target answer (A or B)
+        The target answer (A or B)
     """
-    index = doc.get("Index", doc.get("index", doc.get("idx", -1)))
-    if isinstance(index, int) and index > 0:
-        index = index - 1
-
     original_answer = doc.get("Correct Answer", doc.get("answer", ""))
-    normalized = _normalize_answer(original_answer)
-
-    return _get_corrected_answer(index, normalized)
+    return _normalize_answer(original_answer)
 
 
 def mmvp_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Any]:
@@ -196,10 +163,7 @@ def mmvp_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, A
     if isinstance(index, int) and index > 0:
         index = index - 1
 
-    original_answer = doc.get("Correct Answer", doc.get("answer", ""))
-    normalized_original = _normalize_answer(original_answer)
-    gt = _get_corrected_answer(index, normalized_original)
-
+    gt = mmvp_doc_to_target(doc)
     pred_letter = _extract_answer_letter(pred)
     is_correct = pred_letter == gt
 
@@ -211,9 +175,7 @@ def mmvp_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, A
         "pred": pred,
         "pred_letter": pred_letter,
         "gt": gt,
-        "original_gt": normalized_original,
         "is_correct": is_correct,
-        "correction_applied": index in GROUND_TRUTH_CORRECTIONS,
     }
 
     return {
@@ -238,11 +200,6 @@ def mmvp_aggregate_results(results: List[Dict[str, Any]]) -> float:
     correct = sum(1 for r in results if r["is_correct"])
     total = len(results)
     accuracy = correct / total
-
-    # Log detailed results
-    corrected_indices = [r["index"] for r in results if r["correction_applied"]]
-    if corrected_indices:
-        eval_logger.info(f"MMVP: Applied ground truth corrections to indices: {corrected_indices}")
 
     eval_logger.info(f"MMVP Accuracy: {accuracy:.4f} ({correct}/{total})")
 
