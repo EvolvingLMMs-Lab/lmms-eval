@@ -27,9 +27,10 @@ import zipfile
 from pathlib import Path
 
 import requests
-from datasets import Dataset, Features, Image, Value
 from PIL import Image as PILImage
 from tqdm import tqdm
+
+from datasets import Dataset, Features, Image, Value
 
 
 def download_json(url: str) -> list:
