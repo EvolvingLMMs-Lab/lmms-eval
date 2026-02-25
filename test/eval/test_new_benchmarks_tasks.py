@@ -15,7 +15,7 @@ from lmms_eval.tasks.vggsound import utils as vggsound_utils
 class TestNewBenchmarkTaskRegistration(unittest.TestCase):
     def test_new_tasks_are_registered(self):
         task_manager = TaskManager()
-        expected_tasks = {"repcount", "countix", "ovr_kinetics", "ssv2", "vggsound", "av_asr"}
+        expected_tasks = {"repcount", "countix", "ovr_kinetics", "ssv2", "vggsound", "av_asr", "neptune"}
         missing_tasks = expected_tasks.difference(task_manager.all_tasks)
         self.assertFalse(missing_tasks, f"Missing new benchmark tasks: {sorted(missing_tasks)}")
 
