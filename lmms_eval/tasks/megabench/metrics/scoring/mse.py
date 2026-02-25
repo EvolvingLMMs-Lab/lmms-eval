@@ -32,7 +32,7 @@ class NormalizedRMSE:
             rmse = np.clip(np.sqrt(mse_val), cls.MIN, cls.MAX)
             norm_rmse = 1 - (rmse - cls.MIN) / (cls.MAX - cls.MIN)
             return norm_rmse
-        except:
+        except Exception:
             # Usually Syntax, Type or Value errors, caused by wrong output formats
             return 0
 

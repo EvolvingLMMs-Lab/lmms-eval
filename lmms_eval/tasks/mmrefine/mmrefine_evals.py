@@ -95,10 +95,10 @@ class MMRefineEvaluator:
                 eval_logger.error("Error in evaluating answer for problem")
             try:
                 solution_correctness = int(resp.strip())
-            except:
+            except Exception:
                 try:
                     solution_correctness = self.get_chat_response(PARSING_PROMPT.format(target="Output", model_response=resp), temperature=0, max_tokens=256, n=1)
-                except:
+                except Exception:
                     solution_correctness = 0
             return {
                 "solution_correctness": solution_correctness,
@@ -109,15 +109,15 @@ class MMRefineEvaluator:
                 resp = self.get_chat_response(full_prompt, temperature=0, max_tokens=1024, n=1)
                 try:
                     error_detection = int(self.get_chat_response(PARSING_PROMPT.format(target="Error Detection", model_response=resp), temperature=0, max_tokens=256, n=1).strip())
-                except:
+                except Exception:
                     error_detection = 0
                 try:
                     error_correction = int(self.get_chat_response(PARSING_PROMPT.format(target="Error Correction", model_response=resp), temperature=0, max_tokens=256, n=1).strip())
-                except:
+                except Exception:
                     error_correction = 0
                 try:
                     solution_correctness = int(self.get_chat_response(PARSING_PROMPT.format(target="Effectiveness and Correctness of the Feedback", model_response=resp), temperature=0, max_tokens=256, n=1).strip())
-                except:
+                except Exception:
                     solution_correctness = 0
             except Exception as e:
                 eval_logger.error(e)

@@ -253,7 +253,7 @@ def convert_str_to_dict(predict_str: str):
         try:
             for key, value in matches:
                 data[key.strip()] = value.strip()
-        except:
+        except Exception:
             return {}
 
     if not data:
@@ -261,7 +261,7 @@ def convert_str_to_dict(predict_str: str):
 
     try:
         result = {k.strip(): str(v).strip() for k, v in data.items()}
-    except:
+    except Exception:
         return {}
     return result
 
@@ -522,7 +522,7 @@ def get_anls(s1, s2):
     try:
         s1 = s1.lower()
         s2 = s2.lower()
-    except:
+    except Exception:
         pass
     if s1 == s2:
         return 1.0
@@ -649,7 +649,7 @@ def csv_eval(predictions, references, easy, pred_type="json"):
                 try:
                     num = float(c)
                     not_header = True
-                except:
+                except Exception:
                     continue
                 if not_header:
                     break
@@ -664,14 +664,14 @@ def csv_eval(predictions, references, easy, pred_type="json"):
             for i in range(1, len(values)):
                 try:
                     temp = [entity if entity[-1] != ":" else entity[:-1], ""]
-                except:
+                except Exception:
                     temp = [entity, ""]
                 if header is not None:
                     try:
                         this_header = header[i]
                         temp = [entity, this_header]
                         temp = [x if x[-1] != ":" else x[:-1] for x in temp]
-                    except:
+                    except Exception:
                         this_header = entity.strip()
                 value = values[i].strip()
                 value = re.sub(r"[^\d.-]", "", str(value))
@@ -756,7 +756,7 @@ def csv_eval(predictions, references, easy, pred_type="json"):
                     temp_gt_head = sorted(label[idx][:2])
                     pred[idx] = (temp_pred_head[0], temp_pred_head[1], pred[idx][2])
                     label[idx] = (temp_gt_head[0], temp_gt_head[1], label[idx][2])
-                except:
+                except Exception:
                     continue
             intersection = intersection_with_tolerance(pred, label, tol_word=tol_word, tol_num=tol_num)
             union = union_with_tolerance(pred, label, tol_word=tol_word, tol_num=tol_num)

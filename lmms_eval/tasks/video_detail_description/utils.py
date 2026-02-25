@@ -210,7 +210,7 @@ def video_detail_description_aggregate_score(results, args):
         eval_score = result["score"]
         try:
             eval_score = int(eval_score)
-        except:
+        except Exception:
             eval_score = 0.0
 
         score += eval_score

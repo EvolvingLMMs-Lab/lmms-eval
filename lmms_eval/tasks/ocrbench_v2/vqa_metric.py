@@ -28,7 +28,7 @@ def vqa_evaluation(predict, answers):
                 answers[j] = str(answers[j])
             try:
                 answer = answers[j].lower().strip().replace("\n", " ")
-            except:
+            except Exception:
                 ipdb.set_trace()
             if isinstance(predict, (int, float)):
                 predict = str(predict)
@@ -71,7 +71,7 @@ def cn_vqa_evaluation(predict, answers):
                 answers[j] = str(answers[j])
             try:
                 answer = answers[j].lower().strip().replace("\n", " ").replace(" ", "")
-            except:
+            except Exception:
                 ipdb.set_trace()
             if isinstance(predict, (int, float)):
                 predict = str(predict)
@@ -114,7 +114,7 @@ def vqa_evaluation_case_sensitive(predict, answers):
                 answers[j] = str(answers[j])
             try:
                 answer = answers[j].strip().replace("\n", " ")
-            except:
+            except Exception:
                 ipdb.set_trace()
             predict = predict.strip().replace("\n", " ")
             if len(answer.split()) < 5:

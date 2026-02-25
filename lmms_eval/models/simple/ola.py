@@ -65,7 +65,7 @@ try:
     from ola.model.language_model.ola_qwen import OlaConfigQwen
 
     AutoConfig.register("ola_qwen", OlaConfigQwen)
-except:
+except Exception:
     eval_logger.debug("")
 from moviepy.video.io.VideoFileClip import VideoFileClip
 

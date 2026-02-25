@@ -80,7 +80,7 @@ def is_nan_value(value):
 
         if pd.isna(value):
             return True
-    except:
+    except Exception:
         pass
     return False
 
@@ -203,7 +203,7 @@ def ocrbench_v2_process_results(doc, results):
                     gold_table_html = wrap_html_table(gt_ans[0])
                     try:
                         score = teds.evaluate(pred_table_html, gold_table_html)
-                    except:
+                    except Exception:
                         score = 0
 
             elif "markdown" in question.lower():
@@ -240,7 +240,7 @@ def ocrbench_v2_process_results(doc, results):
                 gold_table_html = wrap_html_table(gt_ans[0])
                 try:
                     score = teds.evaluate(pred_table_html, gold_table_html)
-                except:
+                except Exception:
                     score = 0
                     print("error")
 

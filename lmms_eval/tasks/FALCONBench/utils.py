@@ -305,7 +305,7 @@ def evaluate_FALCONbench_gpteval(results):
         eval_score = result["score"]
         try:
             eval_score = int(eval_score)
-        except:
+        except Exception:
             eval_score = 0.0
         score += eval_score
 
@@ -314,7 +314,7 @@ def evaluate_FALCONbench_gpteval(results):
             eval_acc = str(eval_acc)
             if eval_acc == "yes":
                 acc += 1
-        except:
+        except Exception:
             acc += 0
     return {"score": score / len(results), "acc": acc / len(results)}
 

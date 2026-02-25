@@ -167,7 +167,7 @@ def get_eval_result(prompt, maxtry=10, sys_prompt=None):
             llm_output = get_llm_output(prompt, sys_prompt)
             rating = llm_output_to_rating(llm_output)
             return llm_output, rating
-        except:
+        except Exception:
             if maxtry <= 0:
                 return llm_output, 0
             maxtry -= 1

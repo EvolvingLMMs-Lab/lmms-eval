@@ -15,7 +15,7 @@ from loguru import logger as eval_logger
 
 try:
     import dashscope
-except:
+except Exception:
     eval_logger.debug("Can not import Dashscope")
 
 API_KEY = os.getenv("DASHSCOPE_API_KEY", "YOUR_API_KEY")

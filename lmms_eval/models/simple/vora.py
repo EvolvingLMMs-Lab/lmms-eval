@@ -248,7 +248,7 @@ class VoRA(lmms):
                 for visual_path in visual_paths:
                     try:
                         os.remove(visual_path)
-                    except:
+                    except Exception:
                         pass
                 pbar.update(1)
             # reorder this group of results back to original unsorted form

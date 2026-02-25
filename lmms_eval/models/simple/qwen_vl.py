@@ -254,7 +254,7 @@ class Qwen_VL(lmms):
             if "image_sizes" not in gen_kwargs:
                 try:
                     gen_kwargs["image_sizes"] = [visuals[0].size]
-                except:
+                except Exception:
                     gen_kwargs["image_sizes"] = None
             if "max_new_tokens" not in gen_kwargs:
                 gen_kwargs["max_new_tokens"] = 1024
@@ -299,7 +299,7 @@ class Qwen_VL(lmms):
                 for visual_path in visual_paths:
                     try:
                         os.remove(visual_path)
-                    except:
+                    except Exception:
                         pass
                 pbar.update(1)
             # reorder this group of results back to original unsorted form

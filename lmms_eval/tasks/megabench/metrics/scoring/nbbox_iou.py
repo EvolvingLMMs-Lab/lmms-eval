@@ -27,7 +27,7 @@ class NbboxIouTuple:
 
         try:
             iou_scores = calculate_iou(responses, targets)
-        except:
+        except Exception:
             return 0
 
         if not iou_scores:
@@ -63,7 +63,7 @@ class NbboxIouSingle:
             )
             if not iou_scores:
                 return 0
-        except:
+        except Exception:
             return 0
 
         # Take the mean IoU score for now.

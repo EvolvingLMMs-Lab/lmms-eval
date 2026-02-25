@@ -44,7 +44,7 @@ def get_result_summary(anno, result_list, summary_key):
                 area_dict=get_area_score(result_list, key),
                 subfield_dict=get_subfield_score(result_list, key, all_subfield),
             )
-        except:
+        except Exception:
             import pdb
 
             pdb.set_trace()

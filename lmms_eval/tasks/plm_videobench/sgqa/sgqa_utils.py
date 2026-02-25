@@ -52,7 +52,7 @@ def plm_sgqa_process_results(doc, results):
 
     try:
         judgement = json.loads(llm_response)
-    except:
+    except Exception:
         if "yes" in llm_response or "Yes" in llm_response:
             judgement = {"pred": "yes", "reason": "parse_error"}
         else:

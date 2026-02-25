@@ -235,7 +235,7 @@ def videomme_doc_to_text_subtitle(doc, lmms_eval_specific_kwargs=None):
                     raw_text = re.findall(pattern, subtitle_by_frame[idx][2])
                     try:
                         textlist.append(raw_text[0])
-                    except:
+                    except Exception:
                         continue
                 subtitle_text = "\n".join(textlist)
         subtitle = subtitle_text

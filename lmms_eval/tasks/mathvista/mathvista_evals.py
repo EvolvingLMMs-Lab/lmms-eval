@@ -283,7 +283,7 @@ class MathVistaEvaluator:
             else:
                 try:
                     extraction = str(extraction)
-                except:
+                except Exception:
                     extraction = ""
 
             # extract "A" from "(A) text"
@@ -305,19 +305,19 @@ class MathVistaEvaluator:
         elif answer_type == "integer":
             try:
                 extraction = str(int(float(extraction)))
-            except:
+            except Exception:
                 extraction = None
 
         elif answer_type == "float":
             try:
                 extraction = str(round(float(extraction), precision))
-            except:
+            except Exception:
                 extraction = None
 
         elif answer_type == "list":
             try:
                 extraction = str(extraction)
-            except:
+            except Exception:
                 extraction = None
 
         return extraction

@@ -16,7 +16,7 @@ def remove_boxed(s):
         if "=" in answer:
             answer = answer.split("=")[-1].lstrip(" ")
         return answer
-    except:
+    except Exception:
         return None
 
 
@@ -76,7 +76,7 @@ def cal_not(inputs):
         out = float(x) * 10 ** float(ab)
         # print(float(x)*10**float(ab))
         return str(out)
-    except:
+    except Exception:
         print("error")
     return inputs
 
@@ -102,7 +102,7 @@ def parse_not(inputs):
         else:
             return inputs
         return x, ab
-    except:
+    except Exception:
         return "", ""
 
 
@@ -113,13 +113,13 @@ def equiv_with_unit(model_output, answer, unit):
     try:
         ans = float(clean_number_string(answer))
         first = isclose(float(model_output.strip()), ans, rel_tol=0.05)
-    except:
+    except Exception:
         first = False
 
     try:
         model = model_output.strip().split()[0]
         second = isclose(float(model.strip()), ans, rel_tol=0.05)
-    except:
+    except Exception:
         second = False
 
     return first or second

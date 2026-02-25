@@ -72,7 +72,7 @@ def plm_rdcap_process_results(doc, results):
             # Parse LLM judge outputs
             try:
                 judgement = json.loads(llm_response)
-            except:
+            except Exception:
                 judgement = {"score": 0, "explanation": "N/A"}
             score = judgement["score"] / 10
             scores.append(score)

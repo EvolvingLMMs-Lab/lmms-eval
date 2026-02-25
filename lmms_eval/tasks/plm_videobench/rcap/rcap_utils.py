@@ -63,7 +63,7 @@ def plm_rcap_process_results(doc, results):
     try:
         judgement = json.loads(llm_response)
         success = 1
-    except:
+    except Exception:
         success = 0
         judgement = {"score": 0, "explanation": "N/A"}
 

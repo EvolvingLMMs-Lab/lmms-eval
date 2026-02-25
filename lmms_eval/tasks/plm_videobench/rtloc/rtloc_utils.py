@@ -62,7 +62,7 @@ def plm_rtloc_process_results(doc, results):
         pred_window = re.findall(r"(\[[0-9]+(?:\.[0-9]+)?,\s*[0-9]+(?:\.[0-9]+)?\])", pred)[0]
         pred_segment = np.array([ast.literal_eval(pred_window)])
         parse_error = 0
-    except:
+    except Exception:
         pred_segment = np.array([[doc["end_frame"] + 10, doc["end_frame"] + 20]])
         parse_error = 1
 

@@ -49,10 +49,10 @@ def voicebench_doc_to_audio(doc):
                     elif str(type(audio_array).__name__) == "Tensor":
                         try:
                             audio_array = audio_array.cpu().numpy()
-                        except:
+                        except Exception:
                             try:
                                 audio_array = audio_array.detach().cpu().numpy()
-                            except:
+                            except Exception:
                                 audio_array = np.array(audio_array)
 
                     sampling_rate = 16000  # default

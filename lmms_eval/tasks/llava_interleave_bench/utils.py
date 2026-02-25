@@ -333,7 +333,7 @@ def overall_score(results):
 #                 result["gpt_eval_explanation"] = explanation
 #                 result["gpt_eval_rating"] = rating
 #                 result["gpt_eval_model_name"] = model_name
-#             except:
+#             except Exception:
 #                 eval_logger.error(f"Error on evaluating {result['sample_id']}. Results: {results}")
 #                 result["gpt_eval_explanation"] = ""
 #                 result["gpt_eval_rating"] = 0

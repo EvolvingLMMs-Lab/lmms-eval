@@ -397,7 +397,7 @@ def get_llm_output_for_captioning(prompt):
     token_count = dict_result["usage"]
     try:
         llm_output = dict_result["choices"][0]["message"]["content"].strip()
-    except:
+    except Exception:
         if "error" in dict_result and dict_result["error"]["type"] == "invalid_request_error":
             llm_output = "invalid_request_error"
         else:
@@ -413,7 +413,7 @@ def get_eval_result_for_captioning(prompt, mc_answer, maxtry=10):
             eval_result = parse_llm_output_for_captioning(llm_output, gt_answer=mc_answer)
             eval_result["token_count"] = token_count
             return eval_result
-        except:
+        except Exception:
             if maxtry <= 0:
                 eval_result = {"chatgpt-reasoning": None, "chatgpt-answer": None, "rating": -1, "token_count": None}
                 return eval_result
@@ -465,7 +465,7 @@ def get_eval_result(prompt, maxtry=10, sys_prompt=None):
             llm_output = get_llm_output(prompt, sys_prompt)
             rating = llm_output_to_rating(llm_output)
             return llm_output, rating
-        except:
+        except Exception:
             if maxtry <= 0:
                 return llm_output, 0
             maxtry -= 1

@@ -123,7 +123,7 @@ def is_equal(asw: str, gt_asw: str) -> bool:
 
         else:
             return False
-    except:
+    except Exception:
         # If any error occurs during comparison, return False.
         return False
 
@@ -173,7 +173,7 @@ def extract_nums(s):
     for i in range(len(nums)):
         try:
             return_list.append(eval(nums[i].strip().lstrip(" 0")))
-        except:
+        except Exception:
             pass
     return return_list
 
@@ -236,7 +236,7 @@ def _fix_fracs(string):
                 # for numerator and denominator.
                 try:
                     assert len(substr) >= 2
-                except:
+                except Exception:
                     return string
 
                 a = substr[0]  # Potential numerator.
@@ -282,7 +282,7 @@ def _fix_a_slash_b(string):
         return new_string
 
     # Handle exceptions for non-integer fractions or other unexpected formats.
-    except:
+    except Exception:
         return string
 
 
@@ -398,7 +398,7 @@ def find_math_answer(s: str) -> str:
     try:
         pattern = re.compile("oxed{(.*)}", flags=re.S)
         ans = pattern.findall(s)[-1]
-    except:
+    except Exception:
         ans = s  # If the pattern is not found, consider the entire string as the answer.
 
     # If there's a closing bracket without an opening bracket before it, consider everything before it.

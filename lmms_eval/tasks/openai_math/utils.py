@@ -232,7 +232,7 @@ def process_docs_openai_math_cot_quality_check(dataset: datasets.Dataset) -> dat
             if getattr(doc, "few_shot", None) is not None:
                 out_doc["few_shot"] = True
             return out_doc
-        except:
+        except Exception:
             return {"problem": "Drop", "solution": "Drop", "answer": "Drop", "thinking_trajectory": ["Drop"]}
 
     processed_dataset = dataset.map(_process_doc)

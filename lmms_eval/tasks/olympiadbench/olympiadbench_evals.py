@@ -76,7 +76,7 @@ class OlympiadBenchEvaluator:
 
         try:
             expression1, expression2 = self.preprocess(expression1, expression2)
-        except:
+        except Exception:
             return False
         if expression1 == expression2:
             # print("Exactly equal")
@@ -139,7 +139,7 @@ class OlympiadBenchEvaluator:
                 if self.interval_equal(expression1, expression2):
                     # print("Interval equivalent")
                     return True
-            except:
+            except Exception:
                 return False
 
         # Then check for numerical equality
@@ -147,21 +147,21 @@ class OlympiadBenchEvaluator:
             if self.numerical_equal(expression1, expression2):
                 # print("Numerically equivalent")
                 return True
-        except:
+        except Exception:
             pass
         # Then check if expressions are mathematically equal
         try:
             if self.expression_equal(expression1, expression2) and not ("=" in expression1 and "=" in expression2):
                 # print("Expression equivalent")
                 return True
-        except:
+        except Exception:
             pass
         # Lastly, check for equation equality
         try:
             if self.equation_equal(expression1, expression2):
                 # print("Equation equivalent")
                 return True
-        except:
+        except Exception:
             pass
         return False
 
@@ -211,7 +211,7 @@ class OlympiadBenchEvaluator:
                         return True
                     else:
                         return False
-                except:
+                except Exception:
                     return False
             else:
                 try:
@@ -219,7 +219,7 @@ class OlympiadBenchEvaluator:
 
                     num_value = simplified_expr.evalf()
                     return abs(num_value) < 1e-3
-                except:
+                except Exception:
                     return False
 
     def equation_equal(self, expression1, expression2):

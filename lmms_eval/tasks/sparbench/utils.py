@@ -286,13 +286,13 @@ def sparbench_process_results(doc, results):
         for key, value in METRICS_FOR_NA.items():
             try:
                 doc[key] = eval(value)(to_float(process_na(doc["prediction"], doc["task"])), to_float(doc["answer"]))
-            except:
+            except Exception:
                 doc[key] = WORST_CASE_FOR_METRICS[key]
     elif doc["task"] in SPECIAL_QUESTION_TYPES:
         if doc["task"] == "view_change_infer":
             try:
                 doc["vci_metric"] = compute_vci_metric(doc["prediction"], doc["answer"])
-            except:
+            except Exception:
                 doc["vci_metric"] = 0
 
     else:

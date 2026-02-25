@@ -28,7 +28,7 @@ def load_zip_file_keys(file, fileNameRegExp=""):
     """
     try:
         archive = zipfile.ZipFile(file, mode="r", allowZip64=True)
-    except:
+    except Exception:
         raise Exception("Error loading the ZIP archive.")
 
     pairs = []
@@ -58,7 +58,7 @@ def load_zip_file(file, fileNameRegExp="", allEntries=False):
     """
     try:
         archive = zipfile.ZipFile(file, mode="r", allowZip64=True)
-    except:
+    except Exception:
         raise Exception("Error loading the ZIP archive")
 
     pairs = []
@@ -88,7 +88,7 @@ def decode_utf8(raw):
     """
     try:
         return raw.decode("utf-8-sig", errors="replace")
-    except:
+    except Exception:
         return None
 
 

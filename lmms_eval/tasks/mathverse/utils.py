@@ -76,7 +76,7 @@ def mathverse_aggregate_results_submission(results, args, *, calculate_gain=Fals
     # Don't know why but this sometimes yields error so I hardcode it
     try:
         split_flag = results[0]["metadata"]["split"]
-    except:
+    except Exception:
         split_flag = "testmini"
     path = generate_submission_file(f"mathverse_{split_flag}_results.json", args)
     with open(path, "w") as f:

@@ -59,7 +59,7 @@ class VideoChatGPT(lmms):
             self.device_map = f"cuda:{accelerator.local_process_index}"
         try:
             self.model, self.vision_tower, self.tokenizer, self.image_processor, self.video_token_len = initialize_model(model_path, projection_path, device=self.device)
-        except:
+        except Exception:
             eval_logger.info("Does not find the model from the path you provide, try downloading from the hf repo.")
             model_path = snapshot_download(repo_id=model_path)
             projection_path = os.path.join(snapshot_download(repo_id=projection_path), "video_chatgpt-7B.bin")

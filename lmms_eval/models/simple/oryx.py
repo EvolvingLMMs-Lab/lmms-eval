@@ -42,7 +42,7 @@ try:
     from oryx.model.language_model.oryx_qwen import OryxQwenConfig
 
     AutoConfig.register("oryx_qwen", OryxQwenConfig)
-except:
+except Exception:
     eval_logger.debug("")
 
 

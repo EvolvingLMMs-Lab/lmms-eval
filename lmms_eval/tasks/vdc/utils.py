@@ -318,7 +318,7 @@ def vdc_aggregate_score(results, args):
         eval_score = result["score"]
         try:
             eval_score = float(eval_score)
-        except:
+        except Exception:
             eval_score = 0.0
 
         score += eval_score
@@ -332,7 +332,7 @@ def vdc_aggregate_acc(results, args):
         eval_acc = result["acc"]
         try:
             eval_acc = float(eval_acc)
-        except:
+        except Exception:
             eval_acc = 0.0
         acc += eval_acc
 
