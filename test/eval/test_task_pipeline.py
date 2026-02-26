@@ -9,8 +9,8 @@ No dataset download, no model inference, no API keys required.
 
 import importlib
 import os
-import unittest
 
+import pytest
 import yaml
 
 from lmms_eval.tasks import TaskManager
@@ -19,14 +19,11 @@ from lmms_eval.tasks import TaskManager
 # Shared TaskManager (expensive to init, reuse across all tests)
 # ---------------------------------------------------------------------------
 
-_tm: TaskManager = None
 
-
-def _get_tm() -> TaskManager:
-    global _tm
-    if _tm is None:
-        _tm = TaskManager("WARNING")
-    return _tm
+@pytest.fixture(scope="module")
+def tm():
+    """Module-scoped fixture for TaskManager singleton."""
+    return TaskManager("WARNING")
 
 
 # ---------------------------------------------------------------------------
@@ -76,40 +73,7 @@ TASK_PROCESS_RESULTS_FN = {
 
 
 # ===========================================================================
-# Task Registration
-# ===========================================================================
-
-
-class TestTaskRegistration(unittest.TestCase):
-    def test_mainstream_tasks_are_registered(self):
-        tm = _get_tm()
-        for task_name in MAINSTREAM_TASKS:
-            with self.subTest(task=task_name):
-                self.assertIn(task_name, tm.all_subtasks, f"Task '{task_name}' not found in TaskManager.all_subtasks")
-
-    def test_mainstream_groups_are_registered(self):
-        tm = _get_tm()
-        for group_name in MAINSTREAM_GROUPS:
-            with self.subTest(group=group_name):
-                self.assertIn(group_name, tm.all_tasks, f"Group '{group_name}' not found in TaskManager.all_tasks")
-
-    def test_task_count_is_reasonable(self):
-        tm = _get_tm()
-        self.assertGreater(len(tm.all_subtasks), 100, "Expected 100+ subtasks in the registry")
-
-    def test_task_index_has_yaml_paths(self):
-        tm = _get_tm()
-        for task_name in MAINSTREAM_TASKS:
-            with self.subTest(task=task_name):
-                entry = tm.task_index.get(task_name)
-                self.assertIsNotNone(entry, f"No index entry for '{task_name}'")
-                yaml_path = entry.get("yaml_path")
-                self.assertIsNotNone(yaml_path, f"No yaml_path for '{task_name}'")
-                self.assertTrue(os.path.isfile(yaml_path), f"YAML file missing: {yaml_path}")
-
-
-# ===========================================================================
-# YAML Config Integrity
+# YAML Config Integrity Helpers
 # ===========================================================================
 
 
@@ -132,41 +96,76 @@ def _load_task_yaml(yaml_path: str) -> dict:
         return yaml.load(f, Loader=loader_copy)
 
 
-class TestYAMLConfigIntegrity(unittest.TestCase):
-    def test_yaml_files_parse_without_error(self):
-        tm = _get_tm()
-        for task_name in MAINSTREAM_TASKS:
-            with self.subTest(task=task_name):
-                yaml_path = tm.task_index[task_name]["yaml_path"]
-                cfg = _load_task_yaml(yaml_path)
-                self.assertIsInstance(cfg, dict, f"YAML for '{task_name}' did not parse to a dict")
+# ===========================================================================
+# Task Registration
+# ===========================================================================
 
-    def test_yaml_has_task_field(self):
-        tm = _get_tm()
-        for task_name in MAINSTREAM_TASKS:
-            with self.subTest(task=task_name):
-                yaml_path = tm.task_index[task_name]["yaml_path"]
-                cfg = _load_task_yaml(yaml_path)
-                task_field = cfg.get("task")
-                self.assertIsNotNone(task_field, f"YAML for '{task_name}' missing 'task' field")
 
-    def test_yaml_has_dataset_path(self):
-        tm = _get_tm()
-        for task_name in MAINSTREAM_TASKS:
-            with self.subTest(task=task_name):
-                yaml_path = tm.task_index[task_name]["yaml_path"]
-                cfg = _load_task_yaml(yaml_path)
-                has_dataset = "dataset_path" in cfg or "include" in cfg
-                self.assertTrue(has_dataset, f"YAML for '{task_name}' has neither 'dataset_path' nor 'include'")
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_mainstream_tasks_are_registered(tm, task_name):
+    """Verify each mainstream task is registered in TaskManager."""
+    assert task_name in tm.all_subtasks, f"Task '{task_name}' not found in TaskManager.all_subtasks"
 
-    def test_yaml_has_formatter(self):
-        tm = _get_tm()
-        for task_name in MAINSTREAM_TASKS:
-            with self.subTest(task=task_name):
-                yaml_path = tm.task_index[task_name]["yaml_path"]
-                cfg = _load_task_yaml(yaml_path)
-                has_formatter = any(k in cfg or "include" in cfg for k in ("doc_to_messages", "doc_to_text", "doc_to_visual"))
-                self.assertTrue(has_formatter, f"YAML for '{task_name}' has no input formatter and no include")
+
+@pytest.mark.parametrize("group_name", MAINSTREAM_GROUPS)
+def test_mainstream_groups_are_registered(tm, group_name):
+    """Verify each mainstream group is registered in TaskManager."""
+    assert group_name in tm.all_tasks, f"Group '{group_name}' not found in TaskManager.all_tasks"
+
+
+def test_task_count_is_reasonable(tm):
+    """Verify the registry contains a reasonable number of subtasks."""
+    assert len(tm.all_subtasks) > 100, "Expected 100+ subtasks in the registry"
+
+
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_task_index_has_yaml_paths(tm, task_name):
+    """Verify each task has a valid YAML path in the index."""
+    entry = tm.task_index.get(task_name)
+    assert entry is not None, f"No index entry for '{task_name}'"
+    yaml_path = entry.get("yaml_path")
+    assert yaml_path is not None, f"No yaml_path for '{task_name}'"
+    assert os.path.isfile(yaml_path), f"YAML file missing: {yaml_path}"
+
+
+# ===========================================================================
+# YAML Config Integrity
+# ===========================================================================
+
+
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_yaml_files_parse_without_error(tm, task_name):
+    """Verify YAML files parse to valid dicts."""
+    yaml_path = tm.task_index[task_name]["yaml_path"]
+    cfg = _load_task_yaml(yaml_path)
+    assert isinstance(cfg, dict), f"YAML for '{task_name}' did not parse to a dict"
+
+
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_yaml_has_task_field(tm, task_name):
+    """Verify each YAML has a 'task' field."""
+    yaml_path = tm.task_index[task_name]["yaml_path"]
+    cfg = _load_task_yaml(yaml_path)
+    task_field = cfg.get("task")
+    assert task_field is not None, f"YAML for '{task_name}' missing 'task' field"
+
+
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_yaml_has_dataset_path(tm, task_name):
+    """Verify each YAML has either 'dataset_path' or 'include'."""
+    yaml_path = tm.task_index[task_name]["yaml_path"]
+    cfg = _load_task_yaml(yaml_path)
+    has_dataset = "dataset_path" in cfg or "include" in cfg
+    assert has_dataset, f"YAML for '{task_name}' has neither 'dataset_path' nor 'include'"
+
+
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_yaml_has_formatter(tm, task_name):
+    """Verify each YAML has an input formatter."""
+    yaml_path = tm.task_index[task_name]["yaml_path"]
+    cfg = _load_task_yaml(yaml_path)
+    has_formatter = any(k in cfg or "include" in cfg for k in ("doc_to_messages", "doc_to_text", "doc_to_visual"))
+    assert has_formatter, f"YAML for '{task_name}' has no input formatter and no include"
 
 
 # ===========================================================================
@@ -174,47 +173,49 @@ class TestYAMLConfigIntegrity(unittest.TestCase):
 # ===========================================================================
 
 
-class TestUtilsFunctions(unittest.TestCase):
-    def test_utils_modules_are_importable(self):
-        for task_name, module_path in TASK_UTILS.items():
-            with self.subTest(task=task_name):
-                mod = importlib.import_module(module_path)
-                self.assertIsNotNone(mod)
+@pytest.mark.parametrize("task_name,module_path", TASK_UTILS.items())
+def test_utils_modules_are_importable(task_name, module_path):
+    """Verify utils modules can be imported."""
+    mod = importlib.import_module(module_path)
+    assert mod is not None
 
-    def test_process_results_functions_exist_and_callable(self):
-        for task_name, fn_name in TASK_PROCESS_RESULTS_FN.items():
-            with self.subTest(task=task_name):
-                module_path = TASK_UTILS[task_name]
-                mod = importlib.import_module(module_path)
-                fn = getattr(mod, fn_name, None)
-                self.assertIsNotNone(fn, f"{module_path}.{fn_name} does not exist")
-                self.assertTrue(callable(fn), f"{module_path}.{fn_name} is not callable")
 
-    def test_doc_to_text_functions_exist(self):
-        known_doc_to_text = {
-            "mme": "mme_doc_to_text",
-            "mmmu_val": "mmmu_doc_to_text",
-            "mmstar": "mmstar_doc_to_text",
-            "scienceqa": "sqa_doc_to_text",
-            "ocrbench": "ocrbench_doc_to_text",
-            "videomme": "videomme_doc_to_text",
-        }
-        for task_name, fn_name in known_doc_to_text.items():
-            with self.subTest(task=task_name):
-                module_path = TASK_UTILS[task_name]
-                mod = importlib.import_module(module_path)
-                fn = getattr(mod, fn_name, None)
-                self.assertIsNotNone(fn, f"{module_path}.{fn_name} does not exist")
-                self.assertTrue(callable(fn), f"{module_path}.{fn_name} is not callable")
+@pytest.mark.parametrize("task_name,fn_name", TASK_PROCESS_RESULTS_FN.items())
+def test_process_results_functions_exist_and_callable(task_name, fn_name):
+    """Verify process_results functions exist and are callable."""
+    module_path = TASK_UTILS[task_name]
+    mod = importlib.import_module(module_path)
+    fn = getattr(mod, fn_name, None)
+    assert fn is not None, f"{module_path}.{fn_name} does not exist"
+    assert callable(fn), f"{module_path}.{fn_name} is not callable"
 
-    def test_doc_to_messages_exists_for_chat_tasks(self):
-        for task_name in TASKS_WITH_DOC_TO_MESSAGES:
-            with self.subTest(task=task_name):
-                module_path = TASK_UTILS[task_name]
-                mod = importlib.import_module(module_path)
-                fn = getattr(mod, "mmmu_doc_to_messages", None)
-                self.assertIsNotNone(fn, f"{module_path} missing doc_to_messages function")
-                self.assertTrue(callable(fn))
+
+def test_doc_to_text_functions_exist():
+    """Verify doc_to_text functions exist for known tasks."""
+    known_doc_to_text = {
+        "mme": "mme_doc_to_text",
+        "mmmu_val": "mmmu_doc_to_text",
+        "mmstar": "mmstar_doc_to_text",
+        "scienceqa": "sqa_doc_to_text",
+        "ocrbench": "ocrbench_doc_to_text",
+        "videomme": "videomme_doc_to_text",
+    }
+    for task_name, fn_name in known_doc_to_text.items():
+        module_path = TASK_UTILS[task_name]
+        mod = importlib.import_module(module_path)
+        fn = getattr(mod, fn_name, None)
+        assert fn is not None, f"{module_path}.{fn_name} does not exist"
+        assert callable(fn), f"{module_path}.{fn_name} is not callable"
+
+
+def test_doc_to_messages_exists_for_chat_tasks():
+    """Verify doc_to_messages exists for tasks that use it."""
+    for task_name in TASKS_WITH_DOC_TO_MESSAGES:
+        module_path = TASK_UTILS[task_name]
+        mod = importlib.import_module(module_path)
+        fn = getattr(mod, "mmmu_doc_to_messages", None)
+        assert fn is not None, f"{module_path} missing doc_to_messages function"
+        assert callable(fn)
 
 
 # ===========================================================================
@@ -222,28 +223,19 @@ class TestUtilsFunctions(unittest.TestCase):
 # ===========================================================================
 
 
-class TestCrossTaskConsistency(unittest.TestCase):
-    def test_all_mainstream_tasks_have_generate_until_output_type(self):
-        tm = _get_tm()
-        for task_name in MAINSTREAM_TASKS:
-            with self.subTest(task=task_name):
-                yaml_path = tm.task_index[task_name]["yaml_path"]
-                cfg = _load_task_yaml(yaml_path)
-                output_type = cfg.get("output_type")
-                if output_type is not None:
-                    self.assertEqual(
-                        output_type,
-                        "generate_until",
-                        f"Task '{task_name}' has unexpected output_type: {output_type}",
-                    )
-
-    def test_no_duplicate_task_names_in_registry(self):
-        tm = _get_tm()
-        seen = set()
-        for name in tm.all_subtasks:
-            self.assertNotIn(name, seen, f"Duplicate subtask name: {name}")
-            seen.add(name)
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_all_mainstream_tasks_have_generate_until_output_type(tm, task_name):
+    """Verify mainstream tasks use generate_until output type."""
+    yaml_path = tm.task_index[task_name]["yaml_path"]
+    cfg = _load_task_yaml(yaml_path)
+    output_type = cfg.get("output_type")
+    if output_type is not None:
+        assert output_type == "generate_until", f"Task '{task_name}' has unexpected output_type: {output_type}"
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_no_duplicate_task_names_in_registry(tm):
+    """Verify no duplicate task names exist in the registry."""
+    seen = set()
+    for name in tm.all_subtasks:
+        assert name not in seen, f"Duplicate subtask name: {name}"
+        seen.add(name)
