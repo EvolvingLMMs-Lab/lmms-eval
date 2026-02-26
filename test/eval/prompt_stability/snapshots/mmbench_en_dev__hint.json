@@ -1,0 +1,16 @@
+{
+  "task": "mmbench_en_dev",
+  "variant": "with-hint",
+  "doc_id": "101",
+  "prompt_text": "The person is outdoors near a body of water. What activity is the person in the image performing? There are several options:\nA. Swimming\nB. Running\nC. Fishing\nD. Cycling\n\nAnswer with the option's letter from the given choices directly.",
+  "gen_kwargs": {
+    "until": [
+      "ASSISTANT:"
+    ],
+    "max_new_tokens": 1024,
+    "temperature": 0,
+    "top_p": 1.0,
+    "num_beams": 1,
+    "do_sample": false
+  }
+}

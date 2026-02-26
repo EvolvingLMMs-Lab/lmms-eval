@@ -1,0 +1,11 @@
+{
+  "task": "mmvp",
+  "variant": null,
+  "doc_id": "1",
+  "prompt_text": "Is the arrow pointing up or down?\nA. Up\nB. Down\nAnswer with the option's letter from the given choices directly.",
+  "gen_kwargs": {
+    "max_new_tokens": 16,
+    "temperature": 0,
+    "do_sample": false
+  }
+}

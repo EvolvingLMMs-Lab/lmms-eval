@@ -199,3 +199,17 @@ dev = [
     "textual>=7.2.0",
     "textual-dev>=1.8.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "gpu: requires GPU hardware (deselect with '-m not gpu')",
+    "api: requires external API keys (deselect with '-m not api')",
+    "slow: slow integration tests (deselect with '-m not slow')",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

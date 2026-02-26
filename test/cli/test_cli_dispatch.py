@@ -146,7 +146,7 @@ class TestModelsSubcommand(unittest.TestCase):
     def test_models_output_contains_known_model(self):
         output = self._run_models(aliases=False)
         self.assertIn("qwen2_5_vl", output)
-        self.assertIn("qwen2_5_vl", output)
+        self.assertIn("openai", output)
 
     def test_models_counts_are_consistent(self):
         output = self._run_models(aliases=False)
@@ -186,7 +186,6 @@ class TestVersionSubcommand(unittest.TestCase):
         with patch("sys.stdout", buf):
             run_version(argparse.Namespace())
         output = buf.getvalue()
-        self.assertIn("torch", output)
         self.assertIn("torch", output)
 
 
