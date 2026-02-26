@@ -66,6 +66,18 @@ User input: --model X --tasks Y
 
 ### CLI Layer
 
+The CLI layer tests verify that user commands are parsed and routed correctly. For example, `--model openai --tasks mme` is detected as a legacy invocation and redirected to the `eval` subcommand:
+
+```python
+@pytest.mark.parametrize("argv, expected", [
+    ([], False),
+    (["--model", "openai", "--tasks", "mme"], True),  # legacy flags
+    (["eval", "--model", "openai"], False),             # modern subcommand
+])
+def test_is_legacy_invocation(argv, expected):
+    assert _is_legacy_invocation(argv) is expected
+```
+
 #### `test/cli/test_cli_dispatch_parametrized.py`
 
 Parametrized test suite for the unified CLI dispatch router. Handles both legacy flag-style invocations (`--model X --tasks Y`) and modern subcommand-style invocations (`eval --model X`).
@@ -93,6 +105,25 @@ This pattern (one test file per new CLI argument) keeps argument parsing tests i
 
 ### Model Resolution Layer
 
+The model resolution tests verify that user-provided model names map to the correct Python class paths. For example, when both chat and simple backends are registered, the registry defaults to chat:
+
+```python
+def test_chat_precedence_and_force_simple():
+    registry = ModelRegistryV2()
+    registry.register_manifest(ModelManifest(
+        model_id="demo",
+        simple_class_path="pkg.simple.DemoSimple",
+        chat_class_path="pkg.chat.DemoChat",
+    ))
+
+    resolved = registry.resolve("demo")
+    assert resolved.model_type == "chat"               # chat wins by default
+    assert resolved.class_path == "pkg.chat.DemoChat"
+
+    resolved = registry.resolve("demo", force_simple=True)
+    assert resolved.model_type == "simple"              # explicit override
+```
+
 #### `test/models/test_model_registry_v2.py`
 
 Validates `ModelRegistryV2`, the system that maps user-provided model names (like `qwen2_5_vl` or `openai_compatible`) to Python class paths.
@@ -109,6 +140,22 @@ These tests use synthetic `ModelManifest` registrations rather than the real reg
 ---
 
 ### Task Loading Layer
+
+The task loading tests verify that task YAMLs parse correctly, are registered in the TaskManager, and their `utils.py` functions are importable. For example, each mainstream task must exist and use `generate_until`:
+
+```python
+MAINSTREAM_TASKS = ["mme", "mmmu_val", "mmstar", "ai2d", "scienceqa", "ocrbench", "mmvet", "videomme"]
+
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_task_registered(task_name, tm):
+    assert task_name in tm.all_subtasks
+
+@pytest.mark.parametrize("task_name", MAINSTREAM_TASKS)
+def test_task_output_type_is_generate_until(task_name, tm):
+    yaml_path = _find_yaml(task_name, tm)
+    config = yaml.safe_load(open(yaml_path))
+    assert config.get("output_type") == "generate_until"
+```
 
 #### `test/eval/test_task_pipeline.py`
 
@@ -144,6 +191,23 @@ Covers recently added benchmarks (repcount, countix, ovr_kinetics, ssv2, vggsoun
 ---
 
 ### Prompt Stability Layer
+
+Prompt stability tests catch silent drift in prompt templates. Each test calls the real `doc_to_text` with a synthetic document and compares against a golden snapshot:
+
+```python
+@pytest.mark.parametrize("case_name", sorted(CASES.keys()))
+def test_prompt_stable(case_name, update_snapshots):
+    case = CASES[case_name]
+    doc_to_text = case["get_fn"]()
+    prompt = doc_to_text(case["fixture"], case["default_kwargs"])
+
+    snapshot_path = SNAPSHOT_DIR / f"{case_name}.json"
+    expected = json.loads(snapshot_path.read_text())
+    assert prompt == expected["prompt_text"], (
+        f"Prompt changed for '{case_name}'!\n"
+        f"If intentional, run: pytest test/eval/prompt_stability/ --update-snapshots"
+    )
+```
 
 #### `test/eval/prompt_stability/`
 
@@ -186,6 +250,20 @@ This regenerates all golden files. Review the diff before committing to confirm 
 
 ### Request Construction Layer
 
+Request construction tests verify the exact tuple shape that models unpack from `Instance.args`. A mismatch here causes silent data corruption at runtime:
+
+```python
+def test_configurable_task_generate_until_tuple_shape():
+    args = ("What is this?", {"temperature": 0}, _dummy_doc_to_visual, 0, "test_task", "test")
+    inst = _make_instance("generate_until", args)
+
+    prompt, gen_kwargs, doc_to_visual, doc_id, task, split = inst.args
+    assert prompt == "What is this?"
+    assert callable(doc_to_visual)
+    assert isinstance(gen_kwargs, dict)
+    assert doc_id == 0
+```
+
 #### `test/eval/test_construct_requests.py`
 
 Validates the `Instance.args` tuple that `task.construct_requests()` produces. This tuple is the contract between task code and model code — its length, order, and types must be exact.
@@ -208,6 +286,25 @@ The tests use mock tasks with controlled YAML configs to verify each combination
 
 ### Message Protocol Layer
 
+Protocol tests verify that multimodal inputs are correctly structured and media can be extracted. For example, images and videos from a mixed message are separated into typed lists:
+
+```python
+def test_extract_media_mixed_content(sample_image):
+    messages = _build_chat_messages([{
+        "role": "user",
+        "content": [
+            {"type": "image", "url": sample_image},
+            {"type": "video", "url": "/path/to/video.mp4"},
+            {"type": "text", "text": "Describe both."},
+        ],
+    }])
+
+    images, videos, audios = messages.extract_media()
+    assert len(images) == 1 and isinstance(images[0], Image.Image)
+    assert len(videos) == 1 and videos[0] == "/path/to/video.mp4"
+    assert audios == []
+```
+
 #### `test/eval/test_protocol.py`
 
 Tests `ChatMessages`, the unified message protocol that all chat models consume. Every multimodal input (image, video, audio, text) flows through this structure.
@@ -222,6 +319,41 @@ The test covers:
 ---
 
 ### Execution and Caching Layer
+
+Execution tests verify the agentic multi-round loop and cache hit/miss lifecycle. For example, the loop terminates when `doc_to_text` signals completion:
+
+```python
+def test_agentic_single_round_terminal():
+    model = _make_simple_model(["model_reply"])
+    instance = _make_agentic_instance(
+        doc_to_text=_terminal_doc_to_text,  # signals terminal after round 0
+    )
+
+    _run_generate_until_agentic([instance], model, max_agentic_steps=5)
+
+    output = json.loads(instance.resps[0])
+    assert output["rounds"] == 1
+    assert output["last_model_output"] == "model_reply"
+```
+
+Cache tests verify that deterministic requests are stored and replayed:
+
+```python
+def test_cache_hit_miss_lifecycle(self):
+    requests = [_gen_request(prompt="What is 2+2?", temperature=0)]
+
+    # First run: cache miss, model is called
+    cache = self._open_cache()
+    to_run, cached = cache.filter_cached(requests)
+    assert len(to_run) == 1 and len(cached) == 0
+    cache.store(to_run, ["4"])
+    cache.close()
+
+    # Second run: cache hit, model is skipped
+    cache = self._open_cache()
+    to_run, cached = cache.filter_cached(requests)
+    assert len(to_run) == 0 and len(cached) == 1
+```
 
 #### `test/eval/test_evaluator.py`
 
@@ -277,6 +409,25 @@ The canonical parametrized test suite for `is_deterministic()`. Contains 14 case
 
 ### Token Counting Layer
 
+Token counting tests verify that diverse model return formats are normalized into a consistent `(text, TokenCounts)` pair:
+
+```python
+def test_unwrap_plain_string():
+    text, tc = unwrap_generation_output("hello world")
+    assert text == "hello world"
+    assert tc is None
+
+def test_unwrap_generation_result():
+    gr = GenerationResult(
+        text="answer",
+        token_counts=TokenCounts(input_tokens=100, output_tokens=20),
+    )
+    text, tc = unwrap_generation_output(gr)
+    assert text == "answer"
+    assert tc.input_tokens == 100
+    assert tc.output_tokens == 20
+```
+
 #### `test/eval/test_token_counts.py`
 
 Tests the per-sample token counting infrastructure that feeds into usage tracking and efficiency metrics.
@@ -290,6 +441,18 @@ Tests the per-sample token counting infrastructure that feeds into usage trackin
 ---
 
 ### Metrics Layer
+
+Metrics tests verify that sample-level token counts aggregate correctly into task-level efficiency summaries:
+
+```python
+def test_efficiency_metrics_tokens_per_correct(base_results):
+    summary = build_efficiency_summary(base_results)
+
+    assert summary["overall"]["total_input_tokens"] == 150.0   # 100 + 50
+    assert summary["overall"]["total_output_tokens"] == 50.0   # 20 + 30
+    assert summary["overall"]["total_correct_score"] == 1.0    # only first sample scored 1
+    assert summary["overall"]["tokens_per_correct_answer"] == 50.0  # 50 output / 1 correct
+```
 
 #### `test/eval/test_efficiency_metrics.py`
 
