@@ -9,7 +9,7 @@ Covers:
 - ResponseCache._is_valid_response() with GenerationResult
 """
 
-import unittest
+import pytest
 
 from lmms_eval.api.instance import (
     GenerationResult,
@@ -37,28 +37,34 @@ def _make_instance(request_type="generate_until", prompt="prompt", doc_id=0, idx
 # ===========================================================================
 
 
-class TestTokenCounts(unittest.TestCase):
-    def test_defaults_are_none(self):
-        tc = TokenCounts()
-        self.assertIsNone(tc.input_tokens)
-        self.assertIsNone(tc.output_tokens)
-        self.assertIsNone(tc.reasoning_tokens)
+def test_token_counts_defaults_are_none():
+    """TokenCounts fields default to None."""
+    tc = TokenCounts()
+    assert tc.input_tokens is None
+    assert tc.output_tokens is None
+    assert tc.reasoning_tokens is None
 
-    def test_to_dict_omits_none_fields(self):
-        tc = TokenCounts(output_tokens=42)
-        d = tc.to_dict()
-        self.assertEqual(d, {"output_tokens": 42})
-        self.assertNotIn("input_tokens", d)
-        self.assertNotIn("reasoning_tokens", d)
 
-    def test_to_dict_all_fields(self):
-        tc = TokenCounts(input_tokens=100, output_tokens=50, reasoning_tokens=10)
-        d = tc.to_dict()
-        self.assertEqual(d, {"input_tokens": 100, "output_tokens": 50, "reasoning_tokens": 10})
+def test_token_counts_to_dict_omits_none_fields():
+    """to_dict() excludes None fields."""
+    tc = TokenCounts(output_tokens=42)
+    d = tc.to_dict()
+    assert d == {"output_tokens": 42}
+    assert "input_tokens" not in d
+    assert "reasoning_tokens" not in d
 
-    def test_to_dict_empty_when_all_none(self):
-        tc = TokenCounts()
-        self.assertEqual(tc.to_dict(), {})
+
+def test_token_counts_to_dict_all_fields():
+    """to_dict() includes all non-None fields."""
+    tc = TokenCounts(input_tokens=100, output_tokens=50, reasoning_tokens=10)
+    d = tc.to_dict()
+    assert d == {"input_tokens": 100, "output_tokens": 50, "reasoning_tokens": 10}
+
+
+def test_token_counts_to_dict_empty_when_all_none():
+    """to_dict() returns empty dict when all fields are None."""
+    tc = TokenCounts()
+    assert tc.to_dict() == {}
 
 
 # ===========================================================================
@@ -66,17 +72,19 @@ class TestTokenCounts(unittest.TestCase):
 # ===========================================================================
 
 
-class TestGenerationResult(unittest.TestCase):
-    def test_text_only(self):
-        gr = GenerationResult(text="hello")
-        self.assertEqual(gr.text, "hello")
-        self.assertIsNone(gr.token_counts)
+def test_generation_result_text_only():
+    """GenerationResult with text only, no token counts."""
+    gr = GenerationResult(text="hello")
+    assert gr.text == "hello"
+    assert gr.token_counts is None
 
-    def test_with_token_counts(self):
-        tc = TokenCounts(output_tokens=10)
-        gr = GenerationResult(text="hello", token_counts=tc)
-        self.assertEqual(gr.text, "hello")
-        self.assertEqual(gr.token_counts.output_tokens, 10)
+
+def test_generation_result_with_token_counts():
+    """GenerationResult with text and token counts."""
+    tc = TokenCounts(output_tokens=10)
+    gr = GenerationResult(text="hello", token_counts=tc)
+    assert gr.text == "hello"
+    assert gr.token_counts.output_tokens == 10
 
 
 # ===========================================================================
@@ -84,72 +92,88 @@ class TestGenerationResult(unittest.TestCase):
 # ===========================================================================
 
 
-class TestUnwrapGenerationOutput(unittest.TestCase):
-    def test_plain_string(self):
-        text, tc = unwrap_generation_output("hello")
-        self.assertEqual(text, "hello")
-        self.assertIsNone(tc)
+def test_unwrap_generation_output_plain_string():
+    """Plain string input returns text and None token counts."""
+    text, tc = unwrap_generation_output("hello")
+    assert text == "hello"
+    assert tc is None
 
-    def test_generation_result_with_counts(self):
-        tc = TokenCounts(input_tokens=100, output_tokens=50, reasoning_tokens=10)
-        gr = GenerationResult(text="answer", token_counts=tc)
-        text, result_tc = unwrap_generation_output(gr)
-        self.assertEqual(text, "answer")
-        self.assertIsNotNone(result_tc)
-        self.assertEqual(result_tc.input_tokens, 100)
-        self.assertEqual(result_tc.output_tokens, 50)
-        self.assertEqual(result_tc.reasoning_tokens, 10)
 
-    def test_generation_result_without_counts(self):
-        gr = GenerationResult(text="answer")
-        text, tc = unwrap_generation_output(gr)
-        self.assertEqual(text, "answer")
-        self.assertIsNone(tc)
+def test_unwrap_generation_output_generation_result_with_counts():
+    """GenerationResult with token counts is unwrapped correctly."""
+    tc = TokenCounts(input_tokens=100, output_tokens=50, reasoning_tokens=10)
+    gr = GenerationResult(text="answer", token_counts=tc)
+    text, result_tc = unwrap_generation_output(gr)
+    assert text == "answer"
+    assert result_tc is not None
+    assert result_tc.input_tokens == 100
+    assert result_tc.output_tokens == 50
+    assert result_tc.reasoning_tokens == 10
 
-    def test_tuple_with_token_counts_object(self):
-        tc = TokenCounts(output_tokens=25)
-        text, result_tc = unwrap_generation_output(("response", tc))
-        self.assertEqual(text, "response")
-        self.assertEqual(result_tc.output_tokens, 25)
 
-    def test_tuple_with_dict(self):
-        meta = {"input_tokens": 10, "output_tokens": 20, "reasoning_tokens": 5}
-        text, tc = unwrap_generation_output(("response", meta))
-        self.assertEqual(text, "response")
-        self.assertIsNotNone(tc)
-        self.assertEqual(tc.input_tokens, 10)
-        self.assertEqual(tc.output_tokens, 20)
-        self.assertEqual(tc.reasoning_tokens, 5)
+def test_unwrap_generation_output_generation_result_without_counts():
+    """GenerationResult without token counts returns None for counts."""
+    gr = GenerationResult(text="answer")
+    text, tc = unwrap_generation_output(gr)
+    assert text == "answer"
+    assert tc is None
 
-    def test_tuple_with_partial_dict(self):
-        meta = {"output_tokens": 15}
-        text, tc = unwrap_generation_output(("response", meta))
-        self.assertEqual(text, "response")
-        self.assertEqual(tc.output_tokens, 15)
-        self.assertIsNone(tc.input_tokens)
-        self.assertIsNone(tc.reasoning_tokens)
 
-    def test_list_pair(self):
-        """Lists of length 2 with str first element should also work."""
-        text, tc = unwrap_generation_output(["hello", {"output_tokens": 5}])
-        self.assertEqual(text, "hello")
-        self.assertEqual(tc.output_tokens, 5)
+def test_unwrap_generation_output_tuple_with_token_counts_object():
+    """Tuple of (str, TokenCounts) is unwrapped correctly."""
+    tc = TokenCounts(output_tokens=25)
+    text, result_tc = unwrap_generation_output(("response", tc))
+    assert text == "response"
+    assert result_tc.output_tokens == 25
 
-    def test_non_string_fallback(self):
-        """Non-string, non-GenerationResult, non-tuple inputs -> str(output), None."""
-        text, tc = unwrap_generation_output(42)
-        self.assertEqual(text, "42")
-        self.assertIsNone(tc)
 
-    def test_empty_string(self):
-        text, tc = unwrap_generation_output("")
-        self.assertEqual(text, "")
-        self.assertIsNone(tc)
+def test_unwrap_generation_output_tuple_with_dict():
+    """Tuple of (str, dict) converts dict to TokenCounts."""
+    meta = {"input_tokens": 10, "output_tokens": 20, "reasoning_tokens": 5}
+    text, tc = unwrap_generation_output(("response", meta))
+    assert text == "response"
+    assert tc is not None
+    assert tc.input_tokens == 10
+    assert tc.output_tokens == 20
+    assert tc.reasoning_tokens == 5
 
-    def test_none_input(self):
-        text, tc = unwrap_generation_output(None)
-        self.assertEqual(text, "None")
-        self.assertIsNone(tc)
+
+def test_unwrap_generation_output_tuple_with_partial_dict():
+    """Tuple with partial dict creates TokenCounts with None fields."""
+    meta = {"output_tokens": 15}
+    text, tc = unwrap_generation_output(("response", meta))
+    assert text == "response"
+    assert tc.output_tokens == 15
+    assert tc.input_tokens is None
+    assert tc.reasoning_tokens is None
+
+
+def test_unwrap_generation_output_list_pair():
+    """Lists of length 2 with str first element work like tuples."""
+    text, tc = unwrap_generation_output(["hello", {"output_tokens": 5}])
+    assert text == "hello"
+    assert tc.output_tokens == 5
+
+
+def test_unwrap_generation_output_non_string_fallback():
+    """Non-string, non-GenerationResult, non-tuple inputs use str()."""
+    text, tc = unwrap_generation_output(42)
+    assert text == "42"
+    assert tc is None
+
+
+def test_unwrap_generation_output_empty_string():
+    """Empty string is handled correctly."""
+    text, tc = unwrap_generation_output("")
+    assert text == ""
+    assert tc is None
+
+
+def test_unwrap_generation_output_none_input():
+    """None input is converted to string 'None'."""
+    text, tc = unwrap_generation_output(None)
+    assert text == "None"
+    assert tc is None
 
 
 # ===========================================================================
@@ -157,43 +181,48 @@ class TestUnwrapGenerationOutput(unittest.TestCase):
 # ===========================================================================
 
 
-class TestInstanceTokenCounts(unittest.TestCase):
-    def test_default_empty_list(self):
-        inst = _make_instance()
-        self.assertEqual(inst.token_counts, [])
+def test_instance_token_counts_default_empty_list():
+    """Instance.token_counts defaults to empty list."""
+    inst = _make_instance()
+    assert inst.token_counts == []
 
-    def test_append_token_counts(self):
-        inst = _make_instance()
-        tc = TokenCounts(output_tokens=30)
+
+def test_instance_token_counts_append_token_counts():
+    """Can append TokenCounts to Instance.token_counts."""
+    inst = _make_instance()
+    tc = TokenCounts(output_tokens=30)
+    inst.token_counts.append(tc)
+    assert len(inst.token_counts) == 1
+    assert inst.token_counts[0].output_tokens == 30
+
+
+def test_instance_token_counts_append_none():
+    """Can append None to Instance.token_counts."""
+    inst = _make_instance()
+    inst.token_counts.append(None)
+    assert len(inst.token_counts) == 1
+    assert inst.token_counts[0] is None
+
+
+def test_instance_token_counts_alignment_with_resps():
+    """token_counts and resps stay aligned during evaluation."""
+    inst = _make_instance()
+    # Simulate what the evaluator does
+    outputs = [
+        GenerationResult(text="a", token_counts=TokenCounts(output_tokens=10)),
+        "b",  # plain string
+    ]
+    for output in outputs:
+        text, tc = unwrap_generation_output(output)
+        inst.resps.append(text)
         inst.token_counts.append(tc)
-        self.assertEqual(len(inst.token_counts), 1)
-        self.assertEqual(inst.token_counts[0].output_tokens, 30)
 
-    def test_append_none(self):
-        inst = _make_instance()
-        inst.token_counts.append(None)
-        self.assertEqual(len(inst.token_counts), 1)
-        self.assertIsNone(inst.token_counts[0])
-
-    def test_alignment_with_resps(self):
-        """token_counts and resps should stay aligned."""
-        inst = _make_instance()
-        # Simulate what the evaluator does
-        outputs = [
-            GenerationResult(text="a", token_counts=TokenCounts(output_tokens=10)),
-            "b",  # plain string
-        ]
-        for output in outputs:
-            text, tc = unwrap_generation_output(output)
-            inst.resps.append(text)
-            inst.token_counts.append(tc)
-
-        self.assertEqual(len(inst.resps), 2)
-        self.assertEqual(len(inst.token_counts), 2)
-        self.assertEqual(inst.resps[0], "a")
-        self.assertEqual(inst.token_counts[0].output_tokens, 10)
-        self.assertEqual(inst.resps[1], "b")
-        self.assertIsNone(inst.token_counts[1])
+    assert len(inst.resps) == 2
+    assert len(inst.token_counts) == 2
+    assert inst.resps[0] == "a"
+    assert inst.token_counts[0].output_tokens == 10
+    assert inst.resps[1] == "b"
+    assert inst.token_counts[1] is None
 
 
 # ===========================================================================
@@ -201,45 +230,51 @@ class TestInstanceTokenCounts(unittest.TestCase):
 # ===========================================================================
 
 
-class TestResponseCacheGenerationResult(unittest.TestCase):
-    def test_extract_cacheable_reduces_to_text(self):
-        from lmms_eval.caching.response_cache import ResponseCache
+def test_response_cache_extract_cacheable_reduces_to_text():
+    """ResponseCache._extract_cacheable() reduces GenerationResult to text."""
+    from lmms_eval.caching.response_cache import ResponseCache
 
-        gr = GenerationResult(text="cached text", token_counts=TokenCounts(output_tokens=42))
-        result = ResponseCache._extract_cacheable(gr)
-        self.assertEqual(result, "cached text")
-
-    def test_extract_cacheable_passthrough_string(self):
-        from lmms_eval.caching.response_cache import ResponseCache
-
-        result = ResponseCache._extract_cacheable("plain string")
-        self.assertEqual(result, "plain string")
-
-    def test_extract_cacheable_passthrough_tuple(self):
-        from lmms_eval.caching.response_cache import ResponseCache
-
-        tup = (1.23, True)
-        result = ResponseCache._extract_cacheable(tup)
-        self.assertEqual(result, tup)
-
-    def test_is_valid_response_generation_result_valid(self):
-        from lmms_eval.caching.response_cache import ResponseCache
-
-        gr = GenerationResult(text="hello", token_counts=TokenCounts(output_tokens=5))
-        self.assertTrue(ResponseCache._is_valid_response(gr, "generate_until"))
-
-    def test_is_valid_response_generation_result_empty(self):
-        from lmms_eval.caching.response_cache import ResponseCache
-
-        gr = GenerationResult(text="", token_counts=TokenCounts(output_tokens=0))
-        self.assertFalse(ResponseCache._is_valid_response(gr, "generate_until"))
-
-    def test_is_valid_response_generation_result_whitespace(self):
-        from lmms_eval.caching.response_cache import ResponseCache
-
-        gr = GenerationResult(text="   ", token_counts=TokenCounts(output_tokens=1))
-        self.assertFalse(ResponseCache._is_valid_response(gr, "generate_until"))
+    gr = GenerationResult(text="cached text", token_counts=TokenCounts(output_tokens=42))
+    result = ResponseCache._extract_cacheable(gr)
+    assert result == "cached text"
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_response_cache_extract_cacheable_passthrough_string():
+    """ResponseCache._extract_cacheable() passes through plain strings."""
+    from lmms_eval.caching.response_cache import ResponseCache
+
+    result = ResponseCache._extract_cacheable("plain string")
+    assert result == "plain string"
+
+
+def test_response_cache_extract_cacheable_passthrough_tuple():
+    """ResponseCache._extract_cacheable() passes through tuples."""
+    from lmms_eval.caching.response_cache import ResponseCache
+
+    tup = (1.23, True)
+    result = ResponseCache._extract_cacheable(tup)
+    assert result == tup
+
+
+def test_response_cache_is_valid_response_generation_result_valid():
+    """ResponseCache._is_valid_response() accepts non-empty GenerationResult."""
+    from lmms_eval.caching.response_cache import ResponseCache
+
+    gr = GenerationResult(text="hello", token_counts=TokenCounts(output_tokens=5))
+    assert ResponseCache._is_valid_response(gr, "generate_until") is True
+
+
+def test_response_cache_is_valid_response_generation_result_empty():
+    """ResponseCache._is_valid_response() rejects empty GenerationResult."""
+    from lmms_eval.caching.response_cache import ResponseCache
+
+    gr = GenerationResult(text="", token_counts=TokenCounts(output_tokens=0))
+    assert ResponseCache._is_valid_response(gr, "generate_until") is False
+
+
+def test_response_cache_is_valid_response_generation_result_whitespace():
+    """ResponseCache._is_valid_response() rejects whitespace-only GenerationResult."""
+    from lmms_eval.caching.response_cache import ResponseCache
+
+    gr = GenerationResult(text="   ", token_counts=TokenCounts(output_tokens=1))
+    assert ResponseCache._is_valid_response(gr, "generate_until") is False
