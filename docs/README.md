@@ -7,7 +7,7 @@ This documentation covers every layer of `lmms-eval` — from running your first
 Every evaluation follows the same six-stage pipeline. Each stage has dedicated documentation, and failures at any stage produce clear error messages indicating what went wrong.
 
 ```
-User input: --model qwen2_5_vl --tasks mme
+User input: --model openai_compatible --tasks mmmu_val,video_mmmu,longvideobench_val_v
          │
          ▼
     ┌─ CLI Parsing ─────────────── commands.md
@@ -29,15 +29,30 @@ User input: --model qwen2_5_vl --tasks mme
         Score responses, compute task-level metrics, write output
 ```
 
-A minimal evaluation runs the entire pipeline with a single command. This example evaluates Qwen2.5-VL on MME with 8 samples:
+A minimal evaluation runs the entire pipeline with a single command. This example evaluates GPT-4.1-mini on MMMU via the OpenAI-compatible API:
+
+```bash
+export OPENAI_API_KEY="your-api-key"
+
+python -m lmms_eval \
+  --model openai_compatible \
+  --model_args model_version=gpt-4.1-mini \
+  --tasks mmmu_val \
+  --batch_size 1 \
+  --limit 8
+```
+
+The same pattern works for any OpenAI-compatible endpoint (OpenRouter, Azure, local vLLM/SGLang servers). To evaluate across image and video tasks together:
 
 ```bash
 python -m lmms_eval \
-  --model qwen2_5_vl \
-  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
-  --tasks mme \
+  --model openai_compatible \
+  --model_args model_version=gpt-4.1-mini \
+  --tasks mmmu_val,video_mmmu,longvideobench_val_v \
   --batch_size 1 \
-  --limit 8
+  --limit 8 \
+  --log_samples \
+  --output_path ./results/
 ```
 
 ## Getting Started
@@ -114,9 +129,9 @@ uv run lmms-eval-ui          # opens browser, requires Node.js 18+
 from lmms_eval import evaluator
 
 results = evaluator.simple_evaluate(
-    model="qwen2_5_vl",
-    model_args="pretrained=Qwen/Qwen2.5-VL-3B-Instruct",
-    tasks=["mme"],
+    model="openai_compatible",
+    model_args="model_version=gpt-4.1-mini",
+    tasks=["mmmu_val", "video_mmmu", "longvideobench_val_v"],
     batch_size=1,
     limit=8,
 )
@@ -133,18 +148,26 @@ The response cache stores only deterministic requests (`temperature=0`, `do_samp
 
 ```bash
 python -m lmms_eval \
-  --model qwen2_5_vl \
-  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
-  --tasks mme \
+  --model openai_compatible \
+  --model_args model_version=gpt-4.1-mini \
+  --tasks mmmu_val,video_mmmu \
   --use_cache ./eval_cache
 ```
 
 ## Task Catalog
 
-The [Current Tasks](current_tasks.md) page lists every registered evaluation task across all modalities. The framework ships with 100+ tasks covering:
+The [Current Tasks](current_tasks.md) page lists every registered evaluation task across all modalities. The framework ships with 100+ tasks. Three recommended starting benchmarks:
 
-- **Image understanding** — MME, MMMU, MMBench, AI2D, ScienceQA, OCRBench, MathVista, and more.
-- **Video understanding** — VideoMME, EgoSchema, MVBench, LongVideoBench, PerceptionTest.
+| Benchmark | Task Name | Modality | What It Tests |
+|-----------|-----------|----------|---------------|
+| **MMMU** | `mmmu_val` | Image | College-level multimodal reasoning across 30 subjects. |
+| **Video-MMMU** | `video_mmmu` | Video | Knowledge acquisition from multi-discipline professional videos. |
+| **LongVideoBench** | `longvideobench_val_v` | Long Video | Understanding of extended video content with temporal reasoning. |
+
+Beyond these, the full catalog covers:
+
+- **Image understanding** — MME, MMBench, AI2D, ScienceQA, OCRBench, MathVista, and more.
+- **Video understanding** — VideoMME, EgoSchema, MVBench, PerceptionTest.
 - **Audio understanding** — AIR-Bench, Clotho-AQA, LibriSpeech.
 - **Agentic evaluation** — Multi-round tool-use scenarios with stateful `doc_to_text` callbacks.
 
