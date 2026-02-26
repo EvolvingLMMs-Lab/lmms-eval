@@ -1,0 +1,25 @@
+dataset_path: yifanzhang114/MME-RealWorld-CN-Lmms-eval
+dataset_kwargs:
+  token: True
+task: "mmerealworld_cn_reasoning"
+test_split: train
+output_type: generate_until
+doc_to_visual: !function utils.mme_realworld_doc_to_visual
+doc_to_text: !function utils.mme_realworld_cn_doc_to_text
+doc_to_messages: !function utils.mme_realworld_cn_reasoning_doc_to_messages
+doc_to_target: "answer"
+process_results: !function utils.mme_realworld_reasoning_process_results
+
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: format_score
+    aggregation: mean
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 49152
+
+metadata:
+  version: 0.0
