@@ -1,5 +1,6 @@
-group: mmbench_en_reasoning
+group: mmbench_reasoning
 task:
+  - mmbench_cn_dev_reasoning
   - mmbench_en_dev_reasoning
 metadata:
   version: 0.0

@@ -3,9 +3,6 @@ dataset_kwargs:
   token: True
 doc_to_target: "answer"
 doc_to_visual: !function utils.mmbench_doc_to_visual
-doc_to_text: !function utils.mmbench_doc_to_text
-doc_to_messages: !function utils.mmbench_doc_to_messages
-process_results: !function utils.mmbench_process_results
 output_type: generate_until
 
 metric_list:

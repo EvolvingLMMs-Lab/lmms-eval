@@ -26,20 +26,27 @@ SYSTEM_PROMPT = (
 )
 
 
-def mmbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
-    dataset_name = os.getenv("DATASET_NAME", "cn")
-    sys_prompt = ""
-    if dataset_name == "cn":
-        with open(Path(__file__).parent.parent / "mmbench.yaml", "r") as f:
-            raw_data = f.readlines()
-            safe_data = []
-            for i, line in enumerate(raw_data):
-                if "!function" not in line:
-                    safe_data.append(line)
-            config = yaml.safe_load("".join(safe_data))
-            sys_prompt = config["metadata"]["sys_prompt"]
+def mmbench_cn_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    with open(Path(__file__).parent.parent / "mmbench.yaml", "r") as f:
+        raw_data = f.readlines()
+        safe_data = []
+        for i, line in enumerate(raw_data):
+            if "!function" not in line:
+                safe_data.append(line)
+        config = yaml.safe_load("".join(safe_data))
+        sys_prompt = config["metadata"]["sys_prompt"]
 
     mmbench_evaluator = MMBench_Evaluator(sys_prompt=sys_prompt, API_KEY=API_KEY, API_URL=API_URL, model_version=GPT_EVAL_MODEL_NAME)
+    option_candidate = ["A", "B", "C", "D", "E"]
+    options_prompt, options_dict = mmbench_evaluator.create_options_prompt(doc, option_candidate)
+
+    query_prompt = f"{doc['hint']} {doc['question']} {options_prompt}" if str(doc["hint"]) != "nan" and doc["hint"] else f"{doc['question']} {options_prompt}"
+
+    return query_prompt
+
+
+def mmbench_en_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    mmbench_evaluator = MMBench_Evaluator(sys_prompt="", API_KEY=API_KEY, API_URL=API_URL, model_version=GPT_EVAL_MODEL_NAME)
     option_candidate = ["A", "B", "C", "D", "E"]
     options_prompt, options_dict = mmbench_evaluator.create_options_prompt(doc, option_candidate)
 
@@ -59,8 +66,20 @@ def mmbench_doc_to_visual(doc):
         raise ValueError(f"num_image must be 1 or 2, got {num_image}")
 
 
-def mmbench_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = mmbench_doc_to_text(doc, lmms_eval_specific_kwargs)
+def mmbench_cn_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    question = mmbench_cn_doc_to_text(doc, lmms_eval_specific_kwargs)
+    visuals = mmbench_doc_to_visual(doc)
+    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
+    messages = [{"role": "user", "content": []}]
+    for visual in visuals:
+        messages[0]["content"].append({"type": "image", "url": visual})
+    messages[0]["content"].append({"type": "text", "text": question.strip()})
+    messages = system_messages + messages
+    return messages
+
+
+def mmbench_en_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+    question = mmbench_en_doc_to_text(doc, lmms_eval_specific_kwargs)
     visuals = mmbench_doc_to_visual(doc)
     system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     messages = [{"role": "user", "content": []}]
@@ -72,15 +91,13 @@ def mmbench_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
 
 
 def mmbench_process_results(doc, results):
-    dataset_name = os.getenv("DATASET_NAME", "cn")
-    data_source = f"mmbench_{dataset_name}"
     acc_score = 0
     format_score = 0
-    question = mmbench_doc_to_text(doc, None)
+    question = mmbench_cn_doc_to_text(doc, None)
     ground_truth = doc["answer"]
     extra_info = {"question": question}
     for pred in results:
-        score_dict = compute_score(data_source=data_source, solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
+        score_dict = compute_score(data_source="mmbench", solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
         acc_score += score_dict["acc_score"]
         format_score += score_dict.get("format_reward_score", 0.0)
 
