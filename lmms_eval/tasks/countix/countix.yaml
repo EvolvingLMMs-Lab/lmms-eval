@@ -1,7 +1,11 @@
-dataset_path: lmms-lab-eval/countix
+dataset_path: csv
 dataset_kwargs:
   token: True
-  cache_dir: countix
+  cache_dir: countix_kekeyeah
+  data_files:
+    train: https://huggingface.co/datasets/kekeYeah/Countix-QA/resolve/main/cut_countix_train.csv
+    validation: https://huggingface.co/datasets/kekeYeah/Countix-QA/resolve/main/cut_countix_val.csv
+    test: https://huggingface.co/datasets/kekeYeah/Countix-QA/resolve/main/cut_countix_test.csv
 task: countix
 test_split: test
 output_type: generate_until
