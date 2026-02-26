@@ -339,9 +339,9 @@ def relax_exact_match(predict_str: str, ground_truth: str, relax_portion: float 
         float: 1.0 if the prediction matches the ground truth, otherwise 0.0.
     """
     # If the question is an mcq
-    if ground_truth in ["A", "B", "C", "D", "E", "F", "G", "H"]:
+    if parse_mcq(ground_truth) in ["A", "B", "C", "D", "E", "F", "G", "H"]:
         predict_str = parse_mcq(predict_str)
-        if predict_str == ground_truth:
+        if predict_str.lower().strip() == parse_mcq(ground_truth).lower().strip():
             return 1.0
         return 0.0
     if predict_str in ground_truth and len(predict_str) >= relax_portion * len(ground_truth):
