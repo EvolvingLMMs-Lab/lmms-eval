@@ -57,34 +57,6 @@ class _CacheTestBase(unittest.TestCase):
             return [json.loads(line) for line in f if line.strip()]
 
 
-# ===========================================================================
-# Unit tests - pure functions, no I/O
-# ===========================================================================
-
-
-class TestDeterminismDetection(unittest.TestCase):
-    def test_loglikelihood_always_deterministic(self):
-        self.assertTrue(is_deterministic("loglikelihood", {"temperature": 999}))
-
-    def test_temp_zero_deterministic(self):
-        self.assertTrue(is_deterministic("generate_until", {"temperature": 0}))
-        self.assertTrue(is_deterministic("generate_until", {}))
-        self.assertTrue(is_deterministic("generate_until", None))
-
-    def test_temp_positive_nondeterministic(self):
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 0.7}))
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 1}))
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 0.01}))
-
-    def test_do_sample_nondeterministic(self):
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 0, "do_sample": True}))
-
-    def test_multi_return_nondeterministic(self):
-        self.assertFalse(is_deterministic("generate_until", {"n": 3}))
-        self.assertFalse(is_deterministic("generate_until", {"best_of": 2}))
-        self.assertFalse(is_deterministic("generate_until", {"num_return_sequences": 5}))
-
-
 class TestCacheKeyCollision(unittest.TestCase):
     def test_conditional_vs_unconditional_differ(self):
         cond = _make_instance("loglikelihood", ("What is 2+2?", " A) 4", None, 0, "t", "test"), 0, "t", 42)

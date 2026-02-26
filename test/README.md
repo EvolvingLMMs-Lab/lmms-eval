@@ -2,7 +2,7 @@
 
 This directory contains the full test suite for lmms-eval. The suite validates every layer of the evaluation pipeline — from CLI argument parsing down to per-sample token counting — without requiring a GPU, dataset downloads, or API keys.
 
-**260 tests pass in ~12 seconds on a CPU-only machine.**
+**292 tests pass in ~10 seconds on a CPU-only machine.**
 
 ## Quick Start
 
@@ -66,9 +66,9 @@ User input: --model X --tasks Y
 
 ### CLI Layer
 
-#### `test/cli/test_cli_dispatch.py`
+#### `test/cli/test_cli_dispatch_parametrized.py`
 
-Validates the unified CLI dispatch router that handles both legacy flag-style invocations (`--model X --tasks Y`) and modern subcommand-style invocations (`eval --model X`).
+Parametrized test suite for the unified CLI dispatch router. Handles both legacy flag-style invocations (`--model X --tasks Y`) and modern subcommand-style invocations (`eval --model X`).
 
 The test covers:
 
@@ -78,9 +78,7 @@ The test covers:
 - **Subcommand parsers** — `tasks` accepts `list|groups|subtasks|tags`, `models` supports `--aliases`, `version` prints environment info.
 - **`_col()` helper** — The column-formatting function used by `models` output. Short text is padded, long text is truncated.
 
-#### `test/cli/test_cli_dispatch_parametrized.py`
-
-Parametrized version of the same CLI dispatch logic. Each test case is a single `@pytest.mark.parametrize` row instead of a separate method. This file is easier to extend when adding new CLI flags or subcommands.
+Each test case is a single `@pytest.mark.parametrize` row instead of a separate method. This file is easier to extend when adding new CLI flags or subcommands.
 
 #### `test/eval/test_cli_parse_args.py`
 
@@ -121,7 +119,7 @@ The most comprehensive task validation file. It checks eight mainstream tasks (m
 3. **Utils importability** — Each task's `utils.py` module can be imported. The `process_results` and `doc_to_text` functions exist and are callable. Tasks that use `doc_to_messages` (like mmmu_val) have that function too.
 4. **Cross-task consistency** — All mainstream tasks use `generate_until` as their `output_type`. No duplicate task names exist in the registry.
 
-> The `TaskManager` instantiation is expensive (~2s), so it is cached in a module-level singleton `_tm` and reused across all tests in the file.
+> The `TaskManager` instantiation is expensive (~2s), so it is cached via a `@pytest.fixture(scope="module")` fixture and reused across all tests in the file.
 
 #### `test/eval/test_benchmark_aliases.py`
 
@@ -243,7 +241,7 @@ The test covers:
 
 #### `test/cache/test_response_cache.py`
 
-The largest test file (~565 lines). It covers the full lifecycle of `ResponseCache`, the SQLite-backed response cache that avoids re-running deterministic model calls.
+The largest test file (~540 lines). It covers the full lifecycle of `ResponseCache`, the SQLite-backed response cache that avoids re-running deterministic model calls.
 
 **Pure function tests (no I/O):**
 
@@ -273,7 +271,7 @@ Two focused tests for the intersection of agentic evaluation and caching:
 
 #### `test/cache/test_determinism_parametrized.py`
 
-Parametrized version of `is_deterministic()` tests. Contains 14 cases covering all combinations of request type, temperature, `do_sample`, and multi-return keys. Overlaps with `TestDeterminismDetection` in `test_response_cache.py` (cleanup candidate).
+The canonical parametrized test suite for `is_deterministic()`. Contains 14 cases covering all combinations of request type, temperature, `do_sample`, and multi-return keys.
 
 ---
 
@@ -354,7 +352,7 @@ Add a test in `test/eval/test_cli_parse_args.py` following the existing pattern:
 
 ### For cache behavior changes
 
-Add test cases to `test/cache/test_response_cache.py` under the appropriate class. Use the `_CacheTestBase` mixin for automatic temp directory setup/teardown.
+Add test cases to `test/cache/test_response_cache.py`. Use the `tmp_path` fixture for automatic temp directory setup/teardown.
 
 ## File Reference
 
@@ -366,14 +364,13 @@ test/
 │
 ├── cache/
 │   ├── __init__.py
-│   ├── test_response_cache.py               # ResponseCache full lifecycle (~40 tests)
+│   ├── test_response_cache.py               # ResponseCache full lifecycle (~36 tests)
 │   ├── test_agentic_response_cache.py       # Agentic + cache integration (2 tests)
 │   └── test_determinism_parametrized.py     # is_deterministic parametrized (14 tests)
 │
 ├── cli/
 │   ├── __init__.py
-│   ├── test_cli_dispatch.py                 # CLI dispatch router (~30 tests)
-│   └── test_cli_dispatch_parametrized.py    # Same logic, parametrized (17 tests)
+│   └── test_cli_dispatch_parametrized.py    # CLI dispatch router, parametrized (17 tests)
 │
 ├── eval/
 │   ├── __init__.py
