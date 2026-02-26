@@ -1,0 +1,4 @@
+include: _default_template_mmbench_reasoning_yaml
+task: "mmbench_cn_dev_reasoning"
+metadata:
+  version: 0.0

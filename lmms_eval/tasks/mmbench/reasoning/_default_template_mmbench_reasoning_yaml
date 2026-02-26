@@ -7,7 +7,6 @@ doc_to_text: !function utils.mmbench_doc_to_text
 doc_to_messages: !function utils.mmbench_doc_to_messages
 process_results: !function utils.mmbench_process_results
 output_type: generate_until
-dataset_name: "en"
 
 metric_list:
   - metric: acc_score
