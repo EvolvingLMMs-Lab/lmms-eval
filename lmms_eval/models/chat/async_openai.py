@@ -87,6 +87,7 @@ class AsyncOpenAIChat(lmms):
         message_format: str = "openai",
         prefix_aware_queue: bool = True,
         prefix_hash_chars: int = 256,
+        system_prompt_file: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -120,6 +121,11 @@ class AsyncOpenAIChat(lmms):
         self.message_format = message_format
         self.prefix_aware_queue = parse_bool(prefix_aware_queue)
         self.prefix_hash_chars = max(32, int(prefix_hash_chars))
+        if system_prompt_file is not None:
+            with open(system_prompt_file, "r") as f:
+                self.system_prompt = f.read()
+        else:
+            self.system_prompt = None
         if mcp_server_path is not None:
             from lmms_eval.mcp import MCPClient
 
@@ -162,6 +168,25 @@ class AsyncOpenAIChat(lmms):
     @property
     def world_size(self):
         return self._world_size
+
+    def _apply_system_prompt(self, messages: List[dict]) -> List[dict]:
+        if self.system_prompt is None:
+            return messages
+
+        result = []
+        system_applied = False
+
+        for message in messages:
+            if message.get("role") == "system":
+                result.append({"role": "system", "content": self.system_prompt})
+                system_applied = True
+            else:
+                result.append(message)
+
+        if not system_applied:
+            result.insert(0, {"role": "system", "content": self.system_prompt})
+
+        return result
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         assert False, "TODO, not implemented"
@@ -405,6 +430,7 @@ class AsyncOpenAIChat(lmms):
         chat_messages = doc_to_messages(self.task_dict[task][split][doc_id])
         chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages})
         messages, video_kwargs = self.prepare_messages(chat_messages)
+        messages = self._apply_system_prompt(messages)
         images, videos, audios = chat_messages.extract_media()
         if self.mcp_client is not None:
             for image_idx, image in enumerate(images):
