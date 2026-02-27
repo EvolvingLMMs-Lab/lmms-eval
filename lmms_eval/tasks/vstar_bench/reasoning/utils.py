@@ -15,6 +15,7 @@ def vstar_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     question = doc["text"]
 
     import re
+
     options_match = re.findall(r"\([A-D]\)\s*([^()]+?)(?=\s*\([A-D]\)|$)", question)
 
     if options_match:

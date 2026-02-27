@@ -1,4 +1,8 @@
-from lmms_eval.tasks._task_utils.reasoning_utils import compute_score, extract_anwser_tag, format_reward
+from lmms_eval.tasks._task_utils.reasoning_utils import (
+    compute_score,
+    extract_anwser_tag,
+    format_reward,
+)
 from lmms_eval.tasks.ocrbench.utils import ocrbench_process_results
 
 SYSTEM_PROMPT = (

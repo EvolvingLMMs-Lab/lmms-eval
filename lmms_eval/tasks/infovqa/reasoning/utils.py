@@ -1,5 +1,8 @@
-from lmms_eval.tasks._task_utils.reasoning_utils import format_reward, extract_anwser_tag
 from lmms_eval.api.metrics import anls
+from lmms_eval.tasks._task_utils.reasoning_utils import (
+    extract_anwser_tag,
+    format_reward,
+)
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant. When user asks a question, your response must include two parts: "
@@ -41,7 +44,7 @@ def infovqa_reasoning_process_results(doc, results):
     for pred in results:
         pred = extract_anwser_tag(pred).strip()
         anls_score = anls(ground_truth, results)
-        acc_score += anls_score['anls']
+        acc_score += anls_score["anls"]
         format_score += format_reward(pred)
 
     return {"anls_acc_score": acc_score / len(results) if results else 0.0, "anls_format_score": format_score / len(results) if results else 0.0}
