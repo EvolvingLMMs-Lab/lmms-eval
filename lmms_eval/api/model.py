@@ -1,11 +1,10 @@
 import abc
 import gc
+import os
 from typing import List, Optional, Tuple, Type, TypeVar
 
 import torch
-import torch.distributed as dist
 import torch.nn as nn
-from loguru import logger as eval_logger
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -26,6 +25,32 @@ class lmms(abc.ABC):
         self._world_size = 1
         self.cache_hook = CacheHook(None)
         self.task_dict = {}
+
+    @staticmethod
+    def _resolve_system_prompt(value: str) -> str:
+        if value and os.path.isfile(value):
+            with open(value, "r") as f:
+                return f.read().strip()
+        return value
+
+    def _apply_system_prompt(self, messages: list, system_prompt: str) -> list:
+        if not system_prompt:
+            return messages
+
+        use_list_format = True
+        for msg in messages:
+            if isinstance(msg.get("content"), str):
+                use_list_format = False
+                break
+
+        system_content = [{"type": "text", "text": system_prompt}] if use_list_format else system_prompt
+
+        if messages and messages[0].get("role") == "system":
+            messages[0]["content"] = system_content
+        else:
+            messages.insert(0, {"role": "system", "content": system_content})
+
+        return messages
 
     @abc.abstractmethod
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:

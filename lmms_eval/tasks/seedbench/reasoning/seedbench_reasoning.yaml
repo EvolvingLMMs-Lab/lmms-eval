@@ -1,0 +1,38 @@
+dataset_path: lmms-lab/SEED-Bench
+dataset_kwargs:
+  token: True
+task: "seedbench_reasoning"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.seed_doc_to_visual
+doc_to_text: !function utils.seed_doc_to_text
+doc_to_messages: !function utils.seed_reasoning_doc_to_messages
+doc_to_target: "answer"
+process_results: !function utils.seed_reasoning_process_results
+
+metric_list:
+  - metric: seed_image_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seed_image_format_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seed_video_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seed_video_format_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seed_all_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seed_all_format_score
+    aggregation: mean
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 49152
+  image_aspect_ratio: original
+
+metadata:
+  version: 0.0
