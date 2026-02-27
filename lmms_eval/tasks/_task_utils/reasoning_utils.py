@@ -162,6 +162,10 @@ def format_reward(predict_str: str) -> float:
     if re.fullmatch(think_answer_pattern, predict_str):
         return 1.0
 
+    analysis_answer_pattern = re.compile(r"<analysis>.*</analysis>.*<answer>.*</answer>", re.DOTALL)
+    if re.fullmatch(analysis_answer_pattern, predict_str):
+        return 1.0
+
     # Check for \boxed{} format (common in mathematical solutions)
     if extract_boxed_answer(predict_str):
         return 1.0
@@ -438,3 +442,47 @@ def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     }
 
     return score_dict
+
+
+DEFAULT_REASONING_SYSTEM_PROMPT = (
+    "You are a helpful assistant. When user asks a question, your response must include two parts: "
+    "first, reasoning process enclosed in <analysis>...</analysis> tags, then final answer enclosed in <answer>...</answer> tags."
+    "Please provide a clear, concise response within <answer> </answer> tags that directly addresses to question."
+)
+
+
+def make_reasoning_doc_to_messages(doc_to_visual_fn, doc_to_text_fn, system_prompt=None):
+    prompt = system_prompt or DEFAULT_REASONING_SYSTEM_PROMPT
+
+    def _doc_to_messages(doc, lmms_eval_specific_kwargs=None):
+        question = doc_to_text_fn(doc, lmms_eval_specific_kwargs)
+        visuals = doc_to_visual_fn(doc)
+        system_messages = [{"role": "system", "content": [{"type": "text", "text": prompt}]}]
+        user_content = []
+        for visual in visuals:
+            user_content.append({"type": "image", "url": visual})
+        user_content.append({"type": "text", "text": question.strip()})
+        return system_messages + [{"role": "user", "content": user_content}]
+
+    return _doc_to_messages
+
+
+def make_reasoning_process_results(data_source, doc_to_text_fn, gt_key="answer", metrics_prefix="", extra_info_fn=None):
+    def _process_results(doc, results):
+        question = doc_to_text_fn(doc, None)
+        ground_truth = str(doc[gt_key])
+        extra_info = {"question": question}
+        if extra_info_fn:
+            extra_info.update(extra_info_fn(doc))
+
+        acc_score = 0
+        fmt_score = 0
+        for pred in results:
+            score_dict = compute_score(data_source=data_source, solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
+            acc_score += score_dict["acc_score"]
+            fmt_score += score_dict.get("format_reward_score", 0.0)
+
+        n = len(results) or 1
+        return {f"{metrics_prefix}acc_score": acc_score / n, f"{metrics_prefix}format_score": fmt_score / n}
+
+    return _process_results

@@ -305,6 +305,12 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         help=("String arguments for model generation on greedy_until tasks," " e.g. `temperature=0,top_k=0,top_p=0`"),
     )
     parser.add_argument(
+        "--reasoning_tags",
+        type=str,
+        default='[["<think>", "</think>"], ["<analysis>", "</analysis>"]]',
+        help="JSON string list of [start_tag, end_tag] pairs used for reasoning extraction.",
+    )
+    parser.add_argument(
         "--verbosity",
         type=str,
         default="INFO",

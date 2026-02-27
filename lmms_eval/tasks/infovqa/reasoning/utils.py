@@ -2,12 +2,7 @@ from lmms_eval.api.metrics import anls
 from lmms_eval.tasks._task_utils.reasoning_utils import (
     extract_anwser_tag,
     format_reward,
-)
-
-SYSTEM_PROMPT = (
-    "You are a helpful assistant. When user asks a question, your response must include two parts: "
-    "first, reasoning process enclosed in <analysis>...</analysis> tags, then final answer enclosed in <answer>...</answer> tags."
-    "Please provide a clear, concise response within <answer> </answer> tags that directly addresses to question."
+    make_reasoning_doc_to_messages,
 )
 
 
@@ -22,29 +17,22 @@ def infovqa_doc_to_text(doc, lmms_eval_specific_kwargs):
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-def infovqa_reasoning_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = infovqa_doc_to_text(doc, lmms_eval_specific_kwargs)
-    visuals = infovqa_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    for visual in visuals:
-        messages[0]["content"].append({"type": "image", "url": visual})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
+infovqa_reasoning_doc_to_messages = make_reasoning_doc_to_messages(infovqa_doc_to_visual, infovqa_doc_to_text)
 
 
 def infovqa_reasoning_process_results(doc, results):
-    question = infovqa_doc_to_text(doc, None)
     ground_truth = doc["answers"]
-    extra_info = {"question": question}
-
     acc_score = 0
     format_score = 0
     for pred in results:
-        pred = extract_anwser_tag(pred).strip()
-        anls_score = anls(ground_truth, results)
+        extracted = extract_anwser_tag(pred).strip()
+        anls_score = anls(ground_truth, [extracted])
         acc_score += anls_score["anls"]
         format_score += format_reward(pred)
 
-    return {"anls_acc_score": acc_score / len(results) if results else 0.0, "anls_format_score": format_score / len(results) if results else 0.0}
+    n = len(results) or 1
+    return {
+        "anls": acc_score / n,
+        "anls_acc_score": acc_score / n,
+        "anls_format_score": format_score / n,
+    }

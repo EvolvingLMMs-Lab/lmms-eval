@@ -4,14 +4,10 @@ import re
 
 from PIL import Image
 
-from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
-
-SYSTEM_PROMPT = (
-    "You are a helpful assistant. When user asks a question, your response must include two parts: "
-    "first, reasoning process enclosed in <analysis>...</analysis> tags, then final answer enclosed in <answer>...</answer> tags."
-    "Please provide a clear, concise response within <answer> </answer> tags that directly addresses to question."
+from lmms_eval.tasks._task_utils.reasoning_utils import (
+    make_reasoning_doc_to_messages,
+    make_reasoning_process_results,
 )
-
 
 TASKS = [
     "Reasoning",
@@ -58,26 +54,8 @@ def mme_realworld_cn_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     return question
 
 
-def mme_realworld_reasoning_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = mme_realworld_doc_to_text(doc, lmms_eval_specific_kwargs)
-    visuals = mme_realworld_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    messages[0]["content"].append({"type": "image", "url": visuals[0]})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
-
-
-def mme_realworld_cn_reasoning_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = mme_realworld_cn_doc_to_text(doc, lmms_eval_specific_kwargs)
-    visuals = mme_realworld_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    messages[0]["content"].append({"type": "image", "url": visuals[0]})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
+mme_realworld_reasoning_doc_to_messages = make_reasoning_doc_to_messages(mme_realworld_doc_to_visual, mme_realworld_doc_to_text)
+mme_realworld_cn_reasoning_doc_to_messages = make_reasoning_doc_to_messages(mme_realworld_doc_to_visual, mme_realworld_cn_doc_to_text)
 
 
 def extract_characters_regex(s, choices=["(A)", "(B)", "(C)", "(D)", "(E)"]):
@@ -114,29 +92,5 @@ def get_correct_answer(sample):
     return correct_answer
 
 
-def mme_realworld_reasoning_process_results(doc, results):
-    acc_score = 0
-    format_score = 0
-    question = mme_realworld_doc_to_text(doc, None)
-    ground_truth = doc["answer"]
-    extra_info = {"question": question}
-    for pred in results:
-        score_dict = compute_score(data_source="mmerealworld", solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
-        acc_score += score_dict["acc_score"]
-        format_score += score_dict.get("format_reward_score", 0.0)
-
-    return {"acc_score": acc_score / len(results) if results else 0.0, "format_score": format_score / len(results) if results else 0.0}
-
-
-def mme_realworld_cn_reasoning_process_results(doc, results):
-    acc_score = 0
-    format_score = 0
-    question = mme_realworld_cn_doc_to_text(doc, None)
-    ground_truth = doc["answer"]
-    extra_info = {"question": question}
-    for pred in results:
-        score_dict = compute_score(data_source="mmerealworld_cn", solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
-        acc_score += score_dict["acc_score"]
-        format_score += score_dict.get("format_reward_score", 0.0)
-
-    return {"acc_score": acc_score / len(results) if results else 0.0, "format_score": format_score / len(results) if results else 0.0}
+mme_realworld_reasoning_process_results = make_reasoning_process_results("mmerealworld", mme_realworld_doc_to_text)
+mme_realworld_cn_reasoning_process_results = make_reasoning_process_results("mmerealworld_cn", mme_realworld_cn_doc_to_text)

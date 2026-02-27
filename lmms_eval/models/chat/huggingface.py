@@ -50,7 +50,10 @@ class Huggingface(lmms):
         use_cache=True,
         attn_implementation: Optional[str] = None,
         max_num_frames: int = 32,
-        system_prompt: Optional[str] = "You are a helpful assistant.",
+        use_custom_video_loader: Optional[bool] = False,
+        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
+        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
+        system_prompt: Optional[str] = None,
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
         **kwargs,
@@ -94,13 +97,13 @@ class Huggingface(lmms):
         self._model = model_cls.from_pretrained(pretrained, **model_kwargs).eval()
         self.max_num_frames = max_num_frames
 
-        if reasoning_prompt:
-            self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
+        raw_prompt = reasoning_prompt or system_prompt
+        if raw_prompt:
+            self.system_prompt = self._resolve_system_prompt(raw_prompt.replace("\\n", "\n"))
         else:
-            self.reasoning_prompt = None
+            self.system_prompt = None
         self.processor = AutoProcessor.from_pretrained(pretrained)
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
-        self.system_prompt = system_prompt
         self.interleave_visuals = interleave_visuals
 
         self._config = self.model.config
@@ -201,6 +204,8 @@ class Huggingface(lmms):
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
             chat_messages = [doc_to_messages[0](self.task_dict[task][split][ids]) for ids, task, split in zip(doc_id, task, split)]
+            if self.system_prompt:
+                chat_messages = [self._apply_system_prompt(messages, self.system_prompt) for messages in chat_messages]
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
             visuals = []
             videos = []
