@@ -70,6 +70,7 @@ class AsyncOpenAIChat(lmms):
         prefix_aware_queue: bool = True,
         prefix_hash_chars: int = 256,
         system_prompt: Optional[str] = None,
+        system_prompt_file: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -103,7 +104,10 @@ class AsyncOpenAIChat(lmms):
         )
         self.prefix_aware_queue = parse_bool(prefix_aware_queue)
         self.prefix_hash_chars = max(32, int(prefix_hash_chars))
-        if system_prompt is not None:
+        if system_prompt_file is not None:
+            with open(system_prompt_file, "r", encoding="utf-8") as f:
+                self.system_prompt = f.read().strip()
+        elif system_prompt is not None:
             self.system_prompt = self._resolve_system_prompt(system_prompt)
         else:
             self.system_prompt = None
