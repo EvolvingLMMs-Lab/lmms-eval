@@ -166,6 +166,7 @@ python -m lmms_eval --tasks list_with_num
   - p3, p3_box, p3_box_img
   - o3, o3_box, o3_box_img
 - [LV-Bench](https://github.com/LV-Bench/LV-Bench) (lvbench)
+- [MMVP](https://github.com/tsb0601/MMVP) (mmvp)
 - [VSI-Bench](https://github.com/vsi-bench/vsi-bench) (vsibench)
 - [HR-Bench](https://github.com/HR-Bench/HR-Bench) (hrbench)
 
