@@ -1,6 +1,6 @@
 from lmms_eval.tasks._task_utils.reasoning_utils import (
-    compute_score,
     make_reasoning_doc_to_messages,
+    make_reasoning_process_results,
 )
 
 
@@ -30,24 +30,15 @@ def seed_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 seed_reasoning_doc_to_messages = make_reasoning_doc_to_messages(seed_doc_to_visual, seed_doc_to_text)
 
+_base_process = make_reasoning_process_results("seedbench_2_plus", seed_doc_to_text)
+
 
 def seed_reasoning_process_results(doc, results):
     data_type = doc["question_image_type"].capitalize()
-    question = seed_doc_to_text(doc, None)
-    ground_truth = doc["answer"]
-    extra_info = {"question": question}
-
-    acc_score = 0
-    format_score = 0
-    for pred in results:
-        score_dict = compute_score(data_source="seedbench_2_plus", solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
-        acc_score += score_dict["acc_score"]
-        format_score += score_dict.get("format_reward_score", 0.0)
-
-    n = len(results) or 1
+    base = _base_process(doc, results)
     return {
-        f"seedbench_2_plus_{data_type}_acc_score": acc_score / n,
-        f"seedbench_2_plus_{data_type}_format_score": format_score / n,
-        "seedbench_2_plus_all_acc_score": acc_score / n,
-        "seedbench_2_plus_all_format_score": format_score / n,
+        f"seedbench_2_plus_{data_type}_acc_score": base["acc_score"],
+        f"seedbench_2_plus_{data_type}_format_score": base["format_score"],
+        "seedbench_2_plus_all_acc_score": base["acc_score"],
+        "seedbench_2_plus_all_format_score": base["format_score"],
     }

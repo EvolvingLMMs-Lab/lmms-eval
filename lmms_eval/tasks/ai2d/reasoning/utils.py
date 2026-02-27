@@ -1,6 +1,7 @@
-import re
-
-from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
+from lmms_eval.tasks._task_utils.reasoning_utils import (
+    compute_score,
+    make_reasoning_doc_to_messages,
+)
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant. When the user asks a question, your response must include two parts: "
@@ -21,15 +22,7 @@ def ai2d_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def ai2d_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = ai2d_doc_to_text(doc, lmms_eval_specific_kwargs)
-    visuals = ai2d_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    messages[0]["content"].append({"type": "image", "url": visuals[0]})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
+ai2d_doc_to_messages = make_reasoning_doc_to_messages(ai2d_doc_to_visual, ai2d_doc_to_text, system_prompt=SYSTEM_PROMPT)
 
 
 def ai2d_process_results(doc, results):
