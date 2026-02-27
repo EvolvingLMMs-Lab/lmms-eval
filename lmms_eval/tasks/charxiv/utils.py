@@ -1,9 +1,9 @@
 import os
 
-from datasets import Dataset
 from openai import OpenAI
 from tqdm import tqdm
 
+from datasets import Dataset
 from lmms_eval.tasks.charxiv.constant import REASONING_RESP_INST
 from lmms_eval.tasks.charxiv.descriptive_utils import (
     build_descriptive_grading_queries,
