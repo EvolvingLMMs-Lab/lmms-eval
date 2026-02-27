@@ -16,8 +16,9 @@
 import json
 import os
 
-import datasets
 from PIL import Image
+
+import datasets
 
 # Find for instance the citation on arxiv or on the dataset repo/website
 _CITATION = """\
