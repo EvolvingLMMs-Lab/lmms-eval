@@ -1,10 +1,10 @@
 import time
 from typing import List
 
-from loguru import logger as eval_logger
-from tqdm import tqdm
-from PIL import Image
 import numpy as np
+from loguru import logger as eval_logger
+from PIL import Image
+from tqdm import tqdm
 
 from lmms_eval import utils
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
@@ -18,7 +18,7 @@ from lmms_eval.protocol import ChatMessages
 class Phi4(Phi4Simple):
     is_simple = False
 
-    def get_role_tag(self, role:str):
+    def get_role_tag(self, role: str):
         if role == "system":
             return "<|system|>"
         elif role == "user":
