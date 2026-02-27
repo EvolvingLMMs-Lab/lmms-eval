@@ -4,11 +4,10 @@ import json
 import os
 from typing import Any, Dict, List
 
+from datasets import load_dataset
 from metrics import AggregationType, MetricType, ResponseParseType
 from metrics.parsing.common.utils import evaluate_as_string
 from metrics.scoring.vlm_as_judge import VLMJudgeScore
-
-from datasets import load_dataset
 
 
 class MEGABenchEvaluator:
