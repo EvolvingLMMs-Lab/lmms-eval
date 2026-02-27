@@ -8,11 +8,11 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
+from datasets import load_dataset
 from datasets.utils.metadata import MetadataConfigs
 from huggingface_hub import DatasetCard, DatasetCardData, HfApi, hf_hub_url
 from huggingface_hub.utils import build_hf_headers, get_session, hf_raise_for_status
 
-from datasets import load_dataset
 from lmms_eval.utils import (
     eval_logger,
     get_file_datetime,

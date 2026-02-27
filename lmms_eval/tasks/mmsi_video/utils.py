@@ -7,11 +7,10 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+import datasets
 import yaml
 from loguru import logger as eval_logger
 from PIL import Image
-
-import datasets
 
 # Get cache directory following the lmms-eval pattern (like vsibench/sitebench)
 # lmms-eval automatically downloads the dataset and extracts zip files to $HF_HOME/<cache_dir>/

@@ -16,9 +16,8 @@
 import json
 import os
 
-from PIL import Image
-
 import datasets
+from PIL import Image
 
 # Find for instance the citation on arxiv or on the dataset repo/website
 _CITATION = """https://allenai.org/data/diagrams"""
