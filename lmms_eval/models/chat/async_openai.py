@@ -69,6 +69,7 @@ class AsyncOpenAIChat(lmms):
         adaptive_failure_threshold: float = 0.05,
         prefix_aware_queue: bool = True,
         prefix_hash_chars: int = 256,
+        system_prompt: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -102,6 +103,10 @@ class AsyncOpenAIChat(lmms):
         )
         self.prefix_aware_queue = parse_bool(prefix_aware_queue)
         self.prefix_hash_chars = max(32, int(prefix_hash_chars))
+        if system_prompt is not None:
+            self.system_prompt = self._resolve_system_prompt(system_prompt)
+        else:
+            self.system_prompt = None
         if mcp_server_path is not None:
             from lmms_eval.mcp import MCPClient
 
@@ -176,6 +181,7 @@ class AsyncOpenAIChat(lmms):
             messages = chat_messages.to_qwen3_vl_openai_messages(video_kwargs)
         else:
             messages = chat_messages.to_openai_messages(video_kwargs)
+        messages = self._apply_system_prompt(messages, self.system_prompt) if self.system_prompt else messages
         images, videos, audios = chat_messages.extract_media()
         if self.mcp_client is not None:
             for image_idx, image in enumerate(images):

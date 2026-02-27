@@ -1,0 +1,26 @@
+dataset_path: vikhyatk/CountBenchQA
+task: "countbenchqa_reasoning"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.countbenchqa_doc_to_visual
+doc_to_text: !function utils.countbenchqa_doc_to_text
+doc_to_messages: !function utils.countbenchqa_reasoning_doc_to_messages
+doc_to_target: "number"
+process_results: !function utils.countbenchqa_reasoning_process_results
+metric_list:
+  - metric: acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: format_score
+    aggregation: mean
+    higher_is_better: true
+generation_kwargs:
+  max_new_tokens: 49152
+  temperature: 0
+  do_sample: False
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.0
