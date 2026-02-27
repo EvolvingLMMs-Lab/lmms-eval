@@ -371,6 +371,40 @@ def llm_as_judge_sync(predict_str, ground_truth, extra_info):
     return score
 
 
+def acc_reward(predict_str, ground_truth, extra_info=None, format_reward_score=0.0, solution_str=None):
+    """Compute the accuracy reward for a given prediction.
+
+    Args:
+        predict_str (str): The extracted prediction string.
+        ground_truth (str): The ground truth answer for comparison.
+        extra_info (dict, optional): Additional information that might be needed for scoring. Defaults to None.
+        format_reward_score (float): The format reward score for fallback logic.
+        solution_str (str, optional): The original solution string for fallback judgment.
+
+    Returns:
+        float: The accuracy score.
+    """
+    predict_str = simple_parse(predict_str)
+    gt = simple_parse(ground_truth)
+
+    acc_score = relax_exact_match(predict_str, gt)
+    if acc_score == 0.0:
+        try:
+            gold = parse(gt)
+            pred = parse(predict_str)
+            acc_score = int(verify(gold, pred))
+        except Exception:
+            acc_score = 0.0
+
+    if acc_score == 0.0 and USE_LLM_JUDGE == "True":
+        acc_score = llm_as_judge_sync(predict_str, ground_truth, extra_info)
+
+    if acc_score == 0.0 and USE_LLM_JUDGE == "True" and format_reward_score == 0.0 and solution_str is not None and len(solution_str) < 500:
+        acc_score = llm_as_judge_sync(solution_str, ground_truth, extra_info)
+
+    return acc_score
+
+
 def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     """Compute the score for a given solution based on the data source.
 
@@ -389,26 +423,10 @@ def compute_score(data_source, solution_str, ground_truth, extra_info=None):
     format_reward_score = format_reward(solution_str)
 
     extracted_answer = extract_anwser_tag(solution_str).strip()
+
+    acc_score = acc_reward(extracted_answer, ground_truth, extra_info, format_reward_score, solution_str)
     predict_str = simple_parse(extracted_answer)
     gt = simple_parse(ground_truth)
-
-    acc_score = relax_exact_match(predict_str, gt)
-    if acc_score == 0.0:
-        try:
-            gold = parse(gt)
-            pred = parse(predict_str)
-            acc_score = int(verify(gold, pred))
-        except Exception:
-            acc_score = 0.0
-
-    if acc_score == 0.0 and USE_LLM_JUDGE == "True":
-        acc_score = llm_as_judge_sync(predict_str, ground_truth, extra_info)
-
-    # When the format reward score is 0.0, we directly judge the solution string with the ground truth
-    # and the solution string is not too long
-    if acc_score == 0.0 and USE_LLM_JUDGE == "True" and format_reward_score == 0.0 and len(solution_str) < 500:
-        # Direct judge the solution string with the ground truth
-        acc_score = llm_as_judge_sync(solution_str, ground_truth, extra_info)
 
     score = (1.0 - format_score) * acc_score + format_score * format_reward_score
     score_dict = {
