@@ -14,7 +14,7 @@ import sys
 # These are the known subcommand names.  If argv[1] is NOT one of these
 # and starts with '-', we assume the legacy flat-args invocation and
 # route everything to `eval`.
-_SUBCOMMANDS = {"eval", "tasks", "models", "ui", "serve", "power", "version", "tui"}
+_SUBCOMMANDS = {"eval", "tasks", "models", "ui", "serve", "power", "version", "tui", "mcp"}
 
 # Help banner shown when no args are given (before heavy imports).
 _BANNER = """
@@ -27,6 +27,7 @@ _BANNER = """
 \u2502  lmms-eval models [--aliases]             List model backends \u2502
 \u2502  lmms-eval ui     [--port 8000]           Launch Web UI       \u2502
 \u2502  lmms-eval serve  [--host H --port P]     HTTP eval server    \u2502
+│  lmms-eval mcp    [--transport stdio]     MCP server (agents) │
 \u2502  lmms-eval power  [--effect-size 0.03]    Power analysis      \u2502
 \u2502  lmms-eval version                        Version info        \u2502
 \u2502                                                              \u2502
@@ -48,6 +49,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="subcommand")
 
     # ---- lightweight subcommands (no torch import) ----
+    from lmms_eval.cli.mcp_cmd import add_mcp_parser
     from lmms_eval.cli.models_cmd import add_models_parser
     from lmms_eval.cli.power_cmd import add_power_parser
     from lmms_eval.cli.serve_cmd import add_serve_parser
@@ -61,6 +63,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_serve_parser(sub)
     add_power_parser(sub)
     add_version_parser(sub)
+    add_mcp_parser(sub)
 
     # ---- eval subcommand (placeholder, actual parsing done by legacy code) ----
     eval_p = sub.add_parser(
@@ -83,7 +86,7 @@ def _run_tui(_args: argparse.Namespace) -> None:
 
         tui_main()
     except ImportError as e:
-        print(f"TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]")
+        print("TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]")
         print(f"Error: {e}")
         sys.exit(1)
 

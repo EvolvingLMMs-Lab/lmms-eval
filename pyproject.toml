@@ -86,6 +86,9 @@ server = [
     "fastapi",
     "uvicorn",
 ]
+mcp = [
+    "mcp[cli]>=1.20.0",
+]
 audio = [
     "more-itertools",
     "editdistance",
@@ -137,6 +140,7 @@ video = [
 ]
 all = [
     "lmms_eval[core]",
+    "lmms_eval[mcp]",
     "lmms_eval[gemini]",
     "lmms_eval[reka]",
     "lmms_eval[qwen]",
@@ -188,6 +192,7 @@ exclude = [
 
 [project.scripts]
 lmms-eval = "lmms_eval.cli.dispatch:main"
+lmms-eval-mcp = "lmms_eval.mcp:main"
 lmms-eval-ui = "lmms_eval.tui.cli:main"
 
 [project.urls]
