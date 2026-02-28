@@ -1,6 +1,6 @@
 # LMMs-Eval v0.7
 
-v0.7 makes lmms-eval easier to operate and harder to get wrong. The theme is **operational simplicity** for users and **pipeline maturity** for the framework — the evaluator now handles:
+v0.7 makes lmms-eval easier to operate and ready for production-tooling usage. The theme is **operational simplicity** for users and **pipeline maturity** — the evaluator now handles:
 - injecting prompts and parsing outputs from reasoning models
 - image/video decode optimization
 - efficiency metrics
@@ -17,11 +17,12 @@ Fewer flags to remember, fewer things that go wrong, and a single file that capt
 - [5. Safety and Red-Teaming Baseline](#5-safety-and-red-teaming-baseline)
 - [6. Efficiency Metrics Coverage](#6-efficiency-metrics-coverage)
 - [7. Skill-Based Agent Workflows](#7-skill-based-agent-workflows)
-- [8. Better One-Line Evaluation Support](#8-better-one-line-evaluation-support)
-- [9. Pipeline-Level Reasoning Tag Stripping](#9-pipeline-level-reasoning-tag-stripping)
-- [10. Support customized message_format in async_openai](#10-support-customized-message_format-in-async_openai)
-- [11. Flattened JSONL Log Output](#11-flattened-jsonl-log-output)
-- [12. Bug Fixes](#12-bug-fixes)
+- [8. Agentic Task Evaluation](#8-agentic-task-evaluation)
+- [9. Better One-Line Evaluation Support](#9-better-one-line-evaluation-support)
+- [10. Pipeline-Level Reasoning Tag Stripping](#10-pipeline-level-reasoning-tag-stripping)
+- [11. Support customized message_format in async_openai](#11-support-customized-message_format-in-async_openai)
+- [12. Flattened JSONL Log Output](#12-flattened-jsonl-log-output)
+- [13. Bug Fixes](#13-bug-fixes)
 
 ---
 
@@ -47,7 +48,7 @@ Most workflows are backward-compatible. Two model-backend changes require attent
 
 - **`is_qwen3_vl` flag removed** from `async_openai` model_args. Use `message_format=qwen3_vl` instead.
 
-- **`parse_reasoning_model_answer` removed** from 6 model files. Reasoning tag stripping is now handled at the pipeline level (see [Section 9](#9-pipeline-level-reasoning-tag-stripping)). Remove any direct calls to this function.
+- **`parse_reasoning_model_answer` removed** from 6 model files. Reasoning tag stripping is now handled at the pipeline level (see [Section 10](#10-pipeline-level-reasoning-tag-stripping)). Remove any direct calls to this function.
 
 ### Backward-Compatible Renames
 
@@ -74,7 +75,7 @@ v0.7 adds 25+ benchmark tasks across eight domains:
 | **Math & reasoning** | MathCanvas, MathKangaroo, VisuLogic, LLaVA-OV 1.5 RL reasoning collection |
 | **Spatial & counting** | Point-Bench, CountBench, FSC-147 |
 | **Knowledge & QA** | SimpleVQA, WorldVQA, MTVQA, HiPhO, MME-CC, VPCT, ZeroBench |
-| **AGI & agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp |
+| **AGI & agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp, Vending-Bench 2 (seed), τ2-Bench Telecom (seed) |
 | **Audio** | AMI, CN College Listen MCQ, DREAM TTS MCQ, EuroPal ASR, Song Describer |
 | **Safety** | JailbreakBench harmful + benign splits (see [Section 5](#5-safety-and-red-teaming-baseline)) |
 
@@ -358,7 +359,7 @@ On local pre-downloaded videos, local raw and Lance modes are often near-parity 
 
 v0.7 adds a safety/red-teaming task group based on JailbreakBench behaviors. This addresses a gap where lmms-eval had no built-in safety benchmark for jailbreak robustness and over-refusal analysis.
 
-### 9.1 New Task Group
+### 5.1 New Task Group
 
 - `safety_redteam` (group)
   - `safety_jailbreakbench_harmful`
@@ -366,7 +367,7 @@ v0.7 adds a safety/red-teaming task group based on JailbreakBench behaviors. Thi
 
 Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + benign splits).
 
-### 9.2 Reported Metrics
+### 5.2 Reported Metrics
 
 **Harmful split**:
 
@@ -389,7 +390,7 @@ Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + be
 | `demographic_refusal_rate` | Refusal rate on demographic-related prompts |
 | `non_demographic_refusal_rate` | Refusal rate on non-demographic prompts |
 
-### 9.3 Toxicity Backends
+### 5.3 Toxicity Backends
 
 Toxicity scoring supports two modes:
 
@@ -398,7 +399,7 @@ Toxicity scoring supports two modes:
 
 This keeps safety evaluation usable in both cloud and offline environments.
 
-### 9.4 Usage
+### 5.4 Usage
 
 ```bash [Terminal]
 python -m lmms_eval \
@@ -415,7 +416,7 @@ python -m lmms_eval \
 
 v0.7 improves efficiency observability, but not all metrics are equally available across backends.
 
-### 10.1 What v0.7 Covers
+### 6.1 What v0.7 Covers
 
 "Efficiency metrics complete" in v0.7 means:
 
@@ -427,7 +428,7 @@ v0.7 improves efficiency observability, but not all metrics are equally availabl
 TTFT/TPOT parity across every backend is out of scope for v0.7.
 ::
 
-### 10.2 TTFT/TPOT Coverage Matrix
+### 6.2 TTFT/TPOT Coverage Matrix
 
 | Backend Family | TTFT | TPOT | Notes |
 |----------------|------|------|-------|
@@ -440,7 +441,7 @@ TTFT/TPOT parity across every backend is out of scope for v0.7.
 TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
 ::
 
-### 10.3 Extending TTFT Beyond vLLM
+### 6.3 Extending TTFT Beyond vLLM
 
 Extending TTFT to other backends is feasible but requires backend-specific work:
 
@@ -450,13 +451,13 @@ Extending TTFT to other backends is feasible but requires backend-specific work:
 | SGLang | Per-request first-token timing in generation path | Batch-level timing alone is not sufficient |
 | HuggingFace local | Token streaming/generation callbacks | Default `generate()` does not expose TTFT |
 
-### 10.4 Reporting Guidance
+### 6.4 Reporting Guidance
 
 - If TTFT/TPOT is critical, use `vllm` backends.
 - If using API/SGLang/HF backends, report throughput and token usage. Treat TTFT as unavailable unless custom instrumentation is enabled.
 - Keep metric claims backend-qualified (e.g., "TTFT measured on vLLM runtime metrics").
 
-### 10.5 Token-Based Efficiency in Results JSON
+### 6.5 Token-Based Efficiency in Results JSON
 
 With `--log_samples` enabled, v0.7 emits an `efficiency` section in aggregated results:
 
@@ -480,7 +481,7 @@ v0.7 standardizes how coding agents learn and orchestrate lmms-eval workflows th
 
 This turns lmms-eval from a set of docs into a reusable operational skill for agents — discover the right integration path, apply correct file-level patterns, and schedule evaluation jobs safely.
 
-### 11.1 Add New Models and Tasks via Skill References
+### 7.1 Add New Models and Tasks via Skill References
 
 The skill references define recommended implementation paths for extension work:
 
@@ -504,7 +505,7 @@ The skill references define recommended implementation paths for extension work:
 Agents should follow this workflow: resolve whether the change is model-side, task-side, or both; load the matching skill reference; follow existing code patterns in nearby models and task YAMLs; run a small-sample verification before broader evaluation.
 ::
 
-### 11.2 Insert lmms-eval into Training Jobs via HTTP Service
+### 7.2 Insert lmms-eval into Training Jobs via HTTP Service
 
 For training-time evaluation, use the eval server workflow from `references/api-server.md`.
 
@@ -526,7 +527,7 @@ Key endpoints for job orchestration:
 
 This service mode is the recommended way to decouple training and evaluation in v0.7 workflows.
 
-### 11.3 HTTP Service as an Operational Primitive
+### 7.3 HTTP Service as an Operational Primitive
 
 Treat the eval server as infrastructure, not only a convenience API:
 
@@ -539,7 +540,7 @@ Treat the eval server as infrastructure, not only a convenience API:
 Run the eval server in trusted environments only. Add authentication, rate limiting, and network isolation before exposing it beyond internal boundaries.
 ::
 
-### 11.4 Agent Dispatch Strategy
+### 7.4 Agent Dispatch Strategy
 
 When agents orchestrate lmms-eval tasks, use this routing:
 
@@ -556,7 +557,85 @@ This separates development-time edits (model/task code) from runtime scheduling 
 
 ---
 
-## 8. Better One-Line Evaluation Support
+## 8. Agentic Task Evaluation
+
+v0.7 introduces `generate_until_agentic`, a new output type for evaluating models as tool-calling agents. The evaluator runs an iterative loop: on each step the model emits a `<tool_call>` or `<submit>` tag, the task's `doc_to_text` callback executes the tool against a deterministic simulator, and the evaluator feeds the result back as the next prompt. The loop terminates when the model submits a final answer or reaches `max_agentic_steps`.
+
+### 8.1 How It Works
+
+The pipeline lives in `_run_generate_until_agentic()` in `evaluator.py`. Each step:
+
+1. The model generates a response (single `generate_until` call).
+2. The task's `doc_to_text` callback parses the response for `<tool_call>` or `<submit>` tags.
+3. If `<tool_call>`: the callback executes the tool against a Python simulator, updates internal state, and returns the next prompt with the tool result. The evaluator loops.
+4. If `<submit>`: the callback returns a terminal signal with the final payload (success/failure, trace, state). The evaluator stops.
+5. If neither: the callback returns an error hint and the loop continues.
+6. If `max_agentic_steps` is reached without a submit, the evaluator emits a fallback payload with `"error": "max_agentic_steps_reached"` and the accumulated trace.
+
+The `doc_to_text` function signature for agentic tasks:
+
+```python
+def doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None,
+                round_idx=None, previous_round_info=None):
+    # Returns either:
+    # - str (next prompt)
+    # - 5-tuple: (visuals, next_context, terminal_signal, updated_outputs, round_info)
+```
+
+### 8.2 Seed Agentic Tasks
+
+Two seed tasks validate the infrastructure with deterministic Python simulators (no external sandbox required):
+
+| Task | Domain | Tools | Goal | Steps |
+|------|--------|-------|------|-------|
+| `vending_bench2_seed` | Vending machine operation | `get_vending_status`, `set_price`, `restock`, `simulate_days` | Reach target cash and elapsed days | 10 |
+| `tau2_bench_telecom_seed` | Telecom customer support | `get_line_status`, `disable_airplane_mode`, `enable_roaming`, `reset_network` | Reach target device state | 8 |
+
+Quick smoke test:
+
+```bash
+python -m lmms_eval \
+  --model openai \
+  --model_args model=gpt-4o-mini \
+  --tasks vending_bench2_seed \
+  --limit 2 --batch_size 1
+```
+
+### 8.3 Metrics
+
+Agentic tasks report trace-level metrics beyond simple success rate:
+
+| Metric | Description |
+|--------|-------------|
+| **success** | Binary: did the model reach the target state before submitting? |
+| **trace_step_validity** | Fraction of tool calls that executed without error. |
+| **trace_state_progress** | How close the final state is to the target (normalized 0-1). |
+| **trace_termination_quality** | Did the model emit a proper `<submit>` (vs. hitting the step limit)? |
+| **trace_quality** | Average of step validity, state progress, and termination quality. |
+
+### 8.4 YAML Configuration
+
+```yaml
+output_type: generate_until_agentic
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  max_agentic_steps: 10  # loop budget
+```
+
+### 8.5 Adding Your Own Agentic Task
+
+1. Create a JSONL dataset with `initial_state`, `target_state`, `tools` (name + description), and `user_query` fields.
+2. Implement tool functions in `utils.py` that mutate state deterministically.
+3. Write a `doc_to_text` callback that parses `<tool_call>` / `<submit>` tags, calls tools, and returns the 5-tuple.
+4. Set `output_type: generate_until_agentic` in the task YAML.
+5. Define `process_results` to extract metrics from the JSON payload.
+
+The seed tasks (`vending_bench2`, `tau2_bench`) serve as reference implementations.
+
+---
+
+## 9. Better One-Line Evaluation Support
 
 Running an evaluation used to mean assembling a long command with many flags. Sharing that command meant copy-pasting a fragile shell one-liner and hoping the environment was set up correctly. Reproducing a result from a paper meant reverse-engineering the setup from a results JSON that stored only a few fields.
 
@@ -568,7 +647,7 @@ python -m lmms_eval --config configs/my_experiment.yaml
 
 One file captures everything — model, tasks, generation parameters, and environment variables. Ship the YAML, reproduce the result.
 
-### 5.1 What Goes in the YAML
+### 9.1 What Goes in the YAML
 
 A config file maps directly to CLI arguments, plus an optional `env` section for environment variables.
 
@@ -624,7 +703,7 @@ For batch evaluation (multiple models in one run):
   log_samples: true
 ```
 
-### 5.2 Environment Variables
+### 9.2 Environment Variables
 
 The `env` section sets environment variables before evaluation starts. Credentials and paths live in the config, not in someone's `.bashrc`.
 
@@ -641,7 +720,7 @@ Values containing `${VAR}` expand using the current shell environment. The `${VA
 Keys containing `KEY`, `TOKEN`, `SECRET`, or `PASSWORD` are automatically masked in log output (e.g., `Config env: OPENAI_API_KEY=********`). The actual values are set correctly in `os.environ`.
 ::
 
-### 5.3 CLI Override Priority
+### 9.3 CLI Override Priority
 
 The priority chain is: **defaults < YAML < CLI**. CLI arguments always win.
 
@@ -655,7 +734,7 @@ python -m lmms_eval --config configs/example_local.yaml --batch_size 4
 
 Keep a "canonical" config in the YAML and override individual values at the command line without editing the file. Override detection compares each CLI argument against argparse defaults — only arguments that differ from defaults count as explicit overrides.
 
-### 5.4 Schema Validation
+### 9.4 Schema Validation
 
 Unknown keys in the YAML now raise an error with the list of valid keys:
 
@@ -666,7 +745,7 @@ Valid keys are: ['batch_size', 'config', 'device', 'gen_kwargs', 'limit', 'log_s
 
 Previously, typos like `modle` instead of `model` were silently accepted and ignored at runtime, leading to confusing evaluation failures.
 
-### 5.5 Full Experiment Reproducibility
+### 9.5 Full Experiment Reproducibility
 
 Results JSON now includes `resolved_cli_args` — the complete resolved configuration after merging defaults, YAML, and CLI overrides:
 
@@ -694,7 +773,7 @@ Results JSON now includes `resolved_cli_args` — the complete resolved configur
 
 Reconstruct the exact YAML config from any results file. No more guessing what flags were used.
 
-### 5.6 Web UI Integration
+### 9.6 Web UI Integration
 
 The Web UI supports YAML import and export:
 
@@ -703,7 +782,7 @@ The Web UI supports YAML import and export:
 
 The `env` section maps to the Web UI's environment variables field. The round-trip is lossless — export a YAML, import it back, and the form state is identical.
 
-### 5.7 Example Configs
+### 9.7 Example Configs
 
 Three example configs ship in `configs/`:
 
@@ -723,13 +802,13 @@ python -m lmms_eval --config configs/my_experiment.yaml
 
 ---
 
-## 9. Pipeline-Level Reasoning Tag Stripping
+## 10. Pipeline-Level Reasoning Tag Stripping
 
 Reasoning models (Qwen3-VL, DeepSeek-R1, QwQ, etc.) emit `<think>...</think>` blocks in their generated text. Without stripping, these tokens pollute scoring on standard benchmarks. Previously, only 6 model files had ad-hoc handling, and vLLM, SGLang, and OpenAI backends had zero protection.
 
 v0.7 moves reasoning tag stripping into the evaluator pipeline itself. It works uniformly across all model backends.
 
-### 6.1 How It Works
+### 10.1 How It Works
 
 Stripping runs in `evaluator.py` **after** the filter pipeline and **before** `process_results()`. Both raw and cleaned outputs are preserved:
 
@@ -751,7 +830,7 @@ This design means:
 - **Scoring is clean** — `process_results()` never sees `<think>` tokens.
 - **Analysis is preserved** — the raw chain-of-thought remains available in `--log_samples` output.
 
-### 6.2 Usage
+### 10.2 Usage
 
 Stripping is enabled by default with `<think>...</think>` tags.
 
@@ -774,7 +853,7 @@ python -m lmms_eval --model qwen3_vl --tasks mme \
 ```
 ::
 
-### 6.3 Per-Task Override
+### 10.3 Per-Task Override
 
 Tasks can override the CLI setting via the `reasoning_tags` field in their YAML config. Task-level config takes priority over the CLI flag.
 
@@ -784,7 +863,7 @@ reasoning_tags: [["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]
 
 Set to `none` or `false` to disable stripping for a specific task.
 
-### 6.4 JSONL Log Output Fields
+### 10.4 JSONL Log Output Fields
 
 When `--log_samples` is enabled, each JSONL line contains these fields:
 
@@ -816,7 +895,7 @@ Example record from a reasoning model:
 `resps` contains the full chain-of-thought and is useful for debugging reasoning behavior. `filtered_resps` is the canonical scored output — use it when computing or verifying metrics. When no stripping occurs, `resps` is omitted if identical to `filtered_resps`.
 ::
 
-### 6.5 Implementation Details
+### 10.5 Implementation Details
 
 | File | Change |
 |------|--------|
@@ -829,11 +908,11 @@ Example record from a reasoning model:
 
 ---
 
-## 10. Support customized message_format in async_openai
+## 11. Support customized message_format in async_openai
 
 The `async_openai` model backend receives two changes: an internal refactor for maintainability, and a `message_format` parameter that replaces the previous `is_qwen3_vl` flag and the separate `async_openai_qwen3_vl` model class.
 
-### 7.1 message_format Parameter
+### 11.1 message_format Parameter
 
 Different model families behind OpenAI-compatible APIs require different message serialization. Qwen3-VL needs per-frame timestamps prepended to video frames, while the standard OpenAI format sends frames as plain base64 images.
 
@@ -857,7 +936,7 @@ python -m lmms_eval --model async_openai \
 
 Adding a new format requires only an `elif` in `prepare_messages()` and a corresponding `to_*_messages()` method in `ChatMessages` — no new files or registry changes.
 
-### 7.2 Refactored Concurrency Control
+### 11.2 Refactored Concurrency Control
 
 The `generate_until()` method was a single 130-line function with retry logic, adaptive concurrency control, and request scheduling interleaved. v0.7 decomposes it into focused methods:
 
@@ -887,7 +966,7 @@ Concurrency tracking state lives in `_AdaptiveConcurrencyTracker` (a dataclass) 
 
 ---
 
-## 11. Flattened JSONL Log Output
+## 12. Flattened JSONL Log Output
 
 With `--log_samples` enabled, the per-sample JSONL files previously wrote `resps` and `filtered_resps` as doubly-nested lists:
 
@@ -903,7 +982,7 @@ v0.7 flattens the outer list at serialization time when it contains only a singl
 {"resps": ["The answer is cat"], "filtered_resps": ["cat"]}
 ```
 
-### 8.1 When Flattening Applies
+### 12.1 When Flattening Applies
 
 | Output Type | Instances per Doc | Before | After |
 |-------------|-------------------|--------|-------|
@@ -915,17 +994,17 @@ v0.7 flattens the outer list at serialization time when it contains only a singl
 Flattening only removes the outer wrapper when there is exactly one Instance. Multi-choice tasks with multiple Instances per document remain untouched.
 ::
 
-### 8.2 Deduplication with Flattened Format
+### 12.2 Deduplication with Flattened Format
 
 The existing dedup logic (omit `resps` when identical to `filtered_resps`) continues to work with the flattened format. After flattening, the two fields are compared directly — if they match, `resps` is omitted from the JSONL record to save space.
 
-### 8.3 Implementation
+### 12.3 Implementation
 
 The flattening happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so existing consumers (wandb logger, logging utilities) continue to work without changes.
 
 ---
 
-## 12. Bug Fixes
+## 13. Bug Fixes
 
 - Fix image vs video file path detection in `auto_doc_to_messages` fallback
 - Align `osworld_g` polygon scoring with osworld-verified annotations
