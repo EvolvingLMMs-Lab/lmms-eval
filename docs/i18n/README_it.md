@@ -16,7 +16,7 @@
 
 🏠 [Home Page LMMs-Lab](https://www.lmms-lab.com/) | 🤗 [Dataset Huggingface](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Attività Supportate (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Modelli Supportati (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentazione](../README.md)
+📖 [Attività Supportate (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [Modelli Supportati (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentazione](../README.md)
 
 ---
 
@@ -26,7 +26,7 @@ Valutare i modelli multimodali è più difficile di quanto sembri. Abbiamo centi
 
 **Gennaio 2026** - Abbiamo riconosciuto che il ragionamento spaziale e compositivo rimanevano punti ciechi nei benchmark esistenti. Abbiamo aggiunto [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) e [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Per i team che eseguono pipeline di valutazione remota, abbiamo introdotto un server di valutazione HTTP (#972). Per coloro che necessitano di rigore statistico, abbiamo aggiunto CLT e la stima dell'errore standard raggruppato (#989).
 
-**Ottobre 2025 (v0.5)** - L'audio era stato una lacuna. I modelli potevano sentire, ma non avevamo un modo coerente per testarli. Questa versione ha aggiunto una valutazione audio completa, il caching delle risposte per l'efficienza e oltre 50 varianti di benchmark che spaziano tra audio, visione e ragionamento. [Note di rilascio](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md).
+**Ottobre 2025 (v0.5)** - L'audio era stato una lacuna. I modelli potevano sentire, ma non avevamo un modo coerente per testarli. Questa versione ha aggiunto una valutazione audio completa, il caching delle risposte per l'efficienza e oltre 50 varianti di benchmark che spaziano tra audio, visione e ragionamento. [Note di rilascio](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md).
 
 ## Perché `lmms-eval`?
 

@@ -16,15 +16,15 @@
 
 🏠 [LMMs-Lab Ana Sayfa](https://www.lmms-lab.com/) | 🤗 [Huggingface Veri Setleri](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Desteklenen Görevler (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Desteklenen Modeller (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Dokümantasyon](../README.md)
+📖 [Desteklenen Görevler (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [Desteklenen Modeller (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Dokümantasyon](../README.md)
 
 ---
 
 ## Duyurular
 
 - [2026-01] 🚀🚀 **Ocak 2026** - Mevcut kıyaslamalarda (benchmarks) uzamsal ve kompozisyonel akıl yürütmenin hala kör noktalar olduğunu fark ettik. [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) ve [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial) benchmarklarını ekledik. Uzaktan değerlendirme boru hatları (pipeline) çalıştıran ekipler için bir HTTP değerlendirme sunucusu (#972) sunduk. İstatistiksel titizlik isteyenler için CLT ve kümelenmiş standart hata tahmini (#989) özelliklerini ekledik.
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** burada! Bu büyük sürüm, kapsamlı ses değerlendirmesi, yanıt önbellekleme, 5 yeni model (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme) ve ses (Step2, VoiceBench, WenetSpeech), görüntü (CharXiv, Lemonade) ve akıl yürütme (CSBench, SciBench, MedQA, SuperGPQA) kapsayan 50'den fazla yeni benchmark varyantı sunuyor. Detaylar için [sürüm notlarına](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md) bakın.
-- [2025-07] 🚀🚀 `lmms-eval-0.4` sürümünü yayınladık. Daha fazla detay için [sürüm notlarına](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.4.md) bakın.
+- [2025-10] 🚀🚀 **LMMs-Eval v0.5** burada! Bu büyük sürüm, kapsamlı ses değerlendirmesi, yanıt önbellekleme, 5 yeni model (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme) ve ses (Step2, VoiceBench, WenetSpeech), görüntü (CharXiv, Lemonade) ve akıl yürütme (CSBench, SciBench, MedQA, SuperGPQA) kapsayan 50'den fazla yeni benchmark varyantı sunuyor. Detaylar için [sürüm notlarına](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md) bakın.
+- [2025-07] 🚀🚀 `lmms-eval-0.4` sürümünü yayınladık. Daha fazla detay için [sürüm notlarına](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.4.md) bakın.
 
 ## Neden `lmms-eval`?
 

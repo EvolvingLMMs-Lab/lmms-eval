@@ -16,7 +16,7 @@
 
 🏠 [LMMs-Lab 홈페이지](https://www.lmms-lab.com/) | 🤗 [Huggingface 데이터셋](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [지원 태스크 (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [지원 모델 (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [문서](../README.md)
+📖 [지원 태스크 (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [지원 모델 (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [문서](../README.md)
 
 ---
 
@@ -26,12 +26,12 @@
 
 **2026년 1월** - 기존 벤치마크에서 공간 및 구성적 추론이 여전히 사각지대로 남아있음을 확인했습니다. 이에 [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)을 추가했습니다. 원격 평가 파이프라인을 운영하는 팀들을 위해 HTTP 평가 서버(#972)를 도입했습니다. 통계적 엄밀함이 필요한 사용자들을 위해 CLT 및 클러스터링된 표준 오차 추정(#989)을 추가했습니다.
 
-**2025년 10월 (v0.5)** - 오디오 분야는 그동안 공백이었습니다. 모델은 들을 수 있었지만 이를 테스트할 일관된 방법이 없었습니다. 이번 릴리스에서는 포괄적인 오디오 평가, 효율성을 위한 응답 캐싱, 그리고 오디오, 비전, 추론을 아우르는 50개 이상의 벤치마크 변형을 추가했습니다. [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md).
+**2025년 10월 (v0.5)** - 오디오 분야는 그동안 공백이었습니다. 모델은 들을 수 있었지만 이를 테스트할 일관된 방법이 없었습니다. 이번 릴리스에서는 포괄적인 오디오 평가, 효율성을 위한 응답 캐싱, 그리고 오디오, 비전, 추론을 아우르는 50개 이상의 벤치마크 변형을 추가했습니다. [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md).
 
 <details>
 <summary>아래는 놀라운 기여자들에 의해 추가된 최근 태스크, 모델 및 기능의 연대순 목록입니다.</summary>
 
-- [2025-07] 🚀🚀 `lmms-eval-0.4`를 출시했습니다. 자세한 내용은 [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.4.md)를 참조하세요.
+- [2025-07] 🚀🚀 `lmms-eval-0.4`를 출시했습니다. 자세한 내용은 [릴리스 노트](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.4.md)를 참조하세요.
 
 </details>
 

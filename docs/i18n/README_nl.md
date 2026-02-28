@@ -16,7 +16,7 @@
 
 🏠 [LMMs-Lab Homepage](https://www.lmms-lab.com/) | 🤗 [Huggingface Datasets](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Ondersteunde Taken (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Ondersteunde Modellen (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentatie](../README.md)
+📖 [Ondersteunde Taken (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [Ondersteunde Modellen (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Documentatie](../README.md)
 
 ---
 
@@ -24,8 +24,8 @@
 
 **Januari 2026** - We stelden vast dat ruimtelijk en compositorisch redeneren blinde vlekken bleven in bestaande benchmarks. We hebben [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) en [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial) toegevoegd. Voor teams die evaluatie-pipelines op afstand draaien, hebben we een HTTP eval server geïntroduceerd (#972). Voor degenen die statistische nauwkeurigheid nodig hebben, hebben we CLT en geclusterde standaardfout-schatting toegevoegd (#989).
 
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** is hier! Deze belangrijke release introduceert uitgebreide audio-evaluatie, response caching, 5 nieuwe modellen (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), en meer dan 50 nieuwe benchmark-varianten die audio (Step2, VoiceBench, WenetSpeech), visie (CharXiv, Lemonade) en redeneren (CSBench, SciBench, MedQA, SuperGPQA) beslaan. Zie de [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md) voor details.
-- [2025-07] 🚀🚀 We hebben `lmms-eval-0.4` uitgebracht. Zie de [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.4.md) voor meer details.
+- [2025-10] 🚀🚀 **LMMs-Eval v0.5** is hier! Deze belangrijke release introduceert uitgebreide audio-evaluatie, response caching, 5 nieuwe modellen (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), en meer dan 50 nieuwe benchmark-varianten die audio (Step2, VoiceBench, WenetSpeech), visie (CharXiv, Lemonade) en redeneren (CSBench, SciBench, MedQA, SuperGPQA) beslaan. Zie de [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md) voor details.
+- [2025-07] 🚀🚀 We hebben `lmms-eval-0.4` uitgebracht. Zie de [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.4.md) voor meer details.
 
 ## Waarom `lmms-eval`?
 

@@ -16,7 +16,7 @@
 
 🏠 [Главная страница LMMs-Lab](https://www.lmms-lab.com/) | 🤗 [Наборы данных Huggingface](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Поддерживаемые задачи (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Поддерживаемые модели (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Документация](../README.md)
+📖 [Поддерживаемые задачи (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [Поддерживаемые модели (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Документация](../README.md)
 
 ---
 
@@ -24,8 +24,8 @@
 
 **Январь 2026** — Мы признали, что пространственное и композиционное рассуждение оставались слепыми зонами в существующих бенчмарках. Мы добавили [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) и [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Для команд, использующих удаленные конвейеры оценки, мы представили HTTP-сервер для оценки (#972). Для тех, кому нужна статистическая строгость, мы добавили CLT и оценку кластеризованной стандартной ошибки (#989).
 
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** здесь! Этот крупный релиз включает комплексную оценку аудио, кэширование ответов, 5 новых моделей (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme) и более 50 новых вариантов бенчмарков, охватывающих аудио (Step2, VoiceBench, WenetSpeech), зрение (CharXiv, Lemonade) и рассуждения (CSBench, SciBench, MedQA, SuperGPQA). Подробности см. в [примечаниях к релизу](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md).
-- [2025-07] 🚀🚀 Мы выпустили `lmms-eval-0.4`. Подробности см. в [примечаниях к релизу](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.4.md).
+- [2025-10] 🚀🚀 **LMMs-Eval v0.5** здесь! Этот крупный релиз включает комплексную оценку аудио, кэширование ответов, 5 новых моделей (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme) и более 50 новых вариантов бенчмарков, охватывающих аудио (Step2, VoiceBench, WenetSpeech), зрение (CharXiv, Lemonade) и рассуждения (CSBench, SciBench, MedQA, SuperGPQA). Подробности см. в [примечаниях к релизу](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md).
+- [2025-07] 🚀🚀 Мы выпустили `lmms-eval-0.4`. Подробности см. в [примечаниях к релизу](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.4.md).
 
 ## Почему `lmms-eval`?
 

@@ -19,7 +19,7 @@
 
 </details>
 
-📚 [Documentation](docs/README.md) | 📖 [100+ Tasks](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [30+ Models](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | ⚡ [Quickstart](docs/quickstart.md)
+📚 [Documentation](docs/README.md) | 📖 [100+ Tasks](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [30+ Models](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | ⚡ [Quickstart](docs/getting-started/quickstart.md)
 
 🏠 [Homepage](https://www.lmms-lab.com/) | 💬 [Discord](https://discord.gg/8xTM6jWnXa) | 🤝 [Contributing](CONTRIBUTING.md)
 
@@ -27,36 +27,32 @@
 
 ## Why `lmms-eval`?
 
-We are on a journey toward Artificial General Intelligence, similar to the excitement of the moon landing era. This effort is driven by large language models and multimodal models that can understand and act across many kinds of tasks. To measure progress, we rely on benchmarks. But the ecosystem is fragmented. Datasets are scattered across different platforms, each with its own format, scripts, and post processing logic. Two teams evaluating the same model on the same benchmark often report different numbers. The difference often comes from evaluation details.
+Benchmarks decide what gets built next. A model team that trusts its eval numbers can focus on real improvements instead of chasing noise. But the multimodal evaluation ecosystem is fragmented - scattered datasets, inconsistent post-processing, and single-number accuracy scores that hide whether a gain is real or random. Two teams evaluating the same model on the same benchmark routinely report different results.
 
-Even with a unified pipeline, deeper problems remain. Existing open source evaluation toolkits are packaged as libraries, not as services that can be used in different scenarios (async eval call during training, or a job submission after training in standalone cluster). And scores are usually reported as a single accuracy number, representing only the mean from a statistical perspective. It is hard to tell whether a small gain is a true improvement without estimating variance and considering the number of samples in each benchmark. There are many more to be fixed and explored. [lmms-eval v0.6](docs/changelogs/lmms-eval-0.6.md) is a small step towards better eval toolkit.
+We are building `lmms-eval` and focusing on three core principles:
 
-We are keeping the evolving pace to build better evals, to explore evaluation's role on the path to frontier models. We believe [better evals lead to better models](https://arxiv.org/pdf/2211.09110): good evaluation maps the border of model capabilities and shapes what we build next. That is what it means to probe intelligence in the real world.
+- **Reproducibility** - One pipeline, deterministic results. Same model + same benchmark = same numbers, every time.
+- **Large-scale Throughput** - Evaluation should not be the bottleneck. We grind everything - async serving, adaptive batching, video I/O optimizations - to keep your GPUs saturated end to end.
+- **Trustworthy** - We dive deep into what makes an eval result meaningful - not just accuracy, but confidence intervals, clustered standard errors, paired comparisons, and ongoing research into evaluation methodology itself. The goal is results you can trust enough to act on.
+
+We believe [better evals lead to better models](https://arxiv.org/pdf/2211.09110). Good evaluation maps the border of what models can do and shapes what we build next.
 
 ## What's New
 
-**February 2026 (v0.7)** - The theme is operational simplicity and pipeline maturity. v0.7 adds 25+ new benchmark tasks across document, video, math, spatial, AGI, audio, and safety domains, plus two new model backends (NanoVLM, async multi-GPU HF). Video decode gets a unified `read_video` entry point with TorchCodec multi-threaded backend (up to 3.58x faster), and MINERVA ships Lance-backed video distribution on Hugging Face. Also: YAML config-driven evaluation (`--config`), pipeline-level reasoning tag stripping for `<think>` models, safety/red-teaming baselines (JailbreakBench), flattened JSONL logs, and token efficiency metrics. [Release notes](docs/changelogs/lmms-eval-0.7.md) | [Changelog](docs/changelogs/CHANGELOG.md).
+**v0.7** (Feb 2026) - Operational simplicity and . 25+ new tasks, unified video decode (TorchCodec, up to 3.58x faster), YAML config-driven evaluation (`--config`), reasoning tag stripping for `<think>` models, safety baselines, and token efficiency metrics. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
 
-**February 2026 (v0.6)** - Our previous versions were too slow, the architecture wasn't clean, and the results lacked statistical insight. v0.6 is a re-engineered release that addresses all three: evaluation runs as a standalone service (decoupled from training, serving queue-based eval requests), statistically grounded results that capture real model improvements rather than a single accuracy score (confidence intervals, clustered standard errors, paired comparison with t-test), and optimizations to max out your model runtime's capacity (~7.5x over previous versions). 50+ new tasks and 10+ new models. [Release notes](docs/changelogs/lmms-eval-0.6.md) | [Changelog](docs/changelogs/CHANGELOG.md).
+**v0.6** (Feb 2026) - Evaluation as a service. Standalone HTTP eval server, ~7.5x throughput over v0.5, statistically grounded results (CI, paired t-test), 50+ new tasks. [Release notes](docs/releases/lmms-eval-0.6.md) | [Changelog](docs/releases/CHANGELOG.md).
 
-**October 2025 (v0.5)** - Audio had been a gap. Models could hear, but we had no consistent way to test them. This release added comprehensive audio evaluation, response caching for efficiency, and 50+ benchmark variants spanning audio, vision, and reasoning. [Release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md).
+**v0.5** (Oct 2025) - Audio expansion. Comprehensive audio evaluation, response caching, 50+ benchmark variants across audio, vision, and reasoning. [Release notes](docs/releases/lmms-eval-0.5.md).
 
 <details>
-<summary>Below is a chronological list of recent tasks, models, and features added by our amazing contributors. </summary>
+<summary>Older updates</summary>
 
-- [2025-01] 🎓🎓 We have released our new benchmark: [Video-MMMU: Evaluating Knowledge Acquisition from Multi-Discipline Professional Videos](https://arxiv.org/abs/2501.13826). Please refer to the [project page](https://videommmu.github.io/) for more details.
-- [2024-12] 🎉🎉 We have presented [MME-Survey: A Comprehensive Survey on Evaluation of Multimodal LLMs](https://arxiv.org/pdf/2411.15296), jointly with [MME Team](https://github.com/BradyFU/Video-MME) and [OpenCompass Team](https://github.com/open-compass).
-- [2024-11] 🔈🔊 The `lmms-eval/v0.3.0` has been upgraded to support audio evaluations for audio models like Qwen2-Audio and Gemini-Audio across tasks such as AIR-Bench, Clotho-AQA, LibriSpeech, and more. Please refer to the [blog](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.3.md) for more details!
-- [2024-10] 🎉🎉 We welcome the new task [NaturalBench](https://huggingface.co/datasets/BaiqiL/NaturalBench), a vision-centric VQA benchmark (NeurIPS'24) that challenges vision-language models with simple questions about natural imagery.
-- [2024-10] 🎉🎉 We welcome the new task [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench) for fine-grained temporal understanding and reasoning for videos, which reveals a huge (>30%) human-AI gap.
-- [2024-10] 🎉🎉 We welcome the new tasks [VDC](https://rese1f.github.io/aurora-web/) for video detailed captioning, [MovieChat-1K](https://rese1f.github.io/MovieChat/) for long-form video understanding, and [Vinoground](https://vinoground.github.io/), a temporal counterfactual LMM benchmark composed of 1000 short natural video-caption pairs. We also welcome the new models: [AuroraCap](https://github.com/rese1f/aurora) and [MovieChat](https://github.com/rese1f/MovieChat).
-- [2024-09] 🎉🎉 We welcome the new tasks [MMSearch](https://mmsearch.github.io/) and [MME-RealWorld](https://mme-realworld.github.io/) for inference acceleration
-- [2024-09] ⚙️️⚙️️️️ We upgrade `lmms-eval` to `0.2.3` with more tasks and features. We support a compact set of language tasks evaluations (code credit to [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)), and we remove the registration logic at start (for all models and tasks) to reduce the overhead. Now `lmms-eval` only launches necessary tasks/models. Please check the [release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/releases/tag/v0.2.3) for more details.
-- [2024-08] 🎉🎉 We welcome the new model [LLaVA-OneVision](https://huggingface.co/papers/2408.03326), [Mantis](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/162), new tasks [MVBench](https://huggingface.co/datasets/OpenGVLab/MVBench), [LongVideoBench](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/117), [MMStar](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/158). We provide new feature of SGlang Runtime API for llava-onevision model, please refer the [doc](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/commands.md) for inference acceleration
-- [2024-07] 👨‍💻👨‍💻 The `lmms-eval/v0.2.1` has been upgraded to support more models, including [LongVA](https://github.com/EvolvingLMMs-Lab/LongVA), [InternVL-2](https://github.com/OpenGVLab/InternVL), [VILA](https://github.com/NVlabs/VILA), and many more evaluation tasks, e.g. [Details Captions](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/136), [MLVU](https://arxiv.org/abs/2406.04264), [WildVision-Bench](https://huggingface.co/datasets/WildVision/wildvision-arena-data), [VITATECS](https://github.com/lscpku/VITATECS) and [LLaVA-Interleave-Bench](https://llava-vl.github.io/blog/2024-06-16-llava-next-interleave/).
-- [2024-07] 🎉🎉 We have released the [technical report](https://arxiv.org/abs/2407.12772) and [LiveBench](https://huggingface.co/spaces/lmms-lab/LiveBench)!
-- [2024-06] 🎬🎬 The `lmms-eval/v0.2.0` has been upgraded to support video evaluations for video models like LLaVA-NeXT Video and Gemini 1.5 Pro across tasks such as EgoSchema, PerceptionTest, VideoMME, and more. Please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/) for more details!
-- [2024-03] 📝📝 We have released the first version of `lmms-eval`, please refer to the [blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/) for more details!
+- [2025-01] [Video-MMMU](https://arxiv.org/abs/2501.13826) - Knowledge acquisition from multi-discipline professional videos.
+- [2024-12] [MME-Survey](https://arxiv.org/pdf/2411.15296) - Comprehensive survey on evaluation of multimodal LLMs.
+- [2024-11] **v0.3** - Audio evaluation support (Qwen2-Audio, Gemini-Audio). [Release notes](docs/releases/lmms-eval-0.3.md).
+- [2024-06] **v0.2** - Video evaluation (LLaVA-NeXT Video, Gemini 1.5 Pro, VideoMME, EgoSchema). [Blog](https://lmms-lab.github.io/posts/lmms-eval-0.2/).
+- [2024-03] **v0.1** - First release. [Blog](https://lmms-lab.github.io/posts/lmms-eval-0.1/).
 
 </details>
 
@@ -77,7 +73,7 @@ python -m lmms_eval \
   --limit 8
 ```
 
-If it prints metrics, your environment is ready. For the full guide, see [`docs/quickstart.md`](docs/quickstart.md).
+If it prints metrics, your environment is ready. For the full guide, see [`docs/getting-started/quickstart.md`](docs/getting-started/quickstart.md).
 
 ## Installation
 
@@ -327,7 +323,7 @@ class MyChatModel(lmms):
             # Generate...
 ```
 
-For more details, see the [Model Guide](docs/model_guide.md).
+For more details, see the [Model Guide](docs/guides/model_guide.md).
 
 ## Custom Dataset Integration
 
@@ -385,7 +381,7 @@ metric_list:
 - Auto-fallback: If not provided, uses `doc_to_visual` + `doc_to_text`
 
 
-For more details, see the [Task Guide](docs/task_guide.md).
+For more details, see the [Task Guide](docs/guides/task_guide.md).
 
 ## Web UI
 
@@ -526,7 +522,7 @@ for job_id in eval_jobs:
 
 ⚠️ **This server is intended for trusted environments only**. Do NOT expose to untrusted networks without additional security layers (authentication, rate limiting, network isolation).
 
-For more details, see the [v0.6 release notes](docs/changelogs/lmms-eval-0.6.md).
+For more details, see the [v0.6 release notes](docs/releases/lmms-eval-0.6.md).
 
 ## Frequently Asked Questions
 
@@ -546,14 +542,14 @@ If a new model family is already fully supported by vLLM or SGLang at runtime, w
 <details>
 <summary><strong>What benchmarks and tasks are available?</strong></summary>
 
-Over 100 evaluation tasks across image, video, and audio modalities, including MMMU, MME, MMBench, MathVista, VideoMME, EgoSchema, and many more. Check [`docs/current_tasks.md`](docs/current_tasks.md) for the full list.
+Over 100 evaluation tasks across image, video, and audio modalities, including MMMU, MME, MMBench, MathVista, VideoMME, EgoSchema, and many more. Check [`docs/advanced/current_tasks.md`](docs/advanced/current_tasks.md) for the full list.
 
 </details>
 
 <details>
 <summary><strong>How do I add my own benchmark?</strong></summary>
 
-Create a YAML config under `lmms_eval/tasks/` with dataset path, splits, and a `doc_to_messages` function. See [`docs/task_guide.md`](docs/task_guide.md) for a step-by-step guide.
+Create a YAML config under `lmms_eval/tasks/` with dataset path, splits, and a `doc_to_messages` function. See [`docs/guides/task_guide.md`](docs/guides/task_guide.md) for a step-by-step guide.
 
 </details>
 
@@ -567,7 +563,7 @@ Yes. Use `--model openai` with `--model_args model=gpt-4o` and set `OPENAI_API_K
 <details>
 <summary><strong>How do I run evaluations on multiple GPUs?</strong></summary>
 
-Use `accelerate launch` or pass `--device cuda` with tensor parallelism via vLLM/SGLang backends. See [`docs/commands.md`](docs/commands.md) for multi-GPU flags.
+Use `accelerate launch` or pass `--device cuda` with tensor parallelism via vLLM/SGLang backends. See [`docs/getting-started/commands.md`](docs/getting-started/commands.md) for multi-GPU flags.
 
 </details>
 

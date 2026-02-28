@@ -61,9 +61,9 @@ Start here if this is your first time using `lmms-eval`.
 
 | Guide | What You Learn |
 |-------|---------------|
-| [Quick Start](quickstart.md) | Clone, install, and run your first evaluation in 5 minutes. |
-| [Commands Guide](commands.md) | Every CLI flag explained — model selection, task filtering, batching, caching, output control, and seed management. |
-| [Run Examples](run_examples.md) | Copy-paste commands for LLaVA, Qwen, InternVL, VILA, GPT-4o, and other models across image, video, and audio tasks. |
+| [Quick Start](getting-started/quickstart.md) | Clone, install, and run your first evaluation in 5 minutes. |
+| [Commands Guide](getting-started/commands.md) | Every CLI flag explained — model selection, task filtering, batching, caching, output control, and seed management. |
+| [Run Examples](getting-started/run_examples.md) | Copy-paste commands for LLaVA, Qwen, InternVL, VILA, GPT-4o, and other models across image, video, and audio tasks. |
 
 ## Extending the Framework
 
@@ -71,7 +71,7 @@ These guides walk through adding your own models and tasks.
 
 ### Adding a Model
 
-The [Model Guide](model_guide.md) covers the full process: subclass `lmms_eval.api.model.lmms`, implement `generate_until`, and register a `ModelManifest`. Chat models (recommended) receive structured messages with roles and typed content. Simple models (legacy) receive plain text with `<image>` placeholders.
+The [Model Guide](guides/model_guide.md) covers the full process: subclass `lmms_eval.api.model.lmms`, implement `generate_until`, and register a `ModelManifest`. Chat models (recommended) receive structured messages with roles and typed content. Simple models (legacy) receive plain text with `<image>` placeholders.
 
 ```python
 from lmms_eval.api.registry import register_model
@@ -90,7 +90,7 @@ class MyModel(lmms):
 
 ### Adding a Task
 
-The [Task Guide](task_guide.md) explains the YAML configuration format. Each task defines a dataset source, prompt template, generation parameters, and scoring function. The simplest tasks require only a YAML file; complex tasks add a `utils.py` with custom prompt formatting and metric computation.
+The [Task Guide](guides/task_guide.md) explains the YAML configuration format. Each task defines a dataset source, prompt template, generation parameters, and scoring function. The simplest tasks require only a YAML file; complex tasks add a `utils.py` with custom prompt formatting and metric computation.
 
 ```yaml
 task: "my_benchmark"
@@ -108,7 +108,7 @@ metric_list:
 
 ## Using lmms-eval as a Library
 
-The [External Usage](external_usage.md) guide covers three access patterns beyond the standard CLI:
+The [External Usage](advanced/external_usage.md) guide covers three access patterns beyond the standard CLI:
 
 **CLI task browsing** lists registered tasks, groups, and model backends without downloading datasets:
 
@@ -141,8 +141,8 @@ results = evaluator.simple_evaluate(
 
 | Guide | What You Learn |
 |-------|---------------|
-| [Caching](caching.md) | SQLite-backed response cache for deterministic requests. Store, replay, merge shards across distributed ranks, and recover from crashes via JSONL audit log. |
-| [Throughput Metrics](throughput_metrics.md) | Inference timing metrics logged by chat models — end-to-end latency, time to first token, tokens per second, and batch-level summaries. |
+| [Caching](advanced/caching.md) | SQLite-backed response cache for deterministic requests. Store, replay, merge shards across distributed ranks, and recover from crashes via JSONL audit log. |
+| [Throughput Metrics](advanced/throughput_metrics.md) | Inference timing metrics logged by chat models — end-to-end latency, time to first token, tokens per second, and batch-level summaries. |
 
 The response cache stores only deterministic requests (`temperature=0`, `do_sample=False`). Enable it with `--use_cache ./eval_cache` to skip redundant model calls on repeated runs:
 
@@ -156,7 +156,7 @@ python -m lmms_eval \
 
 ## Task Catalog
 
-The [Current Tasks](current_tasks.md) page lists every registered evaluation task across all modalities. The framework ships with 100+ tasks. Three recommended starting benchmarks:
+The [Current Tasks](advanced/current_tasks.md) page lists every registered evaluation task across all modalities. The framework ships with 100+ tasks. Three recommended starting benchmarks:
 
 | Benchmark | Task Name | Modality | What It Tests |
 |-----------|-----------|----------|---------------|
@@ -177,11 +177,11 @@ Each release note documents new tasks, models, architectural changes, and migrat
 
 | Version | Theme | Highlights |
 |---------|-------|------------|
-| [v0.7](changelogs/lmms-eval-0.7.md) | Operational simplicity | YAML-first config, reasoning-tag stripping, Lance-backed video, skill-based agent workflows. |
-| [v0.6](changelogs/lmms-eval-0.6.md) | Evaluation as a service | Async HTTP server, adaptive API concurrency (~7.5x throughput), statistical rigor (CI, paired t-test). |
-| [v0.5](changelogs/lmms-eval-0.5.md) | Audio expansion | Comprehensive audio evaluation, response caching, 50+ benchmark variants. |
-| [v0.4](changelogs/lmms-eval-0.4.md) | Scale and reasoning | Distributed evaluation, reasoning benchmarks, unified chat interface. |
-| [v0.3](changelogs/lmms-eval-0.3.md) | Audio foundations | Initial audio model support (Qwen2-Audio, Gemini-Audio). |
+| [v0.7](releases/lmms-eval-0.7.md) | Operational simplicity | YAML-first config, reasoning-tag stripping, Lance-backed video, skill-based agent workflows. |
+| [v0.6](releases/lmms-eval-0.6.md) | Evaluation as a service | Async HTTP server, adaptive API concurrency (~7.5x throughput), statistical rigor (CI, paired t-test). |
+| [v0.5](releases/lmms-eval-0.5.md) | Audio expansion | Comprehensive audio evaluation, response caching, 50+ benchmark variants. |
+| [v0.4](releases/lmms-eval-0.4.md) | Scale and reasoning | Distributed evaluation, reasoning benchmarks, unified chat interface. |
+| [v0.3](releases/lmms-eval-0.3.md) | Audio foundations | Initial audio model support (Qwen2-Audio, Gemini-Audio). |
 
 ## Additional Resources
 

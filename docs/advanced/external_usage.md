@@ -190,7 +190,7 @@ tm = TaskManager(include_path="/path/to/my/tasks", include_defaults=False)
 tm = TaskManager(include_path=["/path/a", "/path/b"])
 ```
 Task YAMLs in the custom directory follow the same format as built-in tasks.
-See the [Task Guide](task_guide.md) for the full specification.
+See the [Task Guide](../guides/task_guide.md) for the full specification.
 ## 13) Run an Evaluation Programmatically
 
 `simple_evaluate` is the same function the CLI calls internally:

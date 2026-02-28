@@ -16,7 +16,7 @@
 
 🏠 [Beranda LMMs-Lab](https://www.lmms-lab.com/) | 🤗 [Dataset Huggingface](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Tugas yang Didukung (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Model yang Didukung (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Dokumentasi](../README.md)
+📖 [Tugas yang Didukung (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [Model yang Didukung (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Dokumentasi](../README.md)
 
 ---
 
@@ -26,13 +26,13 @@ Mengevaluasi model multimodal lebih sulit daripada yang terlihat. Kami memiliki 
 
 **Januari 2026** - Kami menyadari bahwa penalaran spasial dan komposisional tetap menjadi titik buta dalam benchmark yang ada. Kami menambahkan [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), and [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Untuk tim yang menjalankan pipeline evaluasi jarak jauh, kami memperkenalkan server eval HTTP (#972). Bagi mereka yang membutuhkan ketelitian statistik, kami menambahkan CLT dan estimasi kesalahan standar terklaster (#989).
 
-**Oktober 2025 (v0.5)** - Audio telah menjadi celah. Model bisa mendengar, tetapi kami tidak memiliki cara yang konsisten untuk mengujinya. Rilis ini menambahkan evaluasi audio komprehensif, caching respons untuk efisiensi, dan 50+ varian benchmark yang mencakup audio, visi, dan penalaran. [Catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md).
+**Oktober 2025 (v0.5)** - Audio telah menjadi celah. Model bisa mendengar, tetapi kami tidak memiliki cara yang konsisten untuk mengujinya. Rilis ini menambahkan evaluasi audio komprehensif, caching respons untuk efisiensi, dan 50+ varian benchmark yang mencakup audio, visi, dan penalaran. [Catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md).
 
 <details>
 <summary>Di bawah ini adalah daftar kronologis tugas, model, dan fitur terbaru yang ditambahkan oleh kontributor luar biasa kami. </summary>
 
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** hadir! Rilis utama ini memperkenalkan evaluasi audio komprehensif, caching respons, 5 model baru (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), dan 50+ varian benchmark baru yang mencakup audio (Step2, VoiceBench, WenetSpeech), visi (CharXiv, Lemonade), dan penalaran (CSBench, SciBench, MedQA, SuperGPQA). Lihat [catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md) untuk detail.
-- [2025-07] 🚀🚀 Kami telah merilis `lmms-eval-0.4`. Lihat [catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.4.md) untuk detail lebih lanjut.
+- [2025-10] 🚀🚀 **LMMs-Eval v0.5** hadir! Rilis utama ini memperkenalkan evaluasi audio komprehensif, caching respons, 5 model baru (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), dan 50+ varian benchmark baru yang mencakup audio (Step2, VoiceBench, WenetSpeech), visi (CharXiv, Lemonade), dan penalaran (CSBench, SciBench, MedQA, SuperGPQA). Lihat [catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md) untuk detail.
+- [2025-07] 🚀🚀 Kami telah merilis `lmms-eval-0.4`. Lihat [catatan rilis](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.4.md) untuk detail lebih lanjut.
 
 </details>
 
