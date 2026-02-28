@@ -94,14 +94,12 @@ All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No 
 
 ## 3. Image/Video I/O Throughput Upgrade
 
-This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics. The headline numbers:
+This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics:
 
-- **Up to 3.58x faster video decode** with TorchCodec multi-threaded backend (8 frames, `LMMS_VIDEO_TORCHCODEC_THREADS=8`)
-- **2.7x pipeline speedup on LongVideoBench** (decode latency `2.79s` -> `1.02s`, scores unchanged)
-- **1.95x at 32 frames**, **1.32x at dense sampling** (fps=30, 1639 frames)
-- No regression at sparse sampling (fps=1) — PyAV remains the default
+- **Up to 3.58x faster video decode** (8 frames) and **1.95x at 32 frames** with TorchCodec multi-threaded backend. PyAV is single-threaded by design; TorchCodec parallelizes frame decode across worker threads, so the gap widens as frame counts grow. Set `LMMS_VIDEO_TORCHCODEC_THREADS=8`.
+- **2.7x pipeline speedup on LongVideoBench** (decode latency `2.79s` -> `1.02s`, scores unchanged). The unified `read_video` entry point eliminates redundant container open/close cycles that previously happened per-model, and preallocates the output array instead of building a Python list and calling `np.stack`.
+- **LRU caching on media-path resolution and image encoding** removes repeated filesystem and base64 work that dominated wall time in large evaluation runs. No regression at sparse sampling (fps=1) — PyAV remains the default.
 
-The gains come from three layers. First, TorchCodec parallelizes frame decode across multiple threads — PyAV is single-threaded by design, so the gap widens as frame counts grow. Second, the unified `read_video` entry point eliminates redundant container open/close cycles that previously happened per-model, and preallocates the output array instead of building a Python list and calling `np.stack`. Third, LRU caching on media-path resolution and image encoding removes repeated filesystem and base64 work that dominated wall time in large evaluation runs.
 ### 3.1 read_video — Unified Video Decode Entry Point
 
 The `read_video` function in `lmms_eval/models/model_utils/load_video.py` is the single entry point for video frame extraction across all model backends. It uniformly samples `num_frm` frames (or uses FPS-guided sampling when `fps` is set) and returns an `np.ndarray` of shape `(N, H, W, 3)` in `uint8`.
@@ -157,84 +155,36 @@ Aggregate scores remain unchanged. Per-item drift is consistent with remote-prov
 
 ### 3.3 TorchCodec Thread Tuning Benchmarks
 
-TorchCodec with multi-threading delivers significant speedups over PyAV. The table below summarizes recommended settings for common scenarios.
+5 warmup + 20 measured iterations per config. TorchCodec `v0.10.0` on PyTorch `2.10.0`. First-frame hash parity verified against PyAV baseline. FPS-guided rows use `num_frm=4096`; `fps=1` yields 54 sampled frames, `fps=30` yields 1639 (near full extraction).
 
-**Recommended settings:**
+| Scenario | Backend | Threads | Mean (ms) | vs PyAV |
+|----------|---------|---------|-----------|---------|
+| 8 frames | PyAV | — | 196.64 | baseline |
+| | TorchCodec | 0 | 197.41 | +0.39% |
+| | TorchCodec | 2 | 121.42 | -38.25% |
+| | TorchCodec | 4 | 76.10 | -61.30% |
+| | **TorchCodec** | **8** | **54.88** | **-72% (3.58x)** |
+| 16 frames | PyAV | — | 188.21 | baseline |
+| | TorchCodec | 0 | 469.48 | +149% |
+| | TorchCodec | 2 | 283.41 | +51% |
+| | **TorchCodec** | **4** | **178.80** | **-5% (1.05x)** |
+| | TorchCodec | 8 | 263.44 | +40% |
+| 32 frames | PyAV | — | 415.76 | baseline |
+| | TorchCodec | 0 | 828.36 | +99% |
+| | TorchCodec | 4 | 296.24 | -29% |
+| | **TorchCodec** | **8** | **213.45** | **-49% (1.95x)** |
+| fps=1 (54 fr) | PyAV | — | 208.65 | baseline |
+| | TorchCodec | 0 | 903.26 | +333% |
+| | TorchCodec | 8 | 228.49 | +10% |
+| | TorchCodec | 16 | 207.43 | -2% (parity) |
+| fps=30 (1639 fr) | PyAV | — | 1676.29 | baseline |
+| | TorchCodec | 0 | 2406.10 | +44% |
+| | **TorchCodec** | **4** | **1272.04** | **-24% (1.32x)** |
+| | TorchCodec | 8 | 1282.75 | -23% |
 
-| Scenario | Threads Setting | Speedup vs PyAV |
-|----------|----------------|-----------------|
-| 8 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | **3.58x** |
-| 16 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.05x |
-| 32 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | 1.95x |
-| FPS=1 (sparse sampling) | Use PyAV default | — |
-| FPS≥30 (dense sampling) | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.32x |
+**Takeaways:** Set `LMMS_VIDEO_TORCHCODEC_THREADS=8` as default. At sparse sampling (fps=1) TorchCodec offers no advantage — use PyAV. At dense sampling (fps≥30) use threads=4 for 1.32x. Default threads (0/1) are **never** faster and regress up to +150% at 16 frames.
 
-General recommendation: set `LMMS_VIDEO_TORCHCODEC_THREADS=8`. See [Section 3.4](#34-fps-guided-sampling-1-fps-vs-30-fps) for FPS-guided details.
-
-::important
-Default threads (0/1) are **not** faster. TorchCodec with `threads=0` or `1` matches or regresses vs PyAV — up to +150% slower at 16 frames. Always set threads explicitly.
-::
-
-**Detailed benchmark data** — 5 warmup + 20 measured iterations per config. TorchCodec `v0.10.0` on PyTorch `2.10.0`. First-frame hash parity verified against PyAV baseline.
-
-**8 frames:**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 196.64 | baseline |
-| TorchCodec | 0 | 197.41 | +0.39% |
-| TorchCodec | 2 | 121.42 | -38.25% |
-| TorchCodec | 4 | 76.10 | -61.30% |
-| **TorchCodec** | **8** | **54.88** | **-72% (3.58x)** |
-
-**16 frames:**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 188.21 | baseline |
-| TorchCodec | 0 | 469.48 | +149% |
-| TorchCodec | 2 | 283.41 | +51% |
-| **TorchCodec** | **4** | **178.80** | **-5% (1.05x)** |
-| TorchCodec | 8 | 263.44 | +40% |
-
-**32 frames:**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 415.76 | baseline |
-| TorchCodec | 0 | 828.36 | +99% |
-| TorchCodec | 4 | 296.24 | -29% |
-| **TorchCodec** | **8** | **213.45** | **-49% (1.95x)** |
-
-
-### 3.4 FPS-Guided Sampling (1 FPS vs 30 FPS)
-
-Same video as Section 3.3, with `num_frm=4096`. `fps=1` yields 54 sampled frames; `fps=30` yields 1639 (near full extraction).
-
-**Sparse sampling (fps=1, 54 frames):**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 208.65 | baseline |
-| TorchCodec | 0 | 903.26 | +333% |
-| TorchCodec | 8 | 228.49 | +10% |
-| TorchCodec | 16 | 207.43 | -2% (near parity) |
-
-**Dense sampling (fps=30, 1639 frames):**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 1676.29 | baseline |
-| TorchCodec | 0 | 2406.10 | +44% |
-| **TorchCodec** | **4** | **1272.04** | **-24% (1.32x)** |
-| TorchCodec | 8 | 1282.75 | -23% |
-
-::tip
-**Sparse sampling (fps=1)**: TorchCodec offers no advantage. PyAV is sufficient.
-**Dense sampling (fps≥30)**: Set `LMMS_VIDEO_TORCHCODEC_THREADS=4` for a 1.32x speedup. The backend advantage only materializes when enough frames are decoded to amortize setup overhead.
-::
-
-### 3.5 Media Resolver LRU Caching
+### 3.4 Media Resolver LRU Caching
 
 The new benchmark tasks rely on `resolve_media_reference` to resolve media paths from local directories, task cache folders, and Hugging Face cache roots. In large runs, this repeats the same path-construction work many times.
 
@@ -248,7 +198,15 @@ v0.7 adds in-process LRU caching for deterministic path-expansion helpers:
 
 ## 4. Lance-Backed Video Mode
 
-v0.7 adds an optional Lance-backed video path for MINERVA so metadata and videos can be distributed through Hugging Face in a single reproducible package.
+v0.7 adds an optional Lance-backed video path for MINERVA so metadata and videos can be distributed through Hugging Face in a compact way — no separate video downloads, no dangling file references.
+
+**Why Lance over Parquet or raw files?** Video evaluation datasets have an inherent tension: lightweight metadata (question text, answer IDs) coexists with heavyweight binary blobs (10-50 MB video files per row). Parquet's row-group architecture forces a trade-off — small row groups waste I/O on scalar columns, large ones blow up memory with video bytes — and its page-level compression means accessing a single video requires decompressing an entire row group. Distributing raw files means managing thousands of loose objects with fragile path references.
+
+Lance resolves this with three design properties documented in [Pace et al., 2025](https://arxiv.org/abs/2504.15247) and the [Lance × Hugging Face integration](https://lancedb.com/blog/lance-x-huggingface-a-new-era-of-sharing-multimodal-data/):
+
+1. **Blob encoding separates metadata from payload.** Columns tagged with `lance-encoding:blob=true` store raw bytes contiguously per row with only a position index in column metadata. Scanning `video_id` or `video_ext` never touches the multi-GB blob pages. `take_blobs(ids=[row_id])` returns a lazy file-like handle with a single positioned range read — no row-group decompression, no full-table scan.
+2. **No row groups.** Lance v2 eliminates row groups entirely ([Lance v2 format](https://lancedb.com/blog/lance-v2/)). Each column picks its own optimal page size independently, so scalar metadata uses compact pages while blob columns use large pages tuned for object-storage I/O. The arXiv paper benchmarks show at most 1 IOP for fixed-width random access and at most 2 IOPs for variable-width, regardless of nesting or compression.
+3. **Single-artifact distribution.** One Lance dataset directory on the Hub packages metadata, video bytes, and optional indexes together. Users point to a single `hf://` URI and the resolver streams blobs on demand, caching locally. This replaces the typical "metadata table here, video files there" pattern that requires download scripts and manual path wiring.
 
 ### 4.1 Dataset Package on Hugging Face
 
@@ -259,7 +217,7 @@ MINERVA is published as `lmms-lab-eval/minerva` with two key assets:
 | `minerva.json` | Task metadata used by `minerva.yaml` |
 | `data/train.lance` | Lance table with one row per `video_id` |
 
-The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`.
+The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`. Under the hood, `train.lance` is a directory containing versioned data fragments (each up to 4 GiB), transaction logs, and a protobuf manifest — not a single monolithic file. The blob encoding stores each video's raw bytes contiguously in the data fragments and keeps only a lightweight position-and-length index in the column metadata. This means scanning scalar columns (`video_id`, `video_ext`) never reads blob pages, while `take_blobs(ids=[row_id])` resolves a video in one positioned range read against the data fragment. The `take_blobs` API returns a lazy file-like handle, so the bytes can be piped directly into PyAV or torchcodec without materializing the entire video in memory.
 
 ### 4.2 Build Lance Table from Local Downloads
 
@@ -317,48 +275,6 @@ uv run --with pylance --with pyarrow python -m lmms_eval \
 
 MINERVA remains reproducible in two modes: fully local video files or remote Lance blobs from the Hub.
 
-### 4.5 Benchmarking Video-Resolution Latency
-
-v0.7 includes a direct resolver benchmark for measuring Lance-mode latency:
-
-::code-group
-```bash [Lance mode]
-uv run python tools/bench_minerva_video_resolution.py \
-  --metadata-json data/minerva/minerva.json \
-  --mode lance \
-  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
-  --limit 200 \
-  --sample-unique-video
-```
-
-```bash [Local-file baseline]
-uv run python tools/bench_minerva_video_resolution.py \
-  --metadata-json data/minerva/minerva.json \
-  --mode local \
-  --local-video-dir /absolute/path/to/minerva/videos \
-  --limit 200
-```
-
-```bash [Pipeline comparison (same decode backend)]
-uv run python tools/bench_minerva_pipeline_latency.py \
-  --local-video-dir /absolute/path/to/minerva/videos \
-  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
-  --limit 100 \
-  --batch-size 1 \
-  --decode-num-frames 8
-```
-::
-
-The benchmark reports absolute latency distribution for `minerva_doc_to_visual`: `startup_ms` (Lance resolver init cost), `cold_*` metrics (first pass, cache-miss heavy), and `warm_*` metrics (second pass, cache-hit heavy).
-
-::tip
-On local pre-downloaded videos, local raw and Lance modes are often near-parity because decode cost dominates. Lance advantages become clearer in remote/object-storage access, cross-machine reproducibility, and repeated subset evaluation workflows.
-::
-
-**Implementation notes:**
-- MINERVA Lance resolver avoids eager full-table `video_id` scan at initialization and resolves rows via filtered scan on demand, reducing startup overhead.
-- For large-blob dataset builds, use blob-oriented write settings in `tools/minerva_to_lance.py` (smaller rows-per-file and stable storage version).
-
 ---
 
 ## 5. Safety and Red-Teaming Baseline
@@ -396,7 +312,7 @@ Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + be
 | `demographic_refusal_rate` | Refusal rate on demographic-related prompts |
 | `non_demographic_refusal_rate` | Refusal rate on non-demographic prompts |
 
-### 5.3 Toxicity Backends
+### 5.3 Toxicity Metrics
 
 Toxicity scoring supports two modes:
 
@@ -422,40 +338,40 @@ python -m lmms_eval \
 
 v0.7 improves efficiency observability, but not all metrics are equally available across backends.
 
-### 6.1 What v0.7 Covers
+### 6.1 Emitted Metrics
 
-"Efficiency metrics complete" in v0.7 means:
+v0.7 adds efficiency data at three levels:
 
-- Per-sample token counts in evaluation outputs (`input_tokens`, `output_tokens`, `reasoning_tokens` when backend metadata exists)
-- Run-level throughput metrics in results (`total_gen_tokens`, `total_elapsed_time`, `avg_speed`)
-- vLLM-backed chat paths report TTFT/TPOT through native runtime metrics
+| Level | Fields | Scope |
+|-------|--------|-------|
+| **Per-sample** | `input_tokens`, `output_tokens`, `reasoning_tokens` | Attached to each evaluation record when backend metadata exists |
+| **Run-level** | `total_gen_tokens`, `total_elapsed_time`, `avg_speed` | Aggregated across the full evaluation run |
+| **Latency breakdown** | TTFT, TPOT | vLLM chat backends only, via native runtime metrics |
 
 ::note
 TTFT/TPOT parity across every backend is out of scope for v0.7.
 ::
 
-### 6.2 TTFT/TPOT Coverage Matrix
+### 6.2 TTFT/TPOT Coverage by Backend
 
-| Backend Family | TTFT | TPOT | Notes |
-|----------------|------|------|-------|
-| `vllm` chat backends | ✅ | ✅ | Reads runtime metrics, logs as `additional_metrics` |
+| Backend Family | TTFT | TPOT | Available Data |
+|----------------|------|------|----------------|
+| `vllm` chat backends | ✅ | ✅ | Native runtime metrics, logged as `additional_metrics` |
 | `sglang` chat backend | ❌ | ❌ | Wall-clock throughput only |
-| OpenAI-compatible APIs (`openai`, `async_openai`) | ❌ | ❌ | Token usage + end-to-end latency, no first-token timestamp |
+| OpenAI-compatible APIs (`openai`, `async_openai`) | ❌ | ❌ | Token usage + end-to-end latency; no first-token timestamp |
 | HuggingFace local generate | ❌ | ❌ | `model.generate()` wall-clock timing only |
 
 ::important
 TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
 ::
 
-### 6.3 Extending TTFT Beyond vLLM
+### 6.3 TTFT/TPOT Gaps
 
-Extending TTFT to other backends is feasible but requires backend-specific work:
-
-| Backend | Feasibility | Caveat |
-|---------|-------------|--------|
-| OpenAI-compatible APIs | Streaming-first instrumentation + first-chunk timestamp | Measured TTFT includes network and client overhead |
-| SGLang | Per-request first-token timing in generation path | Batch-level timing alone is not sufficient |
-| HuggingFace local | Token streaming/generation callbacks | Default `generate()` does not expose TTFT |
+| Backend | Blocker | Path to Coverage |
+|---------|---------|-----------------|
+| OpenAI-compatible APIs | No first-token timestamp in non-streaming responses | Streaming-first instrumentation; measured TTFT would include network and client overhead |
+| SGLang | Batch-level timing only | Per-request first-token timing in generation path |
+| HuggingFace local | `generate()` does not expose per-token timing | Token streaming or generation callbacks |
 
 ### 6.4 Reporting Guidance
 
