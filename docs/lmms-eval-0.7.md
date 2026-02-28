@@ -94,7 +94,12 @@ All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No 
 
 ## 3. Image/Video I/O Throughput Upgrade
 
-This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
+This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics. The headline numbers:
+
+- **Up to 3.58x faster video decode** with TorchCodec multi-threaded backend (8 frames, `LMMS_VIDEO_TORCHCODEC_THREADS=8`)
+- **2.7x pipeline speedup on LongVideoBench** (decode latency `2.79s` -> `1.02s`, scores unchanged)
+- **1.95x at 32 frames**, **1.32x at dense sampling** (fps=30, 1639 frames)
+- No regression at sparse sampling (fps=1) — PyAV remains the default
 
 ### 3.1 read_video — Unified Video Decode Entry Point
 
@@ -129,7 +134,7 @@ read_video(
 - Preallocated output array fill (replaces `list` + `np.stack` path)
 - Configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
 
-### 3.2 LongVideoBench Check
+### 3.2 Check on Long Video Benchmarks
 
 To validate the optimization, we ran `longvideobench_val_v` with an API provider backed model (OpenRouter, `bytedance-seed/seed-1.6-flash`) under fixed settings (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
 
