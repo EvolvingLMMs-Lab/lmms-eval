@@ -393,82 +393,39 @@ The v0.7 efficiency output is token-based by design. It does not include price-d
 
 ## 7. Skill-Based Agent Workflows
 
-v0.7 standardizes how coding agents learn and orchestrate lmms-eval workflows through the repository skill:
+Coding agents working on lmms-eval need to know where model files live, how task YAMLs are structured, what the registry contract looks like, and how to verify changes - context that is scattered across source files and docs. The skill system packages this into structured references so agents can load the right context at the right time instead of guessing.
 
-- `skills/lmms-eval-guide/SKILL.md`
-- `skills/lmms-eval-guide/references/models.md`
-- `skills/lmms-eval-guide/references/tasks.md`
-- `skills/lmms-eval-guide/references/api-server.md`
-- `skills/lmms-eval-guide/references/workflows.md`
+v0.7 ships the skill as a set of files in the repository:
 
-This turns lmms-eval from a set of docs into a reusable operational skill for agents — discover the right integration path, apply correct file-level patterns, and schedule evaluation jobs safely.
+- `skills/lmms-eval-guide/SKILL.md` — entry point and routing logic
+- `skills/lmms-eval-guide/references/models.md` — model integration patterns
+- `skills/lmms-eval-guide/references/tasks.md` — task/benchmark definition patterns
+- `skills/lmms-eval-guide/references/api-server.md` — HTTP eval server workflows
+- `skills/lmms-eval-guide/references/workflows.md` — config, debugging, operational patterns
 
-### 7.1 Add New Models and Tasks via Skill References
+### 7.1 What the Skill References Cover
 
-The skill references define recommended implementation paths for extension work:
+Each reference encodes the recommended implementation path for one concern:
 
-- **New model integration** -> `references/models.md`
-  - Chat-first model template (`is_simple = False`)
-  - Request unpacking contract (`request.args` shape)
-  - `message_format` parameter for API model serialization dispatch
-  - Registration in `lmms_eval/models/__init__.py`
-  - v0.6 -> v0.7 breaking changes and migration
-  - Minimal verification commands (`--limit 5` / `--verbosity DEBUG`)
+- **Model integration** (`references/models.md`) — chat-first model template (`is_simple = False`), request unpacking contract (`request.args` shape), `message_format` parameter for API serialization dispatch, registry entry in `__init__.py`, v0.6 -> v0.7 migration, and verification commands (`--limit 5` / `--verbosity DEBUG`).
 
-- **New task/benchmark integration** -> `references/tasks.md`
-  - YAML-first task definition (auto-registered from `tasks/`)
-  - `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`
-  - `process_results` + `metric_list` contract
-  - `reasoning_tags` per-task override for `<think>` stripping
-  - Available task domains (v0.7 coverage)
-  - Advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge)
+- **Task integration** (`references/tasks.md`) — YAML-first task definition (auto-registered from `tasks/`), `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`, `process_results` + `metric_list` contract, `reasoning_tags` per-task override, and advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge).
+
+- **Training-time evaluation** (`references/api-server.md`) — start the HTTP eval server on dedicated resources, submit non-blocking jobs with `EvalClient.evaluate(...)` during training, poll or wait by `job_id`, collect metrics for checkpoint selection. The server provides queue-safe GPU usage, async checkpoint evaluation, and operational visibility via `/queue` and job lifecycle states.
+
+- **Operational workflows** (`references/workflows.md`) — `--config` YAML usage, debugging steps, config structure and CLI override priority.
 
 ::tip
-Agents should follow this workflow: resolve whether the change is model-side, task-side, or both; load the matching skill reference; follow existing code patterns in nearby models and task YAMLs; run a small-sample verification before broader evaluation.
+The intended workflow: resolve whether the change is model-side, task-side, or both; load the matching reference; follow existing code patterns in nearby files; run a small-sample verification before broader evaluation.
 ::
 
-### 7.2 Insert lmms-eval into Training Jobs via HTTP Service
+### 7.2 Agent Dispatch Strategy
 
-For training-time evaluation, use the eval server workflow from `references/api-server.md`.
-
-Core pattern:
-
-1. Start the HTTP eval server (`launch_server(ServerArgs(...))`) on dedicated eval resources.
-2. During training, submit non-blocking jobs with `EvalClient.evaluate(...)`.
-3. Continue training immediately. Poll or wait by `job_id` later.
-4. Collect metrics asynchronously for checkpoint selection, regression alerts, and model ranking.
-
-Key endpoints for job orchestration:
-
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /evaluate` | Submit evaluation jobs |
-| `GET /jobs/{job_id}` | Query status and results |
-| `GET /queue` | Inspect scheduler backlog |
-| `GET /tasks` and `GET /models` | Runtime capability discovery |
-
-This service mode is the recommended way to decouple training and evaluation in v0.7 workflows.
-
-### 7.3 HTTP Service as an Operational Primitive
-
-Treat the eval server as infrastructure, not only a convenience API:
-
-- **Queue-safe GPU usage** — scheduler-managed jobs prevent resource contention
-- **Async checkpoint evaluation** — evaluate without blocking trainer processes
-- **Multi-team reproducibility** — stable request payloads and job IDs
-- **Operational visibility** — `/queue` and job lifecycle states
-
-::warning
-Run the eval server in trusted environments only. Add authentication, rate limiting, and network isolation before exposing it beyond internal boundaries.
-::
-
-### 7.4 Agent Dispatch Strategy
-
-When agents orchestrate lmms-eval tasks, use this routing:
+When agents orchestrate lmms-eval tasks, use this routing to load the right reference:
 
 | Scenario | Action |
 |----------|--------|
-| Task/model extension | Load `lmms-eval-guide` + `references/models.md` or `references/tasks.md` |
+| Task/model extension | Load `references/models.md` or `references/tasks.md` |
 | YAML config setup | Load `references/workflows.md` for `--config` usage and config structure |
 | Training integration | Load `references/api-server.md` first |
 | Quick validation | Run `--limit` smoke tests before full benchmark submission |
@@ -504,9 +461,9 @@ def doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None,
     # - 5-tuple: (visuals, next_context, terminal_signal, updated_outputs, round_info)
 ```
 
-### 8.2 Seed Agentic Tasks
+### 8.2 Agentic Tasks
 
-Two seed tasks validate the infrastructure with deterministic Python simulators (no external sandbox required):
+Two tasks validate the infrastructure with deterministic Python simulators (no external sandbox required):
 
 | Task | Domain | Tools | Goal | Steps |
 |------|--------|-------|------|-------|
@@ -569,7 +526,7 @@ python -m lmms_eval --config configs/my_experiment.yaml
 
 One file captures everything — model, tasks, generation parameters, and environment variables. Ship the YAML, reproduce the result.
 
-### 9.1 What Goes in the YAML
+### 9.1 Better YAML system
 
 A config file maps directly to CLI arguments, plus an optional `env` section for environment variables.
 
