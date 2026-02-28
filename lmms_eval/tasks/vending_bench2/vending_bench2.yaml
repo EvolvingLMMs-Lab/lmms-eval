@@ -1,8 +1,8 @@
 dataset_path: json
 dataset_kwargs:
   data_files:
-    test: lmms_eval/tasks/vending_bench2/data/vending_bench2_seed.jsonl
-task: "vending_bench2_seed"
+    test: lmms_eval/tasks/vending_bench2/data/vending_bench2.jsonl
+task: "vending_bench2"
 test_split: test
 output_type: generate_until_agentic
 doc_to_visual: !function utils.vending_doc_to_visual
@@ -44,4 +44,4 @@ lmms_eval_specific_kwargs:
     post_prompt: ""
 metadata:
   - version: 0.1
-    description: "Seed no-sandbox Vending-Bench 2 style agentic task with deterministic simulator"
+    description: "Vending-Bench 2 agentic task with deterministic simulator"

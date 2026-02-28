@@ -1,8 +1,8 @@
 dataset_path: json
 dataset_kwargs:
   data_files:
-    test: lmms_eval/tasks/tau2_bench/data/tau2_telecom_seed.jsonl
-task: "tau2_bench_telecom_seed"
+    test: lmms_eval/tasks/tau2_bench/data/tau2_telecom.jsonl
+task: "tau2_bench_telecom"
 test_split: test
 output_type: generate_until_agentic
 doc_to_visual: !function utils.tau2_doc_to_visual
@@ -41,4 +41,4 @@ lmms_eval_specific_kwargs:
     post_prompt: ""
 metadata:
   - version: 0.1
-    description: "Seed no-sandbox telecom-style agentic task with Python function tools"
+    description: "Telecom-style agentic task with Python function tools"

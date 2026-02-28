@@ -1,6 +1,6 @@
-# vending_bench2_seed
+# vending_bench2
 
-This is a no-sandbox seed integration for Vending-Bench 2 style agentic loop evaluation in lmms-eval.
+Vending-Bench 2 agentic loop evaluation in lmms-eval.
 
 - Output type: `generate_until_agentic`
 - Tools: pure Python simulator functions in `utils.py`
@@ -13,12 +13,12 @@ Quick smoke run:
 python -m lmms_eval \
   --model openai \
   --model_args model=gpt-4o-mini \
-  --tasks vending_bench2_seed \
+  --tasks vending_bench2 \
   --limit 2 \
   --batch_size 1
 ```
 
 Notes:
 
-- This seed task validates `generate_until_agentic` with deterministic vending simulation.
-- Full official Vending-Bench 2 integration can be layered on top by replacing the seed JSONL with official task contracts.
+- Validates `generate_until_agentic` with deterministic vending simulation.
+- Full official Vending-Bench 2 integration can be layered on top by replacing the JSONL with official task contracts.

@@ -75,9 +75,9 @@ v0.7 adds 25+ benchmark tasks across eight domains:
 | **Math & reasoning** | MathCanvas, MathKangaroo, VisuLogic, LLaVA-OV 1.5 RL reasoning collection |
 | **Spatial & counting** | Point-Bench, CountBench, FSC-147 |
 | **Knowledge & QA** | SimpleVQA, WorldVQA, MTVQA, HiPhO, MME-CC, VPCT, ZeroBench |
-| **AGI & agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp, Vending-Bench 2 (seed), τ2-Bench Telecom (seed) |
+| **Agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp, Vending-Bench 2, τ2-Bench Telecom |
 | **Audio** | AMI, CN College Listen MCQ, DREAM TTS MCQ, EuroPal ASR, Song Describer |
-| **Safety** | JailbreakBench harmful + benign splits (see [Section 5](#5-safety-and-red-teaming-baseline)) |
+| **Safety** | JailbreakBench harmful + benign splits |
 
 All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No manual registration required. Run `python -m lmms_eval --tasks list` to see all available tasks.
 
@@ -588,8 +588,8 @@ Two seed tasks validate the infrastructure with deterministic Python simulators 
 
 | Task | Domain | Tools | Goal | Steps |
 |------|--------|-------|------|-------|
-| `vending_bench2_seed` | Vending machine operation | `get_vending_status`, `set_price`, `restock`, `simulate_days` | Reach target cash and elapsed days | 10 |
-| `tau2_bench_telecom_seed` | Telecom customer support | `get_line_status`, `disable_airplane_mode`, `enable_roaming`, `reset_network` | Reach target device state | 8 |
+| `vending_bench2` | Vending machine operation | `get_vending_status`, `set_price`, `restock`, `simulate_days` | Reach target cash and elapsed days | 10 |
+| `tau2_bench_telecom` | Telecom customer support | `get_line_status`, `disable_airplane_mode`, `enable_roaming`, `reset_network` | Reach target device state | 8 |
 
 Quick smoke test:
 
@@ -597,7 +597,7 @@ Quick smoke test:
 python -m lmms_eval \
   --model openai \
   --model_args model=gpt-4o-mini \
-  --tasks vending_bench2_seed \
+  --tasks vending_bench2 \
   --limit 2 --batch_size 1
 ```
 

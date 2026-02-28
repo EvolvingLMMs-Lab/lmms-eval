@@ -1,6 +1,6 @@
-# tau2_bench_telecom_seed
+# tau2_bench_telecom
 
-This is a no-sandbox seed integration for agentic loop evaluation in lmms-eval.
+τ2-Bench telecom agentic loop evaluation in lmms-eval.
 
 - Output type: `generate_until_agentic`
 - Tools: pure Python functions in `utils.py`
@@ -13,12 +13,12 @@ Quick smoke run:
 python -m lmms_eval \
   --model openai \
   --model_args model=gpt-4o-mini \
-  --tasks tau2_bench_telecom_seed \
+  --tasks tau2_bench_telecom \
   --limit 2 \
   --batch_size 1
 ```
 
 Notes:
 
-- This seed task validates the new agentic infrastructure (multi-step tool calls + submit).
-- Full official tau2-bench domain integration can be layered on top by converting official task specs to lmms-eval docs.
+- Validates the agentic infrastructure (multi-step tool calls + submit).
+- Full official τ2-bench domain integration can be layered on top by converting official task specs to lmms-eval docs.

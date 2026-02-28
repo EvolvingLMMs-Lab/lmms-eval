@@ -35,7 +35,7 @@
 - SimpleVQA ([#1184](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1184)), WorldVQA ([#1168](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1168)), MTVQA ([#1167](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1167)), HiPhO ([#1186](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1186)), MME-CC ([#1185](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1185)), VPCT ([#1183](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1183)), ZeroBench ([#1182](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1182))
 
 **AGI & agentic**:
-- ARC-AGI-1, ARC-AGI-2, BrowseComp ([#1190](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1190)), Vending-Bench 2 seed, τ2-Bench Telecom seed
+- ARC-AGI-1, ARC-AGI-2, BrowseComp ([#1190](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1190)), Vending-Bench 2, τ2-Bench Telecom
 
 **Audio** (v0.7 Audio Update, [#1124](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1124)):
 - AMI (meeting transcription, train/validation/test splits)
@@ -90,7 +90,7 @@
 ### Agentic Task Evaluation
 
 - **`generate_until_agentic` output type**: iterative evaluator loop where the model emits `<tool_call>` or `<submit>` tags and `doc_to_text` executes tools against deterministic Python simulators. Configurable via `max_agentic_steps`. ([Release notes §8](docs/lmms-eval-0.7.md#8-agentic-task-evaluation))
-- **Seed tasks**: `vending_bench2_seed` (vending machine operation, 4 tools, 10 steps) and `tau2_bench_telecom_seed` (telecom support, 4 tools, 8 steps). No external sandbox required.
+- **Agentic tasks**: `vending_bench2` (vending machine operation, 4 tools, 10 steps) and `tau2_bench_telecom` (telecom support, 4 tools, 8 steps). No external sandbox required.
 - **Trace metrics**: success rate, trace step validity, state progress, termination quality, and composite trace quality.
 
 ### Better One-Line Evaluation Support
