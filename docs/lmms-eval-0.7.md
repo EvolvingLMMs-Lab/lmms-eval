@@ -101,6 +101,7 @@ This update consolidates image encoding in shared helpers and optimizes video de
 - **1.95x at 32 frames**, **1.32x at dense sampling** (fps=30, 1639 frames)
 - No regression at sparse sampling (fps=1) — PyAV remains the default
 
+The gains come from three layers. First, TorchCodec parallelizes frame decode across multiple threads — PyAV is single-threaded by design, so the gap widens as frame counts grow. Second, the unified `read_video` entry point eliminates redundant container open/close cycles that previously happened per-model, and preallocates the output array instead of building a Python list and calling `np.stack`. Third, LRU caching on media-path resolution and image encoding removes repeated filesystem and base64 work that dominated wall time in large evaluation runs.
 ### 3.1 read_video — Unified Video Decode Entry Point
 
 The `read_video` function in `lmms_eval/models/model_utils/load_video.py` is the single entry point for video frame extraction across all model backends. It uniformly samples `num_frm` frames (or uses FPS-guided sampling when `fps` is set) and returns an `np.ndarray` of shape `(N, H, W, 3)` in `uint8`.
