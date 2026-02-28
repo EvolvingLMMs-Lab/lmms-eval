@@ -35,6 +35,8 @@ We are keeping the evolving pace to build better evals, to explore evaluation's 
 
 ## What's New
 
+**February 2026 (v0.7)** - The theme is operational simplicity. v0.7 replaces fragile CLI one-liners with YAML config-driven evaluation (`--config`), adds pipeline-level reasoning tag stripping for `<think>` models, unifies video decode with TorchCodec multi-threaded backend (up to 3.58x faster), introduces safety/red-teaming baselines (JailbreakBench), and ships Lance-backed video distribution for MINERVA. Also: 25+ new benchmark tasks, async multi-GPU HF inference, flattened JSONL logs, and token efficiency metrics. [Release notes](docs/lmms-eval-0.7.md) | [Changelog](CHANGELOG.md).
+
 **February 2026 (v0.6)** - Our previous versions were too slow, the architecture wasn't clean, and the results lacked statistical insight. v0.6 is a re-engineered release that addresses all three: evaluation runs as a standalone service (decoupled from training, serving queue-based eval requests), statistically grounded results that capture real model improvements rather than a single accuracy score (confidence intervals, clustered standard errors, paired comparison with t-test), and optimizations to max out your model runtime's capacity (~7.5x over previous versions). 50+ new tasks and 10+ new models. [Release notes](docs/lmms-eval-0.6.md) | [Changelog](CHANGELOG.md).
 
 **October 2025 (v0.5)** - Audio had been a gap. Models could hear, but we had no consistent way to test them. This release added comprehensive audio evaluation, response caching for efficiency, and 50+ benchmark variants spanning audio, vision, and reasoning. [Release notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
