@@ -28,9 +28,7 @@ Fewer flags to remember, fewer things that go wrong, and a single file that capt
 
 ## Upgrading from v0.6
 
-::important
-Most workflows are backward-compatible. Two model-backend changes require attention before upgrading.
-::
+> **Important:** Most workflows are backward-compatible. Two model-backend changes require attention before upgrading.
 
 ### Breaking Changes
 
@@ -654,9 +652,7 @@ TTFT/TPOT parity across every backend is out of scope for v0.7.
 | OpenAI-compatible APIs (`openai`, `async_openai`) | ❌ | ❌ | Token usage + end-to-end latency; no first-token timestamp |
 | HuggingFace local generate | ❌ | ❌ | `model.generate()` wall-clock timing only |
 
-::important
-TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
-::
+> **Important:** TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
 
 ### 9.3 TTFT/TPOT Gaps
 
