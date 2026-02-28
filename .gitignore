@@ -1,62 +1,85 @@
-**/.cache
-env
+# Python
 *.pyc
-output/
-data/
-lm_cache
-.idea
+__pycache__
+*.egg-info
+*.isorted
+
+# Virtual environments
+env
+venv
+.venv
+
+# Build artifacts
 build
 dist
 !lmms_eval/tui/web/dist
-*.egg-info
+
+# Package manager
 node_modules/
-venv
+uv.lock
+
+# IDE / Editor
+.idea
 .vscode/
-temp
-__pycache__
 .ipynb_checkpoints
-temp
-.DS_STORE
-# IPython
 profile_default/
 ipython_config.py
-logs/
-scripts/
-wandb/
-SimSun.ttf
-submissions/
-lmms_eval/tasks/hallusion_bench/hallusion_output_vs_model.json
-lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
-zk.log
+
+# OS
+.DS_STORE
+
+# Environment and secrets
+.env
+
+# Caches and temp
+**/.cache
+lm_cache
 cache_dir
-ckpt
-pretrained/
-LLaVA/
-*logs
-*.isorted
 temp/
-InternVL/
+outputs/
+output/
+
+# Logs
 logs/
+*logs
+wandb/
+zk.log
+span.log
+
+# Data and models (large / local-only)
 data/
+pretrained/
+ckpt
+submissions/
+remote_code/*
+
+# External repos cloned locally
+LLaVA/
+InternVL/
 llava-video/
 Video-MME/
 VATEX/
+
+# Task-specific generated files
+lmms_eval/tasks/hallusion_bench/hallusion_output_vs_model.json
+lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
 lmms_eval/tasks/vatex/__pycache__/utils.cpython-310.pyc
 lmms_eval/tasks/mlvu/__pycache__/utils.cpython-310.pyc
 
+# Fonts
+SimSun.ttf
+
+# Scripts and workspace (local-only)
 scripts/
-.env
-.venv
-outputs/
-span.log
-uv.lock
 workspace/*
+docs/plans/
+
+# Agent / AI assistant memory files (user-local, not tracked), we encourage users to design their own agents, and can use our provided skills as reference.
+AGENTS.md
+CLAUDE.md
 .claude/*
 !.claude-plugin/
 .opencode/
-remote_code/*
-docs/plans/
 .opencode
-.worktrees/
-AGENTS.md
 .ignored/
+.worktrees/

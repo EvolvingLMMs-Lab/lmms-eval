@@ -23,8 +23,8 @@
 ## 公告
 
 - [2026-01] 🚀🚀 **2026年1月** - 我們意識到空間和組合推理仍然是現有基準測試中的盲點。我們新增了 [CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench)、[SiteBench](https://sitebench.github.io/) 和 [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)。針對運行遠端評估流水線的團隊，我們推出了 HTTP 評估伺服器 (#972)。對於需要統計嚴密性的使用者，我們增加了 CLT（中央極限定理）和集群標準誤差估計 (#989)。
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** 發布！此主要版本引入了全面的音訊評估、回應快取、5個新模型（GPT-4o Audio Preview、Gemma-3、LongViLA-R1、LLaVA-OneVision 1.5、Thyme）以及50多個新基準變體，涵蓋音訊（Step2、VoiceBench、WenetSpeech）、視覺（CharXiv、Lemonade）和推理（CSBench、SciBench、MedQA、SuperGPQA）等可重現結果。詳情請參閱[發布說明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md)。
-- [2025-07] 🚀🚀 我們發布了 `lmms-eval-0.4`。詳情請參閱[發布說明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md)。
+- [2025-10] 🚀🚀 **LMMs-Eval v0.5** 發布！此主要版本引入了全面的音訊評估、回應快取、5個新模型（GPT-4o Audio Preview、Gemma-3、LongViLA-R1、LLaVA-OneVision 1.5、Thyme）以及50多個新基準變體，涵蓋音訊（Step2、VoiceBench、WenetSpeech）、視覺（CharXiv、Lemonade）和推理（CSBench、SciBench、MedQA、SuperGPQA）等可重現結果。詳情請參閱[發布說明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md)。
+- [2025-07] 🚀🚀 我們發布了 `lmms-eval-0.4`。詳情請參閱[發布說明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.4.md)。
 
 ## 為什麼選擇 `lmms-eval`？
 

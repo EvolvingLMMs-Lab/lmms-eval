@@ -174,7 +174,7 @@ Models live under `lmms_eval/models/chat/` (recommended) or `lmms_eval/models/si
    MyLib, _has_mylib = optional_import("mylib", "MyLib")
    ```
 
-See `docs/model_guide.md` for details and `CLAUDE.md` for architecture patterns.
+See `docs/model_guide.md` for details.
 
 ### Fixing Bugs
 
@@ -188,7 +188,7 @@ Documentation improvements are always welcome. Key docs:
 - `README.md` - Project overview (available in 16 languages under `docs/`)
 - `docs/task_guide.md` - How to add benchmarks
 - `docs/model_guide.md` - How to add models
-- `CLAUDE.md` - Architecture reference
+- `docs/changelogs/` - Release notes and changelog
 
 ## Package Management
 

@@ -480,7 +480,7 @@ We welcome contributions to LMMS-Eval! The v0.5 release demonstrates the value o
 ### How to Contribute
 
 1. **Fork the repository** and create a feature branch from `dev/v0d5`
-2. **Follow the development guidelines** in `CLAUDE.md`:
+2. **Follow the development guidelines**:
    - Use `uv` for package management (never pip)
    - Add type hints and docstrings
    - Run `uv run ruff format .` and `uv run ruff check . --fix`

@@ -26,7 +26,7 @@ Valutare i modelli multimodali è più difficile di quanto sembri. Abbiamo centi
 
 **Gennaio 2026** - Abbiamo riconosciuto che il ragionamento spaziale e compositivo rimanevano punti ciechi nei benchmark esistenti. Abbiamo aggiunto [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) e [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Per i team che eseguono pipeline di valutazione remota, abbiamo introdotto un server di valutazione HTTP (#972). Per coloro che necessitano di rigore statistico, abbiamo aggiunto CLT e la stima dell'errore standard raggruppato (#989).
 
-**Ottobre 2025 (v0.5)** - L'audio era stato una lacuna. I modelli potevano sentire, ma non avevamo un modo coerente per testarli. Questa versione ha aggiunto una valutazione audio completa, il caching delle risposte per l'efficienza e oltre 50 varianti di benchmark che spaziano tra audio, visione e ragionamento. [Note di rilascio](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
+**Ottobre 2025 (v0.5)** - L'audio era stato una lacuna. I modelli potevano sentire, ma non avevamo un modo coerente per testarli. Questa versione ha aggiunto una valutazione audio completa, il caching delle risposte per l'efficienza e oltre 50 varianti di benchmark che spaziano tra audio, visione e ragionamento. [Note di rilascio](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md).
 
 ## Perché `lmms-eval`?
 

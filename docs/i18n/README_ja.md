@@ -26,13 +26,13 @@
 
 **2026年1月** - 既存のベンチマークにおいて空間的および構成的な推論が依然として盲点であることを認識しました。[CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench)、[SiteBench](https://sitebench.github.io/)、[ViewSpatial](https://github.com/ViewSpatial/ViewSpatial) を追加しました。リモート評価パイプラインを実行するチームのために、HTTP評価サーバー（#972）を導入しました。また、統計的な厳密さを必要とする方のために、CLT（中心極限定理）とクラスター化標準誤差の推定（#989）を追加しました。
 
-**2025年10月 (v0.5)** - 音声評価が課題となっていました。モデルは音声を認識できましたが、それをテストするための一貫した方法がありませんでした。このリリースでは、包括的な音声評価、効率のためのレスポンスキャッシング、および音声、視覚、推論にわたる 50 以上のベンチマークバリアントが導入されました。[リリースノート](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md)。
+**2025年10月 (v0.5)** - 音声評価が課題となっていました。モデルは音声を認識できましたが、それをテストするための一貫した方法がありませんでした。このリリースでは、包括的な音声評価、効率のためのレスポンスキャッシング、および音声、視覚、推論にわたる 50 以上のベンチマークバリアントが導入されました。[リリースノート](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md)。
 
 <details>
 <summary>以下は、素晴らしいコントリビューターによって追加された最近のタスク、モデル、および機能の時系列リストです。</summary>
 
 - [2025-01] 🎓🎓 新しいベンチマークをリリースしました：[Video-MMMU: Evaluating Knowledge Acquisition from Multi-Discipline Professional Videos](https://arxiv.org/abs/2501.13826)。詳細は[プロジェクトページ](https://videommmu.github.io/)を参照してください。
-- [2025-07] 🚀🚀 `lmms-eval-0.4` をリリースしました。詳細は[リリースノート](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md)をご覧ください。
+- [2025-07] 🚀🚀 `lmms-eval-0.4` をリリースしました。詳細は[リリースノート](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.4.md)をご覧ください。
 
 </details>
 

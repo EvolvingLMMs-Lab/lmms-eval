@@ -26,14 +26,14 @@
 
 **2026年1月** - 我们意识到空间推理和组合推理仍然是现有基准测试的盲点。我们添加了 [CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench)、[SiteBench](https://sitebench.github.io/) 和 [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)。对于运行远程评估流水线的团队，我们引入了 HTTP 评估服务器 (#972)。对于需要统计严密性的用户，我们添加了中心极限定理（CLT）和聚类标准误差估计 (#989)。
 
-**2025年10月 (v0.5)** - 音频评估曾是一个空白。模型可以“听”，但我们没有一致的方法来测试它们。此版本添加了全面的音频评估、响应缓存以提高效率，以及 50 多个涵盖音频、视觉和推理的基准变体。[发布说明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md)。
+**2025年10月 (v0.5)** - 音频评估曾是一个空白。模型可以“听”，但我们没有一致的方法来测试它们。此版本添加了全面的音频评估、响应缓存以提高效率，以及 50 多个涵盖音频、视觉和推理的基准变体。[发布说明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md)。
 
 <details>
 <summary>以下是由我们优秀的贡献者添加的近期任务、模型和功能的按时间顺序排列的列表。</summary>
 
 - [2025-01] 🎓🎓 我们发布了新的基准测试：[Video-MMMU: Evaluating Knowledge Acquisition from Multi-Discipline Professional Videos](https://arxiv.org/abs/2501.13826)。详情请参阅[项目主页](https://videommmu.github.io/)。
 - [2024-12] 🎉🎉 我们与 [MME 团队](https://github.com/BradyFU/Video-MME)和 [OpenCompass 团队](https://github.com/open-compass)共同发布了 [MME-Survey: A Comprehensive Survey on Evaluation of Multimodal LLMs](https://arxiv.org/pdf/2411.15296)。
-- [2024-11] 🔈🔊 `lmms-eval/v0.3.0` 已升级，支持对 Qwen2-Audio 和 Gemini-Audio 等音频模型在 AIR-Bench、Clotho-AQA、LibriSpeech 等任务上进行音频评估。详情请参阅[博客](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.3.md)！
+- [2024-11] 🔈🔊 `lmms-eval/v0.3.0` 已升级，支持对 Qwen2-Audio 和 Gemini-Audio 等音频模型在 AIR-Bench、Clotho-AQA、LibriSpeech 等任务上进行音频评估。详情请参阅[博客](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.3.md)！
 - [2024-10] 🎉🎉 欢迎新任务 [NaturalBench](https://huggingface.co/datasets/BaiqiL/NaturalBench)，这是一个以视觉为核心的 VQA 基准测试 (NeurIPS'24)，通过关于自然图像的简单问题挑战视觉语言模型。
 - [2024-10] 🎉🎉 欢迎新任务 [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench)，用于视频的细粒度时间理解和推理，揭示了巨大的 (>30%) 人机差距。
 - [2024-10] 🎉🎉 欢迎新任务 [VDC](https://rese1f.github.io/aurora-web/)（用于视频详细字幕生成）、[MovieChat-1K](https://rese1f.github.io/MovieChat/)（用于长视频理解）和 [Vinoground](https://vinoground.github.io/)（一个由 1000 个短自然视频-字幕对组成的时间反事实 LMM 基准测试）。同时欢迎新模型：[AuroraCap](https://github.com/rese1f/aurora) 和 [MovieChat](https://github.com/rese1f/MovieChat)。

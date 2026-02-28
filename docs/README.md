@@ -177,11 +177,11 @@ Each release note documents new tasks, models, architectural changes, and migrat
 
 | Version | Theme | Highlights |
 |---------|-------|------------|
-| [v0.7](lmms-eval-0.7.md) | Operational simplicity | YAML-first config, reasoning-tag stripping, Lance-backed video, skill-based agent workflows. |
-| [v0.6](lmms-eval-0.6.md) | Evaluation as a service | Async HTTP server, adaptive API concurrency (~7.5x throughput), statistical rigor (CI, paired t-test). |
-| [v0.5](lmms-eval-0.5.md) | Audio expansion | Comprehensive audio evaluation, response caching, 50+ benchmark variants. |
-| [v0.4](lmms-eval-0.4.md) | Scale and reasoning | Distributed evaluation, reasoning benchmarks, unified chat interface. |
-| [v0.3](lmms-eval-0.3.md) | Audio foundations | Initial audio model support (Qwen2-Audio, Gemini-Audio). |
+| [v0.7](changelogs/lmms-eval-0.7.md) | Operational simplicity | YAML-first config, reasoning-tag stripping, Lance-backed video, skill-based agent workflows. |
+| [v0.6](changelogs/lmms-eval-0.6.md) | Evaluation as a service | Async HTTP server, adaptive API concurrency (~7.5x throughput), statistical rigor (CI, paired t-test). |
+| [v0.5](changelogs/lmms-eval-0.5.md) | Audio expansion | Comprehensive audio evaluation, response caching, 50+ benchmark variants. |
+| [v0.4](changelogs/lmms-eval-0.4.md) | Scale and reasoning | Distributed evaluation, reasoning benchmarks, unified chat interface. |
+| [v0.3](changelogs/lmms-eval-0.3.md) | Audio foundations | Initial audio model support (Qwen2-Audio, Gemini-Audio). |
 
 ## Additional Resources
 

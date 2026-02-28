@@ -26,14 +26,14 @@ Evaluar modelos multimodales es más difícil de lo que parece. Tenemos cientos 
 
 **Enero de 2026** - Reconocimos que el razonamiento espacial y composicional seguían siendo puntos ciegos en los benchmarks existentes. Añadimos [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), y [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Para los equipos que ejecutan flujos de evaluación remotos, introdujimos un servidor de evaluación HTTP (#972). Para quienes necesitan rigor estadístico, añadimos CLT y estimación de error estándar por clúster (#989).
 
-**Octubre de 2025 (v0.5)** - El audio había sido una brecha. Los modelos podían oír, pero no teníamos una forma consistente de probarlos. Esta versión añadió una evaluación de audio completa, caché de respuestas para mayor eficiencia y más de 50 variantes de benchmarks que abarcan audio, visión y razonamiento. [Notas de la versión](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
+**Octubre de 2025 (v0.5)** - El audio había sido una brecha. Los modelos podían oír, pero no teníamos una forma consistente de probarlos. Esta versión añadió una evaluación de audio completa, caché de respuestas para mayor eficiencia y más de 50 variantes de benchmarks que abarcan audio, visión y razonamiento. [Notas de la versión](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.5.md).
 
 <details>
 <summary>A continuación se presenta una lista cronológica de las tareas, modelos y características recientes añadidos por nuestros increíbles colaboradores.</summary>
 
 - [2025-01] 🎓🎓 Hemos lanzado nuestro nuevo benchmark: [Video-MMMU: Evaluating Knowledge Acquisition from Multi-Discipline Professional Videos](https://arxiv.org/abs/2501.13826). Consulte la [página del proyecto](https://videommmu.github.io/) para más detalles.
 - [2024-12] 🎉🎉 Hemos presentado [MME-Survey: A Comprehensive Survey on Evaluation of Multimodal LLMs](https://arxiv.org/pdf/2411.15296), conjuntamente con el [Equipo MME](https://github.com/BradyFU/Video-MME) y el [Equipo OpenCompass](https://github.com/open-compass).
-- [2024-11] 🔈🔊 El `lmms-eval/v0.3.0` ha sido actualizado para soportar evaluaciones de audio para modelos de audio como Qwen2-Audio y Gemini-Audio en tareas como AIR-Bench, Clotho-AQA, LibriSpeech, y más. ¡Consulte el [blog](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.3.md) para más detalles!
+- [2024-11] 🔈🔊 El `lmms-eval/v0.3.0` ha sido actualizado para soportar evaluaciones de audio para modelos de audio como Qwen2-Audio y Gemini-Audio en tareas como AIR-Bench, Clotho-AQA, LibriSpeech, y más. ¡Consulte el [blog](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/changelogs/lmms-eval-0.3.md) para más detalles!
 
 </details>
 
