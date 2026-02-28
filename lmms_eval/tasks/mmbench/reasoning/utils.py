@@ -2,9 +2,13 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+import pandas as pd
 import yaml
+from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks._task_utils.reasoning_utils import (
+    extract_anwser_tag,
     make_reasoning_doc_to_messages,
     make_reasoning_process_results,
 )
@@ -68,3 +72,43 @@ def mmbench_doc_to_visual(doc):
 mmbench_cn_doc_to_messages = make_reasoning_doc_to_messages(mmbench_doc_to_visual, mmbench_cn_doc_to_text)
 mmbench_en_doc_to_messages = make_reasoning_doc_to_messages(mmbench_doc_to_visual, mmbench_en_doc_to_text)
 mmbench_process_results = make_reasoning_process_results("mmbench", mmbench_cn_doc_to_text)
+
+
+def mmbench_process_results_test(doc, results):
+    """Process results for test splits, extracting answer from <answer> tag for submission."""
+    model_response = results[0].strip()
+    extracted_answer = extract_anwser_tag(model_response).strip()
+
+    data = {
+        "submission": {
+            "index": doc["index"],
+            "question": doc["question"],
+            "prediction": model_response,
+            "answer": extracted_answer,
+            "hint": doc["hint"],
+            "source": doc["source"],
+            "split": doc["split"],
+            "category": doc["category"],
+            "L2-category": doc["L2-category"],
+        },
+    }
+    option_candidate = ["A", "B", "C", "D", "E"]
+    for c in option_candidate:
+        data["submission"][c] = doc.get(c, "nan")
+    return data
+
+
+def mmbench_aggregate_test_results_cn(results, args):
+    df = pd.DataFrame(results)
+    excel_write_path = generate_submission_file("mmbench_cn_test_reasoning_results.xlsx", args)
+    with pd.ExcelWriter(excel_write_path) as writer:
+        df.to_excel(writer, index=False)
+    eval_logger.info(f"Saved results to {excel_write_path}")
+
+
+def mmbench_aggregate_test_results_en(results, args):
+    df = pd.DataFrame(results)
+    excel_write_path = generate_submission_file("mmbench_en_test_reasoning_results.xlsx", args)
+    with pd.ExcelWriter(excel_write_path) as writer:
+        df.to_excel(writer, index=False)
+    eval_logger.info(f"Saved results to {excel_write_path}")
