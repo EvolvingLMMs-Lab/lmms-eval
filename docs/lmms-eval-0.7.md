@@ -12,13 +12,13 @@ Fewer flags to remember, fewer things that go wrong, and a single file that capt
 - [Upgrading from v0.6](#upgrading-from-v06)
 - [1. New Benchmark Tasks](#1-new-benchmark-tasks)
 - [2. New Models](#2-new-models)
-- [3. Image/Video I/O Throughput Upgrade](#3-imagevideo-io-throughput-upgrade)
-- [4. Lance-Backed Video Mode](#4-lance-backed-video-mode)
-- [5. Safety and Red-Teaming Baseline](#5-safety-and-red-teaming-baseline)
-- [6. Efficiency Metrics Coverage](#6-efficiency-metrics-coverage)
-- [7. Skill-Based Agent Workflows](#7-skill-based-agent-workflows)
-- [8. Agentic Task Evaluation](#8-agentic-task-evaluation)
-- [9. Better One-Line Evaluation Support](#9-better-one-line-evaluation-support)
+- [3. Skill-Based Agent Workflows](#3-skill-based-agent-workflows)
+- [4. Agentic Task Evaluation](#4-agentic-task-evaluation)
+- [5. Image/Video I/O Throughput Upgrade](#5-imagevideo-io-throughput-upgrade)
+- [6. Lance-Backed Video Mode](#6-lance-backed-video-mode)
+- [7. Safety and Red-Teaming Baseline](#7-safety-and-red-teaming-baseline)
+- [8. Better One-Line Evaluation Support](#8-better-one-line-evaluation-support)
+- [9. Efficiency Metrics Coverage](#9-efficiency-metrics-coverage)
 - [10. Pipeline-Level Reasoning Tag Stripping](#10-pipeline-level-reasoning-tag-stripping)
 - [11. Support customized message_format in async_openai](#11-support-customized-message_format-in-async_openai)
 - [12. Flattened JSONL Log Output](#12-flattened-jsonl-log-output)
@@ -92,7 +92,130 @@ All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No 
 
 ---
 
-## 3. Image/Video I/O Throughput Upgrade
+## 3. Skill-Based Agent Workflows
+
+Coding agents working on lmms-eval need to know where model files live, how task YAMLs are structured, what the registry contract looks like, and how to verify changes - context that is scattered across source files and docs. The skill system packages this into structured references so agents can load the right context at the right time instead of guessing.
+
+v0.7 ships the skill as a set of files in the repository:
+
+- `skills/lmms-eval-guide/SKILL.md` — entry point and routing logic
+- `skills/lmms-eval-guide/references/models.md` — model integration patterns
+- `skills/lmms-eval-guide/references/tasks.md` — task/benchmark definition patterns
+- `skills/lmms-eval-guide/references/api-server.md` — HTTP eval server workflows
+- `skills/lmms-eval-guide/references/workflows.md` — config, debugging, operational patterns
+
+### 3.1 What the Skill References Cover
+
+Each reference encodes the recommended implementation path for one concern:
+
+- **Model integration** (`references/models.md`) — chat-first model template (`is_simple = False`), request unpacking contract (`request.args` shape), `message_format` parameter for API serialization dispatch, registry entry in `__init__.py`, v0.6 -> v0.7 migration, and verification commands (`--limit 5` / `--verbosity DEBUG`).
+
+- **Task integration** (`references/tasks.md`) — YAML-first task definition (auto-registered from `tasks/`), `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`, `process_results` + `metric_list` contract, `reasoning_tags` per-task override, and advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge).
+
+- **Training-time evaluation** (`references/api-server.md`) — start the HTTP eval server on dedicated resources, submit non-blocking jobs with `EvalClient.evaluate(...)` during training, poll or wait by `job_id`, collect metrics for checkpoint selection. The server provides queue-safe GPU usage, async checkpoint evaluation, and operational visibility via `/queue` and job lifecycle states.
+
+- **Operational workflows** (`references/workflows.md`) — `--config` YAML usage, debugging steps, config structure and CLI override priority.
+
+::tip
+The intended workflow: resolve whether the change is model-side, task-side, or both; load the matching reference; follow existing code patterns in nearby files; run a small-sample verification before broader evaluation.
+::
+
+### 3.2 Agent Dispatch Strategy
+
+When agents orchestrate lmms-eval tasks, use this routing to load the right reference:
+
+| Scenario | Action |
+|----------|--------|
+| Task/model extension | Load `references/models.md` or `references/tasks.md` |
+| YAML config setup | Load `references/workflows.md` for `--config` usage and config structure |
+| Training integration | Load `references/api-server.md` first |
+| Quick validation | Run `--limit` smoke tests before full benchmark submission |
+| Scalable evaluation | Use HTTP jobs for long-running or periodic evaluation loops |
+| Debugging failures | Load `references/workflows.md` for step-by-step debug workflow |
+
+This separates development-time edits (model/task code) from runtime scheduling (HTTP jobs) and operational workflows (config, debugging).
+
+---
+
+## 4. Agentic Task Evaluation
+
+v0.7 introduces `generate_until_agentic`, a new output type for evaluating models as tool-calling agents. The evaluator runs an iterative loop: on each step the model emits a `<tool_call>` or `<submit>` tag, the task's `doc_to_text` callback executes the tool against a deterministic simulator, and the evaluator feeds the result back as the next prompt. The loop terminates when the model submits a final answer or reaches `max_agentic_steps`.
+
+### 4.1 How It Works
+
+The pipeline lives in `_run_generate_until_agentic()` in `evaluator.py`. Each step:
+
+1. The model generates a response (single `generate_until` call).
+2. The task's `doc_to_text` callback parses the response for `<tool_call>` or `<submit>` tags.
+3. If `<tool_call>`: the callback executes the tool against a Python simulator, updates internal state, and returns the next prompt with the tool result. The evaluator loops.
+4. If `<submit>`: the callback returns a terminal signal with the final payload (success/failure, trace, state). The evaluator stops.
+5. If neither: the callback returns an error hint and the loop continues.
+6. If `max_agentic_steps` is reached without a submit, the evaluator emits a fallback payload with `"error": "max_agentic_steps_reached"` and the accumulated trace.
+
+The `doc_to_text` function signature for agentic tasks:
+
+```python
+def doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None,
+                round_idx=None, previous_round_info=None):
+    # Returns either:
+    # - str (next prompt)
+    # - 5-tuple: (visuals, next_context, terminal_signal, updated_outputs, round_info)
+```
+
+### 4.2 Agentic Tasks
+
+Two tasks validate the infrastructure with deterministic Python simulators (no external sandbox required):
+
+| Task | Domain | Tools | Goal | Steps |
+|------|--------|-------|------|-------|
+| `vending_bench2` | Vending machine operation | `get_vending_status`, `set_price`, `restock`, `simulate_days` | Reach target cash and elapsed days | 10 |
+| `tau2_bench_telecom` | Telecom customer support | `get_line_status`, `disable_airplane_mode`, `enable_roaming`, `reset_network` | Reach target device state | 8 |
+
+Quick smoke test:
+
+```bash
+python -m lmms_eval \
+  --model openai \
+  --model_args model=gpt-4o-mini \
+  --tasks vending_bench2 \
+  --limit 2 --batch_size 1
+```
+
+### 4.3 Metrics
+
+Agentic tasks report trace-level metrics beyond simple success rate:
+
+| Metric | Description |
+|--------|-------------|
+| **success** | Binary: did the model reach the target state before submitting? |
+| **trace_step_validity** | Fraction of tool calls that executed without error. |
+| **trace_state_progress** | How close the final state is to the target (normalized 0-1). |
+| **trace_termination_quality** | Did the model emit a proper `<submit>` (vs. hitting the step limit)? |
+| **trace_quality** | Average of step validity, state progress, and termination quality. |
+
+### 4.4 YAML Configuration
+
+```yaml
+output_type: generate_until_agentic
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  max_agentic_steps: 10  # loop budget
+```
+
+### 4.5 Adding Your Own Agentic Task
+
+1. Create a JSONL dataset with `initial_state`, `target_state`, `tools` (name + description), and `user_query` fields.
+2. Implement tool functions in `utils.py` that mutate state deterministically.
+3. Write a `doc_to_text` callback that parses `<tool_call>` / `<submit>` tags, calls tools, and returns the 5-tuple.
+4. Set `output_type: generate_until_agentic` in the task YAML.
+5. Define `process_results` to extract metrics from the JSON payload.
+
+The seed tasks (`vending_bench2`, `tau2_bench`) serve as reference implementations.
+
+---
+
+## 5. Image/Video I/O Throughput Upgrade
 
 This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics:
 
@@ -100,7 +223,7 @@ This update consolidates image encoding in shared helpers and optimizes video de
 - **2.7x pipeline speedup on LongVideoBench** (decode latency `2.79s` -> `1.02s`, scores unchanged). The unified `read_video` entry point eliminates redundant container open/close cycles that previously happened per-model, and preallocates the output array instead of building a Python list and calling `np.stack`.
 - **LRU caching on media-path resolution and image encoding** removes repeated filesystem and base64 work that dominated wall time in large evaluation runs. No regression at sparse sampling (fps=1) — PyAV remains the default.
 
-### 3.1 read_video — Unified Video Decode Entry Point
+### 5.1 read_video — Unified Video Decode Entry Point
 
 The `read_video` function in `lmms_eval/models/model_utils/load_video.py` is the single entry point for video frame extraction across all model backends. It uniformly samples `num_frm` frames (or uses FPS-guided sampling when `fps` is set) and returns an `np.ndarray` of shape `(N, H, W, 3)` in `uint8`.
 
@@ -121,7 +244,7 @@ read_video(
 | Backend | Install | Default | Notes |
 |---------|---------|---------|-------|
 | `pyav` | Included (PyAV) | ✅ | Stream-first decode for mp4; packet fallback for webm/mkv. `thread_type="AUTO"` enabled. |
-| `torchcodec` | `uv add torchcodec` | | Thread-tunable via `LMMS_VIDEO_TORCHCODEC_THREADS`. See [Section 3.3](#33-torchcodec-thread-tuning-benchmarks). |
+| `torchcodec` | `uv add torchcodec` | | Thread-tunable via `LMMS_VIDEO_TORCHCODEC_THREADS`. See [Section 5.3](#53-torchcodec-thread-tuning-benchmarks). |
 | `dali` | `nvidia-dali` (GPU) | | GPU-accelerated decode. Requires `LMMS_VIDEO_DALI_DEVICE=gpu`. |
 
 **Additional I/O optimizations in this release:**
@@ -133,7 +256,7 @@ read_video(
 - Preallocated output array fill (replaces `list` + `np.stack` path)
 - Configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
 
-### 3.2 Check on Long Video Benchmarks
+### 5.2 Check on Long Video Benchmarks
 
 To validate the optimization, we ran `longvideobench_val_v` with an API provider backed model (OpenRouter, `bytedance-seed/seed-1.6-flash`) under fixed settings (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
 
@@ -153,7 +276,7 @@ This replay benchmarks two things at once:
 
 Aggregate scores remain unchanged. Per-item drift is consistent with remote-provider nondeterminism.
 
-### 3.3 TorchCodec Thread Tuning Benchmarks
+### 5.3 TorchCodec Thread Tuning Benchmarks
 
 5 warmup + 20 measured iterations per config. TorchCodec `v0.10.0` on PyTorch `2.10.0`. First-frame hash parity verified against PyAV baseline. FPS-guided rows use `num_frm=4096`; `fps=1` yields 54 sampled frames, `fps=30` yields 1639 (near full extraction).
 
@@ -184,7 +307,7 @@ Aggregate scores remain unchanged. Per-item drift is consistent with remote-prov
 
 **Takeaways:** Set `LMMS_VIDEO_TORCHCODEC_THREADS=8` as default. At sparse sampling (fps=1) TorchCodec offers no advantage — use PyAV. At dense sampling (fps≥30) use threads=4 for 1.32x. Default threads (0/1) are **never** faster and regress up to +150% at 16 frames.
 
-### 3.4 Media Resolver LRU Caching
+### 5.4 Media Resolver LRU Caching
 
 The new benchmark tasks rely on `resolve_media_reference` to resolve media paths from local directories, task cache folders, and Hugging Face cache roots. In large runs, this repeats the same path-construction work many times.
 
@@ -196,7 +319,7 @@ v0.7 adds in-process LRU caching for deterministic path-expansion helpers:
 
 ---
 
-## 4. Lance-Backed Video Mode
+## 6. Lance-Backed Video Mode
 
 v0.7 adds an optional Lance-backed video path for MINERVA so metadata and videos can be distributed through Hugging Face in a compact way — no separate video downloads, no dangling file references.
 
@@ -208,7 +331,7 @@ Lance resolves this with three design properties documented in [Pace et al., 202
 2. **No row groups.** Lance v2 eliminates row groups entirely ([Lance v2 format](https://lancedb.com/blog/lance-v2/)). Each column picks its own optimal page size independently, so scalar metadata uses compact pages while blob columns use large pages tuned for object-storage I/O. The arXiv paper benchmarks show at most 1 IOP for fixed-width random access and at most 2 IOPs for variable-width, regardless of nesting or compression.
 3. **Single-artifact distribution.** One Lance dataset directory on the Hub packages metadata, video bytes, and optional indexes together. Users point to a single `hf://` URI and the resolver streams blobs on demand, caching locally. This replaces the typical "metadata table here, video files there" pattern that requires download scripts and manual path wiring.
 
-### 4.1 Dataset Package on Hugging Face
+### 6.1 Dataset Package on Hugging Face
 
 MINERVA is published as `lmms-lab-eval/minerva` with two key assets:
 
@@ -219,7 +342,7 @@ MINERVA is published as `lmms-lab-eval/minerva` with two key assets:
 
 The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`. Under the hood, `train.lance` is a directory containing versioned data fragments (each up to 4 GiB), transaction logs, and a protobuf manifest — not a single monolithic file. The blob encoding stores each video's raw bytes contiguously in the data fragments and keeps only a lightweight position-and-length index in the column metadata. This means scanning scalar columns (`video_id`, `video_ext`) never reads blob pages, while `take_blobs(ids=[row_id])` resolves a video in one positioned range read against the data fragment. The `take_blobs` API returns a lazy file-like handle, so the bytes can be piped directly into PyAV or torchcodec without materializing the entire video in memory.
 
-### 4.2 Build Lance Table from Local Downloads
+### 6.2 Build Lance Table from Local Downloads
 
 Convert local video files to a Lance table with the provided script:
 
@@ -237,7 +360,7 @@ The resulting Lance schema contains: `video_id`, `youtube_url`, `video_ext`, `vi
 Install `pylance` (module import name: `lance`) and `pyarrow` for Lance-mode usage.
 ::
 
-### 4.3 Runtime Resolution Order
+### 6.3 Runtime Resolution Order
 
 At evaluation time, MINERVA resolves videos using this priority:
 
@@ -262,7 +385,7 @@ For local-first mode:
 export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
 ```
 
-### 4.4 Run Example
+### 6.4 Run Example
 
 ```bash [Terminal]
 uv run --with pylance --with pyarrow python -m lmms_eval \
@@ -277,11 +400,11 @@ MINERVA remains reproducible in two modes: fully local video files or remote Lan
 
 ---
 
-## 5. Safety and Red-Teaming Baseline
+## 7. Safety and Red-Teaming Baseline
 
 v0.7 adds a safety/red-teaming task group based on JailbreakBench behaviors. This addresses a gap where lmms-eval had no built-in safety benchmark for jailbreak robustness and over-refusal analysis.
 
-### 5.1 New Task Group
+### 7.1 New Task Group
 
 - `safety_redteam` (group)
   - `safety_jailbreakbench_harmful`
@@ -289,7 +412,7 @@ v0.7 adds a safety/red-teaming task group based on JailbreakBench behaviors. Thi
 
 Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + benign splits).
 
-### 5.2 Reported Metrics
+### 7.2 Reported Metrics
 
 **Harmful split**:
 
@@ -312,7 +435,7 @@ Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + be
 | `demographic_refusal_rate` | Refusal rate on demographic-related prompts |
 | `non_demographic_refusal_rate` | Refusal rate on non-demographic prompts |
 
-### 5.3 Toxicity Metrics
+### 7.3 Toxicity Metrics
 
 Toxicity scoring supports two modes:
 
@@ -321,7 +444,7 @@ Toxicity scoring supports two modes:
 
 This keeps safety evaluation usable in both cloud and offline environments.
 
-### 5.4 Usage
+### 7.4 Usage
 
 ```bash [Terminal]
 python -m lmms_eval \
@@ -334,187 +457,7 @@ python -m lmms_eval \
 
 ---
 
-## 6. Efficiency Metrics Coverage
-
-v0.7 improves efficiency observability, but not all metrics are equally available across backends.
-
-### 6.1 Emitted Metrics
-
-v0.7 adds efficiency data at three levels:
-
-| Level | Fields | Scope |
-|-------|--------|-------|
-| **Per-sample** | `input_tokens`, `output_tokens`, `reasoning_tokens` | Attached to each evaluation record when backend metadata exists |
-| **Run-level** | `total_gen_tokens`, `total_elapsed_time`, `avg_speed` | Aggregated across the full evaluation run |
-| **Latency breakdown** | TTFT, TPOT | vLLM chat backends only, via native runtime metrics |
-
-::note
-TTFT/TPOT parity across every backend is out of scope for v0.7.
-::
-
-### 6.2 TTFT/TPOT Coverage by Backend
-
-| Backend Family | TTFT | TPOT | Available Data |
-|----------------|------|------|----------------|
-| `vllm` chat backends | ✅ | ✅ | Native runtime metrics, logged as `additional_metrics` |
-| `sglang` chat backend | ❌ | ❌ | Wall-clock throughput only |
-| OpenAI-compatible APIs (`openai`, `async_openai`) | ❌ | ❌ | Token usage + end-to-end latency; no first-token timestamp |
-| HuggingFace local generate | ❌ | ❌ | `model.generate()` wall-clock timing only |
-
-::important
-TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
-::
-
-### 6.3 TTFT/TPOT Gaps
-
-| Backend | Blocker | Path to Coverage |
-|---------|---------|-----------------|
-| OpenAI-compatible APIs | No first-token timestamp in non-streaming responses | Streaming-first instrumentation; measured TTFT would include network and client overhead |
-| SGLang | Batch-level timing only | Per-request first-token timing in generation path |
-| HuggingFace local | `generate()` does not expose per-token timing | Token streaming or generation callbacks |
-
-### 6.4 Reporting Guidance
-
-- If TTFT/TPOT is critical, use `vllm` backends.
-- If using API/SGLang/HF backends, report throughput and token usage. Treat TTFT as unavailable unless custom instrumentation is enabled.
-- Keep metric claims backend-qualified (e.g., "TTFT measured on vLLM runtime metrics").
-
-### 6.5 Token-Based Efficiency in Results JSON
-
-With `--log_samples` enabled, v0.7 emits an `efficiency` section in aggregated results:
-
-- `overall.tokens_per_correct_answer`
-- `overall.avg_output_tokens_per_sample`
-- Per-task breakdown under `efficiency.by_task`
-
-The v0.7 efficiency output is token-based by design. It does not include price-derived cost fields, so metric comparability does not depend on provider-specific pricing tables.
-
----
-
-## 7. Skill-Based Agent Workflows
-
-Coding agents working on lmms-eval need to know where model files live, how task YAMLs are structured, what the registry contract looks like, and how to verify changes - context that is scattered across source files and docs. The skill system packages this into structured references so agents can load the right context at the right time instead of guessing.
-
-v0.7 ships the skill as a set of files in the repository:
-
-- `skills/lmms-eval-guide/SKILL.md` — entry point and routing logic
-- `skills/lmms-eval-guide/references/models.md` — model integration patterns
-- `skills/lmms-eval-guide/references/tasks.md` — task/benchmark definition patterns
-- `skills/lmms-eval-guide/references/api-server.md` — HTTP eval server workflows
-- `skills/lmms-eval-guide/references/workflows.md` — config, debugging, operational patterns
-
-### 7.1 What the Skill References Cover
-
-Each reference encodes the recommended implementation path for one concern:
-
-- **Model integration** (`references/models.md`) — chat-first model template (`is_simple = False`), request unpacking contract (`request.args` shape), `message_format` parameter for API serialization dispatch, registry entry in `__init__.py`, v0.6 -> v0.7 migration, and verification commands (`--limit 5` / `--verbosity DEBUG`).
-
-- **Task integration** (`references/tasks.md`) — YAML-first task definition (auto-registered from `tasks/`), `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`, `process_results` + `metric_list` contract, `reasoning_tags` per-task override, and advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge).
-
-- **Training-time evaluation** (`references/api-server.md`) — start the HTTP eval server on dedicated resources, submit non-blocking jobs with `EvalClient.evaluate(...)` during training, poll or wait by `job_id`, collect metrics for checkpoint selection. The server provides queue-safe GPU usage, async checkpoint evaluation, and operational visibility via `/queue` and job lifecycle states.
-
-- **Operational workflows** (`references/workflows.md`) — `--config` YAML usage, debugging steps, config structure and CLI override priority.
-
-::tip
-The intended workflow: resolve whether the change is model-side, task-side, or both; load the matching reference; follow existing code patterns in nearby files; run a small-sample verification before broader evaluation.
-::
-
-### 7.2 Agent Dispatch Strategy
-
-When agents orchestrate lmms-eval tasks, use this routing to load the right reference:
-
-| Scenario | Action |
-|----------|--------|
-| Task/model extension | Load `references/models.md` or `references/tasks.md` |
-| YAML config setup | Load `references/workflows.md` for `--config` usage and config structure |
-| Training integration | Load `references/api-server.md` first |
-| Quick validation | Run `--limit` smoke tests before full benchmark submission |
-| Scalable evaluation | Use HTTP jobs for long-running or periodic evaluation loops |
-| Debugging failures | Load `references/workflows.md` for step-by-step debug workflow |
-
-This separates development-time edits (model/task code) from runtime scheduling (HTTP jobs) and operational workflows (config, debugging).
-
----
-
-## 8. Agentic Task Evaluation
-
-v0.7 introduces `generate_until_agentic`, a new output type for evaluating models as tool-calling agents. The evaluator runs an iterative loop: on each step the model emits a `<tool_call>` or `<submit>` tag, the task's `doc_to_text` callback executes the tool against a deterministic simulator, and the evaluator feeds the result back as the next prompt. The loop terminates when the model submits a final answer or reaches `max_agentic_steps`.
-
-### 8.1 How It Works
-
-The pipeline lives in `_run_generate_until_agentic()` in `evaluator.py`. Each step:
-
-1. The model generates a response (single `generate_until` call).
-2. The task's `doc_to_text` callback parses the response for `<tool_call>` or `<submit>` tags.
-3. If `<tool_call>`: the callback executes the tool against a Python simulator, updates internal state, and returns the next prompt with the tool result. The evaluator loops.
-4. If `<submit>`: the callback returns a terminal signal with the final payload (success/failure, trace, state). The evaluator stops.
-5. If neither: the callback returns an error hint and the loop continues.
-6. If `max_agentic_steps` is reached without a submit, the evaluator emits a fallback payload with `"error": "max_agentic_steps_reached"` and the accumulated trace.
-
-The `doc_to_text` function signature for agentic tasks:
-
-```python
-def doc_to_text(doc, lmms_eval_specific_kwargs=None, previous_output=None,
-                round_idx=None, previous_round_info=None):
-    # Returns either:
-    # - str (next prompt)
-    # - 5-tuple: (visuals, next_context, terminal_signal, updated_outputs, round_info)
-```
-
-### 8.2 Agentic Tasks
-
-Two tasks validate the infrastructure with deterministic Python simulators (no external sandbox required):
-
-| Task | Domain | Tools | Goal | Steps |
-|------|--------|-------|------|-------|
-| `vending_bench2` | Vending machine operation | `get_vending_status`, `set_price`, `restock`, `simulate_days` | Reach target cash and elapsed days | 10 |
-| `tau2_bench_telecom` | Telecom customer support | `get_line_status`, `disable_airplane_mode`, `enable_roaming`, `reset_network` | Reach target device state | 8 |
-
-Quick smoke test:
-
-```bash
-python -m lmms_eval \
-  --model openai \
-  --model_args model=gpt-4o-mini \
-  --tasks vending_bench2 \
-  --limit 2 --batch_size 1
-```
-
-### 8.3 Metrics
-
-Agentic tasks report trace-level metrics beyond simple success rate:
-
-| Metric | Description |
-|--------|-------------|
-| **success** | Binary: did the model reach the target state before submitting? |
-| **trace_step_validity** | Fraction of tool calls that executed without error. |
-| **trace_state_progress** | How close the final state is to the target (normalized 0-1). |
-| **trace_termination_quality** | Did the model emit a proper `<submit>` (vs. hitting the step limit)? |
-| **trace_quality** | Average of step validity, state progress, and termination quality. |
-
-### 8.4 YAML Configuration
-
-```yaml
-output_type: generate_until_agentic
-generation_kwargs:
-  max_new_tokens: 256
-  temperature: 0
-  max_agentic_steps: 10  # loop budget
-```
-
-### 8.5 Adding Your Own Agentic Task
-
-1. Create a JSONL dataset with `initial_state`, `target_state`, `tools` (name + description), and `user_query` fields.
-2. Implement tool functions in `utils.py` that mutate state deterministically.
-3. Write a `doc_to_text` callback that parses `<tool_call>` / `<submit>` tags, calls tools, and returns the 5-tuple.
-4. Set `output_type: generate_until_agentic` in the task YAML.
-5. Define `process_results` to extract metrics from the JSON payload.
-
-The seed tasks (`vending_bench2`, `tau2_bench`) serve as reference implementations.
-
----
-
-## 9. Better One-Line Evaluation Support
+## 8. Better One-Line Evaluation Support
 
 Running an evaluation used to mean assembling a long command with many flags. Sharing that command meant copy-pasting a fragile shell one-liner and hoping the environment was set up correctly. Reproducing a result from a paper meant reverse-engineering the setup from a results JSON that stored only a few fields.
 
@@ -526,7 +469,7 @@ python -m lmms_eval --config configs/my_experiment.yaml
 
 One file captures everything — model, tasks, generation parameters, and environment variables. Ship the YAML, reproduce the result.
 
-### 9.1 Better YAML system
+### 8.1 Better YAML system
 
 A config file maps directly to CLI arguments, plus an optional `env` section for environment variables.
 
@@ -582,7 +525,7 @@ For batch evaluation (multiple models in one run):
   log_samples: true
 ```
 
-### 9.2 Environment Variables
+### 8.2 Environment Variables
 
 The `env` section sets environment variables before evaluation starts. Credentials and paths live in the config, not in someone's `.bashrc`.
 
@@ -599,7 +542,7 @@ Values containing `${VAR}` expand using the current shell environment. The `${VA
 Keys containing `KEY`, `TOKEN`, `SECRET`, or `PASSWORD` are automatically masked in log output (e.g., `Config env: OPENAI_API_KEY=********`). The actual values are set correctly in `os.environ`.
 ::
 
-### 9.3 CLI Override Priority
+### 8.3 CLI Override Priority
 
 The priority chain is: **defaults < YAML < CLI**. CLI arguments always win.
 
@@ -613,7 +556,7 @@ python -m lmms_eval --config configs/example_local.yaml --batch_size 4
 
 Keep a "canonical" config in the YAML and override individual values at the command line without editing the file. Override detection compares each CLI argument against argparse defaults — only arguments that differ from defaults count as explicit overrides.
 
-### 9.4 Schema Validation
+### 8.4 Schema Validation
 
 Unknown keys in the YAML now raise an error with the list of valid keys:
 
@@ -624,7 +567,7 @@ Valid keys are: ['batch_size', 'config', 'device', 'gen_kwargs', 'limit', 'log_s
 
 Previously, typos like `modle` instead of `model` were silently accepted and ignored at runtime, leading to confusing evaluation failures.
 
-### 9.5 Full Experiment Reproducibility
+### 8.5 Full Experiment Reproducibility
 
 Results JSON now includes `resolved_cli_args` — the complete resolved configuration after merging defaults, YAML, and CLI overrides:
 
@@ -652,7 +595,7 @@ Results JSON now includes `resolved_cli_args` — the complete resolved configur
 
 Reconstruct the exact YAML config from any results file. No more guessing what flags were used.
 
-### 9.6 Web UI Integration
+### 8.6 Web UI Integration
 
 The Web UI supports YAML import and export:
 
@@ -661,7 +604,7 @@ The Web UI supports YAML import and export:
 
 The `env` section maps to the Web UI's environment variables field. The round-trip is lossless — export a YAML, import it back, and the form state is identical.
 
-### 9.7 Example Configs
+### 8.7 Example Configs
 
 Three example configs ship in `configs/`:
 
@@ -678,6 +621,63 @@ cp configs/example_local.yaml configs/my_experiment.yaml
 # Edit to your needs, then run
 python -m lmms_eval --config configs/my_experiment.yaml
 ```
+
+---
+
+## 9. Efficiency Metrics Coverage
+
+v0.7 improves efficiency observability, but not all metrics are equally available across backends.
+
+### 9.1 Emitted Metrics
+
+v0.7 adds efficiency data at three levels:
+
+| Level | Fields | Scope |
+|-------|--------|-------|
+| **Per-sample** | `input_tokens`, `output_tokens`, `reasoning_tokens` | Attached to each evaluation record when backend metadata exists |
+| **Run-level** | `total_gen_tokens`, `total_elapsed_time`, `avg_speed` | Aggregated across the full evaluation run |
+| **Latency breakdown** | TTFT, TPOT | vLLM chat backends only, via native runtime metrics |
+
+::note
+TTFT/TPOT parity across every backend is out of scope for v0.7.
+::
+
+### 9.2 TTFT/TPOT Coverage by Backend
+
+| Backend Family | TTFT | TPOT | Available Data |
+|----------------|------|------|----------------|
+| `vllm` chat backends | ✅ | ✅ | Native runtime metrics, logged as `additional_metrics` |
+| `sglang` chat backend | ❌ | ❌ | Wall-clock throughput only |
+| OpenAI-compatible APIs (`openai`, `async_openai`) | ❌ | ❌ | Token usage + end-to-end latency; no first-token timestamp |
+| HuggingFace local generate | ❌ | ❌ | `model.generate()` wall-clock timing only |
+
+::important
+TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
+::
+
+### 9.3 TTFT/TPOT Gaps
+
+| Backend | Blocker | Path to Coverage |
+|---------|---------|-----------------|
+| OpenAI-compatible APIs | No first-token timestamp in non-streaming responses | Streaming-first instrumentation; measured TTFT would include network and client overhead |
+| SGLang | Batch-level timing only | Per-request first-token timing in generation path |
+| HuggingFace local | `generate()` does not expose per-token timing | Token streaming or generation callbacks |
+
+### 9.4 Reporting Guidance
+
+- If TTFT/TPOT is critical, use `vllm` backends.
+- If using API/SGLang/HF backends, report throughput and token usage. Treat TTFT as unavailable unless custom instrumentation is enabled.
+- Keep metric claims backend-qualified (e.g., "TTFT measured on vLLM runtime metrics").
+
+### 9.5 Token-Based Efficiency in Results JSON
+
+With `--log_samples` enabled, v0.7 emits an `efficiency` section in aggregated results:
+
+- `overall.tokens_per_correct_answer`
+- `overall.avg_output_tokens_per_sample`
+- Per-task breakdown under `efficiency.by_task`
+
+The v0.7 efficiency output is token-based by design. It does not include price-derived cost fields, so metric comparability does not depend on provider-specific pricing tables.
 
 ---
 
