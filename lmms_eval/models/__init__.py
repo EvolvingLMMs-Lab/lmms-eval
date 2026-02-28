@@ -106,6 +106,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "internvl_hf": "InternVLHf",
     "llava_hf": "LlavaHf",
     "nanovlm": "NanoVLM",
+    "phi4_multimodal": "Phi4",
     "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
     "thyme": "Thyme",
