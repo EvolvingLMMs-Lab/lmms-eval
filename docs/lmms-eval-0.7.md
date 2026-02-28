@@ -4,6 +4,44 @@ v0.7 makes lmms-eval easier to use, share, and reproduce. The theme is **operati
 
 ---
 
+## Upgrading from v0.6
+
+::important
+Most workflows are backward-compatible. Two model-backend changes require attention before upgrading.
+::
+
+### Breaking Changes
+
+- **`async_openai_qwen3_vl` model class removed.** Use `async_openai` with `message_format=qwen3_vl` instead:
+
+  ```bash [Terminal]
+  # Before (v0.6)
+  python -m lmms_eval --model async_openai_qwen3_vl \
+      --model_args pretrained=Qwen/Qwen3-VL-72B
+
+  # After (v0.7)
+  python -m lmms_eval --model async_openai \
+      --model_args pretrained=Qwen/Qwen3-VL-72B,message_format=qwen3_vl
+  ```
+
+- **`is_qwen3_vl` flag removed** from `async_openai` model_args. Use `message_format=qwen3_vl` instead.
+
+- **`parse_reasoning_model_answer` removed** from 6 model files. Reasoning tag stripping is now handled at the pipeline level (see [Section 2](#2-pipeline-level-reasoning-tag-stripping)). Remove any direct calls to this function.
+
+### Backward-Compatible Renames
+
+- `read_video_pyav` renamed to `read_video`. A backward-compatible alias is in place — existing code continues to work.
+
+### Deprecations
+
+No additional deprecations in v0.7. The v0.6 deprecation of `doc_to_visual` + `doc_to_text` for API models remains in effect. Use `doc_to_messages` + `ChatMessages` for new integrations.
+
+### CLI Changes
+
+v0.7 introduces a subcommand architecture (`eval`, `tasks`, `models`, `ui`, `serve`, `power`, `version`). The existing `python -m lmms_eval` invocation continues to work as before — subcommands are additive. See [docs/external_usage.md](external_usage.md) for details.
+
+---
+
 ## 1. Better One-Line Evaluation
 
 Running an evaluation used to mean assembling a long command with many flags. Sharing that command meant copy-pasting a fragile shell one-liner and hoping the environment was set up correctly. Reproducing a result from a paper meant reverse-engineering the setup from a results JSON that stored only a few fields.
@@ -438,6 +476,7 @@ v0.7 standardizes how coding agents learn and orchestrate lmms-eval workflows th
 - `skills/lmms-eval-guide/references/models.md`
 - `skills/lmms-eval-guide/references/tasks.md`
 - `skills/lmms-eval-guide/references/api-server.md`
+- `skills/lmms-eval-guide/references/workflows.md`
 
 This turns lmms-eval from a set of docs into a reusable operational skill for agents — discover the right integration path, apply correct file-level patterns, and schedule evaluation jobs safely.
 
@@ -448,13 +487,17 @@ The skill references define recommended implementation paths for extension work:
 - **New model integration** -> `references/models.md`
   - Chat-first model template (`is_simple = False`)
   - Request unpacking contract (`request.args` shape)
+  - `message_format` parameter for API model serialization dispatch
   - Registration in `lmms_eval/models/__init__.py`
+  - v0.6 -> v0.7 breaking changes and migration
   - Minimal verification commands (`--limit 5` / `--verbosity DEBUG`)
 
 - **New task/benchmark integration** -> `references/tasks.md`
   - YAML-first task definition (auto-registered from `tasks/`)
   - `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`
   - `process_results` + `metric_list` contract
+  - `reasoning_tags` per-task override for `<think>` stripping
+  - Available task domains (v0.7 coverage)
   - Advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge)
 
 ::tip
@@ -503,11 +546,13 @@ When agents orchestrate lmms-eval tasks, use this routing:
 | Scenario | Action |
 |----------|--------|
 | Task/model extension | Load `lmms-eval-guide` + `references/models.md` or `references/tasks.md` |
+| YAML config setup | Load `references/workflows.md` for `--config` usage and config structure |
 | Training integration | Load `references/api-server.md` first |
 | Quick validation | Run `--limit` smoke tests before full benchmark submission |
 | Scalable evaluation | Use HTTP jobs for long-running or periodic evaluation loops |
+| Debugging failures | Load `references/workflows.md` for step-by-step debug workflow |
 
-This separates development-time edits (model/task code) from runtime scheduling (HTTP jobs).
+This separates development-time edits (model/task code) from runtime scheduling (HTTP jobs) and operational workflows (config, debugging).
 
 ---
 
@@ -550,7 +595,7 @@ read_video(
 
 ### 7.2 LongVideoBench Check
 
-To validate the optimization, we ran `longvideobench_val_v` with a API provider backed model (OpenRouter, `bytedance-seed/seed-1.6-flash`) under fixed settings (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
+To validate the optimization, we ran `longvideobench_val_v` with an API provider backed model (OpenRouter, `bytedance-seed/seed-1.6-flash`) under fixed settings (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
 
 This replay benchmarks two things at once:
 - **Score reproducibility** across baseline and optimized code paths
@@ -570,7 +615,25 @@ Aggregate scores remain unchanged. Per-item drift is consistent with remote-prov
 
 ### 7.3 TorchCodec Thread Tuning Benchmarks
 
-Standard test video benchmarked with `read_video(..., backend=...)`. 5 warmup + 20 measured iterations per config. TorchCodec `v0.10.0` on PyTorch `2.10.0`. First-frame hash parity verified against PyAV baseline.
+TorchCodec with multi-threading delivers significant speedups over PyAV. The table below summarizes recommended settings for common scenarios.
+
+**Recommended settings:**
+
+| Scenario | Threads Setting | Speedup vs PyAV |
+|----------|----------------|-----------------|
+| 8 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | **3.58x** |
+| 16 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.05x |
+| 32 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | 1.95x |
+| FPS=1 (sparse sampling) | Use PyAV default | — |
+| FPS≥30 (dense sampling) | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.32x |
+
+General recommendation: set `LMMS_VIDEO_TORCHCODEC_THREADS=8`. See [Section 7.4](#74-fps-guided-sampling-1-fps-vs-30-fps) for FPS-guided details.
+
+::important
+Default threads (0/1) are **not** faster. TorchCodec with `threads=0` or `1` matches or regresses vs PyAV — up to +150% slower at 16 frames. Always set threads explicitly.
+::
+
+**Detailed benchmark data** — 5 warmup + 20 measured iterations per config. TorchCodec `v0.10.0` on PyTorch `2.10.0`. First-frame hash parity verified against PyAV baseline.
 
 **8 frames:**
 
@@ -601,15 +664,6 @@ Standard test video benchmarked with `read_video(..., backend=...)`. 5 warmup + 
 | TorchCodec | 4 | 296.24 | -29% |
 | **TorchCodec** | **8** | **213.45** | **-49% (1.95x)** |
 
-::important
-Default threads (0/1) are **not** faster. TorchCodec with `threads=0` or `1` matches or regresses vs PyAV — up to +150% slower at 16 frames. Thread tuning is required.
-::
-
-**Recommended defaults:**
-- `num_frames=8`: set `LMMS_VIDEO_TORCHCODEC_THREADS=8` (3.58x faster)
-- `num_frames=16`: set `LMMS_VIDEO_TORCHCODEC_THREADS=4` (threads=8 regresses due to contention)
-- `num_frames=32`: set `LMMS_VIDEO_TORCHCODEC_THREADS=8` (1.95x faster)
-- General recommendation: `LMMS_VIDEO_TORCHCODEC_THREADS=8`
 
 ### 7.4 FPS-Guided Sampling (1 FPS vs 30 FPS)
 
@@ -819,3 +873,51 @@ With `--log_samples` enabled, v0.7 emits an `efficiency` section in aggregated r
 - Per-task breakdown under `efficiency.by_task`
 
 The v0.7 efficiency output is token-based by design. It does not include price-derived cost fields, so metric comparability does not depend on provider-specific pricing tables.
+
+---
+
+## 10. New Benchmark Tasks
+
+v0.7 adds 25+ benchmark tasks across eight domains:
+
+| Domain | Tasks |
+|--------|-------|
+| **Document understanding** | OmniDocBench, MMLongBench, MMLongBench-Doc, DUDE, OfficeQA |
+| **Video** | Neptune long-video benchmarks, TVBench, ViVerBench, EgoTempo |
+| **Math & reasoning** | MathCanvas, MathKangaroo, VisuLogic, LLaVA-OV 1.5 RL reasoning collection |
+| **Spatial & counting** | Point-Bench, CountBench, FSC-147 |
+| **Knowledge & QA** | SimpleVQA, WorldVQA, MTVQA, HiPhO, MME-CC, VPCT, ZeroBench |
+| **AGI & agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp |
+| **Audio** | AMI, CN College Listen MCQ, DREAM TTS MCQ, EuroPal ASR, Song Describer |
+| **Safety** | JailbreakBench harmful + benign splits (see [Section 5](#5-safety-and-red-teaming-baseline-jailbreakbench)) |
+
+All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No manual registration required. Run `python -m lmms_eval --tasks list` to see all available tasks.
+
+---
+
+## 11. New Models
+
+| Model | Description |
+|-------|-------------|
+| **NanoVLM** | SigLIP2 + MLP projector + Qwen3-0.6B. Chat-style evaluation with async multi-GPU inference via job-queue dispatch. |
+| **Async HF model** | Generic async multi-GPU worker backend for HuggingFace model families. Loads replicas on N GPUs with independent worker threads. |
+
+---
+
+## 12. Bug Fixes
+
+- Fix image vs video file path detection in `auto_doc_to_messages` fallback
+- Align `osworld_g` polygon scoring with osworld-verified annotations
+- Harden `mmsi-bench` utils parsing against malformed model responses
+- Fix Whisper `world_size` initialization for single-process runtime
+- Fix Audio Flamingo 3 parameter handling
+- Restore `task_input_specs/redundancy_refactor.yaml` accidentally deleted by test commit
+
+---
+
+## See Also
+
+- [CHANGELOG.md](/CHANGELOG.md) — Full change list with PR links for every item
+- [docs/external_usage.md](external_usage.md) — CLI subcommands and Python library API
+- [configs/](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/configs) — Example YAML configs for local, API, and batch evaluation
+- [skills/lmms-eval-guide/](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/skills/lmms-eval-guide) — Agent skill files for model, task, and API server workflows
