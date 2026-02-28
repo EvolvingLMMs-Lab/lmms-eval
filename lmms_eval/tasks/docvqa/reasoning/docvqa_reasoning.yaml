@@ -1,0 +1,6 @@
+group: docvqa_reasoning
+task:
+  - docvqa_val_reasoning
+  - docvqa_test_reasoning
+metadata:
+  version: 0.0
