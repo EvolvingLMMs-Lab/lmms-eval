@@ -1,6 +1,27 @@
 # LMMs-Eval v0.7
 
-v0.7 makes lmms-eval easier to operate and harder to get wrong. The theme is **operational simplicity** for users and **pipeline maturity** for the framework — the evaluator now handles reasoning models, video decode optimization, and efficiency tracking that previously leaked into model code or didn't exist at all. Fewer flags to remember, fewer things that go wrong, and a single file that captures your entire experiment.
+v0.7 makes lmms-eval easier to operate and harder to get wrong. The theme is **operational simplicity** for users and **pipeline maturity** for the framework — the evaluator now handles:
+- injecting prompts and parsing outputs from reasoning models
+- image/video decode optimization
+- efficiency metrics
+
+Fewer flags to remember, fewer things that go wrong, and a single file that captures your entire experiment.
+
+## Table of Contents
+
+- [Upgrading from v0.6](#upgrading-from-v06)
+- [1. New Benchmark Tasks](#1-new-benchmark-tasks)
+- [2. New Models](#2-new-models)
+- [3. Image/Video I/O Throughput Upgrade](#3-imagevideo-io-throughput-upgrade)
+- [4. Lance-Backed Video Mode](#4-lance-backed-video-mode)
+- [9. Safety and Red-Teaming Baseline](#9-safety-and-red-teaming-baseline)
+- [10. Efficiency Metrics Coverage](#10-efficiency-metrics-coverage)
+- [11. Skill-Based Agent Workflows](#11-skill-based-agent-workflows)
+- [5. Better One-Line Evaluation Support](#5-better-one-line-evaluation-support)
+- [6. Pipeline-Level Reasoning Tag Stripping](#6-pipeline-level-reasoning-tag-stripping)
+- [7. Support customized message_format in async_openai](#7-support-customized-message_format-in-async_openai)
+- [8. Flattened JSONL Log Output](#8-flattened-jsonl-log-output)
+- [12. Bug Fixes](#12-bug-fixes)
 
 ---
 
@@ -26,7 +47,7 @@ Most workflows are backward-compatible. Two model-backend changes require attent
 
 - **`is_qwen3_vl` flag removed** from `async_openai` model_args. Use `message_format=qwen3_vl` instead.
 
-- **`parse_reasoning_model_answer` removed** from 6 model files. Reasoning tag stripping is now handled at the pipeline level (see [Section 2](#2-pipeline-level-reasoning-tag-stripping)). Remove any direct calls to this function.
+- **`parse_reasoning_model_answer` removed** from 6 model files. Reasoning tag stripping is now handled at the pipeline level (see [Section 6](#6-pipeline-level-reasoning-tag-stripping)). Remove any direct calls to this function.
 
 ### Backward-Compatible Renames
 
@@ -42,7 +63,500 @@ v0.7 introduces a subcommand architecture (`eval`, `tasks`, `models`, `ui`, `ser
 
 ---
 
-## 1. Better One-Line Evaluation
+## 1. New Benchmark Tasks
+
+v0.7 adds 25+ benchmark tasks across eight domains:
+
+| Domain | Tasks |
+|--------|-------|
+| **Document understanding** | OmniDocBench, MMLongBench, MMLongBench-Doc, DUDE, OfficeQA |
+| **Video** | Neptune long-video benchmarks, TVBench, ViVerBench, EgoTempo |
+| **Math & reasoning** | MathCanvas, MathKangaroo, VisuLogic, LLaVA-OV 1.5 RL reasoning collection |
+| **Spatial & counting** | Point-Bench, CountBench, FSC-147 |
+| **Knowledge & QA** | SimpleVQA, WorldVQA, MTVQA, HiPhO, MME-CC, VPCT, ZeroBench |
+| **AGI & agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp |
+| **Audio** | AMI, CN College Listen MCQ, DREAM TTS MCQ, EuroPal ASR, Song Describer |
+| **Safety** | JailbreakBench harmful + benign splits (see [Section 9](#9-safety-and-red-teaming-baseline)) |
+
+All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No manual registration required. Run `python -m lmms_eval --tasks list` to see all available tasks.
+
+---
+
+## 2. New Models
+
+| Model | Description |
+|-------|-------------|
+| **NanoVLM** | SigLIP2 + MLP projector + Qwen3-0.6B. Chat-style evaluation with async multi-GPU inference via job-queue dispatch. |
+| **Async HF model** | Generic async multi-GPU worker backend for HuggingFace model families. Loads replicas on N GPUs with independent worker threads. |
+
+---
+
+## 3. Image/Video I/O Throughput Upgrade
+
+This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
+
+### 3.1 read_video — Unified Video Decode Entry Point
+
+The `read_video` function in `lmms_eval/models/model_utils/load_video.py` is the single entry point for video frame extraction across all model backends. It uniformly samples `num_frm` frames (or uses FPS-guided sampling when `fps` is set) and returns an `np.ndarray` of shape `(N, H, W, 3)` in `uint8`.
+
+```python [lmms_eval/models/model_utils/load_video.py]
+read_video(
+    video_path,
+    *,
+    num_frm=8,
+    fps=None,
+    format="rgb24",
+    force_include_last_frame=False,
+    backend=None,
+) -> np.ndarray
+```
+
+**Supported decode backends** (select via `backend` parameter or `LMMS_VIDEO_DECODE_BACKEND` env var):
+
+| Backend | Install | Default | Notes |
+|---------|---------|---------|-------|
+| `pyav` | Included (PyAV) | ✅ | Stream-first decode for mp4; packet fallback for webm/mkv. `thread_type="AUTO"` enabled. |
+| `torchcodec` | `uv add torchcodec` | | Thread-tunable via `LMMS_VIDEO_TORCHCODEC_THREADS`. See [Section 3.3](#33-torchcodec-thread-tuning-benchmarks). |
+| `dali` | `nvidia-dali` (GPU) | | GPU-accelerated decode. Requires `LMMS_VIDEO_DALI_DEVICE=gpu`. |
+
+**Additional I/O optimizations in this release:**
+
+- Shared image encoding helper (`encode_image_to_base64`) across protocol and simple adapters
+- Path-metadata keyed image encode cache for repeated path inputs
+- PyAV stream fallback: `seek(0)` before packet decode on stream failure
+- Set-membership lookup in stream frame selection
+- Preallocated output array fill (replaces `list` + `np.stack` path)
+- Configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
+
+### 3.2 LongVideoBench Check
+
+To validate the optimization, we ran `longvideobench_val_v` with an API provider backed model (OpenRouter, `bytedance-seed/seed-1.6-flash`) under fixed settings (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
+
+This replay benchmarks two things at once:
+- **Score reproducibility** across baseline and optimized code paths
+- **Video decode latency** in the evaluation pipeline
+
+**Results:**
+
+| Metric | Value |
+|--------|-------|
+| Aggregate score (baseline / opt-run1 / opt-run2) | `0.5` / `0.5` / `0.5` |
+| Decode latency reduction | `2.79s` -> `1.02s` (**-63%**, 2.7x speedup) |
+| Opt A/A decode variation | `-3.05%` |
+| Baseline vs opt-run1 prediction match | `8/8` |
+| Opt-run1 vs opt-run2 prediction match | `6/8` |
+
+Aggregate scores remain unchanged. Per-item drift is consistent with remote-provider nondeterminism.
+
+### 3.3 TorchCodec Thread Tuning Benchmarks
+
+TorchCodec with multi-threading delivers significant speedups over PyAV. The table below summarizes recommended settings for common scenarios.
+
+**Recommended settings:**
+
+| Scenario | Threads Setting | Speedup vs PyAV |
+|----------|----------------|-----------------|
+| 8 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | **3.58x** |
+| 16 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.05x |
+| 32 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | 1.95x |
+| FPS=1 (sparse sampling) | Use PyAV default | — |
+| FPS≥30 (dense sampling) | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.32x |
+
+General recommendation: set `LMMS_VIDEO_TORCHCODEC_THREADS=8`. See [Section 3.4](#34-fps-guided-sampling-1-fps-vs-30-fps) for FPS-guided details.
+
+::important
+Default threads (0/1) are **not** faster. TorchCodec with `threads=0` or `1` matches or regresses vs PyAV — up to +150% slower at 16 frames. Always set threads explicitly.
+::
+
+**Detailed benchmark data** — 5 warmup + 20 measured iterations per config. TorchCodec `v0.10.0` on PyTorch `2.10.0`. First-frame hash parity verified against PyAV baseline.
+
+**8 frames:**
+
+| Backend | Threads | Mean (ms) | vs PyAV |
+|---------|---------|-----------|---------|
+| PyAV | — | 196.64 | baseline |
+| TorchCodec | 0 | 197.41 | +0.39% |
+| TorchCodec | 2 | 121.42 | -38.25% |
+| TorchCodec | 4 | 76.10 | -61.30% |
+| **TorchCodec** | **8** | **54.88** | **-72% (3.58x)** |
+
+**16 frames:**
+
+| Backend | Threads | Mean (ms) | vs PyAV |
+|---------|---------|-----------|---------|
+| PyAV | — | 188.21 | baseline |
+| TorchCodec | 0 | 469.48 | +149% |
+| TorchCodec | 2 | 283.41 | +51% |
+| **TorchCodec** | **4** | **178.80** | **-5% (1.05x)** |
+| TorchCodec | 8 | 263.44 | +40% |
+
+**32 frames:**
+
+| Backend | Threads | Mean (ms) | vs PyAV |
+|---------|---------|-----------|---------|
+| PyAV | — | 415.76 | baseline |
+| TorchCodec | 0 | 828.36 | +99% |
+| TorchCodec | 4 | 296.24 | -29% |
+| **TorchCodec** | **8** | **213.45** | **-49% (1.95x)** |
+
+
+### 3.4 FPS-Guided Sampling (1 FPS vs 30 FPS)
+
+Same video as Section 3.3, with `num_frm=4096`. `fps=1` yields 54 sampled frames; `fps=30` yields 1639 (near full extraction).
+
+**Sparse sampling (fps=1, 54 frames):**
+
+| Backend | Threads | Mean (ms) | vs PyAV |
+|---------|---------|-----------|---------|
+| PyAV | — | 208.65 | baseline |
+| TorchCodec | 0 | 903.26 | +333% |
+| TorchCodec | 8 | 228.49 | +10% |
+| TorchCodec | 16 | 207.43 | -2% (near parity) |
+
+**Dense sampling (fps=30, 1639 frames):**
+
+| Backend | Threads | Mean (ms) | vs PyAV |
+|---------|---------|-----------|---------|
+| PyAV | — | 1676.29 | baseline |
+| TorchCodec | 0 | 2406.10 | +44% |
+| **TorchCodec** | **4** | **1272.04** | **-24% (1.32x)** |
+| TorchCodec | 8 | 1282.75 | -23% |
+
+::tip
+**Sparse sampling (fps=1)**: TorchCodec offers no advantage. PyAV is sufficient.
+**Dense sampling (fps≥30)**: Set `LMMS_VIDEO_TORCHCODEC_THREADS=4` for a 1.32x speedup. The backend advantage only materializes when enough frames are decoded to amortize setup overhead.
+::
+
+### 3.5 Media Resolver LRU Caching
+
+The new benchmark tasks rely on `resolve_media_reference` to resolve media paths from local directories, task cache folders, and Hugging Face cache roots. In large runs, this repeats the same path-construction work many times.
+
+v0.7 adds in-process LRU caching for deterministic path-expansion helpers:
+
+- `_candidate_roots_cached(..., maxsize=256)` caches candidate root lists keyed by `cache_dir`, `media_type`, and current environment-derived root values.
+- `_extension_variants(..., maxsize=4096)` caches extension-normalized path variants for repeated basename/clip-id lookups.
+- `resolve_media_reference` still performs `Path.exists()` checks on every call, so newly downloaded media files are discovered immediately. Only pure path-derivation work is cached.
+
+---
+
+## 4. Lance-Backed Video Mode
+
+v0.7 adds an optional Lance-backed video path for MINERVA so metadata and videos can be distributed through Hugging Face in a single reproducible package.
+
+### 4.1 Dataset Package on Hugging Face
+
+MINERVA is published as `lmms-lab-eval/minerva` with two key assets:
+
+| Asset | Purpose |
+|-------|---------|
+| `minerva.json` | Task metadata used by `minerva.yaml` |
+| `data/train.lance` | Lance table with one row per `video_id` |
+
+The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`.
+
+### 4.2 Build Lance Table from Local Downloads
+
+Convert local video files to a Lance table with the provided script:
+
+```bash [Terminal]
+uv run --with pylance --with pyarrow python tools/minerva_to_lance.py \
+  --metadata-json data/minerva/minerva.json \
+  --videos-dir data/minerva/videos \
+  --output data/minerva_hf_package/data/train.lance \
+  --batch-size 6
+```
+
+The resulting Lance schema contains: `video_id`, `youtube_url`, `video_ext`, `video_size_bytes`, `video_blob`.
+
+::note
+Install `pylance` (module import name: `lance`) and `pyarrow` for Lance-mode usage.
+::
+
+### 4.3 Runtime Resolution Order
+
+At evaluation time, MINERVA resolves videos using this priority:
+
+1. **Local file** via `MINERVA_VIDEO_DIR`
+2. **Lance blob** via `MINERVA_LANCE_VIDEO_URI`
+3. **YouTube URL** fallback (`https://www.youtube.com/watch?v=<video_id>`)
+
+Configure Lance mode:
+
+```bash [Terminal]
+export MINERVA_LANCE_VIDEO_URI="hf://datasets/lmms-lab-eval/minerva/data/train.lance"
+export MINERVA_LANCE_VIDEO_ID_COLUMN="video_id"
+export MINERVA_LANCE_VIDEO_BLOB_COLUMN="video_blob"
+export MINERVA_LANCE_CACHE_DIR="~/.cache/lmms_eval/minerva_lance_videos"
+export LANCE_IO_THREADS="64"
+export LANCE_CPU_THREADS="8"
+```
+
+For local-first mode:
+
+```bash [Terminal]
+export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
+```
+
+### 4.4 Run Example
+
+```bash [Terminal]
+uv run --with pylance --with pyarrow python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+  --tasks minerva \
+  --batch_size 1 \
+  --limit 8
+```
+
+MINERVA remains reproducible in two modes: fully local video files or remote Lance blobs from the Hub.
+
+### 4.5 Benchmarking Video-Resolution Latency
+
+v0.7 includes a direct resolver benchmark for measuring Lance-mode latency:
+
+::code-group
+```bash [Lance mode]
+uv run python tools/bench_minerva_video_resolution.py \
+  --metadata-json data/minerva/minerva.json \
+  --mode lance \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 200 \
+  --sample-unique-video
+```
+
+```bash [Local-file baseline]
+uv run python tools/bench_minerva_video_resolution.py \
+  --metadata-json data/minerva/minerva.json \
+  --mode local \
+  --local-video-dir /absolute/path/to/minerva/videos \
+  --limit 200
+```
+
+```bash [Pipeline comparison (same decode backend)]
+uv run python tools/bench_minerva_pipeline_latency.py \
+  --local-video-dir /absolute/path/to/minerva/videos \
+  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
+  --limit 100 \
+  --batch-size 1 \
+  --decode-num-frames 8
+```
+::
+
+The benchmark reports absolute latency distribution for `minerva_doc_to_visual`: `startup_ms` (Lance resolver init cost), `cold_*` metrics (first pass, cache-miss heavy), and `warm_*` metrics (second pass, cache-hit heavy).
+
+::tip
+On local pre-downloaded videos, local raw and Lance modes are often near-parity because decode cost dominates. Lance advantages become clearer in remote/object-storage access, cross-machine reproducibility, and repeated subset evaluation workflows.
+::
+
+**Implementation notes:**
+- MINERVA Lance resolver avoids eager full-table `video_id` scan at initialization and resolves rows via filtered scan on demand, reducing startup overhead.
+- For large-blob dataset builds, use blob-oriented write settings in `tools/minerva_to_lance.py` (smaller rows-per-file and stable storage version).
+
+---
+
+## 9. Safety and Red-Teaming Baseline
+
+v0.7 adds a safety/red-teaming task group based on JailbreakBench behaviors. This addresses a gap where lmms-eval had no built-in safety benchmark for jailbreak robustness and over-refusal analysis.
+
+### 9.1 New Task Group
+
+- `safety_redteam` (group)
+  - `safety_jailbreakbench_harmful`
+  - `safety_jailbreakbench_benign`
+
+Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + benign splits).
+
+### 9.2 Reported Metrics
+
+**Harmful split**:
+
+| Metric | Description |
+|--------|-------------|
+| `jailbreak_asr` | Attack success proxy (lower is better) |
+| `refusal_rate` | Refusal behavior under harmful prompts (higher is better) |
+| `toxicity_score` | Toxicity estimate in [0, 1] (lower is better) |
+| `content_filter_rejection_rate` | Policy/filter rejection frequency (higher is better) |
+| `demographic_refusal_rate` | Refusal rate on demographic-related prompts |
+| `non_demographic_refusal_rate` | Refusal rate on non-demographic prompts |
+
+**Benign split**:
+
+| Metric | Description |
+|--------|-------------|
+| `over_refusal_rate` | Benign prompts incorrectly refused (lower is better) |
+| `benign_toxicity_score` | Toxicity estimate on benign prompts (lower is better) |
+| `content_filter_rejection_rate` | Policy/filter rejection frequency |
+| `demographic_refusal_rate` | Refusal rate on demographic-related prompts |
+| `non_demographic_refusal_rate` | Refusal rate on non-demographic prompts |
+
+### 9.3 Toxicity Backends
+
+Toxicity scoring supports two modes:
+
+1. **Perspective API** when `PERSPECTIVE_API_KEY` is configured
+2. **Offline keyword heuristic** fallback when the API is unavailable
+
+This keeps safety evaluation usable in both cloud and offline environments.
+
+### 9.4 Usage
+
+```bash [Terminal]
+python -m lmms_eval \
+  --model qwen2_5_vl \
+  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
+  --tasks safety_redteam \
+  --batch_size 1 \
+  --limit 20
+```
+
+---
+
+## 10. Efficiency Metrics Coverage
+
+v0.7 improves efficiency observability, but not all metrics are equally available across backends.
+
+### 10.1 What v0.7 Covers
+
+"Efficiency metrics complete" in v0.7 means:
+
+- Per-sample token counts in evaluation outputs (`input_tokens`, `output_tokens`, `reasoning_tokens` when backend metadata exists)
+- Run-level throughput metrics in results (`total_gen_tokens`, `total_elapsed_time`, `avg_speed`)
+- vLLM-backed chat paths report TTFT/TPOT through native runtime metrics
+
+::note
+TTFT/TPOT parity across every backend is out of scope for v0.7.
+::
+
+### 10.2 TTFT/TPOT Coverage Matrix
+
+| Backend Family | TTFT | TPOT | Notes |
+|----------------|------|------|-------|
+| `vllm` chat backends | ✅ | ✅ | Reads runtime metrics, logs as `additional_metrics` |
+| `sglang` chat backend | ❌ | ❌ | Wall-clock throughput only |
+| OpenAI-compatible APIs (`openai`, `async_openai`) | ❌ | ❌ | Token usage + end-to-end latency, no first-token timestamp |
+| HuggingFace local generate | ❌ | ❌ | `model.generate()` wall-clock timing only |
+
+::important
+TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
+::
+
+### 10.3 Extending TTFT Beyond vLLM
+
+Extending TTFT to other backends is feasible but requires backend-specific work:
+
+| Backend | Feasibility | Caveat |
+|---------|-------------|--------|
+| OpenAI-compatible APIs | Streaming-first instrumentation + first-chunk timestamp | Measured TTFT includes network and client overhead |
+| SGLang | Per-request first-token timing in generation path | Batch-level timing alone is not sufficient |
+| HuggingFace local | Token streaming/generation callbacks | Default `generate()` does not expose TTFT |
+
+### 10.4 Reporting Guidance
+
+- If TTFT/TPOT is critical, use `vllm` backends.
+- If using API/SGLang/HF backends, report throughput and token usage. Treat TTFT as unavailable unless custom instrumentation is enabled.
+- Keep metric claims backend-qualified (e.g., "TTFT measured on vLLM runtime metrics").
+
+### 10.5 Token-Based Efficiency in Results JSON
+
+With `--log_samples` enabled, v0.7 emits an `efficiency` section in aggregated results:
+
+- `overall.tokens_per_correct_answer`
+- `overall.avg_output_tokens_per_sample`
+- Per-task breakdown under `efficiency.by_task`
+
+The v0.7 efficiency output is token-based by design. It does not include price-derived cost fields, so metric comparability does not depend on provider-specific pricing tables.
+
+---
+
+## 11. Skill-Based Agent Workflows
+
+v0.7 standardizes how coding agents learn and orchestrate lmms-eval workflows through the repository skill:
+
+- `skills/lmms-eval-guide/SKILL.md`
+- `skills/lmms-eval-guide/references/models.md`
+- `skills/lmms-eval-guide/references/tasks.md`
+- `skills/lmms-eval-guide/references/api-server.md`
+- `skills/lmms-eval-guide/references/workflows.md`
+
+This turns lmms-eval from a set of docs into a reusable operational skill for agents — discover the right integration path, apply correct file-level patterns, and schedule evaluation jobs safely.
+
+### 11.1 Add New Models and Tasks via Skill References
+
+The skill references define recommended implementation paths for extension work:
+
+- **New model integration** -> `references/models.md`
+  - Chat-first model template (`is_simple = False`)
+  - Request unpacking contract (`request.args` shape)
+  - `message_format` parameter for API model serialization dispatch
+  - Registration in `lmms_eval/models/__init__.py`
+  - v0.6 -> v0.7 breaking changes and migration
+  - Minimal verification commands (`--limit 5` / `--verbosity DEBUG`)
+
+- **New task/benchmark integration** -> `references/tasks.md`
+  - YAML-first task definition (auto-registered from `tasks/`)
+  - `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`
+  - `process_results` + `metric_list` contract
+  - `reasoning_tags` per-task override for `<think>` stripping
+  - Available task domains (v0.7 coverage)
+  - Advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge)
+
+::tip
+Agents should follow this workflow: resolve whether the change is model-side, task-side, or both; load the matching skill reference; follow existing code patterns in nearby models and task YAMLs; run a small-sample verification before broader evaluation.
+::
+
+### 11.2 Insert lmms-eval into Training Jobs via HTTP Service
+
+For training-time evaluation, use the eval server workflow from `references/api-server.md`.
+
+Core pattern:
+
+1. Start the HTTP eval server (`launch_server(ServerArgs(...))`) on dedicated eval resources.
+2. During training, submit non-blocking jobs with `EvalClient.evaluate(...)`.
+3. Continue training immediately. Poll or wait by `job_id` later.
+4. Collect metrics asynchronously for checkpoint selection, regression alerts, and model ranking.
+
+Key endpoints for job orchestration:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /evaluate` | Submit evaluation jobs |
+| `GET /jobs/{job_id}` | Query status and results |
+| `GET /queue` | Inspect scheduler backlog |
+| `GET /tasks` and `GET /models` | Runtime capability discovery |
+
+This service mode is the recommended way to decouple training and evaluation in v0.7 workflows.
+
+### 11.3 HTTP Service as an Operational Primitive
+
+Treat the eval server as infrastructure, not only a convenience API:
+
+- **Queue-safe GPU usage** — scheduler-managed jobs prevent resource contention
+- **Async checkpoint evaluation** — evaluate without blocking trainer processes
+- **Multi-team reproducibility** — stable request payloads and job IDs
+- **Operational visibility** — `/queue` and job lifecycle states
+
+::warning
+Run the eval server in trusted environments only. Add authentication, rate limiting, and network isolation before exposing it beyond internal boundaries.
+::
+
+### 11.4 Agent Dispatch Strategy
+
+When agents orchestrate lmms-eval tasks, use this routing:
+
+| Scenario | Action |
+|----------|--------|
+| Task/model extension | Load `lmms-eval-guide` + `references/models.md` or `references/tasks.md` |
+| YAML config setup | Load `references/workflows.md` for `--config` usage and config structure |
+| Training integration | Load `references/api-server.md` first |
+| Quick validation | Run `--limit` smoke tests before full benchmark submission |
+| Scalable evaluation | Use HTTP jobs for long-running or periodic evaluation loops |
+| Debugging failures | Load `references/workflows.md` for step-by-step debug workflow |
+
+This separates development-time edits (model/task code) from runtime scheduling (HTTP jobs) and operational workflows (config, debugging).
+
+---
+
+## 5. Better One-Line Evaluation Support
 
 Running an evaluation used to mean assembling a long command with many flags. Sharing that command meant copy-pasting a fragile shell one-liner and hoping the environment was set up correctly. Reproducing a result from a paper meant reverse-engineering the setup from a results JSON that stored only a few fields.
 
@@ -54,7 +568,7 @@ python -m lmms_eval --config configs/my_experiment.yaml
 
 One file captures everything — model, tasks, generation parameters, and environment variables. Ship the YAML, reproduce the result.
 
-### 1.1 What Goes in the YAML
+### 5.1 What Goes in the YAML
 
 A config file maps directly to CLI arguments, plus an optional `env` section for environment variables.
 
@@ -110,7 +624,7 @@ For batch evaluation (multiple models in one run):
   log_samples: true
 ```
 
-### 1.2 Environment Variables
+### 5.2 Environment Variables
 
 The `env` section sets environment variables before evaluation starts. Credentials and paths live in the config, not in someone's `.bashrc`.
 
@@ -127,7 +641,7 @@ Values containing `${VAR}` expand using the current shell environment. The `${VA
 Keys containing `KEY`, `TOKEN`, `SECRET`, or `PASSWORD` are automatically masked in log output (e.g., `Config env: OPENAI_API_KEY=********`). The actual values are set correctly in `os.environ`.
 ::
 
-### 1.3 CLI Override Priority
+### 5.3 CLI Override Priority
 
 The priority chain is: **defaults < YAML < CLI**. CLI arguments always win.
 
@@ -141,7 +655,7 @@ python -m lmms_eval --config configs/example_local.yaml --batch_size 4
 
 Keep a "canonical" config in the YAML and override individual values at the command line without editing the file. Override detection compares each CLI argument against argparse defaults — only arguments that differ from defaults count as explicit overrides.
 
-### 1.4 Schema Validation
+### 5.4 Schema Validation
 
 Unknown keys in the YAML now raise an error with the list of valid keys:
 
@@ -152,7 +666,7 @@ Valid keys are: ['batch_size', 'config', 'device', 'gen_kwargs', 'limit', 'log_s
 
 Previously, typos like `modle` instead of `model` were silently accepted and ignored at runtime, leading to confusing evaluation failures.
 
-### 1.5 Full Experiment Reproducibility
+### 5.5 Full Experiment Reproducibility
 
 Results JSON now includes `resolved_cli_args` — the complete resolved configuration after merging defaults, YAML, and CLI overrides:
 
@@ -180,7 +694,7 @@ Results JSON now includes `resolved_cli_args` — the complete resolved configur
 
 Reconstruct the exact YAML config from any results file. No more guessing what flags were used.
 
-### 1.6 Web UI Integration
+### 5.6 Web UI Integration
 
 The Web UI supports YAML import and export:
 
@@ -189,7 +703,7 @@ The Web UI supports YAML import and export:
 
 The `env` section maps to the Web UI's environment variables field. The round-trip is lossless — export a YAML, import it back, and the form state is identical.
 
-### 1.7 Example Configs
+### 5.7 Example Configs
 
 Three example configs ship in `configs/`:
 
@@ -209,13 +723,13 @@ python -m lmms_eval --config configs/my_experiment.yaml
 
 ---
 
-## 2. Pipeline-Level Reasoning Tag Stripping
+## 6. Pipeline-Level Reasoning Tag Stripping
 
 Reasoning models (Qwen3-VL, DeepSeek-R1, QwQ, etc.) emit `<think>...</think>` blocks in their generated text. Without stripping, these tokens pollute scoring on standard benchmarks. Previously, only 6 model files had ad-hoc handling, and vLLM, SGLang, and OpenAI backends had zero protection.
 
 v0.7 moves reasoning tag stripping into the evaluator pipeline itself. It works uniformly across all model backends.
 
-### 2.1 How It Works
+### 6.1 How It Works
 
 Stripping runs in `evaluator.py` **after** the filter pipeline and **before** `process_results()`. Both raw and cleaned outputs are preserved:
 
@@ -237,7 +751,7 @@ This design means:
 - **Scoring is clean** — `process_results()` never sees `<think>` tokens.
 - **Analysis is preserved** — the raw chain-of-thought remains available in `--log_samples` output.
 
-### 2.2 Usage
+### 6.2 Usage
 
 Stripping is enabled by default with `<think>...</think>` tags.
 
@@ -260,7 +774,7 @@ python -m lmms_eval --model qwen3_vl --tasks mme \
 ```
 ::
 
-### 2.3 Per-Task Override
+### 6.3 Per-Task Override
 
 Tasks can override the CLI setting via the `reasoning_tags` field in their YAML config. Task-level config takes priority over the CLI flag.
 
@@ -270,7 +784,7 @@ reasoning_tags: [["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]
 
 Set to `none` or `false` to disable stripping for a specific task.
 
-### 2.4 JSONL Log Output Fields
+### 6.4 JSONL Log Output Fields
 
 When `--log_samples` is enabled, each JSONL line contains these fields:
 
@@ -302,7 +816,7 @@ Example record from a reasoning model:
 `resps` contains the full chain-of-thought and is useful for debugging reasoning behavior. `filtered_resps` is the canonical scored output — use it when computing or verifying metrics. When no stripping occurs, `resps` is omitted if identical to `filtered_resps`.
 ::
 
-### 2.5 Implementation Details
+### 6.5 Implementation Details
 
 | File | Change |
 |------|--------|
@@ -315,11 +829,11 @@ Example record from a reasoning model:
 
 ---
 
-## 3. Async OpenAI: Refactored Concurrency Control and message_format
+## 7. Support customized message_format in async_openai
 
 The `async_openai` model backend receives two changes: an internal refactor for maintainability, and a `message_format` parameter that replaces the previous `is_qwen3_vl` flag and the separate `async_openai_qwen3_vl` model class.
 
-### 3.1 message_format Parameter
+### 7.1 message_format Parameter
 
 Different model families behind OpenAI-compatible APIs require different message serialization. Qwen3-VL needs per-frame timestamps prepended to video frames, while the standard OpenAI format sends frames as plain base64 images.
 
@@ -343,7 +857,7 @@ python -m lmms_eval --model async_openai \
 
 Adding a new format requires only an `elif` in `prepare_messages()` and a corresponding `to_*_messages()` method in `ChatMessages` — no new files or registry changes.
 
-### 3.2 Refactored Concurrency Control
+### 7.2 Refactored Concurrency Control
 
 The `generate_until()` method was a single 130-line function with retry logic, adaptive concurrency control, and request scheduling interleaved. v0.7 decomposes it into focused methods:
 
@@ -373,7 +887,7 @@ Concurrency tracking state lives in `_AdaptiveConcurrencyTracker` (a dataclass) 
 
 ---
 
-## 4. Flattened JSONL Log Output
+## 8. Flattened JSONL Log Output
 
 With `--log_samples` enabled, the per-sample JSONL files previously wrote `resps` and `filtered_resps` as doubly-nested lists:
 
@@ -389,7 +903,7 @@ v0.7 flattens the outer list at serialization time when it contains only a singl
 {"resps": ["The answer is cat"], "filtered_resps": ["cat"]}
 ```
 
-### 4.1 When Flattening Applies
+### 8.1 When Flattening Applies
 
 | Output Type | Instances per Doc | Before | After |
 |-------------|-------------------|--------|-------|
@@ -401,506 +915,13 @@ v0.7 flattens the outer list at serialization time when it contains only a singl
 Flattening only removes the outer wrapper when there is exactly one Instance. Multi-choice tasks with multiple Instances per document remain untouched.
 ::
 
-### 4.2 Deduplication with Flattened Format
+### 8.2 Deduplication with Flattened Format
 
 The existing dedup logic (omit `resps` when identical to `filtered_resps`) continues to work with the flattened format. After flattening, the two fields are compared directly — if they match, `resps` is omitted from the JSONL record to save space.
 
-### 4.3 Implementation
+### 8.3 Implementation
 
 The flattening happens in `evaluation_tracker.py` during JSONL serialization, not in the evaluator core. In-memory data structures (`logged_samples`) retain the original nested format so existing consumers (wandb logger, logging utilities) continue to work without changes.
-
----
-
-## 5. Safety and Red-Teaming Baseline (JailbreakBench)
-
-v0.7 adds a safety/red-teaming task group based on JailbreakBench behaviors. This addresses a gap where lmms-eval had no built-in safety benchmark for jailbreak robustness and over-refusal analysis.
-
-### 5.1 New Task Group
-
-- `safety_redteam` (group)
-  - `safety_jailbreakbench_harmful`
-  - `safety_jailbreakbench_benign`
-
-Dataset source: `JailbreakBench/JBB-Behaviors` (`behaviors` config, harmful + benign splits).
-
-### 5.2 Reported Metrics
-
-**Harmful split**:
-
-| Metric | Description |
-|--------|-------------|
-| `jailbreak_asr` | Attack success proxy (lower is better) |
-| `refusal_rate` | Refusal behavior under harmful prompts (higher is better) |
-| `toxicity_score` | Toxicity estimate in [0, 1] (lower is better) |
-| `content_filter_rejection_rate` | Policy/filter rejection frequency (higher is better) |
-| `demographic_refusal_rate` | Refusal rate on demographic-related prompts |
-| `non_demographic_refusal_rate` | Refusal rate on non-demographic prompts |
-
-**Benign split**:
-
-| Metric | Description |
-|--------|-------------|
-| `over_refusal_rate` | Benign prompts incorrectly refused (lower is better) |
-| `benign_toxicity_score` | Toxicity estimate on benign prompts (lower is better) |
-| `content_filter_rejection_rate` | Policy/filter rejection frequency |
-| `demographic_refusal_rate` | Refusal rate on demographic-related prompts |
-| `non_demographic_refusal_rate` | Refusal rate on non-demographic prompts |
-
-### 5.3 Toxicity Backends
-
-Toxicity scoring supports two modes:
-
-1. **Perspective API** when `PERSPECTIVE_API_KEY` is configured
-2. **Offline keyword heuristic** fallback when the API is unavailable
-
-This keeps safety evaluation usable in both cloud and offline environments.
-
-### 5.4 Usage
-
-```bash [Terminal]
-python -m lmms_eval \
-  --model qwen2_5_vl \
-  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
-  --tasks safety_redteam \
-  --batch_size 1 \
-  --limit 20
-```
-
----
-
-## 6. Skill-Based Agent Workflows
-
-v0.7 standardizes how coding agents learn and orchestrate lmms-eval workflows through the repository skill:
-
-- `skills/lmms-eval-guide/SKILL.md`
-- `skills/lmms-eval-guide/references/models.md`
-- `skills/lmms-eval-guide/references/tasks.md`
-- `skills/lmms-eval-guide/references/api-server.md`
-- `skills/lmms-eval-guide/references/workflows.md`
-
-This turns lmms-eval from a set of docs into a reusable operational skill for agents — discover the right integration path, apply correct file-level patterns, and schedule evaluation jobs safely.
-
-### 6.1 Add New Models and Tasks via Skill References
-
-The skill references define recommended implementation paths for extension work:
-
-- **New model integration** -> `references/models.md`
-  - Chat-first model template (`is_simple = False`)
-  - Request unpacking contract (`request.args` shape)
-  - `message_format` parameter for API model serialization dispatch
-  - Registration in `lmms_eval/models/__init__.py`
-  - v0.6 -> v0.7 breaking changes and migration
-  - Minimal verification commands (`--limit 5` / `--verbosity DEBUG`)
-
-- **New task/benchmark integration** -> `references/tasks.md`
-  - YAML-first task definition (auto-registered from `tasks/`)
-  - `doc_to_messages` + fallback `doc_to_visual` / `doc_to_text`
-  - `process_results` + `metric_list` contract
-  - `reasoning_tags` per-task override for `<think>` stripping
-  - Available task domains (v0.7 coverage)
-  - Advanced patterns (`include`, `group`, `cluster_key`, LLM-as-judge)
-
-::tip
-Agents should follow this workflow: resolve whether the change is model-side, task-side, or both; load the matching skill reference; follow existing code patterns in nearby models and task YAMLs; run a small-sample verification before broader evaluation.
-::
-
-### 6.2 Insert lmms-eval into Training Jobs via HTTP Service
-
-For training-time evaluation, use the eval server workflow from `references/api-server.md`.
-
-Core pattern:
-
-1. Start the HTTP eval server (`launch_server(ServerArgs(...))`) on dedicated eval resources.
-2. During training, submit non-blocking jobs with `EvalClient.evaluate(...)`.
-3. Continue training immediately. Poll or wait by `job_id` later.
-4. Collect metrics asynchronously for checkpoint selection, regression alerts, and model ranking.
-
-Key endpoints for job orchestration:
-
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /evaluate` | Submit evaluation jobs |
-| `GET /jobs/{job_id}` | Query status and results |
-| `GET /queue` | Inspect scheduler backlog |
-| `GET /tasks` and `GET /models` | Runtime capability discovery |
-
-This service mode is the recommended way to decouple training and evaluation in v0.7 workflows.
-
-### 6.3 HTTP Service as an Operational Primitive
-
-Treat the eval server as infrastructure, not only a convenience API:
-
-- **Queue-safe GPU usage** — scheduler-managed jobs prevent resource contention
-- **Async checkpoint evaluation** — evaluate without blocking trainer processes
-- **Multi-team reproducibility** — stable request payloads and job IDs
-- **Operational visibility** — `/queue` and job lifecycle states
-
-::warning
-Run the eval server in trusted environments only. Add authentication, rate limiting, and network isolation before exposing it beyond internal boundaries.
-::
-
-### 6.4 Agent Dispatch Strategy
-
-When agents orchestrate lmms-eval tasks, use this routing:
-
-| Scenario | Action |
-|----------|--------|
-| Task/model extension | Load `lmms-eval-guide` + `references/models.md` or `references/tasks.md` |
-| YAML config setup | Load `references/workflows.md` for `--config` usage and config structure |
-| Training integration | Load `references/api-server.md` first |
-| Quick validation | Run `--limit` smoke tests before full benchmark submission |
-| Scalable evaluation | Use HTTP jobs for long-running or periodic evaluation loops |
-| Debugging failures | Load `references/workflows.md` for step-by-step debug workflow |
-
-This separates development-time edits (model/task code) from runtime scheduling (HTTP jobs) and operational workflows (config, debugging).
-
----
-
-## 7. Image/Video I/O Throughput Upgrade
-
-This update consolidates image encoding in shared helpers and optimizes video decode hot paths while preserving task-facing semantics.
-
-### 7.1 read_video — Unified Video Decode Entry Point
-
-The `read_video` function in `lmms_eval/models/model_utils/load_video.py` is the single entry point for video frame extraction across all model backends. It uniformly samples `num_frm` frames (or uses FPS-guided sampling when `fps` is set) and returns an `np.ndarray` of shape `(N, H, W, 3)` in `uint8`.
-
-```python [lmms_eval/models/model_utils/load_video.py]
-read_video(
-    video_path,
-    *,
-    num_frm=8,
-    fps=None,
-    format="rgb24",
-    force_include_last_frame=False,
-    backend=None,
-) -> np.ndarray
-```
-
-**Supported decode backends** (select via `backend` parameter or `LMMS_VIDEO_DECODE_BACKEND` env var):
-
-| Backend | Install | Default | Notes |
-|---------|---------|---------|-------|
-| `pyav` | Included (PyAV) | ✅ | Stream-first decode for mp4; packet fallback for webm/mkv. `thread_type="AUTO"` enabled. |
-| `torchcodec` | `uv add torchcodec` | | Thread-tunable via `LMMS_VIDEO_TORCHCODEC_THREADS`. See [Section 7.3](#73-torchcodec-thread-tuning-benchmarks). |
-| `dali` | `nvidia-dali` (GPU) | | GPU-accelerated decode. Requires `LMMS_VIDEO_DALI_DEVICE=gpu`. |
-
-**Additional I/O optimizations in this release:**
-
-- Shared image encoding helper (`encode_image_to_base64`) across protocol and simple adapters
-- Path-metadata keyed image encode cache for repeated path inputs
-- PyAV stream fallback: `seek(0)` before packet decode on stream failure
-- Set-membership lookup in stream frame selection
-- Preallocated output array fill (replaces `list` + `np.stack` path)
-- Configurable decord threads via `LMMS_VIDEO_DECORD_THREADS`
-
-### 7.2 LongVideoBench Check
-
-To validate the optimization, we ran `longvideobench_val_v` with an API provider backed model (OpenRouter, `bytedance-seed/seed-1.6-flash`) under fixed settings (`limit=8`, `max_frames_num=4`, `max_image_size=512`).
-
-This replay benchmarks two things at once:
-- **Score reproducibility** across baseline and optimized code paths
-- **Video decode latency** in the evaluation pipeline
-
-**Results:**
-
-| Metric | Value |
-|--------|-------|
-| Aggregate score (baseline / opt-run1 / opt-run2) | `0.5` / `0.5` / `0.5` |
-| Decode latency reduction | `2.79s` -> `1.02s` (**-63%**, 2.7x speedup) |
-| Opt A/A decode variation | `-3.05%` |
-| Baseline vs opt-run1 prediction match | `8/8` |
-| Opt-run1 vs opt-run2 prediction match | `6/8` |
-
-Aggregate scores remain unchanged. Per-item drift is consistent with remote-provider nondeterminism.
-
-### 7.3 TorchCodec Thread Tuning Benchmarks
-
-TorchCodec with multi-threading delivers significant speedups over PyAV. The table below summarizes recommended settings for common scenarios.
-
-**Recommended settings:**
-
-| Scenario | Threads Setting | Speedup vs PyAV |
-|----------|----------------|-----------------|
-| 8 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | **3.58x** |
-| 16 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.05x |
-| 32 frames | `LMMS_VIDEO_TORCHCODEC_THREADS=8` | 1.95x |
-| FPS=1 (sparse sampling) | Use PyAV default | — |
-| FPS≥30 (dense sampling) | `LMMS_VIDEO_TORCHCODEC_THREADS=4` | 1.32x |
-
-General recommendation: set `LMMS_VIDEO_TORCHCODEC_THREADS=8`. See [Section 7.4](#74-fps-guided-sampling-1-fps-vs-30-fps) for FPS-guided details.
-
-::important
-Default threads (0/1) are **not** faster. TorchCodec with `threads=0` or `1` matches or regresses vs PyAV — up to +150% slower at 16 frames. Always set threads explicitly.
-::
-
-**Detailed benchmark data** — 5 warmup + 20 measured iterations per config. TorchCodec `v0.10.0` on PyTorch `2.10.0`. First-frame hash parity verified against PyAV baseline.
-
-**8 frames:**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 196.64 | baseline |
-| TorchCodec | 0 | 197.41 | +0.39% |
-| TorchCodec | 2 | 121.42 | -38.25% |
-| TorchCodec | 4 | 76.10 | -61.30% |
-| **TorchCodec** | **8** | **54.88** | **-72% (3.58x)** |
-
-**16 frames:**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 188.21 | baseline |
-| TorchCodec | 0 | 469.48 | +149% |
-| TorchCodec | 2 | 283.41 | +51% |
-| **TorchCodec** | **4** | **178.80** | **-5% (1.05x)** |
-| TorchCodec | 8 | 263.44 | +40% |
-
-**32 frames:**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 415.76 | baseline |
-| TorchCodec | 0 | 828.36 | +99% |
-| TorchCodec | 4 | 296.24 | -29% |
-| **TorchCodec** | **8** | **213.45** | **-49% (1.95x)** |
-
-
-### 7.4 FPS-Guided Sampling (1 FPS vs 30 FPS)
-
-Same video as Section 7.3, with `num_frm=4096`. `fps=1` yields 54 sampled frames; `fps=30` yields 1639 (near full extraction).
-
-**Sparse sampling (fps=1, 54 frames):**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 208.65 | baseline |
-| TorchCodec | 0 | 903.26 | +333% |
-| TorchCodec | 8 | 228.49 | +10% |
-| TorchCodec | 16 | 207.43 | -2% (near parity) |
-
-**Dense sampling (fps=30, 1639 frames):**
-
-| Backend | Threads | Mean (ms) | vs PyAV |
-|---------|---------|-----------|---------|
-| PyAV | — | 1676.29 | baseline |
-| TorchCodec | 0 | 2406.10 | +44% |
-| **TorchCodec** | **4** | **1272.04** | **-24% (1.32x)** |
-| TorchCodec | 8 | 1282.75 | -23% |
-
-::tip
-**Sparse sampling (fps=1)**: TorchCodec offers no advantage. PyAV is sufficient.
-**Dense sampling (fps≥30)**: Set `LMMS_VIDEO_TORCHCODEC_THREADS=4` for a 1.32x speedup. The backend advantage only materializes when enough frames are decoded to amortize setup overhead.
-::
-
-### 7.5 Media Resolver LRU Caching
-
-The new benchmark tasks rely on `resolve_media_reference` to resolve media paths from local directories, task cache folders, and Hugging Face cache roots. In large runs, this repeats the same path-construction work many times.
-
-v0.7 adds in-process LRU caching for deterministic path-expansion helpers:
-
-- `_candidate_roots_cached(..., maxsize=256)` caches candidate root lists keyed by `cache_dir`, `media_type`, and current environment-derived root values.
-- `_extension_variants(..., maxsize=4096)` caches extension-normalized path variants for repeated basename/clip-id lookups.
-- `resolve_media_reference` still performs `Path.exists()` checks on every call, so newly downloaded media files are discovered immediately. Only pure path-derivation work is cached.
-
----
-
-## 8. Lance-Backed Video Mode for MINERVA
-
-v0.7 adds an optional Lance-backed video path for MINERVA so metadata and videos can be distributed through Hugging Face in a single reproducible package.
-
-### 8.1 Dataset Package on Hugging Face
-
-MINERVA is published as `lmms-lab-eval/minerva` with two key assets:
-
-| Asset | Purpose |
-|-------|---------|
-| `minerva.json` | Task metadata used by `minerva.yaml` |
-| `data/train.lance` | Lance table with one row per `video_id` |
-
-The Lance table stores video bytes in `video_blob` with blob encoding metadata (`lance-encoding:blob=true`) so samples can be fetched by row ID through `take_blobs`.
-
-### 8.2 Build Lance Table from Local Downloads
-
-Convert local video files to a Lance table with the provided script:
-
-```bash [Terminal]
-uv run --with pylance --with pyarrow python tools/minerva_to_lance.py \
-  --metadata-json data/minerva/minerva.json \
-  --videos-dir data/minerva/videos \
-  --output data/minerva_hf_package/data/train.lance \
-  --batch-size 6
-```
-
-The resulting Lance schema contains: `video_id`, `youtube_url`, `video_ext`, `video_size_bytes`, `video_blob`.
-
-::note
-Install `pylance` (module import name: `lance`) and `pyarrow` for Lance-mode usage.
-::
-
-### 8.3 Runtime Resolution Order
-
-At evaluation time, MINERVA resolves videos using this priority:
-
-1. **Local file** via `MINERVA_VIDEO_DIR`
-2. **Lance blob** via `MINERVA_LANCE_VIDEO_URI`
-3. **YouTube URL** fallback (`https://www.youtube.com/watch?v=<video_id>`)
-
-Configure Lance mode:
-
-```bash [Terminal]
-export MINERVA_LANCE_VIDEO_URI="hf://datasets/lmms-lab-eval/minerva/data/train.lance"
-export MINERVA_LANCE_VIDEO_ID_COLUMN="video_id"
-export MINERVA_LANCE_VIDEO_BLOB_COLUMN="video_blob"
-export MINERVA_LANCE_CACHE_DIR="~/.cache/lmms_eval/minerva_lance_videos"
-export LANCE_IO_THREADS="64"
-export LANCE_CPU_THREADS="8"
-```
-
-For local-first mode:
-
-```bash [Terminal]
-export MINERVA_VIDEO_DIR="/absolute/path/to/minerva/videos"
-```
-
-### 8.4 Run Example
-
-```bash [Terminal]
-uv run --with pylance --with pyarrow python -m lmms_eval \
-  --model qwen2_5_vl \
-  --model_args pretrained=Qwen/Qwen2.5-VL-3B-Instruct \
-  --tasks minerva \
-  --batch_size 1 \
-  --limit 8
-```
-
-MINERVA remains reproducible in two modes: fully local video files or remote Lance blobs from the Hub.
-
-### 8.5 Benchmarking Video-Resolution Latency
-
-v0.7 includes a direct resolver benchmark for measuring Lance-mode latency:
-
-::code-group
-```bash [Lance mode]
-uv run python tools/bench_minerva_video_resolution.py \
-  --metadata-json data/minerva/minerva.json \
-  --mode lance \
-  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
-  --limit 200 \
-  --sample-unique-video
-```
-
-```bash [Local-file baseline]
-uv run python tools/bench_minerva_video_resolution.py \
-  --metadata-json data/minerva/minerva.json \
-  --mode local \
-  --local-video-dir /absolute/path/to/minerva/videos \
-  --limit 200
-```
-
-```bash [Pipeline comparison (same decode backend)]
-uv run python tools/bench_minerva_pipeline_latency.py \
-  --local-video-dir /absolute/path/to/minerva/videos \
-  --lance-uri hf://datasets/lmms-lab-eval/minerva/data/train.lance \
-  --limit 100 \
-  --batch-size 1 \
-  --decode-num-frames 8
-```
-::
-
-The benchmark reports absolute latency distribution for `minerva_doc_to_visual`: `startup_ms` (Lance resolver init cost), `cold_*` metrics (first pass, cache-miss heavy), and `warm_*` metrics (second pass, cache-hit heavy).
-
-::tip
-On local pre-downloaded videos, local raw and Lance modes are often near-parity because decode cost dominates. Lance advantages become clearer in remote/object-storage access, cross-machine reproducibility, and repeated subset evaluation workflows.
-::
-
-**Implementation notes:**
-- MINERVA Lance resolver avoids eager full-table `video_id` scan at initialization and resolves rows via filtered scan on demand, reducing startup overhead.
-- For large-blob dataset builds, use blob-oriented write settings in `tools/minerva_to_lance.py` (smaller rows-per-file and stable storage version).
-
----
-
-## 9. Efficiency Metrics and TTFT Backend Coverage
-
-v0.7 improves efficiency observability, but not all metrics are equally available across backends.
-
-### 9.1 What v0.7 Covers
-
-"Efficiency metrics complete" in v0.7 means:
-
-- Per-sample token counts in evaluation outputs (`input_tokens`, `output_tokens`, `reasoning_tokens` when backend metadata exists)
-- Run-level throughput metrics in results (`total_gen_tokens`, `total_elapsed_time`, `avg_speed`)
-- vLLM-backed chat paths report TTFT/TPOT through native runtime metrics
-
-::note
-TTFT/TPOT parity across every backend is out of scope for v0.7.
-::
-
-### 9.2 TTFT/TPOT Coverage Matrix
-
-| Backend Family | TTFT | TPOT | Notes |
-|----------------|------|------|-------|
-| `vllm` chat backends | ✅ | ✅ | Reads runtime metrics, logs as `additional_metrics` |
-| `sglang` chat backend | ❌ | ❌ | Wall-clock throughput only |
-| OpenAI-compatible APIs (`openai`, `async_openai`) | ❌ | ❌ | Token usage + end-to-end latency, no first-token timestamp |
-| HuggingFace local generate | ❌ | ❌ | `model.generate()` wall-clock timing only |
-
-::important
-TTFT measures request-to-first-token latency. Throughput measures aggregate speed. They answer different questions and should not be treated as interchangeable.
-::
-
-### 9.3 Extending TTFT Beyond vLLM
-
-Extending TTFT to other backends is feasible but requires backend-specific work:
-
-| Backend | Feasibility | Caveat |
-|---------|-------------|--------|
-| OpenAI-compatible APIs | Streaming-first instrumentation + first-chunk timestamp | Measured TTFT includes network and client overhead |
-| SGLang | Per-request first-token timing in generation path | Batch-level timing alone is not sufficient |
-| HuggingFace local | Token streaming/generation callbacks | Default `generate()` does not expose TTFT |
-
-### 9.4 Reporting Guidance
-
-- If TTFT/TPOT is critical, use `vllm` backends.
-- If using API/SGLang/HF backends, report throughput and token usage. Treat TTFT as unavailable unless custom instrumentation is enabled.
-- Keep metric claims backend-qualified (e.g., "TTFT measured on vLLM runtime metrics").
-
-### 9.5 Token-Based Efficiency in Results JSON
-
-With `--log_samples` enabled, v0.7 emits an `efficiency` section in aggregated results:
-
-- `overall.tokens_per_correct_answer`
-- `overall.avg_output_tokens_per_sample`
-- Per-task breakdown under `efficiency.by_task`
-
-The v0.7 efficiency output is token-based by design. It does not include price-derived cost fields, so metric comparability does not depend on provider-specific pricing tables.
-
----
-
-## 10. New Benchmark Tasks
-
-v0.7 adds 25+ benchmark tasks across eight domains:
-
-| Domain | Tasks |
-|--------|-------|
-| **Document understanding** | OmniDocBench, MMLongBench, MMLongBench-Doc, DUDE, OfficeQA |
-| **Video** | Neptune long-video benchmarks, TVBench, ViVerBench, EgoTempo |
-| **Math & reasoning** | MathCanvas, MathKangaroo, VisuLogic, LLaVA-OV 1.5 RL reasoning collection |
-| **Spatial & counting** | Point-Bench, CountBench, FSC-147 |
-| **Knowledge & QA** | SimpleVQA, WorldVQA, MTVQA, HiPhO, MME-CC, VPCT, ZeroBench |
-| **AGI & agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp |
-| **Audio** | AMI, CN College Listen MCQ, DREAM TTS MCQ, EuroPal ASR, Song Describer |
-| **Safety** | JailbreakBench harmful + benign splits (see [Section 5](#5-safety-and-red-teaming-baseline-jailbreakbench)) |
-
-All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No manual registration required. Run `python -m lmms_eval --tasks list` to see all available tasks.
-
----
-
-## 11. New Models
-
-| Model | Description |
-|-------|-------------|
-| **NanoVLM** | SigLIP2 + MLP projector + Qwen3-0.6B. Chat-style evaluation with async multi-GPU inference via job-queue dispatch. |
-| **Async HF model** | Generic async multi-GPU worker backend for HuggingFace model families. Loads replicas on N GPUs with independent worker threads. |
 
 ---
 
