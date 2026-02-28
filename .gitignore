@@ -58,3 +58,4 @@ remote_code/*
 docs/plans/
 .opencode
 .worktrees/
+AGENTS.md

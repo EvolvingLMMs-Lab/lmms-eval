@@ -21,6 +21,8 @@ Use this skill to cover end-to-end workflows:
 3. Insert lmms-eval into training jobs via async API server calls.
 4. Operate HTTP eval service (`/evaluate`, `/jobs/{job_id}`, `/queue`, `/tasks`, `/models`).
 5. Verify small-sample eval before large-scale runs.
+6. Run full-scale evaluations with proper cache, batch, and seed settings.
+7. Debug pipeline failures systematically.
 
 ## When to Use This Skill
 
@@ -31,6 +33,9 @@ Use this skill when requests include any of the following intents:
 - "Insert lmms-eval into training job"
 - "Run eval asynchronously without blocking training"
 - "Start or debug HTTP eval server"
+- "Run full evaluation" / "production eval run"
+- "Debug eval failure" / "eval is broken" / "something failed"
+- "Where do I edit X?" / "which file handles Y?"
 
 ## Instructions (Execution Order)
 
@@ -121,6 +126,9 @@ Models register in `models/__init__.py` via two dicts mapping `model_id -> Class
 | Start/operate HTTP eval service | [references/api-server.md](references/api-server.md) | Server args, endpoints, client contracts |
 | Insert eval into training jobs (non-blocking) | [references/api-server.md](references/api-server.md) | Training-loop integration patterns using async job submission |
 | Diagnose queue/job states | [references/api-server.md](references/api-server.md) | Job lifecycle, polling, cancellation, queue inspection |
+| Run smoke tests / full evaluations | [references/workflows.md](references/workflows.md) | Smoke test scripts, full run recipes, cache strategy, batch settings |
+| Debug pipeline failures | [references/workflows.md](references/workflows.md) | Step-by-step debug workflow, failure classification, diagnostic commands |
+| Find which file to edit | [references/workflows.md](references/workflows.md) | Edit-routing table by intent (model, task, evaluator, output) |
 
 ## Multi-Track Requests
 
