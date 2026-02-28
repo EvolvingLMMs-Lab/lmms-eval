@@ -32,7 +32,7 @@ cache_dir
 ckpt
 pretrained/
 LLaVA/
-/*logs
+*logs
 *.isorted
 temp/
 InternVL/
@@ -58,3 +58,5 @@ remote_code/*
 docs/plans/
 .opencode
 .worktrees/
+AGENTS.md
+.ignored/

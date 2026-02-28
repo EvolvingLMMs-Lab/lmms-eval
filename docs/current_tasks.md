@@ -24,11 +24,11 @@ python -m lmms_eval --tasks list_with_num
 | Video Understanding | 25+ |
 | Long Video & Temporal | 10+ |
 | Audio & Speech | 20+ |
-| Document Understanding | 19+ |
+| Document Understanding | 20+ |
 | Mathematical Reasoning | 12+ |
 | Spatial & Grounding | 10+ |
 | Text-only Language Tasks | 15+ |
-| **Total** | **197+** |
+| **Total** | **198+** |
 
 ---
 
@@ -47,8 +47,10 @@ python -m lmms_eval --tasks list_with_num
     - COCO 2017 Caption MiniVal (coco2017_cap_val)
     - COCO 2017 Caption MiniTest (coco2017_cap_test)
 - [ConBench](https://github.com/foundation-multimodal-models/ConBench) (conbench)
+- [CountBench](https://huggingface.co/datasets/vikhyatk/CountBenchQA) (countbench)
 - [CV-Bench](https://github.com/nyu-visionx/CV-Bench) (cv_bench)
 - [DetailCaps-4870](https://github.com/foundation-multimodal-models/CAPTURE) (detailcaps)
+- [FSC-147](https://github.com/cvlab-stonybrook/LearningToCountEverything) (fsc147)
 - [Flickr30K](https://github.com/BryanPlummer/flickr30k_entities) (flickr30k)
   - Flickr30K Test (flickr30k_test)
 - [GQA](https://cs.stanford.edu/people/dorarad/gqa/index.html) (gqa)
@@ -76,6 +78,7 @@ python -m lmms_eval --tasks list_with_num
 - [SeedBench 2](https://github.com/AILab-CVC/SEED-Bench) (seedbench_2)
 - [SeedBench 2 Plus](https://huggingface.co/datasets/AILab-CVC/SEED-Bench-2-plus) (seedbench_2_plus)
 - [VibeEval](https://github.com/reka-ai/reka-vibe-eval) (vibe_eval)
+- [VisuLogic](https://visulogic-benchmark.github.io/VisuLogic/) (visulogic)
 - [VizWizVQA](https://vizwiz.org/tasks-and-datasets/vqa/) (vizwiz_vqa)
   - VizWizVQA Validation (vizwiz_vqa_val)
   - VizWizVQA Test (vizwiz_vqa_test)
@@ -122,6 +125,7 @@ python -m lmms_eval --tasks list_with_num
 - [MMVet v2](https://github.com/yuweihao/MM-Vet) (mmvetv2)
 - [MMVU](https://mmvu-bench.github.io/) (mmvu)
 - [MMWorld](https://mmworld-bench.github.io/) (mmworld)
+- [MTVQA](https://huggingface.co/datasets/ByteDance/MTVQA) (mtvqa)
 - [MMSI-Bench](https://github.com/MMSI-Bench/MMSI-Bench) (mmsi_bench)
 - [MMSearch](https://mmsearch.github.io/) (mmsearch)
 
@@ -129,6 +133,11 @@ python -m lmms_eval --tasks list_with_num
 - [HallusionBench](https://github.com/tianyi-lab/HallusionBench) (hallusion_bench_image)
 - [VLMs Are Biased](https://github.com/vlms-are-biased/vlms-are-biased) (vlms_are_biased)
 - [VLMs Are Blind](https://github.com/vlmsareblind/vlmsareblind) (vlmsareblind)
+
+### Safety & Red-Teaming
+- [JailbreakBench Behaviors](https://huggingface.co/datasets/JailbreakBench/JBB-Behaviors) (safety_redteam)
+  - Harmful split (safety_jailbreakbench_harmful)
+  - Benign split (safety_jailbreakbench_benign)
 
 ### Multilingual Benchmarks
 - [Multilingual LLaVA Bench](https://huggingface.co/datasets/gagan3012/multilingual-llava-bench)
@@ -181,6 +190,7 @@ python -m lmms_eval --tasks list_with_num
 - [SNS-Bench](https://github.com/SNS-Bench/SNS-Bench) (snsbench)
 - [TOMATO](https://github.com/TOMATO-Lab/TOMATO) (tomato)
 - [VMC-Bench](https://github.com/VMC-Bench/VMC-Bench) (vmcbench)
+- [ViVerBench](https://huggingface.co/datasets/comin/ViVerBench) (viverbench)
 - [Visual Puzzles](https://github.com/VisualPuzzles/VisualPuzzles) (VisualPuzzles)
 - [VisualWebBench](https://visualwebbench.github.io/) (visualwebbench)
 - [V*-Bench](https://github.com/V-Bench/V-Bench) (vstar_bench)
@@ -205,6 +215,7 @@ python -m lmms_eval --tasks list_with_num
   - llava_interleave_bench_out_domain
   - llava_interleave_bench_multi_view
 - [MIRB](https://github.com/ys-zong/MIRB) (mirb)
+- [MMLongBench](https://zhaowei-wang-nlp.github.io/MMLongBench-page/) (mmlongbench)
 - [MMMU](https://mmmu-benchmark.github.io/) (mmmu)
   - MMMU Validation (mmmu_val)
   - MMMU Test (mmmu_test)
@@ -257,6 +268,7 @@ python -m lmms_eval --tasks list_with_num
   - egoschema_subset_mcppl
   - egoschema_subset
 - [EgoPlan](https://github.com/ChenYi99/EgoPlan) (egoplan)
+- [EgoTempo](https://github.com/google-research-datasets/egotempo) (egotempo)
 - [EgoThink](https://github.com/AdaCheng/EgoThink) (egothink)
 - [MLVU](https://github.com/JUNJIE99/MLVU) (mlvu)
 - [MMT-Bench](https://mmt-bench.github.io/) (mmt)
@@ -283,6 +295,19 @@ python -m lmms_eval --tasks list_with_num
   - mvbench_fine_grained_action
   - mvbench_moving_attribute
   - mvbench_egocentric_navigation
+- [TVBench](https://huggingface.co/datasets/FunAILab/TVBench) (tvbench)
+  - tvbench_action_antonym
+  - tvbench_action_count
+  - tvbench_action_localization
+  - tvbench_action_sequence
+  - tvbench_egocentric_sequence
+  - tvbench_moving_direction
+  - tvbench_object_count
+  - tvbench_object_shuffle
+  - tvbench_scene_transition
+  - tvbench_unexpected_action
+- [MotionBench](https://motion-bench.github.io/) (motionbench)
+  - motionbench_full
 - [NExT-QA](https://github.com/doc-doc/NExT-QA) (nextqa)
   - NExT-QA Multiple Choice Test (nextqa_mc_test)
   - NExT-QA Open Ended Validation (nextqa_oe_val)
@@ -296,6 +321,7 @@ python -m lmms_eval --tasks list_with_num
     - perceptiontest_val_mcppl
 - [PLM VideoBench](https://github.com/PLM-VideoBench/PLM-VideoBench) (plm_videobench)
 - [SciVideoBench](https://scivideobench.github.io/) (scivideobench)
+- [MINERVA](https://arxiv.org/abs/2505.00681) (minerva)
 - [Video-ChatGPT](https://github.com/mbzuai-oryx/Video-ChatGPT) (videochatgpt)
   - Video-ChatGPT Generic (videochatgpt_gen)
   - Video-ChatGPT Temporal (videochatgpt_temporal)
@@ -308,6 +334,9 @@ python -m lmms_eval --tasks list_with_num
 - [WorldQA](https://zhangyuanhan-ai.github.io/WorldQA/) (worldqa)
   - WorldQA Generation (worldqa_gen)
   - WorldQA Multiple Choice (worldqa_mc)
+- [WorldVQA](https://huggingface.co/datasets/moonshotai/WorldVQA) (worldvqa)
+  - WorldQA Compatibility Generation (worldvqa_gen)
+  - WorldQA Compatibility Multiple Choice (worldvqa_mc)
 - [YouCook2](http://youcook2.eecs.umich.edu/) (youcook2_val)
 
 ### Long Video & Temporal Understanding
@@ -317,6 +346,10 @@ python -m lmms_eval --tasks list_with_num
 - [LongTimescope](https://longtimescope.github.io/) (longtimescope)
 - [LongVT](https://longvt-bench.github.io/) (longvt) - Tool-based long video understanding
 - [LongVideoBench](https://github.com/longvideobench/LongVideoBench) (longvideobench)
+- [NEPTUNE](https://github.com/google-deepmind/neptune) (neptune)
+  - Video-path subsets: neptune_full_v, neptune_mma_v, neptune_mmh_v
+  - Frame-sampled subsets: neptune_full_i, neptune_mma_i, neptune_mmh_i
+  - Example: `python -m lmms_eval --model qwen2_5_vl --tasks neptune_full_v --limit 5 --batch_size 1`
 - [MovieChat](https://github.com/rese1f/MovieChat) (moviechat)
   - Global Mode for entire video (moviechat_global)
   - Breakpoint Mode for specific moments (moviechat_breakpoint)
@@ -390,12 +423,16 @@ python -m lmms_eval --tasks list_with_num
 - [DOCVQA](https://github.com/anisha2102/docvqa) (docvqa)
   - DOCVQA Validation (docvqa_val)
   - DOCVQA Test (docvqa_test)
+- [DUDE](https://arxiv.org/abs/2305.08455) (dude)
+- [MMLongBench-Doc](https://mayubo2333.github.io/MMLongBench-Doc/) (mmlongbench_doc)
 - [GEdit-Bench](https://github.com/GEdit-Bench/GEdit-Bench) (gedit_bench)
 - [Infographic VQA](https://www.docvqa.org/datasets/infographicvqa) (infovqa)
   - Infographic VQA Validation (infovqa_val)
   - Infographic VQA Test (infovqa_test)
+- [OfficeQA](https://github.com/databricks/officeqa) (officeqa)
 - [OCRBench](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench)
 - [OCRBench v2](https://github.com/Yuliang-Liu/MultimodalOCR) (ocrbench_v2)
+- [OmniDocBench](https://github.com/opendatalab/OmniDocBench) (omnidocbench)
 - [PRISMM-Bench](https://arxiv.org/abs/2510.16505) (prismm_bench)
   - PRISMM-Bench Identification (prismm_bench_identification)
   - PRISMM-Bench Identification Whole Page Context (prismm_bench_identification_whole_page)
@@ -428,6 +465,16 @@ python -m lmms_eval --tasks list_with_num
 - [AIME](https://artofproblemsolving.com/wiki/index.php/AIME_Problems_and_Solutions) (aime)
 - [DynaMath](https://dynamath.github.io/) (dynamath)
 - [GSM8K](https://github.com/openai/grade-school-math) (gsm8k)
+- [MathCanvas](https://huggingface.co/datasets/shiwk24/MathCanvas-Bench) (mathcanvas)
+  - MathCanvas Algebra (mathcanvas_algebra)
+  - MathCanvas Analytic Geometry (mathcanvas_analytic_geometry)
+  - MathCanvas Calculus and Vector (mathcanvas_calculus_and_vector)
+  - MathCanvas Plane Geometry (mathcanvas_plane_geometry)
+  - MathCanvas Solid Geometry (mathcanvas_solid_geometry)
+  - MathCanvas Statistics (mathcanvas_statistics)
+  - MathCanvas Transformational Geometry (mathcanvas_transformational_geometry)
+  - MathCanvas Trigonometry (mathcanvas_trigonometry)
+- [MathKangaroo](https://huggingface.co/datasets/dfkiuser/kangaroo_math_mc_questions) (mathkangaroo)
 - [MathVerse](https://github.com/ZrrSkywalker/MathVerse) (mathverse)
   - MathVerse Text Dominant (mathverse_testmini_text_dominant)
   - MathVerse Text Only (mathverse_testmini_text_only)
@@ -453,6 +500,7 @@ python -m lmms_eval --tasks list_with_num
 
 ### Referring Expression Comprehension
 - [Ferret](https://github.com/apple/ml-ferret) (ferret)
+- [OSWorld-Verified (OSWorld-G)](https://xlang.ai/blog/osworld-verified) (osworld_g)
 - [RefCOCO](https://github.com/lichengunc/refer) (refcoco)
   - refcoco_seg_test, refcoco_seg_val
   - refcoco_seg_testA, refcoco_seg_testB
@@ -471,6 +519,7 @@ python -m lmms_eval --tasks list_with_num
 - [EmbSpatial](https://github.com/EmbSpatial/EmbSpatial) (embspatial)
 - [ERQA](https://github.com/ERQA-Bench/ERQA) (erqa)
 - [OmniSpatial](https://omnispatial.github.io/) (omnispatial)
+- [Point-Bench](https://pointarena.github.io/) (pointbench)
 - [Where2Place](https://where2place.github.io/) (where2place)
 
 ---
@@ -569,7 +618,6 @@ python -m lmms_eval --tasks list_with_num
 | `qwen_vl` | Qwen_VL | Image |
 | `qwen_vl_api` | Qwen_VL_API | API |
 | `qwen2_5_omni` | Qwen2_5_Omni | Image, Video, Audio |
-| `qwen2_5_vl_interleave` | Qwen2_5_VL_Interleave | Interleaved |
 | `qwen2_audio` | Qwen2_Audio | Audio |
 | `qwen2_vl` | Qwen2_VL | Image, Video |
 | `reka` | Reka | Multimodal API |

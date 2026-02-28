@@ -1,0 +1,44 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/tau2_bench/data/tau2_telecom.jsonl
+task: "tau2_bench_telecom"
+test_split: test
+output_type: generate_until_agentic
+doc_to_visual: !function utils.tau2_doc_to_visual
+doc_to_text: !function utils.tau2_doc_to_text
+doc_to_target: !function utils.tau2_doc_to_target
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+  max_agentic_steps: 8
+process_results: !function utils.tau2_process_results
+metric_list:
+  - metric: tau2_success
+    aggregation: !function utils.tau2_aggregate_success
+    higher_is_better: true
+  - metric: tau2_avg_tool_calls
+    aggregation: !function utils.tau2_aggregate_avg_tool_calls
+    higher_is_better: false
+  - metric: tau2_trace_quality
+    aggregation: !function utils.tau2_aggregate_trace_quality
+    higher_is_better: true
+  - metric: tau2_trace_step_validity
+    aggregation: !function utils.tau2_aggregate_trace_step_validity
+    higher_is_better: true
+  - metric: tau2_trace_state_progress
+    aggregation: !function utils.tau2_aggregate_trace_state_progress
+    higher_is_better: true
+  - metric: tau2_trace_termination_quality
+    aggregation: !function utils.tau2_aggregate_trace_termination_quality
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.1
+    description: "Telecom-style agentic task with Python function tools"

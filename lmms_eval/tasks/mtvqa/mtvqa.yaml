@@ -1,0 +1,27 @@
+dataset_path: ByteDance/MTVQA
+dataset_kwargs:
+  token: false
+task: mtvqa
+test_split: test
+process_docs: !function utils.mtvqa_process_docs
+output_type: generate_until
+doc_to_visual: !function utils.mtvqa_doc_to_visual
+doc_to_text: !function utils.mtvqa_doc_to_text
+doc_to_target: answer
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.mtvqa_process_results
+metric_list:
+  - metric: mtvqa_score
+    aggregation: !function utils.mtvqa_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer the question using a word or phrase in the language of the question."
+metadata:
+  - version: 0.0

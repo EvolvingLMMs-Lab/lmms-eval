@@ -28,6 +28,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
     "cambrians": "CambrianS",
+    "dummy_video_reader": "DummyVideoReader",
     "egogpt": "EgoGPT",
     "from_log": "FromLog",
     "fuyu": "Fuyu",
@@ -71,7 +72,6 @@ AVAILABLE_SIMPLE_MODELS = {
     "qwen_vl_api": "Qwen_VL_API",
     "qwen_vl": "Qwen_VL",
     "qwen2_5_omni": "Qwen2_5_Omni",
-    "qwen2_5_vl_interleave": "Qwen2_5_VL_Interleave",
     "qwen2_5_vl": "Qwen2_5_VL",
     "qwen2_audio": "Qwen2_Audio",
     "qwen2_vl": "Qwen2_VL",
@@ -105,6 +105,8 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "bagel_lmms_engine": "BagelLmmsEngine",
     "internvl_hf": "InternVLHf",
     "llava_hf": "LlavaHf",
+    "nanovlm": "NanoVLM",
+    "phi4_multimodal": "Phi4",
     "qwen3_vl": "Qwen3_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
     "thyme": "Thyme",
@@ -114,6 +116,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "sglang": "Sglang",
     "huggingface": "Huggingface",
     "async_openai": "AsyncOpenAIChat",
+    "async_hf_model": "AsyncHFModel",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
 }
@@ -121,6 +124,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "openai": ("openai_compatible", "openai_compatible_chat"),
     "async_openai": ("async_openai_compatible_chat", "async_openai_compatible"),
+    "async_hf_model": ("async_hf",),
 }
 
 

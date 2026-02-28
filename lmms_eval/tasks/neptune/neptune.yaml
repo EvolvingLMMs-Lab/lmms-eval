@@ -1,0 +1,8 @@
+group: neptune
+task:
+- neptune_full_v
+- neptune_mma_v
+- neptune_mmh_v
+- neptune_full_i
+- neptune_mma_i
+- neptune_mmh_i

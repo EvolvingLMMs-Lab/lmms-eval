@@ -1,6 +1,4 @@
-import base64
 import re
-from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
 import decord
@@ -21,9 +19,7 @@ from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
-from lmms_eval.models.model_utils.reasoning_model_utils import (
-    parse_reasoning_model_answer,
-)
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_data_url
 
 process_vision_info, _has_qwen_vl = optional_import("qwen_vl_utils", "process_vision_info")
 if not _has_qwen_vl:
@@ -48,9 +44,6 @@ class Qwen2_5_VL(lmms):
         min_pixels: int = 256 * 28 * 28,
         max_pixels: int = 1605632,
         max_num_frames: int = 32,
-        use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
-        max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
@@ -64,14 +57,6 @@ class Qwen2_5_VL(lmms):
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
             raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
-
-        self.use_custom_video_loader = use_custom_video_loader
-        self.fps = fps
-        # if self.fps and not self.use_custom_video_loader:
-        #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
-        self.max_image_size = max_image_size
-        if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -180,6 +165,15 @@ class Qwen2_5_VL(lmms):
                 new_list.append(j)
         return new_list
 
+    def _encode_image_data_url(self, image: Image.Image) -> str:
+        return encode_image_to_data_url(
+            image,
+            image_format="JPEG",
+            mime_type="image/jpeg",
+            convert_rgb=True,
+            quality=85,
+        )
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -251,15 +245,10 @@ class Qwen2_5_VL(lmms):
                                 }
                             )
                         elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                            base64_image = visual.convert("RGB")
-                            buffer = BytesIO()
-                            base64_image.save(buffer, format="JPEG")
-                            base64_bytes = base64.b64encode(buffer.getvalue())
-                            base64_string = base64_bytes.decode("utf-8")
                             processed_visuals.append(
                                 {
                                     "type": "image",
-                                    "image": f"data:image/jpeg;base64,{base64_string}",
+                                    "image": self._encode_image_data_url(visual),
                                     "max_pixels": self.max_pixels,
                                     "min_pixels": self.min_pixels,
                                 }
@@ -365,14 +354,12 @@ class Qwen2_5_VL(lmms):
                 answers[i] = ans
 
             for ans, context in zip(answers, contexts):
-                clean_ans = parse_reasoning_model_answer(ans)
-                res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+                res.append(ans)
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
                 # eval_logger.debug(f"Question: {context}")
-                # eval_logger.debug(f"Model Raw Response: {ans}")
-                # eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                # eval_logger.debug(f"Model Response: {ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
@@ -474,15 +461,10 @@ class Qwen2_5_VL(lmms):
                                     }
                                 )
                             elif isinstance(visual, Image.Image):
-                                base64_image = visual.convert("RGB")
-                                buffer = BytesIO()
-                                base64_image.save(buffer, format="JPEG")
-                                base64_bytes = base64.b64encode(buffer.getvalue())
-                                base64_string = base64_bytes.decode("utf-8")
                                 processed_visuals.append(
                                     {
                                         "type": "image",
-                                        "image": f"data:image/jpeg;base64,{base64_string}",
+                                        "image": self._encode_image_data_url(visual),
                                         "max_pixels": self.max_pixels,
                                         "min_pixels": self.min_pixels,
                                     }
@@ -579,8 +561,7 @@ class Qwen2_5_VL(lmms):
 
                 clean_answers = []
                 for ans in answers:
-                    clean_ans = parse_reasoning_model_answer(ans)
-                    clean_answers.append(clean_ans)
+                    clean_answers.append(ans)
 
                 batched_round_res.append(clean_answers)
                 round_idx += 1

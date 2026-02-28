@@ -1,0 +1,31 @@
+name: Line Stats
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  line-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Count lines added/deleted
+        run: |
+          echo "### Commit: ${{ github.sha }}"
+          STATS=$(git diff --shortstat HEAD~1 HEAD)
+          echo "$STATS"
+          ADDED=$(git diff --numstat HEAD~1 HEAD | awk '{s+=$1} END {print s+0}')
+          DELETED=$(git diff --numstat HEAD~1 HEAD | awk '{s+=$2} END {print s+0}')
+          echo "Lines added: $ADDED"
+          echo "Lines deleted: $DELETED"
+          echo "### Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Count |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Lines added | $ADDED |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Lines deleted | $DELETED |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Net change | $((ADDED - DELETED)) |" >> "$GITHUB_STEP_SUMMARY"

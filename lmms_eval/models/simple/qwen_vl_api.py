@@ -1,4 +1,3 @@
-import json
 import os
 import tempfile
 import time
@@ -29,32 +28,13 @@ class Qwen_VL_API(lmms):
         image_token: str = "<image>",  # Use to separate interleaved image and text
         system_prompt: str = "",  # Whether you want some special system prompt here
         tmp_folder: str = "./tmp",  # Due to qwen's api restriction,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         **kwargs,
     ) -> None:
         super().__init__()
-        self.continual_mode = continual_mode
-
         self.model_version = model_version
         self.image_token = image_token
         self.system_prompt = system_prompt
         self.tmp_folder = tmp_folder
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
 
     @property
     def rank(self):
@@ -74,14 +54,6 @@ class Qwen_VL_API(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                if doc_uuid in self.response_cache:
-                    response_text = self.response_cache[doc_uuid]
-                    if response_text:
-                        res.append(response_text)
-                        pbar.update(1)
-                        continue
             # encode, pad, and truncate contexts for this batch
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
@@ -136,12 +108,6 @@ class Qwen_VL_API(lmms):
                     eval_logger.error(f"Error {e} happens when parsing input.")
                     eval_logger.error(f"{response_data}")
                     res.append("")
-
-                if self.continual_mode is True:  # Cache the response
-                    doc_uuid = f"{task}___{split}___{doc_id}"
-                    self.response_cache[doc_uuid] = res[-1]
-                    with open(self.response_persistent_file, "w") as f:
-                        json.dump(self.response_cache, f)
 
             finally:
                 for temp_file in temp_files:

@@ -1,5 +1,161 @@
 # Changelog
 
+## v0.7 (2026-02-27)
+
+[Release notes](docs/lmms-eval-0.7.md)
+
+### Highlights
+
+- **25+ new benchmark tasks** spanning document understanding, video, math, spatial, AGI, audio, and safety domains. ([§1](docs/lmms-eval-0.7.md#1-new-benchmark-tasks))
+- **Image/Video I/O throughput upgrade**: unified `read_video` with TorchCodec backend (up to **3.58x** faster), DALI GPU decode, shared encoding helpers, and LRU caching. ([§3](docs/lmms-eval-0.7.md#3-imagevideo-io-throughput-upgrade))
+- **Lance-backed video mode**: single Lance table on Hugging Face. Local-file, Lance-blob, and YouTube-URL resolution with priority fallback. ([§4](docs/lmms-eval-0.7.md#4-lance-backed-video-mode))
+- **Safety and red-teaming baseline**: `safety_redteam` group with jailbreak ASR, refusal rate, toxicity, and over-refusal metrics. ([§5](docs/lmms-eval-0.7.md#5-safety-and-red-teaming-baseline))
+- **Efficiency metrics coverage**: per-sample token counts, run-level throughput, and TTFT/TPOT on vLLM backends. ([§6](docs/lmms-eval-0.7.md#6-efficiency-metrics-coverage))
+- **Agentic task evaluation**: new `generate_until_agentic` output type with iterative tool-call loop, deterministic simulators, and trace-level metrics. ([§8](docs/lmms-eval-0.7.md#8-agentic-task-evaluation))
+- **YAML config-driven evaluation**: single `--config` YAML file replaces fragile CLI one-liners. Schema validation, env expansion, batch configs, full reproducibility via `resolved_cli_args`. ([§9](docs/lmms-eval-0.7.md#9-better-one-line-evaluation-support))
+- **Pipeline-level reasoning tag stripping**: `<think>` blocks stripped in `evaluator.py` after filters, before `process_results()`. All backends, configurable via `--reasoning_tags`. ([§10](docs/lmms-eval-0.7.md#10-pipeline-level-reasoning-tag-stripping))
+- **Async OpenAI `message_format`**: replaces `is_qwen3_vl` flag and `async_openai_qwen3_vl` class. `generate_until()` decomposed into 7 focused methods. ([§11](docs/lmms-eval-0.7.md#11-support-customized-message_format-in-async_openai))
+- **Flattened JSONL log output**: `generate_until` responses flattened from doubly-nested to singly-nested lists. Multi-choice tasks unchanged. ([§12](docs/lmms-eval-0.7.md#12-flattened-jsonl-log-output))
+
+### New Benchmark Tasks
+
+**Document understanding**:
+- OmniDocBench ([#1152](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1152)), MMLongBench ([#1169](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1169)), MMLongBench-Doc ([#1164](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1164)), DUDE ([#1151](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1151)), OfficeQA ([#1150](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1150))
+
+**Video**:
+- Neptune long-video benchmarks ([#1187](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1187)), TVBench ([#1160](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1160)), ViVerBench ([#1166](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1166)), EgoTempo ([#1155](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1155))
+
+**Math & reasoning**:
+- MathCanvas ([#1161](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1161)), MathKangaroo ([#1158](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1158)), VisuLogic ([#1159](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1159)), LLaVA-OV 1.5 RL reasoning collection ([#1208](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1208))
+
+**Spatial & counting**:
+- Point-Bench ([#1157](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1157)), CountBench ([#1156](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1156)), FSC-147 ([#1163](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1163))
+
+**Knowledge & QA**:
+- SimpleVQA ([#1184](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1184)), WorldVQA ([#1168](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1168)), MTVQA ([#1167](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1167)), HiPhO ([#1186](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1186)), MME-CC ([#1185](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1185)), VPCT ([#1183](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1183)), ZeroBench ([#1182](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1182))
+
+**AGI & agentic**:
+- ARC-AGI-1, ARC-AGI-2, BrowseComp ([#1190](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1190)), Vending-Bench 2, τ2-Bench Telecom
+
+**Audio** (v0.7 Audio Update, [#1124](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1124)):
+- AMI (meeting transcription, train/validation/test splits)
+- CN College Listen MCQ (Chinese college listening comprehension)
+- DREAM TTS MCQ (dialogue-based listening comprehension)
+- EuroPal ASR (European Parliament speech recognition, test/validation splits)
+- Song Describer (music captioning, train/validation splits)
+
+**Safety**:
+- JailbreakBench harmful + benign splits (`safety_redteam` group)
+
+### New Models
+
+- **NanoVLM** (SigLIP2 + MLP projector + Qwen3-0.6B): chat-style evaluation with async multi-GPU inference via job-queue dispatch. ([#1207](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1207))
+- **Async HF model**: generic async multi-GPU worker backend for HuggingFace model families. Loads replicas on N GPUs with independent worker threads. ([#1204](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1204))
+
+### Image/Video I/O Throughput Upgrade
+
+- **Unified `read_video` entry point**: single function in `load_video.py` with `backend` parameter and `LMMS_VIDEO_DECODE_BACKEND` env var. Supports PyAV (default), TorchCodec, and DALI (GPU). ([Release notes §3](docs/lmms-eval-0.7.md#3-imagevideo-io-throughput-upgrade))
+- **TorchCodec multi-threaded decode**: up to **3.58x** faster than PyAV at 8 frames with `LMMS_VIDEO_TORCHCODEC_THREADS=8`. Thread tuning required — default threads (0/1) regress up to +150%.
+- **DALI GPU decode**: optional GPU-accelerated backend via `LMMS_VIDEO_DALI_DEVICE=gpu`.
+- **Shared image encoding**: `encode_image_to_base64` consolidated across protocol and simple adapters with path-metadata keyed cache.
+- **Media resolver LRU caching**: `_candidate_roots_cached(maxsize=256)` and `_extension_variants(maxsize=4096)` cache deterministic path-derivation work. `Path.exists()` checks remain uncached for correctness.
+- **PyAV stream fallback**: `seek(0)` before packet decode on stream failure. Set-membership lookup in frame selection. Preallocated output array fill replaces `list` + `np.stack`.
+- **LongVideoBench validation**: decode latency `2.79s` -> `1.02s` (**-63%**, 2.7x speedup) with score reproducibility confirmed.
+
+### Lance-Backed Video Mode
+
+- **Lance table distribution**: MINERVA videos stored as `video_blob` in a Lance table on Hugging Face (`lmms-lab-eval/minerva`). Single-package reproducible distribution. ([Release notes §4](docs/lmms-eval-0.7.md#4-lance-backed-video-mode))
+- **Resolution priority**: local file (`MINERVA_VIDEO_DIR`) > Lance blob (`MINERVA_LANCE_VIDEO_URI`) > YouTube URL fallback.
+- **Build tooling**: `tools/minerva_to_lance.py` converts local video files to Lance tables. `tools/bench_minerva_video_resolution.py` and `tools/bench_minerva_pipeline_latency.py` for latency benchmarking.
+
+### Safety and Red-Teaming Baseline
+
+- **`safety_redteam` task group**: `safety_jailbreakbench_harmful` and `safety_jailbreakbench_benign` from `JailbreakBench/JBB-Behaviors`. ([Release notes §5](docs/lmms-eval-0.7.md#5-safety-and-red-teaming-baseline))
+- **Harmful split metrics**: jailbreak ASR, refusal rate, toxicity score, content filter rejection rate, demographic/non-demographic refusal rates.
+- **Benign split metrics**: over-refusal rate, benign toxicity score, content filter rejection rate, demographic/non-demographic refusal rates.
+- **Dual toxicity backends**: Perspective API when `PERSPECTIVE_API_KEY` is set; offline keyword heuristic fallback.
+
+### Efficiency Metrics Coverage
+
+- **Per-sample token counts**: `input_tokens`, `output_tokens`, `reasoning_tokens` (when backend metadata exists) in evaluation outputs. ([Release notes §6](docs/lmms-eval-0.7.md#6-efficiency-metrics-coverage)) ([#1125](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1125))
+- **Run-level throughput**: `total_gen_tokens`, `total_elapsed_time`, `avg_speed` in results JSON.
+- **TTFT/TPOT**: available on `vllm` chat backends via native runtime metrics. Not available on SGLang, OpenAI API, or HuggingFace local backends (wall-clock throughput only).
+- **Token-based efficiency output**: `efficiency.overall.tokens_per_correct_answer`, `efficiency.overall.avg_output_tokens_per_sample`, and per-task breakdown. No provider-specific pricing dependencies.
+
+### Skill-Based Agent Workflows
+
+- **Repository skill**: `skills/lmms-eval-guide/SKILL.md` with reference files for models, tasks, and API server integration. Turns lmms-eval into a reusable operational skill for coding agents. ([Release notes §7](docs/lmms-eval-0.7.md#7-skill-based-agent-workflows))
+- **Dispatch routing**: model/task extension via skill references; training integration via HTTP service; quick validation via `--limit` smoke tests.
+
+### Agentic Task Evaluation
+
+- **`generate_until_agentic` output type**: iterative evaluator loop where the model emits `<tool_call>` or `<submit>` tags and `doc_to_text` executes tools against deterministic Python simulators. Configurable via `max_agentic_steps`. ([Release notes §8](docs/lmms-eval-0.7.md#8-agentic-task-evaluation))
+- **Agentic tasks**: `vending_bench2` (vending machine operation, 4 tools, 10 steps) and `tau2_bench_telecom` (telecom support, 4 tools, 8 steps). No external sandbox required.
+- **Trace metrics**: success rate, trace step validity, state progress, termination quality, and composite trace quality.
+
+### Better One-Line Evaluation Support
+
+- **`--config` flag**: one YAML file replaces long CLI commands. Maps directly to CLI arguments plus an `env` section for credentials and paths. ([Release notes §9](docs/lmms-eval-0.7.md#9-better-one-line-evaluation-support))
+- **Environment variable expansion**: `${VAR}` expands from shell; `${VAR:-default}` provides fallback. Keys containing `KEY`, `TOKEN`, `SECRET`, or `PASSWORD` are auto-masked in log output.
+- **Override priority**: defaults < YAML < CLI. CLI arguments always win, enabling a canonical config with per-run overrides.
+- **Schema validation**: unknown keys in YAML now raise an error listing valid keys. Typos like `modle` no longer silently pass.
+- **Batch evaluation**: YAML accepts a list of configs for multi-model runs in a single invocation.
+- **Full reproducibility**: results JSON includes `resolved_cli_args` — the complete merged configuration. Reconstruct the exact experiment from any results file.
+- **Web UI integration**: export/import YAML configs from the Web UI. Round-trip is lossless.
+
+### Pipeline-Level Reasoning Tag Stripping
+
+- **Pipeline-level stripping** (`lmms_eval/api/reasoning.py`): `strip_reasoning_tags()` runs in `evaluator.py` after the filter pipeline and before `process_results()`. All model backends benefit without per-model changes. ([Release notes §10](docs/lmms-eval-0.7.md#10-pipeline-level-reasoning-tag-stripping))
+- **Dual output preservation**: `resps` stores raw output (with `<think>` blocks) for chain-of-thought analysis; `filtered_resps` stores the clean scored text. `resps` omitted when identical to `filtered_resps`.
+- **CLI control**: `--reasoning_tags` accepts `none` (disable), default `<think>...</think>`, or custom JSON pairs like `'[["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]'`.
+- **Per-task override**: set `reasoning_tags` in task YAML to override the CLI flag per-task.
+- **Removed ad-hoc handling**: deleted `parse_reasoning_model_answer` calls from 6 model files.
+
+### Support customized message_format in async_openai
+
+- **`message_format` parameter**: replaces `is_qwen3_vl` flag and the separate `async_openai_qwen3_vl` model class. Currently supports `openai` (default) and `qwen3_vl` (per-frame timestamps for video). New formats require only an `elif` in `prepare_messages()`. ([Release notes §11](docs/lmms-eval-0.7.md#11-support-customized-message_format-in-async_openai))
+- **Decomposed `generate_until()`**: 130-line monolith split into `_build_video_kwargs()`, `prepare_messages()`, `_get_initial_concurrency()`, `_compute_dispatch_order()`, `_process_with_retry()`, `_update_concurrency()`, `_run_scheduling_loop()`. Main method is now 8 lines.
+- **`_AdaptiveConcurrencyTracker`**: concurrency tracking state moved from scattered `nonlocal` closures to a dedicated dataclass.
+
+### Flattened JSONL Log Output
+
+- **Single-instance flattening**: `generate_until` responses flattened from `[["text"]]` to `["text"]` at serialization time. Multi-choice `loglikelihood` tasks with N instances per doc remain `[["a"], ["b"], ...]`. ([Release notes §12](docs/lmms-eval-0.7.md#12-flattened-jsonl-log-output))
+- **Dedup preserved**: `resps` omitted when identical to `filtered_resps` after flattening.
+- **In-memory format unchanged**: `logged_samples` retains nested format for existing consumers (wandb logger, etc.).
+
+### CLI & UX
+
+- **Subcommand architecture** (`lmms_eval/cli/`): modular dispatch with `eval`, `tasks`, `models`, `ui`, `serve`, `power`, `version` subcommands. Interactive wizard when `eval` is invoked without arguments. ([#1202](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1202))
+- **Branded evaluation banner**: startup banner showing version metadata and environment info.
+- **External usage guide**: new `docs/external_usage.md` covering CLI subcommands and Python library access.
+
+### Bug Fixes
+
+- Fix image vs video file path detection in `auto_doc_to_messages` fallback
+- Align `osworld_g` polygon scoring with osworld-verified annotations ([#1165](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1165))
+- Harden `mmsi-bench` utils parsing against malformed model responses ([#1162](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1162))
+- Fix Whisper `world_size` initialization for single-process runtime ([#1124](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1124))
+- Fix Audio Flamingo 3 parameter handling ([#1124](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1124))
+- Restore `task_input_specs/redundancy_refactor.yaml` accidentally deleted by test commit
+
+### Refactoring
+
+- **Test suite modernization**: migrated all test files from `unittest.TestCase` to pure pytest style (`test_protocol`, `test_construct_requests`, `test_evaluator`, `test_task_pipeline`, CLI tests). Added prompt stability tests and benchmark registration coverage.
+- **Video loader cleanup**: renamed `read_video_pyav` -> `read_video` with backward-compat alias; removed dead `read_video_pyav_pil`, `read_video_pyav_base64`, and `_resize_image` functions; updated all 12 caller files.
+- **Reasoning utils deduplication**: consolidated repeated reasoning utility patterns into factory functions across task modules.
+- Removed `use_custom_video_loader` dead code from 5 model files (qwen2_5_vl, qwen3_vl, qwen3_omni, llava_onevision1_5, huggingface).
+- **Async OpenAI internal decomposition**: `generate_until()` split into 7 focused methods with `_AdaptiveConcurrencyTracker` dataclass.
+
+### Infrastructure & Documentation
+
+- Comprehensive test suite README with concrete code examples for each test category.
+- Rewritten `docs/README.md` with pipeline diagram, code examples, and categorized table of contents.
+- External usage guide (`docs/external_usage.md`) for CLI subcommands and Python library API.
+- Updated example scripts: switched to OpenAI API model, promoted MMMU/VideoMMU/LongVideoBench as recommended benchmarks.
+- SpatialTreeBench naming variant documentation ([#1189](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1189)).
+- Agent skill files (`skills/lmms-eval-guide/`) for model, task, and API server integration workflows.
+- Example YAML configs (`configs/`) for local, API, and batch evaluation patterns.
+
 ## v0.6 (2026-02-16)
 
 ### Highlights

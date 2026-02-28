@@ -10,13 +10,10 @@ except ImportError:
     decord = None
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.model_utils.reasoning_model_utils import (
-    parse_reasoning_model_answer,
-)
 from lmms_eval.models.simple.qwen2_5_vl import Qwen2_5_VL as Qwen2_5_VLSimple
 from lmms_eval.protocol import ChatMessages
 
@@ -29,7 +26,7 @@ if not _has_qwen_vl:
 class Qwen2_5_VL(Qwen2_5_VLSimple):
     is_simple = False
 
-    def generate_until(self, requests: List[Instance]) -> List[str]:
+    def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         res = []
 
         # A dummy collate here to sort by doc id
@@ -154,14 +151,12 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
             total_elapsed_time += end_time - start_time
             total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
 
-            for ans, context in zip(answers, texts):
-                clean_ans = parse_reasoning_model_answer(ans)
-                res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+            for i, (ans, context) in enumerate(zip(answers, texts)):
+                res.append(GenerationResult(text=ans, token_counts=TokenCounts(output_tokens=len(generated_ids_trimmed[i]))))
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
 
                 eval_logger.debug(f"Question: {context}")
-                eval_logger.debug(f"Model Raw Response: {ans}")
-                eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                eval_logger.debug(f"Model Response: {ans}")
             # reorder this group of results back to original unsorted form
             pbar.update(1)
         res = re_ords.get_original(res)

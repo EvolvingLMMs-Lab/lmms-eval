@@ -1,0 +1,13 @@
+dataset_path: lmms-lab-audio/song-describer
+doc_to_target: "text"
+doc_to_visual: !function utils.song_describer_doc_to_audio
+doc_to_text: !function utils.song_describer_doc_to_text
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+metadata:
+  version: 0.0

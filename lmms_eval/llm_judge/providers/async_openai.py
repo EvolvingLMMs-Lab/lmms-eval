@@ -5,6 +5,8 @@ from typing import Dict, List, Optional, Union
 import aiohttp
 from loguru import logger as eval_logger
 
+from lmms_eval.models.model_utils.usage_metrics import log_usage
+
 from ..base import AsyncServerInterface
 from ..protocol import Request, Response, ServerConfig
 from .openai import OpenAIProvider
@@ -73,6 +75,26 @@ class AsyncOpenAIProvider(AsyncServerInterface):
                         model_used = response["model"]
                         usage = response.get("usage")
                         raw_response = response
+
+                    # Log usage for token tracking
+                    if self.use_async_client and hasattr(response, "usage") and response.usage:
+                        log_usage(
+                            model_name=model_used or config.model_name,
+                            task_name=None,
+                            input_tokens=getattr(response.usage, "prompt_tokens", 0) or 0,
+                            output_tokens=getattr(response.usage, "completion_tokens", 0) or 0,
+                            reasoning_tokens=0,
+                            source="judge",
+                        )
+                    elif not self.use_async_client and isinstance(usage, dict):
+                        log_usage(
+                            model_name=model_used or config.model_name,
+                            task_name=None,
+                            input_tokens=usage.get("prompt_tokens", 0) or 0,
+                            output_tokens=usage.get("completion_tokens", 0) or 0,
+                            reasoning_tokens=0,
+                            source="judge",
+                        )
 
                     return Response(content=content.strip(), model_used=model_used, usage=usage, raw_response=raw_response)
 

@@ -1,4 +1,4 @@
-dataset_path: MMVP/MMVP
+dataset_path: lmms-lab-eval/MMVP
 dataset_kwargs:
   token: True
 test_split: train
@@ -28,8 +28,9 @@ generation_kwargs:
   do_sample: false
 
 metadata:
-  version: 0.0
-  # Ground truth corrections applied based on verification in issue #1018
-  # https://github.com/EvolvingLMMs-Lab/lmms-eval/issues/1018
-  # Index 99: Corrected from B to A (elephant tusks are long, not short)
-  # Index 279: Corrected from B to A (person is standing, not sitting)
+  version: 0.1
+  # Ground truth corrections applied directly in lmms-lab-eval/MMVP dataset
+  # based on verification in https://github.com/EvolvingLMMs-Lab/lmms-eval/issues/1018
+  # Corrected pairs (answers were swapped in original MMVP/MMVP):
+  #   Indices 99-100: Elephant tusks long/short
+  #   Indices 279-280: Person standing/sitting

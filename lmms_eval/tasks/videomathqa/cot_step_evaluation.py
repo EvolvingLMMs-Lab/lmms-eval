@@ -94,7 +94,7 @@ def prepare_input(sample, matched):
     gt_answer = sample["answer"]
     gt_steps = sample["steps"]
     options = sample["options"]
-    prediction = matched["resps"][0][0]
+    prediction = matched["resps"][0][0] if isinstance(matched["resps"][0], list) else matched["resps"][0]
     input = {"qid": qid, "category": sample["category"], "question": question, "options": options, "gt_answer": gt_answer, "gt_steps": gt_steps, "prediction": prediction}
     return input
 

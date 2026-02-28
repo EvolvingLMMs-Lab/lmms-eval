@@ -1,0 +1,44 @@
+dataset_path: doolayer/SEED-Bench-2-Plus
+dataset_kwargs:
+  token: True
+task: "seedbench_2_plus_reasoning"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.seed_doc_to_visual
+doc_to_text: !function utils.seed_doc_to_text
+doc_to_messages: !function utils.seed_reasoning_doc_to_messages
+doc_to_target: "answer"
+process_results: !function utils.seed_reasoning_process_results
+
+metric_list:
+  - metric: seedbench_2_plus_Chart_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seedbench_2_plus_Chart_format_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seedbench_2_plus_Map_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seedbench_2_plus_Map_format_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seedbench_2_plus_Web_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seedbench_2_plus_Web_format_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seedbench_2_plus_all_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: seedbench_2_plus_all_format_score
+    aggregation: mean
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 49152
+  image_aspect_ratio: original
+
+metadata:
+  version: 0.0

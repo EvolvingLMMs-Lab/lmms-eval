@@ -1,0 +1,6 @@
+task: minerva
+tag: video_qa
+dataset_kwargs:
+  data_files:
+    test: https://huggingface.co/datasets/lmms-lab-eval/minerva/resolve/main/minerva.json
+include: _default_template_yaml

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmms_eval"
-version = "0.6.1"
+version = "0.7.0"
 authors = [
     { name = "LMMMs-Lab Evaluation Team", email = "lmms-lab@outlook.com" },
 ]
@@ -86,6 +86,9 @@ server = [
     "fastapi",
     "uvicorn",
 ]
+mcp = [
+    "mcp[cli]>=1.20.0",
+]
 audio = [
     "more-itertools",
     "editdistance",
@@ -137,6 +140,7 @@ video = [
 ]
 all = [
     "lmms_eval[core]",
+    "lmms_eval[mcp]",
     "lmms_eval[gemini]",
     "lmms_eval[reka]",
     "lmms_eval[qwen]",
@@ -187,7 +191,8 @@ exclude = [
 ]
 
 [project.scripts]
-lmms-eval = "lmms_eval.__main__:cli_evaluate"
+lmms-eval = "lmms_eval.cli.dispatch:main"
+lmms-eval-mcp = "lmms_eval.mcp:main"
 lmms-eval-ui = "lmms_eval.tui.cli:main"
 
 [project.urls]
@@ -198,4 +203,18 @@ Repository = "https://github.com/EvolvingLMMs-Lab/lmms-eval"
 dev = [
     "textual>=7.2.0",
     "textual-dev>=1.8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "gpu: requires GPU hardware (deselect with '-m not gpu')",
+    "api: requires external API keys (deselect with '-m not api')",
+    "slow: slow integration tests (deselect with '-m not slow')",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
 ]

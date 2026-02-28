@@ -1,4 +1,4 @@
-<!-- lmms-eval v0.6 -->
+<!-- lmms-eval v0.7 -->
 # Adding a New Model
 
 ## Choose Model Type
@@ -166,9 +166,10 @@ When `model_id` exists in both `AVAILABLE_CHAT_TEMPLATE_MODELS` and `AVAILABLE_S
 |---------|------|-------|
 | HuggingFace local | `chat/qwen2_5_vl.py` | Standard transformers model |
 | HuggingFace video | `chat/qwen3_vl.py` | Video-capable |
-| API-based | `chat/openai.py` | OpenAI-compatible endpoints |
+| API-based (OpenAI-compatible) | `chat/async_openai.py` | `message_format` parameter for format dispatch |
 | vLLM backend | `chat/vllm.py` | High-throughput inference |
 | SGLang backend | `chat/sglang.py` | Alternative inference engine |
+| Async multi-GPU (HF) | `chat/async_hf.py` | N replicas on N GPUs with independent worker threads |
 
 ## Common model_args
 
@@ -178,9 +179,40 @@ When `model_id` exists in both `AVAILABLE_CHAT_TEMPLATE_MODELS` and `AVAILABLE_S
 | `device_map` | `auto` | GPU memory mapping |
 | `torch_dtype` | `bfloat16` | Data type |
 | `attn_implementation` | `flash_attention_2` | Attention backend |
+| `message_format` | `openai`, `qwen3_vl` | Message serialization format (async_openai only, see below) |
 | `max_pixels` | `12845056` | Max image pixels |
 | `max_num_frames` | `32` | Max video frames |
 | `tensor_parallel_size` | `4` | vLLM parallelism |
+
+## `message_format` Parameter (v0.7)
+
+The `async_openai` model uses `message_format` to dispatch format-specific message serialization:
+
+| Format | When to Use |
+|--------|-------------|
+| `openai` (default) | Standard OpenAI API, GPT-4o, most providers |
+| `qwen3_vl` | Qwen3-VL models that need per-frame timestamps for video |
+
+```bash
+# Standard OpenAI format
+python -m lmms_eval --model async_openai \
+    --model_args pretrained=gpt-4o,message_format=openai --tasks mme
+
+# Qwen3-VL format (per-frame timestamps)
+python -m lmms_eval --model async_openai \
+    --model_args pretrained=Qwen/Qwen3-VL-72B,message_format=qwen3_vl --tasks video_mme
+```
+
+Adding a new format requires only an `elif` in `prepare_messages()` and a `to_*_messages()` method in `ChatMessages`.
+
+## v0.6 -> v0.7 Breaking Changes
+
+| Removed | Replacement |
+|---------|-------------|
+| `async_openai_qwen3_vl` model class | `async_openai` with `message_format=qwen3_vl` |
+| `is_qwen3_vl` flag in model_args | `message_format=qwen3_vl` |
+| `parse_reasoning_model_answer` in model files | Pipeline-level `--reasoning_tags` (handled by evaluator, not models) |
+| `read_video_pyav` function name | `read_video` (backward-compat alias exists) |
 
 ## Distributed Evaluation
 
@@ -190,4 +222,7 @@ accelerate launch --num_processes 4 -m lmms_eval --model qwen2_5_vl --tasks mme
 
 # vLLM tensor parallelism
 python -m lmms_eval --model vllm --model_args pretrained=Qwen/Qwen2.5-VL-7B-Instruct,tensor_parallel_size=4 --tasks mme
+
+# Async HF multi-GPU (job-queue dispatch)
+python -m lmms_eval --model async_hf --model_args pretrained=org/model,num_gpus=4 --tasks mme
 ```

@@ -1,0 +1,13 @@
+include: _default_template_mmbench_reasoning_yaml
+task: "mmbench_cn_test_reasoning"
+test_split: test
+dataset_name: "cn"
+doc_to_text: !function utils.mmbench_cn_doc_to_text
+doc_to_messages: !function utils.mmbench_cn_doc_to_messages
+process_results: !function utils.mmbench_process_results_test
+metric_list:
+  - metric: submission
+    aggregation: !function utils.mmbench_aggregate_test_results_cn
+    higher_is_better: true
+metadata:
+  version: 0.0

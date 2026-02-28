@@ -11,12 +11,9 @@ from tqdm import tqdm
 from transformers.cache_utils import DynamicCache
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.model_utils.reasoning_model_utils import (
-    parse_reasoning_model_answer,
-)
 from lmms_eval.models.model_utils.thyme.sandbox import execute_code_in_sandbox
 from lmms_eval.models.model_utils.thyme.utils import (
     REASONING_SYS_PROMPT,
@@ -286,7 +283,7 @@ class Thyme(Qwen2_5_VLSimple):
 
         return generated_text, total_tokens
 
-    def generate_until(self, requests: List[Instance]) -> List[str]:
+    def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         res = []
 
         # A dummy collate here to sort by doc id
@@ -330,6 +327,7 @@ class Thyme(Qwen2_5_VLSimple):
                 eval_logger.warning(f"Thyme model currently only supports batch_size=1, got {self.batch_size}")
             answers = []
             cache_contexts = []
+            output_token_counts = []
             start_time = time.time()
             for current_message in batched_messages:
                 with extract_user_input(current_message) as temp_image_path:
@@ -344,20 +342,19 @@ class Thyme(Qwen2_5_VLSimple):
                 answers.append(final_response)
                 cache_context = self.processor.apply_chat_template(current_message, tokenize=False, add_generation_prompt=True)
                 cache_contexts.append(cache_context)
+                output_token_counts.append(generated_total_tokens)
             end_time = time.time()
 
             # Calculate timing metrics for batch
             total_elapsed_time += end_time - start_time
 
-            for answer, context in zip(answers, cache_contexts):
-                clean_ans = parse_reasoning_model_answer(answer)
-                res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+            for answer, context, output_tokens in zip(answers, cache_contexts, output_token_counts):
+                res.append(GenerationResult(text=answer, token_counts=TokenCounts(output_tokens=output_tokens)))
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 pbar.update(1)
 
                 eval_logger.debug(f"Question: {context}")
-                eval_logger.debug(f"Model Raw Response: {answer}")
-                eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                eval_logger.debug(f"Model Response: {answer}")
         # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 

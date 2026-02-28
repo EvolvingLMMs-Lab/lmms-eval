@@ -6,7 +6,7 @@ Write order: JSONL append+fsync -> SQLite upsert (crash-safe).
 
 Activation: ``python -m lmms_eval --model ... --tasks ... --use_cache ./eval_cache``
 
-Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs).
+Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs, content_hash, task_fingerprint, model_fingerprint_hash).
 Scoped per model: ``{use_cache}/{model_hash}/rank{N}.db``
 """
 
@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from loguru import logger as eval_logger
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance
 
 CACHE_RELEVANT_KEYS = frozenset(
     {
@@ -40,7 +40,14 @@ CACHE_RELEVANT_KEYS = frozenset(
     }
 )
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
+
+
+def _short_hash(value: str) -> str:
+    if not value:
+        return ""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
 
 _SCHEMA_SQL = """\
 CREATE TABLE IF NOT EXISTS responses (
@@ -164,12 +171,14 @@ def fingerprint_callable(fn) -> str:
 
 
 def _extract_content_hash(instance: Instance) -> str:
-    """Hash the text content of loglikelihood args to prevent collisions.
+    """Hash leading text arguments to prevent cache-key collisions.
 
-    For multiple_choice with acc_mutual_info, conditional requests have
-    ``(ctx, continuation, ...)`` while unconditional have ``("", choice)``.
-    Both share the same (task_name, doc_id, idx) so we need this hash
-    to distinguish them.
+    Some flows can issue multiple deterministic requests that share the same
+    ``(task_name, doc_id, idx, gen_kwargs)`` while differing in prompt text.
+    This is common in multi-round / agentic generation loops.
+
+    We hash the leading consecutive string arguments (for example context and
+    continuation) so those requests do not alias to the same cache entry.
     """
     args = instance.args
     text_parts = []
@@ -192,6 +201,7 @@ def compute_cache_key(
     idx: int = 0,
     task_fingerprint: str = "",
     content_hash: str = "",
+    model_fingerprint_hash: str = "",
 ) -> str:
     """Deterministic SHA-256 cache key for a model response.
 
@@ -199,6 +209,7 @@ def compute_cache_key(
     ``content_hash`` distinguishes conditional vs unconditional loglikelihood
     requests that share the same (task_name, doc_id, idx).
     ``task_fingerprint`` enables automatic invalidation on YAML/prompt changes.
+    ``model_fingerprint_hash`` ensures key-level model adapter isolation.
     """
     payload = {
         "v": _SCHEMA_VERSION,
@@ -212,6 +223,8 @@ def compute_cache_key(
         payload["ch"] = content_hash
     if task_fingerprint:
         payload["tf"] = task_fingerprint
+    if model_fingerprint_hash:
+        payload["mfh"] = model_fingerprint_hash
     data = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
@@ -240,6 +253,7 @@ class ResponseCache:
         self.db_path = db_path
         self.audit_path = audit_path
         self.model_fingerprint = model_fingerprint
+        self._model_fingerprint_hash = _short_hash(model_fingerprint)
         self._task_fingerprints: Dict[str, str] = task_fingerprints or {}
 
         self.db = sqlite3.connect(db_path, timeout=30)
@@ -249,8 +263,10 @@ class ResponseCache:
 
         if model_fingerprint:
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint", model_fingerprint))
-            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
-            self.db.commit()
+        if self._model_fingerprint_hash:
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
+        self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
+        self.db.commit()
 
         self._replay_audit_log()
         self._audit_file = open(audit_path, "a", encoding="utf-8")
@@ -297,7 +313,21 @@ class ResponseCache:
             return None
         return _deserialize_response(row[0])
 
-    def _log_to_audit(self, request_type: str, task_name: str, doc_id: Union[int, str], idx: int, gen_kwargs: dict, response: Any, *, cache_key: str = "", deterministic: bool = True) -> None:
+    def _log_to_audit(
+        self,
+        request_type: str,
+        task_name: str,
+        doc_id: Union[int, str],
+        idx: int,
+        gen_kwargs: dict,
+        response: Any,
+        *,
+        cache_key: str = "",
+        deterministic: bool = True,
+        task_fingerprint: str = "",
+        content_hash: str = "",
+        model_fingerprint_hash: str = "",
+    ) -> None:
         """Append every response to the JSONL audit log regardless of determinism.
 
         This provides real-time observability (``tail -f``) for ALL model responses,
@@ -306,6 +336,7 @@ class ResponseCache:
         now = time.time()
         record = {
             "cache_key": cache_key,
+            "fingerprint_schema_version": _SCHEMA_VERSION,
             "request_type": request_type,
             "task_name": task_name,
             "doc_id": doc_id,
@@ -315,6 +346,12 @@ class ResponseCache:
             "created_at": now,
             "deterministic": deterministic,
         }
+        if task_fingerprint:
+            record["task_fingerprint"] = task_fingerprint
+        if content_hash:
+            record["content_hash"] = content_hash
+        if model_fingerprint_hash:
+            record["model_fingerprint_hash"] = model_fingerprint_hash
         self._audit_file.write(json.dumps(record, ensure_ascii=False) + "\n")
         self._audit_file.flush()
         os.fsync(self._audit_file.fileno())
@@ -332,10 +369,22 @@ class ResponseCache:
         self.db.commit()
 
     @staticmethod
+    def _extract_cacheable(response: Any) -> Any:
+        """Extract the cache-safe payload from a model response.
+
+        ``GenerationResult`` objects are reduced to their ``.text`` so that the
+        cache stores only plain strings (token counts are ephemeral).
+        """
+        if isinstance(response, GenerationResult):
+            return response.text
+        return response
+
+    @staticmethod
     def _is_valid_response(response: Any, request_type: str) -> bool:
-        """Reject None, empty strings, and malformed loglikelihood tuples to prevent cache poisoning."""
         if response is None:
             return False
+        if isinstance(response, GenerationResult):
+            return bool(response.text and response.text.strip())
         if request_type == "loglikelihood":
             return isinstance(response, (list, tuple)) and len(response) == 2
         if isinstance(response, str) and response.strip() == "":
@@ -363,7 +412,7 @@ class ResponseCache:
                 self._skipped += 1
                 continue
 
-            ch = _extract_content_hash(req) if reqtype == "loglikelihood" else ""
+            ch = _extract_content_hash(req)
             tf = self._task_fingerprints.get(req.task_name, "")
             cache_key = compute_cache_key(
                 request_type=reqtype,
@@ -373,6 +422,7 @@ class ResponseCache:
                 idx=req.idx,
                 content_hash=ch,
                 task_fingerprint=tf,
+                model_fingerprint_hash=self._model_fingerprint_hash,
             )
             cached = self._lookup(cache_key)
             if cached is not None:
@@ -391,14 +441,40 @@ class ResponseCache:
             new_resps = getattr(lm, reqtype)(uncached)
             for idx_pos, req, resp in zip(uncached_indices, uncached, new_resps):
                 results[idx_pos] = resp
+                cacheable = self._extract_cacheable(resp)
                 gen_kwargs = extract_gen_kwargs(req)
                 deterministic = is_deterministic(reqtype, gen_kwargs)
-                ch = _extract_content_hash(req) if reqtype == "loglikelihood" else ""
+                ch = _extract_content_hash(req)
                 tf = self._task_fingerprints.get(req.task_name, "")
-                cache_key = compute_cache_key(request_type=reqtype, task_name=req.task_name, doc_id=req.doc_id, gen_kwargs=gen_kwargs, idx=req.idx, content_hash=ch, task_fingerprint=tf) if deterministic else ""
-                self._log_to_audit(reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, resp, cache_key=cache_key, deterministic=deterministic)
+                cache_key = (
+                    compute_cache_key(
+                        request_type=reqtype,
+                        task_name=req.task_name,
+                        doc_id=req.doc_id,
+                        gen_kwargs=gen_kwargs,
+                        idx=req.idx,
+                        content_hash=ch,
+                        task_fingerprint=tf,
+                        model_fingerprint_hash=self._model_fingerprint_hash,
+                    )
+                    if deterministic
+                    else ""
+                )
+                self._log_to_audit(
+                    reqtype,
+                    req.task_name,
+                    req.doc_id,
+                    req.idx,
+                    gen_kwargs,
+                    cacheable,
+                    cache_key=cache_key,
+                    deterministic=deterministic,
+                    task_fingerprint=tf,
+                    content_hash=ch,
+                    model_fingerprint_hash=self._model_fingerprint_hash,
+                )
                 if deterministic and self._is_valid_response(resp, reqtype):
-                    self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, resp)
+                    self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable)
         else:
             eval_logger.info(f"ResponseCache: all {len(requests)} requests served from cache — skipping model inference")
 
