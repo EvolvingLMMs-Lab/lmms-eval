@@ -174,9 +174,12 @@ Two tasks validate the infrastructure with deterministic Python simulators (no e
 Quick smoke test:
 
 ```bash
+export OPENAI_API_KEY="your-openrouter-key"
+export OPENAI_API_BASE="https://openrouter.ai/api/v1"
+
 python -m lmms_eval \
   --model openai \
-  --model_args model=gpt-4o-mini \
+  --model_args model=moonshotai/kimi-k2.5 \
   --tasks vending_bench2 \
   --limit 2 --batch_size 1
 ```
