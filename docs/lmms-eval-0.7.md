@@ -1,6 +1,6 @@
 # LMMs-Eval v0.7
 
-v0.7 makes lmms-eval easier to use, share, and reproduce. The theme is **operational simplicity** — fewer flags to remember, fewer things that go wrong, and a single file that captures your entire experiment.
+v0.7 makes lmms-eval easier to operate and harder to get wrong. The theme is **operational simplicity** for users and **pipeline maturity** for the framework — the evaluator now handles reasoning models, video decode optimization, and efficiency tracking that previously leaked into model code or didn't exist at all. Fewer flags to remember, fewer things that go wrong, and a single file that captures your entire experiment.
 
 ---
 
