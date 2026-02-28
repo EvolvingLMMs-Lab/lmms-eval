@@ -14,13 +14,13 @@ Fewer flags to remember, fewer things that go wrong, and a single file that capt
 - [2. New Models](#2-new-models)
 - [3. Image/Video I/O Throughput Upgrade](#3-imagevideo-io-throughput-upgrade)
 - [4. Lance-Backed Video Mode](#4-lance-backed-video-mode)
-- [9. Safety and Red-Teaming Baseline](#9-safety-and-red-teaming-baseline)
-- [10. Efficiency Metrics Coverage](#10-efficiency-metrics-coverage)
-- [11. Skill-Based Agent Workflows](#11-skill-based-agent-workflows)
-- [5. Better One-Line Evaluation Support](#5-better-one-line-evaluation-support)
-- [6. Pipeline-Level Reasoning Tag Stripping](#6-pipeline-level-reasoning-tag-stripping)
-- [7. Support customized message_format in async_openai](#7-support-customized-message_format-in-async_openai)
-- [8. Flattened JSONL Log Output](#8-flattened-jsonl-log-output)
+- [5. Safety and Red-Teaming Baseline](#5-safety-and-red-teaming-baseline)
+- [6. Efficiency Metrics Coverage](#6-efficiency-metrics-coverage)
+- [7. Skill-Based Agent Workflows](#7-skill-based-agent-workflows)
+- [8. Better One-Line Evaluation Support](#8-better-one-line-evaluation-support)
+- [9. Pipeline-Level Reasoning Tag Stripping](#9-pipeline-level-reasoning-tag-stripping)
+- [10. Support customized message_format in async_openai](#10-support-customized-message_format-in-async_openai)
+- [11. Flattened JSONL Log Output](#11-flattened-jsonl-log-output)
 - [12. Bug Fixes](#12-bug-fixes)
 
 ---
@@ -47,7 +47,7 @@ Most workflows are backward-compatible. Two model-backend changes require attent
 
 - **`is_qwen3_vl` flag removed** from `async_openai` model_args. Use `message_format=qwen3_vl` instead.
 
-- **`parse_reasoning_model_answer` removed** from 6 model files. Reasoning tag stripping is now handled at the pipeline level (see [Section 6](#6-pipeline-level-reasoning-tag-stripping)). Remove any direct calls to this function.
+- **`parse_reasoning_model_answer` removed** from 6 model files. Reasoning tag stripping is now handled at the pipeline level (see [Section 9](#9-pipeline-level-reasoning-tag-stripping)). Remove any direct calls to this function.
 
 ### Backward-Compatible Renames
 
@@ -76,7 +76,7 @@ v0.7 adds 25+ benchmark tasks across eight domains:
 | **Knowledge & QA** | SimpleVQA, WorldVQA, MTVQA, HiPhO, MME-CC, VPCT, ZeroBench |
 | **AGI & agentic** | ARC-AGI-1, ARC-AGI-2, BrowseComp |
 | **Audio** | AMI, CN College Listen MCQ, DREAM TTS MCQ, EuroPal ASR, Song Describer |
-| **Safety** | JailbreakBench harmful + benign splits (see [Section 9](#9-safety-and-red-teaming-baseline)) |
+| **Safety** | JailbreakBench harmful + benign splits (see [Section 5](#5-safety-and-red-teaming-baseline)) |
 
 All tasks are auto-discovered from their YAML configs in `lmms_eval/tasks/`. No manual registration required. Run `python -m lmms_eval --tasks list` to see all available tasks.
 
@@ -354,7 +354,7 @@ On local pre-downloaded videos, local raw and Lance modes are often near-parity 
 
 ---
 
-## 9. Safety and Red-Teaming Baseline
+## 5. Safety and Red-Teaming Baseline
 
 v0.7 adds a safety/red-teaming task group based on JailbreakBench behaviors. This addresses a gap where lmms-eval had no built-in safety benchmark for jailbreak robustness and over-refusal analysis.
 
@@ -411,7 +411,7 @@ python -m lmms_eval \
 
 ---
 
-## 10. Efficiency Metrics Coverage
+## 6. Efficiency Metrics Coverage
 
 v0.7 improves efficiency observability, but not all metrics are equally available across backends.
 
@@ -468,7 +468,7 @@ The v0.7 efficiency output is token-based by design. It does not include price-d
 
 ---
 
-## 11. Skill-Based Agent Workflows
+## 7. Skill-Based Agent Workflows
 
 v0.7 standardizes how coding agents learn and orchestrate lmms-eval workflows through the repository skill:
 
@@ -556,7 +556,7 @@ This separates development-time edits (model/task code) from runtime scheduling 
 
 ---
 
-## 5. Better One-Line Evaluation Support
+## 8. Better One-Line Evaluation Support
 
 Running an evaluation used to mean assembling a long command with many flags. Sharing that command meant copy-pasting a fragile shell one-liner and hoping the environment was set up correctly. Reproducing a result from a paper meant reverse-engineering the setup from a results JSON that stored only a few fields.
 
@@ -723,7 +723,7 @@ python -m lmms_eval --config configs/my_experiment.yaml
 
 ---
 
-## 6. Pipeline-Level Reasoning Tag Stripping
+## 9. Pipeline-Level Reasoning Tag Stripping
 
 Reasoning models (Qwen3-VL, DeepSeek-R1, QwQ, etc.) emit `<think>...</think>` blocks in their generated text. Without stripping, these tokens pollute scoring on standard benchmarks. Previously, only 6 model files had ad-hoc handling, and vLLM, SGLang, and OpenAI backends had zero protection.
 
@@ -829,7 +829,7 @@ Example record from a reasoning model:
 
 ---
 
-## 7. Support customized message_format in async_openai
+## 10. Support customized message_format in async_openai
 
 The `async_openai` model backend receives two changes: an internal refactor for maintainability, and a `message_format` parameter that replaces the previous `is_qwen3_vl` flag and the separate `async_openai_qwen3_vl` model class.
 
@@ -887,7 +887,7 @@ Concurrency tracking state lives in `_AdaptiveConcurrencyTracker` (a dataclass) 
 
 ---
 
-## 8. Flattened JSONL Log Output
+## 11. Flattened JSONL Log Output
 
 With `--log_samples` enabled, the per-sample JSONL files previously wrote `resps` and `filtered_resps` as doubly-nested lists:
 

@@ -9,12 +9,12 @@
 - **25+ new benchmark tasks** spanning document understanding, video, math, spatial, AGI, audio, and safety domains. ([§1](docs/lmms-eval-0.7.md#1-new-benchmark-tasks))
 - **Image/Video I/O throughput upgrade**: unified `read_video` with TorchCodec backend (up to **3.58x** faster), DALI GPU decode, shared encoding helpers, and LRU caching. ([§3](docs/lmms-eval-0.7.md#3-imagevideo-io-throughput-upgrade))
 - **Lance-backed video mode**: single Lance table on Hugging Face. Local-file, Lance-blob, and YouTube-URL resolution with priority fallback. ([§4](docs/lmms-eval-0.7.md#4-lance-backed-video-mode))
-- **Safety and red-teaming baseline**: `safety_redteam` group with jailbreak ASR, refusal rate, toxicity, and over-refusal metrics. ([§9](docs/lmms-eval-0.7.md#9-safety-and-red-teaming-baseline))
-- **Efficiency metrics coverage**: per-sample token counts, run-level throughput, and TTFT/TPOT on vLLM backends. ([§10](docs/lmms-eval-0.7.md#10-efficiency-metrics-coverage))
-- **YAML config-driven evaluation**: single `--config` YAML file replaces fragile CLI one-liners. Schema validation, env expansion, batch configs, full reproducibility via `resolved_cli_args`. ([§5](docs/lmms-eval-0.7.md#5-better-one-line-evaluation-support))
-- **Pipeline-level reasoning tag stripping**: `<think>` blocks stripped in `evaluator.py` after filters, before `process_results()`. All backends, configurable via `--reasoning_tags`. ([§6](docs/lmms-eval-0.7.md#6-pipeline-level-reasoning-tag-stripping))
-- **Async OpenAI `message_format`**: replaces `is_qwen3_vl` flag and `async_openai_qwen3_vl` class. `generate_until()` decomposed into 7 focused methods. ([§7](docs/lmms-eval-0.7.md#7-support-customized-message_format-in-async_openai))
-- **Flattened JSONL log output**: `generate_until` responses flattened from doubly-nested to singly-nested lists. Multi-choice tasks unchanged. ([§8](docs/lmms-eval-0.7.md#8-flattened-jsonl-log-output))
+- **Safety and red-teaming baseline**: `safety_redteam` group with jailbreak ASR, refusal rate, toxicity, and over-refusal metrics. ([§5](docs/lmms-eval-0.7.md#5-safety-and-red-teaming-baseline))
+- **Efficiency metrics coverage**: per-sample token counts, run-level throughput, and TTFT/TPOT on vLLM backends. ([§6](docs/lmms-eval-0.7.md#6-efficiency-metrics-coverage))
+- **YAML config-driven evaluation**: single `--config` YAML file replaces fragile CLI one-liners. Schema validation, env expansion, batch configs, full reproducibility via `resolved_cli_args`. ([§8](docs/lmms-eval-0.7.md#8-better-one-line-evaluation-support))
+- **Pipeline-level reasoning tag stripping**: `<think>` blocks stripped in `evaluator.py` after filters, before `process_results()`. All backends, configurable via `--reasoning_tags`. ([§9](docs/lmms-eval-0.7.md#9-pipeline-level-reasoning-tag-stripping))
+- **Async OpenAI `message_format`**: replaces `is_qwen3_vl` flag and `async_openai_qwen3_vl` class. `generate_until()` decomposed into 7 focused methods. ([§10](docs/lmms-eval-0.7.md#10-support-customized-message_format-in-async_openai))
+- **Flattened JSONL log output**: `generate_until` responses flattened from doubly-nested to singly-nested lists. Multi-choice tasks unchanged. ([§11](docs/lmms-eval-0.7.md#11-flattened-jsonl-log-output))
 
 ### New Benchmark Tasks
 
@@ -69,26 +69,26 @@
 
 ### Safety and Red-Teaming Baseline
 
-- **`safety_redteam` task group**: `safety_jailbreakbench_harmful` and `safety_jailbreakbench_benign` from `JailbreakBench/JBB-Behaviors`. ([Release notes §9](docs/lmms-eval-0.7.md#9-safety-and-red-teaming-baseline))
+- **`safety_redteam` task group**: `safety_jailbreakbench_harmful` and `safety_jailbreakbench_benign` from `JailbreakBench/JBB-Behaviors`. ([Release notes §5](docs/lmms-eval-0.7.md#5-safety-and-red-teaming-baseline))
 - **Harmful split metrics**: jailbreak ASR, refusal rate, toxicity score, content filter rejection rate, demographic/non-demographic refusal rates.
 - **Benign split metrics**: over-refusal rate, benign toxicity score, content filter rejection rate, demographic/non-demographic refusal rates.
 - **Dual toxicity backends**: Perspective API when `PERSPECTIVE_API_KEY` is set; offline keyword heuristic fallback.
 
 ### Efficiency Metrics Coverage
 
-- **Per-sample token counts**: `input_tokens`, `output_tokens`, `reasoning_tokens` (when backend metadata exists) in evaluation outputs. ([Release notes §10](docs/lmms-eval-0.7.md#10-efficiency-metrics-coverage)) ([#1125](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1125))
+- **Per-sample token counts**: `input_tokens`, `output_tokens`, `reasoning_tokens` (when backend metadata exists) in evaluation outputs. ([Release notes §6](docs/lmms-eval-0.7.md#6-efficiency-metrics-coverage)) ([#1125](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1125))
 - **Run-level throughput**: `total_gen_tokens`, `total_elapsed_time`, `avg_speed` in results JSON.
 - **TTFT/TPOT**: available on `vllm` chat backends via native runtime metrics. Not available on SGLang, OpenAI API, or HuggingFace local backends (wall-clock throughput only).
 - **Token-based efficiency output**: `efficiency.overall.tokens_per_correct_answer`, `efficiency.overall.avg_output_tokens_per_sample`, and per-task breakdown. No provider-specific pricing dependencies.
 
 ### Skill-Based Agent Workflows
 
-- **Repository skill**: `skills/lmms-eval-guide/SKILL.md` with reference files for models, tasks, and API server integration. Turns lmms-eval into a reusable operational skill for coding agents. ([Release notes §11](docs/lmms-eval-0.7.md#11-skill-based-agent-workflows))
+- **Repository skill**: `skills/lmms-eval-guide/SKILL.md` with reference files for models, tasks, and API server integration. Turns lmms-eval into a reusable operational skill for coding agents. ([Release notes §7](docs/lmms-eval-0.7.md#7-skill-based-agent-workflows))
 - **Dispatch routing**: model/task extension via skill references; training integration via HTTP service; quick validation via `--limit` smoke tests.
 
 ### Better One-Line Evaluation Support
 
-- **`--config` flag**: one YAML file replaces long CLI commands. Maps directly to CLI arguments plus an `env` section for credentials and paths. ([Release notes §5](docs/lmms-eval-0.7.md#5-better-one-line-evaluation-support))
+- **`--config` flag**: one YAML file replaces long CLI commands. Maps directly to CLI arguments plus an `env` section for credentials and paths. ([Release notes §8](docs/lmms-eval-0.7.md#8-better-one-line-evaluation-support))
 - **Environment variable expansion**: `${VAR}` expands from shell; `${VAR:-default}` provides fallback. Keys containing `KEY`, `TOKEN`, `SECRET`, or `PASSWORD` are auto-masked in log output.
 - **Override priority**: defaults < YAML < CLI. CLI arguments always win, enabling a canonical config with per-run overrides.
 - **Schema validation**: unknown keys in YAML now raise an error listing valid keys. Typos like `modle` no longer silently pass.
@@ -98,7 +98,7 @@
 
 ### Pipeline-Level Reasoning Tag Stripping
 
-- **Pipeline-level stripping** (`lmms_eval/api/reasoning.py`): `strip_reasoning_tags()` runs in `evaluator.py` after the filter pipeline and before `process_results()`. All model backends benefit without per-model changes. ([Release notes §6](docs/lmms-eval-0.7.md#6-pipeline-level-reasoning-tag-stripping))
+- **Pipeline-level stripping** (`lmms_eval/api/reasoning.py`): `strip_reasoning_tags()` runs in `evaluator.py` after the filter pipeline and before `process_results()`. All model backends benefit without per-model changes. ([Release notes §9](docs/lmms-eval-0.7.md#9-pipeline-level-reasoning-tag-stripping))
 - **Dual output preservation**: `resps` stores raw output (with `<think>` blocks) for chain-of-thought analysis; `filtered_resps` stores the clean scored text. `resps` omitted when identical to `filtered_resps`.
 - **CLI control**: `--reasoning_tags` accepts `none` (disable), default `<think>...</think>`, or custom JSON pairs like `'[["<think>", "</think>"], ["<reasoning>", "</reasoning>"]]'`.
 - **Per-task override**: set `reasoning_tags` in task YAML to override the CLI flag per-task.
@@ -106,13 +106,13 @@
 
 ### Support customized message_format in async_openai
 
-- **`message_format` parameter**: replaces `is_qwen3_vl` flag and the separate `async_openai_qwen3_vl` model class. Currently supports `openai` (default) and `qwen3_vl` (per-frame timestamps for video). New formats require only an `elif` in `prepare_messages()`. ([Release notes §7](docs/lmms-eval-0.7.md#7-support-customized-message_format-in-async_openai))
+- **`message_format` parameter**: replaces `is_qwen3_vl` flag and the separate `async_openai_qwen3_vl` model class. Currently supports `openai` (default) and `qwen3_vl` (per-frame timestamps for video). New formats require only an `elif` in `prepare_messages()`. ([Release notes §10](docs/lmms-eval-0.7.md#10-support-customized-message_format-in-async_openai))
 - **Decomposed `generate_until()`**: 130-line monolith split into `_build_video_kwargs()`, `prepare_messages()`, `_get_initial_concurrency()`, `_compute_dispatch_order()`, `_process_with_retry()`, `_update_concurrency()`, `_run_scheduling_loop()`. Main method is now 8 lines.
 - **`_AdaptiveConcurrencyTracker`**: concurrency tracking state moved from scattered `nonlocal` closures to a dedicated dataclass.
 
 ### Flattened JSONL Log Output
 
-- **Single-instance flattening**: `generate_until` responses flattened from `[["text"]]` to `["text"]` at serialization time. Multi-choice `loglikelihood` tasks with N instances per doc remain `[["a"], ["b"], ...]`. ([Release notes §8](docs/lmms-eval-0.7.md#8-flattened-jsonl-log-output))
+- **Single-instance flattening**: `generate_until` responses flattened from `[["text"]]` to `["text"]` at serialization time. Multi-choice `loglikelihood` tasks with N instances per doc remain `[["a"], ["b"], ...]`. ([Release notes §11](docs/lmms-eval-0.7.md#11-flattened-jsonl-log-output))
 - **Dedup preserved**: `resps` omitted when identical to `filtered_resps` after flattening.
 - **In-memory format unchanged**: `logged_samples` retains nested format for existing consumers (wandb logger, etc.).
 
