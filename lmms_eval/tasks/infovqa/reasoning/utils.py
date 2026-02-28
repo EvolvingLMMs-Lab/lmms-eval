@@ -1,4 +1,9 @@
+import json
+
+from loguru import logger as eval_logger
+
 from lmms_eval.api.metrics import anls
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks._task_utils.reasoning_utils import (
     extract_anwser_tag,
     format_reward,
@@ -36,3 +41,17 @@ def infovqa_reasoning_process_results(doc, results):
         "anls_acc_score": acc_score / n,
         "anls_format_score": format_score / n,
     }
+
+
+def infovqa_reasoning_test_process_results(doc, results):
+    pred = results[0]
+    questionId = doc["questionId"]
+    extracted_answer = extract_anwser_tag(pred).strip()
+    return {"submission": {"questionId": int(questionId), "answer": extracted_answer}}
+
+
+def infovqa_reasoning_test_aggregate_results(results, args):
+    file = generate_submission_file("infovqa_test_reasoning_for_submission.json", args)
+    with open(file, "w") as f:
+        json.dump(results, f)
+    eval_logger.info(f"Results saved to {file}")
