@@ -23,26 +23,56 @@ The benchmark is built from [AudioBench](https://github.com/AudioBench/AudioBenc
 
 | Task name | Condition | Options | Samples |
 |---|---|---|---:|
-| `xmod_bench_audio_image` | Audio | Image | 11,689 |
-| `xmod_bench_audio_text` | Audio | Text | 14,719 |
+| `xmod_bench_audio_image` | Audio | Image | 7,689 |
+| `xmod_bench_audio_text` | Audio | Text | 10,720 |
 | `xmod_bench_audio_video` | Audio | Video | 3,031 |
-| `xmod_bench_image_audio` | Image | Audio | 11,689 |
-| `xmod_bench_image_text` | Image | Text | 11,689 |
-| `xmod_bench_text_audio` | Text | Audio | 14,725 |
-| `xmod_bench_text_image` | Text | Image | 11,689 |
+| `xmod_bench_image_audio` | Image | Audio | 7,689 |
+| `xmod_bench_image_text` | Image | Text | 7,689 |
+| `xmod_bench_text_audio` | Text | Audio | 10,725 |
+| `xmod_bench_text_image` | Text | Image | 7,689 |
 | `xmod_bench_text_video` | Text | Video | 3,031 |
 | `xmod_bench_video_audio` | Video | Audio | 3,036 |
 | `xmod_bench_video_text` | Video | Text | 3,036 |
-| **`xmod_bench`** (group) | All | All | **88,334** |
+| **`xmod_bench`** (group) | All | All | **64,335** |
+
+## Sample Counts by Group and Subtask
+
+| Group | Subtask | Samples |
+|---|---|---:|
+| Perception | finegrained | 6,000 |
+| Perception | general_activities | 6,000 |
+| Perception | instruments | 6,000 |
+| Perception | instruments_comp | 3,000 |
+| Perception | natures | 6,000 |
+| **Perception total** | | **27,000** |
+| Spatial | 3D_movements | 2,646 |
+| Spatial | arrangements | 2,790 |
+| Spatial | panaroma | 2,355 |
+| **Spatial total** | | **7,791** |
+| Speech | recognition | 4,032 |
+| Speech | translation | 4,212 |
+| **Speech total** | | **8,244** |
+| Temporal | calculation | 3,000 |
+| Temporal | count | 3,000 |
+| Temporal | order | 3,000 |
+| **Temporal total** | | **9,000** |
+| External | emotion_classification | 4,200 |
+| External | movie_matching | 1,200 |
+| External | music_genre_classification | 6,000 |
+| External | singer_identification | 900 |
+| **External total** | | **12,300** |
+| **Grand total** | | **64,335** |
+
+Note: `perception/finegrained` and `perception/general_activities` each consist of 1,000 unique instances × 6 modality combinations. The same 1,000 instances are shared across all 6 modality JSONL files (cross-modal correspondence is preserved by `build_data.py`).
 
 ## Setup
 
 ### 1. Prepare the data
 
-Set the `AUDIOBENCH_ROOT` environment variable to point to your AudioBench root directory (defaults to `/home/xwang378/scratch/2025/AudioBench`):
+Set the `XMODBENCH` environment variable to point to your AudioBench root directory (defaults to `/home/xwang378/scratch/2025/AudioBench`):
 
 ```bash
-export AUDIOBENCH_ROOT=/path/to/AudioBench
+export XMODBENCH=/path/to/AudioBench
 ```
 
 The preprocessed JSONL files are stored in `data/` and already embedded in this task directory. They are generated from the raw AudioBench JSON files and have a unified schema.
@@ -50,13 +80,10 @@ The preprocessed JSONL files are stored in `data/` and already embedded in this 
 If you need to regenerate the JSONL files (e.g., after updating the raw data), run:
 
 ```bash
-python3 -c "
-import json, os
-
-TASKS_ROOT = '$AUDIOBENCH_ROOT/benchmark/tasks'
-OUT_DIR = 'lmms_eval/tasks/xmod_bench/data'
-# ... (see the preprocessing logic in utils.py comments)
-"
+python lmms_eval/tasks/xmod_bench/build_data.py \
+    --tasks-root $XMODBENCH/benchmark/tasks \
+    --out-dir lmms_eval/tasks/xmod_bench/data \
+    --seed 42
 ```
 
 ### 2. Run evaluation
@@ -66,7 +93,7 @@ OUT_DIR = 'lmms_eval/tasks/xmod_bench/data'
 python -m lmms_eval \
     --model qwen2_5_omni \
     --model_args pretrained=Qwen/Qwen2.5-Omni-7B \
-    --tasks xmod_bench_audio_text \
+    --tasks xmod_bench_image_text \
     --batch_size 1 \
     --limit 8
 ```

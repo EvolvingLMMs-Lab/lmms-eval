@@ -15,8 +15,8 @@ Dataset schema (per sample):
     "category": str  # optional
   }
 
-Media paths are relative to AUDIOBENCH_ROOT, e.g. "./benchmark/Data/vggss_audio_bench/foo.wav".
-Set the AUDIOBENCH_ROOT env var if your data lives somewhere other than the default.
+Media paths are relative to XMODBENCH, e.g. "./benchmark/Data/vggss_audio_bench/foo.wav".
+Set the XMODBENCH env var if your data lives somewhere other than the default.
 """
 
 import os
@@ -24,11 +24,53 @@ from collections import defaultdict
 from typing import Any
 
 import numpy as np
+import soundfile as sf
 from loguru import logger as eval_logger
+from PIL import Image
 
-AUDIOBENCH_ROOT = os.getenv("AUDIOBENCH_ROOT", "/home/xwang378/scratch/2025/AudioBench")
+XMODBENCH = os.getenv("XMODBENCH", "/home/xwang378/scratch/2025/AudioBench")
 
 LETTERS = ["A", "B", "C", "D"]
+
+# Map path prefix → group name (category looks like "01_perception/instruments")
+_PATH_PREFIX_TO_GROUP = {
+    "01_perception": "perception",
+    "02_spatial":    "spatial",
+    "03_speech":     "speech",
+    "04_temporal":   "temporal",
+    "05_exteral":    "external",   # typo in original data
+    "05_external":   "external",
+}
+
+# VGGSound finegrained plain-English category names → perception/finegrained
+_VGGSOUND_CATEGORIES = {
+    "animal sounds", "human activities", "human speech",
+    "musical instruments", "natural sounds",
+    "tools & machinery", "transportation", "urban sounds",
+}
+
+_GROUP_ORDER = ["perception", "spatial", "speech", "temporal", "external"]
+
+
+def _get_group_and_subtask(category: str) -> tuple[str, str]:
+    """Return (group, subtask) for a given category string.
+
+    Handles two formats:
+    - Path-style  : "01_perception/instruments"  → ("perception", "instruments")
+    - Plain English: "Animal Sounds"              → ("perception", "finegrained")
+    """
+    if "/" in category:
+        prefix, subtask = category.split("/", 1)
+        group = _PATH_PREFIX_TO_GROUP.get(prefix.lower(), "other")
+        return group, subtask
+
+    cat_lower = category.lower()
+    if cat_lower in _VGGSOUND_CATEGORIES:
+        return "perception", "finegrained"
+    if cat_lower == "general_activities":
+        return "perception", "general_activities"
+
+    return "other", category
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +85,34 @@ def resolve_path(relative_path: str) -> str:
     # Strip leading "./"
     if relative_path.startswith("./"):
         relative_path = relative_path[2:]
-    return os.path.join(AUDIOBENCH_ROOT, relative_path)
+    return os.path.join(XMODBENCH, relative_path)
+
+
+# ---------------------------------------------------------------------------
+# Media loading helpers
+# ---------------------------------------------------------------------------
+
+
+def _load_media(input_path: str, modality: str):
+    """Load a media file and return the Python object expected by generate_until.
+
+    - image → PIL.Image.Image
+    - audio → {"array": np.ndarray (float32, mono), "sampling_rate": int}
+    - video → str (absolute path; the model handles decoding)
+    """
+    abs_path = resolve_path(input_path)
+    mod = modality.lower()
+    if mod == "image":
+        return Image.open(abs_path).convert("RGB")
+    elif mod == "audio":
+        array, sr = sf.read(abs_path, dtype="float32")
+        if array.ndim > 1:          # stereo → mono
+            array = array.mean(axis=1)
+        return {"array": array, "sampling_rate": sr}
+    elif mod == "video":
+        return abs_path             # model handles video decoding
+    else:
+        raise ValueError(f"Unknown modality: {modality}")
 
 
 # ---------------------------------------------------------------------------
@@ -52,20 +121,23 @@ def resolve_path(relative_path: str) -> str:
 
 
 def xmod_bench_doc_to_visual(doc: dict) -> list:
-    """Return an ordered list of all non-text media paths.
+    """Return an ordered list of all non-text media as Python objects.
 
     Order: [condition, optA, optB, optC, optD]  (text items are skipped).
+    - image  → PIL.Image.Image
+    - audio  → {"array": np.ndarray, "sampling_rate": int}
+    - video  → str path
     """
     result = []
 
     cond = doc["conditions"]
     if cond["modality"].lower() != "text":
-        result.append(resolve_path(cond["input"]))
+        result.append(_load_media(cond["input"], cond["modality"]))
 
     for letter in LETTERS:
         opt = doc["options"][letter]
         if opt["modality"].lower() != "text":
-            result.append(resolve_path(opt["input"]))
+            result.append(_load_media(opt["input"], opt["modality"]))
 
     return result
 
@@ -211,12 +283,23 @@ def xmod_bench_process_results(doc: dict, results: list) -> dict:
     correct = int(pred == gold) if pred is not None else 0
 
     # Derive category: use explicit field, or fall back to modality combo
-    cond_mod = doc["conditions"]["modality"].lower()
-    opt_mod = list(doc["options"].values())[0]["modality"].lower()
+    def _norm(mod: str) -> str:
+        m = mod.lower()
+        return "vision" if m in ("image", "video") else m
+
+    cond_mod = _norm(doc["conditions"]["modality"])
+    opt_mod  = _norm(list(doc["options"].values())[0]["modality"])
     modality_combo = f"{cond_mod}->{opt_mod}"
     category = doc.get("category") or modality_combo
+    group, subtask = _get_group_and_subtask(category)
 
-    return {"xmod_bench_score": {"category": category, "modality": modality_combo, "correct": correct}}
+    return {"xmod_bench_score": {
+        "category": category,
+        "group":    group,
+        "subtask":  subtask,
+        "modality": modality_combo,
+        "correct":  correct,
+    }}
 
 
 # ---------------------------------------------------------------------------
@@ -233,33 +316,45 @@ def xmod_bench_aggregate_results(results: list) -> float:
     total_correct = sum(r["correct"] for r in results)
     overall_acc = total_correct / total * 100.0
 
-    # Per-category
-    cat_correct: dict[str, int] = defaultdict(int)
-    cat_total: dict[str, int] = defaultdict(int)
-    # Per-modality-combo
-    mod_correct: dict[str, int] = defaultdict(int)
-    mod_total: dict[str, int] = defaultdict(int)
+    grp_correct:     dict[str, int] = defaultdict(int)
+    grp_total:       dict[str, int] = defaultdict(int)
+    subtask_correct: dict[str, int] = defaultdict(int)  # keyed "group/subtask"
+    subtask_total:   dict[str, int] = defaultdict(int)
+    mod_correct:     dict[str, int] = defaultdict(int)
+    mod_total:       dict[str, int] = defaultdict(int)
 
     for r in results:
-        cat = r["category"]
+        grp = r["group"]
+        sub = r["subtask"]
         mod = r["modality"]
-        cat_correct[cat] += r["correct"]
-        cat_total[cat] += 1
-        mod_correct[mod] += r["correct"]
-        mod_total[mod] += 1
+        key = f"{grp}/{sub}"
+        grp_correct[grp]         += r["correct"]
+        grp_total[grp]           += 1
+        subtask_correct[key]     += r["correct"]
+        subtask_total[key]       += 1
+        mod_correct[mod]         += r["correct"]
+        mod_total[mod]           += 1
 
     eval_logger.info("=" * 60)
     eval_logger.info(f"XModBench Overall Accuracy: {overall_acc:.2f}%  ({total_correct}/{total})")
+
+    eval_logger.info("\nPer group accuracy:")
+    for grp in _GROUP_ORDER + sorted(g for g in grp_total if g not in _GROUP_ORDER):
+        if grp not in grp_total:
+            continue
+        acc = grp_correct[grp] / grp_total[grp] * 100.0
+        eval_logger.info(f"  {grp:15s}: {acc:6.2f}%  ({grp_correct[grp]}/{grp_total[grp]})")
+
+    eval_logger.info("\nPer subtask accuracy:")
+    for grp in _GROUP_ORDER + sorted(g for g in grp_total if g not in _GROUP_ORDER):
+        for key in sorted(k for k in subtask_total if k.startswith(grp + "/")):
+            acc = subtask_correct[key] / subtask_total[key] * 100.0
+            eval_logger.info(f"  {key:40s}: {acc:6.2f}%  ({subtask_correct[key]}/{subtask_total[key]})")
 
     eval_logger.info("\nPer modality-combo accuracy:")
     for mod in sorted(mod_total):
         acc = mod_correct[mod] / mod_total[mod] * 100.0
         eval_logger.info(f"  {mod:30s}: {acc:6.2f}%  ({mod_correct[mod]}/{mod_total[mod]})")
-
-    eval_logger.info("\nPer category accuracy:")
-    for cat in sorted(cat_total):
-        acc = cat_correct[cat] / cat_total[cat] * 100.0
-        eval_logger.info(f"  {cat:40s}: {acc:6.2f}%  ({cat_correct[cat]}/{cat_total[cat]})")
 
     eval_logger.info("=" * 60)
     return round(overall_acc, 5)
