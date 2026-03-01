@@ -29,17 +29,17 @@
 
 Benchmarks decide what gets built next. A model team that trusts its eval numbers can focus on real improvements instead of chasing noise. But the multimodal evaluation ecosystem is fragmented - scattered datasets, inconsistent post-processing, and single-number accuracy scores that hide whether a gain is real or random. Two teams evaluating the same model on the same benchmark routinely report different results.
 
+We believe [better evals lead to better models](https://arxiv.org/pdf/2211.09110). Good evaluation maps the border of what models can do and shapes what we build next.
+
 We are building `lmms-eval` and focusing on three core principles:
 
-- **Reproducibility** - One pipeline, deterministic results. Same model + same benchmark = same numbers, every time.
-- **Large-scale Throughput** - Evaluation should not be the bottleneck. We grind everything - async serving, adaptive batching, video I/O optimizations - to keep your GPUs saturated end to end.
-- **Trustworthy** - We dive deep into what makes an eval result meaningful - not just accuracy, but confidence intervals, clustered standard errors, paired comparisons, and ongoing research into evaluation methodology itself. The goal is results you can trust enough to act on.
-
-We believe [better evals lead to better models](https://arxiv.org/pdf/2211.09110). Good evaluation maps the border of what models can do and shapes what we build next.
+- **Reproducible** - One pipeline, deterministic results. Same model, same benchmark, same numbers, every time.
+- **Efficient** - Evaluation should not be the bottleneck, even at large scale. Async serving, adaptive batching, and video I/O optimizations keep your GPUs saturated end to end.
+- **Trustworthy** - Not just accuracy. Confidence intervals, clustered standard errors, paired comparisons, and ongoing research into evaluation methodology. Results you can trust enough to act on.
 
 ## What's New
 
-**v0.7** (Feb 2026) - Operational simplicity and . 25+ new tasks, unified video decode (TorchCodec, up to 3.58x faster), YAML config-driven evaluation (`--config`), reasoning tag stripping for `<think>` models, safety baselines, and token efficiency metrics. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
+**v0.7** (Feb 2026) - Operational simplicity and pipeline maturity. 25+ new tasks across 8 domains, 2 new model backends, agentic task evaluation (`generate_until_agentic`), video I/O overhaul with TorchCodec (up to 3.58x faster), Lance-backed video distribution on Hugging Face, safety/red-teaming baselines, efficiency metrics (per-sample token counts, run-level throughput), and streamlined flattened JSONL log output for cleaner post-analysis. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
 
 **v0.6** (Feb 2026) - Evaluation as a service. Standalone HTTP eval server, ~7.5x throughput over v0.5, statistically grounded results (CI, paired t-test), 50+ new tasks. [Release notes](docs/releases/lmms-eval-0.6.md) | [Changelog](docs/releases/CHANGELOG.md).
 
