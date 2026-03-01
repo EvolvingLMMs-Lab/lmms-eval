@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import platform
+import re
 import signal
 import socket
 import subprocess
@@ -66,6 +67,20 @@ def get_repo_root() -> str:
         return ""
 
 
+def _detect_env_setup() -> str:
+    """Auto-detect environment activation command.
+
+    Builds: cd <repo_root> && source .venv/bin/activate
+    Returns empty string if no venv found.
+    """
+    repo_root = get_repo_root()
+    if repo_root:
+        activate = Path(repo_root) / ".venv" / "bin" / "activate"
+        if activate.exists():
+            return f"cd {repo_root} && source .venv/bin/activate"
+    return ""
+
+
 def get_system_info() -> dict[str, str]:
     return {
         "hostname": socket.gethostname(),
@@ -101,6 +116,7 @@ class EvalRequest(BaseModel):
     log_samples: bool = True
     verbosity: str = "INFO"
     device: str | None = None
+    env_setup: str = ""
 
 
 class EvalStartResponse(BaseModel):
@@ -119,6 +135,7 @@ class PreviewRequest(BaseModel):
     log_samples: bool = True
     verbosity: str = "INFO"
     device: str | None = None
+    env_setup: str = ""
 
 
 class PreviewResponse(BaseModel):
@@ -136,6 +153,7 @@ class ExportYamlRequest(BaseModel):
     log_samples: bool = True
     verbosity: str = "INFO"
     device: str | None = None
+    env_setup: str = ""
 
 
 class ExportYamlResponse(BaseModel):
@@ -169,6 +187,7 @@ async def health() -> dict[str, Any]:
         "version": get_version(),
         "git": get_git_info(),
         "system": get_system_info(),
+        "env_setup": _detect_env_setup(),
     }
 
 
@@ -193,6 +212,37 @@ async def get_tasks() -> list[TaskInfo]:
         )
         for task_id, name in tasks
     ]
+
+
+@app.get("/tasks/{task_id}/yaml")
+async def get_task_yaml(task_id: str) -> dict[str, str]:
+    tasks_dir = Path(__file__).resolve().parent.parent / "tasks"
+    if not tasks_dir.exists():
+        raise HTTPException(status_code=500, detail="Tasks directory not found")
+
+    task_pattern = re.compile(rf"^\s*task\s*:\s*[\"']?{re.escape(task_id)}[\"']?\s*$", re.MULTILINE)
+    yaml_files = sorted({*tasks_dir.rglob("*.yaml"), *tasks_dir.rglob("*.yml")})
+
+    for yaml_file in yaml_files:
+        try:
+            yaml_content = yaml_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+
+        if task_pattern.search(yaml_content):
+            repo_root = Path(__file__).resolve().parents[2]
+            try:
+                relative_path = str(yaml_file.relative_to(repo_root))
+            except ValueError:
+                relative_path = str(yaml_file)
+
+            return {
+                "task_id": task_id,
+                "yaml": yaml_content,
+                "path": relative_path,
+            }
+
+    raise HTTPException(status_code=404, detail=f"Task YAML not found for '{task_id}'")
 
 
 def _normalize_env_line(line: str) -> str | None:
@@ -256,9 +306,14 @@ def _build_command(request: EvalRequest | PreviewRequest) -> str:
     if request.device:
         parts.append(f"--device {request.device}")
     command = " \\\n    ".join(parts)
-    env_exports = _build_env_exports(request.env_vars)
-    if env_exports:
-        return "\n".join([*env_exports, command])
+    # Collect all prefix lines: env_setup first, then env_vars exports
+    prefix_lines: list[str] = []
+    env_setup = request.env_setup or _detect_env_setup()
+    if env_setup:
+        prefix_lines.append(env_setup)
+    prefix_lines.extend(_build_env_exports(request.env_vars))
+    if prefix_lines:
+        return "\n".join([*prefix_lines, command])
     return command
 
 
@@ -280,10 +335,15 @@ def _build_shell_command(request: EvalRequest) -> str:
     if request.device:
         parts.extend(["--device", request.device])
     command = " ".join(parts)
-    env_exports = _build_env_exports(request.env_vars)
-    if env_exports:
-        export_prefix = " && ".join(env_exports)
-        return f"{export_prefix} && {command}"
+    # Collect all prefix commands: env_setup first, then env_vars exports
+    prefix_parts: list[str] = []
+    env_setup = request.env_setup or _detect_env_setup()
+    if env_setup:
+        prefix_parts.append(env_setup)
+    prefix_parts.extend(_build_env_exports(request.env_vars))
+    if prefix_parts:
+        prefix = " && ".join(prefix_parts)
+        return f"{prefix} && {command}"
     return command
 
 

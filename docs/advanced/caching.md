@@ -127,7 +127,7 @@ The cache is implemented in `lmms_eval.api.model.lmms` via:
 - `get_response_from_cache()` to split incoming requests into “already cached” vs “not cached”
 - `add_request_response_to_cache()` to append new results as they are produced
 
-Models that call these APIs (for example `async_openai_compatible_chat`) automatically benefit from caching without any code changes in user scripts. You will need to use this api in your `generate_until` to cache and reload cache.
+Models that call these APIs (for example `async_openai`) automatically benefit from caching without any code changes in user scripts. You will need to use this api in your `generate_until` to cache and reload cache.
 
 ### Minimal example (inside a model's `generate_until`)
 
@@ -172,14 +172,14 @@ Notes:
 
 ### How it works at runtime
 
-For models wired to the cache API (e.g., `async_openai_compatible_chat`):
+For models wired to the cache API (e.g., `async_openai`):
 - At the beginning of `generate_until(...)` the model calls `load_cache()` and then `get_response_from_cache(requests)`.
 - Cached items are returned immediately; only the remaining requests are forwarded to the backend.
 - After each response is produced, `add_request_response_to_cache(...)` appends a JSONL record.
 
 The cache key is the tuple `(task_name, doc_id)`. Ensure your task produces stable `doc_id`s across runs.
 
-### Example: use with async_openai_compatible_chat
+### Example: use with async_openai
 
 ```bash
 export OPENAI_API_BASE="http://localhost:8000/v1"

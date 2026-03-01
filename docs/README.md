@@ -2,12 +2,28 @@
 
 This documentation covers every layer of `lmms-eval` — from running your first evaluation to adding custom models and tasks. The framework evaluates large multimodal models across image, video, and audio benchmarks with a single unified pipeline.
 
+## Table of Contents
+
+- [How the Evaluation Pipeline Works](#how-the-evaluation-pipeline-works)
+- [Why it's Efficient and Trustworthy](#why-its-efficient-and-trustworthy)
+  - [Efficient](#efficient)
+  - [Trustworthy](#trustworthy)
+- [Getting Started](#getting-started)
+- [Extending the Framework](#extending-the-framework)
+  - [Adding a Model](#adding-a-model)
+  - [Adding a Task](#adding-a-task)
+- [Using lmms-eval as a Library](#using-lmms-eval-as-a-library)
+- [Performance and Caching](#performance-and-caching)
+- [Task Catalog](#task-catalog)
+- [Release Notes](#release-notes)
+- [Additional Resources](#additional-resources)
+
 ## How the Evaluation Pipeline Works
 
 Every evaluation follows the same six-stage pipeline. Each stage has dedicated documentation, and failures at any stage produce clear error messages indicating what went wrong.
 
 ```
-User input: --model openai_compatible --tasks mmmu_val,video_mmmu,longvideobench_val_v
+User input: --model openai --tasks mmmu_val,video_mmmu,longvideobench_val_v
          │
          ▼
     ┌─ CLI Parsing ─────────────── commands.md
@@ -35,7 +51,7 @@ A minimal evaluation runs the entire pipeline with a single command. This exampl
 export OPENAI_API_KEY="your-api-key"
 
 python -m lmms_eval \
-  --model openai_compatible \
+  --model openai \
   --model_args model_version=gpt-4.1-mini \
   --tasks mmmu_val \
   --batch_size 1 \
@@ -46,7 +62,7 @@ The same pattern works for any OpenAI-compatible endpoint (OpenRouter, Azure, lo
 
 ```bash
 python -m lmms_eval \
-  --model openai_compatible \
+  --model openai \
   --model_args model_version=gpt-4.1-mini \
   --tasks mmmu_val,video_mmmu,longvideobench_val_v \
   --batch_size 1 \
@@ -54,6 +70,35 @@ python -m lmms_eval \
   --log_samples \
   --output_path ./results/
 ```
+
+## Why it's Efficient and Trustworthy
+
+The pipeline above is designed to be fast enough to iterate on and rigorous enough to trust. This section summarizes the concrete mechanisms that back those claims. Each links to deeper documentation.
+
+### Efficient
+
+Evaluation should not be the bottleneck. Four layers of optimization keep GPUs and API endpoints saturated end to end.
+
+| Layer | Mechanism | Impact |
+|-------|-----------|--------|
+| **API throughput** | Adaptive concurrency control with refill scheduling, prefix-aware queueing, and retry/backoff decoupling. | ~7.5x throughput over v0.5 on fixed benchmarks ([v0.6 release notes](releases/lmms-eval-0.6.md)). |
+| **Response caching** | SQLite + JSONL write-ahead log stores deterministic responses (`temperature=0`, `do_sample=False`). Subsequent runs skip inference entirely for cached samples. | Zero redundant model calls on repeated or resumed runs ([caching guide](advanced/caching.md)). |
+| **Video I/O** | TorchCodec multi-threaded decode replaces single-threaded PyAV. Lance-backed blob storage on Hugging Face enables single-IOP random access per video. | Up to 3.58x faster frame decode; eliminates full-table scans ([v0.7 release notes](releases/lmms-eval-0.7.md)). |
+| **Prefix KV reuse** | Requests are clustered by shared media and sorted by length so vLLM/SGLang can maximize KV cache hits across a batch. | Fewer redundant prefill computations on shared-image/video tasks. |
+
+The async pipeline decouples model inference from metric scoring. Model outputs are persisted immediately, and scoring runs independently - so a crash after inference does not lose results, and judge-stage work (exact match, LLM-as-judge) can run on a separate machine or at a later time.
+
+### Trustworthy
+
+A benchmark score is only useful if it is reproducible and statistically grounded. The framework provides four categories of trust guarantees.
+
+**Reproducibility.** Every run is seeded (`--seed` controls Python `random`, NumPy, and PyTorch) and every task config is fingerprinted. The cache key includes a SHA-256 of the schema version, task YAML, generation kwargs, and document ID - so any change to the prompt, parameters, or task definition automatically invalidates stale results. The [test suite](../test/README.md) includes prompt stability snapshots for 8 classic benchmarks to catch unintended prompt regressions.
+
+**Statistical rigor.** Point estimates hide uncertainty. The framework reports confidence intervals and supports clustered standard errors for benchmarks with correlated questions (e.g., multiple questions per video). Paired comparison with a baseline model removes question-difficulty variance, isolating the actual model difference with a p-value - replacing hand-waving with verifiable claims. Power analysis tools help determine the minimum sample size needed to detect a given improvement. See the [v0.6 release notes](releases/lmms-eval-0.6.md) for the full statistical methodology.
+
+**Cache integrity.** Responses are validated before storage: `None`, empty strings, and malformed loglikelihood tuples are rejected. The JSONL write-ahead log is fsynced before the SQLite upsert, so a crash between the two writes is recovered on the next startup. Per-rank files prevent write contention in distributed runs. Details in the [caching guide](advanced/caching.md).
+
+**Clean scoring.** Reasoning models (Qwen3-VL, DeepSeek-R1, QwQ) emit `<think>...</think>` blocks that must not leak into metric computation. The pipeline strips reasoning tags before scoring and preserves the raw output in a separate `resps` field for analysis. This is configured globally via `--reasoning_tags` or per-task in the YAML config. See the [commands guide](getting-started/commands.md) for usage.
 
 ## Getting Started
 
@@ -129,7 +174,7 @@ uv run lmms-eval-ui          # opens browser, requires Node.js 18+
 from lmms_eval import evaluator
 
 results = evaluator.simple_evaluate(
-    model="openai_compatible",
+    model="openai",
     model_args="model_version=gpt-4.1-mini",
     tasks=["mmmu_val", "video_mmmu", "longvideobench_val_v"],
     batch_size=1,
@@ -148,7 +193,7 @@ The response cache stores only deterministic requests (`temperature=0`, `do_samp
 
 ```bash
 python -m lmms_eval \
-  --model openai_compatible \
+  --model openai \
   --model_args model_version=gpt-4.1-mini \
   --tasks mmmu_val,video_mmmu \
   --use_cache ./eval_cache
@@ -156,20 +201,22 @@ python -m lmms_eval \
 
 ## Task Catalog
 
-The [Current Tasks](advanced/current_tasks.md) page lists every registered evaluation task across all modalities. The framework ships with 100+ tasks. Three recommended starting benchmarks:
+The [Current Tasks](advanced/current_tasks.md) page lists every registered evaluation task across all modalities. The framework ships with 100+ tasks across five categories:
 
-| Benchmark | Task Name | Modality | What It Tests |
-|-----------|-----------|----------|---------------|
-| **MMMU** | `mmmu_val` | Image | College-level multimodal reasoning across 30 subjects. |
-| **Video-MMMU** | `video_mmmu` | Video | Knowledge acquisition from multi-discipline professional videos. |
-| **LongVideoBench** | `longvideobench_val_v` | Long Video | Understanding of extended video content with temporal reasoning. |
-
-Beyond these, the full catalog covers:
-
-- **Image understanding** — MME, MMBench, AI2D, ScienceQA, OCRBench, MathVista, and more.
-- **Video understanding** — VideoMME, EgoSchema, MVBench, PerceptionTest.
-- **Audio understanding** — AIR-Bench, Clotho-AQA, LibriSpeech.
-- **Agentic evaluation** — Multi-round tool-use scenarios with stateful `doc_to_text` callbacks.
+| Category | Benchmark | Task Name | What It Tests |
+|----------|-----------|-----------|---------------|
+| **Image** | MMMU | `mmmu_val` | College-level multimodal reasoning across 30 subjects. |
+| | MME | `mme` | Perception and cognition across 14 subtasks. |
+| | MathVista | `mathvista_testmini` | Mathematical reasoning with visual context. |
+| | MMBench | `mmbench_en` | Multi-ability benchmark covering 20 fine-grained skills. |
+| **Video** | Video-MMMU | `video_mmmu` | Knowledge acquisition from multi-discipline professional videos. |
+| | VideoMME | `videomme` | Comprehensive video understanding across diverse content types. |
+| | EgoSchema | `egoschema` | Long-form egocentric video reasoning. |
+| **Long Video** | LongVideoBench | `longvideobench_val_v` | Extended video content with temporal reasoning. |
+| **Audio** | AIR-Bench | `air_bench_chat` | Audio understanding across speech, music, and sound. |
+| | LibriSpeech | `librispeech` | Automatic speech recognition accuracy. |
+| **Agentic** | Vending-Bench 2 | `vending_bench2` | Multi-step tool-use with deterministic vending simulator (`generate_until_agentic`). |
+| | τ2-Bench | `tau2_bench_telecom` | Telecom-domain tool-use with state tracking and `<tool_call>`/`<submit>` protocol. |
 
 ## Release Notes
 

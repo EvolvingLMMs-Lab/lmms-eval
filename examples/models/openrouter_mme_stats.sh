@@ -23,7 +23,7 @@ echo "[INFO] model=${MODEL_VERSION} tasks=${TASKS} repeats=${REPEATS} limit=${LI
 echo "[INFO] output_path=${OUTPUT_PATH}"
 
 python3 -m lmms_eval \
-  --model openai_compatible \
+  --model openai \
   --model_args "model_version=${MODEL_VERSION}" \
   --tasks "${TASKS}" \
   --batch_size "${BATCH_SIZE}" \

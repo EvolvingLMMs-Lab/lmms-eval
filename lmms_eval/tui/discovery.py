@@ -91,18 +91,18 @@ def discover_models() -> list[tuple[str, str]]:
         models: dict[str, str] = {}
         for model_id in list_available_models(include_aliases=False):
             manifest = get_model_manifest(model_id)
-            class_path = manifest.chat_class_path or manifest.simple_class_path
-            class_name = class_path.rsplit(".", 1)[-1] if class_path else model_id
-            models[model_id] = _create_model_display_name(model_id, class_name)
+            aliases = manifest.aliases if manifest else ()
+            models[model_id] = _create_model_display_name(model_id, aliases)
 
         return sorted(models.items(), key=lambda x: x[0])
     except ImportError:
         return []
 
 
-def _create_model_display_name(model_id: str, class_name: str, is_chat: bool = False) -> str:
-    name = class_name.replace("_", " ")
-    return name
+def _create_model_display_name(model_id: str, aliases: tuple[str, ...] = ()) -> str:
+    if aliases:
+        return f"{model_id} ({', '.join(aliases)})"
+    return model_id
 
 
 def get_popular_tasks() -> list[tuple[str, str]]:
@@ -122,14 +122,15 @@ def get_popular_tasks() -> list[tuple[str, str]]:
 
 def get_popular_models() -> list[tuple[str, str]]:
     return [
-        ("openai", "OpenAI Compatible API"),
-        ("qwen2_5_vl", "Qwen2.5-VL"),
-        ("qwen2_5_vl_chat", "Qwen2.5-VL Chat"),
-        ("llava_onevision", "LLaVA-OneVision"),
-        ("llava", "LLaVA"),
-        ("internvl2", "InternVL2"),
-        ("claude", "Claude API"),
-        ("gemini_api", "Gemini API"),
+        ("openai", "openai (openai_compatible, openai_compatible_chat)"),
+        ("async_openai", "async_openai (async_openai_compatible_chat, async_openai_compatible)"),
+        ("qwen2_5_vl", "qwen2_5_vl"),
+        ("qwen3_vl", "qwen3_vl"),
+        ("vllm", "vllm"),
+        ("sglang", "sglang"),
+        ("llava_hf", "llava_hf"),
+        ("internvl_hf", "internvl_hf"),
+        ("huggingface", "huggingface"),
     ]
 
 

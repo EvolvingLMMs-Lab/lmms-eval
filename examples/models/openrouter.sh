@@ -20,7 +20,7 @@ echo "[INFO] output_path=${OUTPUT_PATH}"
 echo "[INFO] agentic_trace_mode=${AGENTIC_TRACE_MODE}"
 
 uv run python -m lmms_eval \
-  --model openai_compatible \
+  --model openai \
   --model_args "model_version=${MODEL_VERSION}" \
   --tasks "${TASKS}" \
   --batch_size "${BATCH_SIZE}" \

@@ -37,6 +37,8 @@ We are building `lmms-eval` and focusing on three core principles:
 - **Efficient** - Evaluation should not be the bottleneck, even at large scale. Async serving, adaptive batching, and video I/O optimizations keep your GPUs saturated end to end.
 - **Trustworthy** - Not just accuracy. Confidence intervals, clustered standard errors, paired comparisons, and ongoing research into evaluation methodology. Results you can trust enough to act on.
 
+For how the pipeline works and the concrete mechanisms behind these principles, see [How the Evaluation Pipeline Works](docs/README.md#how-the-evaluation-pipeline-works) and [Why it's Efficient and Trustworthy](docs/README.md#why-its-efficient-and-trustworthy).
+
 ## What's New
 
 **v0.7** (Feb 2026) - Operational simplicity and pipeline maturity. 25+ new tasks across 8 domains, 2 new model backends, agentic task evaluation (`generate_until_agentic`), video I/O overhaul with TorchCodec (up to 3.58x faster), Lance-backed video distribution on Hugging Face, safety/red-teaming baselines, efficiency metrics (per-sample token counts, run-level throughput), and streamlined flattened JSONL log output for cleaner post-analysis. [Release notes](docs/releases/lmms-eval-0.7.md) | [Changelog](docs/releases/CHANGELOG.md).
