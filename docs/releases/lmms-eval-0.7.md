@@ -1,11 +1,6 @@
 # LMMs-Eval v0.7
 
-v0.7 makes lmms-eval easier to operate and ready for production-tooling usage. The theme is **operational simplicity** for users and **pipeline maturity** — the evaluator now handles:
-- injecting prompts and parsing outputs from reasoning models
-- image/video decode optimization
-- efficiency metrics
-
-Fewer flags to remember, fewer things that go wrong, and a single file that captures your entire experiment.
+v0.7 makes lmms-eval easier to operate and ready for production-tooling usage. The theme is **operational simplicity** for users and **pipeline maturity**, here's what we do.
 
 ## Table of Contents
 
