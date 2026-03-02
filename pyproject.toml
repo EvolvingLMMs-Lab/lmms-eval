@@ -150,6 +150,7 @@ all = [
 ]
 
 [tool.setuptools.package-data]
+"lmms_eval" = ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.txt"]
 "lmms_eval.tui.web.dist" = ["**/*"]
 "lmms_eval.tui.web.dist.assets" = ["**/*"]
 
