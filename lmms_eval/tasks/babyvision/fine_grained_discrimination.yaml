@@ -1,7 +1,7 @@
 # BabyVision Fine-grained Discrimination Task
 dataset_path: parquet
 dataset_kwargs:
-  data_files: hf://datasets/kkv233/lmms-eval-dataset/babyvision/babyvision_first2types_all.parquet
+  data_files: hf://datasets/kkv233/unig2u_dataset/babyvision/babyvision_first2types_all.parquet
 task: "babyvision_fine_grained"
 test_split: train
 output_type: generate_until

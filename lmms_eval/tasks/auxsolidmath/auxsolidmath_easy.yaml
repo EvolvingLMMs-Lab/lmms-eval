@@ -1,6 +1,6 @@
 dataset_path: parquet
 dataset_kwargs:
-  data_files: hf://datasets/kkv233/lmms-eval-dataset/auxsolidmath/auxsolidmath_test_easy_first100.parquet
+  data_files: hf://datasets/kkv233/unig2u_dataset/auxsolidmath/auxsolidmath_test_easy_first100.parquet
 task: "auxsolidmath_easy"
 test_split: train
 output_type: generate_until

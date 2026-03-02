@@ -1,7 +1,7 @@
 # RealUnify Mental Tracking Task - Visual CoT Version
 dataset_path: parquet
 dataset_kwargs:
-  data_files: hf://datasets/kkv233/lmms-eval-dataset/realunify/realunify_mental_tracking.parquet
+  data_files: hf://datasets/kkv233/unig2u_dataset/realunify/realunify_mental_tracking.parquet
 task: "realunify_mental_tracking_visual_cot"
 test_split: train
 output_type: generate_until
