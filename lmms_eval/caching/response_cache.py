@@ -24,8 +24,8 @@ import inspect
 import json
 import os
 import sqlite3
-import urllib.parse
 import time
+import urllib.parse
 from functools import partial
 from typing import Any, Dict, List, Optional, Union
 
@@ -50,7 +50,7 @@ CACHE_RELEVANT_KEYS = frozenset(
     }
 )
 
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 
 def _short_hash(value: str) -> str:
@@ -212,6 +212,7 @@ def compute_cache_key(
     task_fingerprint: str = "",
     content_hash: str = "",
     model_fingerprint_hash: str = "",
+    eval_version: str = "",
 ) -> str:
     """Deterministic SHA-256 cache key for a model response.
 
@@ -220,6 +221,7 @@ def compute_cache_key(
     requests that share the same (task_name, doc_id, idx).
     ``task_fingerprint`` enables automatic invalidation on YAML/prompt changes.
     ``model_fingerprint_hash`` ensures key-level model adapter isolation.
+    ``eval_version`` isolates cache entries across lmms-eval releases.
     """
     payload = {
         "v": _SCHEMA_VERSION,
@@ -235,6 +237,8 @@ def compute_cache_key(
         payload["tf"] = task_fingerprint
     if model_fingerprint_hash:
         payload["mfh"] = model_fingerprint_hash
+    if eval_version:
+        payload["ev"] = eval_version
     data = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
@@ -272,12 +276,14 @@ class ResponseCache:
         model_fingerprint: str = "",
         task_fingerprints: Optional[Dict[str, str]] = None,
         shared_db_path: Optional[str] = None,
+        eval_version: str = "",
     ):
         self.db_path = db_path
         self.audit_path = audit_path
         self.model_fingerprint = model_fingerprint
         self._model_fingerprint_hash = _short_hash(model_fingerprint)
         self._task_fingerprints: Dict[str, str] = task_fingerprints or {}
+        self._eval_version = eval_version
 
         self.db = sqlite3.connect(db_path, timeout=30)
         self.db.execute("PRAGMA journal_mode=WAL")
@@ -289,6 +295,12 @@ class ResponseCache:
         if self._model_fingerprint_hash:
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
         self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
+        if eval_version:
+            # Warn if DB was written by a different lmms-eval version
+            row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
+            if row and row[0] != eval_version:
+                eval_logger.warning(f"ResponseCache: DB was last written by lmms-eval {row[0]}, " f"current version is {eval_version}. Cache keys now include version \u2014 " f"old entries will not match (safe, but no reuse).")
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", eval_version))
         self.db.commit()
 
         # Optional shared (read-only) DB for two-tier caching.
@@ -311,6 +323,7 @@ class ResponseCache:
         self._hits_shared = 0
         self._misses = 0
         self._skipped = 0
+
     def _replay_audit_log(self) -> None:
         """Replay JSONL entries missing from SQLite (crash recovery)."""
         if not os.path.exists(self.audit_path):
@@ -360,6 +373,7 @@ class ResponseCache:
             except Exception:
                 pass  # shared DB failure is non-fatal
         return None
+
     def _log_to_audit(
         self,
         request_type: str,
@@ -399,6 +413,8 @@ class ResponseCache:
             record["content_hash"] = content_hash
         if model_fingerprint_hash:
             record["model_fingerprint_hash"] = model_fingerprint_hash
+        if self._eval_version:
+            record["eval_version"] = self._eval_version
         self._audit_file.write(json.dumps(record, ensure_ascii=False) + "\n")
         self._audit_file.flush()
         os.fsync(self._audit_file.fileno())
@@ -470,6 +486,7 @@ class ResponseCache:
                 content_hash=ch,
                 task_fingerprint=tf,
                 model_fingerprint_hash=self._model_fingerprint_hash,
+                eval_version=self._eval_version,
             )
             cached = self._lookup(cache_key)
             if cached is not None:
@@ -503,6 +520,7 @@ class ResponseCache:
                         content_hash=ch,
                         task_fingerprint=tf,
                         model_fingerprint_hash=self._model_fingerprint_hash,
+                        eval_version=self._eval_version,
                     )
                     if deterministic
                     else ""
@@ -561,6 +579,7 @@ class ResponseCache:
                 self._shared_db = None
         except Exception:
             pass
+
     def __del__(self):
         try:
             self.close()
@@ -665,17 +684,11 @@ class ResponseCache:
         """
         # Merge SQLite shards
         merged_entries = ResponseCache.merge_shards(shard_db_paths, target_db_path)
-        eval_logger.info(
-            f"ResponseCache: consolidated {merged_entries} entries from "
-            f"{len(shard_db_paths)} shard(s) into {target_db_path}"
-        )
+        eval_logger.info(f"ResponseCache: consolidated {merged_entries} entries from " f"{len(shard_db_paths)} shard(s) into {target_db_path}")
 
         # Merge JSONL audit logs
         merged_lines = ResponseCache.merge_audit_logs(shard_audit_paths, target_audit_path)
-        eval_logger.info(
-            f"ResponseCache: consolidated {merged_lines} audit entries from "
-            f"{len(shard_audit_paths)} log(s) into {target_audit_path}"
-        )
+        eval_logger.info(f"ResponseCache: consolidated {merged_lines} audit entries from " f"{len(shard_audit_paths)} log(s) into {target_audit_path}")
 
         # Cleanup shard files
         if cleanup:
