@@ -304,15 +304,19 @@ def simple_evaluate(
     world_size = int(os.environ.get("WORLD_SIZE", 1))
 
     response_cache = None
-    _cache_target_db = None      # final consolidated .db path (user-specified)
-    _cache_write_db = None       # DB path used for writes during evaluation
+    _cache_target_db = None  # final consolidated .db path (user-specified)
+    _cache_write_db = None  # DB path used for writes during evaluation
     _cache_write_audit = None
     _cache_target_audit = None
-    _cache_shared_db = None      # read-only shared DB for two-tier cache (may be None)
-    _cache_is_two_tier = False   # True when local scratch != target (NFS case)
-    _cache_staging_dir = None    # shared staging dir for multi-node two-tier merges
+    _cache_shared_db = None  # read-only shared DB for two-tier cache (may be None)
+    _cache_is_two_tier = False  # True when local scratch != target (NFS case)
+    _cache_staging_dir = None  # shared staging dir for multi-node two-tier merges
     if use_cache is not None:
-        from lmms_eval.caching.fs_detect import FsType, detect_fs_type, find_local_scratch
+        from lmms_eval.caching.fs_detect import (
+            FsType,
+            detect_fs_type,
+            find_local_scratch,
+        )
 
         _FUNC_ADDR_RE = re.compile(r" at 0x[0-9a-fA-F]+>")
 
@@ -345,11 +349,7 @@ def simple_evaluate(
         # place cache.db inside it.  Otherwise treat as a .db file path.
         _cache_target_db = use_cache
         if os.path.isdir(_cache_target_db) or _cache_target_db.endswith(os.sep):
-            eval_logger.warning(
-                f"ResponseCache: --use_cache received a directory ({_cache_target_db}). "
-                "In future versions, pass a .db file path directly (e.g. --use_cache ./cache.db). "
-                "Auto-mapping to cache.db inside the directory."
-            )
+            eval_logger.warning(f"ResponseCache: --use_cache received a directory ({_cache_target_db}). " "In future versions, pass a .db file path directly (e.g. --use_cache ./cache.db). " "Auto-mapping to cache.db inside the directory.")
             _cache_target_db = os.path.join(_cache_target_db, "cache.db")
         elif not _cache_target_db.endswith(".db"):
             _cache_target_db = _cache_target_db + ".db"
@@ -380,10 +380,7 @@ def simple_evaluate(
                 else:
                     _cache_write_db = os.path.join(local_cache_dir, "local.db")
                     _cache_write_audit = os.path.join(local_cache_dir, "local.audit.jsonl")
-                eval_logger.info(
-                    f"ResponseCache: two-tier mode - writes to {_cache_write_db}, "
-                    f"reads from local + shared ({_cache_target_db})"
-                )
+                eval_logger.info(f"ResponseCache: two-tier mode - writes to {_cache_write_db}, " f"reads from local + shared ({_cache_target_db})")
             else:
                 eval_logger.warning("ResponseCache: target is on remote FS but no local scratch found, writing directly")
 
@@ -430,12 +427,8 @@ def simple_evaluate(
     finally:
         if response_cache is not None:
             stats = response_cache.get_stats()
-            shared_info = f", {stats.get('hits_shared', 0)} from shared DB" if stats.get('hits_shared', 0) else ""
-            eval_logger.info(
-                f"ResponseCache stats: {stats['hits']} hits{shared_info}, "
-                f"{stats['misses']} misses, {stats['skipped_non_deterministic']} skipped, "
-                f"hit rate: {stats['hit_rate']:.1%}"
-            )
+            shared_info = f", {stats.get('hits_shared', 0)} from shared DB" if stats.get("hits_shared", 0) else ""
+            eval_logger.info(f"ResponseCache stats: {stats['hits']} hits{shared_info}, " f"{stats['misses']} misses, {stats['skipped_non_deterministic']} skipped, " f"hit rate: {stats['hit_rate']:.1%}")
             response_cache.close()
 
             # Post-eval consolidation: only on success, rank 0 only.
@@ -444,6 +437,7 @@ def simple_evaluate(
                     # Two-tier multi-node: each rank copies its local shard to shared staging.
                     # Rank 0 does its own copy here; other ranks copy below after barrier.
                     import shutil
+
                     for src in (_cache_write_db, _cache_write_audit):
                         if os.path.exists(src):
                             shutil.copy2(src, _cache_staging_dir)
@@ -454,6 +448,7 @@ def simple_evaluate(
                     lm.accelerator.wait_for_everyone()
                 elif distributed_executor_backend == "torchrun":
                     import torch.distributed as dist
+
                     if dist.is_initialized():
                         dist.barrier()
 
@@ -461,6 +456,7 @@ def simple_evaluate(
             if eval_succeeded and response_cache is not None:
                 if _cache_is_two_tier and world_size > 1 and _cache_staging_dir and global_rank != 0:
                     import shutil
+
                     for src in (_cache_write_db, _cache_write_audit):
                         if os.path.exists(src):
                             shutil.copy2(src, _cache_staging_dir)
@@ -471,6 +467,7 @@ def simple_evaluate(
                     lm.accelerator.wait_for_everyone()
                 elif distributed_executor_backend == "torchrun":
                     import torch.distributed as dist
+
                     if dist.is_initialized():
                         dist.barrier()
 
@@ -494,6 +491,7 @@ def simple_evaluate(
                     # Clean up staging dir.
                     if _cache_staging_dir and os.path.isdir(_cache_staging_dir):
                         import shutil
+
                         shutil.rmtree(_cache_staging_dir, ignore_errors=True)
                 elif world_size > 1:
                     # Direct mode, multi-GPU: merge per-rank shards into target.
