@@ -24,8 +24,8 @@ import inspect
 import json
 import os
 import sqlite3
-import urllib.parse
 import time
+import urllib.parse
 from functools import partial
 from typing import Any, Dict, List, Optional, Union
 
@@ -311,6 +311,7 @@ class ResponseCache:
         self._hits_shared = 0
         self._misses = 0
         self._skipped = 0
+
     def _replay_audit_log(self) -> None:
         """Replay JSONL entries missing from SQLite (crash recovery)."""
         if not os.path.exists(self.audit_path):
@@ -360,6 +361,7 @@ class ResponseCache:
             except Exception:
                 pass  # shared DB failure is non-fatal
         return None
+
     def _log_to_audit(
         self,
         request_type: str,
@@ -561,6 +563,7 @@ class ResponseCache:
                 self._shared_db = None
         except Exception:
             pass
+
     def __del__(self):
         try:
             self.close()
@@ -665,17 +668,11 @@ class ResponseCache:
         """
         # Merge SQLite shards
         merged_entries = ResponseCache.merge_shards(shard_db_paths, target_db_path)
-        eval_logger.info(
-            f"ResponseCache: consolidated {merged_entries} entries from "
-            f"{len(shard_db_paths)} shard(s) into {target_db_path}"
-        )
+        eval_logger.info(f"ResponseCache: consolidated {merged_entries} entries from " f"{len(shard_db_paths)} shard(s) into {target_db_path}")
 
         # Merge JSONL audit logs
         merged_lines = ResponseCache.merge_audit_logs(shard_audit_paths, target_audit_path)
-        eval_logger.info(
-            f"ResponseCache: consolidated {merged_lines} audit entries from "
-            f"{len(shard_audit_paths)} log(s) into {target_audit_path}"
-        )
+        eval_logger.info(f"ResponseCache: consolidated {merged_lines} audit entries from " f"{len(shard_audit_paths)} log(s) into {target_audit_path}")
 
         # Cleanup shard files
         if cleanup:
