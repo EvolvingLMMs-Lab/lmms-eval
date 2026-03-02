@@ -1,13 +1,22 @@
 """Unified response-level cache for lmms-eval.
 
 SQLite primary store (WAL mode) + JSONL write-ahead audit log.
-Per-rank files for distributed safety. Caches only deterministic requests.
+Caches only deterministic requests (temperature=0, do_sample=False).
 Write order: JSONL append+fsync -> SQLite upsert (crash-safe).
 
-Activation: ``python -m lmms_eval --model ... --tasks ... --use_cache ./eval_cache``
+Activation::
+
+    python -m lmms_eval --model ... --tasks ... --use_cache ./my_cache.db
 
 Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs, content_hash, task_fingerprint, model_fingerprint_hash).
-Scoped per model: ``{use_cache}/{model_hash}/rank{N}.db``
+
+File layout:
+    Single GPU, local disk   - writes directly to the user-specified .db file.
+    Multi-GPU, local disk    - each rank writes to a temporary shard
+                               (``<target>.shard.<rank>``); rank 0 merges after eval.
+    Remote target (NFS/CIFS) - two-tier mode: writes go to local scratch (NVMe/SSD),
+                               reads check local first then shared DB on NFS.
+                               After eval, local writes merge back to NFS target.
 """
 
 import hashlib
@@ -15,6 +24,7 @@ import inspect
 import json
 import os
 import sqlite3
+import urllib.parse
 import time
 from functools import partial
 from typing import Any, Dict, List, Optional, Union
@@ -244,12 +254,25 @@ def _deserialize_response(stored: str) -> Any:
 class ResponseCache:
     """Unified response cache: SQLite (lookup) + JSONL (crash recovery).
 
+    Supports an optional **shared read-only DB** for two-tier caching.
+    When ``shared_db_path`` is provided, lookups check the local (writable)
+    DB first, then fall back to the shared DB.  All writes go exclusively
+    to the local DB.  This enables a pattern where the shared DB lives on
+    NFS (slow writes, fast reads) while the local DB lives on NVMe.
+
     Write path: JSONL append+fsync -> SQLite upsert.
     On startup: replays JSONL tail into SQLite to recover incomplete writes.
     Skips caching for non-deterministic requests and error/empty responses.
     """
 
-    def __init__(self, db_path: str, audit_path: str, model_fingerprint: str = "", task_fingerprints: Optional[Dict[str, str]] = None):
+    def __init__(
+        self,
+        db_path: str,
+        audit_path: str,
+        model_fingerprint: str = "",
+        task_fingerprints: Optional[Dict[str, str]] = None,
+        shared_db_path: Optional[str] = None,
+    ):
         self.db_path = db_path
         self.audit_path = audit_path
         self.model_fingerprint = model_fingerprint
@@ -268,13 +291,26 @@ class ResponseCache:
         self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
         self.db.commit()
 
+        # Optional shared (read-only) DB for two-tier caching.
+        self._shared_db: Optional[sqlite3.Connection] = None
+        self._shared_db_path = shared_db_path
+        if shared_db_path and os.path.exists(shared_db_path):
+            try:
+                encoded_path = urllib.parse.quote(str(shared_db_path), safe="/")
+                self._shared_db = sqlite3.connect(f"file:{encoded_path}?mode=ro&immutable=1", uri=True, timeout=10)
+                shared_count = self._shared_db.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+                eval_logger.info(f"ResponseCache: shared DB loaded ({shared_count} entries): {shared_db_path}")
+            except Exception as e:
+                eval_logger.warning(f"ResponseCache: failed to open shared DB {shared_db_path}: {e}")
+                self._shared_db = None
+
         self._replay_audit_log()
         self._audit_file = open(audit_path, "a", encoding="utf-8")
 
         self._hits = 0
+        self._hits_shared = 0
         self._misses = 0
         self._skipped = 0
-
     def _replay_audit_log(self) -> None:
         """Replay JSONL entries missing from SQLite (crash recovery)."""
         if not os.path.exists(self.audit_path):
@@ -307,12 +343,23 @@ class ResponseCache:
             eval_logger.warning(f"ResponseCache: audit log replay failed: {e}")
 
     def _lookup(self, cache_key: str) -> Any:
+        """Look up a cache key: local DB first, then shared DB."""
+        # 1. Check local (writable) DB
         cur = self.db.execute("SELECT response FROM responses WHERE cache_key = ?", (cache_key,))
         row = cur.fetchone()
-        if row is None:
-            return None
-        return _deserialize_response(row[0])
-
+        if row is not None:
+            return _deserialize_response(row[0])
+        # 2. Fall back to shared (read-only) DB
+        if self._shared_db is not None:
+            try:
+                cur = self._shared_db.execute("SELECT response FROM responses WHERE cache_key = ?", (cache_key,))
+                row = cur.fetchone()
+                if row is not None:
+                    self._hits_shared += 1
+                    return _deserialize_response(row[0])
+            except Exception:
+                pass  # shared DB failure is non-fatal
+        return None
     def _log_to_audit(
         self,
         request_type: str,
@@ -482,13 +529,20 @@ class ResponseCache:
 
     def get_stats(self) -> Dict[str, Any]:
         total_lookups = self._hits + self._misses
-        return {
+        stats = {
             "hits": self._hits,
+            "hits_shared": self._hits_shared,
             "misses": self._misses,
             "skipped_non_deterministic": self._skipped,
             "hit_rate": self._hits / max(1, total_lookups),
             "total_cached_entries": self.db.execute("SELECT COUNT(*) FROM responses").fetchone()[0],
         }
+        if self._shared_db is not None:
+            try:
+                stats["shared_cached_entries"] = self._shared_db.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+            except Exception:
+                stats["shared_cached_entries"] = "unavailable"
+        return stats
 
     def close(self) -> None:
         try:
@@ -501,7 +555,12 @@ class ResponseCache:
                 self.db.close()
         except Exception:
             pass
-
+        try:
+            if self._shared_db:
+                self._shared_db.close()
+                self._shared_db = None
+        except Exception:
+            pass
     def __del__(self):
         try:
             self.close()
@@ -509,12 +568,15 @@ class ResponseCache:
             pass
 
     @staticmethod
-    def merge_shards(shard_paths: List[str], output_path: str) -> None:
-        """Merge per-rank SQLite shards into a consolidated DB (INSERT OR IGNORE)."""
-        if os.path.exists(output_path):
-            os.remove(output_path)
+    def merge_shards(shard_paths: List[str], output_path: str) -> int:
+        """Merge per-rank SQLite shards into a consolidated DB.
 
-        out_db = sqlite3.connect(output_path)
+        Uses INSERT OR IGNORE so existing entries in ``output_path`` are preserved.
+        Creates ``output_path`` if it does not exist.
+
+        Returns the number of entries inserted.
+        """
+        out_db = sqlite3.connect(output_path, timeout=30)
         out_db.execute("PRAGMA journal_mode=WAL")
         out_db.executescript(_SCHEMA_SQL)
 
@@ -533,8 +595,99 @@ class ResponseCache:
                     total += 1
                 except sqlite3.IntegrityError:
                     pass
+            # Copy meta table entries (model_fingerprint, schema_version, etc.)
+            meta_rows = shard_db.execute("SELECT key, value FROM meta").fetchall()
+            for key, value in meta_rows:
+                out_db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", (key, value))
             shard_db.close()
 
         out_db.commit()
         out_db.close()
-        eval_logger.info(f"ResponseCache: merged {total} entries from {len(shard_paths)} shards into {output_path}")
+        return total
+
+    @staticmethod
+    def merge_audit_logs(audit_paths: List[str], output_path: str) -> int:
+        """Merge per-rank JSONL audit logs into a single file.
+
+        Appends entries from all ``audit_paths`` into ``output_path``,
+        sorted by ``created_at`` timestamp.  Deduplicates by ``cache_key``
+        for deterministic entries; non-deterministic entries are always kept.
+
+        Returns the number of lines written.
+        """
+        entries: list = []
+        seen_keys: set = set()
+        for path in audit_paths:
+            if not os.path.exists(path):
+                continue
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    # Deduplicate deterministic entries by cache_key
+                    ck = rec.get("cache_key", "")
+                    if ck and rec.get("deterministic", True):
+                        if ck in seen_keys:
+                            continue
+                        seen_keys.add(ck)
+                    entries.append(rec)
+
+        # Sort by created_at for chronological ordering
+        entries.sort(key=lambda r: r.get("created_at", 0))
+
+        written = 0
+        with open(output_path, "a", encoding="utf-8") as out:
+            for rec in entries:
+                out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                written += 1
+        return written
+
+    @staticmethod
+    def consolidate_cache(
+        target_db_path: str,
+        shard_db_paths: List[str],
+        shard_audit_paths: List[str],
+        target_audit_path: str,
+        cleanup: bool = True,
+    ) -> None:
+        """Consolidate per-rank shards into a single cache DB + audit log.
+
+        Called by rank 0 after evaluation completes.
+
+        1. Merges all shard DBs into ``target_db_path`` (INSERT OR IGNORE).
+        2. Merges all shard JSONL audit logs into ``target_audit_path``.
+        3. If ``cleanup`` is True, removes the shard files.
+        """
+        # Merge SQLite shards
+        merged_entries = ResponseCache.merge_shards(shard_db_paths, target_db_path)
+        eval_logger.info(
+            f"ResponseCache: consolidated {merged_entries} entries from "
+            f"{len(shard_db_paths)} shard(s) into {target_db_path}"
+        )
+
+        # Merge JSONL audit logs
+        merged_lines = ResponseCache.merge_audit_logs(shard_audit_paths, target_audit_path)
+        eval_logger.info(
+            f"ResponseCache: consolidated {merged_lines} audit entries from "
+            f"{len(shard_audit_paths)} log(s) into {target_audit_path}"
+        )
+
+        # Cleanup shard files
+        if cleanup:
+            for path in shard_db_paths + shard_audit_paths:
+                try:
+                    if os.path.exists(path):
+                        os.remove(path)
+                        # Also remove WAL/SHM sidecar files for SQLite
+                        for suffix in ("-wal", "-shm"):
+                            sidecar = path + suffix
+                            if os.path.exists(sidecar):
+                                os.remove(sidecar)
+                except OSError as e:
+                    eval_logger.warning(f"ResponseCache: failed to remove shard {path}: {e}")
+            eval_logger.info("ResponseCache: shard files cleaned up")

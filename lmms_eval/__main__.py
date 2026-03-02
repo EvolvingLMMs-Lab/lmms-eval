@@ -225,10 +225,11 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         "-c",
         type=str,
         default=None,
-        metavar="DIR",
-        help="Directory for response-level caching (SQLite + JSONL audit log). "
+        metavar="PATH",
+        help="Path to a SQLite .db file for response-level caching (e.g. ./my_cache.db). "
         "Caches deterministic model responses (temperature=0) for reuse across runs. "
-        "Per-rank files created automatically for distributed safety. `None` to disable.",
+        "In distributed mode, temporary per-rank shards are auto-merged into this file. "
+        "A .db suffix is appended automatically if missing. `None` to disable.",
     )
     parser.add_argument(
         "--cache_requests",
