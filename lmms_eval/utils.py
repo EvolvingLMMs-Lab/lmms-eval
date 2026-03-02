@@ -793,6 +793,34 @@ def get_lmms_eval_version_string():
     return f"{branch}@{commit[:8]}"
 
 
+def get_lmms_eval_cache_version() -> str:
+    """Return a version identifier for cache scoping.
+
+    - PyPI install: returns the package version (e.g. "0.7.0").
+    - Editable / source install: returns the git commit hash for precise tracking.
+    - Fallback: returns "unknown" (cache will still work, just won't auto-invalidate).
+    """
+    import importlib.metadata
+
+    # 1) Try package version from installed metadata
+    pkg_version = None
+    try:
+        pkg_version = importlib.metadata.version("lmms-eval")
+    except importlib.metadata.PackageNotFoundError:
+        pass
+
+    # 2) Try git commit (available for editable / source installs)
+    commit = get_git_commit_hash()
+
+    # For editable installs the package version stays at the same tag while code
+    # changes on every commit, so prefer the commit hash when available.
+    if commit:
+        return commit
+    if pkg_version:
+        return pkg_version
+    return "unknown"
+
+
 # ---------------------------------------------------------------------------
 # Evaluation banner: printed above the results table
 # ---------------------------------------------------------------------------

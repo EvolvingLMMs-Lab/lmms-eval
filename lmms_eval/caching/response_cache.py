@@ -6,7 +6,7 @@ Write order: JSONL append+fsync -> SQLite upsert (crash-safe).
 
 Activation: ``python -m lmms_eval --model ... --tasks ... --use_cache ./eval_cache``
 
-Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs, content_hash, task_fingerprint, model_fingerprint_hash).
+Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs, content_hash, task_fingerprint, model_fingerprint_hash, eval_version).
 Scoped per model: ``{use_cache}/{model_hash}/rank{N}.db``
 """
 
@@ -40,7 +40,7 @@ CACHE_RELEVANT_KEYS = frozenset(
     }
 )
 
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 
 def _short_hash(value: str) -> str:
@@ -202,6 +202,7 @@ def compute_cache_key(
     task_fingerprint: str = "",
     content_hash: str = "",
     model_fingerprint_hash: str = "",
+    eval_version: str = "",
 ) -> str:
     """Deterministic SHA-256 cache key for a model response.
 
@@ -210,6 +211,7 @@ def compute_cache_key(
     requests that share the same (task_name, doc_id, idx).
     ``task_fingerprint`` enables automatic invalidation on YAML/prompt changes.
     ``model_fingerprint_hash`` ensures key-level model adapter isolation.
+    ``eval_version`` scopes entries to a specific lmms-eval version or commit.
     """
     payload = {
         "v": _SCHEMA_VERSION,
@@ -225,6 +227,8 @@ def compute_cache_key(
         payload["tf"] = task_fingerprint
     if model_fingerprint_hash:
         payload["mfh"] = model_fingerprint_hash
+    if eval_version:
+        payload["ev"] = eval_version
     data = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
@@ -249,12 +253,13 @@ class ResponseCache:
     Skips caching for non-deterministic requests and error/empty responses.
     """
 
-    def __init__(self, db_path: str, audit_path: str, model_fingerprint: str = "", task_fingerprints: Optional[Dict[str, str]] = None):
+    def __init__(self, db_path: str, audit_path: str, model_fingerprint: str = "", task_fingerprints: Optional[Dict[str, str]] = None, eval_version: str = ""):
         self.db_path = db_path
         self.audit_path = audit_path
         self.model_fingerprint = model_fingerprint
         self._model_fingerprint_hash = _short_hash(model_fingerprint)
         self._task_fingerprints: Dict[str, str] = task_fingerprints or {}
+        self._eval_version = eval_version
 
         self.db = sqlite3.connect(db_path, timeout=30)
         self.db.execute("PRAGMA journal_mode=WAL")
@@ -266,6 +271,14 @@ class ResponseCache:
         if self._model_fingerprint_hash:
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
         self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
+
+        # Store and check lmms-eval version for traceability
+        if eval_version:
+            prev_row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
+            prev_version = prev_row[0] if prev_row else None
+            if prev_version and prev_version != eval_version:
+                eval_logger.warning(f"ResponseCache: version changed ({prev_version} -> {eval_version}). Cached entries from the old version will not be reused.")
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", eval_version))
         self.db.commit()
 
         self._replay_audit_log()
@@ -345,6 +358,7 @@ class ResponseCache:
             "response": _serialize_response(response),
             "created_at": now,
             "deterministic": deterministic,
+            "eval_version": self._eval_version,
         }
         if task_fingerprint:
             record["task_fingerprint"] = task_fingerprint
@@ -423,6 +437,7 @@ class ResponseCache:
                 content_hash=ch,
                 task_fingerprint=tf,
                 model_fingerprint_hash=self._model_fingerprint_hash,
+                eval_version=self._eval_version,
             )
             cached = self._lookup(cache_key)
             if cached is not None:
@@ -456,6 +471,7 @@ class ResponseCache:
                         content_hash=ch,
                         task_fingerprint=tf,
                         model_fingerprint_hash=self._model_fingerprint_hash,
+                        eval_version=self._eval_version,
                     )
                     if deterministic
                     else ""

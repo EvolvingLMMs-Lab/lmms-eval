@@ -55,6 +55,7 @@ from lmms_eval.utils import (
     get_datetime_str,
     get_git_branch_name,
     get_git_commit_hash,
+    get_lmms_eval_cache_version,
     get_lmms_eval_version_string,
     handle_non_serializable,
     hash_string,
@@ -334,8 +335,9 @@ def simple_evaluate(
         os.makedirs(cache_dir, exist_ok=True)
         db_path = os.path.join(cache_dir, f"rank{global_rank}.db")
         audit_path = os.path.join(cache_dir, f"rank{global_rank}.jsonl")
-        response_cache = ResponseCache(db_path=db_path, audit_path=audit_path, model_fingerprint=model_fp, task_fingerprints=task_fingerprints)
-        eval_logger.info(f"ResponseCache initialized: {db_path}")
+        eval_version = get_lmms_eval_cache_version()
+        response_cache = ResponseCache(db_path=db_path, audit_path=audit_path, model_fingerprint=model_fp, task_fingerprints=task_fingerprints, eval_version=eval_version)
+        eval_logger.info(f"ResponseCache initialized: {db_path} (eval_version={eval_version})")
 
     try:
         results = evaluate(
