@@ -55,6 +55,7 @@ from lmms_eval.utils import (
     get_datetime_str,
     get_git_branch_name,
     get_git_commit_hash,
+    get_lmms_eval_cache_version,
     get_lmms_eval_version_string,
     handle_non_serializable,
     hash_string,
@@ -399,6 +400,7 @@ def simple_evaluate(
             model_fingerprint=model_fp,
             task_fingerprints=task_fingerprints,
             shared_db_path=_cache_shared_db,
+            eval_version=get_lmms_eval_cache_version(),
         )
         eval_logger.info(f"ResponseCache initialized: {_cache_write_db}")
 

@@ -793,6 +793,24 @@ def get_lmms_eval_version_string():
     return f"{branch}@{commit[:8]}"
 
 
+def get_lmms_eval_cache_version() -> str:
+    """Return a version string for cache key isolation.
+
+    For dev/editable installs the git commit hash is preferred because the
+    PyPI version stays constant while the code changes.  For pip installs
+    (no git repo) we fall back to ``importlib.metadata.version``.
+    """
+    commit = get_git_commit_hash()
+    if commit:
+        return commit
+    try:
+        import importlib.metadata
+
+        return importlib.metadata.version("lmms-eval")
+    except Exception:
+        return "unknown"
+
+
 # ---------------------------------------------------------------------------
 # Evaluation banner: printed above the results table
 # ---------------------------------------------------------------------------
