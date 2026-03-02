@@ -41,6 +41,28 @@ cpu, _ = optional_import("decord", "cpu")
 load_dotenv(verbose=True)
 
 
+def _normalize_openai_message_content(content) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for part in content:
+            if isinstance(part, str):
+                text_parts.append(part)
+                continue
+            if not isinstance(part, dict):
+                continue
+            if part.get("type") == "text" and isinstance(part.get("text"), str):
+                text_parts.append(part["text"])
+                continue
+            if isinstance(part.get("content"), str):
+                text_parts.append(part["content"])
+        return "".join(text_parts)
+    return str(content)
+
+
 @register_model("openai")
 class OpenAICompatible(lmms):
     def __init__(
@@ -311,7 +333,9 @@ class OpenAICompatible(lmms):
             for attempt in range(self.max_retries):
                 try:
                     response = self.client.chat.completions.create(**payload)
-                    response_text = response.choices[0].message.content
+                    response_text = _normalize_openai_message_content(
+                        response.choices[0].message.content
+                    )
                     token_counts = None
                     if hasattr(response, "usage") and response.usage:
                         log_usage(

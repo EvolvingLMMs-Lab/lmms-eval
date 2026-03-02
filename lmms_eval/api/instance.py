@@ -48,9 +48,11 @@ def unwrap_generation_output(output: Any) -> Tuple[str, Optional[TokenCounts]]:
     maximum backward compatibility.
     """
     if isinstance(output, GenerationResult):
-        return output.text, output.token_counts
+        return "" if output.text is None else str(output.text), output.token_counts
     if isinstance(output, str):
         return output, None
+    if output is None:
+        return "", None
 
     if isinstance(output, (tuple, list)) and len(output) == 2 and isinstance(output[0], str):
         text, meta = output
