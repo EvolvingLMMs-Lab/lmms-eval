@@ -15,8 +15,8 @@ Detection strategy:
 """
 
 import os
-import subprocess
 import shutil
+import subprocess
 from enum import Enum
 from typing import Optional
 
@@ -171,16 +171,16 @@ def detect_fs_type(path: str) -> FsType:
 
 def find_local_scratch(min_free_gb: float = 1.0) -> Optional[str]:
     """Find a suitable local fast-storage directory for cache scratch space.
-    
+
     Priority order:
         1. ``$LMMS_LOCAL_CACHE`` environment variable (explicit user override)
         2. ``/local/scratch`` (common HPC convention)
         3. ``/scratch`` (another common convention)
         4. ``/tmp`` (always available, but may be tmpfs / size-limited)
-    
+
     A candidate is accepted only if it is writable and has at least
     ``min_free_gb`` GB of free space (default 1 GB).
-    
+
     Returns the first usable directory found, or ``None`` if none qualify.
     """
     candidates = []
@@ -200,7 +200,7 @@ def find_local_scratch(min_free_gb: float = 1.0) -> Optional[str]:
         if os.path.isdir(path) and os.access(path, os.W_OK):
             try:
                 usage = shutil.disk_usage(path)
-                free_gb = usage.free / (1024 ** 3)
+                free_gb = usage.free / (1024**3)
                 if free_gb < min_free_gb:
                     eval_logger.debug(f"fs_detect: skipping {path} (only {free_gb:.1f} GB free, need {min_free_gb} GB)")
                     continue
