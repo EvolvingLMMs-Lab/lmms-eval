@@ -1,5 +1,7 @@
 # BabyVision Visual Tracking Task
-dataset_path: UnipatAI/BabyVision
+dataset_path: parquet
+dataset_kwargs:
+  data_files: hf://datasets/kkv233/unig2u_dataset/babyvision/babyvision_first2types_all.parquet
 task: "babyvision_visual_tracking"
 test_split: train
 output_type: generate_until

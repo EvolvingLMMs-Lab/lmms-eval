@@ -1,7 +1,8 @@
 task: geometry3k_visual_cot
-dataset_path: hiyouga/geometry3k
-dataset_name: null
-test_split: test
+dataset_path: parquet
+dataset_kwargs:
+  data_files: hf://datasets/kkv233/unig2u_dataset/geometry3k/geometry3k_train_first100.parquet
+test_split: train
 output_type: generate_until
 doc_to_visual: !function utils.geometry3k_doc_to_visual
 doc_to_text: !function utils.geometry3k_doc_to_text_visual_cot

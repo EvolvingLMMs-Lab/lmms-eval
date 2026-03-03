@@ -1,7 +1,8 @@
-dataset_path: shasha/AuxSolidMath
-dataset_name: test_easy
+dataset_path: parquet
+dataset_kwargs:
+  data_files: hf://datasets/kkv233/unig2u_dataset/auxsolidmath/auxsolidmath_test_easy_first100.parquet
 task: "auxsolidmath_easy_visual_cot"
-test_split: test_easy
+test_split: train
 output_type: generate_until
 
 doc_to_visual: !function utils.auxsolidmath_doc_to_visual
