@@ -497,7 +497,31 @@ class Task(abc.ABC):
         self._instances = flattened_instances
 
         if len(self._instances) == 0:
-            raise ValueError("task.build_requests() did not find any docs!")
+            if world_size > 1:
+                eval_logger.warning(f"task.build_requests() found no docs on rank {rank}/{world_size - 1}; injecting one padding request for distributed synchronization.")
+                if len(self.eval_docs_no_media) > 0:
+                    pad_doc_id = 0
+                    pad_doc = self.eval_docs_no_media[pad_doc_id]
+                    pad_ctx = self.fewshot_context(
+                        pad_doc,
+                        0 if self.config.num_fewshot is None else self.config.num_fewshot,
+                        system_instruction,
+                        apply_chat_template,
+                        fewshot_as_multiturn,
+                        chat_template,
+                    )
+                    pad_metadata = {"task": self.config["task"], "doc_id": pad_doc_id, "repeats": self.config.repeats, "split": split, "__padding_only__": True}
+                    if self.config.metadata and type(self.config.metadata) == dict:
+                        pad_metadata.update(self.config.metadata)
+                    pad_inst = self.construct_requests(doc_id=pad_doc_id, ctx=pad_ctx, metadata=pad_metadata)
+                    if not isinstance(pad_inst, list):
+                        pad_inst = [pad_inst]
+                    self._instances = pad_inst
+                    eval_logger.warning(f"task.build_requests() injected {len(self._instances)} padding request(s) on rank {rank}/{world_size - 1}.")
+                else:
+                    eval_logger.warning(f"task.build_requests() could not inject padding request on rank {rank}/{world_size - 1} because dataset has no docs.")
+            else:
+                raise ValueError("task.build_requests() did not find any docs!")
 
         if cache_requests and (not cached_instances or rewrite_requests_cache):
             save_to_cache(file_name=cache_key, obj=instances)
