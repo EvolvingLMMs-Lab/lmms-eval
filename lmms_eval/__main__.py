@@ -29,10 +29,10 @@ from accelerate import Accelerator
 from accelerate.utils import InitProcessGroupKwargs
 from loguru import logger as eval_logger
 
-import lmms_eval.tasks
 from lmms_eval import evaluator, utils
 from lmms_eval.api.metrics import power_analysis
 from lmms_eval.api.registry import ALL_TASKS
+from lmms_eval.cli.power_utils import collect_task_sizes
 from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
 from lmms_eval.tasks import TaskManager
@@ -90,59 +90,11 @@ def _handle_non_serializable(o):
         return str(o)
 
 
-def _format_task_load_error(exc: Exception) -> str:
-    def _flatten(text: str) -> str:
-        return " | ".join(line.strip() for line in str(text).splitlines() if line.strip())
-
-    details = [f"{type(exc).__name__}: {_flatten(exc)}"]
-
-    root = exc
-    visited = {id(root)}
-    while True:
-        nxt = getattr(root, "__cause__", None) or getattr(root, "__context__", None)
-        if nxt is None or id(nxt) in visited:
-            break
-        root = nxt
-        visited.add(id(root))
-    if root is not exc:
-        details.append(f"root={type(root).__name__}: {_flatten(root)}")
-
-    tb = traceback.extract_tb(exc.__traceback__)
-    if tb:
-        last = tb[-1]
-        details.append(f"at {last.filename}:{last.lineno} ({last.name})")
-
-    return " | ".join(details)
-
-
-def _is_debug_verbosity(verbosity: object) -> bool:
-    return str(verbosity or "").upper() == "DEBUG"
-
-
 def _run_power_analysis(args: argparse.Namespace) -> None:
     """Run power analysis to calculate minimum sample size for detecting a given effect."""
     task_sizes = {}
     if args.tasks and args.tasks not in ["list", "list_groups", "list_tags", "list_subtasks"]:
-        task_manager = TaskManager(args.verbosity, include_path=args.include_path)
-        requested_tasks = [task.strip() for task in args.tasks.split(",") if task.strip()]
-        task_names = task_manager.match_tasks(requested_tasks)
-        missing_tasks = [task for task in requested_tasks if task not in task_names and "*" not in task]
-        if missing_tasks:
-            print(f"[warning] Unresolved task names (skipped): {', '.join(sorted(set(missing_tasks)))}")
-        if not task_names:
-            print("[warning] No valid tasks resolved from --tasks; running global power analysis only.")
-        for task_name in task_names:
-            try:
-                task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
-            except Exception as exc:
-                print(f"[warning] Failed to load task '{task_name}' (skipped): {_format_task_load_error(exc)}")
-                if _is_debug_verbosity(args.verbosity):
-                    print("[warning] Full traceback:")
-                    print("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)).rstrip())
-                continue
-            for name, task_obj in task_dict.items():
-                if hasattr(task_obj, "eval_docs"):
-                    task_sizes[name] = len(task_obj.eval_docs)
+        task_sizes = collect_task_sizes(args.tasks, verbosity=args.verbosity, include_path=args.include_path)
 
     result = power_analysis(
         effect_size=args.effect_size,

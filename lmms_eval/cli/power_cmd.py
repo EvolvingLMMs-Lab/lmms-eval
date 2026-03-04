@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import traceback
 
 
 def add_power_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -25,59 +24,10 @@ def add_power_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def run_power(args: argparse.Namespace) -> None:
-    import lmms_eval.tasks
     from lmms_eval.api.metrics import power_analysis
-    from lmms_eval.tasks import TaskManager
+    from lmms_eval.cli.power_utils import collect_task_sizes
 
-    def _format_task_load_error(exc: Exception) -> str:
-        def _flatten(text: str) -> str:
-            return " | ".join(line.strip() for line in str(text).splitlines() if line.strip())
-
-        details = [f"{type(exc).__name__}: {_flatten(exc)}"]
-
-        root = exc
-        visited = {id(root)}
-        while True:
-            nxt = getattr(root, "__cause__", None) or getattr(root, "__context__", None)
-            if nxt is None or id(nxt) in visited:
-                break
-            root = nxt
-            visited.add(id(root))
-        if root is not exc:
-            details.append(f"root={type(root).__name__}: {_flatten(root)}")
-
-        tb = traceback.extract_tb(exc.__traceback__)
-        if tb:
-            last = tb[-1]
-            details.append(f"at {last.filename}:{last.lineno} ({last.name})")
-
-        return " | ".join(details)
-
-    def _is_debug(verbosity: object) -> bool:
-        return str(verbosity or "").upper() == "DEBUG"
-
-    task_sizes: dict[str, int] = {}
-    if args.tasks:
-        task_manager = TaskManager(args.verbosity, include_path=args.include_path)
-        requested_tasks = [task.strip() for task in args.tasks.split(",") if task.strip()]
-        task_names = task_manager.match_tasks(requested_tasks)
-        missing_tasks = [task for task in requested_tasks if task not in task_names and "*" not in task]
-        if missing_tasks:
-            print(f"[warning] Unresolved task names (skipped): {', '.join(sorted(set(missing_tasks)))}")
-        if not task_names:
-            print("[warning] No valid tasks resolved from --tasks; running global power analysis only.")
-        for task_name in task_names:
-            try:
-                task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
-            except Exception as exc:
-                print(f"[warning] Failed to load task '{task_name}' (skipped): {_format_task_load_error(exc)}")
-                if _is_debug(args.verbosity):
-                    print("[warning] Full traceback:")
-                    print("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)).rstrip())
-                continue
-            for name, task_obj in task_dict.items():
-                if hasattr(task_obj, "eval_docs"):
-                    task_sizes[name] = len(task_obj.eval_docs)
+    task_sizes = collect_task_sizes(args.tasks, verbosity=args.verbosity, include_path=args.include_path)
 
     result = power_analysis(
         effect_size=args.effect_size,
