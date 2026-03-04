@@ -52,6 +52,7 @@ class VLLMGenerate(VLLMChat):
         min_image_pixels=28,
         fps: Optional[int] = None,
         nframes: Optional[int] = 32,
+        max_new_tokens: int = 4096,
         **kwargs,
     ):
         super().__init__(
@@ -67,6 +68,7 @@ class VLLMGenerate(VLLMChat):
             min_image_pixels,
             fps,
             nframes,
+            max_new_tokens=max_new_tokens,
             **kwargs,
         )
         self.processor = AutoProcessor.from_pretrained(model)
@@ -85,7 +87,7 @@ class VLLMGenerate(VLLMChat):
         chat_messages = ChatMessages(messages=raw_messages)
         # Copy to avoid side-effects across threads
         _gen = dict(gen_kwargs or {})
-        _gen.setdefault("max_new_tokens", 4096)
+        _gen["max_new_tokens"] = self._select_max_new_tokens(_gen.get("max_new_tokens"))
         _gen.setdefault("temperature", 0)
         _gen.setdefault("top_p", 0.95)
 
@@ -170,10 +172,13 @@ class VLLMGenerate(VLLMChat):
 
             sampling_params = SamplingParams(**sampling_params)
             start_time = time.time()
-            response = self.client.generate(batched_vllm_inputs, sampling_params)
-            end_time = time.time()
 
-            response_text = [o.outputs[0].text for o in response]
+            def _run_generate(inputs: list[dict]) -> list[str]:
+                response = self.client.generate(inputs, sampling_params)
+                return [o.outputs[0].text for o in response]
+
+            response_text = self._run_tp_synced(batched_vllm_inputs, _run_generate)
+            end_time = time.time()
 
             # Calculate timing metrics for batch
             total_elapsed_time += end_time - start_time
