@@ -4,8 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
-from accelerate import Accelerator, DistributedType
 import torch.distributed as dist
+from accelerate import Accelerator, DistributedType
 from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
@@ -216,11 +216,7 @@ class VLLM(lmms):
             kwargs["distributed_executor_backend"] = "external_launcher"
             expected_world_size = self.tensor_parallel_size * self.data_parallel_size
             if expected_world_size > 1 and accelerator.num_processes != expected_world_size:
-                raise ValueError(
-                    "For external_launcher mode, accelerate world size must equal "
-                    f"tensor_parallel_size * data_parallel_size ({expected_world_size}), "
-                    f"but got {accelerator.num_processes}."
-                )
+                raise ValueError("For external_launcher mode, accelerate world size must equal " f"tensor_parallel_size * data_parallel_size ({expected_world_size}), " f"but got {accelerator.num_processes}.")
         self.client = LLM(
             model=self.model,
             tensor_parallel_size=self.tensor_parallel_size,
@@ -251,10 +247,7 @@ class VLLM(lmms):
             self._tp_rank_in_group = int(tp_group.rank_in_group)
         except Exception as exc:
             if self._world_size > 1:
-                raise RuntimeError(
-                    "Failed to initialize vLLM TP group for synchronized request dispatch. "
-                    "This is required when tensor_parallel_size > 1 under distributed launch."
-                ) from exc
+                raise RuntimeError("Failed to initialize vLLM TP group for synchronized request dispatch. " "This is required when tensor_parallel_size > 1 under distributed launch.") from exc
             eval_logger.warning(f"Failed to initialize TP group for request sync: {exc}")
 
     def _select_max_new_tokens(self, request_max_new_tokens: Any) -> int:
@@ -263,10 +256,7 @@ class VLLM(lmms):
         try:
             request_max_new_tokens = int(request_max_new_tokens)
         except (TypeError, ValueError):
-            eval_logger.warning(
-                "Invalid max_new_tokens from task (%s), falling back to model setting (%s)."
-                % (request_max_new_tokens, self.max_new_tokens)
-            )
+            eval_logger.warning("Invalid max_new_tokens from task (%s), falling back to model setting (%s)." % (request_max_new_tokens, self.max_new_tokens))
             return self.max_new_tokens
         return max(request_max_new_tokens, self.max_new_tokens)
 
@@ -295,10 +285,7 @@ class VLLM(lmms):
 
         merged_outputs = run_fn(merged_inputs)
         if len(merged_outputs) != len(merged_inputs):
-            raise RuntimeError(
-                "vLLM output count mismatch after TP request synchronization: "
-                f"expected {len(merged_inputs)}, got {len(merged_outputs)}"
-            )
+            raise RuntimeError("vLLM output count mismatch after TP request synchronization: " f"expected {len(merged_inputs)}, got {len(merged_outputs)}")
 
         start = offsets[self._tp_rank_in_group]
         end = offsets[self._tp_rank_in_group + 1]
