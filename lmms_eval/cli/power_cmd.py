@@ -24,19 +24,10 @@ def add_power_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def run_power(args: argparse.Namespace) -> None:
-    import lmms_eval.tasks
     from lmms_eval.api.metrics import power_analysis
-    from lmms_eval.tasks import TaskManager
+    from lmms_eval.cli.power_utils import collect_task_sizes
 
-    task_sizes: dict[str, int] = {}
-    if args.tasks:
-        task_manager = TaskManager(args.verbosity, include_path=args.include_path)
-        task_names = task_manager.match_tasks(args.tasks.split(","))
-        for task_name in task_names:
-            task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
-            for name, task_obj in task_dict.items():
-                if hasattr(task_obj, "eval_docs"):
-                    task_sizes[name] = len(task_obj.eval_docs)
+    task_sizes = collect_task_sizes(args.tasks, verbosity=args.verbosity, include_path=args.include_path)
 
     result = power_analysis(
         effect_size=args.effect_size,
