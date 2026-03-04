@@ -498,9 +498,7 @@ class Task(abc.ABC):
 
         if len(self._instances) == 0:
             if world_size > 1:
-                eval_logger.warning(
-                    f"task.build_requests() found no docs on rank {rank}/{world_size - 1}; injecting one padding request for distributed synchronization."
-                )
+                eval_logger.warning(f"task.build_requests() found no docs on rank {rank}/{world_size - 1}; injecting one padding request for distributed synchronization.")
                 if len(self.eval_docs_no_media) > 0:
                     pad_doc_id = 0
                     pad_doc = self.eval_docs_no_media[pad_doc_id]
@@ -519,13 +517,9 @@ class Task(abc.ABC):
                     if not isinstance(pad_inst, list):
                         pad_inst = [pad_inst]
                     self._instances = pad_inst
-                    eval_logger.warning(
-                        f"task.build_requests() injected {len(self._instances)} padding request(s) on rank {rank}/{world_size - 1}."
-                    )
+                    eval_logger.warning(f"task.build_requests() injected {len(self._instances)} padding request(s) on rank {rank}/{world_size - 1}.")
                 else:
-                    eval_logger.warning(
-                        f"task.build_requests() could not inject padding request on rank {rank}/{world_size - 1} because dataset has no docs."
-                    )
+                    eval_logger.warning(f"task.build_requests() could not inject padding request on rank {rank}/{world_size - 1} because dataset has no docs.")
             else:
                 raise ValueError("task.build_requests() did not find any docs!")
 

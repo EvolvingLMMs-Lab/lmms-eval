@@ -964,9 +964,7 @@ def evaluate(
             # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
             numpad = max(gathered_item) - gathered_item[lm.rank]
             if reqtype is None:
-                eval_logger.warning(
-                    f"Task: {task_output.task_name}; unable to infer request type on rank {global_rank}, skipping padding computation."
-                )
+                eval_logger.warning(f"Task: {task_output.task_name}; unable to infer request type on rank {global_rank}, skipping padding computation.")
             else:
                 # todo: may not account for padding in cases like SquadV2 which has multiple req types
                 padding_requests[reqtype] += numpad
@@ -996,12 +994,9 @@ def evaluate(
         for req in reqs:
             cloned_reqs.extend([req] * req.repeats)
 
-
         if (world_size > 1) and (padding_requests[reqtype] > 0):
             if pad_source is None:
-                eval_logger.warning(
-                    f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding."
-                )
+                eval_logger.warning(f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding.")
             else:
                 for _ in range(padding_requests[reqtype]):
                     cloned_reqs.extend([pad_source] * pad_source.repeats)
