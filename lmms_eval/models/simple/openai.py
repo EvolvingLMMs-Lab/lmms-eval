@@ -333,9 +333,7 @@ class OpenAICompatible(lmms):
             for attempt in range(self.max_retries):
                 try:
                     response = self.client.chat.completions.create(**payload)
-                    response_text = _normalize_openai_message_content(
-                        response.choices[0].message.content
-                    )
+                    response_text = _normalize_openai_message_content(response.choices[0].message.content)
                     token_counts = None
                     if hasattr(response, "usage") and response.usage:
                         log_usage(
