@@ -860,6 +860,17 @@ def evaluate(
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     eval_logger.info(f"Running on rank {global_rank} (local rank {local_rank})")
 
+    def _infer_task_request_type(task_obj: Task) -> Optional[str]:
+        if task_obj.instances:
+            return task_obj.instances[0].request_type
+
+        output_type = getattr(task_obj, "OUTPUT_TYPE", None)
+        if output_type == "multiple_choice":
+            return "loglikelihood"
+        if isinstance(output_type, str):
+            return output_type
+        return None
+
     # get lists of group hierarchy and each type of request
     eval_tasks = get_task_list(task_dict)
     name_to_task = {}
@@ -942,25 +953,58 @@ def evaluate(
             else:
                 raise ValueError(f"Invalid distributed_executor_backend: {distributed_executor_backend}. Choose either 'accelerate' or 'torchrun'.")
 
-            # "multiple_choice" task types dispatch (several) "loglikelihood" request types
-            reqtype = task.instances[0].request_type
+            # "multiple_choice" task types dispatch "loglikelihood" requests.
+            local_reqtype = _infer_task_request_type(task)
+            reqtype = local_reqtype
+            if dist.is_available() and dist.is_initialized():
+                gathered_reqtypes = [None] * world_size
+                dist.all_gather_object(gathered_reqtypes, local_reqtype)
+                reqtype = next((rt for rt in gathered_reqtypes if rt is not None), None)
+
             # compute number of pseudo-batches to pad with (FSDP/DDP require even batches among ranks)
             numpad = max(gathered_item) - gathered_item[lm.rank]
-            # todo: may not account for padding in cases like SquadV2 which has multiple req types
-            padding_requests[reqtype] += numpad
+            if reqtype is None:
+                eval_logger.warning(
+                    f"Task: {task_output.task_name}; unable to infer request type on rank {global_rank}, skipping padding computation."
+                )
+            else:
+                # todo: may not account for padding in cases like SquadV2 which has multiple req types
+                padding_requests[reqtype] += numpad
 
     ### Run LMM on inputs, get all outputs ###
+    if world_size > 1 and dist.is_available() and dist.is_initialized():
+        local_reqtypes = list(requests.keys())
+        gathered_reqtypes = [None] * world_size
+        dist.all_gather_object(gathered_reqtypes, local_reqtypes)
+        canonical_reqtypes = []
+        for rank_reqtypes in gathered_reqtypes:
+            if not rank_reqtypes:
+                continue
+            for reqtype in rank_reqtypes:
+                if reqtype not in canonical_reqtypes:
+                    canonical_reqtypes.append(reqtype)
+    else:
+        canonical_reqtypes = list(requests.keys())
+
     # execute each type of request
-    for reqtype, reqs in requests.items():
+    for reqtype in canonical_reqtypes:
+        reqs = requests.get(reqtype, [])
         eval_logger.info("Running {} requests".format(reqtype))
         # create `K` copies of each request `req` based off `K = req.repeats`
         cloned_reqs = []
+        pad_source = reqs[-1] if reqs else None
         for req in reqs:
             cloned_reqs.extend([req] * req.repeats)
 
+
         if (world_size > 1) and (padding_requests[reqtype] > 0):
-            for _ in range(padding_requests[reqtype]):
-                cloned_reqs.extend([req] * req.repeats)
+            if pad_source is None:
+                eval_logger.warning(
+                    f"Running {reqtype} requests but could not find a pad source request on rank {global_rank}; skipping rank padding."
+                )
+            else:
+                for _ in range(padding_requests[reqtype]):
+                    cloned_reqs.extend([pad_source] * pad_source.repeats)
 
         # run requests through model (with optional response cache)
         if reqtype == "generate_until_agentic":
@@ -1026,7 +1070,25 @@ def evaluate(
         for instances in instances_by_doc_id.values():
             instances.sort(key=lambda x: x.idx)
         # iterate over different filters used
-        for filter_key in task.instances[0].filtered_resps.keys():
+        local_filter_keys = list(task.instances[0].filtered_resps.keys()) if task.instances else []
+        if WORLD_SIZE > 1 and dist.is_available() and dist.is_initialized():
+            gathered_filter_keys = [None] * WORLD_SIZE
+            dist.all_gather_object(gathered_filter_keys, local_filter_keys)
+            filter_keys = []
+            for rank_keys in gathered_filter_keys:
+                if not rank_keys:
+                    continue
+                for filter_key in rank_keys:
+                    if filter_key not in filter_keys:
+                        filter_keys.append(filter_key)
+        else:
+            filter_keys = local_filter_keys
+
+        if len(filter_keys) == 0:
+            eval_logger.warning(f"Task: {task_output.task_name}; no filter keys available on rank {RANK}.")
+            continue
+
+        for filter_key in filter_keys:
             # Resolve reasoning tags for this task
             cli_reasoning_tags = getattr(cli_args, "reasoning_tags", None) if cli_args else None
             task_reasoning_tags = getattr(task.config, "reasoning_tags", None)
