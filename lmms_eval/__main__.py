@@ -95,9 +95,19 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     task_sizes = {}
     if args.tasks and args.tasks not in ["list", "list_groups", "list_tags", "list_subtasks"]:
         task_manager = TaskManager(args.verbosity, include_path=args.include_path)
-        task_names = task_manager.match_tasks(args.tasks.split(","))
+        requested_tasks = [task.strip() for task in args.tasks.split(",") if task.strip()]
+        task_names = task_manager.match_tasks(requested_tasks)
+        missing_tasks = [task for task in requested_tasks if task not in task_names and "*" not in task]
+        if missing_tasks:
+            print(f"[warning] Unresolved task names (skipped): {', '.join(sorted(set(missing_tasks)))}")
+        if not task_names:
+            print("[warning] No valid tasks resolved from --tasks; running global power analysis only.")
         for task_name in task_names:
-            task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
+            try:
+                task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
+            except Exception as exc:
+                print(f"[warning] Failed to hydrate task '{task_name}' (skipped): {type(exc).__name__}: {exc}")
+                continue
             for name, task_obj in task_dict.items():
                 if hasattr(task_obj, "eval_docs"):
                     task_sizes[name] = len(task_obj.eval_docs)
