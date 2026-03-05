@@ -5,7 +5,9 @@ LMMs-Eval Web UI Server - FastAPI backend with static file serving.
 from __future__ import annotations
 
 import asyncio
+import io
 import json
+import mimetypes
 import os
 import platform
 import re
@@ -25,6 +27,9 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from lmms_eval import utils as lmms_utils
+from lmms_eval.tasks import TaskManager
+from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
 from lmms_eval.tui.discovery import get_discovery_cache
 
 app = FastAPI(title="LMMs-Eval Web UI", version="0.1.0")
@@ -42,6 +47,180 @@ app.add_middleware(
 
 # In-memory job storage
 _jobs: dict[str, dict[str, Any]] = {}
+_task_manager: TaskManager | None = None
+_dataset_cache: dict[tuple[str, str | None, str], Any] = {}
+
+
+def _get_task_manager() -> TaskManager:
+    global _task_manager
+    if _task_manager is None:
+        _task_manager = TaskManager(verbosity="ERROR")
+    return _task_manager
+
+
+def _get_task_dataset_spec(task_name: str) -> tuple[str, str | None, str, dict[str, Any]]:
+    manager = _get_task_manager()
+    info = manager.task_index.get(task_name)
+    if info is None or info.get("type") != "task":
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    yaml_path = info.get("yaml_path")
+    if not yaml_path or yaml_path == -1:
+        raise HTTPException(status_code=404, detail="Task config not found")
+
+    config = lmms_utils.load_yaml_config(yaml_path, mode="full")
+    if not isinstance(config, dict):
+        raise HTTPException(status_code=500, detail="Task config is invalid")
+
+    dataset_path = config.get("dataset_path")
+    if not isinstance(dataset_path, str) or not dataset_path:
+        raise HTTPException(status_code=404, detail="Task dataset is not configured")
+
+    dataset_name = config.get("dataset_name")
+    if dataset_name is not None and not isinstance(dataset_name, str):
+        dataset_name = None
+
+    split: str | None = None
+    for key in ("test_split", "validation_split", "train_split", "split"):
+        value = config.get(key)
+        if isinstance(value, str) and value:
+            split = value
+            break
+    if split is None:
+        raise HTTPException(status_code=404, detail="Task split is not configured")
+
+    dataset_kwargs = config.get("dataset_kwargs")
+    if not isinstance(dataset_kwargs, dict):
+        dataset_kwargs = {}
+
+    return dataset_path, dataset_name, split, dataset_kwargs
+
+
+def _get_dataset(dataset_path: str, dataset_name: str | None, split: str, dataset_kwargs: dict[str, Any]):
+    cache_key = (dataset_path, dataset_name, split)
+    if cache_key in _dataset_cache:
+        return _dataset_cache[cache_key]
+
+    from datasets import load_dataset
+
+    kwargs = dict(dataset_kwargs)
+    if dataset_name:
+        dataset = load_dataset(dataset_path, dataset_name, split=split, **kwargs)
+    else:
+        dataset = load_dataset(dataset_path, split=split, **kwargs)
+    _dataset_cache[cache_key] = dataset
+    return dataset
+
+
+def _serialize_pil_image(image) -> tuple[bytes, str]:
+    fmt = getattr(image, "format", None)
+    pil_format = fmt.upper() if isinstance(fmt, str) and fmt else "PNG"
+    mime = f"image/{pil_format.lower()}"
+    if pil_format == "JPG":
+        pil_format = "JPEG"
+        mime = "image/jpeg"
+
+    buffer = io.BytesIO()
+    image.save(buffer, format=pil_format)
+    return buffer.getvalue(), mime
+
+
+def _extract_image_blob(value: Any) -> tuple[bytes, str] | None:
+    if value is None:
+        return None
+
+    try:
+        from PIL import Image
+
+        if isinstance(value, Image.Image):
+            return _serialize_pil_image(value)
+    except ImportError:
+        pass
+
+    if isinstance(value, (bytes, bytearray)):
+        return bytes(value), "image/png"
+
+    if isinstance(value, dict):
+        raw_bytes = value.get("bytes")
+        if isinstance(raw_bytes, (bytes, bytearray)):
+            path_hint = value.get("path") if isinstance(value.get("path"), str) else None
+            guessed, _ = mimetypes.guess_type(path_hint or "")
+            media_type = guessed if guessed and guessed.startswith("image/") else "image/png"
+            return bytes(raw_bytes), media_type
+
+        for candidate_key in ("image", "img", "picture"):
+            if candidate_key in value:
+                nested = _extract_image_blob(value[candidate_key])
+                if nested is not None:
+                    return nested
+
+        for nested_value in value.values():
+            nested = _extract_image_blob(nested_value)
+            if nested is not None:
+                return nested
+
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            nested = _extract_image_blob(item)
+            if nested is not None:
+                return nested
+
+    return None
+
+
+def _extract_video_path(value: Any, dataset_cache_dir: str | None) -> str | None:
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        resolved = resolve_media_reference(value, media_type="video", cache_dir=dataset_cache_dir)
+        if isinstance(resolved, str) and Path(resolved).exists():
+            return resolved
+        return None
+
+    if isinstance(value, dict):
+        for key in ("video", "video_path", "path", "file", "clip_path"):
+            candidate = value.get(key)
+            path = _extract_video_path(candidate, dataset_cache_dir)
+            if path is not None:
+                return path
+
+        for nested in value.values():
+            path = _extract_video_path(nested, dataset_cache_dir)
+            if path is not None:
+                return path
+
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            path = _extract_video_path(item, dataset_cache_dir)
+            if path is not None:
+                return path
+
+    return None
+
+
+def _resolve_dataset_media(task_name: str, doc_id: int) -> tuple[str, bytes | str, str]:
+    dataset_path, dataset_name, split, dataset_kwargs = _get_task_dataset_spec(task_name)
+    dataset = _get_dataset(dataset_path, dataset_name, split, dataset_kwargs)
+
+    try:
+        record = dataset[doc_id]
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=404, detail="Sample doc_id not found in dataset") from exc
+
+    image_payload = _extract_image_blob(record)
+    if image_payload is not None:
+        image_bytes, media_type = image_payload
+        return "bytes", image_bytes, media_type
+
+    cache_dir = dataset_kwargs.get("cache_dir") if isinstance(dataset_kwargs.get("cache_dir"), str) else None
+    video_path = _extract_video_path(record, cache_dir)
+    if video_path is not None:
+        guessed, _ = mimetypes.guess_type(video_path)
+        media_type = guessed if guessed and guessed.startswith("video/") else "video/mp4"
+        return "file", video_path, media_type
+
+    raise HTTPException(status_code=404, detail="No image/video found in dataset sample")
 
 
 def get_version() -> str:
@@ -710,6 +889,37 @@ async def get_log_run_samples(
         raise HTTPException(status_code=404, detail="Samples file not found") from exc
 
     return LogSamplesResponse(samples=samples, total=total, offset=offset, limit=limit)
+
+
+@app.get("/logs/runs/{run_id:path}/samples/{task_name}/media/{doc_id}")
+async def get_log_run_sample_media(
+    run_id: str,
+    task_name: str,
+    doc_id: int,
+    logs_path: str = Query("./logs/"),
+):
+    run_path = _resolve_run_results_path(logs_path, run_id)
+    if not run_path.name.endswith("_results.json"):
+        raise HTTPException(status_code=404, detail="Run results not found")
+    if not run_path.exists() or not run_path.is_file():
+        raise HTTPException(status_code=404, detail="Run results not found")
+    if "/" in task_name or "\\" in task_name:
+        raise HTTPException(status_code=400, detail="Invalid task name")
+    if doc_id < 0:
+        raise HTTPException(status_code=400, detail="Invalid doc_id")
+
+    mode, payload, media_type = await asyncio.to_thread(_resolve_dataset_media, task_name, doc_id)
+    if mode == "file":
+        return FileResponse(
+            path=str(payload),
+            media_type=media_type,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    return StreamingResponse(
+        io.BytesIO(payload),
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 if STATIC_DIR.exists():
