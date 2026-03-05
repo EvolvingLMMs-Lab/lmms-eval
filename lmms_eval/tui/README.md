@@ -55,6 +55,7 @@ LMMS_SERVER_PORT=3000 uv run lmms-eval-ui
 - Live evaluation output streaming
 - Start/Stop evaluation controls
 - Configuration: batch size, limit, device, verbosity
+- Log Viewer: browse saved runs, metrics, and samples from `./logs/`
 
 ## API Endpoints
 
@@ -67,6 +68,9 @@ LMMS_SERVER_PORT=3000 uv run lmms-eval-ui
 | `/eval/start` | POST | Start evaluation |
 | `/eval/{job_id}/stream` | GET | Stream evaluation output (SSE) |
 | `/eval/{job_id}/stop` | POST | Stop evaluation |
+| `/logs/runs` | GET | List available evaluation runs under logs path |
+| `/logs/runs/{run_id}/results` | GET | Load full results JSON for one run |
+| `/logs/runs/{run_id}/samples/{task_name}` | GET | Paginated sample records for one task |
 
 ## File Structure
 

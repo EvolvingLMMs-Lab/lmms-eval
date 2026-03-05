@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import LogViewer from './LogViewer'
 
 const API_BASE = ''
 
@@ -331,6 +332,7 @@ type TaskNode =
   | { type: 'leaf', task: TaskInfo }
 
 export default function App() {
+  const [page, setPage] = useState<'evaluate' | 'logs'>('evaluate')
   const [version, setVersion] = useState('...')
   const [gitInfo, setGitInfo] = useState<GitInfo>({ branch: '', commit: '' })
   const [sysInfo, setSysInfo] = useState<SysInfo>({ hostname: '', cwd: '' })
@@ -678,7 +680,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-white text-neutral-900 font-light selection:bg-black selection:text-white">
       <header className="relative h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="text-lg font-bold tracking-tight text-neutral-900">LMMs-Eval</div>
           <div className="flex items-center gap-3 text-[10px] font-mono text-neutral-400">
             <span className="bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-600">v{version}</span>
@@ -702,6 +704,28 @@ export default function App() {
             )}
 
           </div>
+          <div className="flex items-center h-14 ml-2">
+            <button
+              onClick={() => setPage('evaluate')}
+              className={`h-full px-3 text-[10px] uppercase tracking-wider font-medium border-b-2 transition-colors ${
+                page === 'evaluate'
+                  ? 'border-black text-black'
+                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
+              }`}
+            >
+              Evaluate
+            </button>
+            <button
+              onClick={() => setPage('logs')}
+              className={`h-full px-3 text-[10px] uppercase tracking-wider font-medium border-b-2 transition-colors ${
+                page === 'logs'
+                  ? 'border-black text-black'
+                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
+              }`}
+            >
+              Log Viewer
+            </button>
+          </div>
         </div>
         <div className="flex items-center">
           <div className={`px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-medium border ${
@@ -721,7 +745,8 @@ export default function App() {
         )}
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      {page === 'evaluate' ? (
+        <div className="flex flex-1 overflow-hidden">
         <div className="w-full md:w-[400px] lg:w-[450px] xl:w-[500px] 2xl:w-[550px] min-w-[320px] max-w-[600px] bg-white border-r border-neutral-200 flex flex-col overflow-y-auto scrollbar-thin flex-shrink-0">
           <div className="flex-shrink-0 border-b border-neutral-100">
             <div 
@@ -1086,6 +1111,9 @@ export default function App() {
           </div>
         </div>
       </div>
+      ) : (
+        <LogViewer />
+      )}
 
       {yamlPreview && (
         <div
