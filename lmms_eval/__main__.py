@@ -29,10 +29,10 @@ from accelerate import Accelerator
 from accelerate.utils import InitProcessGroupKwargs
 from loguru import logger as eval_logger
 
-import lmms_eval.tasks
 from lmms_eval import evaluator, utils
 from lmms_eval.api.metrics import power_analysis
 from lmms_eval.api.registry import ALL_TASKS
+from lmms_eval.cli.power_utils import collect_task_sizes
 from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
 from lmms_eval.tasks import TaskManager
@@ -94,13 +94,7 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     """Run power analysis to calculate minimum sample size for detecting a given effect."""
     task_sizes = {}
     if args.tasks and args.tasks not in ["list", "list_groups", "list_tags", "list_subtasks"]:
-        task_manager = TaskManager(args.verbosity, include_path=args.include_path)
-        task_names = task_manager.match_tasks(args.tasks.split(","))
-        for task_name in task_names:
-            task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
-            for name, task_obj in task_dict.items():
-                if hasattr(task_obj, "eval_docs"):
-                    task_sizes[name] = len(task_obj.eval_docs)
+        task_sizes = collect_task_sizes(args.tasks, verbosity=args.verbosity, include_path=args.include_path)
 
     result = power_analysis(
         effect_size=args.effect_size,

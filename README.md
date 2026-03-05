@@ -409,6 +409,7 @@ The web UI provides:
 - Real-time command preview
 - Live evaluation output streaming
 - Start/Stop evaluation controls
+- Log Viewer for browsing saved evaluation results and samples
 
 For more details, see [Web UI README](lmms_eval/tui/README.md).
 
