@@ -682,8 +682,32 @@ export default function App() {
       <header className="relative h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
         <div className="flex items-center gap-4 min-w-0">
           <div className="text-lg font-bold tracking-tight text-neutral-900">LMMs-Eval</div>
-          <div className="flex items-center gap-3 text-[10px] font-mono text-neutral-400">
-            <span className="bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-600">v{version}</span>
+          <div className="flex items-center rounded-md border border-neutral-300 bg-neutral-100 p-0.5">
+            <button
+              type="button"
+              onClick={() => setPage('evaluate')}
+              className={`h-8 px-3 text-[11px] font-semibold rounded-[5px] transition-colors ${
+                page === 'evaluate'
+                  ? 'bg-white text-black shadow-sm border border-neutral-300'
+                  : 'text-neutral-500 border border-transparent hover:text-neutral-700'
+              }`}
+            >
+              Evaluate
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage('logs')}
+              className={`h-8 px-3 text-[11px] font-semibold rounded-[5px] transition-colors ${
+                page === 'logs'
+                  ? 'bg-white text-black shadow-sm border border-neutral-300'
+                  : 'text-neutral-500 border border-transparent hover:text-neutral-700'
+              }`}
+            >
+              View Logs
+            </button>
+          </div>
+          <div className="hidden md:flex items-center gap-3 text-[10px] font-mono text-neutral-400">
+            <span>v{version}</span>
             {(gitInfo.branch || gitInfo.commit) && (
               <>
                 <span className="text-neutral-300">/</span>
@@ -703,28 +727,6 @@ export default function App() {
               </>
             )}
 
-          </div>
-          <div className="flex items-center h-14 ml-2">
-            <button
-              onClick={() => setPage('evaluate')}
-              className={`h-full px-3 text-[10px] uppercase tracking-wider font-medium border-b-2 transition-colors ${
-                page === 'evaluate'
-                  ? 'border-black text-black'
-                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
-              }`}
-            >
-              Evaluate
-            </button>
-            <button
-              onClick={() => setPage('logs')}
-              className={`h-full px-3 text-[10px] uppercase tracking-wider font-medium border-b-2 transition-colors ${
-                page === 'logs'
-                  ? 'border-black text-black'
-                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
-              }`}
-            >
-              Log Viewer
-            </button>
           </div>
         </div>
         <div className="flex items-center">
