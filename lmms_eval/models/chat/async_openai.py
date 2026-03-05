@@ -77,8 +77,7 @@ class AsyncOpenAIChat(lmms):
         if model is not None:
             model_version = model
         if kwargs:
-            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. "
-                                f"Check the supported parameters for the 'async_openai' backend.")
+            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. " f"Check the supported parameters for the 'async_openai' backend.")
         self.model_version = model_version
         self.timeout = timeout
         self.retry_backoff_s = max(0.0, float(1.0 if retry_backoff_s is None else retry_backoff_s))

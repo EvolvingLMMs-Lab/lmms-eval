@@ -105,8 +105,7 @@ class OpenAICompatible(lmms):
         if model is not None:
             model_version = model
         if kwargs:
-            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. "
-                                f"Check the supported parameters for the 'openai' backend.")
+            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. " f"Check the supported parameters for the 'openai' backend.")
         self.model_version = model_version
         self.timeout = timeout
         self.retry_backoff_s = max(0.0, float(retry_backoff_s))
