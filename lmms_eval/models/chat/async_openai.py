@@ -45,6 +45,7 @@ class AsyncOpenAIChat(lmms):
     def __init__(
         self,
         model_version: str = "grok-2-latest",
+        model: Optional[str] = None,
         base_url: str = None,
         api_key: str = None,
         timeout: int = 600,
@@ -73,6 +74,11 @@ class AsyncOpenAIChat(lmms):
         **kwargs,
     ) -> None:
         super().__init__()
+        if model is not None:
+            model_version = model
+        if kwargs:
+            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. "
+                                f"Check the supported parameters for the 'async_openai' backend.")
         self.model_version = model_version
         self.timeout = timeout
         self.retry_backoff_s = max(0.0, float(1.0 if retry_backoff_s is None else retry_backoff_s))

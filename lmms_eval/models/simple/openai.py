@@ -68,6 +68,7 @@ class OpenAICompatible(lmms):
     def __init__(
         self,
         model_version: str = "grok-2-latest",
+        model: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         timeout: int = 10,
@@ -99,6 +100,13 @@ class OpenAICompatible(lmms):
             HTTPS_PROXY, ALL_PROXY) and macOS proxy server settings.
         """
         super().__init__()
+        # Accept both `model` and `model_version` for convenience, since
+        # `--model_args model=xxx` is a common user expectation.
+        if model is not None:
+            model_version = model
+        if kwargs:
+            eval_logger.warning(f"Unknown model_args ignored: {list(kwargs.keys())}. "
+                                f"Check the supported parameters for the 'openai' backend.")
         self.model_version = model_version
         self.timeout = timeout
         self.retry_backoff_s = max(0.0, float(retry_backoff_s))
