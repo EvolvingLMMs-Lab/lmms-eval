@@ -1,7 +1,9 @@
+import base64
 import collections
 import copy
 import itertools
 import json
+import mimetypes
 import os
 import random
 import re
@@ -64,6 +66,79 @@ from lmms_eval.utils import (
     run_task_tests,
     simple_parse_args_string,
 )
+
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff")
+
+
+def _looks_like_image_ref(value: str) -> bool:
+    lowered = value.lower().strip()
+    if lowered.startswith("data:image/"):
+        return True
+    if lowered.startswith(("http://", "https://", "file://")):
+        return any(ext in lowered for ext in IMAGE_EXTENSIONS)
+    return lowered.endswith(IMAGE_EXTENSIONS)
+
+
+def _guess_image_mime(path_hint: Optional[str]) -> str:
+    if path_hint:
+        guessed, _ = mimetypes.guess_type(path_hint)
+        if guessed and guessed.startswith("image/"):
+            return guessed
+    return "image/png"
+
+
+def _append_image_source(target: list[str], source: str, seen: set[str], max_items: int) -> None:
+    if not source or source in seen or len(target) >= max_items:
+        return
+    seen.add(source)
+    target.append(source)
+
+
+def _extract_image_sources(value, out: list[str], seen: set[str], max_items: int = 4, max_inline_bytes: int = 300_000) -> None:
+    if len(out) >= max_items:
+        return
+
+    if isinstance(value, str):
+        if _looks_like_image_ref(value):
+            _append_image_source(out, value, seen, max_items)
+        return
+
+    if isinstance(value, dict):
+        path_hint: Optional[str] = None
+        for key in ("url", "uri", "path", "image", "image_url", "image_path"):
+            candidate = value.get(key)
+            if isinstance(candidate, str):
+                if key == "path":
+                    path_hint = candidate
+                if _looks_like_image_ref(candidate):
+                    _append_image_source(out, candidate, seen, max_items)
+
+        raw_bytes = value.get("bytes")
+        if isinstance(raw_bytes, (bytes, bytearray)) and 0 < len(raw_bytes) <= max_inline_bytes and len(out) < max_items:
+            mime = _guess_image_mime(path_hint)
+            encoded = base64.b64encode(raw_bytes).decode("ascii")
+            _append_image_source(out, f"data:{mime};base64,{encoded}", seen, max_items)
+
+        for nested in value.values():
+            _extract_image_sources(nested, out, seen, max_items=max_items, max_inline_bytes=max_inline_bytes)
+        return
+
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _extract_image_sources(item, out, seen, max_items=max_items, max_inline_bytes=max_inline_bytes)
+            if len(out) >= max_items:
+                break
+
+
+def _collect_input_media(doc: dict, request_args: list) -> list[str]:
+    sources: list[str] = []
+    seen: set[str] = set()
+    _extract_image_sources(doc, sources, seen)
+    for arg in request_args:
+        if len(sources) >= 4:
+            break
+        _extract_image_sources(arg, sources, seen)
+    return sources
 
 
 @positional_deprecated
@@ -1106,6 +1181,8 @@ def evaluate(
                             # else:
                             #     filtered_arguments.append(_handle_non_serializable(value))
 
+                    input_media = _collect_input_media(doc, filtered_arguments)
+
                     per_sample_tc = []
                     for req in requests:
                         if req.token_counts:
@@ -1131,6 +1208,8 @@ def evaluate(
                             )
                         ),
                     }
+                    if input_media:
+                        example["input_media"] = input_media
                     example.update(metrics)
                     task_output.logged_samples.append(example)
                 for metric, value in metrics.items():

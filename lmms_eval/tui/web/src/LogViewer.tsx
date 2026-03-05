@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 
 const API_BASE = ''
 const DEFAULT_LOGS_PATH = './logs/'
 const SAMPLE_PAGE_SIZE = 20
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.tif', '.tiff']
 
 interface LogRunSummary {
   run_id: string
@@ -118,6 +119,233 @@ function filteredResponsesText(value: unknown): string {
   return valueToText(value)
 }
 
+function looksLikeImageSource(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return false
+  if (normalized.startsWith('data:image/')) return true
+  if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('file://')) {
+    return IMAGE_EXTENSIONS.some(ext => normalized.includes(ext))
+  }
+  return IMAGE_EXTENSIONS.some(ext => normalized.endsWith(ext))
+}
+
+function isDirectlyLoadableImageSource(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return false
+  if (normalized.startsWith('data:image/')) return true
+  if (normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('file://')) return true
+  if (normalized.startsWith('/')) return true
+  return false
+}
+
+function collectImageCandidates(value: unknown, bucket: string[], seen: Set<string>, maxItems = 4): void {
+  if (bucket.length >= maxItems || value == null) return
+
+  if (typeof value === 'string') {
+    if (looksLikeImageSource(value) && !seen.has(value)) {
+      seen.add(value)
+      bucket.push(value)
+    }
+    return
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectImageCandidates(item, bucket, seen, maxItems)
+      if (bucket.length >= maxItems) break
+    }
+    return
+  }
+
+  if (!isRecord(value)) {
+    return
+  }
+
+  for (const [key, nested] of Object.entries(value)) {
+    if (bucket.length >= maxItems) break
+    if (typeof nested === 'string' && (key.includes('image') || key.includes('url') || key.includes('path')) && looksLikeImageSource(nested) && !seen.has(nested)) {
+      seen.add(nested)
+      bucket.push(nested)
+      continue
+    }
+    collectImageCandidates(nested, bucket, seen, maxItems)
+  }
+}
+
+interface ImageSourceBuckets {
+  loadable: string[]
+  unresolved: string[]
+}
+
+function buildDatasetMediaSource(runId: string | null, taskName: string, docId: unknown, logsPath: string): string | null {
+  if (!runId || !taskName) {
+    return null
+  }
+  const parsedDocId = Number(docId)
+  if (!Number.isInteger(parsedDocId) || parsedDocId < 0) {
+    return null
+  }
+  const params = new URLSearchParams({ logs_path: logsPath })
+  return `${API_BASE}/logs/runs/${runId}/samples/${encodeURIComponent(taskName)}/media/${parsedDocId}?${params.toString()}`
+}
+
+function extractInputImages(sample: Record<string, unknown>): ImageSourceBuckets {
+  const refs: string[] = []
+  const seen = new Set<string>()
+
+  const explicit = sample.input_media
+  if (Array.isArray(explicit)) {
+    for (const entry of explicit) {
+      if (typeof entry === 'string' && looksLikeImageSource(entry) && !seen.has(entry)) {
+        seen.add(entry)
+        refs.push(entry)
+      }
+    }
+    if (refs.length > 0) {
+      return {
+        loadable: refs.filter(isDirectlyLoadableImageSource),
+        unresolved: refs.filter(src => !isDirectlyLoadableImageSource(src)),
+      }
+    }
+  }
+
+  collectImageCandidates(sample, refs, seen)
+  return {
+    loadable: refs.filter(isDirectlyLoadableImageSource),
+    unresolved: refs.filter(src => !isDirectlyLoadableImageSource(src)),
+  }
+}
+
+interface DeferredImageGalleryProps {
+  docId: unknown
+  imageSources: string[]
+  unresolvedSources: string[]
+}
+
+function DeferredImageGallery({ docId, imageSources, unresolvedSources }: DeferredImageGalleryProps) {
+  const [shouldLoadImages, setShouldLoadImages] = useState(false)
+  const [failedSources, setFailedSources] = useState<Set<string>>(new Set())
+  const [videoSources, setVideoSources] = useState<Set<string>>(new Set())
+  const imageSignature = imageSources.join('|')
+
+  useEffect(() => {
+    setShouldLoadImages(false)
+    setFailedSources(new Set())
+    setVideoSources(new Set())
+  }, [imageSignature])
+
+  if (imageSources.length === 0 && unresolvedSources.length === 0) {
+    return null
+  }
+
+  if (imageSources.length === 0) {
+    return (
+      <div className="mt-2 border border-amber-200 bg-amber-50 px-2 py-2 text-[10px] font-mono text-amber-800">
+        Image reference found but not directly loadable in Web UI: {unresolvedSources[0]}
+      </div>
+    )
+  }
+
+  const skeletonCount = Math.min(imageSources.length, 4)
+  const visibleImageSources = imageSources.filter(src => !failedSources.has(src))
+
+  return (
+    <div
+      tabIndex={0}
+      onFocus={() => setShouldLoadImages(true)}
+      onClick={() => setShouldLoadImages(true)}
+      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          setShouldLoadImages(true)
+        }
+      }}
+      className="mt-2 border border-neutral-200 bg-white p-2"
+    >
+      {shouldLoadImages ? (
+        <div className="space-y-2">
+          {visibleImageSources.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {visibleImageSources.map((src, imgIdx) => (
+                <a
+                  key={`${valueToText(docId)}-${imgIdx}`}
+                  href={src}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group block border border-neutral-200 bg-white overflow-hidden"
+                  title={src}
+                >
+                  {videoSources.has(src) ? (
+                    <video
+                      src={src}
+                      controls
+                      className="w-full h-36 object-contain bg-neutral-100"
+                      preload="metadata"
+                      onError={() => {
+                        setFailedSources(prev => {
+                          const next = new Set(prev)
+                          next.add(src)
+                          return next
+                        })
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={src}
+                      alt={`input-${imgIdx}`}
+                      className="w-full h-36 object-contain bg-neutral-100"
+                      loading="lazy"
+                      onError={() => {
+                        setVideoSources(prev => {
+                          const next = new Set(prev)
+                          next.add(src)
+                          return next
+                        })
+                      }}
+                    />
+                  )}
+                  <div className="px-2 py-1 text-[10px] font-mono text-neutral-500 truncate group-hover:text-neutral-800">
+                    {src}
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div className="border border-amber-200 bg-amber-50 px-2 py-2 text-[10px] font-mono text-amber-800">
+              Unable to load media preview from current source.
+            </div>
+          )}
+          {failedSources.size > 0 && (
+            <div className="border border-amber-200 bg-amber-50 px-2 py-2 text-[10px] font-mono text-amber-800">
+              Failed to load {failedSources.size} media source{failedSources.size > 1 ? 's' : ''}.
+            </div>
+          )}
+          {unresolvedSources.length > 0 && (
+            <div className="border border-amber-200 bg-amber-50 px-2 py-2 text-[10px] font-mono text-amber-800">
+              Skipped {unresolvedSources.length} non-loadable image reference{unresolvedSources.length > 1 ? 's' : ''}.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" aria-hidden="true">
+            {Array.from({ length: skeletonCount }).map((_, idx) => (
+              <div key={`${valueToText(docId)}-skeleton-${idx}`} className="h-36 border border-neutral-200 bg-neutral-100" />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShouldLoadImages(true)}
+            className="w-full text-left px-2 py-2 text-[10px] font-mono text-neutral-500 border border-dashed border-neutral-300 bg-neutral-50 hover:text-neutral-800 hover:border-neutral-500 transition-colors"
+          >
+            {imageSources.length} media preview{imageSources.length > 1 ? 's' : ''} ready - focus or click to load
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function extractMetricRows(runResults: RunResults | null): MetricRow[] {
   if (!runResults?.results || !isRecord(runResults.results)) {
     return []
@@ -160,6 +388,7 @@ function extractSampleBadges(sample: Record<string, unknown>): Array<[string, un
   const ignored = new Set([
     'doc_id',
     'input',
+    'input_media',
     'target',
     'filtered_resps',
     'doc_hash',
@@ -580,6 +809,12 @@ export default function LogViewer() {
                   samplesResponse.samples.map((sample, index) => {
                     const badges = extractSampleBadges(sample)
                     const docId = sample.doc_id ?? sample.doc_hash ?? `${samplesResponse.offset + index}`
+                    const inputImageBuckets = extractInputImages(sample)
+                    const datasetMediaSource = buildDatasetMediaSource(selectedRunId, selectedTask, docId, logsPath)
+                    const imageSources = datasetMediaSource
+                      ? Array.from(new Set([...inputImageBuckets.loadable, datasetMediaSource]))
+                      : inputImageBuckets.loadable
+                    const unresolvedSources = inputImageBuckets.unresolved
 
                     return (
                       <div key={`${samplesResponse.offset}-${index}`} className="border border-neutral-200 bg-white p-3 space-y-2">
@@ -607,6 +842,11 @@ export default function LogViewer() {
                             <pre className="whitespace-pre-wrap break-words text-xs font-mono text-neutral-700 border border-neutral-200 bg-neutral-50 p-2">
                               {valueToText(sample.input) || 'N/A'}
                             </pre>
+                            <DeferredImageGallery
+                              docId={docId}
+                              imageSources={imageSources}
+                              unresolvedSources={unresolvedSources}
+                            />
                           </div>
 
                           <div>
