@@ -63,7 +63,7 @@ dependencies = [
     "loguru",
     "hf_transfer",
     "tenacity>=8.3.0",
-    "wandb>=0.16.0",
+    "wandb==0.25.0",
     "tiktoken",
     "pre-commit",
     "pydantic",
