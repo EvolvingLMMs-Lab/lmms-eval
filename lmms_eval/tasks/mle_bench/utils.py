@@ -36,6 +36,7 @@ SUB_TASK_MAP = {
 # Helper: extract answer letter from model output
 # ---------------------------------------------------------------------------
 
+
 def _extract_answer_letter(text: str) -> str:
     """
     Robustly extract the first answer-choice letter (A/B/C/D) from model output.
@@ -87,6 +88,7 @@ def _answer_to_letter(doc: Dict) -> str:
 # Core task functions
 # ---------------------------------------------------------------------------
 
+
 def mle_bench_doc_to_visual(doc: Dict) -> List:
     """Return the image as a list (lmms-eval convention)."""
     return [doc["image"].convert("RGB")]
@@ -128,6 +130,7 @@ def mle_bench_doc_to_target(doc: Dict) -> str:
 # ---------------------------------------------------------------------------
 # Result processing & aggregation
 # ---------------------------------------------------------------------------
+
 
 def mle_bench_process_results(doc: Dict, results: List[str]) -> Dict:
     """
@@ -191,6 +194,7 @@ def mle_bench_aggregate_results(results: List[Dict]) -> float:
 # ---------------------------------------------------------------------------
 # Filter functions for sub-task specific YAML configs
 # ---------------------------------------------------------------------------
+
 
 def filter_small(dataset):
     """Keep only small-object samples (existence_0-30)."""
