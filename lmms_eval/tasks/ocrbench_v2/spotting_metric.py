@@ -1,10 +1,8 @@
 import ast
 import os
 import re
-import shutil
+import tempfile
 import zipfile
-
-import ipdb
 
 import lmms_eval.tasks.ocrbench_v2.spotting_eval.rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
 from lmms_eval.tasks.ocrbench_v2.spotting_eval.script import (
@@ -127,58 +125,53 @@ def zip_folder(source_folder, destination_zip):
 def spotting_evaluation(prediction_list, img_metas):
     score = 0
 
-    submit_path = "./lmms_eval/tasks/ocrbench_v2/spotting_eval/submit"
-    gt_path = "./lmms_eval/tasks/ocrbench_v2/spotting_eval/gt"
-    submit_zip_path = "./lmms_eval/tasks/ocrbench_v2/spotting_eval/submit.zip"
-    gt_zip_path = "./lmms_eval/tasks/ocrbench_v2/spotting_eval/gt.zip"
-    for file_path in [submit_path, gt_path, submit_zip_path, gt_zip_path]:
-        if "zip" in file_path:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        else:
-            if os.path.exists(file_path):
-                shutil.rmtree(file_path)
-            os.makedirs(file_path)
+    with tempfile.TemporaryDirectory(prefix="ocrbench-v2-spotting-") as temp_dir:
+        submit_path = os.path.join(temp_dir, "submit")
+        gt_path = os.path.join(temp_dir, "gt")
+        submit_zip_path = os.path.join(temp_dir, "submit.zip")
+        gt_zip_path = os.path.join(temp_dir, "gt.zip")
+        os.makedirs(submit_path, exist_ok=True)
+        os.makedirs(gt_path, exist_ok=True)
+        os.makedirs(os.path.join(temp_dir, "lmms_eval", "tasks", "ocrbench_v2", "spotting_eval"), exist_ok=True)
 
-    res_submit_list = []
-    for item in prediction_list:
-        if len(item) != 5:
-            ipdb.set_trace()
-        x1, y1, x2, y2, rec = item
-        if x1 >= x2 or y1 >= y2:
-            continue
+        res_submit_list = []
+        for item in prediction_list:
+            if len(item) != 5:
+                continue
+            x1, y1, x2, y2, rec = item
+            if x1 >= x2 or y1 >= y2:
+                continue
 
-        res_submit_list.append(",".join([str(x1), str(y1), str(x2), str(y1), str(x2), str(y2), str(x1), str(y2), rec]))
+            res_submit_list.append(",".join([str(x1), str(y1), str(x2), str(y1), str(x2), str(y2), str(x1), str(y2), rec]))
 
-    res_gt_list = []
-    for bbox, rec in zip(img_metas["bbox_list"], img_metas["content"]):
-        x_coords = bbox[0::2]
-        y_coords = bbox[1::2]
+        res_gt_list = []
+        for bbox, rec in zip(img_metas["bbox_list"], img_metas["content"]):
+            x_coords = bbox[0::2]
+            y_coords = bbox[1::2]
 
-        x1, y1 = min(x_coords), min(y_coords)
-        x2, y2 = max(x_coords), max(y_coords)
+            x1, y1 = min(x_coords), min(y_coords)
+            x2, y2 = max(x_coords), max(y_coords)
 
-        res_gt_list.append(",".join([str(x1), str(y1), str(x2), str(y1), str(x2), str(y2), str(x1), str(y2), rec]))
+            res_gt_list.append(",".join([str(x1), str(y1), str(x2), str(y1), str(x2), str(y2), str(x1), str(y2), rec]))
 
-    if len(res_submit_list) == 0 or len(res_gt_list) == 0:
-        return 0
+        if len(res_submit_list) == 0 or len(res_gt_list) == 0:
+            return 0
 
-    with open(os.path.join(submit_path, "res_img_0.txt"), "w") as f:
-        for item in res_submit_list[:-1]:
-            f.write(item + "\n")
-        f.write(res_submit_list[-1])
+        with open(os.path.join(submit_path, "res_img_0.txt"), "w") as f:
+            for item in res_submit_list[:-1]:
+                f.write(item + "\n")
+            f.write(res_submit_list[-1])
 
-    with open(os.path.join(gt_path, "gt_img_0.txt"), "w") as f:
-        for item in res_gt_list[:-1]:
-            f.write(item + "\n")
-        f.write(res_gt_list[-1])
+        with open(os.path.join(gt_path, "gt_img_0.txt"), "w") as f:
+            for item in res_gt_list[:-1]:
+                f.write(item + "\n")
+            f.write(res_gt_list[-1])
 
-    zip_folder(submit_path, submit_zip_path)
-    zip_folder(gt_path, gt_zip_path)
+        zip_folder(submit_path, submit_zip_path)
+        zip_folder(gt_path, gt_zip_path)
 
-    command = {"g": gt_zip_path, "s": submit_zip_path, "o": "./", "p": '{"IOU_CONSTRAINT":0.5}'}
+        command = {"g": gt_zip_path, "s": submit_zip_path, "o": temp_dir, "p": '{"IOU_CONSTRAINT":0.5}'}
 
-    # run rrc_evaluation_funcs
-    result = rrc_evaluation_funcs.main_evaluation(command, default_evaluation_params, validate_data, evaluate_method)
-    score = result["method"]["hmean"]
+        result = rrc_evaluation_funcs.main_evaluation(command, default_evaluation_params, validate_data, evaluate_method)
+        score = result["method"]["hmean"]
     return score
