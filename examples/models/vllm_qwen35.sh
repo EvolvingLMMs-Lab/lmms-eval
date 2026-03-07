@@ -4,6 +4,7 @@ MODEL="Qwen/Qwen3.5-397B-A17B"
 TASKS="mmmu_val,mme"
 
 TENSOR_PARALLEL_SIZE=8
+# Global DP replica count across the full launch, not a per-GPU local value.
 DATA_PARALLEL_SIZE=1
 GPU_MEMORY_UTILIZATION=0.85
 BATCH_SIZE=16

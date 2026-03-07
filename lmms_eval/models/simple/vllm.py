@@ -51,6 +51,9 @@ class VLLM(lmms):
             Default: "Qwen/Qwen2.5-VL-3B-Instruct"
         tensor_parallel_size (int): Number of GPUs to use for tensor parallelism.
             Default: 1
+        data_parallel_size (int): Global number of data-parallel replicas across the
+            distributed launch. This is a world-size value, not a per-node or per-GPU
+            local count. Default: 1
         gpu_memory_utilization (float): Fraction of GPU memory to use for model weights.
             Should be between 0.0 and 1.0. Default: 0.8
         batch_size (int): Number of requests to process in parallel per GPU.
@@ -212,9 +215,16 @@ class VLLM(lmms):
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
+        expected_world_size = self.tensor_parallel_size * self.data_parallel_size
+        if self.data_parallel_size > 1 and accelerator.num_processes == 1:
+            raise ValueError(
+                "vLLM data parallel requires torchrun/accelerate multi-process launch. "
+                f"Expected world_size = tensor_parallel_size * data_parallel_size = {expected_world_size}, "
+                "but got single-process execution. Re-launch lmms_eval with torchrun or another "
+                "distributed launcher instead of passing data_parallel_size to a single process."
+            )
         if accelerator.num_processes > 1:
             kwargs["distributed_executor_backend"] = "external_launcher"
-            expected_world_size = self.tensor_parallel_size * self.data_parallel_size
             if expected_world_size > 1 and accelerator.num_processes != expected_world_size:
                 raise ValueError("For external_launcher mode, accelerate world size must equal " f"tensor_parallel_size * data_parallel_size ({expected_world_size}), " f"but got {accelerator.num_processes}.")
         self.client = LLM(

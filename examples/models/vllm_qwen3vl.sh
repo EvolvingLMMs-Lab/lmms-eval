@@ -29,7 +29,7 @@ MODEL="Qwen/Qwen3-VL-30B-A3B-Instruct"
 # Adjust based on your GPU configuration.
 # If DATA_PARALLEL_SIZE > 1, this script automatically switches to torchrun.
 TENSOR_PARALLEL_SIZE=4  # Number of GPUs for tensor parallelism
-DATA_PARALLEL_SIZE=1    # Number of model replicas for data parallelism
+DATA_PARALLEL_SIZE=1    # Global number of data-parallel replicas, not a per-GPU local value
 
 # Memory and Performance Settings
 GPU_MEMORY_UTILIZATION=0.85  # Fraction of GPU memory to use (0.0 - 1.0)
