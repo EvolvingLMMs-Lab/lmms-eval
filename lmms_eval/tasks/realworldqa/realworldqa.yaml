@@ -2,6 +2,8 @@ dataset_path: lmms-lab/RealWorldQA
 dataset_kwargs:
   token: True
 task: "realworldqa"
+tag:
+  - public_eval_qwen3_5_family
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.realworldqa_doc_to_visual

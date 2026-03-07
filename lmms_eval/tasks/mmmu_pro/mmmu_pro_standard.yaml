@@ -1,4 +1,7 @@
 task: "mmmu_pro_standard"
+tag:
+  - public_eval_qwen3_5_family
+  - public_eval_gemini3_family
 dataset_path: MMMU/MMMU_Pro
 dataset_name: "standard (10 options)"
 test_split: test

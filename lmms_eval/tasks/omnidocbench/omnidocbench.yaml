@@ -2,6 +2,10 @@ dataset_path: ouyanglinke/OmniDocBench_tsv
 dataset_kwargs:
   token: True
 task: omnidocbench
+tag:
+  - public_eval_qwen3_5_family
+  - public_eval_seed2_family
+  - public_eval_gemini3_family
 test_split: train
 output_type: generate_until
 doc_to_visual: !function utils.omnidocbench_doc_to_visual

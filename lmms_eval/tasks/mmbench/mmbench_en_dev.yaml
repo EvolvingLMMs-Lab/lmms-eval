@@ -1,4 +1,6 @@
 task: "mmbench_en_dev"
+tag:
+  - public_eval_qwen3_5_family
 test_split: dev
 include: _default_template_mmbench_en_yaml
 metric_list:
