@@ -10,11 +10,10 @@ import uuid
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecodeError
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import numpy as np
 from accelerate import Accelerator, DistributedType
-from mcp.types import ImageContent, TextContent
 from PIL import Image
 from sglang import Engine
 from tqdm import tqdm
@@ -23,7 +22,6 @@ from transformers import AutoProcessor
 from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.mcp import MCPClient
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.protocol import ChatMessages
 
@@ -46,6 +44,25 @@ try:
     from sglang.srt.entrypoints.openai.protocol import Tool
 except ImportError:
     from sglang.srt.openai_api.protocol import Tool
+
+if TYPE_CHECKING:
+    from lmms_eval.mcp.client import MCPClient
+
+
+def _build_mcp_client(server_path: str) -> "MCPClient":
+    try:
+        from lmms_eval.mcp.client import MCPClient
+    except ImportError as exc:
+        raise ImportError("MCP support requires the optional 'mcp' dependency. Install with: pip install 'lmms_eval[mcp]'") from exc
+    return MCPClient(server_path)
+
+
+def _is_mcp_image_content(result: Any) -> bool:
+    return result.__class__.__name__ == "ImageContent" and hasattr(result, "data")
+
+
+def _is_mcp_text_content(result: Any) -> bool:
+    return result.__class__.__name__ == "TextContent" and hasattr(result, "text")
 
 
 @register_model("sglang_runtime")
@@ -94,7 +111,7 @@ class Sglang(lmms):
         if json_model_override_args is not None:
             kwargs["json_model_override_args"] = json_model_override_args
         if mcp_server_path is not None:
-            self.mcp_client = MCPClient(mcp_server_path)
+            self.mcp_client = _build_mcp_client(mcp_server_path)
         else:
             self.mcp_client = None
         self.processor = AutoProcessor.from_pretrained(model, trust_remote_code=trust_remote_code)
@@ -234,8 +251,8 @@ class Sglang(lmms):
         messages = chat_messages.to_hf_messages(video_kwargs)
         images, videos, audios = chat_messages.extract_media()
 
-        # Handle media files if tools are available
-        if self.tools is not None:
+        # Handle media files if tools are available (MCP enabled)
+        if self.tools:
             for image_idx, image in enumerate(images):
                 image_path = os.path.join(self.work_dir, f"{uuid.uuid4()}.jpg")
                 image.save(image_path)
@@ -253,7 +270,7 @@ class Sglang(lmms):
                     }
                 )
 
-        return messages, images
+        return messages, images, videos
 
     def _extract_gen_params(self, gen_kwargs):
         """Extract generation parameters with defaults."""
@@ -305,62 +322,95 @@ class Sglang(lmms):
             with ThreadPoolExecutor(max_workers=min(len(batch_requests), self.threads)) as executor:
                 batched_messages_and_images = list(executor.map(self._prepare_single_message, batch_requests))
 
-            # Unpack messages and images from parallel results
-            batched_messages = [msg for msg, _ in batched_messages_and_images]
-            image_data = [imgs for _, imgs in batched_messages_and_images]
+            # Unpack messages, images, and videos from parallel results
+            batched_messages = [msg for msg, _, _ in batched_messages_and_images]
+            image_data = [imgs for _, imgs, _ in batched_messages_and_images]
+            video_data = [vids for _, _, vids in batched_messages_and_images]
 
             # Extract generation parameters from first request (should be same for batch)
             ctx, doc_to_messages, gen_kwargs, doc_id, task, split = batch_requests[0].arguments
             params = self._extract_gen_params(gen_kwargs)
 
-            image_inputs, video_inputs, video_kwargs = process_vision_info(batched_messages, return_video_kwargs=True, return_video_metadata=True)
+            # Detect video vs image-only via process_vision_info
+            image_inputs, video_inputs, vision_info_kwargs = process_vision_info(
+                batched_messages,
+                return_video_kwargs=True,
+                return_video_metadata=True,
+                image_patch_size=16,
+            )
+
             texts = self.processor.apply_chat_template(
                 batched_messages,
                 tokenize=False,
                 add_generation_prompt=True,
-                tools=self.tools,
+                tools=self.tools or None,
             )
-            if video_inputs is not None:
-                video_inputs, video_metadatas = zip(*video_inputs)
-                video_inputs, video_metadatas = (
-                    list(video_inputs),
-                    list(video_metadatas),
-                )
-            else:
-                video_metadatas = None
-            assert image_inputs is None or video_inputs is None, "Only one of image or video inputs should be provided"
-            inputs = self.processor(
-                text=texts,
-                images=image_inputs,
-                videos=video_inputs,
-                video_metadata=video_metadatas,
-                **video_kwargs,
-                padding=True,
-                return_tensors="pt",
-            )
-            # If video inputs is not None, we need to replace the image token ids with the video token ids before generating
-            # so that the visual tokens are being scattered correctly.
-            if video_inputs is not None:
-                input_ids = inputs.pop("input_ids")
-                input_ids[input_ids == self.video_token_id] = self.image_token_id
-                input_ids = input_ids.tolist()
-                image_inputs = []
-                for video_input in video_inputs:
-                    images = [Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8)) for frame in video_input]
-                    image_inputs.append(images)
-            else:
-                input_ids = inputs.pop("input_ids").tolist()
 
             start_time = time.time()
-            if self.mcp_client is None:
-                outputs = self.batch_level_generate(input_ids=input_ids, sampling_params=params, image_data=image_inputs)
+            if video_inputs is not None:
+                # ── VIDEO path: pass text + video data directly to SGLang ──
+                # Do NOT pre-tokenize with self.processor() — SGLang's Engine runs its
+                # own Qwen3-VL processor internally, which handles videos natively.
+                # Passing pre-expanded input_ids causes double-expansion of pad tokens
+                # (same issue as the image-only fix below).
+                if self.mcp_client is None:
+                    outputs = self.client.generate(prompt=texts, video_data=video_data, sampling_params=params)
+                else:
+                    # MCP path still needs input_ids for tool-call round-trips.
+                    # TODO: This path has the same double-processing bug — fix when
+                    # MCP + video is actually needed.
+                    video_inputs, video_metadatas = zip(*video_inputs)
+                    video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+
+                    proc_video_kwargs = self._prepare_video_kwargs()
+                    proc_video_kwargs.update(vision_info_kwargs)
+
+                    inputs = self.processor(
+                        text=texts,
+                        images=None,
+                        videos=video_inputs,
+                        video_metadata=video_metadatas,
+                        **proc_video_kwargs,
+                        do_resize=False,
+                        padding=True,
+                        return_tensors="pt",
+                    )
+                    input_ids = inputs.pop("input_ids")
+                    input_ids[input_ids == self.video_token_id] = self.image_token_id
+                    input_ids = input_ids.tolist()
+                    video_as_images = []
+                    for video_input in video_inputs:
+                        frames = [Image.fromarray(frame.permute(1, 2, 0).numpy().astype(np.uint8)) for frame in video_input]
+                        video_as_images.append(frames)
+                    outputs = self.req_level_generate(
+                        input_ids=input_ids,
+                        image_data=video_as_images,
+                        sampling_params=params,
+                        batched_messages=batched_messages,
+                    )
             else:
-                outputs = self.req_level_generate(
-                    input_ids=input_ids,
-                    image_data=image_inputs,
-                    sampling_params=params,
-                    batched_messages=batched_messages,
-                )
+                # ── IMAGE-ONLY path: pass text directly to SGLang ──
+                # Do NOT pre-tokenize with self.processor() — SGLang's Engine runs its
+                # own Qwen3-VL processor internally.  Passing pre-expanded input_ids
+                # causes double-expansion of <|image_pad|> tokens → IndexError.
+                if self.mcp_client is None:
+                    outputs = self.client.generate(prompt=texts, image_data=image_data, sampling_params=params)
+                else:
+                    # MCP path still needs input_ids for tool-call round-trips
+                    inputs = self.processor(
+                        text=texts,
+                        images=image_inputs,
+                        do_resize=False,
+                        padding=True,
+                        return_tensors="pt",
+                    )
+                    input_ids = inputs.pop("input_ids").tolist()
+                    outputs = self.req_level_generate(
+                        input_ids=input_ids,
+                        image_data=image_inputs,
+                        sampling_params=params,
+                        batched_messages=batched_messages,
+                    )
             end_time = time.time()
 
             response_text = [o["text"] for o in outputs]
@@ -496,11 +546,11 @@ class Sglang(lmms):
                     results = await self.mcp_client.run_tool(tool_call.name, arguments)
                     content_list = []
                     for result in results.content:
-                        if isinstance(result, ImageContent):
+                        if _is_mcp_image_content(result):
                             new_image = Image.open(io.BytesIO(base64.b64decode(result.data)))
                             new_image_data.append(new_image)
                             content_list.append({"type": "image"})
-                        elif isinstance(result, TextContent):
+                        elif _is_mcp_text_content(result):
                             content_list.append({"type": "text", "text": result.text})
                         else:
                             raise ValueError(f"Unsupported result type: {type(result)}. Only ImageContent, TextContent are supported.")
