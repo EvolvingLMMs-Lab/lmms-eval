@@ -95,7 +95,24 @@ class LlamaEmu3p5Chat(EMU3p5EncoderModel):
         if tokenizer.pad_token is None:
             eval_logger.warning("No pad_token found in tokenizer, setting pad_token to eos_token.")
             tokenizer.pad_token = tokenizer.eos_token
+
+        sft_eot_token_id = tokenizer.init_kwargs.get("sft_eot_token")
+        if sft_eot_token_id is not None:
+            self._sft_eot_token_id = sft_eot_token_id
+            eval_logger.info(f"Using sft_eot_token_id={sft_eot_token_id} for generation stopping")
+        else:
+            self._sft_eot_token_id = None
+            eval_logger.warning("No sft_eot_token found in tokenizer init_kwargs. " "Generation will only stop at eos_token_id.")
+
         return tokenizer
+
+    @property
+    def generation_eos_token_id(self):
+        """Return both eos_token_id and sft_eot_token_id for generation."""
+        ids = [self.tokenizer.eos_token_id]
+        if self._sft_eot_token_id is not None:
+            ids.append(self._sft_eot_token_id)
+        return ids
 
     def _load_llm(self, model_path: str, **kwargs) -> LlamaForCausalLM:
         """Load Llama causal language model."""

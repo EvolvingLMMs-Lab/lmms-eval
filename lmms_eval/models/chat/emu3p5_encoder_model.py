@@ -44,6 +44,11 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
 
     is_simple = False  # Chat model
 
+    @property
+    def generation_eos_token_id(self):
+        """Return eos_token_id(s) for generation. Override for custom stop tokens."""
+        return self.tokenizer.eos_token_id
+
     def _chat_transform(self, hf_messages: list[dict]) -> list[dict]:
         """
         Optional: Transform HF messages before applying chat template.
@@ -63,14 +68,12 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
         """Generate responses for chat model using chat template."""
         res = []
 
-        # Initialize statistics counters
         text_only_count = 0
         multi_image_count = 0
         total_samples = 0
         skipped_text_only = 0
         skipped_multi_image = 0
 
-        # Collate helper
         def _collate(x):
             return x[0], x[0]
 
@@ -95,13 +98,11 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
 
-            # Extract media and prepare batch
+            # Extract media and prepare current batch
             batch_data = []
-
             for idx, chat_message in enumerate(chat_messages):
                 total_samples += 1
 
-                # Extract media
                 visual, _, _ = chat_message.extract_media()
 
                 # Check for text-only samples
@@ -130,10 +131,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                         continue
                     # else: process all images (multi-image supported)
 
-                # Convert to HF messages
                 hf_messages = chat_message.to_hf_messages()
-
-                # Apply subclass transformation hook
                 transformed_messages = self._chat_transform(hf_messages)
 
                 # Convert images to PIL if needed
@@ -164,7 +162,6 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             # Prepare images list
             images_list = [item["images"] for item in batch_data]
 
-            # Encode images and inject vision tokens
             inputs = self.processor.encode_and_inject_vision_tokens(
                 texts=texts,
                 images=images_list,
@@ -183,7 +180,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             generation_config = GenerationConfig(
                 pad_token_id=self.tokenizer.pad_token_id,
                 bos_token_id=self.tokenizer.bos_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
+                eos_token_id=self.generation_eos_token_id,
                 max_new_tokens=gen_kwargs.get("max_new_tokens", 1024),
                 temperature=gen_kwargs.get("temperature", 0.0),
                 do_sample=gen_kwargs.get("do_sample", False),

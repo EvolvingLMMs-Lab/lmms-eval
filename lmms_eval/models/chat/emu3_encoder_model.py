@@ -42,6 +42,11 @@ class EMU3EncoderModel(EMU3EncoderBaseModel):
 
     is_simple = False  # Chat model
 
+    @property
+    def generation_eos_token_id(self):
+        """Return eos_token_id(s) for generation. Override for custom stop tokens."""
+        return self.tokenizer.eos_token_id
+
     def _chat_transform(self, hf_messages: list[dict]) -> list[dict]:
         """
         Optional: Transform HF messages before applying chat template.
@@ -182,7 +187,7 @@ class EMU3EncoderModel(EMU3EncoderBaseModel):
             generation_config = GenerationConfig(
                 pad_token_id=self.tokenizer.pad_token_id,
                 bos_token_id=self.tokenizer.bos_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
+                eos_token_id=self.generation_eos_token_id,
                 max_new_tokens=gen_kwargs.get("max_new_tokens", 1024),
                 temperature=gen_kwargs.get("temperature", 0.0),
                 do_sample=gen_kwargs.get("do_sample", False),
