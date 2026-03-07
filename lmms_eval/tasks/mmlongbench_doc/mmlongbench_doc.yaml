@@ -2,6 +2,9 @@ dataset_path: yubo2333/MMLongBench-Doc
 dataset_kwargs:
   token: true
 task: mmlongbench_doc
+tag:
+  - public_eval_qwen3_5_family
+  - public_eval_seed2_family
 test_split: train
 output_type: generate_until
 doc_to_visual: !function utils.mmlongbench_doc_to_visual

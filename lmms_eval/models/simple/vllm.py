@@ -1,9 +1,10 @@
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
+import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
 from decord import VideoReader, cpu
 from loguru import logger as eval_logger
@@ -21,6 +22,7 @@ WORKERS = int(os.getenv("WORKERS", "32"))
 
 LLM, _has_vllm = optional_import("vllm", "LLM")
 SamplingParams, _ = optional_import("vllm", "SamplingParams")
+get_tp_group, _ = optional_import("vllm.distributed.parallel_state", "get_tp_group")
 
 
 @register_model("vllm")
@@ -151,6 +153,7 @@ class VLLM(lmms):
         min_image_pixels: int = 28,  # minimum image dimension, required for Qwen 2/2.5-VL models
         disable_log_stats: bool = False,
         image_first: bool = False,
+        max_new_tokens: int = 1024,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -161,8 +164,10 @@ class VLLM(lmms):
         self.max_frame_num = max_frame_num
         self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
-        self.data_parallel_size = data_parallel_size
+        self.data_parallel_size = int(data_parallel_size)
+        self.tensor_parallel_size = int(tensor_parallel_size)
         self.image_first = image_first
+        self.max_new_tokens = int(max_new_tokens)
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model)
 
@@ -207,14 +212,15 @@ class VLLM(lmms):
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
-        # TODO: Support tensor parallelism in the future for flexible vllm parallel
-        if data_parallel_size > 1:
-            assert tensor_parallel_size == 1, "Data parallelism is not supported with tensor parallelism. For current vllm version"
         if accelerator.num_processes > 1:
             kwargs["distributed_executor_backend"] = "external_launcher"
+            expected_world_size = self.tensor_parallel_size * self.data_parallel_size
+            if expected_world_size > 1 and accelerator.num_processes != expected_world_size:
+                raise ValueError("For external_launcher mode, accelerate world size must equal " f"tensor_parallel_size * data_parallel_size ({expected_world_size}), " f"but got {accelerator.num_processes}.")
         self.client = LLM(
             model=self.model,
-            tensor_parallel_size=tensor_parallel_size,
+            tensor_parallel_size=self.tensor_parallel_size,
+            data_parallel_size=self.data_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
             trust_remote_code=trust_remote_code,
             disable_log_stats=disable_log_stats,
@@ -225,6 +231,65 @@ class VLLM(lmms):
 
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
+
+        self._tp_group_cpu = None
+        self._tp_world_size = 1
+        self._tp_rank_in_group = 0
+        self._setup_tp_group_for_request_sync()
+
+    def _setup_tp_group_for_request_sync(self) -> None:
+        if self.tensor_parallel_size <= 1 or get_tp_group is None:
+            return
+        try:
+            tp_group = get_tp_group()
+            self._tp_group_cpu = tp_group.cpu_group
+            self._tp_world_size = int(tp_group.world_size)
+            self._tp_rank_in_group = int(tp_group.rank_in_group)
+        except Exception as exc:
+            if self._world_size > 1:
+                raise RuntimeError("Failed to initialize vLLM TP group for synchronized request dispatch. " "This is required when tensor_parallel_size > 1 under distributed launch.") from exc
+            eval_logger.warning(f"Failed to initialize TP group for request sync: {exc}")
+
+    def _select_max_new_tokens(self, request_max_new_tokens: Any) -> int:
+        if request_max_new_tokens is None:
+            return self.max_new_tokens
+        try:
+            request_max_new_tokens = int(request_max_new_tokens)
+        except (TypeError, ValueError):
+            eval_logger.warning("Invalid max_new_tokens from task (%s), falling back to model setting (%s)." % (request_max_new_tokens, self.max_new_tokens))
+            return self.max_new_tokens
+        return max(request_max_new_tokens, self.max_new_tokens)
+
+    def _run_tp_synced(
+        self,
+        local_inputs: list[Any],
+        run_fn: Callable[[list[Any]], list[Any]],
+    ) -> list[Any]:
+        if self._tp_world_size <= 1 or self._tp_group_cpu is None:
+            return run_fn(local_inputs)
+        if not dist.is_available() or not dist.is_initialized():
+            return run_fn(local_inputs)
+
+        gathered_inputs = [None for _ in range(self._tp_world_size)]
+        dist.all_gather_object(gathered_inputs, local_inputs, group=self._tp_group_cpu)
+
+        merged_inputs = []
+        offsets = [0]
+        for rank_inputs in gathered_inputs:
+            rank_inputs = rank_inputs or []
+            merged_inputs.extend(rank_inputs)
+            offsets.append(len(merged_inputs))
+
+        if len(merged_inputs) == 0:
+            return []
+
+        merged_outputs = run_fn(merged_inputs)
+        if len(merged_outputs) != len(merged_inputs):
+            raise RuntimeError("vLLM output count mismatch after TP request synchronization: " f"expected {len(merged_inputs)}, got {len(merged_outputs)}")
+
+        start = offsets[self._tp_rank_in_group]
+        end = offsets[self._tp_rank_in_group + 1]
+        return merged_outputs[start:end]
 
     def _is_qwen_vl_model(self, model: str) -> bool:
         qwen_vl_patterns = ["qwen2-vl", "qwen2.5-vl"]
@@ -308,12 +373,10 @@ class VLLM(lmms):
             batched_messages = []
             for idx in range(len(batch_requests)):
                 contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
-                if "max_new_tokens" not in gen_kwargs:
-                    gen_kwargs["max_new_tokens"] = 1024
-                if "temperature" not in gen_kwargs:
-                    gen_kwargs["temperature"] = 0
-                if "top_p" not in gen_kwargs:
-                    gen_kwargs["top_p"] = 0.95
+                gen_kwargs = dict(gen_kwargs or {})
+                gen_kwargs["max_new_tokens"] = self._select_max_new_tokens(gen_kwargs.get("max_new_tokens"))
+                gen_kwargs.setdefault("temperature", 0)
+                gen_kwargs.setdefault("top_p", 0.95)
 
                 params = {
                     "max_tokens": gen_kwargs["max_new_tokens"],
@@ -370,15 +433,18 @@ class VLLM(lmms):
             # - vllm chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
             # The logic here is similar to the vllm implementation as shown here (https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat)
             # - vllm implementation: https://github.com/vllm-project/vllm/blob/d97841078b6e0dde8da36d5a2b8e8857a2c37944/vllm/entrypoints/chat_utils.py#L829
-            if self.chat_template is not None:
-                response = self.client.chat(
-                    sampling_params=sampling_params,
-                    messages=batched_messages,
-                    chat_template=self.chat_template,
-                )
-            else:
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
-            response_text = [o.outputs[0].text for o in response]
+            def _run_chat(inputs: list[Any]) -> list[str]:
+                if self.chat_template is not None:
+                    response = self.client.chat(
+                        sampling_params=sampling_params,
+                        messages=inputs,
+                        chat_template=self.chat_template,
+                    )
+                else:
+                    response = self.client.chat(sampling_params=sampling_params, messages=inputs)
+                return [o.outputs[0].text for o in response]
+
+            response_text = self._run_tp_synced(batched_messages, _run_chat)
 
             assert len(response_text) == len(batch_requests)
             res.extend(response_text)

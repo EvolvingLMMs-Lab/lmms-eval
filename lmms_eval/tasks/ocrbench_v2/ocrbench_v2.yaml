@@ -2,6 +2,8 @@ dataset_path: ling99/OCRBench_v2
 dataset_kwargs:
   token: True
 task: "ocrbench_v2"
+tag:
+  - public_eval_seed2_family
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.ocrbench_v2_doc_to_visual
