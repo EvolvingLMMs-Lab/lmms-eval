@@ -10,7 +10,7 @@ Quick smoke run:
 
 ```bash
 python -m lmms_eval \
-  --model dummy_video_reader \
+  --model dummy \
   --model_args response=yes \
   --tasks mme_cc \
   --limit 8 \

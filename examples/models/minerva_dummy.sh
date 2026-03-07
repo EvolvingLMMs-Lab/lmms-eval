@@ -4,14 +4,14 @@ set -euo pipefail
 
 LIMIT="${LIMIT:-50}"
 BATCH_SIZE="${BATCH_SIZE:-1}"
-OUTPUT_PATH="${OUTPUT_PATH:-./logs/minerva_dummy_video_reader/}"
+OUTPUT_PATH="${OUTPUT_PATH:-./logs/minerva_dummy/}"
 VERBOSITY="${VERBOSITY:-INFO}"
 
 echo "[INFO] MINERVA dummy video-reader benchmark"
 echo "[INFO] tasks=minerva limit=${LIMIT} batch_size=${BATCH_SIZE}"
 
 uv run --with pylance --with pyarrow python -m lmms_eval \
-    --model dummy_video_reader \
+    --model dummy \
     --model_args "read_bytes=65536,response=A,allow_remote=false,fail_on_missing=true" \
     --tasks minerva \
     --batch_size "${BATCH_SIZE}" \

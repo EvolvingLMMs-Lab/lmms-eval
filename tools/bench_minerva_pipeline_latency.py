@@ -72,7 +72,7 @@ def _run_mode(mode: str, args, base_env: dict) -> dict:
         "-m",
         "lmms_eval",
         "--model",
-        "dummy_video_reader",
+        "dummy",
         "--model_args",
         model_args,
         "--tasks",
