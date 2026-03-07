@@ -111,9 +111,13 @@ class ApertusEmu3Chat(EMU3EncoderModel):
     @property
     def generation_eos_token_id(self):
         """Return both eos_token_id and sft_eot_token_id for generation."""
-        ids = [self.tokenizer.eos_token_id]
+        eos = self.tokenizer.eos_token_id
+        ids = list(eos) if isinstance(eos, list) else [eos]
         if self._sft_eot_token_id is not None:
-            ids.append(self._sft_eot_token_id)
+            if isinstance(self._sft_eot_token_id, list):
+                ids.extend(self._sft_eot_token_id)
+            else:
+                ids.append(self._sft_eot_token_id)
         return ids
 
     def _load_llm(self, model_path: str, **kwargs) -> ApertusForCausalLM:
