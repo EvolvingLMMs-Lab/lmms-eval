@@ -4,7 +4,7 @@
 dataset_path: longvideobench/LongVideoBench
 dataset_kwargs:
   token: True
-  cache_dir: /mnt/vast/cache/huggingface/datasets
+  cache_dir: datasets/longvideobench
   video: True
   force_download: False
   local_files_only: False
