@@ -5,7 +5,7 @@ from loguru import logger as eval_logger
 from transformers import AutoTokenizer, LlamaForCausalLM
 
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.chat.emu3p5_encoder_model import EMU3p5EncoderModel
+from lmms_eval.models.chat.emu_encoder_model import EMU3p5EncoderModel
 
 
 @register_model("llama_emu3p5")
@@ -122,13 +122,6 @@ class LlamaEmu3p5Chat(EMU3p5EncoderModel):
     def image_placeholder(self) -> str:
         """Llama uses <|image|> as placeholder in chat template."""
         return "<|image|>"
-
-    def _chat_transform(self, hf_messages: list[dict]) -> list[dict]:
-        """
-        Llama doesn't require message transformation.
-        Return messages unchanged.
-        """
-        return hf_messages
 
     @property
     def max_length(self):

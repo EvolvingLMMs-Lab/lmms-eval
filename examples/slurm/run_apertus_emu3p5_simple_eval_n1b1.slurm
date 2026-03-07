@@ -24,9 +24,13 @@ RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/apertus_emu3p5_simp
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
 
-# Emu3.5 default pixel ranges
-EMU_MIN_PIXELS="65536"    # 256*256
-EMU_MAX_PIXELS="1960000"  # 1400*1400
+# Emu3.5 default pixel ranges (use arithmetic expressions like 1400*1400)
+EMU_MIN_PIXELS=$((256*256))
+EMU_MAX_PIXELS=$((1400*1400))
+
+# Debug mode (disabled by default)
+DEBUG_SAMPLES="false"
+NUM_DEBUG_SAMPLES=5
 
 # Parse optional arguments
 while [[ $# -gt 0 ]]; do
@@ -52,12 +56,20 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --emu-min-pixels)
-            EMU_MIN_PIXELS="$2"
+            EMU_MIN_PIXELS=$(($2))
             shift 2
             ;;
         --emu-max-pixels)
-            EMU_MAX_PIXELS="$2"
+            EMU_MAX_PIXELS=$(($2))
             shift 2
+            ;;
+        --debug)
+            DEBUG_SAMPLES="true"
+            if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                NUM_DEBUG_SAMPLES="$2"
+                shift
+            fi
+            shift
             ;;
         --no-offline-datasets)
             OFFLINE_DATASETS="false"
@@ -99,6 +111,7 @@ echo "Batch size(per GPU):  ${BATCH_SIZE}"
 echo "Emu min pixels:       ${EMU_MIN_PIXELS}"
 echo "Emu max pixels:       ${EMU_MAX_PIXELS}"
 echo "Offline datasets:     ${OFFLINE_DATASETS}"
+echo "Debug samples:        ${DEBUG_SAMPLES} (${NUM_DEBUG_SAMPLES})"
 echo "Num GPU:              ${NUM_GPUS}"
 echo "Output-Path:          ${RES_PATH}"
 echo "Eval-Repo-Location:   ${EVAL_DIR}"
@@ -141,6 +154,9 @@ if [ -n "$EMU_MIN_PIXELS" ]; then
 fi
 if [ -n "$EMU_MAX_PIXELS" ]; then
     MODEL_ARGS="${MODEL_ARGS},emu_max_pixels=${EMU_MAX_PIXELS}"
+fi
+if [ "$DEBUG_SAMPLES" = "true" ]; then
+    MODEL_ARGS="${MODEL_ARGS},debug_samples=true,num_debug_samples=${NUM_DEBUG_SAMPLES}"
 fi
 
 echo "Running LM evaluation..."

@@ -1,8 +1,11 @@
 """
-Simple (non-chat) model base class using EMU3 Vision Tokenizer.
+Unified simple (non-chat) model mixin for EMU encoder models.
 
-For base models without instruction tuning. Uses direct text prompts
+EMUSimpleModelMixin provides the shared generate_until() logic for
+base models without instruction tuning. Uses direct text prompts
 instead of chat templates.
+
+Concrete classes combine it with the appropriate base model.
 """
 
 import time
@@ -17,17 +20,17 @@ from transformers.generation.configuration_utils import GenerationConfig
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.models.emu3_encoder_base_model import EMU3EncoderBaseModel
+from lmms_eval.models.emu3p5_encoder_base_model import EMU3p5EncoderBaseModel
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 
 
-class EMU3SimpleModel(EMU3EncoderBaseModel):
+class EMUSimpleModelMixin:
     """
-    Simple (non-chat) EMU3 encoder model base class.
+    Mixin providing simple-mode generate_until() for EMU encoder models.
 
     Works with plain text contexts instead of ChatMessages.
     For evaluating base models without instruction tuning.
-
-    Inherits all vision processing logic from EMU3EncoderBaseModel.
+    Must be combined with an EMU encoder base model class.
 
     Subclasses must implement:
     - _load_llm: Load the language model
@@ -35,7 +38,8 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
     - image_placeholder: Property defining image placeholder token
     """
 
-    is_simple = True  # Simple model
+    is_simple = True
+    _model_label: str = "EMU"
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """Generate responses for simple model with text prompts."""
@@ -56,12 +60,23 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
         re_ords = utils.Collator([req.args for req in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
-        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=num_iters,
+            disable=(self.rank != 0),
+            desc="Model Responding",
+        )
         e2e_latency = 0.0
         total_tokens = 0
 
         for chunk in chunks:
-            contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
+            (
+                contexts,
+                all_gen_kwargs,
+                doc_to_visual,
+                doc_id,
+                task,
+                split,
+            ) = zip(*chunk)
 
             # Extract visuals from dataset
             visuals = [doc_to_visual[i](self.task_dict[task[i]][split[i]][ids]) for i, ids in enumerate(doc_id)]
@@ -71,7 +86,7 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
             # Build prompts with image placeholders
             prompts = []
             images_list = []
-            batch_contexts = []  # Track contexts for non-skipped samples
+            batch_contexts = []
 
             for context, visual_list in zip(contexts, visuals):
                 total_samples += 1
@@ -79,24 +94,25 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                 # Handle text-only samples
                 if not visual_list or len(visual_list) == 0:
                     text_only_count += 1
-                    if self.skip_text_only:
-                        res.append("")
-                        self.cache_hook.add_partial("generate_until", (context, gen_kwargs), "")
-                        pbar.update(1)
-                        continue
-                    else:
-                        # Can't process without images
-                        res.append("")
-                        self.cache_hook.add_partial("generate_until", (context, gen_kwargs), "")
-                        pbar.update(1)
-                        continue
+                    res.append("")
+                    self.cache_hook.add_partial(
+                        "generate_until",
+                        (context, gen_kwargs),
+                        "",
+                    )
+                    pbar.update(1)
+                    continue
 
                 # Handle multi-image samples
                 if len(visual_list) > 1:
                     multi_image_count += 1
                     if self.skip_multi_image:
                         res.append("")
-                        self.cache_hook.add_partial("generate_until", (context, gen_kwargs), "")
+                        self.cache_hook.add_partial(
+                            "generate_until",
+                            (context, gen_kwargs),
+                            "",
+                        )
                         pbar.update(1)
                         continue
                     else:
@@ -115,7 +131,7 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
                 prompt = " ".join(image_tokens) + "\n" + context
                 prompts.append(prompt)
                 images_list.append(pil_images)
-                batch_contexts.append(context)  # Track this context
+                batch_contexts.append(context)
 
             # Skip if all filtered
             if len(prompts) == 0:
@@ -203,9 +219,10 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
         pbar.close()
 
         # Print statistics
+        label = self._model_label
         if self.rank == 0:
-            eval_logger.warning(f"EMU3 Simple Statistics: Found {text_only_count}/" f"{total_samples} text-only samples (skipped: " f"{text_only_count if self.skip_text_only else 0})")
-            eval_logger.warning(f"EMU3 Simple Statistics: Found {multi_image_count}/" f"{total_samples} multi-image samples (skipped: " f"{multi_image_count if self.skip_multi_image else 0})")
+            eval_logger.warning(f"{label} Simple Statistics: Found " f"{text_only_count}/{total_samples} " f"text-only samples (skipped: " f"{text_only_count if self.skip_text_only else 0})")
+            eval_logger.warning(f"{label} Simple Statistics: Found " f"{multi_image_count}/{total_samples} " f"multi-image samples (skipped: " f"{multi_image_count if self.skip_multi_image else 0})")
 
         # Log timing metrics
         avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
@@ -222,9 +239,21 @@ class EMU3SimpleModel(EMU3EncoderBaseModel):
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        """Loglikelihood not implemented for vision models."""
-        raise NotImplementedError("Loglikelihood not implemented for EMU3 simple")
+        """Loglikelihood not implemented for EMU simple models."""
+        raise NotImplementedError(f"Loglikelihood not implemented for {self._model_label} simple")
 
     def generate_until_multi_round(self, requests) -> List[str]:
         """Multi-round not implemented for simple models."""
-        raise NotImplementedError("Multi-round not implemented for EMU3 simple")
+        raise NotImplementedError(f"Multi-round not implemented for {self._model_label} simple")
+
+
+class EMU3SimpleModel(EMUSimpleModelMixin, EMU3EncoderBaseModel):
+    """Simple (non-chat) EMU3 encoder model."""
+
+    _model_label = "EMU3"
+
+
+class EMU3p5SimpleModel(EMUSimpleModelMixin, EMU3p5EncoderBaseModel):
+    """Simple (non-chat) EMU3.5 encoder model."""
+
+    _model_label = "EMU3.5"

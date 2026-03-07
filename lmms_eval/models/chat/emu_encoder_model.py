@@ -1,12 +1,14 @@
 """
-Chat model base class using EMU3.5 IBQ Vision Tokenizer with chat templates.
+Unified chat model mixin for EMU encoder models with chat template support.
+
+EMUEncoderModelMixin provides the shared generate_until() logic.
+Concrete classes combine it with the appropriate base model.
 
 Inheriting models overwrite:
-- _load_llm:               Load the language model
-- _load_tokenizer:         Load the text tokenizer
-- _load_vision_tokenizer:  Load the IBQ vision tokenizer
-- _chat_transform:         Optional: Transform HF messages before chat template
-- image_placeholder:       Property defining image placeholder token
+- _load_llm:        Load the language model
+- _load_tokenizer:  Load the text tokenizer
+- _chat_transform:  Optional: Transform HF messages before chat template
+- image_placeholder: Property defining image placeholder token
 """
 
 import time
@@ -20,29 +22,30 @@ from transformers.generation.configuration_utils import GenerationConfig
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
+from lmms_eval.models.emu3_encoder_base_model import EMU3EncoderBaseModel
 from lmms_eval.models.emu3p5_encoder_base_model import EMU3p5EncoderBaseModel
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
 from lmms_eval.protocol import ChatMessages
 
 
-class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
+class EMUEncoderModelMixin:
     """
-    Chat-specific EMU3.5 encoder model.
+    Mixin providing chat-mode generate_until() for EMU encoder models.
 
     Handles ChatMessages and applies chat templates for instruction-tuned
-    models. Inherits all vision processing logic from EMU3p5EncoderBaseModel.
+    models. Must be combined with an EMU encoder base model class.
 
     Subclasses must implement:
     - _load_llm: Load the language model
     - _load_tokenizer: Load the text tokenizer
-    - _load_vision_tokenizer: Load the IBQ vision tokenizer
     - image_placeholder: Property defining image placeholder token
 
     Optionally override:
     - _chat_transform: Transform HF messages before chat template
     """
 
-    is_simple = False  # Chat model
+    is_simple = False
+    _model_label: str = "EMU"
 
     @property
     def generation_eos_token_id(self):
@@ -57,10 +60,11 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
         Default implementation returns messages unchanged.
 
         Args:
-            hf_messages: List of HF-formatted message dicts
+            hf_messages: List of HF-formatted message dicts with
+                         structure: [{"role": "user", "content": [...]}]
 
         Returns:
-            Transformed message dicts
+            Transformed message dicts in same format
         """
         return hf_messages
 
@@ -68,12 +72,14 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
         """Generate responses for chat model using chat template."""
         res = []
 
+        # Initialize statistics counters
         text_only_count = 0
         multi_image_count = 0
         total_samples = 0
         skipped_text_only = 0
         skipped_multi_image = 0
 
+        # Collate helper
         def _collate(x):
             return x[0], x[0]
 
@@ -86,23 +92,36 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
         )
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
         num_iters = len(requests) // self.batch_size if len(requests) % self.batch_size == 0 else len(requests) // self.batch_size + 1
-        pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
+        pbar = tqdm(
+            total=num_iters,
+            disable=(self.rank != 0),
+            desc="Model Responding",
+        )
         e2e_latency = 0.0
         total_tokens = 0
 
         # Iterate through batches
         for chunk in chunks:
-            ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
+            (
+                ctx,
+                doc_to_messages,
+                all_gen_kwargs,
+                doc_id,
+                task,
+                split,
+            ) = zip(*chunk)
 
             # Get chat messages from dataset
             chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
 
-            # Extract media and prepare current batch
+            # Extract media and prepare batch
             batch_data = []
+
             for idx, chat_message in enumerate(chat_messages):
                 total_samples += 1
 
+                # Extract media
                 visual, _, _ = chat_message.extract_media()
 
                 # Check for text-only samples
@@ -110,15 +129,14 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                     text_only_count += 1
                     if self.skip_text_only:
                         skipped_text_only += 1
-                        res.append("")
-                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
-                        pbar.update(1)
-                        continue
-                    else:
-                        res.append("")
-                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
-                        pbar.update(1)
-                        continue
+                    res.append("")
+                    self.cache_hook.add_partial(
+                        "generate_until",
+                        (ctx[idx], all_gen_kwargs[idx]),
+                        "",
+                    )
+                    pbar.update(1)
+                    continue
 
                 # Check for multi-image samples
                 if len(visual) > 1:
@@ -126,12 +144,19 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                     if self.skip_multi_image:
                         skipped_multi_image += 1
                         res.append("")
-                        self.cache_hook.add_partial("generate_until", (ctx[idx], all_gen_kwargs[idx]), "")
+                        self.cache_hook.add_partial(
+                            "generate_until",
+                            (ctx[idx], all_gen_kwargs[idx]),
+                            "",
+                        )
                         pbar.update(1)
                         continue
                     # else: process all images (multi-image supported)
 
+                # Convert to HF messages
                 hf_messages = chat_message.to_hf_messages()
+
+                # Apply subclass transformation hook
                 transformed_messages = self._chat_transform(hf_messages)
 
                 # Convert images to PIL if needed
@@ -162,6 +187,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
             # Prepare images list
             images_list = [item["images"] for item in batch_data]
 
+            # Encode images and inject vision tokens
             inputs = self.processor.encode_and_inject_vision_tokens(
                 texts=texts,
                 images=images_list,
@@ -190,7 +216,7 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
                 use_cache=self.use_cache,
             )
 
-            # Filter inputs for model.generate()
+            # Filter inputs to only include keys accepted by model.generate()
             model_inputs = {
                 "input_ids": inputs["input_ids"],
                 "attention_mask": inputs["attention_mask"],
@@ -239,11 +265,12 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
         pbar.close()
 
         # Print statistics
+        label = self._model_label
         if self.rank == 0:
-            eval_logger.warning(f"EMU3.5 Statistics: Found {text_only_count}/{total_samples} " f"text-only samples (no images). " f"Skipped: {skipped_text_only} " f"(skip_text_only={self.skip_text_only})")
-            eval_logger.warning(f"EMU3.5 Statistics: Found {multi_image_count}/{total_samples} " f"multi-image samples (>1 image). " f"Skipped: {skipped_multi_image} " f"(skip_multi_image={self.skip_multi_image})")
+            eval_logger.warning(f"{label} Statistics: Found " f"{text_only_count}/{total_samples} " f"text-only samples (no images). " f"Skipped: {skipped_text_only} " f"(skip_text_only={self.skip_text_only})")
+            eval_logger.warning(f"{label} Statistics: Found " f"{multi_image_count}/{total_samples} " f"multi-image samples (>1 image). " f"Skipped: {skipped_multi_image} " f"(skip_multi_image={self.skip_multi_image})")
             if text_only_count == 0 and multi_image_count == 0:
-                eval_logger.info(f"EMU3.5 Statistics: All {total_samples} samples had exactly 1 " "image. No text-only or multi-image samples encountered.")
+                eval_logger.info(f"{label} Statistics: All {total_samples} " "samples had exactly 1 image. " "No text-only or multi-image samples encountered.")
 
         # Log timing metrics
         avg_speed = total_tokens / e2e_latency if e2e_latency > 0 else 0
@@ -260,9 +287,21 @@ class EMU3p5EncoderModel(EMU3p5EncoderBaseModel):
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        """Loglikelihood not implemented for EMU3.5."""
-        raise NotImplementedError("Loglikelihood not implemented for EMU3.5")
+        """Loglikelihood not implemented for EMU encoder models."""
+        raise NotImplementedError(f"Loglikelihood not implemented for {self._model_label}")
 
     def generate_until_multi_round(self, requests) -> List[str]:
-        """Multi-round generation not implemented for EMU3.5."""
-        raise NotImplementedError("Multi-round generation not implemented for EMU3.5")
+        """Multi-round generation not implemented for EMU encoder models."""
+        raise NotImplementedError(f"Multi-round generation not implemented for {self._model_label}")
+
+
+class EMU3EncoderModel(EMUEncoderModelMixin, EMU3EncoderBaseModel):
+    """Chat-specific EMU3 encoder model."""
+
+    _model_label = "EMU3"
+
+
+class EMU3p5EncoderModel(EMUEncoderModelMixin, EMU3p5EncoderBaseModel):
+    """Chat-specific EMU3.5 encoder model."""
+
+    _model_label = "EMU3.5"

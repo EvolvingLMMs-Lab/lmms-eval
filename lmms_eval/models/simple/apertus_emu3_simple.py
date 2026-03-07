@@ -12,7 +12,7 @@ from loguru import logger as eval_logger
 from transformers import ApertusForCausalLM, AutoTokenizer
 
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.simple.emu3_simple_model import EMU3SimpleModel
+from lmms_eval.models.simple.emu_simple_model import EMU3SimpleModel
 
 
 @register_model("apertus_emu3_simple")

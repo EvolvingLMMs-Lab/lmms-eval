@@ -8,21 +8,41 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=285
 #SBATCH --time=12:00:00
-#SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.out
-#SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3_%j.err
+#SBATCH --output=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3p5_%j.out
+#SBATCH --error=/iopsstor/scratch/cscs/%u/lmms-eval/logs/eval_llama_emu3p5_%j.err
 
-TASKS="mmmu_val_group_img,vqav2_val" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa"
+# Unset SSL_CERT_FILE to avoid FileNotFoundError inside NGC container
+# (host path /etc/ssl/ca-bundle.pem doesn't exist in container)
+unset SSL_CERT_FILE
+
+TASKS="mmmu_val_group_img,vqav2_val" #,pope,gqa,vqav2_val,mmmu_test_group_img,mme,ai2d,ocrbench_v2,chartqa,docvqa,infovqa
 BATCH_SIZE=1
 MODEL="llama_emu3p5"
-#MODEL_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
-MODEL_ARGS=""
-RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/llama_emu3_results"
+MODEL_PATH=""        # Required: path to HF model or HF hub identifier (e.g. "org/model-name")
+TOKENIZER_PATH=""    # Required: path to tokenizer or HF hub identifier (defaults to MODEL_PATH)
+RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/llama_emu3p5_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
 OFFLINE_DATASETS="true"
+
+# Emu3.5 default pixel ranges (use arithmetic expressions like 1400*1400)
+EMU_MIN_PIXELS=$((256*256))
+EMU_MAX_PIXELS=$((1400*1400))
+
+# Debug mode (disabled by default, use --debug [N] to enable)
+DEBUG_SAMPLES="false"
+NUM_DEBUG_SAMPLES=5
 
 # Parse optional arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --model-path)
+            MODEL_PATH="$2"
+            shift 2
+            ;;
+        --tokenizer-path)
+            TOKENIZER_PATH="$2"
+            shift 2
+            ;;
         --tasks)
             TASKS="$2"
             shift 2
@@ -35,6 +55,22 @@ while [[ $# -gt 0 ]]; do
             MAX_LENGTH="$2"
             shift 2
             ;;
+        --emu-min-pixels)
+            EMU_MIN_PIXELS=$(($2))
+            shift 2
+            ;;
+        --emu-max-pixels)
+            EMU_MAX_PIXELS=$(($2))
+            shift 2
+            ;;
+        --debug)
+            DEBUG_SAMPLES="true"
+            if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                NUM_DEBUG_SAMPLES="$2"
+                shift
+            fi
+            shift
+            ;;
         --no-offline-datasets)
             OFFLINE_DATASETS="false"
             shift
@@ -46,7 +82,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Automatically get number of available GPUS to configure accelerate properöy
+# Validate required arguments
+if [ -z "$MODEL_PATH" ]; then
+    echo "ERROR: --model-path is required"
+    echo "Usage: sbatch $0 --model-path /path/to/model [OPTIONS]"
+    exit 1
+fi
+
+# Default tokenizer to model path if not set
+if [ -z "$TOKENIZER_PATH" ]; then
+    TOKENIZER_PATH="$MODEL_PATH"
+fi
+
+# Automatically get number of available GPUS to configure accelerate properly
 NUM_GPUS=$(echo "$CUDA_VISIBLE_DEVICES" | awk -F',' '{print NF}')
 echo "Number of GPUs available: $NUM_GPUS"
 echo "GPUS: $CUDA_VISIBLE_DEVICES"
@@ -56,17 +104,20 @@ echo "========================================"
 echo "MLLM Evaluation Configuration"
 echo "========================================"
 echo "Model:                ${MODEL}"
+echo "Model path:           ${MODEL_PATH}"
+echo "Tokenizer path:       ${TOKENIZER_PATH}"
 echo "Tasks:                ${TASKS}"
 echo "Batch size(per GPU):  ${BATCH_SIZE}"
+echo "Emu min pixels:       ${EMU_MIN_PIXELS}"
+echo "Emu max pixels:       ${EMU_MAX_PIXELS}"
 echo "Offline datasets:     ${OFFLINE_DATASETS}"
+echo "Debug samples:        ${DEBUG_SAMPLES} (${NUM_DEBUG_SAMPLES})"
 echo "Num GPU:              ${NUM_GPUS}"
 echo "Output-Path:          ${RES_PATH}"
 echo "Eval-Repo-Location:   ${EVAL_DIR}"
 echo "========================================"
 echo ""
 
-# Run evaluation command
-echo "Running LM evaluation..."
 # Conditionally set/unset offline mode
 if [ "$OFFLINE_DATASETS" = "true" ]; then
     export HF_DATASETS_OFFLINE=1
@@ -80,30 +131,38 @@ echo "<<Current Packages>>"
 pip list
 echo ""
 
-echo "📦 Setting up lmms-eval package..."
+echo "Setting up lmms-eval package..."
 cd "$EVAL_DIR" || exit
 pip uninstall jupyterlab -y  # Uninstall conflicting package
 pip install -e .
+pip install -e ".[metrics]"
 
-echo "📦 Installing task-specific dependencies..."
+echo "Installing task-specific dependencies..."
 source "${EVAL_DIR}/examples/install_task_deps.sh" "${TASKS}" "${EVAL_DIR}"
-
-echo "📦 Install Emu3 specific versions"
-pip install -e .[emu3]
 
 echo "<<New Packages>>"
 pip list
 echo ""
 
-# Construct model_args parameter if MODEL_ARGS is non-empty
-MODEL_ARGS_PARAM=""
-if [ -n "${MODEL_ARGS}" ]; then
-    MODEL_ARGS_PARAM="--model_args ${MODEL_ARGS}"
+# Build model_args with required parameters
+MODEL_ARGS="model_descriptor=${MODEL_PATH},tokenizer_path=${TOKENIZER_PATH}"
+if [ -n "$MAX_LENGTH" ]; then
+    MODEL_ARGS="${MODEL_ARGS},max_length=${MAX_LENGTH}"
+fi
+if [ -n "$EMU_MIN_PIXELS" ]; then
+    MODEL_ARGS="${MODEL_ARGS},emu_min_pixels=${EMU_MIN_PIXELS}"
+fi
+if [ -n "$EMU_MAX_PIXELS" ]; then
+    MODEL_ARGS="${MODEL_ARGS},emu_max_pixels=${EMU_MAX_PIXELS}"
+fi
+if [ "$DEBUG_SAMPLES" = "true" ]; then
+    MODEL_ARGS="${MODEL_ARGS},debug_samples=true,num_debug_samples=${NUM_DEBUG_SAMPLES}"
 fi
 
+echo "Running LM evaluation..."
 accelerate launch -m lmms_eval \
     --model "${MODEL}" \
-    ${MODEL_ARGS_PARAM} \
+    --model_args "${MODEL_ARGS}" \
     --tasks "${TASKS}" \
     --batch_size "${BATCH_SIZE}" \
     --output_path "${RES_PATH}"

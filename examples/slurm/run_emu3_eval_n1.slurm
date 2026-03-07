@@ -14,12 +14,15 @@
 TASKS="ai2d" #"pope,gqa,vqav2_val,mmmu_val_group_img,mme,ai2d,docvqa,infovqa,ocrbench_v2,chartqa"
 BATCH_SIZE=1
 MODEL="emu3"
-DEBUG_ARGS="debug_samples=true,num_debug_samples=10" # ex for debug outputs
 
 PRETRAINED="${PRETRAINED:-BAAI/Emu3-Chat}"
 TOKENIZER_PATH="${TOKENIZER_PATH:-$PRETRAINED}"
-EMU_MIN_PIXELS="${EMU_MIN_PIXELS:-262144}"     # 512*512
-EMU_MAX_PIXELS="${EMU_MAX_PIXELS:-1048576}"    # 1024*1024
+EMU_MIN_PIXELS="${EMU_MIN_PIXELS:-$((512*512))}"
+EMU_MAX_PIXELS="${EMU_MAX_PIXELS:-$((1024*1024))}"
+
+# Debug mode (disabled by default, use --debug [N] to enable)
+DEBUG_SAMPLES="false"
+NUM_DEBUG_SAMPLES=5
 
 RES_PATH="/iopsstor/scratch/cscs/$USER/PDM/results/lmms_eval/emu3_results"
 EVAL_DIR=/iopsstor/scratch/cscs/$USER/lmms-eval
@@ -40,6 +43,14 @@ while [[ $# -gt 0 ]]; do
             MAX_LENGTH="$2"
             shift 2
             ;;
+        --debug)
+            DEBUG_SAMPLES="true"
+            if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                NUM_DEBUG_SAMPLES="$2"
+                shift
+            fi
+            shift
+            ;;
         --no-offline-datasets)
             OFFLINE_DATASETS="false"
             shift
@@ -57,11 +68,13 @@ echo "Number of GPUs available: $NUM_GPUS"
 echo "GPUS: $CUDA_VISIBLE_DEVICES"
 
 # ========== Build model_args ==========
-MODEL_ARGS="pretrained=$PRETRAINED"
+MODEL_ARGS="model_descriptor=$PRETRAINED"
 MODEL_ARGS="$MODEL_ARGS,tokenizer_path=$TOKENIZER_PATH"
 MODEL_ARGS="$MODEL_ARGS,emu_min_pixels=$EMU_MIN_PIXELS"
 MODEL_ARGS="$MODEL_ARGS,emu_max_pixels=$EMU_MAX_PIXELS"
-MODEL_ARGS="$MODEL_ARGS,$DEBUG_ARGS"
+if [ "$DEBUG_SAMPLES" = "true" ]; then
+    MODEL_ARGS="$MODEL_ARGS,debug_samples=true,num_debug_samples=$NUM_DEBUG_SAMPLES"
+fi
 
 # Print configuration
 echo "========================================"
@@ -71,6 +84,7 @@ echo "Model:                ${MODEL}"
 echo "Tasks:                ${TASKS}"
 echo "Batch size(per GPU):  ${BATCH_SIZE}"
 echo "Offline datasets:     ${OFFLINE_DATASETS}"
+echo "Debug samples:        ${DEBUG_SAMPLES} (${NUM_DEBUG_SAMPLES})"
 echo "Num GPU:              ${NUM_GPUS}"
 echo "Output-Path:          ${RES_PATH}"
 echo "Eval-Repo-Location:   ${EVAL_DIR}"

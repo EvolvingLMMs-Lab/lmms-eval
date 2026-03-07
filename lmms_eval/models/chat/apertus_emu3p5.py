@@ -5,7 +5,7 @@ from loguru import logger as eval_logger
 from transformers import ApertusForCausalLM, AutoTokenizer
 
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.chat.emu3p5_encoder_model import EMU3p5EncoderModel
+from lmms_eval.models.chat.emu_encoder_model import EMU3p5EncoderModel
 
 
 @register_model("apertus_emu3p5")
