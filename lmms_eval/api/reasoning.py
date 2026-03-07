@@ -22,6 +22,12 @@ def strip_reasoning_tags(text: str, tag_pairs: List[List[str]]) -> str:
                 result = result[:start] + result[end + len(end_tag) :]
             else:
                 break
+        # Some chat templates prefill the opening reasoning tag in the prompt,
+        # so the model completion may contain only the closing tag plus the
+        # final answer. In that case, keep the suffix after the final closing
+        # tag so downstream scorers see the answer instead of the reasoning.
+        if end_tag in result and start_tag not in result:
+            result = result.rsplit(end_tag, 1)[-1]
     return result.strip()
 
 
