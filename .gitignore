@@ -26,7 +26,7 @@ profile_default/
 ipython_config.py
 
 # OS
-.DS_STORE
+.DS_Store
 
 # Environment and secrets
 .env
@@ -41,7 +41,7 @@ output/
 
 # Logs
 logs/
-*logs
+*.log
 wandb/
 zk.log
 span.log
@@ -63,15 +63,13 @@ VATEX/
 # Task-specific generated files
 lmms_eval/tasks/hallusion_bench/hallusion_output_vs_model.json
 lmms_eval/tasks/hallusion_bench/hallusion_output_vd_model.json
-lmms_eval/tasks/vatex/__pycache__/utils.cpython-310.pyc
-lmms_eval/tasks/mlvu/__pycache__/utils.cpython-310.pyc
 
 # Fonts
 SimSun.ttf
 
 # Scripts and workspace (local-only)
 scripts/
-workspace/*
+workspace/
 docs/plans/
 
 # Agent / AI assistant memory files (user-local, not tracked), we encourage users to design their own agents, and can use our provided skills as reference.
