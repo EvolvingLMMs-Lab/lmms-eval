@@ -22,6 +22,7 @@ process_vision_info, _ = optional_import("qwen_vl_utils", "process_vision_info")
 @register_model("llava_onevision1_5_chat")
 class Llava_OneVision1_5(LlavaOneVisionSimple):
     is_simple = False
+    fps = None
 
     def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         assert process_vision_info is not None, "qwen_vl_utils is required. Please install it via `pip install qwen-vl-utils`"
