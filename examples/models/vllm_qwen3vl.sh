@@ -26,9 +26,10 @@
 MODEL="Qwen/Qwen3-VL-30B-A3B-Instruct"
 
 # Parallelization Settings
-# Adjust based on your GPU configuration
+# Adjust based on your GPU configuration.
+# If DATA_PARALLEL_SIZE > 1, this script automatically switches to torchrun.
 TENSOR_PARALLEL_SIZE=4  # Number of GPUs for tensor parallelism
-DATA_PARALLEL_SIZE=1     # Number of GPUs for data parallelism
+DATA_PARALLEL_SIZE=1    # Number of model replicas for data parallelism
 
 # Memory and Performance Settings
 GPU_MEMORY_UTILIZATION=0.85  # Fraction of GPU memory to use (0.0 - 1.0)
@@ -68,10 +69,17 @@ echo "Batch Size: $BATCH_SIZE"
 echo "Output Path: $OUTPUT_PATH"
 echo "=========================================="
 
-# Build the command
-CMD="uv run python -m lmms_eval \
+LAUNCHER="uv run python -m lmms_eval"
+MODEL_ARGS="model=${MODEL},tensor_parallel_size=${TENSOR_PARALLEL_SIZE},gpu_memory_utilization=${GPU_MEMORY_UTILIZATION}"
+
+if [ "${DATA_PARALLEL_SIZE}" -gt 1 ]; then
+    LAUNCHER="uv run python -m torch.distributed.run --standalone --nproc_per_node=$((TENSOR_PARALLEL_SIZE * DATA_PARALLEL_SIZE)) -m lmms_eval"
+    MODEL_ARGS="${MODEL_ARGS},data_parallel_size=${DATA_PARALLEL_SIZE}"
+fi
+
+CMD="${LAUNCHER} \
     --model vllm \
-    --model_args model=${MODEL},tensor_parallel_size=${TENSOR_PARALLEL_SIZE},data_parallel_size=${DATA_PARALLEL_SIZE},gpu_memory_utilization=${GPU_MEMORY_UTILIZATION} \
+    --model_args ${MODEL_ARGS} \
     --tasks ${TASKS} \
     --batch_size ${BATCH_SIZE} \
     --output_path ${OUTPUT_PATH}"
