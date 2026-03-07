@@ -986,8 +986,7 @@ class ConfigurableTask(Task):
             if "video" in dataset_kwargs and dataset_kwargs["video"]:
                 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
                 hf_home = os.path.expanduser(hf_home)
-                cache_dir = dataset_kwargs["cache_dir"]
-                cache_dir = os.path.join(hf_home, cache_dir)
+                cache_dir = utils.resolve_cache_dir(dataset_kwargs["cache_dir"], base_dir=hf_home)
                 accelerator = Accelerator()
                 if accelerator.is_main_process:
                     force_download = dataset_kwargs.get("force_download", False)

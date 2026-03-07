@@ -129,6 +129,18 @@ def is_multimodal_content(value: Any) -> bool:
     return False
 
 
+def resolve_cache_dir(cache_dir: str, base_dir: Optional[str] = None) -> str:
+    """Resolve cache paths while allowing env vars and absolute paths.
+
+    Relative values are resolved against ``base_dir`` when provided.
+    Absolute values are preserved after ``$VAR``/``~`` expansion.
+    """
+    resolved = os.path.expanduser(os.path.expandvars(cache_dir))
+    if base_dir is not None and not os.path.isabs(resolved):
+        return os.path.join(base_dir, resolved)
+    return resolved
+
+
 def sanitize_list(sub):
     """
     Takes possible nested list and recursively converts all inner component to strings
