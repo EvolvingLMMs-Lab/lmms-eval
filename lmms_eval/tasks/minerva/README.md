@@ -94,16 +94,16 @@ When Lance is likely to show stronger practical gains:
 
 ## Dummy model evaluation for video-read simulation
 
-Use `dummy_video_reader` to simulate request flow and local video reads without real model/API inference.
+Use `dummy` to simulate request flow and local video reads without real model/API inference.
 
 ```bash
 uv run --with pylance --with pyarrow python -m lmms_eval \
-  --model dummy_video_reader \
+  --model dummy \
   --model_args "read_bytes=65536,response=A,allow_remote=false,fail_on_missing=true" \
   --tasks minerva \
   --batch_size 1 \
   --limit 50 \
-  --output_path ./logs/minerva_dummy_video_reader \
+  --output_path ./logs/minerva_dummy \
   --verbosity INFO
 ```
 

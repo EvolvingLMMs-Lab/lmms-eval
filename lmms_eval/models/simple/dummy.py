@@ -53,12 +53,22 @@ def _percentile(values: List[float], ratio: float) -> float:
     return sorted_vals[idx]
 
 
-@register_model("dummy_video_reader")
-class DummyVideoReader(lmms):
+@register_model("dummy")
+class Dummy(lmms):
+    """No-op model that returns a fixed response without any inference.
+
+    Default mode (no extra args): instantly returns ``response`` for every request.
+    Useful for hydrating HF dataset caches or smoke-testing task configs.
+
+    Video-bench mode (``read_bytes > 0`` or ``decode_num_frames > 0``): reads
+    visual file bytes and optionally decodes frames, tracking IO/decode latency.
+    Useful for benchmarking video pipeline throughput.
+    """
+
     def __init__(
         self,
         response: str = "A",
-        read_bytes: int = 65536,
+        read_bytes: int = 0,
         allow_remote: bool = False,
         fail_on_missing: bool = True,
         decode_num_frames: int = 0,
@@ -68,13 +78,16 @@ class DummyVideoReader(lmms):
     ) -> None:
         super().__init__()
         self._response = str(response).strip() or "A"
-        self._read_bytes = _as_int(read_bytes, 65536)
+        self._read_bytes = _as_int(read_bytes, 0)
         self._allow_remote = _as_bool(allow_remote)
         self._fail_on_missing = _as_bool(fail_on_missing)
         self._decode_num_frames = max(0, _as_int(decode_num_frames, 0))
         self._decode_fps = _as_optional_float(decode_fps)
         self._metrics_output_path = str(metrics_output_path).strip()
         self._decode_fn: Optional[Callable] = None
+
+        # Whether to process visuals at all.
+        self._bench_video = self._read_bytes > 0 or self._decode_num_frames > 0
 
         self._resolved_count = 0
         self._local_file_count = 0
@@ -100,14 +113,14 @@ class DummyVideoReader(lmms):
         if visual.startswith("http://") or visual.startswith("https://"):
             self._remote_count += 1
             if not self._allow_remote and self._fail_on_missing:
-                raise RuntimeError(f"DummyVideoReader got remote visual path: {visual}")
+                raise RuntimeError(f"Dummy got remote visual path: {visual}")
             return 0.0
 
         path = Path(visual)
         if not path.exists():
             self._missing_count += 1
             if self._fail_on_missing:
-                raise FileNotFoundError(f"DummyVideoReader visual path does not exist: {visual}")
+                raise FileNotFoundError(f"Dummy visual path does not exist: {visual}")
             return 0.0
 
         self._local_file_count += 1
@@ -167,7 +180,37 @@ class DummyVideoReader(lmms):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
+    def _log_bench_summary(self, metrics: dict) -> None:
+        eval_logger.info(
+            "Dummy bench summary - resolved: {} | local: {} | remote: {} | missing: {}",
+            self._resolved_count,
+            self._local_file_count,
+            self._remote_count,
+            self._missing_count,
+        )
+        total_latency = metrics["latency"]["total"]
+        if total_latency.get("samples", 0) > 0:
+            eval_logger.info(
+                "Dummy latency total - samples: {} | mean_ms: {:.3f} | p50_ms: {:.3f} | p95_ms: {:.3f}",
+                total_latency["samples"],
+                total_latency["mean_ms"],
+                total_latency["p50_ms"],
+                total_latency["p95_ms"],
+            )
+        if self._decode_num_frames > 0:
+            decode_latency = metrics["latency"]["decode"]
+            if decode_latency.get("samples", 0) > 0:
+                eval_logger.info(
+                    "Dummy decode - frames: {} | mean_ms: {:.3f} | frames_per_s: {:.3f}",
+                    self._decoded_frame_count,
+                    decode_latency["mean_ms"],
+                    metrics.get("throughput_decode_frames_per_s", 0.0),
+                )
+
     def generate_until(self, requests) -> List[str]:
+        if not self._bench_video:
+            return [self._response] * len(requests)
+
         responses = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
@@ -201,36 +244,12 @@ class DummyVideoReader(lmms):
 
         pbar.close()
         metrics = self._build_metrics_payload()
-        eval_logger.info(
-            "DummyVideoReader summary - resolved: {} | local: {} | remote: {} | missing: {}",
-            self._resolved_count,
-            self._local_file_count,
-            self._remote_count,
-            self._missing_count,
-        )
-        total_latency = metrics["latency"]["total"]
-        if total_latency.get("samples", 0) > 0:
-            eval_logger.info(
-                "DummyVideoReader latency total - samples: {} | mean_ms: {:.3f} | p50_ms: {:.3f} | p95_ms: {:.3f}",
-                total_latency["samples"],
-                total_latency["mean_ms"],
-                total_latency["p50_ms"],
-                total_latency["p95_ms"],
-            )
-        if self._decode_num_frames > 0:
-            decode_latency = metrics["latency"]["decode"]
-            if decode_latency.get("samples", 0) > 0:
-                eval_logger.info(
-                    "DummyVideoReader decode - frames: {} | mean_ms: {:.3f} | frames_per_s: {:.3f}",
-                    self._decoded_frame_count,
-                    decode_latency["mean_ms"],
-                    metrics.get("throughput_decode_frames_per_s", 0.0),
-                )
+        self._log_bench_summary(metrics)
         self._maybe_write_metrics(metrics)
         return responses
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
-        raise NotImplementedError("DummyVideoReader does not implement loglikelihood")
+        return [(0.0, False)] * len(requests)
 
     def generate_until_multi_round(self, requests) -> List[str]:
         return self.generate_until(requests)
