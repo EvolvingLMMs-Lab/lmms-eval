@@ -5,15 +5,17 @@ import sqlite3
 import tempfile
 import time
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.caching.response_cache import (
+    _SCHEMA_VERSION,
     ResponseCache,
     _extract_content_hash,
     compute_cache_key,
     extract_gen_kwargs,
     is_deterministic,
+    resolve_response_cache_layout,
 )
 
 # ---------------------------------------------------------------------------
@@ -293,7 +295,7 @@ class TestAuditLogObservability(_CacheTestBase):
         self.assertTrue(lines[0]["deterministic"])
         self.assertEqual(json.loads(lines[0]["response"]), "det_answer")
         self.assertNotEqual(lines[0]["cache_key"], "")
-        self.assertEqual(lines[0]["fingerprint_schema_version"], 2)
+        self.assertEqual(lines[0]["fingerprint_schema_version"], _SCHEMA_VERSION)
         self.assertIn("model_fingerprint_hash", lines[0])
         self.assertIn("task_fingerprint", lines[0])
         self.assertIn("content_hash", lines[0])
@@ -421,6 +423,99 @@ class TestMultiRankIsolation(_CacheTestBase):
 
 
 # ===========================================================================
+# Integration - layered cache roots
+# ===========================================================================
+
+
+class TestLayeredCacheLayout(_CacheTestBase):
+    def test_directory_target_uses_layered_root_and_run_dir(self):
+        cache_root = os.path.join(self.tmpdir, "layered")
+        with patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-123"}, clear=False):
+            layout = resolve_response_cache_layout(
+                cache_root,
+                world_size=4,
+                global_rank=2,
+                model_hash="unused",
+            )
+
+        self.assertEqual(layout.mode, "layered_dir")
+        self.assertEqual(layout.target_db_path, os.path.join(cache_root, "cache.db"))
+        self.assertEqual(layout.target_audit_path, os.path.join(cache_root, "cache.audit.jsonl"))
+        self.assertEqual(layout.run_root, os.path.join(cache_root, "runs"))
+        self.assertEqual(layout.run_dir, os.path.join(cache_root, "runs", "job-123"))
+        self.assertEqual(layout.write_db_path, os.path.join(layout.run_dir, "cache.db.shard.2"))
+        self.assertEqual(layout.write_audit_path, os.path.join(layout.run_dir, "cache.db.audit.shard.2.jsonl"))
+        self.assertFalse(layout.cleanup_after_consolidation)
+
+    def test_explicit_db_target_keeps_legacy_file_mode(self):
+        target_db = os.path.join(self.tmpdir, "explicit.db")
+        layout = resolve_response_cache_layout(
+            target_db,
+            world_size=1,
+            global_rank=0,
+            model_hash="unused",
+        )
+
+        self.assertEqual(layout.mode, "direct")
+        self.assertEqual(layout.target_db_path, target_db)
+        self.assertEqual(layout.write_db_path, target_db)
+        self.assertEqual(layout.run_dir, "")
+        self.assertEqual(layout.run_root, "")
+
+    def test_explicit_root_cache_db_uses_layered_mode(self):
+        cache_root = os.path.join(self.tmpdir, "layered")
+        target_db = os.path.join(cache_root, "cache.db")
+        with patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-789"}, clear=False):
+            layout = resolve_response_cache_layout(
+                target_db,
+                world_size=1,
+                global_rank=0,
+                model_hash="unused",
+            )
+
+        self.assertEqual(layout.mode, "layered_dir")
+        self.assertEqual(layout.target_db_path, target_db)
+        self.assertEqual(layout.target_audit_path, os.path.join(cache_root, "cache.audit.jsonl"))
+        self.assertEqual(layout.run_root, os.path.join(cache_root, "runs"))
+        self.assertEqual(layout.run_dir, os.path.join(cache_root, "runs", "job-789"))
+        self.assertEqual(layout.write_db_path, os.path.join(layout.run_dir, "cache.db"))
+        self.assertEqual(layout.write_audit_path, os.path.join(layout.run_dir, "cache.audit.jsonl"))
+
+    def test_finalize_layered_runs_merges_ready_run_into_root_cache(self):
+        cache_root = os.path.join(self.tmpdir, "layered")
+        run_root = os.path.join(cache_root, "runs")
+        run_dir = os.path.join(run_root, "job-456")
+        os.makedirs(run_dir, exist_ok=True)
+
+        target_db = os.path.join(cache_root, "cache.db")
+        target_audit = os.path.join(cache_root, "cache.audit.jsonl")
+        shard_db = os.path.join(run_dir, "cache.db.shard.0")
+        shard_audit = os.path.join(run_dir, "cache.db.audit.shard.0.jsonl")
+
+        cache = ResponseCache(shard_db, shard_audit, model_fingerprint="model_A")
+        cache.execute(_mock_model(["answer"]), "generate_until", [_gen_request("prompt", doc_id=7)])
+        cache.close()
+
+        merged_runs = ResponseCache.finalize_layered_runs(
+            target_db_path=target_db,
+            target_audit_path=target_audit,
+            run_root=run_root,
+            current_run_dir=run_dir,
+            cleanup=False,
+            lock_timeout_seconds=2,
+        )
+
+        self.assertEqual(merged_runs, 1)
+        root_cache = ResponseCache(target_db, target_audit, model_fingerprint="model_A")
+        results = root_cache.execute(_mock_model([]), "generate_until", [_gen_request("prompt", doc_id=7)])
+        self.assertEqual(results, ["answer"])
+        self.assertEqual(root_cache.get_stats()["hits"], 1)
+        root_cache.close()
+        self.assertTrue(os.path.exists(os.path.join(run_dir, ".ready")))
+        self.assertTrue(os.path.exists(os.path.join(run_dir, ".merged")))
+
+
+# ===========================================================================
 # Integration - model fingerprint isolation
 # ===========================================================================
 
@@ -458,7 +553,7 @@ class TestModelFingerprintIsolation(_CacheTestBase):
         schema_row = cache.db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
         self.assertIsNotNone(hash_row)
         self.assertEqual(len(hash_row[0]), 16)
-        self.assertEqual(schema_row[0], "2")
+        self.assertEqual(schema_row[0], str(_SCHEMA_VERSION))
         cache.close()
 
 

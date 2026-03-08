@@ -9,12 +9,19 @@ import random
 import re
 from typing import Callable, List, Optional, Union
 
+from datetime import timedelta
+
 import numpy as np
 import torch
 import torch.distributed as dist
 from accelerate import Accelerator
 from loguru import logger as eval_logger
 from tqdm import tqdm
+
+# Increase default torch.distributed process group timeout from 30 min to 24 hours.
+# With dp=16 across 2 nodes, workload imbalance causes fast ranks to finish hours
+# before slow ranks (e.g. 1h24m vs 4h24m).  3h was not enough — increase to 24h.
+torch.distributed.distributed_c10d.default_pg_timeout = timedelta(hours=24)
 
 import lmms_eval.api
 import lmms_eval.api.metrics
@@ -199,7 +206,7 @@ def simple_evaluate(
     :param device: str, optional
         PyTorch device (e.g. "cpu" or "cuda:0") for running models
     :param use_cache: str, optional
-        Path to a SQLite .db file for response-level caching. `None` to disable.
+        Path to a response-cache root directory or SQLite .db file for response-level caching. `None` to disable.
     :param cache_requests: bool, optional
         Speed up evaluation by caching the building of dataset requests. `None` if not caching.
     :param rewrite_requests_cache: bool, optional
@@ -298,7 +305,47 @@ def simple_evaluate(
     elif isinstance(model, lmms_eval.api.model.lmms):
         lm = model
     task_type = "simple" if lm.is_simple else "chat"
-    task_dict = get_task_dict(tasks, task_manager, task_type)
+
+    # Patch filelock to allow reentrant locking within the same thread.
+    # filelock >= 3.16 detects when two FileLock instances in the same thread target the
+    # same file and raises RuntimeError("Deadlock"). Setting is_singleton=True makes locks
+    # reentrant across instances.  HF datasets triggers this during nested load_dataset calls
+    # (e.g. BLINK benchmark with multiple sub-configs sharing parent lock files).
+    import filelock as _fl
+
+    _orig_filelock_init = _fl.FileLock.__init__
+
+    def _patched_filelock_init(self, *args, **kwargs):
+        kwargs.setdefault("is_singleton", True)
+        _orig_filelock_init(self, *args, **kwargs)
+
+    _fl.FileLock.__init__ = _patched_filelock_init
+
+    # Make SSLContext picklable so dill/datasets can fingerprint closures that
+    # capture the HF Hub HTTP session.  Without this, datasets 4.x raises
+    # "TypeError: cannot pickle 'SSLContext' object" during load_dataset().
+    import ssl
+
+    if not hasattr(ssl.SSLContext, "_orig_reduce"):
+        ssl.SSLContext._orig_reduce = True  # sentinel to avoid double-patching
+        ssl.SSLContext.__reduce__ = lambda self: (ssl.SSLContext, (self.protocol,))
+
+    # Stagger dataset loading across ranks to avoid cross-process FileLock contention
+    # on shared FS.  Rank 0 loads first (populates HF cache), then all others load
+    # from warm cache after a barrier.
+    # NOTE: use torch.distributed directly (not `dist`) because later code in this function
+    # has local `import torch.distributed as dist` which shadows the module-level import.
+    if torch.distributed.is_initialized():
+        rank = torch.distributed.get_rank()
+        if rank == 0:
+            eval_logger.info("Rank 0: loading datasets first to warm HF cache")
+            task_dict = get_task_dict(tasks, task_manager, task_type)
+        torch.distributed.barrier()
+        if rank != 0:
+            eval_logger.info(f"Rank {rank}: loading datasets from warm cache")
+            task_dict = get_task_dict(tasks, task_manager, task_type)
+    else:
+        task_dict = get_task_dict(tasks, task_manager, task_type)
 
     # helper function to recursively apply config overrides to leaf subtasks, skipping their constituent groups.
     # (setting of num_fewshot ; bypassing metric calculation ; setting fewshot seed)
@@ -386,14 +433,13 @@ def simple_evaluate(
     _cache_target_audit = None
     _cache_shared_db = None  # read-only shared DB for two-tier cache (may be None)
     _cache_is_two_tier = False  # True when local scratch != target (NFS case)
+    _cache_is_layered_dir = False  # True when --use_cache points to a cache root directory
     _cache_staging_dir = None  # shared staging dir for multi-node two-tier merges
+    _cache_cleanup_after_consolidation = True
+    _cache_run_id = ""
+    _cache_run_dir = ""
+    _cache_run_root = ""
     if use_cache is not None:
-        from lmms_eval.caching.fs_detect import (
-            FsType,
-            detect_fs_type,
-            find_local_scratch,
-        )
-
         _FUNC_ADDR_RE = re.compile(r" at 0x[0-9a-fA-F]+>")
 
         task_fingerprints = {}
@@ -420,54 +466,36 @@ def simple_evaluate(
         model_fp = f"{model}|{model_args_fp}"
         model_hash = hash_string(model_fp)[:16]
 
-        # Resolve target DB path.
-        # Backward compat: if user passes an existing directory (old --use_cache ./dir style),
-        # place cache.db inside it.  Otherwise treat as a .db file path.
-        _cache_target_db = use_cache
-        if os.path.isdir(_cache_target_db) or _cache_target_db.endswith(os.sep):
-            eval_logger.warning(f"ResponseCache: --use_cache received a directory ({_cache_target_db}). " "In future versions, pass a .db file path directly (e.g. --use_cache ./cache.db). " "Auto-mapping to cache.db inside the directory.")
-            _cache_target_db = os.path.join(_cache_target_db, "cache.db")
-        elif not _cache_target_db.endswith(".db"):
-            _cache_target_db = _cache_target_db + ".db"
-        _cache_target_audit = os.path.splitext(_cache_target_db)[0] + ".audit.jsonl"
-        target_dir = os.path.dirname(os.path.abspath(_cache_target_db))
-        os.makedirs(target_dir, exist_ok=True)
+        from lmms_eval.caching.response_cache import resolve_response_cache_layout
 
-        # Two-tier cache decision: detect if target is on remote storage.
-        # If remote (NFS/CIFS), write to local scratch and merge back after eval.
-        # If local or unknown, write directly to target.
-        target_fs = detect_fs_type(_cache_target_db)
-        if target_fs == FsType.REMOTE:
-            local_scratch = find_local_scratch()
-            if local_scratch is not None:
-                _cache_is_two_tier = True
-                local_cache_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash)
-                os.makedirs(local_cache_dir, exist_ok=True)
-                # Shared DB: the user-specified NFS path (read-only during eval)
-                _cache_shared_db = _cache_target_db if os.path.exists(_cache_target_db) else None
-                # Write DB: local scratch (fast writes)
-                if world_size > 1:
-                    _cache_write_db = os.path.join(local_cache_dir, f"shard.{global_rank}.db")
-                    _cache_write_audit = os.path.join(local_cache_dir, f"shard.{global_rank}.audit.jsonl")
-                    # Multi-node: each node's local scratch is invisible to rank 0.
-                    # Use a shared staging dir on the target FS for consolidation.
-                    _cache_staging_dir = os.path.splitext(_cache_target_db)[0] + ".staging"
-                    os.makedirs(_cache_staging_dir, exist_ok=True)
-                else:
-                    _cache_write_db = os.path.join(local_cache_dir, "local.db")
-                    _cache_write_audit = os.path.join(local_cache_dir, "local.audit.jsonl")
-                eval_logger.info(f"ResponseCache: two-tier mode - writes to {_cache_write_db}, " f"reads from local + shared ({_cache_target_db})")
-            else:
-                eval_logger.warning("ResponseCache: target is on remote FS but no local scratch found, writing directly")
-
-        # Fallback: direct write to target (local FS, or no scratch available)
-        if not _cache_is_two_tier:
-            if world_size > 1:
-                _cache_write_db = f"{_cache_target_db}.shard.{global_rank}"
-                _cache_write_audit = f"{_cache_target_db}.audit.shard.{global_rank}.jsonl"
-            else:
-                _cache_write_db = _cache_target_db
-                _cache_write_audit = _cache_target_audit
+        cache_layout = resolve_response_cache_layout(
+            use_cache,
+            world_size=world_size,
+            global_rank=global_rank,
+            model_hash=model_hash,
+        )
+        _cache_target_db = cache_layout.target_db_path
+        _cache_target_audit = cache_layout.target_audit_path
+        _cache_write_db = cache_layout.write_db_path
+        _cache_write_audit = cache_layout.write_audit_path
+        _cache_shared_db = cache_layout.shared_db_path
+        _cache_staging_dir = cache_layout.staging_dir
+        _cache_cleanup_after_consolidation = cache_layout.cleanup_after_consolidation
+        _cache_is_two_tier = cache_layout.mode == "two_tier"
+        _cache_is_layered_dir = cache_layout.mode == "layered_dir"
+        _cache_run_id = cache_layout.run_id
+        _cache_run_dir = cache_layout.run_dir
+        _cache_run_root = cache_layout.run_root
+        if _cache_is_layered_dir:
+            eval_logger.info(
+                f"ResponseCache: layered-dir mode - root={_cache_target_db}, run_id={_cache_run_id}, "
+                f"run_root={_cache_run_root}, writes={_cache_write_db}, reads from root cache when available"
+            )
+        elif _cache_is_two_tier:
+            eval_logger.info(
+                f"ResponseCache: two-tier mode - writes to {_cache_write_db}, "
+                f"reads from local + shared ({_cache_target_db})"
+            )
 
         response_cache = ResponseCache(
             db_path=_cache_write_db,
@@ -550,7 +578,19 @@ def simple_evaluate(
 
             # Rank 0: merge all shards into the target DB.
             if eval_succeeded and global_rank == 0:
-                if _cache_is_two_tier:
+                if _cache_is_layered_dir and _cache_run_root and _cache_run_dir:
+                    merged_runs = ResponseCache.finalize_layered_runs(
+                        target_db_path=_cache_target_db,
+                        target_audit_path=_cache_target_audit,
+                        run_root=_cache_run_root,
+                        current_run_dir=_cache_run_dir,
+                        cleanup=_cache_cleanup_after_consolidation,
+                    )
+                    if merged_runs:
+                        eval_logger.info(
+                            f"ResponseCache: merged {merged_runs} layered run(s) into {_cache_target_db}"
+                        )
+                elif _cache_is_two_tier:
                     if world_size > 1 and _cache_staging_dir:
                         # Merge from shared staging dir.
                         shard_db_paths = [os.path.join(_cache_staging_dir, f"shard.{r}.db") for r in range(world_size)]
@@ -563,23 +603,27 @@ def simple_evaluate(
                         shard_db_paths=shard_db_paths,
                         shard_audit_paths=shard_audit_paths,
                         target_audit_path=_cache_target_audit,
-                        cleanup=True,
+                        cleanup=_cache_cleanup_after_consolidation,
                     )
                     # Clean up staging dir.
-                    if _cache_staging_dir and os.path.isdir(_cache_staging_dir):
+                    if _cache_cleanup_after_consolidation and _cache_staging_dir and os.path.isdir(_cache_staging_dir):
                         import shutil
 
                         shutil.rmtree(_cache_staging_dir, ignore_errors=True)
                 elif world_size > 1:
                     # Direct mode, multi-GPU: merge per-rank shards into target.
-                    shard_db_paths = [f"{_cache_target_db}.shard.{r}" for r in range(world_size)]
-                    shard_audit_paths = [f"{_cache_target_db}.audit.shard.{r}.jsonl" for r in range(world_size)]
+                    if _cache_is_layered_dir and _cache_run_dir:
+                        shard_db_paths = [os.path.join(_cache_run_dir, f"cache.db.shard.{r}") for r in range(world_size)]
+                        shard_audit_paths = [os.path.join(_cache_run_dir, f"cache.db.audit.shard.{r}.jsonl") for r in range(world_size)]
+                    else:
+                        shard_db_paths = [f"{_cache_target_db}.shard.{r}" for r in range(world_size)]
+                        shard_audit_paths = [f"{_cache_target_db}.audit.shard.{r}.jsonl" for r in range(world_size)]
                     ResponseCache.consolidate_cache(
                         target_db_path=_cache_target_db,
                         shard_db_paths=shard_db_paths,
                         shard_audit_paths=shard_audit_paths,
                         target_audit_path=_cache_target_audit,
-                        cleanup=True,
+                        cleanup=_cache_cleanup_after_consolidation,
                     )
     if global_rank == 0:
         from lmms_eval.models.model_utils.gen_metrics import summarize_logged_metrics
