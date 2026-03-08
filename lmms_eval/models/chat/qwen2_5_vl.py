@@ -66,9 +66,8 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 "max_pixels": self.max_pixels,
                 "min_pixels": self.min_pixels,
             }
-            fps = getattr(self, "fps", None)
-            if fps is not None:
-                video_kwargs["fps"] = fps
+            if self.fps is not None:
+                video_kwargs["fps"] = self.fps
             else:
                 # Probe videos to get frame count and set nframes = min(max_num_frames, total_frames)
                 # This avoids the error when video has fewer frames than max_num_frames

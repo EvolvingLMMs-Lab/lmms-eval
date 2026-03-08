@@ -61,9 +61,8 @@ class Qwen3_VL(Qwen3_VLSimple):
                 "max_pixels": self.max_pixels,
                 "min_pixels": self.min_pixels,
             }
-            fps = getattr(self, "fps", None)
-            if fps is not None:
-                video_kwargs["fps"] = fps
+            if self.fps is not None:
+                video_kwargs["fps"] = self.fps
                 # limit the number of frames in case fps is set
                 video_kwargs["max_frames"] = self.max_num_frames
             else:
