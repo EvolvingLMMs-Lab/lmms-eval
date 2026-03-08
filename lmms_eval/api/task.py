@@ -921,7 +921,7 @@ class ConfigurableTask(Task):
         # Recursively search whether their is a zip and unzip it to the huggingface home
         download_config = DownloadConfig()
         download_config.max_retries = dataset_kwargs.get("max_retries", 10) if dataset_kwargs is not None else 10
-        download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
+        download_config.num_proc = dataset_kwargs.get("num_proc", 1) if dataset_kwargs is not None else 1
         download_config.local_files_only = dataset_kwargs.get("local_files_only", False) if dataset_kwargs is not None else False
         if dataset_kwargs is not None:
             if "From_YouTube" in dataset_kwargs:
@@ -1103,6 +1103,7 @@ class ConfigurableTask(Task):
                 name=self.DATASET_NAME,
                 download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
                 download_config=download_config,
+                num_proc=1,
                 **dataset_kwargs if dataset_kwargs is not None else {},
             )
 
