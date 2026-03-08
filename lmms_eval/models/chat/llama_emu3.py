@@ -90,7 +90,7 @@ class LlamaEmu3Chat(EMU3EncoderModel):
 
     def _load_tokenizer(self, tokenizer_path: str, **kwargs) -> AutoTokenizer:
         """Load Llama tokenizer and ensure pad token is set."""
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, padding_side="left")
         if tokenizer.pad_token is None:
             eval_logger.warning("No pad_token found in tokenizer, setting pad_token to eos_token.")
             tokenizer.pad_token = tokenizer.eos_token

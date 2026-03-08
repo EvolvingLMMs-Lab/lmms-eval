@@ -93,7 +93,7 @@ class ApertusEmu3p5Chat(EMU3p5EncoderModel):
 
     def _load_tokenizer(self, tokenizer_path: str, **kwargs) -> AutoTokenizer:
         """Load Apertus tokenizer and ensure pad token is set."""
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, padding_side="left")
         if tokenizer.pad_token is None:
             eval_logger.warning("No pad_token found in tokenizer, setting pad_token to eos_token.")
             tokenizer.pad_token = tokenizer.eos_token
@@ -141,7 +141,10 @@ class ApertusEmu3p5Chat(EMU3p5EncoderModel):
         for msg in hf_messages:
             if msg["role"] == "user" and isinstance(msg["content"], list):
                 # Wrap content list in "parts" key for Apertus format
-                transformed_msg = {"role": msg["role"], "content": {"parts": msg["content"]}}
+                transformed_msg = {
+                    "role": msg["role"],
+                    "content": {"parts": msg["content"]},
+                }
                 transformed.append(transformed_msg)
             else:
                 # Assistant and system messages don't need transformation

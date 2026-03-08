@@ -176,7 +176,7 @@ class EMUSimpleModelMixin:
                 outputs = self.model.generate(**model_inputs, generation_config=generation_config)
             end_time = time.time()
 
-            # Trim input_ids from outputs
+            # Trim input_ids from outputs (includes padding in batched mode)
             outputs_trimmed = outputs[:, model_inputs["input_ids"].shape[-1] :]
             text_outputs = self.processor.batch_decode(outputs_trimmed, skip_special_tokens=True)
 
@@ -205,11 +205,18 @@ class EMUSimpleModelMixin:
                 # Debug output
                 if self.debug_samples and self._debug_samples_printed < self.num_debug_samples and self.rank == 0:
                     self._debug_samples_printed += 1
+                    attn = model_inputs["attention_mask"][i]
+                    seq_len = attn.shape[0]
+                    n_pad = (attn == 0).sum().item()
+                    n_real = (attn == 1).sum().item()
+                    head = attn[:8].tolist()
+                    tail = attn[-8:].tolist()
                     eval_logger.info("=" * 80)
                     eval_logger.info(f"DEBUG SAMPLE {self._debug_samples_printed}/" f"{self.num_debug_samples}")
                     eval_logger.info("=" * 80)
                     eval_logger.info(f"PROMPT (clean): {prompts[i]}")
                     eval_logger.info(f"PROMPT (with tokens): {prompts_with_tokens[i]}")
+                    eval_logger.info(f"ATTENTION MASK: len={seq_len} pad={n_pad} real={n_real} head={head} tail={tail}")
                     eval_logger.info(f"ANSWER (clean): {ans}")
                     eval_logger.info(f"ANSWER (with tokens): {answers_with_tokens[i]}")
                     eval_logger.info("=" * 80)

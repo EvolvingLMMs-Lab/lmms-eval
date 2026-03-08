@@ -90,7 +90,7 @@ class ApertusEmu3p5Simple(EMU3p5SimpleModel):
 
     def _load_tokenizer(self, tokenizer_path: str, **kwargs) -> AutoTokenizer:
         """Load Apertus tokenizer."""
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, padding_side="left")
         if tokenizer.pad_token is None:
             eval_logger.warning("No pad_token found, setting pad_token to eos_token.")
             tokenizer.pad_token = tokenizer.eos_token
