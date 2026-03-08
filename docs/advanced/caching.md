@@ -15,6 +15,20 @@ python -m lmms_eval \
 
 On a second run with the same command, cached responses are loaded and the model is only called for new or changed requests.
 
+When `--use_cache` points to a directory, or to an explicit root `cache.db`, lmms-eval uses a layered layout:
+
+```text
+eval_cache/
+  cache.db
+  cache.audit.jsonl
+  runs/
+    <run_id>/
+      cache.db
+      cache.audit.jsonl
+```
+
+The root `cache.db` is the shared read cache. Each evaluation run writes to its own UUID-scoped directory and rank 0 merges completed runs back into the root database under an exclusive lock. That gives you cache reuse without asking concurrent jobs to write into the same SQLite file.
+
 ### What gets cached
 
 Only **deterministic** requests are cached. A request is considered non-deterministic (and skipped) when any of:
@@ -56,16 +70,23 @@ Float/int normalization: `temperature=0.0` and `temperature=0` produce the same 
 
 ### File layout
 
+Layered directory mode (recommended for shared or long-running jobs):
+
 ```
-{use_cache}/
-  {model_hash}/          # sha256("{model}|{model_args}")[:16]
-    rank0.db             # SQLite (WAL mode) - primary lookup
-    rank0.jsonl          # write-ahead audit log - crash recovery
-    rank1.db             # (if multi-GPU)
-    rank1.jsonl
+{cache_root}/
+  cache.db
+  cache.audit.jsonl
+  runs/
+    {run_id}/
+      cache.db                     # single-rank writes
+      cache.audit.jsonl
+      cache.db.shard.{rank}        # multi-rank writes
+      cache.db.audit.shard.{rank}.jsonl
+      .ready
+      .merged
 ```
 
-Per-rank files avoid write contention in distributed runs.
+Legacy file mode keeps the older behavior where a direct `.db` target may receive per-rank shard files next to the target DB.
 
 ### Cache invalidation
 
@@ -92,14 +113,16 @@ Responses are validated before caching:
 
 ### Merge distributed shards
 
-After a multi-GPU run, merge per-rank DBs into one:
+Layered directory mode merges distributed shards automatically on successful completion. Rank 0 acquires an exclusive merge lock, folds every ready run under `runs/` into the root `cache.db`, and marks the run directory as merged.
+
+If you are using legacy file mode, you can still merge shard DBs manually:
 
 ```python
 from lmms_eval.caching.response_cache import ResponseCache
 
 ResponseCache.merge_shards(
-    shard_paths=["eval_cache/abc123/rank0.db", "eval_cache/abc123/rank1.db"],
-    output_path="eval_cache/abc123/merged.db",
+    shard_paths=["eval_cache/cache.db.shard.0", "eval_cache/cache.db.shard.1"],
+    output_path="eval_cache/cache.db",
 )
 ```
 
@@ -211,5 +234,3 @@ On a second run with the same task/docs, cached responses will be loaded and onl
 ### Optional: legacy SQLite cache wrapper
 
 There is also a separate optional wrapper `CachingLMM` (see `lmms_eval.api.model.CachingLMM`) that caches by hashing the entire call arguments to a SQLite DB (via `SqliteDict`). It is independent from the JSONL cache above and can be useful for broader API‑level caching. For most users, enabling `LMMS_EVAL_USE_CACHE=True` is sufficient and simpler.
-
-
