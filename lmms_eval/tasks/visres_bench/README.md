@@ -86,3 +86,18 @@ The default prompt uses the **guided_question** column. To use **generic_questio
 | `visres_bench_level_1`| Level 1, no random_sampling | 8   |
 | `visres_bench_level_2`| Level 2 only             | 12      |
 | `visres_bench_level_3`| Level 3 only             | 5       |
+
+---
+
+## Citation
+
+If you use VisRes-Bench in your work, please cite:
+
+```bibtex
+@article{tortei2025visres,
+  title={VisRes Bench: On Evaluating the Visual Reasoning Capabilities of VLMs},
+  author={T{\"o}rtei, Brigitta Malagurski and Dahou, Yasser and Huynh, Ngoc Dung and Para, Wamiq Reyaz and Khac, Ph{\'u}c H L{\^e} and Singh, Ankit and Chaybouti, Sofian and Narayan, Sanath},
+  journal={arXiv preprint arXiv:2512.21194},
+  year={2025}
+}
+```
