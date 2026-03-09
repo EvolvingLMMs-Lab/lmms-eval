@@ -439,6 +439,7 @@ def simple_evaluate(
     _cache_run_id = ""
     _cache_run_dir = ""
     _cache_run_root = ""
+    _cache_segment_config = None
     if use_cache is not None:
         _FUNC_ADDR_RE = re.compile(r" at 0x[0-9a-fA-F]+>")
 
@@ -486,11 +487,19 @@ def simple_evaluate(
         _cache_run_id = cache_layout.run_id
         _cache_run_dir = cache_layout.run_dir
         _cache_run_root = cache_layout.run_root
+        _cache_segment_config = cache_layout.segment_config
         if _cache_is_layered_dir:
-            eval_logger.info(
-                f"ResponseCache: layered-dir mode - root={_cache_target_db}, run_id={_cache_run_id}, "
-                f"run_root={_cache_run_root}, writes={_cache_write_db}, reads from root cache when available"
-            )
+            if _cache_segment_config is not None:
+                eval_logger.info(
+                    f"ResponseCache: layered-dir segmented mode - root={_cache_target_db}, run_id={_cache_run_id}, "
+                    f"run_root={_cache_run_root}, local_writes={_cache_write_db}, "
+                    f"shared_segments={_cache_segment_config.shared_segment_root}, reads from root cache when available"
+                )
+            else:
+                eval_logger.info(
+                    f"ResponseCache: layered-dir mode - root={_cache_target_db}, run_id={_cache_run_id}, "
+                    f"run_root={_cache_run_root}, writes={_cache_write_db}, reads from root cache when available"
+                )
         elif _cache_is_two_tier:
             eval_logger.info(
                 f"ResponseCache: two-tier mode - writes to {_cache_write_db}, "
@@ -504,6 +513,7 @@ def simple_evaluate(
             task_fingerprints=task_fingerprints,
             shared_db_path=_cache_shared_db,
             eval_version=get_lmms_eval_cache_version(),
+            segment_config=_cache_segment_config,
         )
         eval_logger.info(f"ResponseCache initialized: {_cache_write_db}")
 

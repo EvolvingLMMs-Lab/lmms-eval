@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from lmms_eval.api.instance import Instance
+from lmms_eval.caching.fs_detect import FsType
 from lmms_eval.caching.response_cache import (
     _SCHEMA_VERSION,
     ResponseCache,
@@ -481,6 +482,35 @@ class TestLayeredCacheLayout(_CacheTestBase):
         self.assertEqual(layout.write_db_path, os.path.join(layout.run_dir, "cache.db"))
         self.assertEqual(layout.write_audit_path, os.path.join(layout.run_dir, "cache.audit.jsonl"))
 
+    def test_remote_layered_target_uses_local_active_segment_dir(self):
+        cache_root = os.path.join(self.tmpdir, "layered")
+        scratch_root = os.path.join(self.tmpdir, "scratch")
+        os.makedirs(scratch_root, exist_ok=True)
+        with (
+            patch.dict(
+                os.environ,
+                {"LMMS_CACHE_RUN_ID": "job-remote", "LMMS_CACHE_SEGMENT_MAX_RESPONSES": "2"},
+                clear=False,
+            ),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.REMOTE),
+            patch("lmms_eval.caching.response_cache.find_local_scratch", return_value=scratch_root),
+        ):
+            layout = resolve_response_cache_layout(
+                cache_root,
+                world_size=4,
+                global_rank=2,
+                model_hash="modelhash",
+            )
+
+        self.assertEqual(layout.mode, "layered_dir")
+        self.assertIsNotNone(layout.segment_config)
+        self.assertEqual(layout.run_dir, os.path.join(cache_root, "runs", "job-remote"))
+        self.assertEqual(layout.segment_config.shared_segment_root, os.path.join(layout.run_dir, "segments", "rank_2"))
+        self.assertEqual(layout.segment_config.local_active_dir, os.path.join(scratch_root, "lmms_eval_cache", "modelhash", "layered_runs", "job-remote", "rank_2", "active"))
+        self.assertEqual(layout.segment_config.max_responses, 2)
+        self.assertEqual(layout.write_db_path, os.path.join(layout.segment_config.local_active_dir, "cache.db"))
+        self.assertEqual(layout.write_audit_path, os.path.join(layout.segment_config.local_active_dir, "cache.audit.jsonl"))
+
     def test_finalize_layered_runs_merges_ready_run_into_root_cache(self):
         cache_root = os.path.join(self.tmpdir, "layered")
         run_root = os.path.join(cache_root, "runs")
@@ -513,6 +543,59 @@ class TestLayeredCacheLayout(_CacheTestBase):
         root_cache.close()
         self.assertTrue(os.path.exists(os.path.join(run_dir, ".ready")))
         self.assertTrue(os.path.exists(os.path.join(run_dir, ".merged")))
+
+    def test_segmented_remote_layered_cache_promotes_sealed_segments_into_root_cache(self):
+        cache_root = os.path.join(self.tmpdir, "layered")
+        scratch_root = os.path.join(self.tmpdir, "scratch")
+        os.makedirs(scratch_root, exist_ok=True)
+
+        with (
+            patch.dict(
+                os.environ,
+                {"LMMS_CACHE_RUN_ID": "job-segmented", "LMMS_CACHE_SEGMENT_MAX_RESPONSES": "2"},
+                clear=False,
+            ),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.REMOTE),
+            patch("lmms_eval.caching.response_cache.find_local_scratch", return_value=scratch_root),
+        ):
+            layout = resolve_response_cache_layout(
+                cache_root,
+                world_size=1,
+                global_rank=0,
+                model_hash="modelhash",
+            )
+
+        self.assertIsNotNone(layout.segment_config)
+        requests = [_gen_request(f"prompt{i}", doc_id=i) for i in range(3)]
+        cache = ResponseCache(
+            layout.write_db_path,
+            layout.write_audit_path,
+            model_fingerprint="model_A",
+            segment_config=layout.segment_config,
+        )
+        cache.execute(_mock_model(["answer0", "answer1", "answer2"]), "generate_until", requests)
+
+        root_cache = ResponseCache(layout.target_db_path, layout.target_audit_path, model_fingerprint="model_A")
+        partial_model = _mock_model([])
+        partial_results = root_cache.execute(partial_model, "generate_until", requests[:2])
+        self.assertEqual(partial_results, ["answer0", "answer1"])
+        partial_model.generate_until.assert_not_called()
+        root_cache.close()
+
+        cache.close()
+
+        final_cache = ResponseCache(layout.target_db_path, layout.target_audit_path, model_fingerprint="model_A")
+        final_model = _mock_model([])
+        final_results = final_cache.execute(final_model, "generate_until", requests)
+        self.assertEqual(final_results, ["answer0", "answer1", "answer2"])
+        final_model.generate_until.assert_not_called()
+        final_cache.close()
+
+        segment_root = layout.segment_config.shared_segment_root
+        self.assertTrue(os.path.exists(os.path.join(segment_root, "seg_000000", ".ready")))
+        self.assertTrue(os.path.exists(os.path.join(segment_root, "seg_000000", ".merged")))
+        self.assertTrue(os.path.exists(os.path.join(segment_root, "seg_000001", ".ready")))
+        self.assertTrue(os.path.exists(os.path.join(segment_root, "seg_000001", ".merged")))
 
 
 # ===========================================================================

@@ -29,6 +29,7 @@ import json
 import os
 import sqlite3
 import socket
+import shutil
 import time
 import urllib.parse
 import uuid
@@ -66,6 +67,44 @@ _CACHE_RUN_ID_ENV_KEYS = ("LMMS_CACHE_RUN_ID", "SLURM_JOB_ID", "TORCHELASTIC_RUN
 _LAYERED_READY_MARKER = ".ready"
 _LAYERED_MERGED_MARKER = ".merged"
 _LAYERED_LOCK_DIRNAME = ".merge.lock"
+_LAYERED_SEGMENTS_DIRNAME = "segments"
+_DEFAULT_SEGMENT_MAX_RESPONSES = 256
+_DEFAULT_SEGMENT_PROMOTE_LOCK_TIMEOUT_SECONDS = 1.0
+
+
+def _get_env_int(name: str, default: int, minimum: int = 1) -> int:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, value)
+
+
+def _get_env_float(name: str, default: float, minimum: float = 0.0) -> float:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, value)
+
+
+@dataclass(frozen=True)
+class LayeredSegmentConfig:
+    target_db_path: str
+    target_audit_path: str
+    run_root: str
+    run_dir: str
+    shared_segment_root: str
+    local_active_dir: str
+    global_rank: int
+    max_responses: int
+    promote_lock_timeout_seconds: float
 
 
 @dataclass(frozen=True)
@@ -82,6 +121,7 @@ class ResponseCacheLayout:
     run_root: str = ""
     cache_root: str = ""
     staging_dir: Optional[str] = None
+    segment_config: Optional[LayeredSegmentConfig] = None
 
 
 def _short_hash(value: str) -> str:
@@ -222,13 +262,37 @@ def resolve_response_cache_layout(
         os.makedirs(run_root, exist_ok=True)
         run_dir = os.path.join(run_root, run_id)
         os.makedirs(run_dir, exist_ok=True)
-        if world_size > 1:
+        shared_db_path = target_db_path if os.path.exists(target_db_path) else None
+        segment_config = None
+        target_fs = detect_fs_type(target_db_path)
+        local_scratch = find_local_scratch() if target_fs == FsType.REMOTE else None
+        if local_scratch is not None:
+            local_active_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash, "layered_runs", run_id, f"rank_{global_rank}", "active")
+            shared_segment_root = os.path.join(run_dir, _LAYERED_SEGMENTS_DIRNAME, f"rank_{global_rank}")
+            os.makedirs(local_active_dir, exist_ok=True)
+            os.makedirs(shared_segment_root, exist_ok=True)
+            write_db_path = os.path.join(local_active_dir, "cache.db")
+            write_audit_path = os.path.join(local_active_dir, "cache.audit.jsonl")
+            segment_config = LayeredSegmentConfig(
+                target_db_path=target_db_path,
+                target_audit_path=target_audit_path,
+                run_root=run_root,
+                run_dir=run_dir,
+                shared_segment_root=shared_segment_root,
+                local_active_dir=local_active_dir,
+                global_rank=global_rank,
+                max_responses=_get_env_int("LMMS_CACHE_SEGMENT_MAX_RESPONSES", _DEFAULT_SEGMENT_MAX_RESPONSES),
+                promote_lock_timeout_seconds=_get_env_float(
+                    "LMMS_CACHE_SEGMENT_PROMOTE_LOCK_TIMEOUT_S",
+                    _DEFAULT_SEGMENT_PROMOTE_LOCK_TIMEOUT_SECONDS,
+                ),
+            )
+        elif world_size > 1:
             write_db_path = os.path.join(run_dir, f"cache.db.shard.{global_rank}")
             write_audit_path = os.path.join(run_dir, f"cache.db.audit.shard.{global_rank}.jsonl")
         else:
             write_db_path = os.path.join(run_dir, "cache.db")
             write_audit_path = os.path.join(run_dir, "cache.audit.jsonl")
-        shared_db_path = target_db_path if os.path.exists(target_db_path) else None
         return ResponseCacheLayout(
             mode="layered_dir",
             target_db_path=target_db_path,
@@ -241,6 +305,7 @@ def resolve_response_cache_layout(
             run_dir=run_dir,
             run_root=run_root,
             cache_root=cache_root,
+            segment_config=segment_config,
         )
 
     target_db_path = use_cache
@@ -516,6 +581,7 @@ class ResponseCache:
         task_fingerprints: Optional[Dict[str, str]] = None,
         shared_db_path: Optional[str] = None,
         eval_version: str = "",
+        segment_config: Optional[LayeredSegmentConfig] = None,
     ):
         self.db_path = db_path
         self.audit_path = audit_path
@@ -523,24 +589,18 @@ class ResponseCache:
         self._model_fingerprint_hash = _short_hash(model_fingerprint)
         self._task_fingerprints: Dict[str, str] = task_fingerprints or {}
         self._eval_version = eval_version
+        self._segment_config = segment_config
+        self._segment_entries = 0
+        self._segment_index = 0
+        self.db: Optional[sqlite3.Connection] = None
+        self._audit_file = None
 
-        self.db = sqlite3.connect(db_path, timeout=30)
-        self.db.execute("PRAGMA journal_mode=WAL")
-        self.db.execute("PRAGMA synchronous=NORMAL")
-        self.db.executescript(_SCHEMA_SQL)
+        if self._segment_config is not None:
+            os.makedirs(self._segment_config.local_active_dir, exist_ok=True)
+            os.makedirs(self._segment_config.shared_segment_root, exist_ok=True)
+            self._segment_index = self._discover_next_segment_index(self._segment_config.shared_segment_root)
 
-        if model_fingerprint:
-            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint", model_fingerprint))
-        if self._model_fingerprint_hash:
-            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
-        self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
-        if eval_version:
-            # Warn if DB was written by a different lmms-eval version
-            row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
-            if row and row[0] != eval_version:
-                eval_logger.warning(f"ResponseCache: DB was last written by lmms-eval {row[0]}, " f"current version is {eval_version}. Cache keys now include version \u2014 " f"old entries will not match (safe, but no reuse).")
-            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", eval_version))
-        self.db.commit()
+        self._open_local_handles()
 
         # Optional shared (read-only) DB for two-tier caching.
         self._shared_db: Optional[sqlite3.Connection] = None
@@ -555,13 +615,181 @@ class ResponseCache:
                 eval_logger.warning(f"ResponseCache: failed to open shared DB {shared_db_path}: {e}")
                 self._shared_db = None
 
-        self._replay_audit_log()
-        self._audit_file = open(audit_path, "a", encoding="utf-8")
-
         self._hits = 0
         self._hits_shared = 0
         self._misses = 0
         self._skipped = 0
+
+    def _open_local_handles(self) -> None:
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        os.makedirs(os.path.dirname(self.audit_path), exist_ok=True)
+        self.db = sqlite3.connect(self.db_path, timeout=30)
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA synchronous=NORMAL")
+        self.db.executescript(_SCHEMA_SQL)
+
+        if self.model_fingerprint:
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint", self.model_fingerprint))
+        if self._model_fingerprint_hash:
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
+        self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
+        if self._eval_version:
+            row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
+            if row and row[0] != self._eval_version:
+                eval_logger.warning(
+                    f"ResponseCache: DB was last written by lmms-eval {row[0]}, current version is {self._eval_version}. "
+                    f"Cache keys now include version — old entries will not match (safe, but no reuse)."
+                )
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", self._eval_version))
+        self.db.commit()
+        self._replay_audit_log()
+        self._audit_file = open(self.audit_path, "a", encoding="utf-8")
+        if self._segment_config is not None:
+            self._segment_entries = self.db.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+
+    def _close_local_handles(self, checkpoint: bool = False) -> None:
+        try:
+            if self._audit_file and not self._audit_file.closed:
+                self._audit_file.flush()
+                os.fsync(self._audit_file.fileno())
+                self._audit_file.close()
+        except Exception:
+            pass
+        self._audit_file = None
+
+        try:
+            if self.db:
+                if checkpoint:
+                    try:
+                        self.db.commit()
+                        self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    except sqlite3.Error:
+                        pass
+                self.db.close()
+        except Exception:
+            pass
+        self.db = None
+
+    @staticmethod
+    def _discover_next_segment_index(shared_segment_root: str) -> int:
+        next_index = 0
+        if not os.path.isdir(shared_segment_root):
+            return next_index
+        for entry in os.scandir(shared_segment_root):
+            if not entry.is_dir():
+                continue
+            name = entry.name
+            if not name.startswith("seg_"):
+                continue
+            suffix = name[4:]
+            if not suffix.isdigit():
+                continue
+            next_index = max(next_index, int(suffix) + 1)
+        return next_index
+
+    @staticmethod
+    def _remove_sqlite_artifacts(db_path: str) -> None:
+        for path in (db_path, f"{db_path}-wal", f"{db_path}-shm"):
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except OSError:
+                pass
+
+    @staticmethod
+    def _remove_file(path: str) -> None:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            pass
+
+    def _active_segment_has_artifacts(self) -> bool:
+        if self.db is not None:
+            try:
+                if self.db.execute("SELECT COUNT(*) FROM responses").fetchone()[0] > 0:
+                    return True
+            except sqlite3.Error:
+                pass
+        return os.path.exists(self.audit_path) and os.path.getsize(self.audit_path) > 0
+
+    def _segment_name(self) -> str:
+        return f"seg_{self._segment_index:06d}"
+
+    def _write_segment_manifest(self, segment_dir: str) -> None:
+        if self._segment_config is None:
+            return
+        manifest_path = os.path.join(segment_dir, "manifest.json")
+        _touch_text(
+            manifest_path,
+            json.dumps(
+                {
+                    "global_rank": self._segment_config.global_rank,
+                    "run_dir": self._segment_config.run_dir,
+                    "segment_name": self._segment_name(),
+                    "responses": self._segment_entries,
+                    "sealed_at": time.time(),
+                },
+                ensure_ascii=True,
+                sort_keys=True,
+            ),
+        )
+
+    def _try_promote_ready_segments(self) -> int:
+        if self._segment_config is None:
+            return 0
+        return ResponseCache.promote_ready_layered_segments(
+            target_db_path=self._segment_config.target_db_path,
+            target_audit_path=self._segment_config.target_audit_path,
+            run_root=self._segment_config.run_root,
+            lock_timeout_seconds=self._segment_config.promote_lock_timeout_seconds,
+            cleanup=False,
+        )
+
+    def _seal_active_segment(self, reopen: bool = True) -> bool:
+        if self._segment_config is None or not self._active_segment_has_artifacts():
+            if not reopen:
+                self._close_local_handles()
+            return False
+
+        segment_name = self._segment_name()
+        final_dir = os.path.join(self._segment_config.shared_segment_root, segment_name)
+        tmp_dir = os.path.join(
+            self._segment_config.shared_segment_root,
+            f".{segment_name}.tmp-{uuid.uuid4().hex}",
+        )
+
+        self._close_local_handles(checkpoint=True)
+        try:
+            os.makedirs(tmp_dir, exist_ok=False)
+            if os.path.exists(self.db_path):
+                shutil.copy2(self.db_path, os.path.join(tmp_dir, "cache.db"))
+            if os.path.exists(self.audit_path):
+                shutil.copy2(self.audit_path, os.path.join(tmp_dir, "cache.audit.jsonl"))
+            self._write_segment_manifest(tmp_dir)
+            ResponseCache.mark_layered_run_ready(tmp_dir)
+            os.rename(tmp_dir, final_dir)
+            eval_logger.info(
+                f"ResponseCache: sealed segment {segment_name} from {self.db_path} to {final_dir}"
+            )
+        except Exception as exc:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            eval_logger.warning(f"ResponseCache: failed to seal segment {segment_name}: {exc}")
+            if reopen:
+                self._open_local_handles()
+            return False
+
+        self._remove_sqlite_artifacts(self.db_path)
+        self._remove_file(self.audit_path)
+        self._segment_index += 1
+        self._segment_entries = 0
+        if reopen:
+            self._open_local_handles()
+        self._try_promote_ready_segments()
+        return True
+
+    def _should_rotate_segment(self) -> bool:
+        return self._segment_config is not None and self._segment_entries >= self._segment_config.max_responses
 
     def _replay_audit_log(self) -> None:
         """Replay JSONL entries missing from SQLite (crash recovery)."""
@@ -779,6 +1007,10 @@ class ResponseCache:
                 )
                 if deterministic and self._is_valid_response(resp, reqtype):
                     self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable)
+                    if self._segment_config is not None:
+                        self._segment_entries += 1
+                        if self._should_rotate_segment():
+                            self._seal_active_segment(reopen=True)
         else:
             eval_logger.info(f"ResponseCache: all {len(requests)} requests served from cache — skipping model inference")
 
@@ -803,13 +1035,10 @@ class ResponseCache:
 
     def close(self) -> None:
         try:
-            if self._audit_file and not self._audit_file.closed:
-                self._audit_file.close()
-        except Exception:
-            pass
-        try:
-            if self.db:
-                self.db.close()
+            if self._segment_config is not None:
+                self._seal_active_segment(reopen=False)
+            else:
+                self._close_local_handles()
         except Exception:
             pass
         try:
@@ -968,6 +1197,79 @@ class ResponseCache:
         return shard_db_paths, shard_audit_paths
 
     @staticmethod
+    def _iter_layered_segment_dirs(run_root: str):
+        for run_entry in sorted(os.scandir(run_root), key=lambda item: item.name):
+            if not run_entry.is_dir():
+                continue
+            segments_root = os.path.join(run_entry.path, _LAYERED_SEGMENTS_DIRNAME)
+            if not os.path.isdir(segments_root):
+                continue
+            for rank_entry in sorted(os.scandir(segments_root), key=lambda item: item.name):
+                if not rank_entry.is_dir():
+                    continue
+                for segment_entry in sorted(os.scandir(rank_entry.path), key=lambda item: item.name):
+                    if segment_entry.is_dir():
+                        yield segment_entry.path
+
+    @staticmethod
+    def _merge_ready_layered_segments_unlocked(
+        *,
+        target_db_path: str,
+        target_audit_path: str,
+        run_root: str,
+        cleanup: bool = False,
+    ) -> int:
+        merged_segments = 0
+        for segment_dir in ResponseCache._iter_layered_segment_dirs(run_root):
+            ready_marker = os.path.join(segment_dir, _LAYERED_READY_MARKER)
+            merged_marker = os.path.join(segment_dir, _LAYERED_MERGED_MARKER)
+            if not os.path.exists(ready_marker) or os.path.exists(merged_marker):
+                continue
+
+            shard_db_paths, shard_audit_paths = ResponseCache._collect_layered_run_artifacts(segment_dir)
+            if not shard_db_paths and not shard_audit_paths:
+                eval_logger.warning(f"ResponseCache: layered segment has no cache artifacts, skipping merge: {segment_dir}")
+                continue
+
+            ResponseCache.consolidate_cache(
+                target_db_path=target_db_path,
+                shard_db_paths=shard_db_paths,
+                shard_audit_paths=shard_audit_paths,
+                target_audit_path=target_audit_path,
+                cleanup=cleanup,
+            )
+            ResponseCache.mark_layered_run_merged(segment_dir)
+            if cleanup:
+                shutil.rmtree(segment_dir, ignore_errors=True)
+            merged_segments += 1
+        return merged_segments
+
+    @staticmethod
+    def promote_ready_layered_segments(
+        *,
+        target_db_path: str,
+        target_audit_path: str,
+        run_root: str,
+        cleanup: bool = False,
+        lock_timeout_seconds: float = _DEFAULT_SEGMENT_PROMOTE_LOCK_TIMEOUT_SECONDS,
+    ) -> int:
+        if not run_root:
+            return 0
+        os.makedirs(run_root, exist_ok=True)
+        lock_dir = os.path.join(run_root, _LAYERED_LOCK_DIRNAME)
+        try:
+            with _merge_lock(lock_dir, timeout_seconds=lock_timeout_seconds):
+                return ResponseCache._merge_ready_layered_segments_unlocked(
+                    target_db_path=target_db_path,
+                    target_audit_path=target_audit_path,
+                    run_root=run_root,
+                    cleanup=cleanup,
+                )
+        except TimeoutError:
+            eval_logger.debug("ResponseCache: layered segment merge deferred because lock is busy")
+            return 0
+
+    @staticmethod
     def finalize_layered_runs(
         *,
         target_db_path: str,
@@ -992,6 +1294,12 @@ class ResponseCache:
 
         try:
             with _merge_lock(lock_dir, timeout_seconds=lock_timeout_seconds):
+                merged_segments = ResponseCache._merge_ready_layered_segments_unlocked(
+                    target_db_path=target_db_path,
+                    target_audit_path=target_audit_path,
+                    run_root=run_root,
+                    cleanup=cleanup,
+                )
                 merged_runs = 0
                 for entry in sorted(os.scandir(run_root), key=lambda item: item.name):
                     if not entry.is_dir():
@@ -1004,6 +1312,9 @@ class ResponseCache:
 
                     shard_db_paths, shard_audit_paths = ResponseCache._collect_layered_run_artifacts(run_dir)
                     if not shard_db_paths and not shard_audit_paths:
+                        if os.path.isdir(os.path.join(run_dir, _LAYERED_SEGMENTS_DIRNAME)):
+                            ResponseCache.mark_layered_run_merged(run_dir)
+                            continue
                         eval_logger.warning(f"ResponseCache: layered run has no cache artifacts, skipping merge: {run_dir}")
                         continue
 
@@ -1016,7 +1327,7 @@ class ResponseCache:
                     )
                     ResponseCache.mark_layered_run_merged(run_dir)
                     merged_runs += 1
-                return merged_runs
+                return merged_runs + merged_segments
         except TimeoutError as exc:
             eval_logger.warning(f"ResponseCache: layered merge deferred because lock is busy: {exc}")
             return 0
