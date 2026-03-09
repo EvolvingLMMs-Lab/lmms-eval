@@ -90,9 +90,7 @@ class Emu3p5Processor:
     ):
         assert vision_tokenizer is not None, "image tokenizer can not be None"
         assert tokenizer is not None, "trxt tokenizer cant be None"
-        assert visual_token_format in ("direct", "padded"), (
-            f"visual_token_format must be 'direct' or 'padded', got '{visual_token_format}'"
-        )
+        assert visual_token_format in ("direct", "padded"), f"visual_token_format must be 'direct' or 'padded', got '{visual_token_format}'"
 
         self.vision_tokenizer = vision_tokenizer
         self.txt_tokenizer = tokenizer
