@@ -20,6 +20,9 @@ metric_list:
   - metric: omnidocbench_exact_match
     aggregation: mean
     higher_is_better: true
+  - metric: omnidocbench_nld_score
+    aggregation: mean
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

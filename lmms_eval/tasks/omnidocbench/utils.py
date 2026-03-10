@@ -2,6 +2,7 @@ import io
 import re
 from typing import Any
 
+import Levenshtein
 from PIL import Image
 
 
@@ -96,14 +97,29 @@ def omnidocbench_doc_to_target(doc):
     return answers[0] if answers else ""
 
 
+def _normalized_levenshtein_score(pred: str, ref: str) -> float:
+    """Compute (1 - normalized_levenshtein_distance) * 100.
+
+    Following the Kimi K2.5 technical report metric.
+    """
+    if not pred and not ref:
+        return 100.0
+    max_len = max(len(pred), len(ref))
+    if max_len == 0:
+        return 100.0
+    dist = Levenshtein.distance(pred, ref)
+    return (1.0 - dist / max_len) * 100.0
+
+
 def omnidocbench_process_results(doc, results):
     prediction = _normalize_text(results[0])
     answers = _extract_answers(doc)
     if not answers:
-        return {"omnidocbench_exact_match": 0.0}
+        return {"omnidocbench_exact_match": 0.0, "omnidocbench_nld_score": 0.0}
 
+    # Exact match
     answer_set = {_normalize_text(answer) for answer in answers}
-    score = float(prediction in answer_set)
+    em_score = float(prediction in answer_set)
 
     options = _extract_options(doc)
     if options:
@@ -111,6 +127,9 @@ def omnidocbench_process_results(doc, results):
         if pred_letter:
             for answer in answers:
                 if pred_letter == answer.strip().upper()[:1]:
-                    score = max(score, 1.0)
+                    em_score = max(em_score, 1.0)
 
-    return {"omnidocbench_exact_match": score}
+    # Normalized Levenshtein score: (1 - NLD) * 100, take best across answers
+    nld_score = max(_normalized_levenshtein_score(prediction, _normalize_text(answer)) for answer in answers)
+
+    return {"omnidocbench_exact_match": em_score, "omnidocbench_nld_score": nld_score}
