@@ -110,8 +110,7 @@ def main() -> int:
     stale_phases = {phase.strip() for phase in args.stale_phases.split(",") if phase.strip()}
 
     print(
-        f"[watchdog] monitoring {watch_dir} with timeout={args.timeout_seconds}s "
-        f"poll={args.poll_seconds}s phases={sorted(stale_phases)}",
+        f"[watchdog] monitoring {watch_dir} with timeout={args.timeout_seconds}s " f"poll={args.poll_seconds}s phases={sorted(stale_phases)}",
         flush=True,
     )
 
