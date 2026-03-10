@@ -1,0 +1,3 @@
+task: visres_bench_level_2_color_2same_1diff
+dataset_name: level_2_color_2same_1diff
+include: _default_template_visres_bench_yaml

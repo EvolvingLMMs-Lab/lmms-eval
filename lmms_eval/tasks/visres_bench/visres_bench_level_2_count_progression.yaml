@@ -1,0 +1,3 @@
+task: visres_bench_level_2_count_progression
+dataset_name: level_2_count_progression
+include: _default_template_visres_bench_yaml
