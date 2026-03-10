@@ -170,6 +170,52 @@ class Qwen3_VL(lmms):
                 new_list.append(j)
         return new_list
 
+    @staticmethod
+    def _build_video_frame_indices(total_frames: int, max_num_frames: int) -> np.ndarray:
+        indices = np.linspace(0, total_frames - 1, max_num_frames, dtype=int)
+        indices = np.unique(indices)
+        if total_frames - 1 not in indices:
+            indices = np.append(indices, total_frames - 1)
+            indices = np.unique(indices)
+        return indices
+
+    @staticmethod
+    def _sync_video_metadata_frames(video_metadata, indices: np.ndarray) -> None:
+        if video_metadata is None:
+            return
+
+        if isinstance(video_metadata, dict):
+            metadata_frames = video_metadata.get("frames_indices")
+        else:
+            metadata_frames = getattr(video_metadata, "frames_indices", None)
+
+        if metadata_frames is None:
+            return
+
+        frame_indices = np.asarray(metadata_frames)
+        if frame_indices.ndim != 1 or len(frame_indices) <= np.max(indices):
+            return
+
+        selected_frame_indices = frame_indices[indices]
+        if isinstance(metadata_frames, list):
+            selected_frame_indices = selected_frame_indices.tolist()
+
+        if isinstance(video_metadata, dict):
+            video_metadata["frames_indices"] = selected_frame_indices
+        else:
+            video_metadata.frames_indices = selected_frame_indices
+
+    def _subsample_video_inputs(self, video_inputs, video_metadatas=None) -> None:
+        if video_inputs is None:
+            return
+
+        total_frames = video_inputs[0].shape[0]
+        indices = self._build_video_frame_indices(total_frames, self.max_num_frames)
+        video_inputs[0] = video_inputs[0][indices]
+
+        if video_metadatas is not None:
+            self._sync_video_metadata_frames(video_metadatas[0], indices)
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -279,28 +325,24 @@ class Qwen3_VL(lmms):
 
                 batched_messages.append(message)
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
-            # TODO: refactor code to allow return_video_kwargs and return_video_metadata
-            image_inputs, video_inputs = process_vision_info(
+            image_inputs, video_inputs, video_kwargs = process_vision_info(
                 batched_messages,
-                return_video_kwargs=False,
+                return_video_kwargs=True,
                 image_patch_size=16,
-                return_video_metadata=False,
+                return_video_metadata=True,
             )
+            video_metadatas = None
             if video_inputs is not None:
-                total_frames = video_inputs[0].shape[0]
-                indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
-                # Ensure unique indices if linspace produces duplicates for few frames
-                indices = np.unique(indices)
-                # Append the last frame index if not already included
-                if total_frames - 1 not in indices:
-                    indices = np.append(indices, total_frames - 1)
-                    indices = np.unique(indices)  # Ensure uniqueness again
-                video_inputs[0] = video_inputs[0][indices]
+                video_inputs, video_metadatas = zip(*video_inputs)
+                video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
+                self._subsample_video_inputs(video_inputs, video_metadatas)
             if self.batch_size > 1:
                 inputs = self.processor(
                     text=texts,
                     images=image_inputs,
                     videos=video_inputs,
+                    video_metadata=video_metadatas,
+                    **video_kwargs,
                     do_resize=False,
                     padding=True,
                     padding_side="left",
@@ -311,6 +353,8 @@ class Qwen3_VL(lmms):
                     text=texts,
                     images=image_inputs,
                     videos=video_inputs,
+                    video_metadata=video_metadatas,
+                    **video_kwargs,
                     do_resize=False,
                     return_tensors="pt",
                 )
