@@ -209,12 +209,13 @@ class Qwen3_VL(lmms):
         if video_inputs is None:
             return
 
-        total_frames = video_inputs[0].shape[0]
-        indices = self._build_video_frame_indices(total_frames, self.max_num_frames)
-        video_inputs[0] = video_inputs[0][indices]
+        for index, video_input in enumerate(video_inputs):
+            total_frames = video_input.shape[0]
+            indices = self._build_video_frame_indices(total_frames, self.max_num_frames)
+            video_inputs[index] = video_input[indices]
 
-        if video_metadatas is not None:
-            self._sync_video_metadata_frames(video_metadatas[0], indices)
+            if video_metadatas is not None and index < len(video_metadatas):
+                self._sync_video_metadata_frames(video_metadatas[index], indices)
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []

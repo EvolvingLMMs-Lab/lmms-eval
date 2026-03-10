@@ -122,13 +122,21 @@ class TestQwen3VLSimple(unittest.TestCase):
 
     def test_subsample_video_inputs_updates_dict_metadata_frames(self):
         model = self._make_model(max_num_frames=3)
-        video_inputs = [torch.arange(10, dtype=torch.float32).reshape(5, 2)]
-        video_metadatas = [{"frames_indices": [0, 1, 2, 3, 4]}]
+        video_inputs = [
+            torch.arange(10, dtype=torch.float32).reshape(5, 2),
+            torch.arange(12, dtype=torch.float32).reshape(6, 2),
+        ]
+        video_metadatas = [
+            {"frames_indices": [0, 1, 2, 3, 4]},
+            {"frames_indices": [10, 11, 12, 13, 14, 15]},
+        ]
 
         model._subsample_video_inputs(video_inputs, video_metadatas)
 
         self.assertEqual(video_inputs[0].shape[0], 3)
+        self.assertEqual(video_inputs[1].shape[0], 3)
         self.assertEqual(video_metadatas[0]["frames_indices"], [0, 2, 4])
+        self.assertEqual(video_metadatas[1]["frames_indices"], [10, 12, 15])
 
 
 if __name__ == "__main__":
