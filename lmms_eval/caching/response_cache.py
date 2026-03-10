@@ -27,9 +27,9 @@ import hashlib
 import inspect
 import json
 import os
-import sqlite3
-import socket
 import shutil
+import socket
+import sqlite3
 import time
 import urllib.parse
 import uuid
@@ -636,10 +636,7 @@ class ResponseCache:
         if self._eval_version:
             row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
             if row and row[0] != self._eval_version:
-                eval_logger.warning(
-                    f"ResponseCache: DB was last written by lmms-eval {row[0]}, current version is {self._eval_version}. "
-                    f"Cache keys now include version — old entries will not match (safe, but no reuse)."
-                )
+                eval_logger.warning(f"ResponseCache: DB was last written by lmms-eval {row[0]}, current version is {self._eval_version}. " f"Cache keys now include version — old entries will not match (safe, but no reuse).")
             self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", self._eval_version))
         self.db.commit()
         self._replay_audit_log()
@@ -769,9 +766,7 @@ class ResponseCache:
             self._write_segment_manifest(tmp_dir)
             ResponseCache.mark_layered_run_ready(tmp_dir)
             os.rename(tmp_dir, final_dir)
-            eval_logger.info(
-                f"ResponseCache: sealed segment {segment_name} from {self.db_path} to {final_dir}"
-            )
+            eval_logger.info(f"ResponseCache: sealed segment {segment_name} from {self.db_path} to {final_dir}")
         except Exception as exc:
             shutil.rmtree(tmp_dir, ignore_errors=True)
             eval_logger.warning(f"ResponseCache: failed to seal segment {segment_name}: {exc}")

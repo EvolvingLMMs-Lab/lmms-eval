@@ -4,7 +4,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 MODULE_PATH = Path(__file__).resolve().parents[2] / "tools" / "batch_watchdog.py"
 SPEC = importlib.util.spec_from_file_location("batch_watchdog", MODULE_PATH)
 batch_watchdog = importlib.util.module_from_spec(SPEC)

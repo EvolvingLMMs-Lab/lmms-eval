@@ -7,9 +7,8 @@ import mimetypes
 import os
 import random
 import re
-from typing import Callable, List, Optional, Union
-
 from datetime import timedelta
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
@@ -496,15 +495,9 @@ def simple_evaluate(
                     f"shared_segments={_cache_segment_config.shared_segment_root}, reads from root cache when available"
                 )
             else:
-                eval_logger.info(
-                    f"ResponseCache: layered-dir mode - root={_cache_target_db}, run_id={_cache_run_id}, "
-                    f"run_root={_cache_run_root}, writes={_cache_write_db}, reads from root cache when available"
-                )
+                eval_logger.info(f"ResponseCache: layered-dir mode - root={_cache_target_db}, run_id={_cache_run_id}, " f"run_root={_cache_run_root}, writes={_cache_write_db}, reads from root cache when available")
         elif _cache_is_two_tier:
-            eval_logger.info(
-                f"ResponseCache: two-tier mode - writes to {_cache_write_db}, "
-                f"reads from local + shared ({_cache_target_db})"
-            )
+            eval_logger.info(f"ResponseCache: two-tier mode - writes to {_cache_write_db}, " f"reads from local + shared ({_cache_target_db})")
 
         response_cache = ResponseCache(
             db_path=_cache_write_db,
@@ -597,9 +590,7 @@ def simple_evaluate(
                         cleanup=_cache_cleanup_after_consolidation,
                     )
                     if merged_runs:
-                        eval_logger.info(
-                            f"ResponseCache: merged {merged_runs} layered run(s) into {_cache_target_db}"
-                        )
+                        eval_logger.info(f"ResponseCache: merged {merged_runs} layered run(s) into {_cache_target_db}")
                 elif _cache_is_two_tier:
                     if world_size > 1 and _cache_staging_dir:
                         # Merge from shared staging dir.
