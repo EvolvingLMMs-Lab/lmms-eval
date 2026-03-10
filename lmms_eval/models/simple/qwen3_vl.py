@@ -170,52 +170,43 @@ class Qwen3_VL(lmms):
                 new_list.append(j)
         return new_list
 
-    @staticmethod
-    def _build_video_frame_indices(total_frames: int, max_num_frames: int) -> np.ndarray:
-        indices = np.linspace(0, total_frames - 1, max_num_frames, dtype=int)
-        indices = np.unique(indices)
-        if total_frames - 1 not in indices:
-            indices = np.append(indices, total_frames - 1)
-            indices = np.unique(indices)
-        return indices
-
-    @staticmethod
-    def _sync_video_metadata_frames(video_metadata, indices: np.ndarray) -> None:
-        if video_metadata is None:
-            return
-
-        if isinstance(video_metadata, dict):
-            metadata_frames = video_metadata.get("frames_indices")
-        else:
-            metadata_frames = getattr(video_metadata, "frames_indices", None)
-
-        if metadata_frames is None:
-            return
-
-        frame_indices = np.asarray(metadata_frames)
-        if frame_indices.ndim != 1 or len(frame_indices) <= np.max(indices):
-            return
-
-        selected_frame_indices = frame_indices[indices]
-        if isinstance(metadata_frames, list):
-            selected_frame_indices = selected_frame_indices.tolist()
-
-        if isinstance(video_metadata, dict):
-            video_metadata["frames_indices"] = selected_frame_indices
-        else:
-            video_metadata.frames_indices = selected_frame_indices
-
     def _subsample_video_inputs(self, video_inputs, video_metadatas=None) -> None:
         if video_inputs is None:
             return
 
         for index, video_input in enumerate(video_inputs):
             total_frames = video_input.shape[0]
-            indices = self._build_video_frame_indices(total_frames, self.max_num_frames)
+            indices = np.linspace(0, total_frames - 1, self.max_num_frames, dtype=int)
+            indices = np.unique(indices)
+            if total_frames - 1 not in indices:
+                indices = np.append(indices, total_frames - 1)
+                indices = np.unique(indices)
             video_inputs[index] = video_input[indices]
 
-            if video_metadatas is not None and index < len(video_metadatas):
-                self._sync_video_metadata_frames(video_metadatas[index], indices)
+            if video_metadatas is None or index >= len(video_metadatas):
+                continue
+
+            video_metadata = video_metadatas[index]
+            if isinstance(video_metadata, dict):
+                metadata_frames = video_metadata.get("frames_indices")
+            else:
+                metadata_frames = getattr(video_metadata, "frames_indices", None)
+
+            if metadata_frames is None:
+                continue
+
+            frame_indices = np.asarray(metadata_frames)
+            if frame_indices.ndim != 1 or len(frame_indices) <= indices[-1]:
+                continue
+
+            selected_frame_indices = frame_indices[indices]
+            if isinstance(metadata_frames, list):
+                selected_frame_indices = selected_frame_indices.tolist()
+
+            if isinstance(video_metadata, dict):
+                video_metadata["frames_indices"] = selected_frame_indices
+            else:
+                video_metadata.frames_indices = selected_frame_indices
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
