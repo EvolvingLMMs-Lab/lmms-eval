@@ -23,6 +23,24 @@ metric_list:
   - metric: omnidocbench_nld_score
     aggregation: mean
     higher_is_better: true
+  - metric: omnidocbench_exact_match_en
+    aggregation: !function utils.omnidocbench_aggregate_exact_match_en
+    higher_is_better: true
+  - metric: omnidocbench_exact_match_cn
+    aggregation: !function utils.omnidocbench_aggregate_exact_match_cn
+    higher_is_better: true
+  - metric: omnidocbench_nld_score_en
+    aggregation: !function utils.omnidocbench_aggregate_nld_score_en
+    higher_is_better: true
+  - metric: omnidocbench_nld_score_cn
+    aggregation: !function utils.omnidocbench_aggregate_nld_score_cn
+    higher_is_better: true
+  - metric: omnidocbench_exact_match_mixed
+    aggregation: !function utils.omnidocbench_aggregate_exact_match_mixed
+    higher_is_better: true
+  - metric: omnidocbench_nld_score_mixed
+    aggregation: !function utils.omnidocbench_aggregate_nld_score_mixed
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

@@ -173,5 +173,9 @@ def spotting_evaluation(prediction_list, img_metas):
         command = {"g": gt_zip_path, "s": submit_zip_path, "o": temp_dir, "p": '{"IOU_CONSTRAINT":0.5}'}
 
         result = rrc_evaluation_funcs.main_evaluation(command, default_evaluation_params, validate_data, evaluate_method)
-        score = result["method"]["hmean"]
+        method = result.get("method", {})
+        if isinstance(method, dict):
+            score = method.get("hmean", 0)
+        else:
+            score = 0
     return score
