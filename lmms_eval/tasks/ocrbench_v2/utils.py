@@ -368,16 +368,30 @@ def ocrbench_v2_process_results(doc, results):
             else:
                 score = spotting_evaluation(predict_bbox, doc)
 
+    payload = {"question_type": data_type, "score": score, "prediction": pred, "ground_truth": gt_ans}
     return {
-        "ocrbench_v2_accuracy": {"question_type": data_type, "score": score, "prediction": pred, "ground_truth": gt_ans},
+        "ocrbench_v2_accuracy": payload,
+        "ocrbench_v2_accuracy_en": payload,
+        "ocrbench_v2_accuracy_cn": payload,
     }
 
 
 def calculate_average_score(categories, score_buckets):
-    return sum(sum(score_buckets[cat]) / len(score_buckets[cat]) if len(score_buckets[cat]) > 0 else 0 for cat in categories) / len(categories)
+    """Weighted average across categories by sample count."""
+    total_score = sum(sum(score_buckets[cat]) for cat in categories)
+    total_count = sum(len(score_buckets[cat]) for cat in categories)
+    if total_count == 0:
+        return 0.0
+    return total_score / total_count
 
 
-def ocrbench_v2_aggregate_accuracy(results, args):
+ENGLISH_TASKS = ["text_recognition_en", "text_detection_en", "text_spotting_en", "relationship_extraction_en", "element_parsing_en", "mathematical_calculation_en", "visual_text_understanding_en", "knowledge_reasoning_en"]
+
+CHINESE_TASKS = ["text_recognition_cn", "relationship_extraction_cn", "element_parsing_cn", "visual_text_understanding_cn", "knowledge_reasoning_cn"]
+
+
+def _fill_score_buckets(results):
+    """Shared logic: populate score buckets and per-question-type scores from results."""
     question_type_scores = {}
     score_buckets = _make_score_buckets()
 
@@ -435,14 +449,19 @@ def ocrbench_v2_aggregate_accuracy(results, args):
             print("No such task!")
             raise TypeError
 
-    english_tasks = ["text_recognition_en", "text_detection_en", "text_spotting_en", "relationship_extraction_en", "element_parsing_en", "mathematical_calculation_en", "visual_text_understanding_en", "knowledge_reasoning_en"]
+    return question_type_scores, score_buckets
 
-    chinese_tasks = ["text_recognition_cn", "relationship_extraction_cn", "element_parsing_cn", "visual_text_understanding_cn", "knowledge_reasoning_cn"]
 
-    OCRBench_v2_English_subset_score = calculate_average_score(english_tasks, score_buckets)
-    OCRBench_v2_Chinese_subset_score = calculate_average_score(chinese_tasks, score_buckets)
+def ocrbench_v2_aggregate_accuracy(results, args):
+    question_type_scores, score_buckets = _fill_score_buckets(results)
 
-    Final_score = (OCRBench_v2_English_subset_score + OCRBench_v2_Chinese_subset_score) / 2
+    OCRBench_v2_English_subset_score = calculate_average_score(ENGLISH_TASKS, score_buckets)
+    OCRBench_v2_Chinese_subset_score = calculate_average_score(CHINESE_TASKS, score_buckets)
+
+    en_count = sum(len(score_buckets[t]) for t in ENGLISH_TASKS)
+    cn_count = sum(len(score_buckets[t]) for t in CHINESE_TASKS)
+    total = en_count + cn_count
+    Final_score = (OCRBench_v2_English_subset_score * en_count + OCRBench_v2_Chinese_subset_score * cn_count) / total if total > 0 else 0.0
     file_name = generate_submission_file("ocrbench_v2_results.txt", args, subpath="results")
     with open(file_name, "w") as f:
         print("######################### OCRBench v2 ##########################", file=f)
@@ -451,13 +470,13 @@ def ocrbench_v2_aggregate_accuracy(results, args):
             avg_score = sum(scores) / len(scores) if len(scores) > 0 else 0
             print(f"{q_type} (sample number: {len(scores)}): {avg_score:.2f}", file=f)
         print("######################### English Subsets ######################", file=f)
-        for task in english_tasks:
+        for task in ENGLISH_TASKS:
             num_samples = len(score_buckets[task])
             avg_score = sum(score_buckets[task]) / num_samples if num_samples > 0 else 0
             print(f"{task.replace('_', ' ').title()} (Total {num_samples}): {avg_score:.2f}", file=f)
         print(f"Overall English Score: {OCRBench_v2_English_subset_score:.2f}", file=f)
         print("######################### Chinese Subsets ######################", file=f)
-        for task in chinese_tasks:
+        for task in CHINESE_TASKS:
             num_samples = len(score_buckets[task])
             avg_score = sum(score_buckets[task]) / num_samples if num_samples > 0 else 0
             print(f"{task.replace('_', ' ').title()} (Total {num_samples}): {avg_score:.2f}", file=f)
@@ -467,3 +486,13 @@ def ocrbench_v2_aggregate_accuracy(results, args):
     logger.info(f"OCRBench v2 results saved to {file_name}")
 
     return Final_score  # return the final score as accuracy
+
+
+def ocrbench_v2_aggregate_accuracy_en(results, args):
+    _, score_buckets = _fill_score_buckets(results)
+    return calculate_average_score(ENGLISH_TASKS, score_buckets)
+
+
+def ocrbench_v2_aggregate_accuracy_cn(results, args):
+    _, score_buckets = _fill_score_buckets(results)
+    return calculate_average_score(CHINESE_TASKS, score_buckets)

@@ -20,5 +20,11 @@ metric_list:
   - metric: ocrbench_v2_accuracy
     aggregation: !function utils.ocrbench_v2_aggregate_accuracy
     higher_is_better: true
+  - metric: ocrbench_v2_accuracy_en
+    aggregation: !function utils.ocrbench_v2_aggregate_accuracy_en
+    higher_is_better: true
+  - metric: ocrbench_v2_accuracy_cn
+    aggregation: !function utils.ocrbench_v2_aggregate_accuracy_cn
+    higher_is_better: true
 metadata:
   - version: 0.0
