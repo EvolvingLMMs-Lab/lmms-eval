@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from lmms_eval.mcp.client import MCPClient
+
+__all__ = ["MCPClient"]
 
 def main() -> None:
     """Entry point for the lmms-eval MCP server (stdio transport)."""
