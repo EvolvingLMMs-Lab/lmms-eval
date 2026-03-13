@@ -22,7 +22,17 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "YOUR_OPENAI_BASE_URL")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "YOUR_MODEL_VERSION")
 
-client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+# Lazy-initialize the OpenAI client to avoid creating an SSLContext at import time.
+# An SSLContext cannot be pickled, which breaks dataset.map() multiprocessing even
+# with num_proc=1 on newer versions of the `datasets` library.
+_client = None
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+    return _client
 
 
 def charxiv_reasoning_doc_to_text_cot(doc, lmms_eval_specific_kwargs=None):
@@ -53,7 +63,9 @@ def charxiv_descriptive_process_docs(dataset: Dataset) -> Dataset:
         example["descriptive_a"] = example[f"descriptive_a{q_number}"]
         return {"qid": qid, **example}
 
-    dataset = dataset.map(_process_row, with_indices=True, num_proc=1)
+    # Use num_proc=None (single-process, no pickling) to avoid SSLContext
+    # serialization errors from the lazy OpenAI client in module globals.
+    dataset = dataset.map(_process_row, with_indices=True)
     return dataset
 
 
@@ -99,7 +111,7 @@ def charxiv_descriptive_aggregate_results(results):
     queries = build_descriptive_grading_queries(groups)
     combined_queries = []
     for query in tqdm(queries):
-        result = get_descriptive_result_gpt(client, query["grading_query"], len(query["resp_keys"]), model=MODEL_VERSION)
+        result = get_descriptive_result_gpt(_get_client(), query["grading_query"], len(query["resp_keys"]), model=MODEL_VERSION)
         # query contains resp_keys, grading_query, extract_answer and score
         combined_queries.append({**query, **result})
     queries = combined_queries
@@ -131,7 +143,7 @@ def charxiv_reasoning_aggregate_results(results):
         resps[result["resp_key"]] = result["resp_value"]
     queries = build_reasoning_grading_queries(data, resps)
     for figure_id, query in tqdm(queries.items()):
-        ext, scr = get_reasoning_result_gpt(client, query["grading_query"])
+        ext, scr = get_reasoning_result_gpt(_get_client(), query["grading_query"], model=MODEL_VERSION)
         queries[figure_id]["extracted_answer"] = ext
         queries[figure_id]["score"] = scr
         queries[figure_id].pop("grading_query")
