@@ -1,4 +1,5 @@
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -43,14 +44,14 @@ class Qwen3_5(lmms):
         batch_size: Optional[Union[int, str]] = 1,
         use_cache=True,
         attn_implementation: Optional[str] = None,
-        min_pixels: int = 48 * 28 * 28,
-        max_pixels: int = 128 * 28 * 28,
-        max_num_frames: int = 768,
+        min_pixels: int = 64 * 32 * 32,
+        max_pixels: int = 128 * 32 * 32,
+        total_pixels: int = 224 * 1024 * 32 * 32,
+        max_frames: int = 768,
         fps: Optional[float] = None,
         system_prompt: Optional[str] = "You are a helpful assistant.",
         interleave_visuals: Optional[bool] = False,
-        reasoning_prompt: Optional[str] = None,
-        enable_thinking: Optional[bool] = False,
+        enable_thinking: Optional[bool] = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -58,7 +59,7 @@ class Qwen3_5(lmms):
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
 
         # Validate attention implementation
-        valid_attn_implementations = [None, "sdpa", "eager"]  # TODO: "flash_attention_2" is currently not working with Qwen3.5, investigate and add back when fixed
+        valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
             raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
 
@@ -85,15 +86,12 @@ class Qwen3_5(lmms):
         match = re.search(r"A\d+B", pretrained)
         model_fn = Qwen3_5MoeForConditionalGeneration if match else Qwen3_5ForConditionalGeneration
         self._model = model_fn.from_pretrained(pretrained, **model_kwargs).eval()
-        self.max_pixels = max_pixels
         self.min_pixels = min_pixels
-        self.max_num_frames = max_num_frames
+        self.max_pixels = max_pixels
+        self.total_pixels = total_pixels
+        self.max_frames = max_frames
         self.fps = fps
 
-        if reasoning_prompt:
-            self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
-        else:
-            self.reasoning_prompt = None
         self.processor = AutoProcessor.from_pretrained(pretrained, max_pixels=max_pixels, min_pixels=min_pixels)
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
         self.system_prompt = system_prompt
@@ -173,6 +171,150 @@ class Qwen3_5(lmms):
                 new_list.append(j)
         return new_list
 
+    def _preprocess_chunk(self, chunk):
+        """Preprocess a batch chunk on CPU: message building, video decoding, tokenization.
+
+        Returns (inputs, contexts, gen_kwargs, until) with inputs still on CPU.
+        """
+        contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
+        visual_list = [doc_to_visual[0](self.task_dict[t][s][i]) for t, s, i in zip(task, split, doc_id)]
+        gen_kwargs = all_gen_kwargs[0]
+
+        # Set default until or update values from gen_kwargs if present
+        until = gen_kwargs.get("until", [self.tokenizer.decode(self.eot_token_id)])
+
+        if isinstance(until, str):
+            until = [until]
+        elif not isinstance(until, list):
+            raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
+
+        # Avoid using '\n\n' as a stopper to prevent truncation, which can lead to incorrect results
+        until = [item for item in until if item != "\n\n"]
+
+        if isinstance(contexts, tuple):
+            contexts = list(contexts)
+
+        for i in range(len(contexts)):
+            if "<image>" in contexts[i]:
+                contexts[i] = contexts[i].replace("<image>", "")
+
+        video_kwargs = {
+            "min_pixels": self.min_pixels,
+        }
+
+        if self.fps is not None:
+            video_kwargs["fps"] = self.fps
+            # The Qwen video preprocessing stack uses fps + max_frames when sampling toward self.max_frames.
+            # Keep sampling decisions inside process_vision_info/the Qwen processor so metadata stays in sync.
+            video_kwargs["max_frames"] = self.max_frames
+        else:
+            # Qwen video utils use max_frames when directly requesting a fixed number of frames.
+            video_kwargs["max_frames"] = self.max_frames
+
+        if self.total_pixels is not None:
+            video_kwargs["total_pixels"] = self.total_pixels
+        elif self.max_pixels is not None:
+            video_kwargs["max_pixels"] = self.max_pixels
+        else:
+            raise ValueError("At least one of total_pixels or max_pixels must be set for video processing")
+
+        batched_messages = []
+        for i, context in enumerate(contexts):
+            if "<image>" in context:
+                context = context.replace("<image>", "")
+
+            message = [{"role": "system", "content": self.system_prompt}]
+
+            processed_visuals = []
+            if visual_list[i] is not None:
+                for visual in visual_list[i]:
+                    if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
+                        processed_visuals.append(
+                            {
+                                "type": "video",
+                                "video": visual,
+                                **video_kwargs,
+                            }
+                        )
+                    elif isinstance(visual, Image.Image):  # Handle both single and multiple images
+                        processed_visuals.append(
+                            {
+                                "type": "image",
+                                "image": visual,
+                                "max_pixels": self.max_pixels,
+                                "min_pixels": self.min_pixels,
+                            }
+                        )
+
+            if self.interleave_visuals is False:
+                message.append(
+                    {
+                        "role": "user",
+                        "content": processed_visuals + [{"type": "text", "text": context}],
+                    }
+                )
+            else:  # currently support find <image x> in the context
+                image_placeholders = re.findall(r"<image \d+>", context)
+                content_parts = []
+                text_parts = re.split(r"<image \d+>", context)
+                if text_parts[0]:
+                    content_parts.append({"type": "text", "text": text_parts[0]})
+
+                for placeholder_idx, placeholder in enumerate(image_placeholders):
+                    img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
+                    image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
+                    if processed_visuals and image_idx < len(processed_visuals):
+                        content_parts.append(processed_visuals[image_idx])
+                    if placeholder_idx + 1 < len(text_parts) and text_parts[placeholder_idx + 1]:
+                        content_parts.append({"type": "text", "text": text_parts[placeholder_idx + 1]})
+
+                message.append(
+                    {
+                        "role": "user",
+                        "content": content_parts,
+                    }
+                )
+
+            batched_messages.append(message)
+        texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True, enable_thinking=self.enable_thinking)
+        image_inputs, video_inputs, processed_video_kwargs = process_vision_info(
+            batched_messages,
+            return_video_kwargs=True,
+            image_patch_size=16,
+            return_video_metadata=True,
+        )
+        # Only pass processor-relevant kwargs (do_sample_frames, fps list, etc.).
+        # video_kwargs (min_pixels, max_frames, total_pixels, etc.) are preprocessing
+        # params already consumed by fetch_video via the content dicts above.
+        final_video_kwargs = processed_video_kwargs
+        video_metadata_list = None  # Processor expects video_metadata=None when the batch contains no videos.
+        if video_inputs is not None:
+            video_inputs, video_metadata_list = map(list, zip(*video_inputs))
+        if self.batch_size > 1:
+            inputs = self.processor(
+                text=texts,
+                images=image_inputs,
+                videos=video_inputs,
+                video_metadata=video_metadata_list,
+                **final_video_kwargs,
+                do_resize=False,
+                padding=True,
+                padding_side="left",
+                return_tensors="pt",
+            )
+        else:
+            inputs = self.processor(
+                text=texts,
+                images=image_inputs,
+                videos=video_inputs,
+                video_metadata=video_metadata_list,
+                **final_video_kwargs,
+                do_resize=False,
+                return_tensors="pt",
+            )
+
+        return inputs, contexts, gen_kwargs, until
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 
@@ -192,193 +334,80 @@ class Qwen3_5(lmms):
         # in the same batch.
         re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
-        for chunk in chunks:
-            contexts, all_gen_kwargs, doc_to_visual, doc_id, task, split = zip(*chunk)
-            visual_list = [doc_to_visual[0](self.task_dict[t][s][i]) for t, s, i in zip(task, split, doc_id)]
-            gen_kwargs = all_gen_kwargs[0]
+        chunks = list(chunks)  # exhaust the generator to get total number of batches for progress bar
 
-            # Set default until or update values from gen_kwargs if present
-            until = gen_kwargs.get("until", [self.tokenizer.decode(self.eot_token_id)])
+        # Prefetch: overlap CPU preprocessing of batch N+1 with GPU inference of batch N
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self._preprocess_chunk, chunks[0]) if chunks else None
 
-            if isinstance(until, str):
-                until = [until]
-            elif not isinstance(until, list):
-                raise ValueError(f"Expected `gen_kwargs['until']` to be of type Union[str, list], but got {type(until)}")
+            for idx in range(len(chunks)):
+                inputs, contexts, gen_kwargs, until = future.result()
 
-            # Avoid using '\n\n' as a stopper to prevent truncation, which can lead to incorrect results
-            until = [item for item in until if item != "\n\n"]
+                # Submit next batch's preprocessing while GPU processes current batch
+                if idx + 1 < len(chunks):
+                    future = executor.submit(self._preprocess_chunk, chunks[idx + 1])
 
-            if isinstance(contexts, tuple):
-                contexts = list(contexts)
+                if self.device_map == "auto":
+                    inputs = inputs.to("cuda")
+                else:
+                    inputs = inputs.to(self.device)
 
-            for i in range(len(contexts)):
-                if "<image>" in contexts[i]:
-                    contexts[i] = contexts[i].replace("<image>", "")
+                # Set default generation kwargs
+                default_gen_kwargs = {
+                    "max_new_tokens": 1024,
+                    "temperature": 0.7,  # Set to 0 for greedy default
+                    "top_p": 0.8,
+                    "top_k": 20,
+                }
+                # Update with provided kwargs
+                current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
+                pad_token_id = self.tokenizer.pad_token_id
 
-            video_kwargs = {
-                "max_pixels": self.max_pixels,
-                "min_pixels": self.min_pixels,
-            }
-            if self.fps is not None:
-                video_kwargs["fps"] = self.fps
-                # The Qwen video preprocessing stack uses fps + max_frames when sampling toward self.max_num_frames.
-                # Keep sampling decisions inside process_vision_info/the Qwen processor so metadata stays in sync.
-                video_kwargs["max_frames"] = self.max_num_frames
-            else:
-                # Qwen video utils use max_frames when directly requesting a fixed number of frames.
-                video_kwargs["max_frames"] = self.max_num_frames
+                if current_gen_kwargs["temperature"] > 0:
+                    current_gen_kwargs["do_sample"] = True
+                else:
+                    current_gen_kwargs["do_sample"] = False
+                    current_gen_kwargs["temperature"] = None
+                    current_gen_kwargs["top_p"] = None
+                    current_gen_kwargs["top_k"] = None
 
-            batched_messages = []
-            for i, context in enumerate(contexts):
-                if "<image>" in context:
-                    context = context.replace("<image>", "")
-
-                message = [{"role": "system", "content": self.system_prompt}]
-
-                if self.reasoning_prompt:
-                    context = context.strip() + self.reasoning_prompt
-                    contexts[i] = context
-
-                processed_visuals = []
-                if visual_list[i] is not None:
-                    for visual in visual_list[i]:
-                        if isinstance(visual, str) and visual.endswith((".mp4", ".avi", ".mov")):  # Video file
-                            processed_visuals.append(
-                                {
-                                    "type": "video",
-                                    "video": visual,
-                                    **video_kwargs,
-                                }
-                            )
-                        elif isinstance(visual, Image.Image):  # Handle both single and multiple images
-                            processed_visuals.append(
-                                {
-                                    "type": "image",
-                                    "image": visual,
-                                    "max_pixels": self.max_pixels,
-                                    "min_pixels": self.min_pixels,
-                                }
-                            )
-
-                if self.interleave_visuals is False:
-                    message.append(
-                        {
-                            "role": "user",
-                            "content": processed_visuals + [{"type": "text", "text": context}],
-                        }
-                    )
-                else:  # currently support find <image x> in the context
-                    image_placeholders = re.findall(r"<image \d+>", context)
-                    content_parts = []
-                    text_parts = re.split(r"<image \d+>", context)
-                    if text_parts[0]:
-                        content_parts.append({"type": "text", "text": text_parts[0]})
-
-                    for placeholder_idx, placeholder in enumerate(image_placeholders):
-                        img_idx = int(re.search(r"<image (\d+)>", placeholder).group(1)) - 1
-                        image_idx = min(img_idx, len(processed_visuals) - 1) if processed_visuals else 0
-                        if processed_visuals and image_idx < len(processed_visuals):
-                            content_parts.append(processed_visuals[image_idx])
-                        if placeholder_idx + 1 < len(text_parts) and text_parts[placeholder_idx + 1]:
-                            content_parts.append({"type": "text", "text": text_parts[placeholder_idx + 1]})
-
-                    message.append(
-                        {
-                            "role": "user",
-                            "content": content_parts,
-                        }
-                    )
-
-                batched_messages.append(message)
-            texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True, enable_thinking=self.enable_thinking)
-            image_inputs, video_inputs, processed_video_kwargs = process_vision_info(
-                batched_messages,
-                return_video_kwargs=True,
-                image_patch_size=16,
-                return_video_metadata=True,
-            )
-            # Let processor-derived kwargs win so any video sampling metadata stays aligned with the produced frames.
-            final_video_kwargs = {**video_kwargs, **processed_video_kwargs}
-            video_metadata_list = None  # Processor expects video_metadata=None when the batch contains no videos.
-            if video_inputs is not None:
-                video_inputs, video_metadata_list = map(list, zip(*video_inputs))
-            if self.batch_size > 1:
-                inputs = self.processor(
-                    text=texts,
-                    images=image_inputs,
-                    videos=video_inputs,
-                    video_metadata=video_metadata_list,
-                    **final_video_kwargs,
-                    do_resize=False,
-                    padding=True,
-                    padding_side="left",
-                    return_tensors="pt",
+                cont = self.model.generate(
+                    **inputs,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    pad_token_id=pad_token_id,
+                    do_sample=current_gen_kwargs["do_sample"],
+                    temperature=current_gen_kwargs["temperature"],
+                    top_p=current_gen_kwargs["top_p"],
+                    top_k=current_gen_kwargs["top_k"],
+                    max_new_tokens=current_gen_kwargs["max_new_tokens"],
+                    use_cache=self.use_cache,
                 )
-            else:
-                inputs = self.processor(
-                    text=texts,
-                    images=image_inputs,
-                    videos=video_inputs,
-                    video_metadata=video_metadata_list,
-                    **final_video_kwargs,
-                    do_resize=False,
-                    return_tensors="pt",
+
+                generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
+                answers = self.processor.batch_decode(
+                    generated_ids_trimmed,
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=False,
                 )
-            if self.device_map == "auto":
-                inputs = inputs.to("cuda")
-            else:
-                inputs = inputs.to(self.device)
+                for i, ans in enumerate(answers):
+                    for term in until:
+                        if len(term) > 0:
+                            ans = ans.split(term)[0]
+                    answers[i] = ans
 
-            # Set default generation kwargs
-            default_gen_kwargs = {
-                "max_new_tokens": 128,
-                "temperature": 0.0,  # Set to 0 for greedy default
-                "top_p": None,
-                "num_beams": 1,
-            }
-            # Update with provided kwargs
-            current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
-            pad_token_id = self.tokenizer.pad_token_id
+                for ans, context in zip(answers, contexts):
+                    # parse the ...</think> content out of the answer if enable_thinking is True
+                    if self.enable_thinking:
+                        think_content, think_end, remaining = ans.partition("</think>")
+                        ans = remaining.strip()
 
-            if current_gen_kwargs["temperature"] > 0:
-                current_gen_kwargs["do_sample"] = True
-            else:
-                current_gen_kwargs["do_sample"] = False
-                current_gen_kwargs["temperature"] = None
-                current_gen_kwargs["top_p"] = None
+                    res.append(ans)
+                    self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
+                    pbar.update(1)
 
-            cont = self.model.generate(
-                **inputs,
-                eos_token_id=self.tokenizer.eos_token_id,
-                pad_token_id=pad_token_id,
-                do_sample=current_gen_kwargs["do_sample"],
-                temperature=current_gen_kwargs["temperature"],
-                top_p=current_gen_kwargs["top_p"],
-                num_beams=current_gen_kwargs["num_beams"],
-                max_new_tokens=current_gen_kwargs["max_new_tokens"],
-                use_cache=self.use_cache,
-            )
-
-            generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
-            answers = self.processor.batch_decode(
-                generated_ids_trimmed,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False,
-            )
-            for i, ans in enumerate(answers):
-                for term in until:
-                    if len(term) > 0:
-                        ans = ans.split(term)[0]
-                answers[i] = ans
-
-            for ans, context in zip(answers, contexts):
-                res.append(ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
-                pbar.update(1)
-
-                # eval_logger.debug(f"Question: {context}")
-                # eval_logger.debug(f"Model Response: {ans}")
-            # reorder this group of results back to original unsorted form
+                    # eval_logger.debug(f"Question: {context}")
+                    # eval_logger.debug(f"Model Response: {ans}")
+        # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
 
         pbar.close()
