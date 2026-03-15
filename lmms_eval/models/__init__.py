@@ -28,7 +28,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "claude": "Claude",
     "cogvlm2": "CogVLM2",
     "cambrians": "CambrianS",
-    "dummy_video_reader": "DummyVideoReader",
+    "dummy": "Dummy",
     "egogpt": "EgoGPT",
     "from_log": "FromLog",
     "fuyu": "Fuyu",
@@ -122,6 +122,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
 }
 
 MODEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "dummy": ("dummy_video_reader",),
     "openai": ("openai_compatible", "openai_compatible_chat"),
     "async_openai": ("async_openai_compatible_chat", "async_openai_compatible"),
     "async_hf_model": ("async_hf",),

@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from functools import partial
+from functools import lru_cache, partial
 from glob import glob
 from typing import (
     Any,
@@ -46,6 +46,7 @@ from lmms_eval.api.registry import (
     is_higher_better,
 )
 from lmms_eval.caching.cache import load_from_cache, save_to_cache
+from lmms_eval.caching.fs_detect import FsType, detect_fs_type, find_local_scratch
 from lmms_eval.filters import build_filter_ensemble
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
@@ -59,6 +60,42 @@ ALL_OUTPUT_TYPES = [
     "generate_until_multi_round",
     "generate_until_agentic",
 ]
+
+
+def _expand_cache_path(path: str) -> str:
+    return os.path.expanduser(os.path.expandvars(path))
+
+
+@lru_cache(maxsize=1)
+def _resolve_hf_datasets_cache_dir() -> str:
+    """Pick a datasets cache directory that is safe for file locks."""
+
+    explicit_cache_dir = os.getenv("LMMS_EVAL_DATASETS_CACHE", "").strip()
+    if explicit_cache_dir:
+        resolved_cache_dir = _expand_cache_path(explicit_cache_dir)
+        os.makedirs(resolved_cache_dir, exist_ok=True)
+        return resolved_cache_dir
+
+    hf_home = _expand_cache_path(os.getenv("HF_HOME", "~/.cache/huggingface"))
+    target_cache_dir = _expand_cache_path(os.getenv("HF_DATASETS_CACHE", os.path.join(hf_home, "datasets")))
+
+    if detect_fs_type(target_cache_dir) != FsType.REMOTE:
+        os.makedirs(target_cache_dir, exist_ok=True)
+        return target_cache_dir
+
+    local_scratch = find_local_scratch()
+    if local_scratch is None:
+        eval_logger.warning(
+            "HF datasets cache '{}' is on a remote filesystem but no local scratch directory was found; continuing with the remote cache, so file-lock errors may still occur.",
+            target_cache_dir,
+        )
+        os.makedirs(target_cache_dir, exist_ok=True)
+        return target_cache_dir
+
+    local_cache_dir = os.path.join(local_scratch, "lmms_eval_hf_datasets", os.getenv("USER", "unknown"))
+    os.makedirs(local_cache_dir, exist_ok=True)
+    eval_logger.info("HF datasets cache '{}' is on a remote filesystem; using node-local cache '{}'.", target_cache_dir, local_cache_dir)
+    return local_cache_dir
 
 
 @dataclass
@@ -263,18 +300,19 @@ class Task(abc.ABC):
             - `datasets.DownloadMode.FORCE_REDOWNLOAD`
                 Fresh download and fresh dataset.
         """
+        resolved_cache_dir = cache_dir if cache_dir is not None else _resolve_hf_datasets_cache_dir()
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             data_dir=data_dir,
-            cache_dir=cache_dir,
+            cache_dir=resolved_cache_dir,
             download_mode=download_mode,
         )
         self.dataset_no_image = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             data_dir=data_dir,
-            cache_dir=cache_dir,
+            cache_dir=resolved_cache_dir,
             download_mode=download_mode,
         )
         for doc_name in self.dataset_no_image:
@@ -921,8 +959,9 @@ class ConfigurableTask(Task):
         # Recursively search whether their is a zip and unzip it to the huggingface home
         download_config = DownloadConfig()
         download_config.max_retries = dataset_kwargs.get("max_retries", 10) if dataset_kwargs is not None else 10
-        download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
+        download_config.num_proc = dataset_kwargs.get("num_proc", 1) if dataset_kwargs is not None else 1
         download_config.local_files_only = dataset_kwargs.get("local_files_only", False) if dataset_kwargs is not None else False
+        resolved_dataset_cache_dir = _resolve_hf_datasets_cache_dir()
         if dataset_kwargs is not None:
             if "From_YouTube" in dataset_kwargs:
 
@@ -946,11 +985,14 @@ class ConfigurableTask(Task):
                 if accelerator.is_main_process:
                     dataset_kwargs.pop("From_YouTube")
                     assert "load_from_disk" not in dataset_kwargs, "load_from_disk must not be True when From_YouTube is True"
+                    youtube_dataset_kwargs = dict(dataset_kwargs)
+                    youtube_cache_dir = youtube_dataset_kwargs.pop("cache_dir", resolved_dataset_cache_dir)
                     self.all_dataset = datasets.load_dataset(
                         path=self.DATASET_PATH,
                         name=self.DATASET_NAME,
+                        cache_dir=youtube_cache_dir,
                         download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-                        **dataset_kwargs if dataset_kwargs is not None else {},
+                        **youtube_dataset_kwargs,
                     )
                     dataset_kwargs["From_YouTube"] = True
                     cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")  # download_parquet
@@ -1098,12 +1140,16 @@ class ConfigurableTask(Task):
             # `ds = load_datasets("lmms-lab/MMMU")`
             self.dataset = datasets.load_from_disk(dataset_path=self.DATASET_PATH)
         else:
+            load_dataset_kwargs = dict(dataset_kwargs) if dataset_kwargs is not None else {}
+            load_dataset_cache_dir = load_dataset_kwargs.pop("cache_dir", resolved_dataset_cache_dir)
             self.dataset = datasets.load_dataset(
                 path=self.DATASET_PATH,
                 name=self.DATASET_NAME,
+                cache_dir=load_dataset_cache_dir,
                 download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
                 download_config=download_config,
-                **dataset_kwargs if dataset_kwargs is not None else {},
+                num_proc=1,
+                **load_dataset_kwargs,
             )
 
         if self.config.process_docs is not None:

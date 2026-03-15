@@ -6,32 +6,45 @@ Write order: JSONL append+fsync -> SQLite upsert (crash-safe).
 
 Activation::
 
-    python -m lmms_eval --model ... --tasks ... --use_cache ./my_cache.db
+    python -m lmms_eval --model ... --tasks ... --use_cache /path/to/cache
 
-Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs, content_hash, task_fingerprint, model_fingerprint_hash).
+Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs,
+           content_hash, task_fingerprint, model_fingerprint_hash).
 
-File layout:
-    Single GPU, local disk   - writes directly to the user-specified .db file.
-    Multi-GPU, local disk    - each rank writes to a temporary shard
-                               (``<target>.shard.<rank>``); rank 0 merges after eval.
-    Remote target (NFS/CIFS) - two-tier mode: writes go to local scratch (NVMe/SSD),
-                               reads check local first then shared DB on NFS.
-                               After eval, local writes merge back to NFS target.
+File layout::
+
+    {cache_root}/
+      cache.db                 # consolidated root DB
+      cache.audit.jsonl
+      runs/
+        {run_id}/
+          rank_{r}.db          # per-rank writes
+          rank_{r}.audit.jsonl
+
+Setup: ``ResponseCache.create(cache_root, model=..., model_args=..., task_dict=...)``
+Teardown: ``cache.finalize(success=True, ...)``
 """
 
 import hashlib
 import inspect
 import json
 import os
+import re
+import shutil
+import socket
 import sqlite3
 import time
 import urllib.parse
+import uuid
+from contextlib import contextmanager
 from functools import partial
+from glob import glob
 from typing import Any, Dict, List, Optional, Union
 
 from loguru import logger as eval_logger
 
 from lmms_eval.api.instance import GenerationResult, Instance
+from lmms_eval.caching.fs_detect import FsType, detect_fs_type, find_local_scratch
 
 CACHE_RELEVANT_KEYS = frozenset(
     {
@@ -51,6 +64,37 @@ CACHE_RELEVANT_KEYS = frozenset(
 )
 
 _SCHEMA_VERSION = 3
+_LAYERED_RUNS_DIRNAME = "runs"
+_CACHE_RUN_ID_ENV_KEYS = ("LMMS_CACHE_RUN_ID", "SLURM_JOB_ID", "TORCHELASTIC_RUN_ID")
+_LAYERED_READY_MARKER = ".ready"
+_LAYERED_MERGED_MARKER = ".merged"
+_LAYERED_LOCK_DIRNAME = ".merge.lock"
+_CHECKPOINT_INTERVAL = 256  # responses between crash-safety checkpoints
+_CHECKPOINT_INTERVAL_ENV = "LMMS_CACHE_CHECKPOINT_INTERVAL"
+
+_FUNC_ADDR_RE = re.compile(r" at 0x[0-9a-fA-F]+>")
+
+
+def _get_env_int(name: str, default: int, minimum: int = 1) -> int:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, value)
+
+
+def _get_env_float(name: str, default: float, minimum: float = 0.0) -> float:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, value)
 
 
 def _short_hash(value: str) -> str:
@@ -59,23 +103,76 @@ def _short_hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
 
-_SCHEMA_SQL = """\
-CREATE TABLE IF NOT EXISTS responses (
-    cache_key     TEXT PRIMARY KEY,
-    request_type  TEXT NOT NULL,
-    task_name     TEXT NOT NULL,
-    doc_id        INTEGER NOT NULL,
-    idx           INTEGER NOT NULL DEFAULT 0,
-    gen_kwargs    TEXT,
-    response      TEXT NOT NULL,
-    created_at    REAL NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_task_doc ON responses(task_name, doc_id);
-CREATE TABLE IF NOT EXISTS meta (
-    key   TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-);
-"""
+def _sanitize_run_id(run_id: str) -> str:
+    safe = []
+    for ch in str(run_id):
+        if ch.isalnum() or ch in ("-", "_", "."):
+            safe.append(ch)
+        else:
+            safe.append("-")
+    sanitized = "".join(safe).strip("-._")
+    return sanitized or "run"
+
+
+def _resolve_cache_run_id(world_size: int) -> str:
+    for env_key in _CACHE_RUN_ID_ENV_KEYS:
+        env_value = os.environ.get(env_key)
+        if env_value:
+            return _sanitize_run_id(env_value)
+
+    if world_size > 1:
+        master_addr = os.environ.get("MASTER_ADDR", "master")
+        master_port = os.environ.get("MASTER_PORT", "0")
+        return _sanitize_run_id(f"{master_addr}-{master_port}-ws{world_size}")
+
+    return uuid.uuid4().hex
+
+
+def _touch_text(path: str, content: str = "") -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(content)
+
+
+@contextmanager
+def _merge_lock(lock_dir: str, timeout_seconds: int = 60, poll_interval_seconds: float = 1.0):
+    os.makedirs(os.path.dirname(lock_dir), exist_ok=True)
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            os.mkdir(lock_dir)
+            owner_path = os.path.join(lock_dir, "owner.json")
+            _touch_text(
+                owner_path,
+                json.dumps(
+                    {
+                        "pid": os.getpid(),
+                        "hostname": socket.gethostname(),
+                        "created_at": time.time(),
+                    },
+                    ensure_ascii=True,
+                    sort_keys=True,
+                ),
+            )
+            break
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"Timed out waiting for cache merge lock: {lock_dir}")
+            time.sleep(poll_interval_seconds)
+
+    try:
+        yield
+    finally:
+        owner_path = os.path.join(lock_dir, "owner.json")
+        try:
+            if os.path.exists(owner_path):
+                os.remove(owner_path)
+        except OSError:
+            pass
+        try:
+            os.rmdir(lock_dir)
+        except OSError:
+            pass
 
 
 def canonicalize_gen_kwargs(gen_kwargs: Optional[dict]) -> str:
@@ -255,6 +352,25 @@ def _deserialize_response(stored: str) -> Any:
         return stored
 
 
+_SCHEMA_SQL = """\
+CREATE TABLE IF NOT EXISTS responses (
+    cache_key     TEXT PRIMARY KEY,
+    request_type  TEXT NOT NULL,
+    task_name     TEXT NOT NULL,
+    doc_id        INTEGER NOT NULL,
+    idx           INTEGER NOT NULL DEFAULT 0,
+    gen_kwargs    TEXT,
+    response      TEXT NOT NULL,
+    created_at    REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_task_doc ON responses(task_name, doc_id);
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+"""
+
+
 class ResponseCache:
     """Unified response cache: SQLite (lookup) + JSONL (crash recovery).
 
@@ -268,6 +384,109 @@ class ResponseCache:
     On startup: replays JSONL tail into SQLite to recover incomplete writes.
     Skips caching for non-deterministic requests and error/empty responses.
     """
+
+    @classmethod
+    def create(
+        cls,
+        cache_root: str,
+        *,
+        model: str = "",
+        model_args: Union[str, dict] = "",
+        task_dict: Optional[dict] = None,
+        world_size: int = 1,
+        global_rank: int = 0,
+    ) -> "ResponseCache":
+        from lmms_eval.utils import (
+            get_lmms_eval_cache_version,
+            hash_string,
+            simple_parse_args_string,
+        )
+
+        # Normalize cache_root
+        if cache_root.endswith(".db"):
+            cache_root = os.path.dirname(os.path.abspath(cache_root))
+        cache_root = os.path.abspath(cache_root)
+
+        # Task fingerprints
+        task_fingerprints = {}
+        if task_dict:
+            for tname, tobj in task_dict.items():
+                if hasattr(tobj, "dump_config"):
+                    cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
+                    cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
+                    task_fingerprints[tname] = hash_string(cfg_str)[:16]
+
+        # Model fingerprint
+        if isinstance(model_args, dict):
+            model_args_fp = json.dumps(model_args, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+        elif isinstance(model_args, str):
+            try:
+                parsed = simple_parse_args_string(model_args)
+            except Exception:
+                parsed = model_args
+            if isinstance(parsed, dict):
+                model_args_fp = json.dumps(parsed, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+            else:
+                model_args_fp = str(model_args)
+        else:
+            model_args_fp = str(model_args)
+        model_fp = f"{model}|{model_args_fp}"
+        model_hash = hash_string(model_fp)[:16]
+        eval_version = get_lmms_eval_cache_version()
+
+        # Create directories
+        os.makedirs(cache_root, exist_ok=True)
+        run_id = _resolve_cache_run_id(world_size)
+        run_dir = os.path.join(cache_root, _LAYERED_RUNS_DIRNAME, run_id)
+        os.makedirs(run_dir, exist_ok=True)
+
+        # Determine write paths based on FS type
+        target_db = os.path.join(cache_root, "cache.db")
+        shared_db_path = target_db if os.path.exists(target_db) else None
+
+        target_fs = detect_fs_type(cache_root)
+        local_scratch = find_local_scratch() if target_fs == FsType.REMOTE else None
+
+        rank_db_name = f"rank_{global_rank}.db"
+        rank_audit_name = f"rank_{global_rank}.audit.jsonl"
+
+        if local_scratch is not None:
+            scratch_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash, "runs", run_id)
+            os.makedirs(scratch_dir, exist_ok=True)
+            write_db = os.path.join(scratch_dir, rank_db_name)
+            write_audit = os.path.join(scratch_dir, rank_audit_name)
+            use_scratch = True
+        else:
+            write_db = os.path.join(run_dir, rank_db_name)
+            write_audit = os.path.join(run_dir, rank_audit_name)
+            use_scratch = False
+
+        eval_logger.info(f"ResponseCache: root={cache_root}, run={run_id}, rank={global_rank}/{world_size}, " f"writes={'scratch' if use_scratch else 'direct'}")
+
+        instance = cls(
+            db_path=write_db,
+            audit_path=write_audit,
+            model_fingerprint=model_fp,
+            task_fingerprints=task_fingerprints,
+            shared_db_path=shared_db_path,
+            eval_version=eval_version,
+        )
+        # Store metadata for finalize()
+        instance._cache_root = cache_root
+        instance._run_id = run_id
+        instance._run_dir = run_dir
+        instance._global_rank = global_rank
+        instance._world_size = world_size
+        instance._use_scratch = use_scratch
+        instance._checkpoint_interval = _get_env_int(_CHECKPOINT_INTERVAL_ENV, _CHECKPOINT_INTERVAL)
+        instance._entries_since_checkpoint = 0
+        if use_scratch:
+            instance._remote_rank_db = os.path.join(run_dir, rank_db_name)
+            instance._remote_rank_audit = os.path.join(run_dir, rank_audit_name)
+        else:
+            instance._remote_rank_db = None
+            instance._remote_rank_audit = None
+        return instance
 
     def __init__(
         self,
@@ -284,24 +503,22 @@ class ResponseCache:
         self._model_fingerprint_hash = _short_hash(model_fingerprint)
         self._task_fingerprints: Dict[str, str] = task_fingerprints or {}
         self._eval_version = eval_version
+        self.db: Optional[sqlite3.Connection] = None
+        self._audit_file = None
 
-        self.db = sqlite3.connect(db_path, timeout=30)
-        self.db.execute("PRAGMA journal_mode=WAL")
-        self.db.execute("PRAGMA synchronous=NORMAL")
-        self.db.executescript(_SCHEMA_SQL)
+        # Metadata set by create() for finalize()
+        self._cache_root: Optional[str] = None
+        self._run_id: str = ""
+        self._run_dir: str = ""
+        self._global_rank: int = 0
+        self._world_size: int = 1
+        self._use_scratch: bool = False
+        self._remote_rank_db: Optional[str] = None
+        self._remote_rank_audit: Optional[str] = None
+        self._checkpoint_interval: int = _CHECKPOINT_INTERVAL
+        self._entries_since_checkpoint: int = 0
 
-        if model_fingerprint:
-            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint", model_fingerprint))
-        if self._model_fingerprint_hash:
-            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
-        self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
-        if eval_version:
-            # Warn if DB was written by a different lmms-eval version
-            row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
-            if row and row[0] != eval_version:
-                eval_logger.warning(f"ResponseCache: DB was last written by lmms-eval {row[0]}, " f"current version is {eval_version}. Cache keys now include version \u2014 " f"old entries will not match (safe, but no reuse).")
-            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", eval_version))
-        self.db.commit()
+        self._open_local_handles()
 
         # Optional shared (read-only) DB for two-tier caching.
         self._shared_db: Optional[sqlite3.Connection] = None
@@ -316,13 +533,64 @@ class ResponseCache:
                 eval_logger.warning(f"ResponseCache: failed to open shared DB {shared_db_path}: {e}")
                 self._shared_db = None
 
-        self._replay_audit_log()
-        self._audit_file = open(audit_path, "a", encoding="utf-8")
-
         self._hits = 0
         self._hits_shared = 0
         self._misses = 0
         self._skipped = 0
+
+    def _open_local_handles(self) -> None:
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        os.makedirs(os.path.dirname(self.audit_path), exist_ok=True)
+        self.db = sqlite3.connect(self.db_path, timeout=30)
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA synchronous=NORMAL")
+        self.db.executescript(_SCHEMA_SQL)
+
+        if self.model_fingerprint:
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint", self.model_fingerprint))
+        if self._model_fingerprint_hash:
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("model_fingerprint_hash", self._model_fingerprint_hash))
+        self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(_SCHEMA_VERSION)))
+        if self._eval_version:
+            row = self.db.execute("SELECT value FROM meta WHERE key = 'eval_version'").fetchone()
+            if row and row[0] != self._eval_version:
+                eval_logger.warning(f"ResponseCache: DB was last written by lmms-eval {row[0]}, current version is {self._eval_version}. " f"Cache keys now include version — old entries will not match (safe, but no reuse).")
+            self.db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", ("eval_version", self._eval_version))
+        self.db.commit()
+        self._replay_audit_log()
+        self._audit_file = open(self.audit_path, "a", encoding="utf-8")
+
+    def _close_local_handles(self, checkpoint: bool = False) -> None:
+        try:
+            if self._audit_file and not self._audit_file.closed:
+                self._audit_file.flush()
+                os.fsync(self._audit_file.fileno())
+                self._audit_file.close()
+        except Exception:
+            pass
+        self._audit_file = None
+
+        try:
+            if self.db:
+                if checkpoint:
+                    try:
+                        self.db.commit()
+                        self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    except sqlite3.Error:
+                        pass
+                self.db.close()
+        except Exception:
+            pass
+        self.db = None
+
+    @staticmethod
+    def _remove_sqlite_artifacts(db_path: str) -> None:
+        for path in (db_path, f"{db_path}-wal", f"{db_path}-shm"):
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except OSError:
+                pass
 
     def _replay_audit_log(self) -> None:
         """Replay JSONL entries missing from SQLite (crash recovery)."""
@@ -540,10 +808,29 @@ class ResponseCache:
                 )
                 if deterministic and self._is_valid_response(resp, reqtype):
                     self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable)
+                    if self._use_scratch:
+                        self._entries_since_checkpoint += 1
+                        if self._entries_since_checkpoint >= self._checkpoint_interval:
+                            self._checkpoint_to_run_dir()
         else:
             eval_logger.info(f"ResponseCache: all {len(requests)} requests served from cache — skipping model inference")
 
         return results
+
+    def _checkpoint_to_run_dir(self) -> None:
+        """Copy current scratch DB to the run directory for crash safety."""
+        if not self._use_scratch or not self._remote_rank_db:
+            return
+        try:
+            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            self.db.commit()
+            shutil.copy2(self.db_path, self._remote_rank_db)
+            if os.path.exists(self.audit_path):
+                shutil.copy2(self.audit_path, self._remote_rank_audit)
+            self._entries_since_checkpoint = 0
+            eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
+        except Exception as e:
+            eval_logger.warning(f"ResponseCache: checkpoint failed: {e}")
 
     def get_stats(self) -> Dict[str, Any]:
         total_lookups = self._hits + self._misses
@@ -563,16 +850,7 @@ class ResponseCache:
         return stats
 
     def close(self) -> None:
-        try:
-            if self._audit_file and not self._audit_file.closed:
-                self._audit_file.close()
-        except Exception:
-            pass
-        try:
-            if self.db:
-                self.db.close()
-        except Exception:
-            pass
+        self._close_local_handles()
         try:
             if self._shared_db:
                 self._shared_db.close()
@@ -585,6 +863,152 @@ class ResponseCache:
             self.close()
         except Exception:
             pass
+
+    def finalize(
+        self,
+        *,
+        success: bool,
+        dist_backend: str = "accelerate",
+        accelerator: Any = None,
+    ) -> None:
+        """Log stats, close DB, barrier, and merge all rank shards into root cache.db.
+
+        Call this once after evaluation completes. Handles:
+        - Stats logging
+        - Closing the DB
+        - Copying scratch writes to shared run directory
+        - Distributed barrier (all ranks must finish before merge)
+        - Rank-0 merge of all rank DBs into cache_root/cache.db
+        - Cleanup of the run directory after merge
+        """
+        # 1. Log stats
+        try:
+            stats = self.get_stats()
+            shared_info = f", {stats.get('hits_shared', 0)} from shared DB" if stats.get("hits_shared", 0) else ""
+            eval_logger.info(f"ResponseCache stats: {stats['hits']} hits{shared_info}, " f"{stats['misses']} misses, {stats['skipped_non_deterministic']} skipped, " f"hit rate: {stats['hit_rate']:.1%}")
+        except Exception:
+            pass
+
+        # 2. Close DB (flushes WAL)
+        self.close()
+
+        if not success or self._cache_root is None:
+            return
+
+        # 3. Copy scratch to run dir
+        if self._use_scratch and self._remote_rank_db:
+            try:
+                os.makedirs(self._run_dir, exist_ok=True)
+                if os.path.exists(self.db_path):
+                    shutil.copy2(self.db_path, self._remote_rank_db)
+                if os.path.exists(self.audit_path) and self._remote_rank_audit:
+                    shutil.copy2(self.audit_path, self._remote_rank_audit)
+            except Exception as e:
+                eval_logger.warning(f"ResponseCache: failed to copy scratch to run dir: {e}")
+
+        # 4. Barrier
+        self._distributed_barrier(dist_backend, accelerator)
+
+        # 5. Rank 0: merge all rank DBs into root cache.db
+        if self._global_rank == 0:
+            self._merge_run_to_root()
+
+    @staticmethod
+    def _distributed_barrier(dist_backend: str, accelerator: Any) -> None:
+        """Execute a distributed barrier."""
+        try:
+            if dist_backend == "accelerate" and accelerator is not None:
+                accelerator.wait_for_everyone()
+            elif dist_backend == "torchrun":
+                import torch.distributed as dist
+
+                if dist.is_initialized():
+                    dist.barrier()
+        except Exception as e:
+            eval_logger.warning(f"ResponseCache: barrier failed: {e}")
+
+    def _merge_run_to_root(self) -> None:
+        """Rank-0 only: merge all rank DBs from the current run into cache_root/cache.db."""
+        if not self._cache_root or not self._run_dir:
+            return
+
+        target_db = os.path.join(self._cache_root, "cache.db")
+        target_audit = os.path.join(self._cache_root, "cache.audit.jsonl")
+        run_root = os.path.join(self._cache_root, _LAYERED_RUNS_DIRNAME)
+        lock_dir = os.path.join(run_root, _LAYERED_LOCK_DIRNAME)
+
+        # Collect all rank DB/audit files from this run
+        shard_dbs = sorted(glob(os.path.join(self._run_dir, "rank_*.db")))
+        shard_audits = sorted(glob(os.path.join(self._run_dir, "rank_*.audit.jsonl")))
+
+        # Also support legacy naming from older runs
+        if not shard_dbs:
+            shard_dbs = sorted(glob(os.path.join(self._run_dir, "cache.db.shard.*")))
+            single_db = os.path.join(self._run_dir, "cache.db")
+            if not shard_dbs and os.path.exists(single_db):
+                shard_dbs = [single_db]
+        if not shard_audits:
+            shard_audits = sorted(glob(os.path.join(self._run_dir, "cache.db.audit.shard.*.jsonl")))
+            single_audit = os.path.join(self._run_dir, "cache.audit.jsonl")
+            if not shard_audits and os.path.exists(single_audit):
+                shard_audits = [single_audit]
+
+        if not shard_dbs and not shard_audits:
+            eval_logger.info("ResponseCache: no rank artifacts to merge")
+            return
+
+        try:
+            with _merge_lock(lock_dir, timeout_seconds=60):
+                # Mark current run as ready
+                _touch_text(os.path.join(self._run_dir, _LAYERED_READY_MARKER), f"{time.time():.6f}\n")
+
+                # Merge current run
+                if shard_dbs:
+                    merged = ResponseCache.merge_shards(shard_dbs, target_db)
+                    eval_logger.info(f"ResponseCache: merged {merged} entries from {len(shard_dbs)} rank(s) into {target_db}")
+                if shard_audits:
+                    merged_lines = ResponseCache.merge_audit_logs(shard_audits, target_audit)
+                    eval_logger.info(f"ResponseCache: merged {merged_lines} audit entries into {target_audit}")
+
+                # Mark merged
+                _touch_text(os.path.join(self._run_dir, _LAYERED_MERGED_MARKER), f"{time.time():.6f}\n")
+
+                # Opportunistically merge any other ready-but-unmerged runs
+                self._merge_stale_runs(run_root, target_db, target_audit)
+
+        except TimeoutError as exc:
+            eval_logger.warning(f"ResponseCache: merge deferred, lock busy: {exc}")
+
+    def _merge_stale_runs(self, run_root: str, target_db: str, target_audit: str) -> None:
+        """Merge any previous runs that are ready but not yet merged."""
+        for entry in sorted(os.scandir(run_root), key=lambda e: e.name):
+            if not entry.is_dir() or entry.path == self._run_dir:
+                continue
+            ready = os.path.join(entry.path, _LAYERED_READY_MARKER)
+            merged = os.path.join(entry.path, _LAYERED_MERGED_MARKER)
+            if not os.path.exists(ready) or os.path.exists(merged):
+                continue
+
+            shard_dbs = sorted(glob(os.path.join(entry.path, "rank_*.db")))
+            shard_audits = sorted(glob(os.path.join(entry.path, "rank_*.audit.jsonl")))
+            # Legacy naming
+            if not shard_dbs:
+                shard_dbs = sorted(glob(os.path.join(entry.path, "cache.db.shard.*")))
+                single = os.path.join(entry.path, "cache.db")
+                if not shard_dbs and os.path.exists(single):
+                    shard_dbs = [single]
+            if not shard_audits:
+                shard_audits = sorted(glob(os.path.join(entry.path, "cache.db.audit.shard.*.jsonl")))
+                single = os.path.join(entry.path, "cache.audit.jsonl")
+                if not shard_audits and os.path.exists(single):
+                    shard_audits = [single]
+
+            if shard_dbs:
+                ResponseCache.merge_shards(shard_dbs, target_db)
+            if shard_audits:
+                ResponseCache.merge_audit_logs(shard_audits, target_audit)
+            _touch_text(os.path.join(entry.path, _LAYERED_MERGED_MARKER), f"{time.time():.6f}\n")
+            eval_logger.info(f"ResponseCache: merged stale run {entry.name}")
 
     @staticmethod
     def merge_shards(shard_paths: List[str], output_path: str) -> int:
@@ -665,42 +1089,3 @@ class ResponseCache:
                 out.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 written += 1
         return written
-
-    @staticmethod
-    def consolidate_cache(
-        target_db_path: str,
-        shard_db_paths: List[str],
-        shard_audit_paths: List[str],
-        target_audit_path: str,
-        cleanup: bool = True,
-    ) -> None:
-        """Consolidate per-rank shards into a single cache DB + audit log.
-
-        Called by rank 0 after evaluation completes.
-
-        1. Merges all shard DBs into ``target_db_path`` (INSERT OR IGNORE).
-        2. Merges all shard JSONL audit logs into ``target_audit_path``.
-        3. If ``cleanup`` is True, removes the shard files.
-        """
-        # Merge SQLite shards
-        merged_entries = ResponseCache.merge_shards(shard_db_paths, target_db_path)
-        eval_logger.info(f"ResponseCache: consolidated {merged_entries} entries from " f"{len(shard_db_paths)} shard(s) into {target_db_path}")
-
-        # Merge JSONL audit logs
-        merged_lines = ResponseCache.merge_audit_logs(shard_audit_paths, target_audit_path)
-        eval_logger.info(f"ResponseCache: consolidated {merged_lines} audit entries from " f"{len(shard_audit_paths)} log(s) into {target_audit_path}")
-
-        # Cleanup shard files
-        if cleanup:
-            for path in shard_db_paths + shard_audit_paths:
-                try:
-                    if os.path.exists(path):
-                        os.remove(path)
-                        # Also remove WAL/SHM sidecar files for SQLite
-                        for suffix in ("-wal", "-shm"):
-                            sidecar = path + suffix
-                            if os.path.exists(sidecar):
-                                os.remove(sidecar)
-                except OSError as e:
-                    eval_logger.warning(f"ResponseCache: failed to remove shard {path}: {e}")
-            eval_logger.info("ResponseCache: shard files cleaned up")

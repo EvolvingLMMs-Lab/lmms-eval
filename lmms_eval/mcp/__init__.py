@@ -2,6 +2,21 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from lmms_eval.mcp.client import MCPClient
+
+__all__ = ["MCPClient", "main"]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "MCPClient":
+        from lmms_eval.mcp.client import MCPClient
+
+        return MCPClient
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 def main() -> None:
     """Entry point for the lmms-eval MCP server (stdio transport)."""
