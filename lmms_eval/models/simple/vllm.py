@@ -11,13 +11,13 @@ from accelerate import Accelerator, DistributedType
 from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
-from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
+from lmms_eval.models.model_utils.progress import make_progress
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
@@ -207,15 +207,15 @@ class VLLM(lmms):
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
                 DistributedType.DEEPSPEED,
-            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            ], "Unsupported distributed type provided. Only DDP, FSDP, and DeepSpeed are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
-            self._rank = self.accelerator.local_process_index
+            self._rank = self.accelerator.process_index
             self._world_size = self.accelerator.num_processes
         else:
             self.accelerator = accelerator
-            self._rank = self.accelerator.local_process_index
+            self._rank = self.accelerator.process_index
             self._world_size = self.accelerator.num_processes
         expected_world_size = self.tensor_parallel_size * self.data_parallel_size
         if self.data_parallel_size > 1 and accelerator.num_processes == 1:
@@ -442,7 +442,7 @@ class VLLM(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = make_progress(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]

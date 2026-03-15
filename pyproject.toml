@@ -112,7 +112,6 @@ reka = [
     "reka-api",
 ]
 qwen = [
-    "decord",
     "qwen_vl_utils",
 ]
 mmsearch = [
@@ -135,6 +134,9 @@ tui = [
     "uvicorn>=0.20.0",
 ]
 video = [
+    "torchcodec>=0.3.0",
+]
+video-legacy = [
     "decord; platform_system != 'Darwin'",
     "eva-decord; platform_system == 'Darwin' and python_version < '3.12'",
 ]

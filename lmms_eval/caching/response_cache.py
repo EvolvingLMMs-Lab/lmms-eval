@@ -6,27 +6,30 @@ Write order: JSONL append+fsync -> SQLite upsert (crash-safe).
 
 Activation::
 
-    python -m lmms_eval --model ... --tasks ... --use_cache ./my_cache.db
+    python -m lmms_eval --model ... --tasks ... --use_cache /path/to/cache
 
-Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs, content_hash, task_fingerprint, model_fingerprint_hash).
+Cache key: sha256(request_type, task_name, doc_id, idx, canonical gen_kwargs,
+           content_hash, task_fingerprint, model_fingerprint_hash).
 
-File layout:
-    Single GPU, local disk   - writes directly to the user-specified .db file.
-    Multi-GPU, local disk    - each rank writes to a temporary shard
-                               (``<target>.shard.<rank>``); rank 0 merges after eval.
-    Remote target (NFS/CIFS) - two-tier mode: writes go to local scratch (NVMe/SSD),
-                               reads check local first then shared DB on NFS.
-                               After eval, local writes merge back to NFS target.
-    Layered directory mode   - shared root DB lives at ``<cache_root>/cache.db`` while
-                               each run writes to ``<cache_root>/runs/<run_id>/``.
-                               Rank 0 merges ready runs back into the root DB under an
-                               exclusive lock, so concurrent jobs do not fight over writes.
+File layout::
+
+    {cache_root}/
+      cache.db                 # consolidated root DB
+      cache.audit.jsonl
+      runs/
+        {run_id}/
+          rank_{r}.db          # per-rank writes
+          rank_{r}.audit.jsonl
+
+Setup: ``ResponseCache.create(cache_root, model=..., model_args=..., task_dict=...)``
+Teardown: ``cache.finalize(success=True, ...)``
 """
 
 import hashlib
 import inspect
 import json
 import os
+import re
 import shutil
 import socket
 import sqlite3
@@ -34,7 +37,6 @@ import time
 import urllib.parse
 import uuid
 from contextlib import contextmanager
-from dataclasses import dataclass
 from functools import partial
 from glob import glob
 from typing import Any, Dict, List, Optional, Union
@@ -67,9 +69,10 @@ _CACHE_RUN_ID_ENV_KEYS = ("LMMS_CACHE_RUN_ID", "SLURM_JOB_ID", "TORCHELASTIC_RUN
 _LAYERED_READY_MARKER = ".ready"
 _LAYERED_MERGED_MARKER = ".merged"
 _LAYERED_LOCK_DIRNAME = ".merge.lock"
-_LAYERED_SEGMENTS_DIRNAME = "segments"
-_DEFAULT_SEGMENT_MAX_RESPONSES = 256
-_DEFAULT_SEGMENT_PROMOTE_LOCK_TIMEOUT_SECONDS = 1.0
+_CHECKPOINT_INTERVAL = 256  # responses between crash-safety checkpoints
+_CHECKPOINT_INTERVAL_ENV = "LMMS_CACHE_CHECKPOINT_INTERVAL"
+
+_FUNC_ADDR_RE = re.compile(r" at 0x[0-9a-fA-F]+>")
 
 
 def _get_env_int(name: str, default: int, minimum: int = 1) -> int:
@@ -92,36 +95,6 @@ def _get_env_float(name: str, default: float, minimum: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
     return max(minimum, value)
-
-
-@dataclass(frozen=True)
-class LayeredSegmentConfig:
-    target_db_path: str
-    target_audit_path: str
-    run_root: str
-    run_dir: str
-    shared_segment_root: str
-    local_active_dir: str
-    global_rank: int
-    max_responses: int
-    promote_lock_timeout_seconds: float
-
-
-@dataclass(frozen=True)
-class ResponseCacheLayout:
-    mode: str
-    target_db_path: str
-    target_audit_path: str
-    write_db_path: str
-    write_audit_path: str
-    shared_db_path: Optional[str]
-    cleanup_after_consolidation: bool
-    run_id: str = ""
-    run_dir: str = ""
-    run_root: str = ""
-    cache_root: str = ""
-    staging_dir: Optional[str] = None
-    segment_config: Optional[LayeredSegmentConfig] = None
 
 
 def _short_hash(value: str) -> str:
@@ -153,51 +126,6 @@ def _resolve_cache_run_id(world_size: int) -> str:
         return _sanitize_run_id(f"{master_addr}-{master_port}-ws{world_size}")
 
     return uuid.uuid4().hex
-
-
-def _looks_like_cache_directory(path: str) -> bool:
-    if not path:
-        return False
-    if path.endswith(os.sep):
-        return True
-    if os.path.isdir(path):
-        return True
-    if os.path.exists(path):
-        return False
-    return os.path.splitext(os.path.basename(path))[1].lower() != ".db"
-
-
-def _looks_like_layered_cache_db(path: str) -> bool:
-    if not path:
-        return False
-    return os.path.basename(path).lower() == "cache.db"
-
-
-def _is_layered_cache_target(path: str) -> bool:
-    return _looks_like_cache_directory(path) or _looks_like_layered_cache_db(path)
-
-
-def _resolve_layered_target_paths(use_cache: str) -> tuple[str, str, str, str]:
-    if _looks_like_cache_directory(use_cache):
-        cache_root = os.path.abspath(use_cache.rstrip(os.sep))
-        target_db_path = os.path.join(cache_root, "cache.db")
-        target_audit_path = os.path.join(cache_root, "cache.audit.jsonl")
-    elif _looks_like_layered_cache_db(use_cache):
-        target_db_path = os.path.abspath(use_cache)
-        target_audit_path = os.path.splitext(target_db_path)[0] + ".audit.jsonl"
-        cache_root = os.path.dirname(target_db_path)
-    else:
-        target_db_path = use_cache
-        if target_db_path.endswith(os.sep):
-            target_db_path = os.path.join(target_db_path, "cache.db")
-        elif not target_db_path.endswith(".db"):
-            target_db_path = target_db_path + ".db"
-        target_db_path = os.path.abspath(target_db_path)
-        target_audit_path = os.path.splitext(target_db_path)[0] + ".audit.jsonl"
-        cache_root = os.path.dirname(target_db_path)
-
-    run_root = os.path.join(cache_root, _LAYERED_RUNS_DIRNAME)
-    return cache_root, target_db_path, target_audit_path, run_root
 
 
 def _touch_text(path: str, content: str = "") -> None:
@@ -245,141 +173,6 @@ def _merge_lock(lock_dir: str, timeout_seconds: int = 60, poll_interval_seconds:
             os.rmdir(lock_dir)
         except OSError:
             pass
-
-
-def resolve_response_cache_layout(
-    use_cache: str,
-    *,
-    world_size: int,
-    global_rank: int,
-    model_hash: str,
-) -> ResponseCacheLayout:
-    """Resolve response-cache paths for file mode, two-tier mode, or layered dir mode."""
-    if _is_layered_cache_target(use_cache):
-        cache_root, target_db_path, target_audit_path, run_root = _resolve_layered_target_paths(use_cache)
-        os.makedirs(cache_root, exist_ok=True)
-        run_id = _resolve_cache_run_id(world_size)
-        os.makedirs(run_root, exist_ok=True)
-        run_dir = os.path.join(run_root, run_id)
-        os.makedirs(run_dir, exist_ok=True)
-        shared_db_path = target_db_path if os.path.exists(target_db_path) else None
-        segment_config = None
-        target_fs = detect_fs_type(target_db_path)
-        local_scratch = find_local_scratch() if target_fs == FsType.REMOTE else None
-        if local_scratch is not None:
-            local_active_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash, "layered_runs", run_id, f"rank_{global_rank}", "active")
-            shared_segment_root = os.path.join(run_dir, _LAYERED_SEGMENTS_DIRNAME, f"rank_{global_rank}")
-            os.makedirs(local_active_dir, exist_ok=True)
-            os.makedirs(shared_segment_root, exist_ok=True)
-            write_db_path = os.path.join(local_active_dir, "cache.db")
-            write_audit_path = os.path.join(local_active_dir, "cache.audit.jsonl")
-            segment_config = LayeredSegmentConfig(
-                target_db_path=target_db_path,
-                target_audit_path=target_audit_path,
-                run_root=run_root,
-                run_dir=run_dir,
-                shared_segment_root=shared_segment_root,
-                local_active_dir=local_active_dir,
-                global_rank=global_rank,
-                max_responses=_get_env_int("LMMS_CACHE_SEGMENT_MAX_RESPONSES", _DEFAULT_SEGMENT_MAX_RESPONSES),
-                promote_lock_timeout_seconds=_get_env_float(
-                    "LMMS_CACHE_SEGMENT_PROMOTE_LOCK_TIMEOUT_S",
-                    _DEFAULT_SEGMENT_PROMOTE_LOCK_TIMEOUT_SECONDS,
-                ),
-            )
-        elif world_size > 1:
-            write_db_path = os.path.join(run_dir, f"cache.db.shard.{global_rank}")
-            write_audit_path = os.path.join(run_dir, f"cache.db.audit.shard.{global_rank}.jsonl")
-        else:
-            write_db_path = os.path.join(run_dir, "cache.db")
-            write_audit_path = os.path.join(run_dir, "cache.audit.jsonl")
-        return ResponseCacheLayout(
-            mode="layered_dir",
-            target_db_path=target_db_path,
-            target_audit_path=target_audit_path,
-            write_db_path=write_db_path,
-            write_audit_path=write_audit_path,
-            shared_db_path=shared_db_path,
-            cleanup_after_consolidation=False,
-            run_id=run_id,
-            run_dir=run_dir,
-            run_root=run_root,
-            cache_root=cache_root,
-            segment_config=segment_config,
-        )
-
-    target_db_path = use_cache
-    if target_db_path.endswith(os.sep):
-        target_db_path = os.path.join(target_db_path, "cache.db")
-    elif not target_db_path.endswith(".db"):
-        target_db_path = target_db_path + ".db"
-    target_db_path = os.path.abspath(target_db_path)
-    target_audit_path = os.path.splitext(target_db_path)[0] + ".audit.jsonl"
-    target_dir = os.path.dirname(target_db_path)
-    os.makedirs(target_dir, exist_ok=True)
-
-    target_fs = detect_fs_type(target_db_path)
-    if target_fs == FsType.REMOTE:
-        local_scratch = find_local_scratch()
-        if local_scratch is not None:
-            local_cache_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash)
-            os.makedirs(local_cache_dir, exist_ok=True)
-            shared_db_path = target_db_path if os.path.exists(target_db_path) else None
-            if world_size > 1:
-                write_db_path = os.path.join(local_cache_dir, f"shard.{global_rank}.db")
-                write_audit_path = os.path.join(local_cache_dir, f"shard.{global_rank}.audit.jsonl")
-                staging_dir = os.path.splitext(target_db_path)[0] + ".staging"
-                os.makedirs(staging_dir, exist_ok=True)
-            else:
-                write_db_path = os.path.join(local_cache_dir, "local.db")
-                write_audit_path = os.path.join(local_cache_dir, "local.audit.jsonl")
-                staging_dir = None
-            return ResponseCacheLayout(
-                mode="two_tier",
-                target_db_path=target_db_path,
-                target_audit_path=target_audit_path,
-                write_db_path=write_db_path,
-                write_audit_path=write_audit_path,
-                shared_db_path=shared_db_path,
-                cleanup_after_consolidation=True,
-                staging_dir=staging_dir,
-            )
-        eval_logger.warning("ResponseCache: target is on remote FS but no local scratch found, writing directly")
-
-    if world_size > 1:
-        write_db_path = f"{target_db_path}.shard.{global_rank}"
-        write_audit_path = f"{target_db_path}.audit.shard.{global_rank}.jsonl"
-    else:
-        write_db_path = target_db_path
-        write_audit_path = target_audit_path
-    return ResponseCacheLayout(
-        mode="direct",
-        target_db_path=target_db_path,
-        target_audit_path=target_audit_path,
-        write_db_path=write_db_path,
-        write_audit_path=write_audit_path,
-        shared_db_path=None,
-        cleanup_after_consolidation=True,
-    )
-
-
-_SCHEMA_SQL = """\
-CREATE TABLE IF NOT EXISTS responses (
-    cache_key     TEXT PRIMARY KEY,
-    request_type  TEXT NOT NULL,
-    task_name     TEXT NOT NULL,
-    doc_id        INTEGER NOT NULL,
-    idx           INTEGER NOT NULL DEFAULT 0,
-    gen_kwargs    TEXT,
-    response      TEXT NOT NULL,
-    created_at    REAL NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_task_doc ON responses(task_name, doc_id);
-CREATE TABLE IF NOT EXISTS meta (
-    key   TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-);
-"""
 
 
 def canonicalize_gen_kwargs(gen_kwargs: Optional[dict]) -> str:
@@ -559,6 +352,25 @@ def _deserialize_response(stored: str) -> Any:
         return stored
 
 
+_SCHEMA_SQL = """\
+CREATE TABLE IF NOT EXISTS responses (
+    cache_key     TEXT PRIMARY KEY,
+    request_type  TEXT NOT NULL,
+    task_name     TEXT NOT NULL,
+    doc_id        INTEGER NOT NULL,
+    idx           INTEGER NOT NULL DEFAULT 0,
+    gen_kwargs    TEXT,
+    response      TEXT NOT NULL,
+    created_at    REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_task_doc ON responses(task_name, doc_id);
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+"""
+
+
 class ResponseCache:
     """Unified response cache: SQLite (lookup) + JSONL (crash recovery).
 
@@ -573,6 +385,109 @@ class ResponseCache:
     Skips caching for non-deterministic requests and error/empty responses.
     """
 
+    @classmethod
+    def create(
+        cls,
+        cache_root: str,
+        *,
+        model: str = "",
+        model_args: Union[str, dict] = "",
+        task_dict: Optional[dict] = None,
+        world_size: int = 1,
+        global_rank: int = 0,
+    ) -> "ResponseCache":
+        from lmms_eval.utils import (
+            get_lmms_eval_cache_version,
+            hash_string,
+            simple_parse_args_string,
+        )
+
+        # Normalize cache_root
+        if cache_root.endswith(".db"):
+            cache_root = os.path.dirname(os.path.abspath(cache_root))
+        cache_root = os.path.abspath(cache_root)
+
+        # Task fingerprints
+        task_fingerprints = {}
+        if task_dict:
+            for tname, tobj in task_dict.items():
+                if hasattr(tobj, "dump_config"):
+                    cfg_str = json.dumps(tobj.dump_config(), sort_keys=True, default=str)
+                    cfg_str = _FUNC_ADDR_RE.sub(">", cfg_str)
+                    task_fingerprints[tname] = hash_string(cfg_str)[:16]
+
+        # Model fingerprint
+        if isinstance(model_args, dict):
+            model_args_fp = json.dumps(model_args, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+        elif isinstance(model_args, str):
+            try:
+                parsed = simple_parse_args_string(model_args)
+            except Exception:
+                parsed = model_args
+            if isinstance(parsed, dict):
+                model_args_fp = json.dumps(parsed, sort_keys=True, ensure_ascii=True, separators=(",", ":"), default=str)
+            else:
+                model_args_fp = str(model_args)
+        else:
+            model_args_fp = str(model_args)
+        model_fp = f"{model}|{model_args_fp}"
+        model_hash = hash_string(model_fp)[:16]
+        eval_version = get_lmms_eval_cache_version()
+
+        # Create directories
+        os.makedirs(cache_root, exist_ok=True)
+        run_id = _resolve_cache_run_id(world_size)
+        run_dir = os.path.join(cache_root, _LAYERED_RUNS_DIRNAME, run_id)
+        os.makedirs(run_dir, exist_ok=True)
+
+        # Determine write paths based on FS type
+        target_db = os.path.join(cache_root, "cache.db")
+        shared_db_path = target_db if os.path.exists(target_db) else None
+
+        target_fs = detect_fs_type(cache_root)
+        local_scratch = find_local_scratch() if target_fs == FsType.REMOTE else None
+
+        rank_db_name = f"rank_{global_rank}.db"
+        rank_audit_name = f"rank_{global_rank}.audit.jsonl"
+
+        if local_scratch is not None:
+            scratch_dir = os.path.join(local_scratch, "lmms_eval_cache", model_hash, "runs", run_id)
+            os.makedirs(scratch_dir, exist_ok=True)
+            write_db = os.path.join(scratch_dir, rank_db_name)
+            write_audit = os.path.join(scratch_dir, rank_audit_name)
+            use_scratch = True
+        else:
+            write_db = os.path.join(run_dir, rank_db_name)
+            write_audit = os.path.join(run_dir, rank_audit_name)
+            use_scratch = False
+
+        eval_logger.info(f"ResponseCache: root={cache_root}, run={run_id}, rank={global_rank}/{world_size}, " f"writes={'scratch' if use_scratch else 'direct'}")
+
+        instance = cls(
+            db_path=write_db,
+            audit_path=write_audit,
+            model_fingerprint=model_fp,
+            task_fingerprints=task_fingerprints,
+            shared_db_path=shared_db_path,
+            eval_version=eval_version,
+        )
+        # Store metadata for finalize()
+        instance._cache_root = cache_root
+        instance._run_id = run_id
+        instance._run_dir = run_dir
+        instance._global_rank = global_rank
+        instance._world_size = world_size
+        instance._use_scratch = use_scratch
+        instance._checkpoint_interval = _get_env_int(_CHECKPOINT_INTERVAL_ENV, _CHECKPOINT_INTERVAL)
+        instance._entries_since_checkpoint = 0
+        if use_scratch:
+            instance._remote_rank_db = os.path.join(run_dir, rank_db_name)
+            instance._remote_rank_audit = os.path.join(run_dir, rank_audit_name)
+        else:
+            instance._remote_rank_db = None
+            instance._remote_rank_audit = None
+        return instance
+
     def __init__(
         self,
         db_path: str,
@@ -581,7 +496,6 @@ class ResponseCache:
         task_fingerprints: Optional[Dict[str, str]] = None,
         shared_db_path: Optional[str] = None,
         eval_version: str = "",
-        segment_config: Optional[LayeredSegmentConfig] = None,
     ):
         self.db_path = db_path
         self.audit_path = audit_path
@@ -589,16 +503,20 @@ class ResponseCache:
         self._model_fingerprint_hash = _short_hash(model_fingerprint)
         self._task_fingerprints: Dict[str, str] = task_fingerprints or {}
         self._eval_version = eval_version
-        self._segment_config = segment_config
-        self._segment_entries = 0
-        self._segment_index = 0
         self.db: Optional[sqlite3.Connection] = None
         self._audit_file = None
 
-        if self._segment_config is not None:
-            os.makedirs(self._segment_config.local_active_dir, exist_ok=True)
-            os.makedirs(self._segment_config.shared_segment_root, exist_ok=True)
-            self._segment_index = self._discover_next_segment_index(self._segment_config.shared_segment_root)
+        # Metadata set by create() for finalize()
+        self._cache_root: Optional[str] = None
+        self._run_id: str = ""
+        self._run_dir: str = ""
+        self._global_rank: int = 0
+        self._world_size: int = 1
+        self._use_scratch: bool = False
+        self._remote_rank_db: Optional[str] = None
+        self._remote_rank_audit: Optional[str] = None
+        self._checkpoint_interval: int = _CHECKPOINT_INTERVAL
+        self._entries_since_checkpoint: int = 0
 
         self._open_local_handles()
 
@@ -641,8 +559,6 @@ class ResponseCache:
         self.db.commit()
         self._replay_audit_log()
         self._audit_file = open(self.audit_path, "a", encoding="utf-8")
-        if self._segment_config is not None:
-            self._segment_entries = self.db.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
 
     def _close_local_handles(self, checkpoint: bool = False) -> None:
         try:
@@ -668,23 +584,6 @@ class ResponseCache:
         self.db = None
 
     @staticmethod
-    def _discover_next_segment_index(shared_segment_root: str) -> int:
-        next_index = 0
-        if not os.path.isdir(shared_segment_root):
-            return next_index
-        for entry in os.scandir(shared_segment_root):
-            if not entry.is_dir():
-                continue
-            name = entry.name
-            if not name.startswith("seg_"):
-                continue
-            suffix = name[4:]
-            if not suffix.isdigit():
-                continue
-            next_index = max(next_index, int(suffix) + 1)
-        return next_index
-
-    @staticmethod
     def _remove_sqlite_artifacts(db_path: str) -> None:
         for path in (db_path, f"{db_path}-wal", f"{db_path}-shm"):
             try:
@@ -692,99 +591,6 @@ class ResponseCache:
                     os.remove(path)
             except OSError:
                 pass
-
-    @staticmethod
-    def _remove_file(path: str) -> None:
-        try:
-            if os.path.exists(path):
-                os.remove(path)
-        except OSError:
-            pass
-
-    def _active_segment_has_artifacts(self) -> bool:
-        if self.db is not None:
-            try:
-                if self.db.execute("SELECT COUNT(*) FROM responses").fetchone()[0] > 0:
-                    return True
-            except sqlite3.Error:
-                pass
-        return os.path.exists(self.audit_path) and os.path.getsize(self.audit_path) > 0
-
-    def _segment_name(self) -> str:
-        return f"seg_{self._segment_index:06d}"
-
-    def _write_segment_manifest(self, segment_dir: str) -> None:
-        if self._segment_config is None:
-            return
-        manifest_path = os.path.join(segment_dir, "manifest.json")
-        _touch_text(
-            manifest_path,
-            json.dumps(
-                {
-                    "global_rank": self._segment_config.global_rank,
-                    "run_dir": self._segment_config.run_dir,
-                    "segment_name": self._segment_name(),
-                    "responses": self._segment_entries,
-                    "sealed_at": time.time(),
-                },
-                ensure_ascii=True,
-                sort_keys=True,
-            ),
-        )
-
-    def _try_promote_ready_segments(self) -> int:
-        if self._segment_config is None:
-            return 0
-        return ResponseCache.promote_ready_layered_segments(
-            target_db_path=self._segment_config.target_db_path,
-            target_audit_path=self._segment_config.target_audit_path,
-            run_root=self._segment_config.run_root,
-            lock_timeout_seconds=self._segment_config.promote_lock_timeout_seconds,
-            cleanup=False,
-        )
-
-    def _seal_active_segment(self, reopen: bool = True) -> bool:
-        if self._segment_config is None or not self._active_segment_has_artifacts():
-            if not reopen:
-                self._close_local_handles()
-            return False
-
-        segment_name = self._segment_name()
-        final_dir = os.path.join(self._segment_config.shared_segment_root, segment_name)
-        tmp_dir = os.path.join(
-            self._segment_config.shared_segment_root,
-            f".{segment_name}.tmp-{uuid.uuid4().hex}",
-        )
-
-        self._close_local_handles(checkpoint=True)
-        try:
-            os.makedirs(tmp_dir, exist_ok=False)
-            if os.path.exists(self.db_path):
-                shutil.copy2(self.db_path, os.path.join(tmp_dir, "cache.db"))
-            if os.path.exists(self.audit_path):
-                shutil.copy2(self.audit_path, os.path.join(tmp_dir, "cache.audit.jsonl"))
-            self._write_segment_manifest(tmp_dir)
-            ResponseCache.mark_layered_run_ready(tmp_dir)
-            os.rename(tmp_dir, final_dir)
-            eval_logger.info(f"ResponseCache: sealed segment {segment_name} from {self.db_path} to {final_dir}")
-        except Exception as exc:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-            eval_logger.warning(f"ResponseCache: failed to seal segment {segment_name}: {exc}")
-            if reopen:
-                self._open_local_handles()
-            return False
-
-        self._remove_sqlite_artifacts(self.db_path)
-        self._remove_file(self.audit_path)
-        self._segment_index += 1
-        self._segment_entries = 0
-        if reopen:
-            self._open_local_handles()
-        self._try_promote_ready_segments()
-        return True
-
-    def _should_rotate_segment(self) -> bool:
-        return self._segment_config is not None and self._segment_entries >= self._segment_config.max_responses
 
     def _replay_audit_log(self) -> None:
         """Replay JSONL entries missing from SQLite (crash recovery)."""
@@ -1002,14 +808,29 @@ class ResponseCache:
                 )
                 if deterministic and self._is_valid_response(resp, reqtype):
                     self._store(cache_key, reqtype, req.task_name, req.doc_id, req.idx, gen_kwargs, cacheable)
-                    if self._segment_config is not None:
-                        self._segment_entries += 1
-                        if self._should_rotate_segment():
-                            self._seal_active_segment(reopen=True)
+                    if self._use_scratch:
+                        self._entries_since_checkpoint += 1
+                        if self._entries_since_checkpoint >= self._checkpoint_interval:
+                            self._checkpoint_to_run_dir()
         else:
             eval_logger.info(f"ResponseCache: all {len(requests)} requests served from cache — skipping model inference")
 
         return results
+
+    def _checkpoint_to_run_dir(self) -> None:
+        """Copy current scratch DB to the run directory for crash safety."""
+        if not self._use_scratch or not self._remote_rank_db:
+            return
+        try:
+            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            self.db.commit()
+            shutil.copy2(self.db_path, self._remote_rank_db)
+            if os.path.exists(self.audit_path):
+                shutil.copy2(self.audit_path, self._remote_rank_audit)
+            self._entries_since_checkpoint = 0
+            eval_logger.debug(f"ResponseCache: checkpoint to {self._remote_rank_db}")
+        except Exception as e:
+            eval_logger.warning(f"ResponseCache: checkpoint failed: {e}")
 
     def get_stats(self) -> Dict[str, Any]:
         total_lookups = self._hits + self._misses
@@ -1029,13 +850,7 @@ class ResponseCache:
         return stats
 
     def close(self) -> None:
-        try:
-            if self._segment_config is not None:
-                self._seal_active_segment(reopen=False)
-            else:
-                self._close_local_handles()
-        except Exception:
-            pass
+        self._close_local_handles()
         try:
             if self._shared_db:
                 self._shared_db.close()
@@ -1048,6 +863,152 @@ class ResponseCache:
             self.close()
         except Exception:
             pass
+
+    def finalize(
+        self,
+        *,
+        success: bool,
+        dist_backend: str = "accelerate",
+        accelerator: Any = None,
+    ) -> None:
+        """Log stats, close DB, barrier, and merge all rank shards into root cache.db.
+
+        Call this once after evaluation completes. Handles:
+        - Stats logging
+        - Closing the DB
+        - Copying scratch writes to shared run directory
+        - Distributed barrier (all ranks must finish before merge)
+        - Rank-0 merge of all rank DBs into cache_root/cache.db
+        - Cleanup of the run directory after merge
+        """
+        # 1. Log stats
+        try:
+            stats = self.get_stats()
+            shared_info = f", {stats.get('hits_shared', 0)} from shared DB" if stats.get("hits_shared", 0) else ""
+            eval_logger.info(f"ResponseCache stats: {stats['hits']} hits{shared_info}, " f"{stats['misses']} misses, {stats['skipped_non_deterministic']} skipped, " f"hit rate: {stats['hit_rate']:.1%}")
+        except Exception:
+            pass
+
+        # 2. Close DB (flushes WAL)
+        self.close()
+
+        if not success or self._cache_root is None:
+            return
+
+        # 3. Copy scratch to run dir
+        if self._use_scratch and self._remote_rank_db:
+            try:
+                os.makedirs(self._run_dir, exist_ok=True)
+                if os.path.exists(self.db_path):
+                    shutil.copy2(self.db_path, self._remote_rank_db)
+                if os.path.exists(self.audit_path) and self._remote_rank_audit:
+                    shutil.copy2(self.audit_path, self._remote_rank_audit)
+            except Exception as e:
+                eval_logger.warning(f"ResponseCache: failed to copy scratch to run dir: {e}")
+
+        # 4. Barrier
+        self._distributed_barrier(dist_backend, accelerator)
+
+        # 5. Rank 0: merge all rank DBs into root cache.db
+        if self._global_rank == 0:
+            self._merge_run_to_root()
+
+    @staticmethod
+    def _distributed_barrier(dist_backend: str, accelerator: Any) -> None:
+        """Execute a distributed barrier."""
+        try:
+            if dist_backend == "accelerate" and accelerator is not None:
+                accelerator.wait_for_everyone()
+            elif dist_backend == "torchrun":
+                import torch.distributed as dist
+
+                if dist.is_initialized():
+                    dist.barrier()
+        except Exception as e:
+            eval_logger.warning(f"ResponseCache: barrier failed: {e}")
+
+    def _merge_run_to_root(self) -> None:
+        """Rank-0 only: merge all rank DBs from the current run into cache_root/cache.db."""
+        if not self._cache_root or not self._run_dir:
+            return
+
+        target_db = os.path.join(self._cache_root, "cache.db")
+        target_audit = os.path.join(self._cache_root, "cache.audit.jsonl")
+        run_root = os.path.join(self._cache_root, _LAYERED_RUNS_DIRNAME)
+        lock_dir = os.path.join(run_root, _LAYERED_LOCK_DIRNAME)
+
+        # Collect all rank DB/audit files from this run
+        shard_dbs = sorted(glob(os.path.join(self._run_dir, "rank_*.db")))
+        shard_audits = sorted(glob(os.path.join(self._run_dir, "rank_*.audit.jsonl")))
+
+        # Also support legacy naming from older runs
+        if not shard_dbs:
+            shard_dbs = sorted(glob(os.path.join(self._run_dir, "cache.db.shard.*")))
+            single_db = os.path.join(self._run_dir, "cache.db")
+            if not shard_dbs and os.path.exists(single_db):
+                shard_dbs = [single_db]
+        if not shard_audits:
+            shard_audits = sorted(glob(os.path.join(self._run_dir, "cache.db.audit.shard.*.jsonl")))
+            single_audit = os.path.join(self._run_dir, "cache.audit.jsonl")
+            if not shard_audits and os.path.exists(single_audit):
+                shard_audits = [single_audit]
+
+        if not shard_dbs and not shard_audits:
+            eval_logger.info("ResponseCache: no rank artifacts to merge")
+            return
+
+        try:
+            with _merge_lock(lock_dir, timeout_seconds=60):
+                # Mark current run as ready
+                _touch_text(os.path.join(self._run_dir, _LAYERED_READY_MARKER), f"{time.time():.6f}\n")
+
+                # Merge current run
+                if shard_dbs:
+                    merged = ResponseCache.merge_shards(shard_dbs, target_db)
+                    eval_logger.info(f"ResponseCache: merged {merged} entries from {len(shard_dbs)} rank(s) into {target_db}")
+                if shard_audits:
+                    merged_lines = ResponseCache.merge_audit_logs(shard_audits, target_audit)
+                    eval_logger.info(f"ResponseCache: merged {merged_lines} audit entries into {target_audit}")
+
+                # Mark merged
+                _touch_text(os.path.join(self._run_dir, _LAYERED_MERGED_MARKER), f"{time.time():.6f}\n")
+
+                # Opportunistically merge any other ready-but-unmerged runs
+                self._merge_stale_runs(run_root, target_db, target_audit)
+
+        except TimeoutError as exc:
+            eval_logger.warning(f"ResponseCache: merge deferred, lock busy: {exc}")
+
+    def _merge_stale_runs(self, run_root: str, target_db: str, target_audit: str) -> None:
+        """Merge any previous runs that are ready but not yet merged."""
+        for entry in sorted(os.scandir(run_root), key=lambda e: e.name):
+            if not entry.is_dir() or entry.path == self._run_dir:
+                continue
+            ready = os.path.join(entry.path, _LAYERED_READY_MARKER)
+            merged = os.path.join(entry.path, _LAYERED_MERGED_MARKER)
+            if not os.path.exists(ready) or os.path.exists(merged):
+                continue
+
+            shard_dbs = sorted(glob(os.path.join(entry.path, "rank_*.db")))
+            shard_audits = sorted(glob(os.path.join(entry.path, "rank_*.audit.jsonl")))
+            # Legacy naming
+            if not shard_dbs:
+                shard_dbs = sorted(glob(os.path.join(entry.path, "cache.db.shard.*")))
+                single = os.path.join(entry.path, "cache.db")
+                if not shard_dbs and os.path.exists(single):
+                    shard_dbs = [single]
+            if not shard_audits:
+                shard_audits = sorted(glob(os.path.join(entry.path, "cache.db.audit.shard.*.jsonl")))
+                single = os.path.join(entry.path, "cache.audit.jsonl")
+                if not shard_audits and os.path.exists(single):
+                    shard_audits = [single]
+
+            if shard_dbs:
+                ResponseCache.merge_shards(shard_dbs, target_db)
+            if shard_audits:
+                ResponseCache.merge_audit_logs(shard_audits, target_audit)
+            _touch_text(os.path.join(entry.path, _LAYERED_MERGED_MARKER), f"{time.time():.6f}\n")
+            eval_logger.info(f"ResponseCache: merged stale run {entry.name}")
 
     @staticmethod
     def merge_shards(shard_paths: List[str], output_path: str) -> int:
@@ -1128,201 +1089,3 @@ class ResponseCache:
                 out.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 written += 1
         return written
-
-    @staticmethod
-    def consolidate_cache(
-        target_db_path: str,
-        shard_db_paths: List[str],
-        shard_audit_paths: List[str],
-        target_audit_path: str,
-        cleanup: bool = True,
-    ) -> None:
-        """Consolidate per-rank shards into a single cache DB + audit log.
-
-        Called by rank 0 after evaluation completes.
-
-        1. Merges all shard DBs into ``target_db_path`` (INSERT OR IGNORE).
-        2. Merges all shard JSONL audit logs into ``target_audit_path``.
-        3. If ``cleanup`` is True, removes the shard files.
-        """
-        # Merge SQLite shards
-        merged_entries = ResponseCache.merge_shards(shard_db_paths, target_db_path)
-        eval_logger.info(f"ResponseCache: consolidated {merged_entries} entries from " f"{len(shard_db_paths)} shard(s) into {target_db_path}")
-
-        # Merge JSONL audit logs
-        merged_lines = ResponseCache.merge_audit_logs(shard_audit_paths, target_audit_path)
-        eval_logger.info(f"ResponseCache: consolidated {merged_lines} audit entries from " f"{len(shard_audit_paths)} log(s) into {target_audit_path}")
-
-        # Cleanup shard files
-        if cleanup:
-            for path in shard_db_paths + shard_audit_paths:
-                try:
-                    if os.path.exists(path):
-                        os.remove(path)
-                        # Also remove WAL/SHM sidecar files for SQLite
-                        for suffix in ("-wal", "-shm"):
-                            sidecar = path + suffix
-                            if os.path.exists(sidecar):
-                                os.remove(sidecar)
-                except OSError as e:
-                    eval_logger.warning(f"ResponseCache: failed to remove shard {path}: {e}")
-            eval_logger.info("ResponseCache: shard files cleaned up")
-
-    @staticmethod
-    def mark_layered_run_ready(run_dir: str) -> None:
-        _touch_text(os.path.join(run_dir, _LAYERED_READY_MARKER), f"{time.time():.6f}\n")
-
-    @staticmethod
-    def mark_layered_run_merged(run_dir: str) -> None:
-        _touch_text(os.path.join(run_dir, _LAYERED_MERGED_MARKER), f"{time.time():.6f}\n")
-
-    @staticmethod
-    def _collect_layered_run_artifacts(run_dir: str) -> tuple[List[str], List[str]]:
-        shard_db_paths = sorted(glob(os.path.join(run_dir, "cache.db.shard.*")))
-        shard_audit_paths = sorted(glob(os.path.join(run_dir, "cache.db.audit.shard.*.jsonl")))
-
-        single_db_path = os.path.join(run_dir, "cache.db")
-        if not shard_db_paths and os.path.exists(single_db_path):
-            shard_db_paths = [single_db_path]
-
-        single_audit_path = os.path.join(run_dir, "cache.audit.jsonl")
-        if not shard_audit_paths and os.path.exists(single_audit_path):
-            shard_audit_paths = [single_audit_path]
-
-        return shard_db_paths, shard_audit_paths
-
-    @staticmethod
-    def _iter_layered_segment_dirs(run_root: str):
-        for run_entry in sorted(os.scandir(run_root), key=lambda item: item.name):
-            if not run_entry.is_dir():
-                continue
-            segments_root = os.path.join(run_entry.path, _LAYERED_SEGMENTS_DIRNAME)
-            if not os.path.isdir(segments_root):
-                continue
-            for rank_entry in sorted(os.scandir(segments_root), key=lambda item: item.name):
-                if not rank_entry.is_dir():
-                    continue
-                for segment_entry in sorted(os.scandir(rank_entry.path), key=lambda item: item.name):
-                    if segment_entry.is_dir():
-                        yield segment_entry.path
-
-    @staticmethod
-    def _merge_ready_layered_segments_unlocked(
-        *,
-        target_db_path: str,
-        target_audit_path: str,
-        run_root: str,
-        cleanup: bool = False,
-    ) -> int:
-        merged_segments = 0
-        for segment_dir in ResponseCache._iter_layered_segment_dirs(run_root):
-            ready_marker = os.path.join(segment_dir, _LAYERED_READY_MARKER)
-            merged_marker = os.path.join(segment_dir, _LAYERED_MERGED_MARKER)
-            if not os.path.exists(ready_marker) or os.path.exists(merged_marker):
-                continue
-
-            shard_db_paths, shard_audit_paths = ResponseCache._collect_layered_run_artifacts(segment_dir)
-            if not shard_db_paths and not shard_audit_paths:
-                eval_logger.warning(f"ResponseCache: layered segment has no cache artifacts, skipping merge: {segment_dir}")
-                continue
-
-            ResponseCache.consolidate_cache(
-                target_db_path=target_db_path,
-                shard_db_paths=shard_db_paths,
-                shard_audit_paths=shard_audit_paths,
-                target_audit_path=target_audit_path,
-                cleanup=cleanup,
-            )
-            ResponseCache.mark_layered_run_merged(segment_dir)
-            if cleanup:
-                shutil.rmtree(segment_dir, ignore_errors=True)
-            merged_segments += 1
-        return merged_segments
-
-    @staticmethod
-    def promote_ready_layered_segments(
-        *,
-        target_db_path: str,
-        target_audit_path: str,
-        run_root: str,
-        cleanup: bool = False,
-        lock_timeout_seconds: float = _DEFAULT_SEGMENT_PROMOTE_LOCK_TIMEOUT_SECONDS,
-    ) -> int:
-        if not run_root:
-            return 0
-        os.makedirs(run_root, exist_ok=True)
-        lock_dir = os.path.join(run_root, _LAYERED_LOCK_DIRNAME)
-        try:
-            with _merge_lock(lock_dir, timeout_seconds=lock_timeout_seconds):
-                return ResponseCache._merge_ready_layered_segments_unlocked(
-                    target_db_path=target_db_path,
-                    target_audit_path=target_audit_path,
-                    run_root=run_root,
-                    cleanup=cleanup,
-                )
-        except TimeoutError:
-            eval_logger.debug("ResponseCache: layered segment merge deferred because lock is busy")
-            return 0
-
-    @staticmethod
-    def finalize_layered_runs(
-        *,
-        target_db_path: str,
-        target_audit_path: str,
-        run_root: str,
-        current_run_dir: str,
-        cleanup: bool = False,
-        lock_timeout_seconds: int = 60,
-    ) -> int:
-        """Merge all completed layered runs for a shared cache target.
-
-        Each run writes into its own UUID-scoped directory under ``run_root``.
-        Rank 0 marks the current run as ready, then merges every ready-but-unmerged
-        run under an exclusive lock so concurrent jobs do not fight over the root DB.
-        """
-        if not run_root or not current_run_dir:
-            return 0
-
-        os.makedirs(run_root, exist_ok=True)
-        ResponseCache.mark_layered_run_ready(current_run_dir)
-        lock_dir = os.path.join(run_root, _LAYERED_LOCK_DIRNAME)
-
-        try:
-            with _merge_lock(lock_dir, timeout_seconds=lock_timeout_seconds):
-                merged_segments = ResponseCache._merge_ready_layered_segments_unlocked(
-                    target_db_path=target_db_path,
-                    target_audit_path=target_audit_path,
-                    run_root=run_root,
-                    cleanup=cleanup,
-                )
-                merged_runs = 0
-                for entry in sorted(os.scandir(run_root), key=lambda item: item.name):
-                    if not entry.is_dir():
-                        continue
-                    run_dir = entry.path
-                    ready_marker = os.path.join(run_dir, _LAYERED_READY_MARKER)
-                    merged_marker = os.path.join(run_dir, _LAYERED_MERGED_MARKER)
-                    if not os.path.exists(ready_marker) or os.path.exists(merged_marker):
-                        continue
-
-                    shard_db_paths, shard_audit_paths = ResponseCache._collect_layered_run_artifacts(run_dir)
-                    if not shard_db_paths and not shard_audit_paths:
-                        if os.path.isdir(os.path.join(run_dir, _LAYERED_SEGMENTS_DIRNAME)):
-                            ResponseCache.mark_layered_run_merged(run_dir)
-                            continue
-                        eval_logger.warning(f"ResponseCache: layered run has no cache artifacts, skipping merge: {run_dir}")
-                        continue
-
-                    ResponseCache.consolidate_cache(
-                        target_db_path=target_db_path,
-                        shard_db_paths=shard_db_paths,
-                        shard_audit_paths=shard_audit_paths,
-                        target_audit_path=target_audit_path,
-                        cleanup=cleanup,
-                    )
-                    ResponseCache.mark_layered_run_merged(run_dir)
-                    merged_runs += 1
-                return merged_runs + merged_segments
-        except TimeoutError as exc:
-            eval_logger.warning(f"ResponseCache: layered merge deferred because lock is busy: {exc}")
-            return 0
