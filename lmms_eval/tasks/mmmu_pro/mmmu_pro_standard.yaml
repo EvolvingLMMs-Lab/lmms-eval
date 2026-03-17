@@ -23,6 +23,9 @@ lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
     post_prompt: "Answer with the option letter from the given choices directly."
+  penguinvl:
+    format: "penguinvl"
+    post_prompt: "Please reasoning step by step and select the correct answer with the option letter from the options above.\n"
   qwen3_vl:
     format: "qwen3_vl"
     pre_prompt: "Question: "
