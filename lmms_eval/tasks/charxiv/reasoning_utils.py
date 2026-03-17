@@ -9,7 +9,7 @@ from lmms_eval.tasks.charxiv.constant import (
 )
 
 
-def get_reasoning_result_gpt(client, prompt, max_retries=10):
+def get_reasoning_result_gpt(client, prompt, model="gpt-4o-2024-05-13", max_retries=10):
     curr_retries = 0
     max_tokens = 256
     while curr_retries < max_retries:
@@ -22,7 +22,7 @@ def get_reasoning_result_gpt(client, prompt, max_retries=10):
                             "content": prompt,
                         }
                     ],
-                    model="gpt-4o-2024-05-13",
+                    model=model,
                     response_format={"type": "json_object"},
                     n=1,
                     max_tokens=max_tokens,

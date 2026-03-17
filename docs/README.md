@@ -189,7 +189,7 @@ results = evaluator.simple_evaluate(
 | [Caching](advanced/caching.md) | SQLite-backed response cache for deterministic requests. Store, replay, merge shards across distributed ranks, and recover from crashes via JSONL audit log. |
 | [Throughput Metrics](advanced/throughput_metrics.md) | Inference timing metrics logged by chat models — end-to-end latency, time to first token, tokens per second, and batch-level summaries. |
 
-The response cache stores only deterministic requests (`temperature=0`, `do_sample=False`). Enable it with `--use_cache ./eval_cache` to skip redundant model calls on repeated runs:
+The response cache stores only deterministic requests (`temperature=0`, `do_sample=False`). Enable it with `--use_cache ./eval_cache` or `--use_cache ./eval_cache/cache.db` to skip redundant model calls on repeated runs. In layered mode, lmms-eval keeps the shared root DB at `./eval_cache/cache.db` and writes each run into `./eval_cache/runs/<run_id>/` before merging it back:
 
 ```bash
 python -m lmms_eval \

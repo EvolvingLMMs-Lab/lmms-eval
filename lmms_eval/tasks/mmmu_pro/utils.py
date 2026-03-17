@@ -52,6 +52,7 @@ def mmmu_pro_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         return mmmu_doc_to_text_qwen3vl(doc, lmms_eval_specific_kwargs)
 
     post_prompt = lmms_eval_specific_kwargs["post_prompt"]
+    question = doc.get("question", "")
     if "question" in doc and "options" in doc:  # original operation
         question = construct_prompt(doc, post_prompt)
         if config["metadata"]["interleaved_format"]:

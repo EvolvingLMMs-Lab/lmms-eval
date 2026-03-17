@@ -5,10 +5,12 @@ import sqlite3
 import tempfile
 import time
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from lmms_eval.api.instance import Instance
+from lmms_eval.caching.fs_detect import FsType
 from lmms_eval.caching.response_cache import (
+    _SCHEMA_VERSION,
     ResponseCache,
     _extract_content_hash,
     compute_cache_key,
@@ -293,7 +295,7 @@ class TestAuditLogObservability(_CacheTestBase):
         self.assertTrue(lines[0]["deterministic"])
         self.assertEqual(json.loads(lines[0]["response"]), "det_answer")
         self.assertNotEqual(lines[0]["cache_key"], "")
-        self.assertEqual(lines[0]["fingerprint_schema_version"], 2)
+        self.assertEqual(lines[0]["fingerprint_schema_version"], _SCHEMA_VERSION)
         self.assertIn("model_fingerprint_hash", lines[0])
         self.assertIn("task_fingerprint", lines[0])
         self.assertIn("content_hash", lines[0])
@@ -421,6 +423,175 @@ class TestMultiRankIsolation(_CacheTestBase):
 
 
 # ===========================================================================
+# Integration - layered cache roots
+# ===========================================================================
+
+
+class TestCreateAndFinalize(_CacheTestBase):
+    """Tests for the new ResponseCache.create() / finalize() lifecycle API."""
+
+    def _mock_utils(self):
+        """Patch lmms_eval.utils imports used by create()."""
+        return patch.multiple(
+            "lmms_eval.utils",
+            hash_string=lambda s: "h" + s[:15].ljust(15, "0"),
+            simple_parse_args_string=lambda s: {"raw": s},
+            get_lmms_eval_cache_version=lambda: "test-v1",
+            create=True,
+        )
+
+    def test_create_sets_up_run_directory(self):
+        cache_root = os.path.join(self.tmpdir, "cache")
+        with (
+            patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-100"}, clear=False),
+            self._mock_utils(),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.LOCAL),
+        ):
+            rc = ResponseCache.create(cache_root, model="test_model", world_size=4, global_rank=2)
+
+        self.assertEqual(rc._cache_root, cache_root)
+        self.assertEqual(rc._run_id, "job-100")
+        self.assertEqual(rc._global_rank, 2)
+        self.assertEqual(rc._world_size, 4)
+        self.assertFalse(rc._use_scratch)
+        self.assertTrue(os.path.isdir(os.path.join(cache_root, "runs", "job-100")))
+        self.assertIn("rank_2.db", rc.db_path)
+        rc.close()
+
+    def test_create_with_db_suffix_normalizes_to_directory(self):
+        cache_root = os.path.join(self.tmpdir, "cache")
+        os.makedirs(cache_root, exist_ok=True)
+        db_path = os.path.join(cache_root, "cache.db")
+        with (
+            patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-db"}, clear=False),
+            self._mock_utils(),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.LOCAL),
+        ):
+            rc = ResponseCache.create(db_path, model="m", world_size=1, global_rank=0)
+
+        self.assertEqual(rc._cache_root, cache_root)
+        rc.close()
+
+    def test_create_remote_uses_scratch(self):
+        cache_root = os.path.join(self.tmpdir, "remote_cache")
+        scratch_root = os.path.join(self.tmpdir, "scratch")
+        os.makedirs(scratch_root, exist_ok=True)
+        with (
+            patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-remote"}, clear=False),
+            self._mock_utils(),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.REMOTE),
+            patch("lmms_eval.caching.response_cache.find_local_scratch", return_value=scratch_root),
+        ):
+            rc = ResponseCache.create(cache_root, model="m", world_size=2, global_rank=1)
+
+        self.assertTrue(rc._use_scratch)
+        self.assertIn(scratch_root, rc.db_path)
+        self.assertIsNotNone(rc._remote_rank_db)
+        self.assertIn("rank_1.db", rc._remote_rank_db)
+        rc.close()
+
+    def test_finalize_merges_rank_dbs_into_root(self):
+        cache_root = os.path.join(self.tmpdir, "finalize_test")
+        run_dir = os.path.join(cache_root, "runs", "job-merge")
+        os.makedirs(run_dir, exist_ok=True)
+
+        # Simulate rank 0 writing data
+        rank_db = os.path.join(run_dir, "rank_0.db")
+        rank_audit = os.path.join(run_dir, "rank_0.audit.jsonl")
+        cache = ResponseCache(rank_db, rank_audit, model_fingerprint="model_A")
+        cache.execute(_mock_model(["answer"]), "generate_until", [_gen_request("prompt", doc_id=7)])
+
+        # Set finalize metadata (normally done by create())
+        cache._cache_root = cache_root
+        cache._run_id = "job-merge"
+        cache._run_dir = run_dir
+        cache._global_rank = 0
+        cache._world_size = 1
+        cache._use_scratch = False
+        cache._remote_rank_db = None
+        cache._remote_rank_audit = None
+
+        cache.finalize(success=True, dist_backend="none")
+
+        # Verify root cache.db was created with merged data
+        target_db = os.path.join(cache_root, "cache.db")
+        self.assertTrue(os.path.exists(target_db))
+
+        root_cache = ResponseCache(target_db, os.path.join(cache_root, "cache.audit.jsonl"), model_fingerprint="model_A")
+        results = root_cache.execute(_mock_model([]), "generate_until", [_gen_request("prompt", doc_id=7)])
+        self.assertEqual(results, ["answer"])
+        self.assertEqual(root_cache.get_stats()["hits"], 1)
+        root_cache.close()
+
+        # Verify ready/merged markers
+        self.assertTrue(os.path.exists(os.path.join(run_dir, ".ready")))
+        self.assertTrue(os.path.exists(os.path.join(run_dir, ".merged")))
+
+    def test_finalize_multi_rank_merge(self):
+        cache_root = os.path.join(self.tmpdir, "multirank")
+        run_dir = os.path.join(cache_root, "runs", "job-multi")
+        os.makedirs(run_dir, exist_ok=True)
+
+        # Rank 0 writes doc 0-1
+        db0 = os.path.join(run_dir, "rank_0.db")
+        audit0 = os.path.join(run_dir, "rank_0.audit.jsonl")
+        c0 = ResponseCache(db0, audit0, model_fingerprint="model_A")
+        c0.execute(_mock_model(["a0", "a1"]), "generate_until", [_gen_request(f"p{i}", doc_id=i) for i in range(2)])
+        c0.close()
+
+        # Rank 1 writes doc 2-3
+        db1 = os.path.join(run_dir, "rank_1.db")
+        audit1 = os.path.join(run_dir, "rank_1.audit.jsonl")
+        c1 = ResponseCache(db1, audit1, model_fingerprint="model_A")
+        c1.execute(_mock_model(["a2", "a3"]), "generate_until", [_gen_request(f"p{i}", doc_id=i) for i in range(2, 4)])
+        c1.close()
+
+        # Create a rank-0 instance with finalize metadata and call finalize
+        finalize_cache = ResponseCache(db0, audit0, model_fingerprint="model_A")
+        finalize_cache._cache_root = cache_root
+        finalize_cache._run_id = "job-multi"
+        finalize_cache._run_dir = run_dir
+        finalize_cache._global_rank = 0
+        finalize_cache._world_size = 2
+        finalize_cache._use_scratch = False
+        finalize_cache._remote_rank_db = None
+        finalize_cache._remote_rank_audit = None
+        finalize_cache.finalize(success=True, dist_backend="none")
+
+        # Verify all 4 entries merged into root
+        target_db = os.path.join(cache_root, "cache.db")
+        merged_db = sqlite3.connect(target_db)
+        count = merged_db.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+        self.assertEqual(count, 4)
+        merged_db.close()
+
+    def test_finalize_skips_merge_on_failure(self):
+        cache_root = os.path.join(self.tmpdir, "fail_test")
+        run_dir = os.path.join(cache_root, "runs", "job-fail")
+        os.makedirs(run_dir, exist_ok=True)
+
+        rank_db = os.path.join(run_dir, "rank_0.db")
+        rank_audit = os.path.join(run_dir, "rank_0.audit.jsonl")
+        cache = ResponseCache(rank_db, rank_audit, model_fingerprint="model_A")
+        cache.execute(_mock_model(["answer"]), "generate_until", [_gen_request("prompt", doc_id=0)])
+
+        cache._cache_root = cache_root
+        cache._run_id = "job-fail"
+        cache._run_dir = run_dir
+        cache._global_rank = 0
+        cache._world_size = 1
+        cache._use_scratch = False
+        cache._remote_rank_db = None
+        cache._remote_rank_audit = None
+
+        cache.finalize(success=False, dist_backend="none")
+
+        # Root cache.db should NOT have been created
+        target_db = os.path.join(cache_root, "cache.db")
+        self.assertFalse(os.path.exists(target_db))
+
+
+# ===========================================================================
 # Integration - model fingerprint isolation
 # ===========================================================================
 
@@ -458,7 +629,7 @@ class TestModelFingerprintIsolation(_CacheTestBase):
         schema_row = cache.db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
         self.assertIsNotNone(hash_row)
         self.assertEqual(len(hash_row[0]), 16)
-        self.assertEqual(schema_row[0], "2")
+        self.assertEqual(schema_row[0], str(_SCHEMA_VERSION))
         cache.close()
 
 

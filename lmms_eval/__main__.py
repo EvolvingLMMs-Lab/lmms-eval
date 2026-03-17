@@ -220,10 +220,11 @@ def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
         type=str,
         default=None,
         metavar="PATH",
-        help="Path to a SQLite .db file for response-level caching (e.g. ./my_cache.db). "
-        "Caches deterministic model responses (temperature=0) for reuse across runs. "
-        "In distributed mode, temporary per-rank shards are auto-merged into this file. "
-        "A .db suffix is appended automatically if missing. `None` to disable.",
+        help="Path to a response-cache root directory or SQLite .db file. "
+        "If PATH is a directory, or an explicit PATH/cache.db root file, lmms-eval keeps the shared root cache at "
+        "PATH/cache.db and writes each run into PATH/runs/<run_id>/ before auto-merging back into the root DB. "
+        "This avoids write contention across concurrent jobs while preserving cache reuse. "
+        "If PATH is a file, legacy single-target behavior is preserved. `None` disables response caching.",
     )
     parser.add_argument(
         "--cache_requests",
