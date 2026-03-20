@@ -96,8 +96,8 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                 image_patch_size=14,
                 return_video_metadata=True,
             )
-            video_kwargs = {**video_kwargs_qwen, "do_resize":False}
-            
+            video_kwargs = {**video_kwargs_qwen, "do_resize": False}
+
             video_metadatas = None
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
@@ -105,7 +105,7 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                     list(video_inputs),
                     list(video_metadatas),
                 )
-            
+
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,

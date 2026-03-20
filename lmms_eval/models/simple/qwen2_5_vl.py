@@ -332,14 +332,14 @@ class Qwen2_5_VL(lmms):
                 image_patch_size=14,
                 return_video_metadata=True,
             )
-            video_kwargs = {**video_kwargs_qwen, "do_resize":False}
-            
+            video_kwargs = {**video_kwargs_qwen, "do_resize": False}
+
             video_metadatas = None
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
                 video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
                 self._subsample_video_inputs(video_inputs, video_metadatas)
-            
+
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
@@ -553,14 +553,14 @@ class Qwen2_5_VL(lmms):
                     image_patch_size=14,
                     return_video_metadata=True,
                 )
-                video_kwargs = {**video_kwargs_qwen, "do_resize":False}
-                
+                video_kwargs = {**video_kwargs_qwen, "do_resize": False}
+
                 video_metadatas = None
                 if video_inputs is not None:
                     video_inputs, video_metadatas = zip(*video_inputs)
                     video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
                     self._subsample_video_inputs(video_inputs, video_metadatas)
-                
+
                 inputs = self.processor(
                     text=texts,
                     images=image_inputs,
