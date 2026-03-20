@@ -90,12 +90,29 @@ class Qwen2_5_VL(Qwen2_5_VLSimple):
                     video_kwargs["nframes"] = self.max_num_frames
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
-            image_inputs, video_inputs = process_vision_info(batched_messages)
+            image_inputs, video_inputs, video_kwargs_qwen = process_vision_info(
+                batched_messages,
+                return_video_kwargs=True,
+                image_patch_size=14,
+                return_video_metadata=True,
+            )
+            video_kwargs = {**video_kwargs_qwen, "do_resize":False}
+            
+            video_metadatas = None
+            if video_inputs is not None:
+                video_inputs, video_metadatas = zip(*video_inputs)
+                video_inputs, video_metadatas = (
+                    list(video_inputs),
+                    list(video_metadatas),
+                )
+            
             padding_side = "left" if self.batch_size > 1 else "right"
             inputs = self.processor(
                 text=texts,
                 images=image_inputs,
                 videos=video_inputs,
+                video_metadata=video_metadatas,
+                **video_kwargs,
                 padding=True,
                 padding_side=padding_side,
                 return_tensors="pt",
