@@ -5,9 +5,11 @@ from .base import ServerInterface
 from .protocol import ServerConfig
 from .providers import (
     AsyncAzureOpenAIProvider,
+    AsyncMiniMaxProvider,
     AsyncOpenAIProvider,
     AzureOpenAIProvider,
     DummyProvider,
+    MiniMaxProvider,
     OpenAIProvider,
 )
 
@@ -15,7 +17,7 @@ from .providers import (
 class ProviderFactory:
     """Factory for creating judge instances based on configuration"""
 
-    _provider_classes = {"openai": OpenAIProvider, "azure": AzureOpenAIProvider, "async_openai": AsyncOpenAIProvider, "async_azure": AsyncAzureOpenAIProvider, "dummy": DummyProvider}
+    _provider_classes = {"openai": OpenAIProvider, "azure": AzureOpenAIProvider, "async_openai": AsyncOpenAIProvider, "async_azure": AsyncAzureOpenAIProvider, "minimax": MiniMaxProvider, "async_minimax": AsyncMiniMaxProvider, "dummy": DummyProvider}
 
     # TODO
     # This should actually be a decorator that registers the class
