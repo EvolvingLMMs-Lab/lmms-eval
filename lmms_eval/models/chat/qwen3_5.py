@@ -44,13 +44,13 @@ class Qwen3_5(Qwen3_5_Simple):
         total_tokens = 0
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
-            
+
             # chat_messages = []
             chat_messages: List[ChatMessages] = []
             visuals = []
             videos = []
             for idx, (ids, task, split) in enumerate(zip(doc_id, task, split)):
-                
+
                 # [{'role': .., 'content': ..}]
                 messages = doc_to_messages[idx](self.task_dict[task][split][ids])
 
@@ -66,7 +66,7 @@ class Qwen3_5(Qwen3_5_Simple):
 
                 # append a ChatMessages object to the list
                 chat_messages.append(chat_message)
-                
+
             visuals = self.flatten(visuals)
             videos = self.flatten(videos)
             gen_kwargs = all_gen_kwargs[0]
@@ -90,10 +90,6 @@ class Qwen3_5(Qwen3_5_Simple):
                 video_kwargs["max_pixels"] = self.max_pixels
             else:
                 raise ValueError("At least one of total_pixels or max_pixels must be set for video processing")
-            image_kwargs = {
-                "min_pixels": self.min_pixels,
-                "max_pixels": self.max_pixels
-                }
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
 
             texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True, enable_thinking=self.enable_thinking)
@@ -147,7 +143,7 @@ class Qwen3_5(Qwen3_5_Simple):
                 "temperature": 0.7,  # Set to 0 for greedy default
                 "top_p": 0.8,
                 "top_k": 20,
-                }
+            }
             # Update with provided kwargs
             current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
             pad_token_id = self.tokenizer.pad_token_id
