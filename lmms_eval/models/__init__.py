@@ -109,6 +109,7 @@ AVAILABLE_CHAT_TEMPLATE_MODELS = {
     "nanovlm": "NanoVLM",
     "phi4_multimodal": "Phi4",
     "qwen3_vl": "Qwen3_VL",
+    "qwen3_5": "Qwen3_5",
     "qwen2_5_vl": "Qwen2_5_VL",
     "thyme": "Thyme",
     "openai": "OpenAICompatible",
