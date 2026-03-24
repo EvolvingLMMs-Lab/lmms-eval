@@ -81,10 +81,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
             started_at = time.time()
             rate_limited = False
             last_error_msg = "unknown error"
+            client_idx = local_index % len(self.clients)
+            client = self.clients[client_idx]
             for attempt in range(self.max_retries):
                 try:
                     api_start = time.time()
-                    response = self.client.chat.completions.create(**payload)
+                    response = client.chat.completions.create(**payload)
                     api_latency = time.time() - api_start
                     eval_logger.info(f"[DEBUG] Request {local_index}: Preprocessing={preproc_time:.3f}s, API_Inference={api_latency:.3f}s")
                     elapsed = time.time() - started_at
