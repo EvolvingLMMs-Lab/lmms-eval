@@ -34,6 +34,22 @@ load_dotenv(verbose=True)
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
 
+    def __init__(self, **kwargs):
+        # Capture specific args for Qwen3-VL and media processing
+        self.is_qwen3_vl = kwargs.get("is_qwen3_vl", False)
+        # Handle cases where is_qwen3_vl is passed as a string
+        if isinstance(self.is_qwen3_vl, str):
+            self.is_qwen3_vl = self.is_qwen3_vl.lower() == "true"
+            
+        self.max_pixels = int(kwargs.get("max_pixels", 151200))
+        self.min_pixels = int(kwargs.get("min_pixels", 28 * 28))
+        self.max_frames = int(kwargs.get("max_frames", 768))
+        self.video_fps = kwargs.get("video_fps", None)
+        if self.video_fps is not None:
+            self.video_fps = float(self.video_fps)
+        self.max_frames_num = int(kwargs.get("max_frames_num", 64))
+        super().__init__(**kwargs)
+
     def generate_until(self, requests) -> List[GenerationResult]:
         if not requests:
             return []
@@ -185,13 +201,22 @@ class OpenAICompatible(OpenAICompatibleSimple):
             max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
             temperature = request_gen_kwargs.get("temperature", 0)
 
+            video_kwargs = {"max_pixels": self.max_pixels, "min_pixels": self.min_pixels}
             if self.video_fps is not None and self.video_fps > 0:
-                video_kwargs = {"fps": self.video_fps}
+                video_kwargs["fps"] = self.video_fps
             else:
-                video_kwargs = {"nframes": self.max_frames_num}
+                video_kwargs["nframes"] = self.max_frames_num
+            
+            if hasattr(self, "max_frames") and self.max_frames:
+                video_kwargs["max_frames"] = self.max_frames
+
+            if self.is_qwen3_vl:
+                messages = chat_messages.to_qwen3_vl_openai_messages(video_kwargs=video_kwargs)
+            else:
+                messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
 
             payload = {
-                "messages": chat_messages.to_openai_messages(video_kwargs=video_kwargs),
+                "messages": messages,
                 "model": self.model_version,
                 "max_tokens": max_new_tokens,
                 "temperature": temperature,
