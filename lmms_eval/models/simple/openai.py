@@ -332,14 +332,17 @@ class OpenAICompatible(lmms):
             self.adaptive_config.max_concurrency if self.adaptive_concurrency else current_concurrency,
         )
 
-        def process_single_request(local_index: int, payload: dict):
+        def process_single_request(local_index: int, payload: dict, preproc_time: float):
             started_at = time.time()
             rate_limited = False
             last_error_msg = "unknown error"
 
             for attempt in range(self.max_retries):
                 try:
+                    api_start = time.time()
                     response = self.client.chat.completions.create(**payload)
+                    api_latency = time.time() - api_start
+                    eval_logger.info(f"[DEBUG] Request {local_index}: Preprocessing={preproc_time:.3f}s, API_Inference={api_latency:.3f}s")
                     response_text = _normalize_openai_message_content(response.choices[0].message.content)
                     token_counts = None
                     if hasattr(response, "usage") and response.usage:
@@ -484,15 +487,22 @@ class OpenAICompatible(lmms):
                         cursor += 1
                         continue
                     request_index = dispatch_order[cursor]
+                    preproc_start = time.time()
                     payload = build_payload_for_index(request_index)
-                    future = executor.submit(process_single_request, request_index, payload)
+                    preproc_time = time.time() - preproc_start
+                    future = executor.submit(process_single_request, request_index, payload, preproc_time)
                     in_flight[future] = request_index
                     cursor += 1
 
                 if not in_flight:
                     break
 
-                done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                done, _ = wait(in_flight, return_when=FIRST_COMPLETED, timeout=1.0)
+                
+                if not done:
+                    eval_logger.info(f"Queue Status | In-flight requests: {len(in_flight)} / Target concurrency: {current_concurrency} | Processing cursor: {cursor}/{len(dispatch_order)}")
+                    continue
+                
                 for future in done:
                     (
                         response_text,

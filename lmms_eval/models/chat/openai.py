@@ -75,7 +75,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
             self.adaptive_config.max_concurrency if self.adaptive_concurrency else current_concurrency,
         )
 
-        def process_single_request(local_index: int, payload: dict | None):
+        def process_single_request(local_index: int, payload: dict | None, preproc_time: float):
             if payload is None:
                 return "", local_index, False, False, 0.0, 0, 0, 0
             started_at = time.time()
@@ -83,7 +83,10 @@ class OpenAICompatible(OpenAICompatibleSimple):
             last_error_msg = "unknown error"
             for attempt in range(self.max_retries):
                 try:
+                    api_start = time.time()
                     response = self.client.chat.completions.create(**payload)
+                    api_latency = time.time() - api_start
+                    eval_logger.info(f"[DEBUG] Request {local_index}: Preprocessing={preproc_time:.3f}s, API_Inference={api_latency:.3f}s")
                     elapsed = time.time() - started_at
                     response_text = response.choices[0].message.content
                     input_tokens = 0
@@ -200,32 +203,42 @@ class OpenAICompatible(OpenAICompatibleSimple):
 
             return payload
 
+        def wrapped_task(local_index: int):
+            pre_start = time.time()
+            try:
+                payload = build_payload_for_index(local_index)
+                pre_time = time.time() - pre_start
+                if payload is None:
+                    return None, local_index, False, False, 0.0, 0, 0, 0
+                return process_single_request(local_index, payload, pre_time)
+            except Exception as e:
+                eval_logger.error(f"Error in preprocessing request {local_index}: {e}")
+                return f"[PREPROC_FAILED] {e}", local_index, False, False, time.time() - pre_start, 0, 0, 0
+
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             while cursor < len(dispatch_order) or in_flight:
                 while cursor < len(dispatch_order) and len(in_flight) < max(1, current_concurrency):
-                    request_index = dispatch_order[cursor]
-                    payload = build_payload_for_index(request_index)
-                    if payload is None:
-                        responses[request_index] = GenerationResult(text="", token_counts=TokenCounts())
-                        pbar.update(1)
-                        cursor += 1
-                        continue
-
                     if is_budget_exceeded():
-                        responses[request_index] = GenerationResult(text="[LMMS_EVAL_BUDGET_EXCEEDED]", token_counts=TokenCounts())
+                        responses[dispatch_order[cursor]] = GenerationResult(text="[LMMS_EVAL_BUDGET_EXCEEDED]", token_counts=TokenCounts())
                         pbar.update(1)
                         cursor += 1
                         continue
 
-                    assert payload is not None
-                    future = executor.submit(process_single_request, request_index, payload)
+                    request_index = dispatch_order[cursor]
+                    future = executor.submit(wrapped_task, request_index)
                     in_flight[future] = request_index
                     cursor += 1
 
                 if not in_flight:
                     break
 
-                done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                done, _ = wait(in_flight, return_when=FIRST_COMPLETED, timeout=1.0)
+                
+                # Check if it timed out to print queue status periodically
+                if not done:
+                    eval_logger.info(f"Queue Status | In-flight requests: {len(in_flight)} / Target concurrency: {current_concurrency} | Processing cursor: {cursor}/{len(dispatch_order)}")
+                    continue
+                
                 for future in done:
                     (
                         response_text,
@@ -238,8 +251,12 @@ class OpenAICompatible(OpenAICompatibleSimple):
                         reasoning_tokens,
                     ) = future.result()
                     in_flight.pop(future, None)
+                    if response_text == "[LMMS_EVAL_BUDGET_EXCEEDED]" or success is False and response_text == "":
+                        # Handle potential special cases or errors here if needed
+                        pass
+                    
                     responses[local_index] = GenerationResult(
-                        text=response_text,
+                        text=str(response_text) if response_text is not None else "",
                         token_counts=TokenCounts(
                             input_tokens=input_tokens,
                             output_tokens=completion_tokens,
