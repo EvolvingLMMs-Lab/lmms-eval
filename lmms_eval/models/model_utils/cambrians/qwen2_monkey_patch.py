@@ -2,7 +2,9 @@ from typing import Optional, Tuple
 
 import torch
 from transformers.cache_utils import Cache
-from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask_for_sdpa
+from transformers.modeling_attn_mask_utils import (
+    _prepare_4d_causal_attention_mask_for_sdpa,
+)
 from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.models.qwen2.modeling_qwen2 import Qwen2Attention, repeat_kv
 

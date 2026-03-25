@@ -7,7 +7,12 @@ from loguru import logger as eval_logger
 from tqdm import tqdm
 
 try:
-    from cambrian.constants import DEFAULT_IMAGE_TOKEN, DEFAULT_IM_END_TOKEN, DEFAULT_IM_START_TOKEN, IMAGE_TOKEN_INDEX
+    from cambrian.constants import (
+        DEFAULT_IM_END_TOKEN,
+        DEFAULT_IM_START_TOKEN,
+        DEFAULT_IMAGE_TOKEN,
+        IMAGE_TOKEN_INDEX,
+    )
     from cambrian.conversation import conv_templates
     from cambrian.mm_utils import tokenizer_image_token
     from cambrian.model.cambrian_arch import unpad_image
@@ -16,7 +21,10 @@ except ImportError:
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.cambrians.qwen2_monkey_patch import Qwen2SdpaAttention, cambrian_qwen2_forward
+from lmms_eval.models.model_utils.cambrians.qwen2_monkey_patch import (
+    Qwen2SdpaAttention,
+    cambrian_qwen2_forward,
+)
 from lmms_eval.models.simple.cambrians import CambrianS, is_video_file, process_videos
 
 
@@ -192,6 +200,7 @@ class CambriansVSC(CambrianS):
             episodic_caption_input_ids = self.tokenizer(f"{contexts}<|im_end|>\n<|im_start|>assistant\n", return_tensors="pt").input_ids.to(self._device)
 
             with torch.inference_mode():
+
                 def add_newline_tokens(visual_features: torch.Tensor) -> torch.Tensor:
                     visual_features = torch.cat(
                         [visual_features, self.model.model.image_newline[None, None, None, :].expand(*visual_features.size()[:2], 1, -1)],
@@ -287,11 +296,16 @@ class CambriansVSC(CambrianS):
                         surprisingness_score = 1.0
                     else:
                         frame_feature_prediction = frame_feature_prediction.unflatten(1, (vit_visual_features.size(1), vit_visual_features.size(2) + 1))[:, :, :-1]
-                        surprisingness_score = 1 - torch.cosine_similarity(
-                            frame_feature_prediction.flatten(1, 2),
-                            vit_visual_features[frame_idx : frame_idx + 1].flatten(1, 2).to(frame_feature_prediction.device),
-                            dim=-1,
-                        ).mean(1).item()
+                        surprisingness_score = (
+                            1
+                            - torch.cosine_similarity(
+                                frame_feature_prediction.flatten(1, 2),
+                                vit_visual_features[frame_idx : frame_idx + 1].flatten(1, 2).to(frame_feature_prediction.device),
+                                dim=-1,
+                            )
+                            .mean(1)
+                            .item()
+                        )
 
                     out = self.model(
                         input_ids=None,
