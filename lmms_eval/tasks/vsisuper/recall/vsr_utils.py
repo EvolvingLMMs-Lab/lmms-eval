@@ -1,8 +1,8 @@
 import re
-from loguru import logger as eval_logger
+from collections import OrderedDict
 
 import datasets
-from collections import OrderedDict
+from loguru import logger as eval_logger
 
 from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
 
