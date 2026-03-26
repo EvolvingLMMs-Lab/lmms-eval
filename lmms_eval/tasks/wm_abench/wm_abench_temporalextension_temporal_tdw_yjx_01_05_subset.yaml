@@ -1,0 +1,4 @@
+dataset_name: "TemporalExtension_temporal_tdw_yjx_01_05_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_temporalextension_temporal_tdw_yjx_01_05_subset"
+include: _default_template_yaml
