@@ -203,7 +203,7 @@ class MMBench_Evaluator:
                     return chars[tmp], "Failed to predict, thus randomly generate one. "
 
     # Extract answer from multiple rolling records
-    def eval_sub_data(self, sub_data, answer_map):
+    def eval_sub_data(self, sub_data, answer_map, static_only=False):
         lt = len(sub_data)
         GT, PRED = [], []
         for i in range(lt):
@@ -217,6 +217,15 @@ class MMBench_Evaluator:
         for i in range(lt):
             if PRED[i]:
                 continue
+            elif static_only:
+                # Use robust MCQ extraction instead of GPT API
+                from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+                choices = self.build_choices(sub_data.iloc[i])
+                choice_list = sorted(choices.keys())
+                PRED[i] = extract_mcq_answer(sub_data.iloc[i]["prediction"], choices=choice_list)
+                if not PRED[i] or PRED[i] != GT[i]:
+                    return 0
             else:
                 ret, _ = self.extract_answer_from_item(sub_data.iloc[i])
                 PRED[i] = ret
@@ -242,7 +251,8 @@ class MMBench_Evaluator:
     # Evaluate Results
     def eval_result(self, results, eval_method):
         rd.seed(2680)
-        assert eval_method == "openai"
+        static_only = eval_method == "static"
+        assert eval_method in ("openai", "static")
         # Set a large retry number to avoid failure
         # model = OpenAI('gpt-3.5-turbo-0613', retry=99)
 
@@ -286,7 +296,7 @@ class MMBench_Evaluator:
                 continue
 
             sub_data = data[data["index"] % int(1e6) == idx]
-            ret = self.eval_sub_data(sub_data, answer_map)
+            ret = self.eval_sub_data(sub_data, answer_map, static_only=static_only)
             result[idx] = ret
             hit += ret
             tot += 1
