@@ -1,0 +1,30 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test:
+      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Electromagnetism/classification/classification_en.json
+      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Mechanics/classification/classification_en.json
+      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Optics/classification/classification_en.json
+      - https://huggingface.co/datasets/zhaopengyu/Physics-RW/resolve/main/Physics-RW/Thermodynamics/classification/classification_en.json
+task: physics_rw
+test_split: test
+process_docs: !function utils.physics_rw_process_docs
+output_type: generate_until
+doc_to_visual: !function utils.physics_rw_doc_to_visual
+doc_to_text: !function utils.physics_rw_doc_to_text
+doc_to_target: "label"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+process_results: !function utils.physics_rw_process_results
+metric_list:
+  - metric: physics_rw_accuracy
+    aggregation: !function utils.physics_rw_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  - version: 0.0

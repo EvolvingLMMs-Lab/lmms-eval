@@ -1,0 +1,43 @@
+# ContPhy: Continuum Physical Concept Learning and Reasoning from Videos (ICML 2024)
+# Paper: https://arxiv.org/abs/2402.06119
+# Dataset: https://huggingface.co/datasets/zzcnewly/ContPhy_Dataset
+#
+# Setup:
+#   1. Generate the QA file from raw ContPhy zips:
+#      python -m lmms_eval.tasks.contphy.generate_qa \
+#        --mini --output $HF_HOME/contphy/contphy_qa.json
+#   2. Set CONTPHY_DATA_DIR to the extracted data root (for video files)
+#   3. Update data_files below to point to your generated QA JSON
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: contphy_qa.json
+  cache_dir: contphy
+  video: true
+task: contphy
+test_split: test
+output_type: generate_until
+process_docs: !function utils.contphy_process_docs
+doc_to_visual: !function utils.contphy_doc_to_visual
+doc_to_text: !function utils.contphy_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.contphy_process_results
+metric_list:
+  - metric: contphy_accuracy
+    aggregation: !function utils.contphy_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  gpt4v:
+    pre_prompt: ""
+    post_prompt: "\nPlease answer with the correct choice letter (e.g. A, B, or C). Please do NOT add any other text in your response."
+metadata:
+  - version: 0.0

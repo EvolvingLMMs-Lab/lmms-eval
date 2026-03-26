@@ -1,0 +1,32 @@
+# PhysBench: Multi-domain physics reasoning (ICLR 2025)
+# Paper: https://arxiv.org/abs/2501.16411
+# Original: USC-PSI-Lab/PhysBench (incompatible parquet schema)
+# Clean copy: lmms-lab-eval/PhysBench (val/test splits, answers merged)
+#
+# Media files (image.zip, video.zip) must be in the original repo or
+# copied to lmms-lab-eval/PhysBench. Set cache_dir to control extraction path.
+dataset_path: lmms-lab-eval/PhysBench
+dataset_kwargs:
+  token: True
+  cache_dir: physbench
+  video: True
+task: physbench
+test_split: val
+output_type: generate_until
+doc_to_visual: !function utils.physbench_doc_to_visual
+doc_to_text: !function utils.physbench_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+process_results: !function utils.physbench_process_results
+metric_list:
+  - metric: physbench_accuracy
+    aggregation: !function utils.physbench_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+metadata:
+  version: 0.2
