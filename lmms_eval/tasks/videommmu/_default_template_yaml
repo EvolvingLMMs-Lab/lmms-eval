@@ -9,5 +9,6 @@ lmms_eval_specific_kwargs:
     perception_and_comprehension_prompt: "\nPlease ignore the Quiz question in last frame of the video."
     mcq_prompt: "answer the following multi-choice question. The image for this question is at the end of the video.\n"
     open_ended_prompt: "answer the following open-ended question. The image for this question is at the end of the video.\n"
+    mcq_post_prompt: ""
 generation_kwargs:
   max_new_tokens: 1024

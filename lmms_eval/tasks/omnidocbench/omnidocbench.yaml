@@ -12,41 +12,44 @@ doc_to_visual: !function utils.omnidocbench_doc_to_visual
 doc_to_text: !function utils.omnidocbench_doc_to_text
 doc_to_target: !function utils.omnidocbench_doc_to_target
 generation_kwargs:
-  max_new_tokens: 64
+  max_new_tokens: 4096
   temperature: 0
   do_sample: false
 process_results: !function utils.omnidocbench_process_results
 metric_list:
-  - metric: omnidocbench_exact_match
-    aggregation: mean
+  - metric: omnidocbench_overall
+    aggregation: !function utils.omnidocbench_aggregate_overall
     higher_is_better: true
-  - metric: omnidocbench_nld_score
-    aggregation: mean
+  - metric: omnidocbench_text_edit
+    aggregation: !function utils.omnidocbench_aggregate_text_edit
+    higher_is_better: false
+  - metric: omnidocbench_table_teds
+    aggregation: !function utils.omnidocbench_aggregate_table_teds
     higher_is_better: true
-  - metric: omnidocbench_exact_match_en
-    aggregation: !function utils.omnidocbench_aggregate_exact_match_en
+  - metric: omnidocbench_formula_edit
+    aggregation: !function utils.omnidocbench_aggregate_formula_edit
+    higher_is_better: false
+  - metric: omnidocbench_text_edit_en
+    aggregation: !function utils.omnidocbench_aggregate_text_edit_en
+    higher_is_better: false
+  - metric: omnidocbench_text_edit_cn
+    aggregation: !function utils.omnidocbench_aggregate_text_edit_cn
+    higher_is_better: false
+  - metric: omnidocbench_table_teds_en
+    aggregation: !function utils.omnidocbench_aggregate_table_teds_en
     higher_is_better: true
-  - metric: omnidocbench_exact_match_cn
-    aggregation: !function utils.omnidocbench_aggregate_exact_match_cn
+  - metric: omnidocbench_table_teds_cn
+    aggregation: !function utils.omnidocbench_aggregate_table_teds_cn
     higher_is_better: true
-  - metric: omnidocbench_nld_score_en
-    aggregation: !function utils.omnidocbench_aggregate_nld_score_en
-    higher_is_better: true
-  - metric: omnidocbench_nld_score_cn
-    aggregation: !function utils.omnidocbench_aggregate_nld_score_cn
-    higher_is_better: true
-  - metric: omnidocbench_exact_match_mixed
-    aggregation: !function utils.omnidocbench_aggregate_exact_match_mixed
-    higher_is_better: true
-  - metric: omnidocbench_nld_score_mixed
-    aggregation: !function utils.omnidocbench_aggregate_nld_score_mixed
-    higher_is_better: true
+  - metric: omnidocbench_formula_edit_en
+    aggregation: !function utils.omnidocbench_aggregate_formula_edit_en
+    higher_is_better: false
+  - metric: omnidocbench_formula_edit_cn
+    aggregation: !function utils.omnidocbench_aggregate_formula_edit_cn
+    higher_is_better: false
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
-    post_prompt: "\nAnswer with a single word, phrase, or option letter."
-  qwen_vl:
-    pre_prompt: ""
-    post_prompt: " Answer:"
+    post_prompt: ""
 metadata:
-  - version: 0.0
+  - version: 1.0
