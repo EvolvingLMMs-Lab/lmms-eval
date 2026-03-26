@@ -1,0 +1,6 @@
+task: vbench_aesthetic_quality
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/aesthetic_quality.jsonl
+test_split: test
+include: _default_template_yaml
