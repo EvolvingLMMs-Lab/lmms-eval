@@ -1157,21 +1157,24 @@ class ConfigurableTask(Task):
                 if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
                     self.dataset[split] = self.config.process_docs(self.dataset[split])
 
-        # copy dataset, remove image features
-        self.dataset_no_image = self.dataset.copy()
-        for doc_name in self.dataset_no_image:
-            remove_cols = []
-            features = self.dataset_no_image[doc_name].features
-            # If it is an Image instance or a Sequence of Image instance. Remove it
-            for feature in features:
-                if isinstance(features[feature], Image):
-                    remove_cols.append(feature)
-                elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
-                    remove_cols.append(feature)
-                elif isinstance(features[feature], Audio):
-                    remove_cols.append(feature)
-            for remove_col in remove_cols:
-                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
+        # copy dataset, remove image features (unless process_results needs them)
+        if getattr(self.config, "process_results_use_image", False):
+            self.dataset_no_image = self.dataset
+        else:
+            self.dataset_no_image = self.dataset.copy()
+            for doc_name in self.dataset_no_image:
+                remove_cols = []
+                features = self.dataset_no_image[doc_name].features
+                # If it is an Image instance or a Sequence of Image instance. Remove it
+                for feature in features:
+                    if isinstance(features[feature], Image):
+                        remove_cols.append(feature)
+                    elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
+                        remove_cols.append(feature)
+                    elif isinstance(features[feature], Audio):
+                        remove_cols.append(feature)
+                for remove_col in remove_cols:
+                    self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
 
     def has_training_docs(self) -> bool:
         if self.config.training_split is not None:
@@ -1766,7 +1769,17 @@ class ConfigurableMessagesTask(ConfigurableTask):
                     if isinstance(visual, PIL_Image.Image):
                         content.append({"type": "image", "url": visual})
                     elif isinstance(visual, dict):
-                        content.append({"type": "audio", "url": visual})
+                        # Dict visuals carry explicit type (default: video).
+                        # Metadata keys (video_start, video_end, etc.) are
+                        # preserved in the url field so they flow through
+                        # ChatVideoContent → extract_media → fetch_video.
+                        media_type = visual.get("type", "video")
+                        has_metadata = any(k in visual for k in ("video_start", "video_end"))
+                        if has_metadata:
+                            media_url = visual  # pass full dict as url
+                        else:
+                            media_url = visual.get("url") or visual.get("path") or visual
+                        content.append({"type": media_type, "url": media_url})
                     elif isinstance(visual, str):
                         ext = os.path.splitext(visual)[1].lower()
                         if ext in _IMAGE_EXTS:
