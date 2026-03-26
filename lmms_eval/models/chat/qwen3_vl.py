@@ -24,13 +24,9 @@ class Qwen3_VL(Qwen3_VLSimple):
     def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         res = []
 
-        # A dummy collate here to sort by doc id
         def _collate(x):
             return x[0], x[0]
 
-        # we group requests by their generation_kwargs,
-        # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
-        # in the same batch.
         re_ords = utils.Collator(
             [reg.args for reg in requests],
             _collate,
@@ -42,33 +38,31 @@ class Qwen3_VL(Qwen3_VLSimple):
         pbar = tqdm(total=num_iters, disable=(self.rank != 0), desc="Model Responding")
         total_elapsed_time = 0
         total_tokens = 0
+
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
-            chat_messages = [doc_to_messages[idx](self.task_dict[task][split][ids]) for idx, (ids, task, split) in enumerate(zip(doc_id, task, split))]
-            chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
+
+            chat_messages: List[ChatMessages] = []
             visuals = []
             videos = []
-            for messages in chat_messages:
-                visual, video, _ = messages.extract_media()
+            for idx, (ids, task_name, split_name) in enumerate(zip(doc_id, task, split)):
+                messages = doc_to_messages[idx](self.task_dict[task_name][split_name][ids])
+                messages.insert(0, {"role": "system", "content": [{"type": "text", "text": self.system_prompt}]})
+                chat_message = ChatMessages(**{"messages": messages})
+                visual, video, _ = chat_message.extract_media()
                 visuals.append(visual)
                 videos.append(video)
+                chat_messages.append(chat_message)
+
             visuals = self.flatten(visuals)
             videos = self.flatten(videos)
             gen_kwargs = all_gen_kwargs[0]
 
-            # Apply chat template
-            video_kwargs = {
-                "max_pixels": self.max_pixels,
-                "min_pixels": self.min_pixels,
-            }
-            if self.fps is not None:
-                video_kwargs["fps"] = self.fps
-                # limit the number of frames in case fps is set
-                video_kwargs["max_frames"] = self.max_num_frames
-            else:
-                video_kwargs["nframes"] = self.max_num_frames
+            video_kwargs = self._build_video_kwargs()
             batched_messages = [chat_message.to_hf_messages(video_kwargs=video_kwargs) for chat_message in chat_messages]
-            texts = self.processor.apply_chat_template(batched_messages, tokenize=False, add_generation_prompt=True)
+
+            texts = self._apply_chat_template(batched_messages)
+
             image_inputs, video_inputs, video_kwargs_qwen = process_vision_info(
                 batched_messages,
                 return_video_kwargs=True,
@@ -80,10 +74,7 @@ class Qwen3_VL(Qwen3_VLSimple):
             video_metadatas = None
             if video_inputs is not None:
                 video_inputs, video_metadatas = zip(*video_inputs)
-                video_inputs, video_metadatas = (
-                    list(video_inputs),
-                    list(video_metadatas),
-                )
+                video_inputs, video_metadatas = list(video_inputs), list(video_metadatas)
 
             if self.batch_size > 1:
                 inputs = self.processor(
@@ -113,38 +104,10 @@ class Qwen3_VL(Qwen3_VLSimple):
             else:
                 inputs = inputs.to(self.device)
 
-            # Set default generation kwargs
-            default_gen_kwargs = {
-                "max_new_tokens": 128,
-                "temperature": 0.0,  # Set to 0 for greedy default
-                "top_p": None,
-                "num_beams": 1,
-            }
-            # Update with provided kwargs
-            current_gen_kwargs = {**default_gen_kwargs, **gen_kwargs}
-            pad_token_id = self.tokenizer.pad_token_id
-
-            if current_gen_kwargs["temperature"] > 0:
-                current_gen_kwargs["do_sample"] = True
-            else:
-                current_gen_kwargs["do_sample"] = False
-                current_gen_kwargs["temperature"] = None
-                current_gen_kwargs["top_p"] = None
-                current_gen_kwargs["top_k"] = None
+            generate_kwargs = self._build_generate_kwargs(gen_kwargs)
 
             start_time = time.time()
-            cont = self.model.generate(
-                **inputs,
-                eos_token_id=self.tokenizer.eos_token_id,
-                pad_token_id=pad_token_id,
-                do_sample=current_gen_kwargs["do_sample"],
-                temperature=current_gen_kwargs["temperature"],
-                top_p=current_gen_kwargs["top_p"],
-                num_beams=current_gen_kwargs["num_beams"],
-                max_new_tokens=current_gen_kwargs["max_new_tokens"],
-                top_k=current_gen_kwargs.get("top_k", None),
-                use_cache=self.use_cache,
-            )
+            cont = self.model.generate(**inputs, **generate_kwargs)
             end_time = time.time()
 
             generated_ids_trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, cont)]
@@ -154,32 +117,27 @@ class Qwen3_VL(Qwen3_VLSimple):
                 clean_up_tokenization_spaces=False,
             )
 
-            # Calculate timing metrics for batch
             total_elapsed_time += end_time - start_time
             total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
 
             for i, (ans, context) in enumerate(zip(answers, texts)):
+                ans = self._strip_thinking(ans)
                 res.append(GenerationResult(text=ans, token_counts=TokenCounts(output_tokens=len(generated_ids_trimmed[i]))))
                 self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
 
                 eval_logger.debug(f"Question: {context}")
                 eval_logger.debug(f"Model Response: {ans}")
-            # reorder this group of results back to original unsorted form
             pbar.update(1)
+
         res = re_ords.get_original(res)
 
-        # Calculate average speed
         avg_speed = total_tokens / total_elapsed_time if total_elapsed_time > 0 else 0
-        # Log metrics
-        metric_dict = {
-            "total_gen_tokens": total_tokens,
-            "total_elapsed_time": total_elapsed_time,
-            "avg_speed": avg_speed,
-            "additional_metrics": {
-                "rank": self.rank,
-            },
-        }
-        log_metrics(**metric_dict)
+        log_metrics(
+            total_gen_tokens=total_tokens,
+            total_elapsed_time=total_elapsed_time,
+            avg_speed=avg_speed,
+            additional_metrics={"rank": self.rank},
+        )
 
         pbar.close()
         return res
