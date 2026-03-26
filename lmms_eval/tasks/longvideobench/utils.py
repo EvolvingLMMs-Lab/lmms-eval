@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 import yaml
-from decord import cpu
+from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
