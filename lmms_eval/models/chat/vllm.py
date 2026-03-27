@@ -69,12 +69,7 @@ class VLLM(VLLMSimple):
         _gen["max_new_tokens"] = self._select_max_new_tokens(_gen.get("max_new_tokens"))
         _gen.setdefault("temperature", 0)
         _gen.setdefault("top_p", 0.95)
-
-        params = {
-            "temperature": _gen["temperature"],
-            "max_tokens": _gen["max_new_tokens"],
-            "top_p": _gen["top_p"],
-        }
+        params = self._build_sampling_params_dict(_gen)
 
         video_kwargs = {
             "max_pixels": self.max_pixels,
