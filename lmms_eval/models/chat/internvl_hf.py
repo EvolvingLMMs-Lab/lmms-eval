@@ -249,6 +249,9 @@ class InternVLHf(lmms):
                 images_kwargs["min_patches"] = self.min_patches
             if self.max_patches is not None:
                 images_kwargs["max_patches"] = self.max_patches
+            if self.num_frames is not None or self.fps is not None:
+                # InternVL only applies num_frames/fps when frame sampling is explicitly enabled.
+                videos_kwargs["do_sample_frames"] = True
             if self.num_frames is not None:
                 videos_kwargs["num_frames"] = self.num_frames
             if self.fps is not None:
