@@ -1,4 +1,3 @@
-# dataset_path: /mnt/oos/yichengfu/lmms-eval/lmms-eval/hf_datasets_cache/SFE/20250611-en
 dataset_path: InternScience/SFE
 task: "sfe-en"
 test_split: test

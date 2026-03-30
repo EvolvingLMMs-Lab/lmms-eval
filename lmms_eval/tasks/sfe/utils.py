@@ -86,6 +86,74 @@ elif API_TYPE == "azure":
 
 scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
+import os
+from pathlib import Path
+from huggingface_hub import snapshot_download
+
+try:
+    import torch.distributed as dist
+except ImportError:
+    dist = None
+
+
+DOWNLOAD_DIR = "./SFE_images"
+LOCAL_PREFIX = os.path.join(DOWNLOAD_DIR, "images")
+DONE_FLAG = os.path.join(DOWNLOAD_DIR, ".download_complete")
+
+
+def is_dist_initialized():
+    return dist is not None and dist.is_available() and dist.is_initialized()
+
+
+def is_main_process():
+    return (not is_dist_initialized()) or dist.get_rank() == 0
+
+
+def wait_for_everyone():
+    if is_dist_initialized():
+        dist.barrier()
+
+
+def images_ready():
+    # 不只检查目录存在，还检查完成标记 + images 目录非空
+    if not os.path.isfile(DONE_FLAG):
+        return False
+    if not os.path.isdir(LOCAL_PREFIX):
+        return False
+    try:
+        return len(os.listdir(LOCAL_PREFIX)) > 0
+    except Exception:
+        return False
+
+
+def ensure_sfe_images_downloaded():
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+    # 只有主进程负责下载
+    if is_main_process():
+        if not images_ready():
+            print("[rank0] images not ready, start downloading...")
+            snapshot_download(
+                repo_id="InternScience/SFE",
+                repo_type="dataset",
+                allow_patterns="images/*",
+                local_dir=DOWNLOAD_DIR,
+            )
+            Path(DONE_FLAG).write_text("ok", encoding="utf-8")
+            print("[rank0] download finished.")
+        else:
+            print("[rank0] images already exist, skip download.")
+
+    # 其他进程等待主进程下载完成
+    wait_for_everyone()
+
+    # barrier 之后再做一次校验，避免静默失败
+    if not images_ready():
+        raise RuntimeError(
+            f"SFE images are not ready after synchronization: {LOCAL_PREFIX}"
+        )
+
+    return LOCAL_PREFIX
 
 def get_chat_response(content: str, max_tokens: int, retries: int = 5):
     global MODEL_VERSION
@@ -235,7 +303,7 @@ def _get_local_image_paths(doc):
     images = doc["images"]
     local_paths = []
     # 本地图片存储目录
-    local_prefix = "./SFE/images/"
+    local_prefix = ensure_sfe_images_downloaded()
     
     for image_path in images:
         filename = os.path.basename(image_path)
