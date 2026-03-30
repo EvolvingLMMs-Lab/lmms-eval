@@ -1,0 +1,53 @@
+# dataset_path: /mnt/oos/yichengfu/lmms-eval/lmms-eval/hf_datasets_cache/SFE/20250611-en
+dataset_path: InternScience/SFE
+task: "sfe-en"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.sfe_doc_to_visual
+doc_to_text: !function utils.sfe_doc_to_text
+doc_to_target: "answer"
+process_results: !function utils.sfe_process_results
+
+generation_kwargs:
+  max_new_tokens: 1024
+
+metric_list:
+  - metric: all_info
+    aggregation: !function utils.sfe_save_results
+    higher_is_better: true
+  - metric: rouge_score
+    aggregation: !function utils.sfe_aggregate_rouge_results
+    higher_is_better: true
+  - metric: bert_score
+    aggregation: !function utils.sfe_aggregate_bertscore_results
+    higher_is_better: true
+  - metric: bleu_score
+    aggregation: !function utils.sfe_aggregate_bleuscore_results
+    higher_is_better: true
+  - metric: meteor_score
+    aggregation: !function utils.sfe_aggregate_meteor_score_results
+    higher_is_better: true
+  - metric: llm_score
+    aggregation: !function utils.sfe_aggregate_judge_results
+    higher_is_better: true
+  - metric: execute_succ_rate
+    aggregation: !function utils.sfe_aggregate_execute_succ_rate_results
+    higher_is_better: true
+  - metric: iou_score
+    aggregation: !function utils.sfe_aggregate_iou_score_results
+    higher_is_better: true
+  - metric: acc@0.1
+    aggregation: !function utils.sfe_aggregate_acc01_results
+    higher_is_better: true
+  - metric: acc@0.3
+    aggregation: !function utils.sfe_aggregate_acc03_results
+    higher_is_better: true
+  - metric: acc@0.5
+    aggregation: !function utils.sfe_aggregate_acc05_results
+    higher_is_better: true
+  - metric: acc@0.7
+    aggregation: !function utils.sfe_aggregate_acc07_results
+    higher_is_better: true
+  - metric: acc@0.9
+    aggregation: !function utils.sfe_aggregate_acc09_results
+    higher_is_better: true

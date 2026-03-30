@@ -1,0 +1,16 @@
+group: SmolInstruct_v2
+task:
+  - smol_forward_synthesis
+  - smol_retrosynthesis
+  - smol_molecule_captioning
+  - smol_molecule_generation
+  - smol_name_conversion-i2f
+  - smol_name_conversion-i2s
+  - smol_name_conversion-s2f
+  - smol_name_conversion-s2i
+  - smol_property_prediction-esol
+  - smol_property_prediction-lipo
+  - smol_property_prediction-bbbp
+  - smol_property_prediction-clintox
+  - smol_property_prediction-hiv
+  - smol_property_prediction-sider

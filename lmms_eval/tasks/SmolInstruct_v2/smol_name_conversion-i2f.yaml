@@ -1,0 +1,26 @@
+task: smol_name_conversion-i2f
+dataset_path: Innovator-Evaluation/SmolInstruct_v2
+dataset_kwargs:
+  data_files:
+    train: "name_conversion-i2f.parquet"
+    
+output_type: generate_until
+test_split: train
+
+# 对应你在 utils.py 中定义的函数
+doc_to_visual: !function utils.smol_doc_to_visual
+doc_to_text: !function utils.smol_doc_to_text
+doc_to_target: !function utils.smol_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 20
+  temperature: 0.0
+  do_sample: false
+
+# 对应你在 utils.py 中的后处理和聚合函数
+process_results: !function utils.smol_process_results
+
+metric_list:
+  - metric: smol_metrics
+    aggregation: !function utils.smol_aggregate_results
+    higher_is_better: true

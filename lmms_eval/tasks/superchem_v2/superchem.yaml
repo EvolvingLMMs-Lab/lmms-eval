@@ -1,0 +1,34 @@
+dataset_path: ZehuaZhao/SUPERChem
+dataset_name: default
+task: "superchem_en"
+test_split: "test"
+dataset_kwargs:
+  data_files:
+    test: "*.parquet"
+
+output_type: "generate_until"
+
+doc_to_visual: !function utils.doc_to_visual
+doc_to_text: !function utils.doc_to_text
+doc_to_target: !function utils.doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 1.0
+  do_sample: true
+  top_p: 1.0
+  num_beams: 1
+
+process_results: !function utils.process_results
+
+metric_list:
+  - metric: mcp_accuracy
+    aggregation: mean
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    mode: default
+
+metadata:
+  version: 1.0
