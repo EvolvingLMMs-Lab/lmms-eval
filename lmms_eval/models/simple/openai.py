@@ -151,16 +151,26 @@ class OpenAICompatible(lmms):
         if base_url and base_url.endswith("/"):
             base_url = base_url.rstrip("/")
 
-        self.client = (
-            OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
-            if not azure_openai
-            else AzureOpenAI(
-                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE"),
-                api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-                http_client=http_client,
+        if base_url and ";" in base_url:
+            self.base_urls = [url.strip() for url in base_url.split(";")]
+        else:
+            self.base_urls = [base_url]
+
+        self.clients = []
+        for url in self.base_urls:
+            client = (
+                OpenAI(api_key=api_key, base_url=url, http_client=http_client)
+                if not azure_openai
+                else AzureOpenAI(
+                    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+                    azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE") if "http" in (os.getenv("AZURE_OPENAI_API_BASE") or "") else url,
+                    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+                    http_client=http_client,
+                )
             )
-        )
+            self.clients.append(client)
+        
+        self.client = self.clients[0]
 
         accelerator = Accelerator()
         # assert self.batch_size_per_gpu == 1, "Llava currently does not support batched generation. See https://github.com/haotian-liu/LLaVA/issues/754. HF Llava also has this issue."
@@ -332,14 +342,19 @@ class OpenAICompatible(lmms):
             self.adaptive_config.max_concurrency if self.adaptive_concurrency else current_concurrency,
         )
 
-        def process_single_request(local_index: int, payload: dict):
+        def process_single_request(local_index: int, payload: dict, preproc_time: float):
             started_at = time.time()
             rate_limited = False
             last_error_msg = "unknown error"
+            client_idx = local_index % len(self.clients)
+            client = self.clients[client_idx]
 
             for attempt in range(self.max_retries):
                 try:
-                    response = self.client.chat.completions.create(**payload)
+                    api_start = time.time()
+                    response = client.chat.completions.create(**payload)
+                    api_latency = time.time() - api_start
+                    eval_logger.info(f"[DEBUG] Request {local_index}: Preprocessing={preproc_time:.3f}s, API_Inference={api_latency:.3f}s")
                     response_text = _normalize_openai_message_content(response.choices[0].message.content)
                     token_counts = None
                     if hasattr(response, "usage") and response.usage:
@@ -484,15 +499,22 @@ class OpenAICompatible(lmms):
                         cursor += 1
                         continue
                     request_index = dispatch_order[cursor]
+                    preproc_start = time.time()
                     payload = build_payload_for_index(request_index)
-                    future = executor.submit(process_single_request, request_index, payload)
+                    preproc_time = time.time() - preproc_start
+                    future = executor.submit(process_single_request, request_index, payload, preproc_time)
                     in_flight[future] = request_index
                     cursor += 1
 
                 if not in_flight:
                     break
 
-                done, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                done, _ = wait(in_flight, return_when=FIRST_COMPLETED, timeout=1.0)
+                
+                if not done:
+                    eval_logger.info(f"Queue Status | In-flight requests: {len(in_flight)} / Target concurrency: {current_concurrency} | Processing cursor: {cursor}/{len(dispatch_order)}")
+                    continue
+                
                 for future in done:
                     (
                         response_text,
