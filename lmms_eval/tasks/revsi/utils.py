@@ -38,7 +38,6 @@ with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
             safe_data.append(line)
 config = yaml.safe_load("".join(safe_data))
 cache_name = config["dataset_kwargs"]["cache_dir"]
-dataset_name = config["dataset_name"]
 cache_dir = os.path.join(base_cache_dir, cache_name)
 
 
