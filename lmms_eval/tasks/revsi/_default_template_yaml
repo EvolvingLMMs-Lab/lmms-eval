@@ -1,0 +1,27 @@
+dataset_path: 3dlg-hcvc/ReVSI
+test_split: test
+dataset_kwargs:
+  token: True
+  cache_dir: revsi
+  video: True
+output_type: generate_until
+process_docs: !function utils.process_docs
+doc_to_visual: !function utils.revsi_doc_to_visual
+doc_to_text: !function utils.revsi_doc_to_text
+doc_to_target: "ground_truth"
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+process_results: !function utils.revsi_process_results
+metric_list:
+  - metric: revsi_acc
+    aggregation: !function utils.revsi_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "These are frames of a video."
+    mcq_post_prompt: "Answer with the option's letter from the given choices directly."
+    nq_post_prompt: "Answer the question using a single integer or decimal number."
+metadata:
+  - version: 1.0
