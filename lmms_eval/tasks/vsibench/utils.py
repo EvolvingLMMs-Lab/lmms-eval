@@ -138,7 +138,7 @@ def vsibench_process_results(doc, results):
     }
 
 
-def _compute_all_subscores(results: list[dict]) -> dict:
+def _compute_all_subscores(results) -> dict:
     """Compute all sub-category scores from raw results. Shared logic for all aggregation functions."""
     df = pd.DataFrame(results)
     output = {}
