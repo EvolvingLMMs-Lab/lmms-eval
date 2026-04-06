@@ -58,9 +58,11 @@ def embspatial_doc_to_visual(doc: dict) -> list:
     return [doc["image"].convert("RGB")]
 
 
+DATA_SOURCES = ["ai2thor", "mp3d", "scannet"]
+
+
 def embspatial_process_results(doc, results):
     choices = ["A", "B", "C", "D"]
-    key_name = "embspatial_acc"
     # extract grounded answer
     grounded_output = choices[doc["answer"]]
     response = results[0]
@@ -69,8 +71,14 @@ def embspatial_process_results(doc, results):
     pred_letter = _extract_answer_letter(response)
     flag = pred_letter == grounded_output
 
-    omnispatial_submission = {"id": doc["question_id"], "gt_content": grounded_output, "pred": response, "sub_task": doc["relation"], "is_correct": flag}
-    return {key_name: omnispatial_submission}
+    data_source = doc.get("data_source", "unknown")
+    entry = {"id": doc["question_id"], "gt_content": grounded_output, "pred": response, "sub_task": doc["relation"], "is_correct": flag, "data_source": data_source}
+
+    result = {"embspatial_acc": entry}
+    for src in DATA_SOURCES:
+        result[f"{src}_accuracy"] = entry
+
+    return result
 
 
 def embspatial_aggregate_results(results: List[Dict]):
@@ -99,3 +107,21 @@ def embspatial_aggregate_results(results: List[Dict]):
 
     eval_logger.info("=" * 40)
     return accuracy
+
+
+def _aggregate_by_source(results, target_source: str) -> float:
+    """Aggregate accuracy for a specific data source."""
+    scores = [1 if r["is_correct"] else 0 for r in results if r.get("data_source") == target_source]
+    return sum(scores) / len(scores) if scores else 0.0
+
+
+def embspatial_aggregate_ai2thor_accuracy(results):
+    return _aggregate_by_source(results, "ai2thor")
+
+
+def embspatial_aggregate_mp3d_accuracy(results):
+    return _aggregate_by_source(results, "mp3d")
+
+
+def embspatial_aggregate_scannet_accuracy(results):
+    return _aggregate_by_source(results, "scannet")
