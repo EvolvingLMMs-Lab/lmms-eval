@@ -1,6 +1,7 @@
+from tqdm import tqdm
+
 import datasets
 from datasets import load_dataset
-from tqdm import tqdm
 
 
 def gqa_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:

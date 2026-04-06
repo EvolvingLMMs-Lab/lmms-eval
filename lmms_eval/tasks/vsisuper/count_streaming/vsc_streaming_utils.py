@@ -1,8 +1,8 @@
 import json
 
-import datasets
 import numpy as np
 
+import datasets
 from lmms_eval.tasks._task_utils.media_resolver import resolve_media_reference
 
 CACHE_DIR = "vsisuper_count"

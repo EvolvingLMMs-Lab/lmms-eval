@@ -4,11 +4,11 @@ from functools import lru_cache
 from io import BytesIO
 from typing import Any, Dict, List
 
-import datasets
 import numpy as np
 import requests
 from PIL import Image
 
+import datasets
 from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 from lmms_eval.utils import eval_logger
 

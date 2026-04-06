@@ -1,9 +1,10 @@
 import ast
 from collections import defaultdict
 
-import datasets
 from loguru import logger as eval_logger
 from PIL import Image
+
+import datasets
 
 MTVQA_PROMPT_SUFFIX = "\nAnswer the question using a word or phrase in the language of the question."
 
