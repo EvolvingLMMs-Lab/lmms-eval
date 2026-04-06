@@ -4,12 +4,11 @@ import re
 from functools import partial
 from pathlib import Path
 
+import datasets
 import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger as eval_logger
-
-import datasets
 
 MCA_QUESTION_TYPES = [
     "obj_spatial_relation_oo",

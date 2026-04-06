@@ -6,9 +6,8 @@ from functools import lru_cache
 from shutil import copy2
 from typing import Any, Dict, List, Optional, Tuple
 
-from loguru import logger as eval_logger
-
 import datasets
+from loguru import logger as eval_logger
 
 QUESTION_TYPES = [
     "Action Order",

@@ -2,11 +2,10 @@ import re
 from collections import defaultdict
 from functools import lru_cache
 
+import datasets
 from huggingface_hub import hf_hub_download
 from loguru import logger as eval_logger
 from PIL import Image
-
-import datasets
 
 MME_CC_DATASET_REPO = "MaxwellWen/MME-CC"
 

@@ -22,8 +22,10 @@ from typing import (
     Union,
 )
 
+import datasets
 import numpy as np
 from accelerate import Accelerator
+from datasets import Audio, DownloadConfig, Image, Sequence
 from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import Image as PIL_Image
@@ -31,8 +33,6 @@ from PIL import ImageFile
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_fixed
 from tqdm import tqdm
 
-import datasets
-from datasets import Audio, DownloadConfig, Image, Sequence
 from lmms_eval import utils
 from lmms_eval.api import samplers
 from lmms_eval.api.instance import Instance

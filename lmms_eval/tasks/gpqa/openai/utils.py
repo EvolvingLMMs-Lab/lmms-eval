@@ -5,10 +5,9 @@ import time
 from collections import Counter
 from typing import Dict, List, Optional
 
+import datasets
 import openai
 from openai import OpenAI
-
-import datasets
 
 QUERY_TEMPLATE = "{Question}\n\nA) {choice1}\nB) {choice2}\nC) {choice3}\nD) {choice4}"
 QUERY_TEMPLATE_API = "{Question}\nAnswer Choices:\n(A) {choice1}\n(B) {choice2}\n(C) {choice3}\n(D) {choice4}"
