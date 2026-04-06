@@ -2,11 +2,12 @@ import os
 from functools import partial
 from pathlib import Path
 
-import datasets
 import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger as eval_logger
+
+import datasets
 
 MCA_QUESTION_TYPES = [
     "object_rel_direction_easy",
@@ -124,27 +125,33 @@ def vsibench_process_results(doc, results):
     else:
         raise ValueError(f"Unknown question type: {doc['question_type']}")
 
-    return {"vsibench_score": doc}
+    return {
+        "vsibench_overall": doc,
+        "obj_appearance_order_accuracy": doc,
+        "object_abs_distance_mra": doc,
+        "object_counting_mra": doc,
+        "object_rel_distance_accuracy": doc,
+        "object_size_estimation_mra": doc,
+        "room_size_estimation_mra": doc,
+        "route_planning_accuracy": doc,
+        "object_rel_direction_accuracy": doc,
+    }
 
 
-def vsibench_aggregate_results(results):
-    results = pd.DataFrame(results)
-
+def _compute_all_subscores(results: list[dict]) -> dict:
+    """Compute all sub-category scores from raw results. Shared logic for all aggregation functions."""
+    df = pd.DataFrame(results)
     output = {}
 
-    for question_type, question_type_indexes in results.groupby("question_type").groups.items():
-        per_question_type = results.iloc[question_type_indexes]
+    for question_type, question_type_indexes in df.groupby("question_type").groups.items():
+        per_question_type = df.iloc[question_type_indexes]
 
         if question_type in MCA_QUESTION_TYPES:
             for metric in METRICS_FOR_MCA.keys():
                 output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
         elif question_type in NA_QUESTION_TYPES:
             for metric in METRICS_FOR_NA.keys():
-                if metric == "success_rate":
-                    output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
-                else:
-                    output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
-
+                output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
         else:
             raise ValueError(f"Unknown question type: {question_type}")
 
@@ -160,5 +167,47 @@ def vsibench_aggregate_results(results):
     )
 
     output["overall"] = sum([_ for _ in output.values()]) / len(output)
-    eval_logger.info(f"Evaluation results: {output}")
     return output
+
+
+def vsibench_aggregate_overall(results):
+    output = _compute_all_subscores(results)
+    eval_logger.info(f"Evaluation results: {output}")
+    return round(output["overall"], 6)
+
+
+def vsibench_aggregate_obj_appearance_order_accuracy(results):
+    return round(_compute_all_subscores(results).get("obj_appearance_order_accuracy", 0.0), 6)
+
+
+def vsibench_aggregate_object_abs_distance_mra(results):
+    return round(_compute_all_subscores(results).get("object_abs_distance_MRA:.5:.95:.05", 0.0), 6)
+
+
+def vsibench_aggregate_object_counting_mra(results):
+    return round(_compute_all_subscores(results).get("object_counting_MRA:.5:.95:.05", 0.0), 6)
+
+
+def vsibench_aggregate_object_rel_distance_accuracy(results):
+    return round(_compute_all_subscores(results).get("object_rel_distance_accuracy", 0.0), 6)
+
+
+def vsibench_aggregate_object_size_estimation_mra(results):
+    return round(_compute_all_subscores(results).get("object_size_estimation_MRA:.5:.95:.05", 0.0), 6)
+
+
+def vsibench_aggregate_room_size_estimation_mra(results):
+    return round(_compute_all_subscores(results).get("room_size_estimation_MRA:.5:.95:.05", 0.0), 6)
+
+
+def vsibench_aggregate_route_planning_accuracy(results):
+    return round(_compute_all_subscores(results).get("route_planning_accuracy", 0.0), 6)
+
+
+def vsibench_aggregate_object_rel_direction_accuracy(results):
+    return round(_compute_all_subscores(results).get("object_rel_direction_accuracy", 0.0), 6)
+
+
+# Keep backward compatibility
+def vsibench_aggregate_results(results):
+    return vsibench_aggregate_overall(results)
