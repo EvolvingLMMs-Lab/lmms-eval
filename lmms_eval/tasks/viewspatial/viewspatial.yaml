@@ -20,3 +20,18 @@ metric_list:
   - metric: overall_accuracy
     aggregation: !function utils.viewspatial_aggregate_results
     higher_is_better: true
+  - metric: camera_perspective_relative_direction_accuracy
+    aggregation: !function utils.viewspatial_aggregate_camera_perspective_relative_direction
+    higher_is_better: true
+  - metric: camera_perspective_object_view_orientation_accuracy
+    aggregation: !function utils.viewspatial_aggregate_camera_perspective_object_view_orientation
+    higher_is_better: true
+  - metric: person_perspective_relative_direction_accuracy
+    aggregation: !function utils.viewspatial_aggregate_person_perspective_relative_direction
+    higher_is_better: true
+  - metric: person_perspective_object_view_orientation_accuracy
+    aggregation: !function utils.viewspatial_aggregate_person_perspective_object_view_orientation
+    higher_is_better: true
+  - metric: person_perspective_scene_simulation_relative_direction_accuracy
+    aggregation: !function utils.viewspatial_aggregate_person_perspective_scene_simulation_relative_direction
+    higher_is_better: true

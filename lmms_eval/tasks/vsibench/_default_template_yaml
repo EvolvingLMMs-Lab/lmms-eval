@@ -13,10 +13,33 @@ generation_kwargs:
   do_sample: false
 # The return value of process_results will be used by metrics
 process_results: !function utils.vsibench_process_results
-# Note that the metric name can be either a registed metric function (such as the case for GQA) or a key name returned by process_results
 metric_list:
-  - metric: vsibench_score
-    aggregation: !function utils.vsibench_aggregate_results
+  - metric: vsibench_overall
+    aggregation: !function utils.vsibench_aggregate_overall
+    higher_is_better: true
+  - metric: obj_appearance_order_accuracy
+    aggregation: !function utils.vsibench_aggregate_obj_appearance_order_accuracy
+    higher_is_better: true
+  - metric: object_abs_distance_mra
+    aggregation: !function utils.vsibench_aggregate_object_abs_distance_mra
+    higher_is_better: true
+  - metric: object_counting_mra
+    aggregation: !function utils.vsibench_aggregate_object_counting_mra
+    higher_is_better: true
+  - metric: object_rel_distance_accuracy
+    aggregation: !function utils.vsibench_aggregate_object_rel_distance_accuracy
+    higher_is_better: true
+  - metric: object_size_estimation_mra
+    aggregation: !function utils.vsibench_aggregate_object_size_estimation_mra
+    higher_is_better: true
+  - metric: room_size_estimation_mra
+    aggregation: !function utils.vsibench_aggregate_room_size_estimation_mra
+    higher_is_better: true
+  - metric: route_planning_accuracy
+    aggregation: !function utils.vsibench_aggregate_route_planning_accuracy
+    higher_is_better: true
+  - metric: object_rel_direction_accuracy
+    aggregation: !function utils.vsibench_aggregate_object_rel_direction_accuracy
     higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
