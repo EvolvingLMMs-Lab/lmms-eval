@@ -19,6 +19,21 @@ metric_list:
   - metric: videomme_v2_score
     aggregation: !function utils.videomme_v2_aggregate_results
     higher_is_better: true
+  - metric: videomme_v2_relevance_score
+    aggregation: !function utils.videomme_v2_aggregate_relevance
+    higher_is_better: true
+  - metric: videomme_v2_logic_score
+    aggregation: !function utils.videomme_v2_aggregate_logic
+    higher_is_better: true
+  - metric: videomme_v2_level_1
+    aggregation: !function utils.videomme_v2_aggregate_level_1
+    higher_is_better: true
+  - metric: videomme_v2_level_2
+    aggregation: !function utils.videomme_v2_aggregate_level_2
+    higher_is_better: true
+  - metric: videomme_v2_level_3
+    aggregation: !function utils.videomme_v2_aggregate_level_3
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""
