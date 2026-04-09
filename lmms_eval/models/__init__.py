@@ -35,7 +35,6 @@ AVAILABLE_SIMPLE_MODELS = {
     "gpt4v": "GPT4V",
     "idefics2": "Idefics2",
     "illume_plus": "ILLUMEPlus",
-    "illume_plus_visual_cot": "ILLUMEPlusVisualCoT",
     "instructblip": "InstructBLIP",
     "internvideo2": "InternVideo2",
     "internvl": "InternVLChat",
