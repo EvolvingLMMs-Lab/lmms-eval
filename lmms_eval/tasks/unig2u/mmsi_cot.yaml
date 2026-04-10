@@ -1,0 +1,7 @@
+group: unig2u_mmsi_cot
+task:
+  - unig2u_mmsi_attribute_appr_visual_cot
+  - unig2u_mmsi_attribute_meas_visual_cot
+  - unig2u_mmsi_motion_cam_visual_cot
+  - unig2u_mmsi_motion_obj_visual_cot
+  - unig2u_mmsi_msr_visual_cot

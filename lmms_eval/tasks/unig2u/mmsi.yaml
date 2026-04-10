@@ -1,0 +1,7 @@
+group: unig2u_mmsi
+task:
+  - unig2u_mmsi_attribute_appr
+  - unig2u_mmsi_attribute_meas
+  - unig2u_mmsi_motion_cam
+  - unig2u_mmsi_motion_obj
+  - unig2u_mmsi_msr

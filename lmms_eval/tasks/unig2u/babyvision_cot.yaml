@@ -1,0 +1,5 @@
+# BabyVision Visual CoT Task Group
+group: unig2u_babyvision_cot
+task:
+  - unig2u_babyvision_fine_grained_visual_cot
+  - unig2u_babyvision_visual_tracking_visual_cot
