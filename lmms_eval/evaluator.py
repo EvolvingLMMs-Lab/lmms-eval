@@ -34,6 +34,7 @@ from lmms_eval.evaluator_utils import (
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
 from lmms_eval.models import get_model
+from lmms_eval.evaluator_utils import TaskOutput
 from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
@@ -413,7 +414,7 @@ def evaluate(
         lm.accelerator = Accelerator()
 
     for task_output in eval_tasks:
-        task: Task = task_output.task
+        task: TaskOutput = task_output.task
         task_name = task_output.task_name
         task.args = cli_args
 
