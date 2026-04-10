@@ -1,0 +1,13 @@
+group: unig2u_GtA
+task:
+  - unig2u_auxsolidmath_easy_visual_cot
+  - unig2u_chartqa100_visual_cot
+  - unig2u_geometry3k_visual_cot
+  - unig2u_babyvision_cot
+  - unig2u_illusionbench_arshia_visual_cot_split
+  - unig2u_mmsi_cot
+  - unig2u_phyx_cot
+  - unig2u_realunify_cot
+  - unig2u_uni_mmmu_cot
+  - unig2u_vsp_cot
+  - unig2u_VisualPuzzles_visual_cot

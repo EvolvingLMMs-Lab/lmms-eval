@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
+from PIL import Image
 from accelerate import (
     Accelerator,
     infer_auto_device_map,
@@ -33,28 +34,24 @@ else:
 @register_model("bagel")
 class Bagel(lmms):
     """
-    Bagel Multimodal Model
-    Supports both image understanding and text-to-image generation
+    Bagel Multimodal Model (Unified: Understanding + Generation + Visual CoT)
 
     Modes:
         - "understanding": Visual understanding (image + text -> text)
         - "generation": Image generation (text -> image)
+        - Visual CoT: Auto-detected when prompt contains [GEN_PROMPT] tags.
+          Stage 1: Generate auxiliary image. Stage 2: Answer with auxiliary image.
 
-    Example usage for understanding:
-    accelerate launch -m lmms_eval \
-        --model bagel \
+    Example usage:
+    # Understanding
+    accelerate launch -m lmms_eval --model bagel \
         --model_args pretrained=/path/to/BAGEL-7B-MoT,mode=understanding \
-        --tasks mmbench \
-        --batch_size 1 \
-        --output_path ./logs/
+        --tasks unig2u --batch_size 1
 
-    Example usage for generation:
-    accelerate launch -m lmms_eval \
-        --model bagel \
+    # Visual CoT (auto-detected from task config)
+    accelerate launch -m lmms_eval --model bagel \
         --model_args pretrained=/path/to/BAGEL-7B-MoT,mode=generation \
-        --tasks ueval \
-        --batch_size 1 \
-        --output_path ./logs/
+        --tasks unig2u_GtA --batch_size 1
     """
 
     def __init__(
@@ -79,6 +76,17 @@ class Bagel(lmms):
         image_ratio: str = "1:1",
         continual_mode: bool = True,
         response_persistent_folder: Optional[str] = None,
+        # Visual CoT parameters (used when auto-detected from [GEN_PROMPT] tags)
+        stage2_max_new_tokens: int = 16384,
+        stage2_temperature: float = 0.0,
+        stage2_do_sample: bool = False,
+        generation_prompt_template: str = (
+            "Generate a detailed visual diagram or illustration "
+            "to help answer this question: {question}"
+        ),
+        save_intermediate: bool = False,
+        intermediate_dir: Optional[str] = None,
+        fail_gracefully: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -89,6 +97,23 @@ class Bagel(lmms):
 
         self.mode = mode
         self.max_new_tokens = max_new_tokens
+
+        # Visual CoT parameters
+        self.stage2_max_new_tokens = stage2_max_new_tokens
+        self.stage2_temperature = stage2_temperature
+        self.stage2_do_sample = stage2_do_sample
+        self.generation_prompt_template = generation_prompt_template
+        self.save_intermediate = save_intermediate
+        self.fail_gracefully = fail_gracefully
+
+        # Setup intermediate dir for visual CoT artifacts
+        if intermediate_dir is None:
+            self.intermediate_dir = os.path.join(
+                response_persistent_folder or "./logs/bagel_persistent_folder",
+                "visual_cot_artifacts",
+            )
+        else:
+            self.intermediate_dir = intermediate_dir
 
         # Import Bagel dependencies
         try:
@@ -785,8 +810,114 @@ class Bagel(lmms):
                 output.append(item)
         return output
 
+    # ── Visual CoT methods ──────────────────────────────────────────────
+
+    def _vcot_stage1_generate_image(
+        self, generation_prompt: str, doc_id: str, task: str, original_image=None
+    ) -> Tuple[str, List[str]]:
+        """Stage 1: Generate auxiliary visualization image from prompt."""
+        eval_logger.debug(f"Visual CoT Stage 1 - Generating image for doc {doc_id}")
+        try:
+            text, images = self.generate_text_and_image(
+                prompt=generation_prompt,
+                doc_id=f"{doc_id}_stage1",
+                task=task,
+                image=original_image,
+            )
+            return text, images
+        except Exception as e:
+            eval_logger.error(f"Visual CoT Stage 1 failed for doc {doc_id}: {e}")
+            if self.fail_gracefully:
+                return "", []
+            raise
+
+    def _vcot_stage2_answer(
+        self,
+        question: str,
+        image_path: str,
+        doc_id: str,
+        original_image=None,
+    ) -> str:
+        """Stage 2: Answer question using generated auxiliary image."""
+        eval_logger.debug(f"Visual CoT Stage 2 - Answering for doc {doc_id}")
+        try:
+            auxiliary_image = Image.open(image_path).convert("RGB")
+
+            if original_image is not None:
+                input_list = [original_image, auxiliary_image, question]
+                output_list = self.inferencer.interleave_inference(
+                    input_lists=input_list,
+                    understanding_output=True,
+                    think=False,
+                    max_think_token_n=self.stage2_max_new_tokens,
+                    do_sample=self.stage2_do_sample,
+                    text_temperature=self.stage2_temperature,
+                )
+                answer_text = ""
+                for output in output_list:
+                    if isinstance(output, str):
+                        answer_text = output
+                        break
+            else:
+                result = self.inferencer(
+                    image=auxiliary_image,
+                    text=question,
+                    understanding_output=True,
+                    think=False,
+                    max_think_token_n=self.stage2_max_new_tokens,
+                    do_sample=self.stage2_do_sample,
+                    text_temperature=self.stage2_temperature,
+                )
+                answer_text = result.get("text", "")
+
+            return answer_text
+
+        except Exception as e:
+            eval_logger.error(f"Visual CoT Stage 2 failed for doc {doc_id}: {e}")
+            if self.fail_gracefully:
+                return ""
+            raise
+
+    def _vcot_save_artifacts(
+        self,
+        doc_id: str,
+        task: str,
+        generation_prompt: str,
+        stage1_text: str,
+        generated_images: List[str],
+        question: str,
+        stage2_answer: str,
+    ) -> None:
+        """Save intermediate Visual CoT artifacts for debugging."""
+        if not self.save_intermediate:
+            return
+        artifact_dir = os.path.join(self.intermediate_dir, task)
+        os.makedirs(artifact_dir, exist_ok=True)
+        metadata = {
+            "doc_id": doc_id,
+            "task": task,
+            "generation_prompt": generation_prompt,
+            "stage1_text": stage1_text,
+            "generated_images": generated_images,
+            "question": question,
+            "stage2_answer": stage2_answer,
+        }
+        metadata_path = os.path.join(artifact_dir, f"{doc_id}_metadata.json")
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+    # ── Main inference ──────────────────────────────────────────────────
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
-        """Main inference method"""
+        """
+        Main inference method. Auto-detects mode:
+        - [GEN_PROMPT] tags → Visual CoT two-stage pipeline
+        - bagel_interleaved config → Uni-MMMU interleaved generation
+        - mode=understanding → Image understanding
+        - mode=generation → Image generation
+        """
+        import re as re_mod
+
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Bagel Generating")
 
@@ -807,22 +938,83 @@ class Bagel(lmms):
 
             prompt = contexts
 
-            # Check if this is Uni-MMMU interleaved generation mode
+            # ── Route: Uni-MMMU interleaved ──
             bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
-
             if bagel_interleaved is not None:
-                # Uni-MMMU interleaved generation mode
-                # Get input images and doc data
                 doc = self.task_dict[task][split][doc_id]
                 input_images = []
                 if doc_to_visual is not None:
                     visuals = [doc_to_visual(doc)]
                     input_images = self.flatten(visuals)
-
                 output_text, output_images = self.generate_uni_mmmu_interleaved(
                     input_images, prompt, str(doc_id), task, bagel_interleaved, doc
                 )
                 formatted_output = self.format_output(output_text, output_images)
+
+            # ── Route: Visual CoT (explicit via gen_kwargs) ──
+            elif gen_kwargs.pop("visual_cot", False):
+                # Extract original image
+                original_image = None
+                if doc_to_visual is not None:
+                    try:
+                        doc = self.task_dict[task][split][doc_id]
+                        original_visuals = doc_to_visual(doc)
+                        if original_visuals and len(original_visuals) > 0:
+                            original_image = original_visuals[0]
+                    except Exception as e:
+                        eval_logger.warning(
+                            f"Failed to extract original image for doc {doc_id}: {e}"
+                        )
+
+                # Parse [GEN_PROMPT] and [QUESTION] tags
+                gen_prompt_match = re_mod.search(
+                    r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", prompt, re_mod.DOTALL
+                )
+                question_match = re_mod.search(
+                    r"\[QUESTION\](.*?)\[/QUESTION\]", prompt, re_mod.DOTALL
+                )
+
+                if gen_prompt_match and question_match:
+                    custom_gen_prompt = gen_prompt_match.group(1).strip()
+                    actual_question = question_match.group(1).strip()
+                    generation_prompt = custom_gen_prompt.replace(
+                        "{question}", actual_question
+                    )
+                else:
+                    actual_question = prompt
+                    generation_prompt = self.generation_prompt_template.format(
+                        question=prompt
+                    )
+
+                eval_logger.info(f"Visual CoT for doc {doc_id}, task {task}")
+
+                # Stage 1: Generate auxiliary image
+                stage1_text, generated_images = self._vcot_stage1_generate_image(
+                    generation_prompt=generation_prompt,
+                    doc_id=str(doc_id),
+                    task=task,
+                    original_image=original_image,
+                )
+
+                if not generated_images:
+                    formatted_output = stage1_text or ""
+                else:
+                    # Stage 2: Answer with auxiliary image
+                    formatted_output = self._vcot_stage2_answer(
+                        question=actual_question,
+                        image_path=generated_images[0],
+                        doc_id=str(doc_id),
+                        original_image=original_image,
+                    )
+                    self._vcot_save_artifacts(
+                        doc_id=str(doc_id),
+                        task=task,
+                        generation_prompt=generation_prompt,
+                        stage1_text=stage1_text,
+                        generated_images=generated_images,
+                        question=actual_question,
+                        stage2_answer=formatted_output,
+                    )
 
             elif self.mode == "understanding":
                 # Image understanding mode
@@ -832,7 +1024,6 @@ class Bagel(lmms):
                     pbar.update(1)
                     continue
 
-                # Get image from doc_to_visual
                 visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
                 visuals = self.flatten(visuals)
 
@@ -842,7 +1033,6 @@ class Bagel(lmms):
                     pbar.update(1)
                     continue
 
-                # Use first image for understanding
                 image = visuals[0]
                 output_text = self.understand_image(prompt, image, str(doc_id))
                 formatted_output = output_text

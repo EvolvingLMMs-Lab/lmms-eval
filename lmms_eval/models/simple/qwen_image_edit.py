@@ -1,5 +1,7 @@
 import base64
+import json
 import os
+import re
 from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
@@ -25,14 +27,14 @@ except ImportError:
 @register_model("qwen_image_edit")
 class QwenImageEdit(lmms):
     """
-    Qwen-Image-Edit 20B Model
+    Qwen-Image-Edit 20B Model (Unified: Understanding + Editing + Visual CoT)
     https://huggingface.co/Qwen/Qwen-Image-Edit
-    
-    A 20B parameter MMDiT model that supports BOTH:
-    1. Image Understanding (VQA mode): Uses Qwen2.5-VL encoder for image-to-text tasks
-    2. Image Editing: Text-guided image editing in Chinese and English
-    
-    The model internally uses Qwen2.5-VL as semantic encoder, enabling visual understanding.
+
+    Modes:
+    1. Understanding (VQA): Uses Qwen2.5-VL encoder for image-to-text
+    2. Editing: Text-guided image editing
+    3. Visual CoT: Triggered by gen_kwargs visual_cot: true.
+       Stage 1 (edit) -> Stage 2 (understand) pipeline.
     """
 
     def __init__(
@@ -53,14 +55,43 @@ class QwenImageEdit(lmms):
         output_type: str = "pil",
         save_generated_images: bool = True,
         generated_image_dir: str = "./qwen_edit_generated_images",
+        # Visual CoT parameters (triggered by gen_kwargs visual_cot: true)
+        pretrained_edit: Optional[str] = None,
+        pretrained_understand: Optional[str] = None,
+        stage2_max_new_tokens: int = 512,
+        stage2_temperature: float = 0.0,
+        stage2_do_sample: bool = False,
+        generation_prompt_template: str = (
+            "Based on this image and question, generate an annotated "
+            "or highlighted version that helps answer: {question}"
+        ),
+        save_intermediate: bool = False,
+        intermediate_dir: Optional[str] = None,
+        fail_gracefully: bool = True,
         **kwargs,
     ) -> None:
         super().__init__()
-        
+
         # Validate mode
         if mode not in ["understanding", "editing"]:
             raise ValueError(f"mode must be 'understanding' or 'editing', got {mode}")
         self.mode = mode
+
+        # Visual CoT parameters
+        self.pretrained_edit = pretrained_edit
+        self.pretrained_understand = pretrained_understand
+        self.stage2_max_new_tokens = stage2_max_new_tokens
+        self.stage2_temperature = stage2_temperature
+        self.stage2_do_sample = stage2_do_sample
+        self.generation_prompt_template = generation_prompt_template
+        self.save_intermediate = save_intermediate
+        self.fail_gracefully = fail_gracefully
+        self._complementary_model = None  # Lazy-loaded for visual CoT
+
+        if intermediate_dir is None:
+            self.intermediate_dir = "./logs/qwen_edit_visual_cot"
+        else:
+            self.intermediate_dir = intermediate_dir
         
         # Validate torch dtype
         dtype_mapping = {
@@ -448,66 +479,320 @@ class QwenImageEdit(lmms):
         
         return final_text, generated_images
 
+    # ── Visual CoT helpers ───────────────────────────────────────────
+
+    def _get_complementary_model(self):
+        """Lazy-load the complementary model for Visual CoT."""
+        if self._complementary_model is not None:
+            return self._complementary_model
+
+        if self.mode == "editing":
+            # Need understanding model for Stage 2
+            pretrained = (
+                self.pretrained_understand
+                or "Qwen/Qwen2-VL-7B-Instruct"
+            )
+            eval_logger.info(
+                f"Loading understanding model for Visual CoT: {pretrained}"
+            )
+            self._complementary_model = QwenImageEdit(
+                pretrained=pretrained,
+                mode="understanding",
+            )
+        else:
+            # Need editing model for Stage 1
+            pretrained = self.pretrained_edit or "Qwen/Qwen-Image-Edit"
+            eval_logger.info(
+                f"Loading editing model for Visual CoT: {pretrained}"
+            )
+            self._complementary_model = QwenImageEdit(
+                pretrained=pretrained,
+                mode="editing",
+                save_generated_images=True,
+                generated_image_dir=os.path.join(
+                    self.intermediate_dir, "stage1_images"
+                ),
+            )
+        return self._complementary_model
+
+    def _vcot_stage1_edit(
+        self,
+        generation_prompt: str,
+        doc_id: str,
+        task: str,
+        original_image: Image.Image,
+    ) -> str:
+        """Stage 1: Generate auxiliary visualization via editing."""
+        edit_model = (
+            self if self.mode == "editing" else self._get_complementary_model()
+        )
+
+        class MockRequest:
+            def __init__(self, doc, args):
+                self.doc = doc
+                self.arguments = args
+
+        mock_doc = {
+            "image": original_image,
+            "prompt": generation_prompt,
+            "task": task,
+            "doc_id": f"{doc_id}_vcot_s1",
+        }
+        mock_request = MockRequest(mock_doc, [generation_prompt])
+        edit_model._generate_editing([mock_request])
+
+        image_path = os.path.join(
+            edit_model.generated_image_dir,
+            f"{task}_{doc_id}_vcot_s1.png",
+        )
+        return image_path if os.path.exists(image_path) else ""
+
+    def _vcot_stage2_answer(
+        self,
+        question: str,
+        image_path: str,
+        doc_id: str,
+        original_image: Optional[Image.Image] = None,
+    ) -> str:
+        """Stage 2: Answer question using original + auxiliary image."""
+        understand_model = (
+            self
+            if self.mode == "understanding"
+            else self._get_complementary_model()
+        )
+
+        auxiliary_image = Image.open(image_path).convert("RGB")
+        images = (
+            [original_image, auxiliary_image]
+            if original_image
+            else [auxiliary_image]
+        )
+
+        # Build a mock request for understanding
+        class MockInstance:
+            def __init__(self, args):
+                self.args = args
+
+        mock_args = (
+            question,
+            {
+                "max_new_tokens": self.stage2_max_new_tokens,
+                "temperature": self.stage2_temperature,
+                "do_sample": self.stage2_do_sample,
+            },
+            lambda doc: images,
+            doc_id,
+            "_vcot_temp",
+            "test",
+        )
+
+        # Ensure task_dict exists
+        if not hasattr(understand_model, "task_dict"):
+            understand_model.task_dict = {}
+        if "_vcot_temp" not in understand_model.task_dict:
+            understand_model.task_dict["_vcot_temp"] = {"test": {}}
+        understand_model.task_dict["_vcot_temp"]["test"][doc_id] = {}
+
+        mock_request = MockInstance(mock_args)
+        results = understand_model._generate_understanding([mock_request])
+        return results[0] if results else ""
+
+    def _vcot_save_artifacts(
+        self,
+        doc_id: str,
+        task: str,
+        generation_prompt: str,
+        image_path: str,
+        question: str,
+        answer: str,
+    ) -> None:
+        if not self.save_intermediate:
+            return
+        artifact_dir = os.path.join(self.intermediate_dir, task)
+        os.makedirs(artifact_dir, exist_ok=True)
+        metadata = {
+            "doc_id": doc_id,
+            "task": task,
+            "generation_prompt": generation_prompt,
+            "generated_image_path": image_path,
+            "question": question,
+            "stage2_answer": answer,
+        }
+        path = os.path.join(artifact_dir, f"{doc_id}_metadata.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+    # ── Main entry point ────────────────────────────────────────────
+
     def generate_until(self, requests) -> List[str]:
         """
-        Generate outputs based on mode:
-        - Understanding mode: Image + question → text answer (VQA)
-        - Editing mode: Image + edit instruction → edited image
-        - Uni-MMMU interleaved mode: Detected via bagel_interleaved config
+        Generate outputs. Mode selection:
+        - gen_kwargs visual_cot: true -> Visual CoT two-stage pipeline
+        - bagel_interleaved -> Uni-MMMU interleaved generation
+        - mode=understanding -> VQA
+        - mode=editing -> Image editing
         """
-        # Check for Uni-MMMU interleaved mode (aligned with Bagel)
+        # Check for Visual CoT or interleaved in any request
+        has_visual_cot = any(
+            req.args[1].get("visual_cot", False)
+            for req in requests
+        )
         has_interleaved = any(
             req.args[1].get("bagel_interleaved", None) is not None
             for req in requests
         )
-        
-        if has_interleaved:
-            # Uni-MMMU interleaved generation
-            import json
-            res = []
-            pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Uni-MMMU Generating")
-            
-            for request in requests:
-                contexts, gen_kwargs, doc_to_visual, doc_id, task, split = request.args
-                bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
-                
-                if bagel_interleaved is not None:
-                    eval_logger.info(f"Uni-MMMU interleaved mode for doc {doc_id}")
-                    
-                    # Get document and input images
-                    doc = self.task_dict[task][split][doc_id]
-                    input_images = []
-                    if doc_to_visual is not None:
-                        visuals = doc_to_visual(doc)
-                        if isinstance(visuals, list):
-                            input_images = visuals
-                        else:
-                            input_images = [visuals]
-                    
-                    # Generate using interleaved mode
-                    output_text, output_images = self.generate_uni_mmmu_interleaved(
-                        input_images, contexts, str(doc_id), task, bagel_interleaved, doc
-                    )
-                    
-                    # Format output as JSON (aligned with Bagel)
-                    formatted_output = json.dumps(
-                        {"text": output_text, "images": output_images},
-                        ensure_ascii=False
-                    )
-                    res.append(formatted_output)
-                else:
-                    res.append("")
-                
-                pbar.update(1)
-            
-            pbar.close()
-            return res
-        
-        # Regular generation modes
-        if self.mode == "understanding":
+
+        if has_visual_cot:
+            return self._generate_visual_cot(requests)
+        elif has_interleaved:
+            return self._generate_interleaved(requests)
+        elif self.mode == "understanding":
             return self._generate_understanding(requests)
         else:
             return self._generate_editing(requests)
+
+    def _generate_visual_cot(self, requests) -> List[str]:
+        """Visual CoT: triggered by gen_kwargs visual_cot: true."""
+        res = []
+        pbar = tqdm(
+            total=len(requests),
+            disable=(self.rank != 0),
+            desc="QwenEdit VisualCoT",
+        )
+
+        for request in requests:
+            contexts, gen_kwargs, doc_to_visual, doc_id, task, split = (
+                request.args
+            )
+
+            # Extract original image
+            original_image = None
+            if doc_to_visual is not None:
+                try:
+                    doc = self.task_dict[task][split][doc_id]
+                    original_visuals = doc_to_visual(doc)
+                    if original_visuals and len(original_visuals) > 0:
+                        original_image = original_visuals[0]
+                except Exception as e:
+                    eval_logger.warning(
+                        f"Failed to extract image for doc {doc_id}: {e}"
+                    )
+
+            if original_image is None:
+                res.append("")
+                pbar.update(1)
+                continue
+
+            # Parse [GEN_PROMPT] and [QUESTION] tags
+            gen_match = re.search(
+                r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", contexts, re.DOTALL
+            )
+            q_match = re.search(
+                r"\[QUESTION\](.*?)\[/QUESTION\]", contexts, re.DOTALL
+            )
+
+            if gen_match and q_match:
+                generation_prompt = gen_match.group(1).strip()
+                actual_question = q_match.group(1).strip()
+            else:
+                actual_question = contexts
+                generation_prompt = self.generation_prompt_template.format(
+                    question=contexts
+                )
+
+            # Stage 1: Generate auxiliary image
+            try:
+                image_path = self._vcot_stage1_edit(
+                    generation_prompt, str(doc_id), task, original_image
+                )
+            except Exception as e:
+                eval_logger.error(f"Visual CoT Stage 1 failed: {e}")
+                if self.fail_gracefully:
+                    res.append("")
+                    pbar.update(1)
+                    continue
+                raise
+
+            if not image_path:
+                res.append("")
+                pbar.update(1)
+                continue
+
+            # Stage 2: Answer with auxiliary image
+            try:
+                answer = self._vcot_stage2_answer(
+                    actual_question,
+                    image_path,
+                    str(doc_id),
+                    original_image,
+                )
+            except Exception as e:
+                eval_logger.error(f"Visual CoT Stage 2 failed: {e}")
+                if self.fail_gracefully:
+                    answer = ""
+                else:
+                    raise
+
+            self._vcot_save_artifacts(
+                str(doc_id),
+                task,
+                generation_prompt,
+                image_path,
+                actual_question,
+                answer,
+            )
+
+            res.append(answer)
+            pbar.update(1)
+
+        pbar.close()
+        return res
+
+    def _generate_interleaved(self, requests) -> List[str]:
+        """Uni-MMMU interleaved generation."""
+        res = []
+        pbar = tqdm(
+            total=len(requests),
+            disable=(self.rank != 0),
+            desc="Uni-MMMU Generating",
+        )
+
+        for request in requests:
+            contexts, gen_kwargs, doc_to_visual, doc_id, task, split = (
+                request.args
+            )
+            bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
+
+            if bagel_interleaved is not None:
+                doc = self.task_dict[task][split][doc_id]
+                input_images = []
+                if doc_to_visual is not None:
+                    visuals = doc_to_visual(doc)
+                    input_images = (
+                        visuals if isinstance(visuals, list) else [visuals]
+                    )
+                output_text, output_images = (
+                    self.generate_uni_mmmu_interleaved(
+                        input_images,
+                        contexts,
+                        str(doc_id),
+                        task,
+                        bagel_interleaved,
+                        doc,
+                    )
+                )
+                formatted = json.dumps(
+                    {"text": output_text, "images": output_images},
+                    ensure_ascii=False,
+                )
+                res.append(formatted)
+            else:
+                res.append("")
+
+            pbar.update(1)
+
+        pbar.close()
+        return res
     
     def _generate_understanding(self, requests) -> List[str]:
         """Image understanding mode: VQA using Qwen2.5-VL"""
