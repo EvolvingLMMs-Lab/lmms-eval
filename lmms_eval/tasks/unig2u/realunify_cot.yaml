@@ -1,0 +1,6 @@
+# RealUnify GEU Visual CoT Task Group
+group: unig2u_realunify_cot
+task:
+  - unig2u_realunify_mental_tracking_visual_cot
+  - unig2u_realunify_mental_reconstruction_visual_cot
+  - unig2u_realunify_attentional_focusing_visual_cot
