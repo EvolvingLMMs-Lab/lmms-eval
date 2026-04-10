@@ -53,6 +53,7 @@ def _get_video_dir():
             eval_logger.warning(f"[video_holmes] videos.zip not found at {zip_path}")
     return video_dir
 
+
 QUESTION_TYPES = ["SR", "IMC", "TCI", "TA", "MHR", "PAR", "CTI"]
 
 
@@ -91,11 +92,7 @@ def video_holmes_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
     question = doc["Question"]
     options = _build_options_str(doc)
-    instruct_prompt = (
-        "Select the best answer to the following multiple-choice "
-        "question based on the video. Respond with only the letter "
-        "(A, B, C, D, E, or F) of the correct option."
-    )
+    instruct_prompt = "Select the best answer to the following multiple-choice " "question based on the video. Respond with only the letter " "(A, B, C, D, E, or F) of the correct option."
     return f"Question: {question}\n{options}\n{instruct_prompt}"
 
 
