@@ -31,7 +31,7 @@ def ocrbench_doc_to_text(doc, lmms_eval_specific_kwargs):
 
 
 def ocrbench_process_results(doc, results):
-    pred = results[0].lower().strip()
+    pred = results[0].strip()
     gt_ans = doc["answer"]
     dataset_name = doc["dataset"]
 
@@ -88,9 +88,9 @@ def ocrbench_aggregate_accuracy(results, args):
         print(f"Handwriting Recognition(Total 50): {OCRBench_score['Handwriting Recognition']}", file=f)
         print(f"Digit String Recognition(Total 50): {OCRBench_score['Digit String Recognition']}", file=f)
         print(f"Non-Semantic Text Recognition(Total 50): {OCRBench_score['Non-Semantic Text Recognition']}", file=f)
-        print("----------------------------------------------------------------", file=f)
+        print("-------------------------------------------------------------", file=f)
         print(f"Scene Text-centric VQA(Total 200): {OCRBench_score['Scene Text-centric VQA']}", file=f)
-        print("----------------------------------------------------------------", file=f)
+        print("----------------------------------------------------------", file=f)
         print(f"Doc-oriented VQA(Total 200): {OCRBench_score['Doc-oriented VQA']}", file=f)
         print("----------------------------------------------------------------", file=f)
         print(f"Key Information Extraction(Total 200): {OCRBench_score['Key Information Extraction']}", file=f)
