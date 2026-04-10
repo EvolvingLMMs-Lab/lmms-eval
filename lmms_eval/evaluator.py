@@ -34,6 +34,7 @@ from lmms_eval.evaluator_utils import (
 from lmms_eval.llm_judge.launcher import get_launcher
 from lmms_eval.loggers.evaluation_tracker import EvaluationTracker
 from lmms_eval.models import get_model
+from lmms_eval.api.task import Task
 from lmms_eval.tasks import TaskManager, get_task_dict
 from lmms_eval.utils import (
     create_iterator,
