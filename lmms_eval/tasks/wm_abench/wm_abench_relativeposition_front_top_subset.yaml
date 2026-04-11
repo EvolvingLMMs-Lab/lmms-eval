@@ -1,0 +1,4 @@
+dataset_name: "RelativePosition_front_top_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_relativeposition_front_top_subset"
+include: _default_template_yaml

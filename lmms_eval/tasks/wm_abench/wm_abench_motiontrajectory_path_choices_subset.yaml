@@ -1,0 +1,4 @@
+dataset_name: "MotionTrajectory_path_choices_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_motiontrajectory_path_choices_subset"
+include: _default_template_yaml

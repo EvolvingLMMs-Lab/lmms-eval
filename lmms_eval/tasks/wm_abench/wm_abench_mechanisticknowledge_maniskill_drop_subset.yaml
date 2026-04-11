@@ -1,0 +1,4 @@
+dataset_name: "MechanisticKnowledge_maniskill_drop_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_mechanisticknowledge_maniskill_drop_subset"
+include: _default_template_yaml

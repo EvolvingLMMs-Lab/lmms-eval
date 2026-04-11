@@ -1,0 +1,4 @@
+dataset_name: "RelativeCounting_tdw_color_letter_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_relativecounting_tdw_color_letter_subset"
+include: _default_template_yaml

@@ -1,0 +1,4 @@
+dataset_name: "SpatialOccupancy_volume_object_only_unfloat_top_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_spatialoccupancy_volume_object_only_unfloat_top_subset"
+include: _default_template_yaml
