@@ -9,8 +9,6 @@ Dataset: https://huggingface.co/datasets/TencentARC/Video-Holmes
 
 import os
 import random
-import re
-import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -123,6 +121,16 @@ def video_holmes_doc_to_text_reasoning(doc, lmms_eval_specific_kwargs=None):
     question = doc["Question"]
     options = _build_options_str(doc)
     return f"Question: {question}\n{options}\n{reasoning_prompt}"
+
+
+def video_holmes_doc_to_messages_reasoning(doc, lmms_eval_specific_kwargs=None):
+    """Structured chat messages for reasoning variant."""
+    prompt = video_holmes_doc_to_text_reasoning(doc, lmms_eval_specific_kwargs)
+    content = []
+    for video_path in video_holmes_doc_to_visual(doc):
+        content.append({"type": "video", "url": video_path})
+    content.append({"type": "text", "text": prompt})
+    return [{"role": "user", "content": content}]
 
 
 # ──────────────────────────────────────────────

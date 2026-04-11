@@ -1,6 +1,7 @@
 task: video_holmes_reasoning
 include: _default_template_yaml
 doc_to_text: !function utils.video_holmes_doc_to_text_reasoning
+doc_to_messages: !function utils.video_holmes_doc_to_messages_reasoning
 generation_kwargs:
   max_new_tokens: 4096
   temperature: 0
