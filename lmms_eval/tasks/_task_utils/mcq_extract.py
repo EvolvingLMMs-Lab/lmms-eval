@@ -36,6 +36,17 @@ _ANSWER_PHRASES = [
     "i pick",
     "my answer is",
     "my choice is",
+    # Korean
+    "옵션",
+    "정답은",
+    "답은",
+    "답:",
+    # Chinese
+    "答案是",
+    "答案为",
+    "选",
+    # Japanese
+    "答えは",
 ]
 
 # Higher = more confident that this is the intended answer.
