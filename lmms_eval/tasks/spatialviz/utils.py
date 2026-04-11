@@ -1,5 +1,6 @@
 import os
 import re
+import zipfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
@@ -23,6 +24,13 @@ cache_dir = snapshot_download(
     repo_type="dataset",
     local_dir_use_symlinks=False,
 )
+
+# The dataset stores images in images.zip — extract if not already done
+_zip_path = os.path.join(cache_dir, "images.zip")
+if os.path.exists(_zip_path) and not os.path.isdir(os.path.join(cache_dir, "MentalAnimation")):
+    eval_logger.info(f"Extracting {_zip_path} to {cache_dir}")
+    with zipfile.ZipFile(_zip_path, "r") as zf:
+        zf.extractall(cache_dir)
 
 
 def spatialviz_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
