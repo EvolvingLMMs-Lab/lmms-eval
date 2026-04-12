@@ -135,10 +135,11 @@ class QwenImageEdit(lmms):
         else:
             # Load diffusion pipeline for image editing
             try:
+                pipeline_device_map = self.device_map if self.device_map not in ("auto",) else "balanced"
                 self.pipeline = DiffusionPipeline.from_pretrained(
                     pretrained,
                     torch_dtype=self.torch_dtype,
-                    device_map=self.device_map,
+                    device_map=pipeline_device_map,
                     use_safetensors=True,
                 )
                 eval_logger.info(f"Successfully loaded Qwen-Image-Edit pipeline for editing mode")
