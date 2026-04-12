@@ -201,7 +201,7 @@ def geometry3k_process_results(doc: Dict, results: List[str]) -> Dict[str, float
     """
     Process geometry3k results with LLM Judge evaluation using Azure TRAPI.
 
-    Uses GPT-5.1 as Judge (configurable via JUDGE_DEPLOYMENT env var).
+    Uses GPT-4o as Judge (configurable via JUDGE_DEPLOYMENT env var).
     """
     result_text = results[0] if results else ""
 

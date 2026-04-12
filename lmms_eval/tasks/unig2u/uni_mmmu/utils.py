@@ -192,7 +192,7 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             try:
                 data = json.loads(parsed)
                 choice = data.get("choice")
-            except:
+            except (json.JSONDecodeError, ValueError, KeyError):
                 pass
 
     if choice is None:
@@ -280,7 +280,7 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         try:
             moves_data = json.loads(matches[-1].group(1))
             pred_moves = [str(m).strip().lower() for m in moves_data]
-        except:
+        except (json.JSONDecodeError, ValueError, KeyError):
             pass
 
     # Ground truth moves
@@ -364,7 +364,7 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         try:
             moves_data = json.loads(matches[-1].group(1))
             pred_moves = [str(m).strip().lower() for m in moves_data]
-        except:
+        except (json.JSONDecodeError, ValueError, KeyError):
             pass
 
     # Ground truth moves

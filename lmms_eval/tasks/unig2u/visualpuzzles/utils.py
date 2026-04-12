@@ -8,7 +8,6 @@ from collections import defaultdict
 import numpy as np
 from PIL import Image
 
-eval_logger = logging.getLogger("lmms-eval")
 
 MULTI_CHOICE_DIRECT_PROMPT = "Answer the question with the option's letter from the given choices directly."
 COT_PROMPT = "Solve the multiple-choice question and then answer with the option letter from the given choices. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of options. Think step by step before answering."
@@ -37,7 +36,7 @@ def VisualPuzzles_doc_to_visual(doc):
 def VisualPuzzles_doc_to_text(doc, lmms_eval_specific_kwargs):
     question = "Question: " + doc["question"].strip()
     options = doc["options"]
-    if options != None:
+    if options is not None:
         question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
     else:
         question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
@@ -105,7 +104,7 @@ def parse_response(response, all_choices, index2ans):
         for match in matches[::-1]:
             if match in all_choices or match.upper() in all_choices:
                 return match
-    if index2ans != None:
+    if index2ans is not None:
         for index in all_choices:
             ans = index2ans[index]
             if f"answer: {ans}" in response.lower():
@@ -122,7 +121,7 @@ def parse_response(response, all_choices, index2ans):
                 last_index = idx
         if last_found:
             return last_found
-    return random.choice(all_choices)
+    return None
 
 
 def VisualPuzzles_process_result(doc, results):

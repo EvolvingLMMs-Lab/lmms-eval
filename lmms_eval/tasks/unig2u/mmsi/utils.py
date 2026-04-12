@@ -10,7 +10,6 @@ from PIL import Image
 from lmms_eval.filters.extraction import ExtendedRegexFilter
 from lmms_eval.filters.transformation import MapFilter
 
-eval_logger = logging.getLogger("lmms-eval")
 
 
 def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
