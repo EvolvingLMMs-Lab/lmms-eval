@@ -1,1 +1,296 @@
-../utils.py
+"""
+Geometry3K Task Utilities
+Evaluation for plane geometry problems from the Geometry3K dataset.
+"""
+
+import json
+import os
+import time
+from typing import Any, Dict, List, Optional
+
+from azure.identity import (
+    AzureCliCredential,
+    ChainedTokenCredential,
+    ManagedIdentityCredential,
+    get_bearer_token_provider,
+)
+from openai import AzureOpenAI, OpenAI
+from PIL import Image
+
+from lmms_eval.azure_openai_compat import build_client as build_azure_compat_client
+from lmms_eval.azure_openai_compat import has_endpoint_support
+
+
+# ============================================================================
+# LLM Judge Client (Azure TRAPI or OpenAI)
+# ============================================================================
+
+
+class AzureJudgeClient:
+    """Azure TRAPI client for LLM Judge."""
+
+    def __init__(self) -> None:
+        scope = os.getenv("TRAPI_SCOPE", "api://trapi/.default")
+        self.deployment = os.getenv("TRAPI_DEPLOYMENT", "gpt-4o_2024-11-20")
+        instance = os.getenv("TRAPI_INSTANCE", "gcr/shared")
+        api_version = os.getenv("TRAPI_API_VERSION", "2024-10-21")
+        endpoint = f"https://trapi.research.microsoft.com/{instance}"
+
+        credential_provider = get_bearer_token_provider(
+            ChainedTokenCredential(AzureCliCredential(), ManagedIdentityCredential()),
+            scope,
+        )
+        self.client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            azure_ad_token_provider=credential_provider,
+            api_version=api_version,
+        )
+
+    def chat_completion(self, *, messages, **kwargs) -> str:
+        resp = self.client.chat.completions.create(model=self.deployment, messages=messages, **kwargs)
+        return resp.choices[0].message.content
+
+
+class OpenAIJudgeClient:
+    """OpenAI client for LLM Judge."""
+
+    def __init__(self) -> None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY must be set for OpenAI judge.")
+        base_url = os.getenv("OPENAI_BASE_URL")
+        self.deployment = os.getenv("OPENAI_JUDGE_MODEL", "gpt-4o")
+        self.client = OpenAI(api_key=api_key, **({"base_url": base_url} if base_url else {}))
+
+    def chat_completion(self, *, messages, **kwargs) -> str:
+        resp = self.client.chat.completions.create(model=self.deployment, messages=messages, **kwargs)
+        return resp.choices[0].message.content
+
+
+class AzureEndpointJudgeClient:
+    """Azure OpenAI compatible endpoint client backed by Azure CLI bearer tokens."""
+
+    def __init__(self) -> None:
+        _, self.deployment = build_azure_compat_client()
+
+    def chat_completion(self, *, messages, **kwargs) -> str:
+        client, deployment = build_azure_compat_client(model=self.deployment)
+        resp = client.chat.completions.create(model=deployment, messages=messages, **kwargs)
+        return resp.choices[0].message.content
+
+
+_JUDGE_CLIENT: AzureJudgeClient | AzureEndpointJudgeClient | OpenAIJudgeClient | None = None
+
+
+def _get_judge_client() -> AzureJudgeClient | AzureEndpointJudgeClient | OpenAIJudgeClient:
+    """Get or create LLM Judge client (Azure or OpenAI based on env)."""
+    global _JUDGE_CLIENT
+    if _JUDGE_CLIENT is None:
+        if os.getenv("OPENAI_API_KEY"):
+            _JUDGE_CLIENT = OpenAIJudgeClient()
+        elif has_endpoint_support():
+            _JUDGE_CLIENT = AzureEndpointJudgeClient()
+        else:
+            _JUDGE_CLIENT = AzureJudgeClient()
+    return _JUDGE_CLIENT
+
+
+def _find_first_json_substring(text: str) -> Optional[str]:
+    """Extract first JSON object from text"""
+    if not text:
+        return None
+    start_index = text.find("{")
+    if start_index == -1:
+        return None
+
+    brace_depth, in_string, is_escaped = 0, False, False
+    for i in range(start_index, len(text)):
+        char = text[i]
+        if char == '"' and not is_escaped:
+            in_string = not in_string
+        if not in_string:
+            if char == "{":
+                brace_depth += 1
+            elif char == "}":
+                brace_depth -= 1
+                if brace_depth == 0:
+                    return text[start_index : i + 1]
+        is_escaped = char == "\\" and not is_escaped
+    return None
+
+
+def geometry3k_doc_to_visual(doc: Dict) -> List[Image.Image]:
+    """Get visual input for geometry3k task"""
+    images = doc.get("images", [])
+    if images:
+        # images is a list, return the first image
+        if isinstance(images, list) and len(images) > 0:
+            img = images[0]
+            if isinstance(img, Image.Image):
+                return [img]
+    return []
+
+
+def geometry3k_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None) -> str:
+    """Get text prompt for geometry3k task"""
+    problem = doc.get("problem", "")
+
+    # Problem already contains <image> tag, so we use it directly
+    return f"""{problem}
+
+Instructions:
+1. Carefully analyze the geometry diagram shown above.
+2. Read the problem statement and identify what needs to be found.
+3. Show your step-by-step solution with clear reasoning.
+4. Include all intermediate calculations.
+5. State the final answer clearly at the end.
+
+Please solve this problem step by step."""
+
+
+def geometry3k_doc_to_target(doc: Dict) -> str:
+    """Get target answer for geometry3k task"""
+    return doc.get("answer", "")
+
+
+def geometry3k_doc_to_text_visual_cot(
+    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
+) -> str:
+    """
+    Get two-stage Visual Chain-of-Thought prompt for geometry3k task.
+
+    Stage 1: Analyze the problem and draw auxiliary lines on the original diagram
+    Stage 2: Solve the problem using both original diagram and the auxiliary diagram
+    """
+    problem = doc.get("problem", "")
+
+    # Stage 1: Analyze problem and generate diagram with auxiliary constructions
+    generation_prompt = f"""You are given a geometry problem with a diagram. Analyze the problem and create an enhanced version of the SAME diagram with auxiliary constructions added.
+
+Problem: {problem}
+
+Instructions:
+1. KEEP all original elements exactly as they are (all points, lines, labels, and measurements)
+2. Analyze what auxiliary constructions would help solve this problem
+3. ADD auxiliary lines in a different color (e.g., red or dashed lines):
+   - Perpendicular lines from center to chords
+   - Extended lines if needed
+   - Angle bisectors, midpoints, or other helpful constructions
+4. Label any new points you add (use letters not already in the diagram)
+5. The final diagram should look like the original with extra auxiliary lines drawn on top
+
+Generate an enhanced diagram that preserves the original and adds helpful auxiliary constructions."""
+
+    # Stage 2: Solve using both original and auxiliary diagram
+    question_prompt = f"""{problem}
+
+You are given TWO images:
+1) ORIGINAL DIAGRAM: The geometry problem as given
+2) AUXILIARY DIAGRAM: The same diagram with auxiliary constructions (extra lines) added to help solve the problem
+
+Instructions:
+1. Look at the auxiliary diagram to see what constructions were added
+2. Use these auxiliary lines to identify key geometric relationships (perpendiculars, congruent segments, etc.)
+3. Apply relevant theorems (Pythagorean theorem, chord properties, etc.)
+4. Show your step-by-step solution with clear calculations
+5. State the final numerical answer
+
+Solve this problem step by step."""
+
+    return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT]\n[QUESTION]{question_prompt}[/QUESTION]"
+
+
+def geometry3k_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
+    """
+    Process geometry3k results with LLM Judge evaluation using Azure TRAPI.
+
+    Uses GPT-5.1 as Judge (configurable via JUDGE_DEPLOYMENT env var).
+    """
+    result_text = results[0] if results else ""
+
+    # Truncate to last 50000 characters to avoid token limit issues
+    # Keep the end since answers are usually at the end
+    MAX_RESULT_CHARS = 50000
+    if len(result_text) > MAX_RESULT_CHARS:
+        result_text = "...[truncated]...\n" + result_text[-MAX_RESULT_CHARS:]
+
+    # Default scores
+    accuracy = 0.0
+
+    # Get Judge client
+    try:
+        judge_client = _get_judge_client()
+    except Exception as e:
+        print(f"Warning: Failed to initialize Judge client: {e}")
+        return {
+            "geometry3k_accuracy": accuracy,
+        }
+
+    # === Answer Evaluation ===
+    problem = doc.get("problem", "")
+    gt_answer = doc.get("answer", "")
+
+    if problem and gt_answer and result_text:
+        judge_system = """You are a rigorous grader for plane geometry problems.
+Given: problem statement (text with diagram), ground-truth answer, and a candidate solution text.
+
+Evaluate if the candidate's final answer is mathematically equivalent to the ground-truth answer.
+
+Important considerations:
+- Numeric answers: Check if values match (allow minor rounding differences, e.g., 9.2 vs 9.19)
+- Algebraic expressions: Check mathematical equivalence (e.g., "2√221" = "2*sqrt(221)")
+- Fractions: Check equivalence (e.g., "1/2" = "0.5")
+- LaTeX formatting: Ignore formatting differences (e.g., "\frac{1}{2}" = "1/2")
+- Angle measures: Check numeric equivalence
+- Units: Ignore unit differences if values match
+
+Only mark as correct (answer_correct=1) if the final answer is mathematically equivalent.
+Mark as incorrect (answer_correct=0) if:
+- The answer is wrong
+- No clear final answer is provided
+- The answer is ambiguous
+
+Output MUST be a compact JSON: {"answer_correct":0|1,"reason":"<short explanation>"}"""
+
+        judge_user = f"""Problem:
+{problem}
+
+Ground truth answer:
+{gt_answer}
+
+Candidate solution:
+{result_text}
+
+Evaluate if the candidate's final answer matches the ground truth. Output JSON only."""
+
+        for attempt in range(3):
+            try:
+                response_text = judge_client.chat_completion(
+                    messages=[
+                        {"role": "system", "content": judge_system},
+                        {"role": "user", "content": judge_user},
+                    ],
+                    temperature=0.0,
+                    max_tokens=512,
+                )
+                result_json = _find_first_json_substring(response_text)
+                if result_json:
+                    data = json.loads(result_json)
+                    accuracy = 1.0 if int(data.get("answer_correct", 0)) == 1 else 0.0
+                break
+            except Exception as e:
+                print(f"Judge attempt {attempt + 1}/3 failed: {e}")
+                if attempt < 2:
+                    time.sleep(5)
+
+    return {
+        "geometry3k_accuracy": accuracy,
+    }
+
+
+def geometry3k_aggregate(results: List[Optional[float]]) -> float:
+    """Aggregate results"""
+    vals = [v for v in results if v is not None]
+    if not vals:
+        return float("nan")
+    return sum(vals) / len(vals)
