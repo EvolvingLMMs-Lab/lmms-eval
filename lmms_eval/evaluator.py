@@ -1006,8 +1006,6 @@ def evaluate(
                     cloned_reqs.extend([pad_source] * pad_source.repeats)
 
         # run requests through model (with optional response cache)
-        if reqtype == "generate_until" and hasattr(lm, "_check_visual_cot_support"):
-            lm._check_visual_cot_support(cloned_reqs)
         if reqtype == "generate_until_agentic":
             trace_mode = "basic"
             if cli_args is not None:

@@ -54,8 +54,6 @@ class BagelUniG2U(lmms):
         --tasks unig2u_GtA --batch_size 1
     """
 
-    supports_visual_cot = True
-
     def __init__(
         self,
         pretrained: str,

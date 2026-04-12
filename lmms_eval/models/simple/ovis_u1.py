@@ -78,8 +78,6 @@ class OvisU1(lmms):
     switches to two-stage Visual CoT inference.
     """
 
-    supports_visual_cot = True
-
     def __init__(
         self,
         pretrained: str = "AIDC-AI/Ovis-U1-3B",
