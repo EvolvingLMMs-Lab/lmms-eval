@@ -6,11 +6,11 @@ task: "unig2u_realunify_mental_tracking_visual_cot"
 test_split: train
 output_type: generate_visual_cot
 
-doc_to_visual: !function utils.doc_to_visual
+doc_to_visual: !function utils.realunify_doc_to_visual
 doc_to_text: !function utils.doc_to_text_mental_tracking_cot
 doc_to_target: "answer"
 
-process_results: !function utils.process_results
+process_results: !function utils.realunify_process_results
 
 lmms_eval_specific_kwargs:
   default:
@@ -42,7 +42,7 @@ generation_kwargs:
 
 metric_list:
   - metric: mental_tracking
-    aggregation: !function utils.aggregate_results
+    aggregation: !function utils.realunify_aggregate_results
     higher_is_better: true
 
 metadata:

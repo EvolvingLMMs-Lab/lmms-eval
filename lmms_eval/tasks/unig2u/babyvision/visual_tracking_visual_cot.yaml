@@ -8,11 +8,11 @@ output_type: generate_visual_cot
 
 process_docs: !function utils.process_visual_tracking
 
-doc_to_visual: !function utils.doc_to_visual
+doc_to_visual: !function utils.babyvision_doc_to_visual
 doc_to_text: !function utils.doc_to_text_visual_tracking_cot
 doc_to_target: "blankAns"
 
-process_results: !function utils.process_results
+process_results: !function utils.babyvision_process_results
 
 lmms_eval_specific_kwargs:
   default:
@@ -44,7 +44,7 @@ generation_kwargs:
 
 metric_list:
   - metric: Visual Tracking
-    aggregation: !function utils.aggregate_results
+    aggregation: !function utils.babyvision_aggregate_results
     higher_is_better: true
 
 metadata:

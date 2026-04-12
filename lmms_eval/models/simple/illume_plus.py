@@ -398,15 +398,6 @@ class ILLUMEPlus(lmms):
 
             self._model = self._model.eval()
             self._config = self._model.config
-            
-            # MEMORY OPTIMIZATION: Enable gradient checkpointing for inference
-            # This trades computation for memory by not storing intermediate activations
-            if hasattr(self._model, 'gradient_checkpointing_enable'):
-                try:
-                    self._model.gradient_checkpointing_enable()
-                    eval_logger.info("Gradient checkpointing enabled to reduce memory usage")
-                except Exception as e:
-                    eval_logger.warning(f"Could not enable gradient checkpointing: {e}")
 
             # Log GPU memory after model loading
             if torch.cuda.is_available():

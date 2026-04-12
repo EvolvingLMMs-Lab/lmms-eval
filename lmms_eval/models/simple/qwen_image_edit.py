@@ -307,6 +307,7 @@ class QwenImageEdit(lmms):
         # We need understanding model for text generation
         # Load it temporarily if not already loaded
         if not hasattr(self, '_understanding_model'):
+            eval_logger.warning("Loading a second model for understanding — this may increase GPU memory usage")
             eval_logger.info("Loading understanding model for text generation...")
             from lmms_eval.models.simple.qwen_image_edit import QwenImageEdit
             self._understanding_model = QwenImageEdit(

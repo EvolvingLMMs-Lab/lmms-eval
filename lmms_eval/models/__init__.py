@@ -22,7 +22,7 @@ AVAILABLE_SIMPLE_MODELS = {
     "glm4v": "GLM4V",
     "auroracap": "AuroraCap",
     "bagel": "Bagel",
-    "bagel_umm": "lmms_eval.models.simple.bagel.BagelUMM",
+    "bagel_umm": "BagelUMM",
     "bagel_unig2u": "BagelUniG2U",
     "baichuan_omni": "BaichuanOmni",
     "batch_gpt4": "BatchGPT4",

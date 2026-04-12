@@ -145,7 +145,7 @@ class _JudgeClient:
         return resp.choices[0].message.content
 
 
-_JUDGE_CLIENT: _JudgeClient | None = None
+_JUDGE_CLIENT: Optional[_JudgeClient] = None
 
 
 def _get_judge_client() -> _JudgeClient:
@@ -258,7 +258,6 @@ def chartqa_doc_to_text_visual_cot(doc, lmms_eval_specific_kwargs):
 # mmsi_bench
 # ======================================================================
 
-eval_logger = logging.getLogger("lmms-eval")
 
 
 def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -899,7 +898,7 @@ def auxsolidmath_process_results(doc: Dict, results: List[str]) -> Dict[str, flo
     """
     Process auxsolidmath results with LLM Judge evaluation using Azure TRAPI.
 
-    Uses GPT-5.1 as Judge (configurable via JUDGE_DEPLOYMENT env var).
+    Uses GPT-4o as Judge (configurable via JUDGE_DEPLOYMENT env var).
     """
     result_text = results[0] if results else ""
 
@@ -1066,7 +1065,7 @@ def format_choices(choices: List[str]) -> str:
     return formatted.strip()
 
 
-def doc_to_visual(doc: Dict) -> List[Image.Image]:
+def babyvision_doc_to_visual(doc: Dict) -> List[Image.Image]:
     """Get visual input from document."""
     if "image" in doc and doc["image"]:
         img = doc["image"]
@@ -1075,7 +1074,7 @@ def doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+def babyvision_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
     """Format question with choices if applicable."""
     question = doc["question"].strip()
 
@@ -1113,7 +1112,7 @@ def extract_boxed_answer(text: str) -> Optional[str]:
     return None
 
 
-def process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
+def babyvision_process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
     """Process results using Azure TRAPI LLM Judge for evaluation."""
     pred_text = results[0] if results else ""
 
@@ -1163,7 +1162,7 @@ def process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
     }
 
 
-def aggregate_results(results: List[Dict]) -> float:
+def babyvision_aggregate_results(results: List[Dict]) -> float:
     """Aggregate results to compute accuracy."""
     subtype_scores = defaultdict(list)
 
@@ -1386,7 +1385,7 @@ def geometry3k_process_results(doc: Dict, results: List[str]) -> Dict[str, float
     """
     Process geometry3k results with LLM Judge evaluation using Azure TRAPI.
 
-    Uses GPT-5.1 as Judge (configurable via JUDGE_DEPLOYMENT env var).
+    Uses GPT-4o as Judge (configurable via JUDGE_DEPLOYMENT env var).
     """
     result_text = results[0] if results else ""
 
@@ -1714,7 +1713,7 @@ Evaluation for GEU (Generation Enhances Understanding) tasks:
 
 
 
-def doc_to_visual(doc: Dict) -> List[Image.Image]:
+def realunify_doc_to_visual(doc: Dict) -> List[Image.Image]:
     """Get visual input from document."""
     if "image" in doc and doc["image"]:
         img_data = doc["image"]
@@ -1728,7 +1727,7 @@ def doc_to_visual(doc: Dict) -> List[Image.Image]:
     return []
 
 
-def doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
+def realunify_doc_to_text(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
     """Format evaluation prompt."""
     # GEU tasks use evaluation_prompt field
     prompt = doc.get("evaluation_prompt", doc.get("prompt", "")).strip()
@@ -1774,7 +1773,7 @@ def extract_answer(response: str) -> str:
     return ""
 
 
-def process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
+def realunify_process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
     """Process results - extract answer and compare to ground truth."""
     pred_text = results[0] if results else ""
 
@@ -1802,7 +1801,7 @@ def process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
     }
 
 
-def aggregate_results(results: List[Dict]) -> float:
+def realunify_aggregate_results(results: List[Dict]) -> float:
     """Aggregate results to compute accuracy."""
     task_scores = defaultdict(list)
 
@@ -2127,7 +2126,7 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             try:
                 data = json.loads(parsed)
                 choice = data.get("choice")
-            except:
+            except (json.JSONDecodeError, ValueError, KeyError):
                 pass
 
     if choice is None:
@@ -2218,7 +2217,7 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         try:
             moves_data = json.loads(matches[-1].group(1))
             pred_moves = [str(m).strip().lower() for m in moves_data]
-        except:
+        except (json.JSONDecodeError, ValueError, KeyError):
             pass
 
     # Ground truth moves
@@ -2308,7 +2307,7 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
         try:
             moves_data = json.loads(matches[-1].group(1))
             pred_moves = [str(m).strip().lower() for m in moves_data]
-        except:
+        except (json.JSONDecodeError, ValueError, KeyError):
             pass
 
     # Ground truth moves
@@ -2452,7 +2451,6 @@ def sliding_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = 
 # VisualPuzzles
 # ======================================================================
 
-eval_logger = logging.getLogger("lmms-eval")
 
 MULTI_CHOICE_DIRECT_PROMPT = "Answer the question with the option's letter from the given choices directly."
 COT_PROMPT = "Solve the multiple-choice question and then answer with the option letter from the given choices. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of options. Think step by step before answering."
@@ -2479,7 +2477,7 @@ def VisualPuzzles_doc_to_visual(doc):
 def VisualPuzzles_doc_to_text(doc, lmms_eval_specific_kwargs):
     question = "Question: " + doc["question"].strip()
     options = doc["options"]
-    if options != None:
+    if options is not None:
         question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1] + "\n(C) " + options[2] + "\n(D) " + options[3]
     else:
         question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
@@ -2547,7 +2545,7 @@ def parse_response(response, all_choices, index2ans):
         for match in matches[::-1]:
             if match in all_choices or match.upper() in all_choices:
                 return match
-    if index2ans != None:
+    if index2ans is not None:
         for index in all_choices:
             ans = index2ans[index]
             if f"answer: {ans}" in response.lower():
@@ -2564,7 +2562,7 @@ def parse_response(response, all_choices, index2ans):
                 last_index = idx
         if last_found:
             return last_found
-    return random.choice(all_choices)
+    return None
 
 
 def VisualPuzzles_process_result(doc, results):
