@@ -14,6 +14,7 @@ T = TypeVar("T", bound="lmms")
 
 class lmms(abc.ABC):
     is_simple: bool = True
+    supports_visual_cot: bool = False
 
     def __init__(self) -> None:
         """Defines the interface that should be implemented by all lmms subclasses.
@@ -25,6 +26,22 @@ class lmms(abc.ABC):
         self._world_size = 1
         self.cache_hook = CacheHook(None)
         self.task_dict = {}
+
+    def _check_visual_cot_support(self, requests) -> None:
+        """Check if any request requires Visual CoT (GtA) and raise an error if the model does not support it."""
+        if self.supports_visual_cot:
+            return
+        for req in requests:
+            if len(req.args) >= 2:
+                gen_kwargs = req.args[1] if isinstance(req.args[1], dict) else {}
+                if gen_kwargs.get("visual_cot", False):
+                    raise NotImplementedError(
+                        f"{type(self).__name__} does not support Visual CoT (GtA). "
+                        f"To run visual_cot tasks, either:\n"
+                        f"  1. Use a model that supports GtA (e.g., ovis_u1, bagel_unig2u, illume_plus, qwen_image_edit)\n"
+                        f"  2. Implement Visual CoT in your model and set `supports_visual_cot = True`\n"
+                        f"  3. Use the standard (non-visual_cot) version of this task instead"
+                    )
 
     @staticmethod
     def _resolve_system_prompt(value: str) -> str:

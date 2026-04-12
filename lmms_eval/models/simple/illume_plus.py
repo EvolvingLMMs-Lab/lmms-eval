@@ -70,6 +70,8 @@ class ILLUMEPlus(lmms):
     When using illume_plus_visual_cot model name, enable_visual_cot is automatically set to True.
     """
 
+    supports_visual_cot = True
+
     def __init__(
         self,
         pretrained: str = "ILLUME-MLLM/illume_plus-qwen2_5-7b-hf",
