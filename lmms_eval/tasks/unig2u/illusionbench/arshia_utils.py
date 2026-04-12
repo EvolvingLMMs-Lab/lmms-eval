@@ -18,31 +18,38 @@ _DIFF_TOKENS = {"easy", "medium", "hard"}
 
 # ============ 候选类别定义 ============
 # Shape candidates (原始大小写，与原始代码库对齐)
-SHAPE_CANDIDATES_ICON = [
-    "Animal", "Face_Emoji", "Music", "Sport", "Stationery", "Vehicle"
-]
+SHAPE_CANDIDATES_ICON = ["Animal", "Face_Emoji", "Music", "Sport", "Stationery", "Vehicle"]
 
 SHAPE_CANDIDATES_LOGO = [
-    "Adidas", "Amazon", "Apple", "Audi", "BMW", "Mercedes Benz", "Facebook", 
-    "Google", "Instagram", "Mcdonalds", "Nasa", "Nike", "Olympics", 
-    "Playstation", "Puma", "Reebok", "Spotify", "Starbucks", "Tesla", 
-    "Telegram", "Ubuntu"
+    "Adidas",
+    "Amazon",
+    "Apple",
+    "Audi",
+    "BMW",
+    "Mercedes Benz",
+    "Facebook",
+    "Google",
+    "Instagram",
+    "Mcdonalds",
+    "Nasa",
+    "Nike",
+    "Olympics",
+    "Playstation",
+    "Puma",
+    "Reebok",
+    "Spotify",
+    "Starbucks",
+    "Tesla",
+    "Telegram",
+    "Ubuntu",
 ]
 
-SHAPE_CANDIDATES_IN = [
-    "Airplane", "Bicycle", "Bird", "Bottle", "Car", "Cat", "Dog", "Dolphin",
-    "Fork", "Guitar", "Mug", "Panda", "Paper_clip", "Sailboat", "Scooter", "Teapot"
-]
+SHAPE_CANDIDATES_IN = ["Airplane", "Bicycle", "Bird", "Bottle", "Car", "Cat", "Dog", "Dolphin", "Fork", "Guitar", "Mug", "Panda", "Paper_clip", "Sailboat", "Scooter", "Teapot"]
 
 # Scene candidates (与原始代码库一致)
-SIMPLE_SCENE_CANDIDATES = [
-    "Ocean", "Origami", "Forest", "Cloud", "Sand_dune"
-]
+SIMPLE_SCENE_CANDIDATES = ["Ocean", "Origami", "Forest", "Cloud", "Sand_dune"]
 
-COMPLEX_SCENE_CANDIDATES = [
-    "Medieval_Village", "City", "Underwater_ruins", "Museum", 
-    "Bazaar_market", "Time_square"
-]
+COMPLEX_SCENE_CANDIDATES = ["Medieval_Village", "City", "Underwater_ruins", "Museum", "Bazaar_market", "Time_square"]
 
 SCENE_CANDIDATES = SIMPLE_SCENE_CANDIDATES + COMPLEX_SCENE_CANDIDATES
 
@@ -199,12 +206,7 @@ def illusionbench_arshia_doc_to_text(doc):
 
 
 def illusionbench_arshia_doc_to_text_shape(doc):
-    return (
-        "You are given an image where scene elements form an abstract SHAPE.\n"
-        "Task: Identify the abstract shape.\n\n"
-        "Reply in ONE line using this format:\n"
-        "Shape: <shape>\n"
-    )
+    return "You are given an image where scene elements form an abstract SHAPE.\n" "Task: Identify the abstract shape.\n\n" "Reply in ONE line using this format:\n" "Shape: <shape>\n"
 
 
 def _build_shape_prompt(shape_candidates: List[str], scene_candidates: List[str], task_type: str = "icon") -> str:
@@ -217,7 +219,7 @@ def _build_shape_prompt(shape_candidates: List[str], scene_candidates: List[str]
     all_options = shape_candidates + scene_candidates
     shape_string = ", ".join(shape_candidates)
     scene_string = ", ".join(scene_candidates)
-    
+
     if task_type == "icon":
         return (
             f"This image contains a icon integrated into a background, where elements of the background contribute to forming the icon. "
@@ -238,7 +240,7 @@ def _build_shape_prompt(shape_candidates: List[str], scene_candidates: List[str]
             f"Identify the shape that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string} "
             f"Provide your response by stating only the single, most accurate class name that represents the icon. "
             f"You have to respond with a single word."
-    )
+        )
 
 
 def illusionbench_arshia_doc_to_text_shape_icon(doc):
@@ -261,7 +263,7 @@ def _build_scene_prompt(shape_candidates: List[str], scene_candidates: List[str]
     """
     shape_string = ", ".join(shape_candidates)
     scene_string = ", ".join(scene_candidates)
-    
+
     if task_type == "icon":
         return (
             f"This image contains an icon integrated into a background, where elements of the background contribute to forming the icon. "
@@ -282,7 +284,7 @@ def _build_scene_prompt(shape_candidates: List[str], scene_candidates: List[str]
             f"Identify the background that is represented in the image by choosing exclusively among the following options:{shape_string},{scene_string}. "
             f"Provide your response by stating only the single, most accurate class name that represents the background. "
             f"You have to respond with a single word."
-    )
+        )
 
 
 def illusionbench_arshia_doc_to_text_scene(doc):
@@ -341,7 +343,7 @@ def illusionbench_arshia_process_results(doc, results):
 
 def illusionbench_arshia_process_results_shape(doc, results):
     """
-    Process shape results using recall-style matching (substring matching) 
+    Process shape results using recall-style matching (substring matching)
     to match original codebase evaluation style.
     """
     pred = str(results[0]) if results else ""
@@ -379,6 +381,7 @@ def illusionbench_arshia_doc_to_target(doc):
 
 # ============ Split shape/scene visual_cot prompts (for separate tasks) ============
 
+
 def illusionbench_arshia_doc_to_text_visual_cot_icon_shape(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-ICON subset - SHAPE task only"""
     # generation_prompt: NO candidate leakage - only describe the task
@@ -405,11 +408,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_icon_shape(doc, lmms_eval_specif
 def illusionbench_arshia_doc_to_text_visual_cot_icon_scene(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-ICON subset - SCENE task only"""
     # generation_prompt: NO candidate leakage
-    generation_prompt = (
-        "This image depicts a specific scene or environment. "
-        "Your task: Analyze and enhance the scene characteristics. "
-        "Generate a clear visualization that emphasizes the environmental features and setting."
-    )
+    generation_prompt = "This image depicts a specific scene or environment. " "Your task: Analyze and enhance the scene characteristics. " "Generate a clear visualization that emphasizes the environmental features and setting."
 
     # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_ICON)
@@ -449,11 +448,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_logo_shape(doc, lmms_eval_specif
 def illusionbench_arshia_doc_to_text_visual_cot_logo_scene(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-LOGO subset - SCENE task only"""
     # generation_prompt: NO candidate leakage
-    generation_prompt = (
-        "This image depicts a specific scene or environment. "
-        "Your task: Analyze and enhance the scene characteristics. "
-        "Generate a clear visualization that emphasizes the environmental features and setting."
-    )
+    generation_prompt = "This image depicts a specific scene or environment. " "Your task: Analyze and enhance the scene characteristics. " "Generate a clear visualization that emphasizes the environmental features and setting."
 
     # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_LOGO)
@@ -472,9 +467,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_shape(doc, lmms_eval_specific
     """Visual CoT prompt for Illusion-IN subset - SHAPE task only"""
     # generation_prompt: NO candidate leakage
     generation_prompt = (
-        "This image shows a scene where elements are carefully arranged to form a hidden shape. "
-        "Your task: Extract and visualize this hidden shape. "
-        "Generate a clear image that highlights the shape's outline and recognizable features."
+        "This image shows a scene where elements are carefully arranged to form a hidden shape. " "Your task: Extract and visualize this hidden shape. " "Generate a clear image that highlights the shape's outline and recognizable features."
     )
 
     # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
@@ -493,11 +486,7 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_shape(doc, lmms_eval_specific
 def illusionbench_arshia_doc_to_text_visual_cot_in_scene(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for Illusion-IN subset - SCENE task only"""
     # generation_prompt: NO candidate leakage
-    generation_prompt = (
-        "This image depicts a specific scene or environment. "
-        "Your task: Analyze and enhance the scene characteristics. "
-        "Generate a clear visualization that emphasizes the environmental features and setting."
-    )
+    generation_prompt = "This image depicts a specific scene or environment. " "Your task: Analyze and enhance the scene characteristics. " "Generate a clear visualization that emphasizes the environmental features and setting."
 
     # question_prompt: Add auxiliary image explanation + use original codebase format with mixed options
     shape_string = ", ".join(SHAPE_CANDIDATES_IN)
@@ -510,5 +499,3 @@ def illusionbench_arshia_doc_to_text_visual_cot_in_scene(doc, lmms_eval_specific
         f"You have to respond with a single word."
     )
     return f"[GEN_PROMPT]{generation_prompt}[/GEN_PROMPT][QUESTION]{question_prompt}[/QUESTION]"
-
-

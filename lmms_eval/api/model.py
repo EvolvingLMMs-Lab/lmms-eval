@@ -126,9 +126,7 @@ class lmms(abc.ABC):
         Models that support GtA must override this method.
         """
         raise NotImplementedError(
-            f"{type(self).__name__} does not support Visual CoT (GtA). "
-            f"To run visual_cot tasks, the model must implement generate_visual_cot(). "
-            f"Supported models: ovis_u1, bagel_unig2u, illume_plus, qwen_image_edit"
+            f"{type(self).__name__} does not support Visual CoT (GtA). " f"To run visual_cot tasks, the model must implement generate_visual_cot(). " f"Supported models: ovis_u1, bagel_unig2u, illume_plus, qwen_image_edit"
         )
 
     @classmethod

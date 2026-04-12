@@ -22,12 +22,14 @@ def VisualPuzzles_doc_to_visual(doc):
         # If it's a dict, convert to PIL Image
         if "bytes" in image:
             import io
+
             image = Image.open(io.BytesIO(image["bytes"]))
         elif "path" in image:
             image = Image.open(image["path"])
         else:
             # Try to use the dict directly as Image (some formats)
             import numpy as np
+
             image = Image.fromarray(np.array(image))
     return [image]
 
@@ -149,18 +151,7 @@ def VisualPuzzles_process_result(doc, results):
     category = doc.get("category", "Unknown")
 
     # Return results for both category-specific and overall metrics
-    result_dict = {
-        category: {
-            "question_id": doc.get("id", doc.get("idx", "unknown")),
-            "category": category,
-            "score": score
-        },
-        "average": {
-            "question_id": doc.get("id", doc.get("idx", "unknown")),
-            "category": category,
-            "score": score
-        }
-    }
+    result_dict = {category: {"question_id": doc.get("id", doc.get("idx", "unknown")), "category": category, "score": score}, "average": {"question_id": doc.get("id", doc.get("idx", "unknown")), "category": category, "score": score}}
 
     return result_dict
 
@@ -237,6 +228,7 @@ def VisualPuzzles_aggregate_simple(results):
 # ============================================================
 # Visual CoT Prompt Functions (Category-Specific)
 # ============================================================
+
 
 def VisualPuzzles_doc_to_text_visual_cot_algorithmic(doc, lmms_eval_specific_kwargs=None):
     """

@@ -20,7 +20,6 @@ from PIL import Image
 from lmms_eval.azure_openai_compat import build_client as build_azure_compat_client
 from lmms_eval.azure_openai_compat import has_endpoint_support
 
-
 # ============================================================================
 # LLM Judge Client (Azure TRAPI or OpenAI)
 # ============================================================================
@@ -153,9 +152,7 @@ def geometry3k_doc_to_target(doc: Dict) -> str:
     return doc.get("answer", "")
 
 
-def geometry3k_doc_to_text_visual_cot(
-    doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None
-) -> str:
+def geometry3k_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Optional[Dict] = None) -> str:
     """
     Get two-stage Visual Chain-of-Thought prompt for geometry3k task.
 

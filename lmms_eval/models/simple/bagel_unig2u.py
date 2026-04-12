@@ -6,7 +6,6 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
-from PIL import Image
 from accelerate import (
     Accelerator,
     infer_auto_device_map,
@@ -14,6 +13,7 @@ from accelerate import (
     load_checkpoint_and_dispatch,
 )
 from loguru import logger as eval_logger
+from PIL import Image
 from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
@@ -80,10 +80,7 @@ class BagelUniG2U(lmms):
         stage2_max_new_tokens: int = 16384,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
-        generation_prompt_template: str = (
-            "Generate a detailed visual diagram or illustration "
-            "to help answer this question: {question}"
-        ),
+        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration " "to help answer this question: {question}"),
         save_intermediate: bool = False,
         intermediate_dir: Optional[str] = None,
         fail_gracefully: bool = True,
@@ -444,9 +441,7 @@ class BagelUniG2U(lmms):
         output_text = result.get("text", "")
         return output_text
 
-    def generate_text_and_image(
-        self, prompt: str, doc_id: str, task: str, image=None
-    ) -> Tuple[str, List[str]]:
+    def generate_text_and_image(self, prompt: str, doc_id: str, task: str, image=None) -> Tuple[str, List[str]]:
         """
         Generate text and image from prompt (optionally conditioned on input image)
 
@@ -477,9 +472,7 @@ class BagelUniG2U(lmms):
 
         # Generate with optional input image
         if image is not None:
-            result = self.inferencer(
-                image=image, text=prompt, think=self.show_thinking, **inference_hyper
-            )
+            result = self.inferencer(image=image, text=prompt, think=self.show_thinking, **inference_hyper)
         else:
             result = self.inferencer(text=prompt, think=self.show_thinking, **inference_hyper)
 
@@ -527,8 +520,8 @@ class BagelUniG2U(lmms):
         """
         self.set_seed(self.seed)
 
-        from copy import deepcopy
         import json as json_module
+        from copy import deepcopy
 
         task_type = interleaved_config.get("task_type", "jigsaw")
 
@@ -565,12 +558,8 @@ class BagelUniG2U(lmms):
             # Add input images to context first
             for img in input_images:
                 if img is not None:
-                    img_transformed = self.inferencer.vae_transform.resize_transform(
-                        self.pil_img2rgb(img)
-                    )
-                    gen_context = self.inferencer.update_context_image(
-                        img_transformed, gen_context, vae=False, vit=True
-                    )
+                    img_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(img))
+                    gen_context = self.inferencer.update_context_image(img_transformed, gen_context, vae=False, vit=True)
 
             # Add initial prompt to context
             cfg_text_context = deepcopy(gen_context)
@@ -601,15 +590,9 @@ class BagelUniG2U(lmms):
                 generated_images.append(img0_path)
 
                 # Add to context
-                img0_transformed = self.inferencer.vae_transform.resize_transform(
-                    self.pil_img2rgb(img0)
-                )
-                gen_context = self.inferencer.update_context_image(
-                    img0_transformed, gen_context, vae=True, vit=True
-                )
-                gen_context = self.inferencer.update_context_text(
-                    "COMPLETED WITH CANDIDATE 0:", gen_context
-                )
+                img0_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(img0))
+                gen_context = self.inferencer.update_context_image(img0_transformed, gen_context, vae=True, vit=True)
+                gen_context = self.inferencer.update_context_text("COMPLETED WITH CANDIDATE 0:", gen_context)
 
                 # Image 2: Candidate 1 completion
                 suffix2 = "Output ONLY a single image with Candidate 1 placed in the bottom-right cell. No text."
@@ -640,53 +623,34 @@ class BagelUniG2U(lmms):
                 # Re-add original 3 input images (reference 2x2 + candidate 0 patch + candidate 1 patch)
                 for idx, img in enumerate(input_images):
                     if img is not None:
-                        img_transformed = self.inferencer.vae_transform.resize_transform(
-                            self.pil_img2rgb(img)
-                        )
-                        gen_context = self.inferencer.update_context_image(
-                            img_transformed, gen_context, vae=False, vit=True
-                        )
+                        img_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(img))
+                        gen_context = self.inferencer.update_context_image(img_transformed, gen_context, vae=False, vit=True)
 
                 # Re-add initial prompt
                 gen_context = self.inferencer.update_context_text(prompt, gen_context)
                 cfg_img_context = self.inferencer.update_context_text(prompt, cfg_img_context)
 
                 # Add generated Candidate 0 image
-                img0_transformed = self.inferencer.vae_transform.resize_transform(
-                    self.pil_img2rgb(img0)
-                )
-                gen_context = self.inferencer.update_context_image(
-                    img0_transformed, gen_context, vae=False, vit=True
-                )
-                gen_context = self.inferencer.update_context_text(
-                    "COMPLETED WITH CANDIDATE 0:", gen_context
-                )
+                img0_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(img0))
+                gen_context = self.inferencer.update_context_image(img0_transformed, gen_context, vae=False, vit=True)
+                gen_context = self.inferencer.update_context_text("COMPLETED WITH CANDIDATE 0:", gen_context)
 
                 # Add generated Candidate 1 image
-                img1_transformed = self.inferencer.vae_transform.resize_transform(
-                    self.pil_img2rgb(img1)
-                )
-                gen_context = self.inferencer.update_context_image(
-                    img1_transformed, gen_context, vae=False, vit=True
-                )
-                gen_context = self.inferencer.update_context_text(
-                    "COMPLETED WITH CANDIDATE 1:", gen_context
-                )
+                img1_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(img1))
+                gen_context = self.inferencer.update_context_image(img1_transformed, gen_context, vae=False, vit=True)
+                gen_context = self.inferencer.update_context_text("COMPLETED WITH CANDIDATE 1:", gen_context)
 
                 # Final answer
-                final_suffix = (
-                    'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n'
-                    "Do not output any additional images."
-                )
+                final_suffix = 'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n' "Do not output any additional images."
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
-                
+
                 final_text = self.inferencer.gen_text(
                     gen_context,
                     max_length=self.max_new_tokens,
                     do_sample=self.do_sample,
                     temperature=self.text_temperature,
                 )
-                
+
                 if final_text is None:
                     final_text = ""
 
@@ -694,17 +658,17 @@ class BagelUniG2U(lmms):
                 # Maze/Sliding: [gen_text(plan) → gen_image(step)]×k → gen_text(answer)
                 step_texts = []  # Store all plan texts
                 step_images = []  # Store all generated step images
-                
+
                 for i in range(1, num_images + 1):
                     # Generate planning text
                     if task_type == "maze":
                         plan_suffix = f'Now planning for step {i}, Please output a sentence in the form: "Next, move one step up/down/left/right."'
                     else:  # sliding
-                        plan_suffix = f'Now planning for step {i}, Please output a sentence describing which tile to move and in which direction.'
+                        plan_suffix = f"Now planning for step {i}, Please output a sentence describing which tile to move and in which direction."
 
                     # Add suffix to context temporarily for generation
                     gen_context = self.inferencer.update_context_text(plan_suffix, gen_context)
-                    
+
                     plan_text = self.inferencer.gen_text(
                         gen_context,
                         max_length=128,
@@ -741,12 +705,8 @@ class BagelUniG2U(lmms):
                     eval_logger.info(f"Saved step {i} image: {img_path}")
 
                     # Add to context
-                    img_transformed = self.inferencer.vae_transform.resize_transform(
-                        self.pil_img2rgb(img)
-                    )
-                    gen_context = self.inferencer.update_context_image(
-                        img_transformed, gen_context, vae=True, vit=True
-                    )
+                    img_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(img))
+                    gen_context = self.inferencer.update_context_image(img_transformed, gen_context, vae=True, vit=True)
 
                 # Rebuild context for final answer generation (align with Uni-MMMU)
                 gen_context = self.inferencer.init_gen_context()
@@ -755,12 +715,8 @@ class BagelUniG2U(lmms):
                 # Re-add original input images
                 for idx, img in enumerate(input_images):
                     if img is not None:
-                        img_transformed = self.inferencer.vae_transform.resize_transform(
-                            self.pil_img2rgb(img)
-                        )
-                        gen_context = self.inferencer.update_context_image(
-                            img_transformed, gen_context, vae=False, vit=True
-                        )
+                        img_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(img))
+                        gen_context = self.inferencer.update_context_image(img_transformed, gen_context, vae=False, vit=True)
 
                 # Re-add initial prompt
                 gen_context = self.inferencer.update_context_text(prompt, gen_context)
@@ -769,18 +725,11 @@ class BagelUniG2U(lmms):
                 for i, (plan_text, step_img) in enumerate(zip(step_texts, step_images), 1):
                     gen_context = self.inferencer.update_context_text(plan_text, gen_context)
                     gen_context = self.inferencer.update_context_text(f"Image for step {i}:", gen_context)
-                    img_transformed = self.inferencer.vae_transform.resize_transform(
-                        self.pil_img2rgb(step_img)
-                    )
-                    gen_context = self.inferencer.update_context_image(
-                        img_transformed, gen_context, vae=False, vit=True
-                    )
+                    img_transformed = self.inferencer.vae_transform.resize_transform(self.pil_img2rgb(step_img))
+                    gen_context = self.inferencer.update_context_image(img_transformed, gen_context, vae=False, vit=True)
 
                 # Final answer
-                final_suffix = (
-                    "After the images, emit EXACTLY ONE LINE containing ONLY the final move list "
-                    "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
-                )
+                final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY the final move list " "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
                 gen_context = self.inferencer.update_context_text(final_suffix, gen_context)
                 final_text = self.inferencer.gen_text(
                     gen_context,
@@ -812,9 +761,7 @@ class BagelUniG2U(lmms):
 
     # ── Visual CoT methods ──────────────────────────────────────────────
 
-    def _vcot_stage1_generate_image(
-        self, generation_prompt: str, doc_id: str, task: str, original_image=None
-    ) -> Tuple[str, List[str]]:
+    def _vcot_stage1_generate_image(self, generation_prompt: str, doc_id: str, task: str, original_image=None) -> Tuple[str, List[str]]:
         """Stage 1: Generate auxiliary visualization image from prompt."""
         eval_logger.debug(f"Visual CoT Stage 1 - Generating image for doc {doc_id}")
         try:
@@ -950,9 +897,7 @@ class BagelUniG2U(lmms):
                 if doc_to_visual is not None:
                     visuals = [doc_to_visual(doc)]
                     input_images = self.flatten(visuals)
-                output_text, output_images = self.generate_uni_mmmu_interleaved(
-                    input_images, prompt, str(doc_id), task, bagel_interleaved, doc
-                )
+                output_text, output_images = self.generate_uni_mmmu_interleaved(input_images, prompt, str(doc_id), task, bagel_interleaved, doc)
                 formatted_output = self.format_output(output_text, output_images)
 
             # ── Route: Visual CoT (explicit via gen_kwargs) ──
@@ -966,29 +911,19 @@ class BagelUniG2U(lmms):
                         if original_visuals and len(original_visuals) > 0:
                             original_image = original_visuals[0]
                     except Exception as e:
-                        eval_logger.warning(
-                            f"Failed to extract original image for doc {doc_id}: {e}"
-                        )
+                        eval_logger.warning(f"Failed to extract original image for doc {doc_id}: {e}")
 
                 # Parse [GEN_PROMPT] and [QUESTION] tags
-                gen_prompt_match = re_mod.search(
-                    r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", prompt, re_mod.DOTALL
-                )
-                question_match = re_mod.search(
-                    r"\[QUESTION\](.*?)\[/QUESTION\]", prompt, re_mod.DOTALL
-                )
+                gen_prompt_match = re_mod.search(r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", prompt, re_mod.DOTALL)
+                question_match = re_mod.search(r"\[QUESTION\](.*?)\[/QUESTION\]", prompt, re_mod.DOTALL)
 
                 if gen_prompt_match and question_match:
                     custom_gen_prompt = gen_prompt_match.group(1).strip()
                     actual_question = question_match.group(1).strip()
-                    generation_prompt = custom_gen_prompt.replace(
-                        "{question}", actual_question
-                    )
+                    generation_prompt = custom_gen_prompt.replace("{question}", actual_question)
                 else:
                     actual_question = prompt
-                    generation_prompt = self.generation_prompt_template.format(
-                        question=prompt
-                    )
+                    generation_prompt = self.generation_prompt_template.format(question=prompt)
 
                 eval_logger.info(f"Visual CoT for doc {doc_id}, task {task}")
 

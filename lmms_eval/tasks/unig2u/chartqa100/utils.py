@@ -79,10 +79,6 @@ def chartqa_doc_to_text_visual_cot(doc, lmms_eval_specific_kwargs):
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
 
-    question_with_aux = (
-        "In addition to the original chart, you are also given an annotated version "
-        "that highlights the relevant data points for the question.\n\n"
-        f"{pre_prompt}{question}{post_prompt}"
-    )
+    question_with_aux = "In addition to the original chart, you are also given an annotated version " "that highlights the relevant data points for the question.\n\n" f"{pre_prompt}{question}{post_prompt}"
 
     return f"[GEN_PROMPT]{CHARTQA_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question_with_aux}[/QUESTION]"

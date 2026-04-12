@@ -29,11 +29,11 @@ python -m lmms_eval \
     --output_path ./logs/
 """
 
+import gc
 import json
 import os
 import re
 import sys
-import gc
 from io import BytesIO
 from typing import List, Optional, Tuple, Union
 
@@ -48,13 +48,11 @@ from transformers import LogitsProcessorList
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
-from lmms_eval.api.registry import register_model, MODEL_REGISTRY
+from lmms_eval.api.registry import MODEL_REGISTRY, register_model
 
 # Prevent duplicate registration
 if "illume_plus" in MODEL_REGISTRY:
-    eval_logger.warning(
-        "illume_plus already registered, skipping re-registration"
-    )
+    eval_logger.warning("illume_plus already registered, skipping re-registration")
     del MODEL_REGISTRY["illume_plus"]
 
 
@@ -62,11 +60,11 @@ if "illume_plus" in MODEL_REGISTRY:
 class ILLUMEPlus(lmms):
     """
     ILLUME+: Unified multimodal understanding and generation model.
-    
+
     Supports two modes:
     - Standard mode: Visual understanding (enable_visual_cot=False)
     - Visual CoT mode: Two-stage visual reasoning (enable_visual_cot=True)
-    
+
     When using illume_plus_visual_cot model name, enable_visual_cot is automatically set to True.
     """
 
@@ -94,10 +92,7 @@ class ILLUMEPlus(lmms):
         stage2_top_p: Optional[float] = None,
         stage2_num_beams: int = 1,
         # Generation prompt template
-        generation_prompt_template: str = (
-            "Generate a detailed visual diagram or illustration to help answer "
-            "this question: {question}"
-        ),
+        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration to help answer " "this question: {question}"),
         # Output and debugging
         output_dir: Optional[str] = None,
         save_intermediate: bool = False,
@@ -162,39 +157,29 @@ class ILLUMEPlus(lmms):
         os.makedirs(self.generated_images_dir, exist_ok=True)
 
         if intermediate_dir is None:
-            self.intermediate_dir = os.path.join(
-                self.output_dir, "intermediate_artifacts"
-            )
+            self.intermediate_dir = os.path.join(self.output_dir, "intermediate_artifacts")
         else:
             self.intermediate_dir = intermediate_dir
 
         if save_intermediate:
             os.makedirs(self.intermediate_dir, exist_ok=True)
-            eval_logger.info(
-                f"Intermediate artifacts will be saved to: {self.intermediate_dir}"
-            )
+            eval_logger.info(f"Intermediate artifacts will be saved to: {self.intermediate_dir}")
 
         # Setup accelerator for multi-GPU support
         eval_logger.info("Initializing Accelerator for multi-GPU support")
         try:
             accelerator = Accelerator()
-            eval_logger.info(
-                f"Accelerator initialized, num_processes = {accelerator.num_processes}"
-            )
+            eval_logger.info(f"Accelerator initialized, num_processes = {accelerator.num_processes}")
             if accelerator.num_processes > 1:
                 self._device = torch.device(f"cuda:{accelerator.local_process_index}")
                 self._use_accelerator = True
                 self._accelerator = accelerator
             else:
-                self._device = (
-                    torch.device(device) if isinstance(device, str) else device
-                )
+                self._device = torch.device(device) if isinstance(device, str) else device
                 self._use_accelerator = False
                 self._accelerator = None
         except Exception as e:
-            eval_logger.warning(
-                f"Accelerator initialization failed: {e}, using single device mode"
-            )
+            eval_logger.warning(f"Accelerator initialization failed: {e}, using single device mode")
             self._device = torch.device(device) if isinstance(device, str) else device
             self._use_accelerator = False
             self._accelerator = None
@@ -222,19 +207,17 @@ class ILLUMEPlus(lmms):
         self.vq_model = None
         self.diffusion_decoder_pipe = None
         self._vision_decoder_loaded = False
-        
+
         # Store paths for lazy loading
         self._vision_decoder_config = {
-            'tokenizer_config_path': self.tokenizer_config_path,
-            'tokenizer_checkpoint': self.tokenizer_checkpoint,
-            'diffusion_decoder_path': self.diffusion_decoder_path,
+            "tokenizer_config_path": self.tokenizer_config_path,
+            "tokenizer_checkpoint": self.tokenizer_checkpoint,
+            "diffusion_decoder_path": self.diffusion_decoder_path,
         }
-        
+
         if not self.enable_image_decoding:
             eval_logger.warning(
-                "Image decoding is DISABLED. Generated images will be blank placeholders. "
-                "To enable actual image generation, set enable_image_decoding=True and provide "
-                "tokenizer_config_path and diffusion_decoder_path."
+                "Image decoding is DISABLED. Generated images will be blank placeholders. " "To enable actual image generation, set enable_image_decoding=True and provide " "tokenizer_config_path and diffusion_decoder_path."
             )
         else:
             eval_logger.info("Image decoding is enabled. Vision decoder will be loaded on-demand to save memory.")
@@ -249,20 +232,14 @@ class ILLUMEPlus(lmms):
                 DistributedType.MULTI_GPU,
                 DistributedType.DEEPSPEED,
             ]
-            assert self._accelerator.distributed_type in distributed_type_list, (
-                "Unsupported distributed type. Only DDP, FSDP, and DeepSpeed supported"
-            )
+            assert self._accelerator.distributed_type in distributed_type_list, "Unsupported distributed type. Only DDP, FSDP, and DeepSpeed supported"
             if self._accelerator.distributed_type == DistributedType.FSDP:
                 self._model = self._accelerator.prepare(self._model)
             else:
-                self._model = self._accelerator.prepare_model(
-                    self._model, evaluation_mode=True
-                )
+                self._model = self._accelerator.prepare_model(self._model, evaluation_mode=True)
             self.accelerator = self._accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {self._accelerator.num_processes} devices with parallelism"
-                )
+                eval_logger.info(f"Using {self._accelerator.num_processes} devices with parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -276,10 +253,11 @@ class ILLUMEPlus(lmms):
     def _load_model(self, pretrained: str, attn_implementation: Optional[str]):
         """Load ILLUME+ model and processor."""
         try:
-            from transformers import AutoModel, AutoProcessor
             import os
             import sys
             import time
+
+            from transformers import AutoModel, AutoProcessor
 
             # Bypass torch.load security check for .bin files
             os.environ["TRANSFORMERS_ALLOW_UNSAFE_LOAD"] = "1"
@@ -295,11 +273,7 @@ class ILLUMEPlus(lmms):
                     eval_logger.info(f"Found {len(files)} files in model directory")
 
                     # Check for weight files
-                    weight_files = [
-                        f
-                        for f in files
-                        if f.endswith((".safetensors", ".bin")) and "pytorch_model" in f
-                    ]
+                    weight_files = [f for f in files if f.endswith((".safetensors", ".bin")) and "pytorch_model" in f]
                     index_files = [f for f in files if f.endswith(".index.json")]
 
                     eval_logger.info(f"Weight files: {weight_files}")
@@ -308,10 +282,7 @@ class ILLUMEPlus(lmms):
                     # If index file exists but no weight files, model is incomplete
                     if index_files and not weight_files:
                         raise ValueError(
-                            f"Model directory {pretrained} contains index file but "
-                            f"no weight files!\nPlease download the complete model "
-                            f"weights or use HuggingFace Hub: "
-                            f"pretrained=ILLUME-MLLM/illume_plus-qwen2_5-7b-hf"
+                            f"Model directory {pretrained} contains index file but " f"no weight files!\nPlease download the complete model " f"weights or use HuggingFace Hub: " f"pretrained=ILLUME-MLLM/illume_plus-qwen2_5-7b-hf"
                         )
                 except Exception as e:
                     if "index file but no weight files" in str(e):
@@ -328,9 +299,7 @@ class ILLUMEPlus(lmms):
             }
 
             start_time = time.time()
-            self._processor = AutoProcessor.from_pretrained(
-                pretrained, **processor_kwargs
-            )
+            self._processor = AutoProcessor.from_pretrained(pretrained, **processor_kwargs)
             elapsed = time.time() - start_time
             eval_logger.info(f"Processor loaded in {elapsed:.1f} seconds")
 
@@ -343,13 +312,12 @@ class ILLUMEPlus(lmms):
             # Determine device_map strategy
             # Check if we're in a distributed environment
             import torch.cuda
+
             num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
-            
+
             if self.infer_auto_device_map and num_gpus > 1:
                 final_device_map = "auto"
-                eval_logger.info(
-                    f"Using infer_auto_device_map for multi-GPU model parallelism ({num_gpus} GPUs)"
-                )
+                eval_logger.info(f"Using infer_auto_device_map for multi-GPU model parallelism ({num_gpus} GPUs)")
             elif self.device_map is not None:
                 final_device_map = self.device_map
                 eval_logger.info(f"Using user-specified device_map: {final_device_map}")
@@ -375,9 +343,7 @@ class ILLUMEPlus(lmms):
                 self._model = AutoModel.from_pretrained(pretrained, **model_kwargs)
             except (AttributeError, ValueError, ImportError) as e:
                 if "_supports_sdpa" in str(e) or "attn_implementation" in str(e) or "flash_attn" in str(e):
-                    eval_logger.warning(
-                        f"Failed to load with attn_implementation={attn_implementation}: {e}"
-                    )
+                    eval_logger.warning(f"Failed to load with attn_implementation={attn_implementation}: {e}")
                     # Try sdpa first as fallback
                     if attn_implementation != "sdpa":
                         eval_logger.warning("Retrying with attn_implementation='sdpa'")
@@ -408,11 +374,7 @@ class ILLUMEPlus(lmms):
             eval_logger.info("ILLUME+ model loaded successfully")
 
         except ImportError as e:
-            raise ImportError(
-                f"Failed to import transformers. Please install it:\n"
-                f"  pip install transformers\n"
-                f"Error: {e}"
-            )
+            raise ImportError(f"Failed to import transformers. Please install it:\n" f"  pip install transformers\n" f"Error: {e}")
         except Exception as e:
             eval_logger.error(f"Failed to load model: {e}")
             import traceback
@@ -443,14 +405,10 @@ class ILLUMEPlus(lmms):
 
                     self.InterleavedLogitsProcessor = InterleavedLogitsProcessor
                     self._processor_supports_image_sizes = True
-                    eval_logger.info(
-                        "Successfully imported InterleavedLogitsProcessor from ILLUME_plus directory (full feature support)"
-                    )
+                    eval_logger.info("Successfully imported InterleavedLogitsProcessor from ILLUME_plus directory (full feature support)")
                     processor_loaded = True
                 except ImportError as e:
-                    eval_logger.warning(
-                        f"Failed to import from ILLUME_plus directory: {e}"
-                    )
+                    eval_logger.warning(f"Failed to import from ILLUME_plus directory: {e}")
 
             # Fallback to model directory if ILLUME_plus import failed
             if not processor_loaded:
@@ -463,13 +421,9 @@ class ILLUMEPlus(lmms):
 
                 self.InterleavedLogitsProcessor = InterleavedLogitsProcessor
                 self._processor_supports_image_sizes = False
-                eval_logger.info(
-                    "Successfully imported InterleavedLogitsProcessor from model directory (limited feature support)"
-                )
+                eval_logger.info("Successfully imported InterleavedLogitsProcessor from model directory (limited feature support)")
 
-            eval_logger.info(
-                f"InterleavedLogitsProcessor loaded successfully (image_sizes support: {self._processor_supports_image_sizes})"
-            )
+            eval_logger.info(f"InterleavedLogitsProcessor loaded successfully (image_sizes support: {self._processor_supports_image_sizes})")
 
             # Define special tokens for Qwen2.5
             self.special_tokens_ids = [
@@ -501,10 +455,7 @@ class ILLUMEPlus(lmms):
             eval_logger.info("ILLUME+ generation components initialized successfully")
 
         except ImportError as e:
-            eval_logger.error(
-                f"Failed to import ILLUME+ generation utilities: {e}. "
-                f"Image generation will not work properly."
-            )
+            eval_logger.error(f"Failed to import ILLUME+ generation utilities: {e}. " f"Image generation will not work properly.")
             self.InterleavedLogitsProcessor = None
             self.special_tokens_dict = None
             self._processor_supports_image_sizes = False
@@ -517,9 +468,7 @@ class ILLUMEPlus(lmms):
             self.special_tokens_dict = None
             self._processor_supports_image_sizes = False
 
-    def _calculate_image_token_dimensions(
-        self, h: int, w: int, downsample_rate_per_level: List[int] = [28, 16]
-    ) -> Tuple[int, int, int, int, int]:
+    def _calculate_image_token_dimensions(self, h: int, w: int, downsample_rate_per_level: List[int] = [28, 16]) -> Tuple[int, int, int, int, int]:
         """
         Calculate image token dimensions for given resolution.
 
@@ -534,35 +483,23 @@ class ILLUMEPlus(lmms):
         # Try to import RESOLUTION_MAPPING
         try:
             # Ensure vision_tokenizer is in path
-            import sys
             import os
+            import sys
 
-            project_root = os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            )
-            vision_tokenizer_path = os.path.join(
-                project_root, "ILLUME_plus", "vision_tokenizer"
-            )
-            if (
-                os.path.exists(vision_tokenizer_path)
-                and vision_tokenizer_path not in sys.path
-            ):
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            vision_tokenizer_path = os.path.join(project_root, "ILLUME_plus", "vision_tokenizer")
+            if os.path.exists(vision_tokenizer_path) and vision_tokenizer_path not in sys.path:
                 sys.path.insert(0, vision_tokenizer_path)
 
             from tokenizer.dualvitok_model import RESOLUTION_MAPPING
 
             mapped_w, mapped_h = RESOLUTION_MAPPING.get((w, h), (w, h))
             if (mapped_w, mapped_h) != (w, h):
-                eval_logger.warning(
-                    f"RESOLUTION_MAPPING changed resolution from ({w}, {h}) to ({mapped_w}, {mapped_h}). "
-                    f"This may cause OOM. Forcing original resolution."
-                )
+                eval_logger.warning(f"RESOLUTION_MAPPING changed resolution from ({w}, {h}) to ({mapped_w}, {mapped_h}). " f"This may cause OOM. Forcing original resolution.")
                 # MEMORY OPTIMIZATION: Don't use mapped resolution, use original
                 mapped_w, mapped_h = w, h
         except ImportError:
-            eval_logger.warning(
-                "Could not import RESOLUTION_MAPPING, using original resolution"
-            )
+            eval_logger.warning("Could not import RESOLUTION_MAPPING, using original resolution")
             mapped_w, mapped_h = w, h
 
         # Level 0 - Semantic tokens
@@ -580,61 +517,44 @@ class ILLUMEPlus(lmms):
     def _load_vision_decoder(self, offload_to_cpu: bool = False):
         """
         Load vision decoder components on-demand.
-        
+
         Args:
             offload_to_cpu: If True, keep models on CPU and move to GPU only during inference
         """
         if self._vision_decoder_loaded:
             eval_logger.debug("Vision decoder already loaded, skipping")
             return
-            
+
         try:
+            import importlib.machinery
             import os
             import sys
             from types import ModuleType
-            import importlib.machinery
-            from transformers import AutoModel
+
             import transformers.utils.import_utils as import_utils
+            from transformers import AutoModel
 
             import_utils.is_flash_attn_2_available = lambda: False
 
-            if not self._vision_decoder_config['tokenizer_config_path']:
+            if not self._vision_decoder_config["tokenizer_config_path"]:
                 eval_logger.error("tokenizer_config_path is required for image decoding")
                 return
 
             eval_logger.info("Loading vision tokenizer on-demand (memory-efficient mode)...")
-            
-            model_dir = self._vision_decoder_config['tokenizer_config_path']
-            if os.path.isfile(self._vision_decoder_config['tokenizer_config_path']):
-                model_dir = os.path.dirname(self._vision_decoder_config['tokenizer_config_path'])
+
+            model_dir = self._vision_decoder_config["tokenizer_config_path"]
+            if os.path.isfile(self._vision_decoder_config["tokenizer_config_path"]):
+                model_dir = os.path.dirname(self._vision_decoder_config["tokenizer_config_path"])
 
             eval_logger.info(f"Targeting model directory: {model_dir}")
 
             # Try to load with flash_attn if available, otherwise use sdpa
             try:
-                dualvitok = (
-                    AutoModel.from_pretrained(
-                        model_dir, 
-                        trust_remote_code=True, 
-                        torch_dtype=self._dtype,
-                        attn_implementation="flash_attention_2"  # Try flash_attn first
-                    )
-                    .to(self._device)
-                    .eval()
-                )
+                dualvitok = AutoModel.from_pretrained(model_dir, trust_remote_code=True, torch_dtype=self._dtype, attn_implementation="flash_attention_2").to(self._device).eval()  # Try flash_attn first
                 eval_logger.info("Vision tokenizer loaded with flash_attention_2")
             except (ImportError, ValueError, RuntimeError) as e:
                 eval_logger.warning(f"Failed to load with flash_attention_2: {e}, falling back to sdpa")
-                dualvitok = (
-                    AutoModel.from_pretrained(
-                        model_dir, 
-                        trust_remote_code=True, 
-                        torch_dtype=self._dtype,
-                        attn_implementation="sdpa" 
-                    )
-                    .to(target_device)
-                    .eval()
-                )
+                dualvitok = AutoModel.from_pretrained(model_dir, trust_remote_code=True, torch_dtype=self._dtype, attn_implementation="sdpa").to(target_device).eval()
                 eval_logger.info("Vision tokenizer loaded with sdpa")
 
             if hasattr(self._processor, "set_vision_tokenizer"):
@@ -654,36 +574,32 @@ class ILLUMEPlus(lmms):
             if self.diffusion_decoder_path:
                 eval_logger.info(f"Loading SDXL via processor: {self.diffusion_decoder_path}")
                 if hasattr(self._processor, "load_diffusion_vision_detokenizer"):
-                    self._processor.load_diffusion_vision_detokenizer(
-                        self._vision_decoder_config['diffusion_decoder_path']
-                    )
-                    self.diffusion_decoder_pipe = getattr(
-                        self._processor, "diffusion_model", None
-                    )
-                    
+                    self._processor.load_diffusion_vision_detokenizer(self._vision_decoder_config["diffusion_decoder_path"])
+                    self.diffusion_decoder_pipe = getattr(self._processor, "diffusion_model", None)
+
                     # Offload diffusion model to CPU if requested
                     if offload_to_cpu and self.diffusion_decoder_pipe is not None:
                         eval_logger.info("Offloading diffusion decoder to CPU")
                         self.diffusion_decoder_pipe = self.diffusion_decoder_pipe.to("cpu")
-                    
+
                     eval_logger.info("Diffusion decoder loaded successfully.")
-                    
+
                     # MEMORY OPTIMIZATION: Move diffusion decoder to CPU to save GPU memory
                     # It will be moved back to GPU only when needed for decoding
-                    if hasattr(self._processor, 'diffusion_model') and self._processor.diffusion_model is not None:
+                    if hasattr(self._processor, "diffusion_model") and self._processor.diffusion_model is not None:
                         eval_logger.info("Moving diffusion decoder to CPU to save GPU memory...")
                         # Move all components to CPU
-                        if hasattr(self._processor.diffusion_model, 'unet'):
-                            self._processor.diffusion_model.unet = self._processor.diffusion_model.unet.to('cpu')
-                        if hasattr(self._processor.diffusion_model, 'vae'):
-                            self._processor.diffusion_model.vae = self._processor.diffusion_model.vae.to('cpu')
-                        if hasattr(self._processor.diffusion_model, 'text_encoder'):
-                            self._processor.diffusion_model.text_encoder = self._processor.diffusion_model.text_encoder.to('cpu')
-                        if hasattr(self._processor.diffusion_model, 'text_encoder_2'):
-                            self._processor.diffusion_model.text_encoder_2 = self._processor.diffusion_model.text_encoder_2.to('cpu')
+                        if hasattr(self._processor.diffusion_model, "unet"):
+                            self._processor.diffusion_model.unet = self._processor.diffusion_model.unet.to("cpu")
+                        if hasattr(self._processor.diffusion_model, "vae"):
+                            self._processor.diffusion_model.vae = self._processor.diffusion_model.vae.to("cpu")
+                        if hasattr(self._processor.diffusion_model, "text_encoder"):
+                            self._processor.diffusion_model.text_encoder = self._processor.diffusion_model.text_encoder.to("cpu")
+                        if hasattr(self._processor.diffusion_model, "text_encoder_2"):
+                            self._processor.diffusion_model.text_encoder_2 = self._processor.diffusion_model.text_encoder_2.to("cpu")
                         torch.cuda.empty_cache()
                         eval_logger.info("Diffusion decoder moved to CPU")
-                    
+
                     # Log GPU memory after moving to CPU
                     if torch.cuda.is_available():
                         allocated = torch.cuda.memory_allocated(self._device) / 1024**3
@@ -698,45 +614,45 @@ class ILLUMEPlus(lmms):
         except Exception as e:
             eval_logger.error(f"Failed to load vision decoder: {e}")
             import traceback
+
             eval_logger.error(traceback.format_exc())
             self._vision_decoder_loaded = False
-    
+
     def _unload_vision_decoder(self):
         """Unload vision decoder to free memory."""
         if not self._vision_decoder_loaded:
             eval_logger.debug("Vision decoder not loaded, nothing to unload")
             return
-        
+
         eval_logger.info("Unloading vision decoder to free memory...")
-        
+
         # Clear processor's vision tokenizer reference
         if hasattr(self._processor, "set_vision_tokenizer"):
             self._processor.set_vision_tokenizer(None)
-        
+
         # Delete models
         if self.vq_model is not None:
             del self.vq_model
             self.vq_model = None
-        
+
         if self.diffusion_decoder_pipe is not None:
             del self.diffusion_decoder_pipe
             self.diffusion_decoder_pipe = None
-        
+
         # Clear processor's diffusion model reference
         if hasattr(self._processor, "diffusion_model"):
             self._processor.diffusion_model = None
-        
+
         # Force garbage collection and clear CUDA cache
         import gc
+
         gc.collect()
         torch.cuda.empty_cache()
-        
+
         self._vision_decoder_loaded = False
         eval_logger.info("Vision decoder unloaded successfully")
 
-    def _extract_image_tokens_from_text(
-        self, text: str, num_levels: int = 2
-    ) -> Optional[List[List[int]]]:
+    def _extract_image_tokens_from_text(self, text: str, num_levels: int = 2) -> Optional[List[List[int]]]:
         """
         Extract image tokens from generated text.
 
@@ -802,31 +718,20 @@ class ILLUMEPlus(lmms):
             h, w = resolution
 
             # Ensure vision_tokenizer is in path
-            import sys
             import os
+            import sys
 
-            project_root = os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            )
-            vision_tokenizer_path = os.path.join(
-                project_root, "ILLUME_plus", "vision_tokenizer"
-            )
-            if (
-                os.path.exists(vision_tokenizer_path)
-                and vision_tokenizer_path not in sys.path
-            ):
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            vision_tokenizer_path = os.path.join(project_root, "ILLUME_plus", "vision_tokenizer")
+            if os.path.exists(vision_tokenizer_path) and vision_tokenizer_path not in sys.path:
                 sys.path.insert(0, vision_tokenizer_path)
 
             try:
                 from tokenizer.dualvitok_model import RESOLUTION_MAPPING
 
-                mapped_w, mapped_h = RESOLUTION_MAPPING.get(
-                    (w, h), (w, h)
-                )  # Fallback to original if not in mapping
+                mapped_w, mapped_h = RESOLUTION_MAPPING.get((w, h), (w, h))  # Fallback to original if not in mapping
             except ImportError:
-                eval_logger.warning(
-                    "Could not import RESOLUTION_MAPPING, using original resolution"
-                )
+                eval_logger.warning("Could not import RESOLUTION_MAPPING, using original resolution")
                 mapped_w, mapped_h = w, h
 
             # Semantic tokens: downsampled by 28
@@ -839,14 +744,8 @@ class ILLUMEPlus(lmms):
             w2 = w // 16
             expected_pixel = h2 * w2
 
-            eval_logger.debug(
-                f"Expected tokens - semantic: {expected_semantic} ({h1}x{w1}), "
-                f"pixel: {expected_pixel} ({h2}x{w2})"
-            )
-            eval_logger.debug(
-                f"Got tokens - semantic: {len(semantic_tokens)}, "
-                f"pixel: {len(pixel_tokens)}"
-            )
+            eval_logger.debug(f"Expected tokens - semantic: {expected_semantic} ({h1}x{w1}), " f"pixel: {expected_pixel} ({h2}x{w2})")
+            eval_logger.debug(f"Got tokens - semantic: {len(semantic_tokens)}, " f"pixel: {len(pixel_tokens)}")
 
             # Convert to tensors and reshape
             semantic_code = torch.as_tensor([semantic_tokens])
@@ -857,28 +756,24 @@ class ILLUMEPlus(lmms):
                 semantic_code = semantic_code.view(1, h1, w1)
                 pixel_code = pixel_code.view(1, h2, w2)
             except RuntimeError as e:
-                eval_logger.error(
-                    f"Failed to reshape tokens: {e}. "
-                    f"Semantic: {len(semantic_tokens)} -> (1, {h1}, {w1}), "
-                    f"Pixel: {len(pixel_tokens)} -> (1, {h2}, {w2})"
-                )
+                eval_logger.error(f"Failed to reshape tokens: {e}. " f"Semantic: {len(semantic_tokens)} -> (1, {h1}, {w1}), " f"Pixel: {len(pixel_tokens)} -> (1, {h2}, {w2})")
                 return None
 
             # Decode using diffusion decoder if available
             if use_diffusion and self.diffusion_decoder_pipe is not None:
                 eval_logger.debug("Using diffusion decoder")
-                
+
                 # MEMORY OPTIMIZATION: Move diffusion decoder back to GPU temporarily
                 eval_logger.info("Moving diffusion decoder to GPU for decoding...")
-                if hasattr(self.diffusion_decoder_pipe, 'unet'):
+                if hasattr(self.diffusion_decoder_pipe, "unet"):
                     self.diffusion_decoder_pipe.unet = self.diffusion_decoder_pipe.unet.to(self._device)
-                if hasattr(self.diffusion_decoder_pipe, 'vae'):
+                if hasattr(self.diffusion_decoder_pipe, "vae"):
                     self.diffusion_decoder_pipe.vae = self.diffusion_decoder_pipe.vae.to(self._device)
-                if hasattr(self.diffusion_decoder_pipe, 'text_encoder'):
+                if hasattr(self.diffusion_decoder_pipe, "text_encoder"):
                     self.diffusion_decoder_pipe.text_encoder = self.diffusion_decoder_pipe.text_encoder.to(self._device)
-                if hasattr(self.diffusion_decoder_pipe, 'text_encoder_2'):
+                if hasattr(self.diffusion_decoder_pipe, "text_encoder_2"):
                     self.diffusion_decoder_pipe.text_encoder_2 = self.diffusion_decoder_pipe.text_encoder_2.to(self._device)
-                
+
                 diffusion_outputs = self.diffusion_decoder_pipe(
                     vq_indices=(semantic_code, pixel_code),
                     height=h * 2,
@@ -889,51 +784,44 @@ class ILLUMEPlus(lmms):
                 )
                 samples = diffusion_outputs.images
                 decoded_image = np.asarray(samples[0])
-                
+
                 # Move back to CPU to free GPU memory
                 eval_logger.info("Moving diffusion decoder back to CPU...")
-                if hasattr(self.diffusion_decoder_pipe, 'unet'):
-                    self.diffusion_decoder_pipe.unet = self.diffusion_decoder_pipe.unet.to('cpu')
-                if hasattr(self.diffusion_decoder_pipe, 'vae'):
-                    self.diffusion_decoder_pipe.vae = self.diffusion_decoder_pipe.vae.to('cpu')
-                if hasattr(self.diffusion_decoder_pipe, 'text_encoder'):
-                    self.diffusion_decoder_pipe.text_encoder = self.diffusion_decoder_pipe.text_encoder.to('cpu')
-                if hasattr(self.diffusion_decoder_pipe, 'text_encoder_2'):
-                    self.diffusion_decoder_pipe.text_encoder_2 = self.diffusion_decoder_pipe.text_encoder_2.to('cpu')
+                if hasattr(self.diffusion_decoder_pipe, "unet"):
+                    self.diffusion_decoder_pipe.unet = self.diffusion_decoder_pipe.unet.to("cpu")
+                if hasattr(self.diffusion_decoder_pipe, "vae"):
+                    self.diffusion_decoder_pipe.vae = self.diffusion_decoder_pipe.vae.to("cpu")
+                if hasattr(self.diffusion_decoder_pipe, "text_encoder"):
+                    self.diffusion_decoder_pipe.text_encoder = self.diffusion_decoder_pipe.text_encoder.to("cpu")
+                if hasattr(self.diffusion_decoder_pipe, "text_encoder_2"):
+                    self.diffusion_decoder_pipe.text_encoder_2 = self.diffusion_decoder_pipe.text_encoder_2.to("cpu")
                 torch.cuda.empty_cache()
             else:
                 # Use VQ decoder
                 eval_logger.debug("Using VQ decoder")
-                
+
                 # Move VQ model to GPU if it's on CPU (offload mode)
                 vq_device = next(self.vq_model.parameters()).device
                 if vq_device.type == "cpu":
                     eval_logger.debug("Moving VQ model from CPU to GPU for inference")
                     self.vq_model = self.vq_model.to(self._device)
-                
-                quant_semantic = self.vq_model.semantic_quantizer.indices_to_codes(
-                    semantic_code
-                )
+
+                quant_semantic = self.vq_model.semantic_quantizer.indices_to_codes(semantic_code)
                 quant_pixel = self.vq_model.pixel_quantizer.indices_to_codes(pixel_code)
                 samples = self.vq_model.decode(quant_semantic, quant_pixel)
-                decoded_image = (
-                    torch.clamp(127.5 * samples + 128.0, 0, 255)
-                    .permute(0, 2, 3, 1)
-                    .to("cpu", dtype=torch.uint8)
-                    .numpy()[0]
-                )
-                
+                decoded_image = torch.clamp(127.5 * samples + 128.0, 0, 255).permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()[0]
+
                 # Move VQ model back to CPU if in offload mode
                 if vq_device.type == "cpu":
                     eval_logger.debug("Moving VQ model back to CPU")
                     self.vq_model = self.vq_model.to("cpu")
                     torch.cuda.empty_cache()
-            
+
             # Clean up intermediate tensors
             del semantic_code, pixel_code
-            if 'quant_semantic' in locals():
+            if "quant_semantic" in locals():
                 del quant_semantic, quant_pixel, samples
-            if 'diffusion_outputs' in locals():
+            if "diffusion_outputs" in locals():
                 del diffusion_outputs, samples
             torch.cuda.empty_cache()
 
@@ -1048,15 +936,13 @@ class ILLUMEPlus(lmms):
 
         return normalized_images
 
-    def _stage1_generate_image(
-        self, generation_prompt: str, doc_id: str, task: str, original_images=None
-    ) -> Tuple[str, List[str]]:
+    def _stage1_generate_image(self, generation_prompt: str, doc_id: str, task: str, original_images=None) -> Tuple[str, List[str]]:
         try:
             # Load vision decoder on-demand (with CPU offload for memory efficiency)
             if self.enable_image_decoding:
                 eval_logger.info("Loading vision decoder on-demand for image generation...")
                 self._load_vision_decoder(offload_to_cpu=True)
-            
+
             images = []
             if original_images is not None:
                 if not isinstance(original_images, list):
@@ -1071,18 +957,14 @@ class ILLUMEPlus(lmms):
             h, w = 256, 256
 
             # ILLUME+ only supports specific resolutions
-            SUPPORTED_RESOLUTIONS = [
-                (256, 256), (512, 512), (384, 640), (640, 384),
-                (512, 384), (384, 512), (256, 384), (384, 256),
-                (256, 512), (512, 256)
-            ]
+            SUPPORTED_RESOLUTIONS = [(256, 256), (512, 512), (384, 640), (640, 384), (512, 384), (384, 512), (256, 384), (384, 256), (256, 512), (512, 256)]
 
             # Find the closest supported resolution
             def find_closest_resolution(target_h, target_w, supported_resolutions):
                 """Find the closest supported resolution that maintains aspect ratio."""
                 target_ratio = target_w / target_h
                 best_resolution = None
-                best_score = float('inf')
+                best_score = float("inf")
 
                 for res_h, res_w in supported_resolutions:
                     res_ratio = res_w / res_h
@@ -1110,7 +992,7 @@ class ILLUMEPlus(lmms):
             # "not enough images for placeholders" error.
             # Only apply this fix for geometry3k_visual_cot task.
             if task == "geometry3k_visual_cot":
-                generation_prompt_cleaned = re.sub(r'<image>', '', generation_prompt).strip()
+                generation_prompt_cleaned = re.sub(r"<image>", "", generation_prompt).strip()
                 eval_logger.info(f"Applied geometry3k_visual_cot fix: removed <image> tags from prompt")
             else:
                 generation_prompt_cleaned = generation_prompt
@@ -1119,17 +1001,11 @@ class ILLUMEPlus(lmms):
             # Similar to MIO's approach, we make it clear that an image MUST be generated
             if images:
                 # Image editing mode - explicitly request edited image output
-                full_prompt = (
-                    f"{resolution_tag}\n"
-                    f"Edit the image according to this instruction: {generation_prompt_cleaned}"
-                )
+                full_prompt = f"{resolution_tag}\n" f"Edit the image according to this instruction: {generation_prompt_cleaned}"
                 uncond_prompt = f"{resolution_tag}\nReconstruct the image according to the given image\n"
             else:
                 # Image generation mode - explicitly request image output
-                full_prompt = (
-                    f"{resolution_tag}\n"
-                    f"Generate an image with the following content: {generation_prompt_cleaned}"
-                )
+                full_prompt = f"{resolution_tag}\n" f"Generate an image with the following content: {generation_prompt_cleaned}"
                 uncond_prompt = f"Generate a random image of {resolution_tag}\n"
 
             eval_logger.info(f"Generation prompt: {full_prompt}")
@@ -1140,6 +1016,7 @@ class ILLUMEPlus(lmms):
             # Resize to max 448x448 to save ~50-70% memory
             if images:
                 from PIL import Image
+
                 max_input_size = 448  # Reduce from ~900-1100 to 448
                 resized_images = []
                 for img in images:
@@ -1164,35 +1041,26 @@ class ILLUMEPlus(lmms):
                 conversation = [
                     {
                         "role": "system",
-                        "content": [
-                            {"type": "text", "text": "You are a helpful assistant."}
-                        ],
+                        "content": [{"type": "text", "text": "You are a helpful assistant."}],
                     },
                     {
                         "role": "user",
-                        "content": [{"type": "image"}] * len(images)
-                        + [{"type": "text", "text": full_prompt}],
+                        "content": [{"type": "image"}] * len(images) + [{"type": "text", "text": full_prompt}],
                     },
                 ]
-                inputs = self._processor(
-                    text=conversation, images=images, return_tensors="pt"
-                )
+                inputs = self._processor(text=conversation, images=images, return_tensors="pt")
             else:
                 conversation = [
                     {
                         "role": "system",
-                        "content": [
-                            {"type": "text", "text": "You are a helpful assistant."}
-                        ],
+                        "content": [{"type": "text", "text": "You are a helpful assistant."}],
                     },
                     {
                         "role": "user",
                         "content": [{"type": "text", "text": full_prompt}],
                     },
                 ]
-                inputs = self._processor(
-                    text=conversation, images=None, return_tensors="pt"
-                )
+                inputs = self._processor(text=conversation, images=None, return_tensors="pt")
 
             inputs = inputs.to(self._device)
 
@@ -1202,52 +1070,41 @@ class ILLUMEPlus(lmms):
                 uncond_conversation = [
                     {
                         "role": "system",
-                        "content": [
-                            {"type": "text", "text": "You are a helpful assistant."}
-                        ],
+                        "content": [{"type": "text", "text": "You are a helpful assistant."}],
                     },
                     {
                         "role": "user",
-                        "content": [{"type": "image"}] * len(images)
-                        + [{"type": "text", "text": uncond_prompt}],
+                        "content": [{"type": "image"}] * len(images) + [{"type": "text", "text": uncond_prompt}],
                     },
                 ]
-                uncond_inputs = self._processor(
-                    text=uncond_conversation, images=images, return_tensors="pt"
-                )
+                uncond_inputs = self._processor(text=uncond_conversation, images=images, return_tensors="pt")
                 uncond_inputs = uncond_inputs.to(self._device)
             else:
                 # For image generation with CFG
                 uncond_conversation = [
                     {
                         "role": "system",
-                        "content": [
-                            {"type": "text", "text": "You are a helpful assistant."}
-                        ],
+                        "content": [{"type": "text", "text": "You are a helpful assistant."}],
                     },
                     {
                         "role": "user",
                         "content": [{"type": "text", "text": uncond_prompt}],
                     },
                 ]
-                uncond_inputs = self._processor(
-                    text=uncond_conversation, images=None, return_tensors="pt"
-                )
+                uncond_inputs = self._processor(text=uncond_conversation, images=None, return_tensors="pt")
                 uncond_inputs = uncond_inputs.to(self._device)
 
-            semantic_token_num, pixel_token_num, h1, w1, h2, w2 = (
-                self._calculate_image_token_dimensions(h, w)
-            )
-            
+            semantic_token_num, pixel_token_num, h1, w1, h2, w2 = self._calculate_image_token_dimensions(h, w)
+
             # Debug: Log the actual resolution being used
             actual_h = h1 * 28  # Reverse calculate from semantic tokens
             actual_w = w1 * 28
             eval_logger.info(f"Resolution check: requested=({h}, {w}), calculated from tokens=({actual_h}, {actual_w})")
-            
+
             # CRITICAL: Calculate expected tokens and add generous buffer
             # Format: <start_of_image> + semantic_tokens + <end_of_level0> + pixel_tokens + <end_of_image>
             expected_image_tokens = (h1 * (w1 + 1) + 2) + (h2 * (w2 + 1) + 2) + 50
-            
+
             eval_logger.info(f"Expected image tokens: {expected_image_tokens} (semantic: {semantic_token_num}, pixel: {pixel_token_num})")
             eval_logger.info(f"Token dimensions: semantic={h1}x{w1}, pixel={h2}x{w2}")
 
@@ -1271,7 +1128,7 @@ class ILLUMEPlus(lmms):
                 level0_top_k = 2048
                 level1_top_k = 2048 * 3
                 guidance_scale = 1.0  # Disable CFG to save memory
-                
+
                 eval_logger.info(f"Using image EDITING mode with BALANCED optimization (max_tokens={max_tokens}, expected={expected_image_tokens})")
             else:
                 # Image generation parameters - BALANCED OPTIMIZATION
@@ -1289,15 +1146,11 @@ class ILLUMEPlus(lmms):
                 level0_top_k = 2048
                 level1_top_k = 6144
                 guidance_scale = 1.0
-                
+
                 eval_logger.info(f"Using image GENERATION mode with BALANCED optimization (max_tokens={max_tokens}, expected={expected_image_tokens})")
 
             if self.InterleavedLogitsProcessor is None:
-                raise RuntimeError(
-                    "InterleavedLogitsProcessor is not available. "
-                    "Image generation requires the ILLUME+ generation utilities. "
-                    "Please ensure the ILLUME_plus directory is properly set up."
-                )
+                raise RuntimeError("InterleavedLogitsProcessor is not available. " "Image generation requires the ILLUME+ generation utilities. " "Please ensure the ILLUME_plus directory is properly set up.")
 
             try:
                 processor_kwargs = {
@@ -1327,21 +1180,15 @@ class ILLUMEPlus(lmms):
                     processor_kwargs["image_sizes"] = [(w, h)]
 
                 logits_processor = self.InterleavedLogitsProcessor(**processor_kwargs)
-                generate_kwargs["logits_processor"] = LogitsProcessorList(
-                    [logits_processor]
-                )
+                generate_kwargs["logits_processor"] = LogitsProcessorList([logits_processor])
                 mode = "image editing" if images else "image generation"
-                eval_logger.info(
-                    f"Successfully created InterleavedLogitsProcessor for {mode} ({h}x{w})"
-                )
+                eval_logger.info(f"Successfully created InterleavedLogitsProcessor for {mode} ({h}x{w})")
             except Exception as e:
                 eval_logger.error(f"Failed to create logits processor: {e}")
                 import traceback
 
                 eval_logger.error(traceback.format_exc())
-                raise RuntimeError(
-                    f"Cannot generate images without logits processor: {e}"
-                )
+                raise RuntimeError(f"Cannot generate images without logits processor: {e}")
 
             # Add ILLUME+ specific image generation parameters
             image_gen_kwargs = {
@@ -1354,7 +1201,7 @@ class ILLUMEPlus(lmms):
                 "image_pixel_top_k": level1_top_k,
                 "image_pixel_top_p": generate_kwargs.get("top_p", 1.0),
             }
-            
+
             eval_logger.info(f"image_gen_kwargs['target_image_resolution'] = {image_gen_kwargs['target_image_resolution']}")
             eval_logger.info(f"Token grid dimensions: h1={h1}, w1={w1}, h2={h2}, w2={w2}")
 
@@ -1367,20 +1214,20 @@ class ILLUMEPlus(lmms):
             # Similar to MIO's approach of pre-filling <image> token
             start_of_image_id = self.special_tokens_dict["start_of_image"]
             eval_logger.info(f"Pre-filling <start_of_image> token (ID: {start_of_image_id}) to force image generation")
-            
+
             # Append start_of_image token to input_ids
             input_ids = inputs["input_ids"]
             start_token_tensor = torch.tensor([[start_of_image_id]], dtype=input_ids.dtype, device=input_ids.device)
             input_ids_with_trigger = torch.cat([input_ids, start_token_tensor], dim=1)
-            
+
             # Update attention_mask accordingly
             attention_mask = inputs["attention_mask"]
             attention_mask_extended = torch.cat([attention_mask, torch.ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype, device=attention_mask.device)], dim=1)
-            
+
             # Update inputs dict
             inputs["input_ids"] = input_ids_with_trigger
             inputs["attention_mask"] = attention_mask_extended
-            
+
             eval_logger.info(f"Input shape after pre-filling: {input_ids_with_trigger.shape}")
 
             # ===== MEMORY PROFILING START =====
@@ -1396,14 +1243,14 @@ class ILLUMEPlus(lmms):
 
             # Log memory before generation
             log_gpu_memory("Before Generation")
-            
+
             # Log input tensor sizes
             eval_logger.info(f"Input tensor sizes:")
             for key, value in inputs.items():
                 if isinstance(value, torch.Tensor):
                     size_mb = value.element_size() * value.nelement() / 1024**2
                     eval_logger.info(f"  - {key}: {value.shape}, dtype={value.dtype}, size={size_mb:.2f}MB")
-            
+
             # Log model parameter memory
             total_params = sum(p.numel() for p in self._model.parameters())
             total_param_memory = sum(p.numel() * p.element_size() for p in self._model.parameters()) / 1024**3
@@ -1411,40 +1258,41 @@ class ILLUMEPlus(lmms):
 
             with torch.no_grad():
                 eval_logger.info(f"Starting generation with max_new_tokens={generate_kwargs['max_new_tokens']}, use_cache={generate_kwargs['use_cache']}")
-                
+
                 # EXTREME MEMORY OPTIMIZATION: Aggressive cache clearing
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
                     torch.cuda.synchronize()
                     # Force garbage collection
                     import gc
+
                     gc.collect()
-                    
+
                 log_gpu_memory("After Aggressive Cache Clear")
-                
+
                 try:
                     outputs = self._model.generate(**inputs, **generate_kwargs, **image_gen_kwargs)
                     log_gpu_memory("After Generation Success")
                 except RuntimeError as e:
                     log_gpu_memory("At OOM Error")
                     eval_logger.error(f"Generation failed with error: {e}")
-                    
+
                     # Log KV cache size estimate
                     batch_size = inputs["input_ids"].shape[0]
                     seq_len = inputs["input_ids"].shape[1]
-                    max_new = generate_kwargs['max_new_tokens']
+                    max_new = generate_kwargs["max_new_tokens"]
                     total_seq_len = seq_len + max_new
-                    
+
                     # Estimate KV cache size (rough calculation)
                     # For each layer: 2 (K+V) * batch * num_heads * seq_len * head_dim * dtype_size
-                    if hasattr(self._model.config, 'num_hidden_layers'):
+                    if hasattr(self._model.config, "num_hidden_layers"):
                         num_layers = self._model.config.num_hidden_layers
                         hidden_size = self._model.config.hidden_size
                         num_heads = self._model.config.num_attention_heads
                         head_dim = hidden_size // num_heads
                         dtype_size = 2 if self._dtype == torch.float16 or self._dtype == torch.bfloat16 else 4
-                        
-                        if generate_kwargs['use_cache']:
+
+                        if generate_kwargs["use_cache"]:
                             kv_cache_size = 2 * batch_size * num_layers * num_heads * total_seq_len * head_dim * dtype_size / 1024**3
                             eval_logger.error(f"Estimated KV cache size: {kv_cache_size:.2f}GB")
                         else:
@@ -1452,21 +1300,19 @@ class ILLUMEPlus(lmms):
                         eval_logger.error(f"  - Layers: {num_layers}, Heads: {num_heads}, Head dim: {head_dim}")
                         eval_logger.error(f"  - Sequence length: {seq_len} + {max_new} = {total_seq_len}")
                         eval_logger.error(f"  - Batch size: {batch_size}")
-                    
+
                     raise
             # ===== MEMORY PROFILING END =====
 
             outputs_text = outputs[:, inputs["input_ids"].shape[1] :]
-            generated_text = self._processor.batch_decode(
-                outputs_text, skip_special_tokens=False
-            )[0]
-            
+            generated_text = self._processor.batch_decode(outputs_text, skip_special_tokens=False)[0]
+
             # Log generation statistics
             eval_logger.info(f"Generated {outputs_text.shape[1]} tokens")
             eval_logger.info(f"Generated text preview (first 200 chars): {generated_text[:200]}")
 
             image_tokens = self._extract_image_tokens_from_text(generated_text)
-            
+
             # CRITICAL: Validate that we actually got image tokens
             if image_tokens is None or len(image_tokens) < 2:
                 eval_logger.error(f"❌ FAILED to generate image tokens!")
@@ -1476,7 +1322,7 @@ class ILLUMEPlus(lmms):
                 eval_logger.info(f"✅ Successfully generated image tokens:")
                 eval_logger.info(f"   - Semantic tokens (L0): {len(image_tokens[0])} (expected: ~{semantic_token_num})")
                 eval_logger.info(f"   - Pixel tokens (L1): {len(image_tokens[1])} (expected: ~{pixel_token_num})")
-                
+
                 # Validate token counts
                 if len(image_tokens[0]) < semantic_token_num * 0.8:
                     eval_logger.warning(f"⚠️ Semantic tokens count is low: {len(image_tokens[0])} < {semantic_token_num * 0.8}")
@@ -1488,12 +1334,8 @@ class ILLUMEPlus(lmms):
             image_path = os.path.join(task_dir, f"{doc_id}_gen.png")
 
             if image_tokens and self.enable_image_decoding:
-                eval_logger.info(
-                    f"Decoding captured tokens: L0={len(image_tokens[0])}, L1={len(image_tokens[1])}"
-                )
-                decoded_image = self._decode_image_tokens(
-                    image_tokens, resolution=(h, w), use_diffusion=True
-                )
+                eval_logger.info(f"Decoding captured tokens: L0={len(image_tokens[0])}, L1={len(image_tokens[1])}")
+                decoded_image = self._decode_image_tokens(image_tokens, resolution=(h, w), use_diffusion=True)
                 if decoded_image is not None:
                     Image.fromarray(decoded_image).save(image_path)
                     eval_logger.info(f"✅ Successfully saved decoded image to: {image_path}")
@@ -1506,7 +1348,7 @@ class ILLUMEPlus(lmms):
                     eval_logger.error(f"Generated text preview: {generated_text[:100]}")
                 if not self.enable_image_decoding:
                     eval_logger.warning(f"⚠️ Image decoding is disabled")
-                    
+
                 eval_logger.warning(f"Saving light gray placeholder image")
                 Image.new("RGB", (h, w), color=(200, 200, 200)).save(image_path)
 
@@ -1532,11 +1374,9 @@ class ILLUMEPlus(lmms):
                 torch.cuda.synchronize()
                 torch.cuda.empty_cache()
 
-    def _stage2_answer_with_images(
-        self, question: str, generated_image_paths: List[str], original_images: List[Image.Image] = None, task: str = None
-    ) -> str:
+    def _stage2_answer_with_images(self, question: str, generated_image_paths: List[str], original_images: List[Image.Image] = None, task: str = None) -> str:
         eval_logger.debug("Stage 2 - Answering question with multiple images")
-        
+
         # Define local memory logging function
         def log_gpu_memory(stage_name):
             """Log detailed GPU memory usage"""
@@ -1547,24 +1387,24 @@ class ILLUMEPlus(lmms):
                 eval_logger.info(f"[{stage_name}] GPU Memory - Allocated: {allocated:.2f}GB, Reserved: {reserved:.2f}GB, Max: {max_allocated:.2f}GB")
                 return allocated, reserved, max_allocated
             return 0, 0, 0
-        
+
         try:
             # CRITICAL: Aggressive memory cleanup before Stage 2
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
                 gc.collect()
-            
+
             log_gpu_memory("Stage 2 Start - After Cleanup")
-            
+
             # CRITICAL FIX for geometry3k_visual_cot: Remove <image> tags from question
             # Same issue as Stage 1 - images are provided through conversation structure
             if task == "geometry3k_visual_cot":
-                question_cleaned = re.sub(r'<image>', '', question).strip()
+                question_cleaned = re.sub(r"<image>", "", question).strip()
                 eval_logger.info(f"Applied geometry3k_visual_cot fix in Stage 2: removed <image> tags from question")
             else:
                 question_cleaned = question
-            
+
             images = []
 
             if original_images:
@@ -1592,30 +1432,23 @@ class ILLUMEPlus(lmms):
                     new_h = int(h * scale)
                     img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
                 resized_images.append(img)
-            
+
             eval_logger.info(f"Stage 2: Processing {len(resized_images)} images (resized to max {max_size}px)")
-            
+
             images = self._normalize_image_sizes(resized_images)
 
             conversation = [
                 {
                     "role": "system",
-                    "content": [
-                        {"type": "text", "text": "You are a helpful assistant."}
-                    ],
+                    "content": [{"type": "text", "text": "You are a helpful assistant."}],
                 },
                 {
                     "role": "user",
-                    "content": (
-                        [{"type": "image"}] * len(images)
-                        + [{"type": "text", "text": question_cleaned}]  # Use cleaned question
-                    ),
+                    "content": ([{"type": "image"}] * len(images) + [{"type": "text", "text": question_cleaned}]),  # Use cleaned question
                 },
             ]
 
-            inputs = self._processor(
-                text=conversation, images=images, return_tensors="pt"
-            )
+            inputs = self._processor(text=conversation, images=images, return_tensors="pt")
 
             if self.infer_auto_device_map or self.device_map == "auto":
                 inputs = inputs.to("cuda")
@@ -1648,9 +1481,7 @@ class ILLUMEPlus(lmms):
             log_gpu_memory("Stage 2 After Generation")
 
             outputs_text = outputs[:, inputs["input_ids"].shape[1] :]
-            answer = self._processor.batch_decode(
-                outputs_text, skip_special_tokens=True
-            )[0]
+            answer = self._processor.batch_decode(outputs_text, skip_special_tokens=True)[0]
 
             # Aggressive cleanup
             del outputs, outputs_text, inputs, images, resized_images
@@ -1666,7 +1497,6 @@ class ILLUMEPlus(lmms):
             if self.fail_gracefully:
                 return ""
             raise
-            
 
     def _save_intermediate_artifacts(
         self,
@@ -1743,21 +1573,13 @@ class ILLUMEPlus(lmms):
             if task_type == "maze":
                 # Get step count from ground truth
                 steps_str = doc.get("steps", "[]")
-                steps = (
-                    json_module.loads(steps_str)
-                    if isinstance(steps_str, str)
-                    else steps_str
-                )
+                steps = json_module.loads(steps_str) if isinstance(steps_str, str) else steps_str
                 if steps:
                     num_images = len(steps)
             elif task_type == "sliding":
                 # Get step count from ground truth
                 steps_str = doc.get("steps_words", "[]")
-                steps = (
-                    json_module.loads(steps_str)
-                    if isinstance(steps_str, str)
-                    else steps_str
-                )
+                steps = json_module.loads(steps_str) if isinstance(steps_str, str) else steps_str
                 if steps:
                     num_images = len(steps)
 
@@ -1802,10 +1624,7 @@ class ILLUMEPlus(lmms):
                 eval_logger.info(f"Saved jigsaw image 1: {img_paths_1[0]}")
 
             # Final answer using stage 2 with all generated images
-            final_suffix = (
-                'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n'
-                "Do not output any additional images."
-            )
+            final_suffix = 'Now output EXACTLY ONE <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "≤30 words"}</FINAL_ANSWER_JSON>\n' "Do not output any additional images."
             final_question = prompt + "\n\n" + final_suffix
 
             # Use optimized stage 2 method
@@ -1813,13 +1632,8 @@ class ILLUMEPlus(lmms):
                 # Combine original images with generated images
                 all_images = list(original_images) if original_images else []
                 all_images.extend(generated_images)
-                
-                final_text = self._stage2_answer_with_images(
-                    question=final_question,
-                    generated_image_paths=generated_images,
-                    original_images=original_images,
-                    task=task
-                )
+
+                final_text = self._stage2_answer_with_images(question=final_question, generated_image_paths=generated_images, original_images=original_images, task=task)
             else:
                 final_text = ""
 
@@ -1846,20 +1660,12 @@ class ILLUMEPlus(lmms):
                     eval_logger.info(f"Saved step {i} image: {img_paths[0]}")
 
             # Final answer using all generated step images
-            final_suffix = (
-                "After the images, emit EXACTLY ONE LINE containing ONLY the final move list "
-                "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
-            )
+            final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY the final move list " "as <ANSWER_JSON>[...]</ANSWER_JSON>. No other text."
             final_question = prompt + "\n\n" + final_suffix
 
             # Use optimized stage 2 method
             if generated_images:
-                final_text = self._stage2_answer_with_images(
-                    question=final_question,
-                    generated_image_paths=generated_images,
-                    original_images=original_images,
-                    task=task
-                )
+                final_text = self._stage2_answer_with_images(question=final_question, generated_image_paths=generated_images, original_images=original_images, task=task)
             else:
                 final_text = ""
 
@@ -1875,7 +1681,7 @@ class ILLUMEPlus(lmms):
         num_beams: int,
     ) -> str:
         """Generate response for standard mode (visual understanding).
-        
+
         Args:
             context: Text prompt
             images: List of input images
@@ -1883,7 +1689,7 @@ class ILLUMEPlus(lmms):
             temperature: Sampling temperature
             top_p: Top-p sampling parameter
             num_beams: Number of beams for beam search
-            
+
         Returns:
             Generated text response
         """
@@ -1893,13 +1699,16 @@ class ILLUMEPlus(lmms):
             return ""
 
         import re
+
         image_placeholder_patterns = [
-            r'<image>', r'<img>', r'\[image\]', r'<IMAGE>', r'<IMG>',
+            r"<image>",
+            r"<img>",
+            r"\[image\]",
+            r"<IMAGE>",
+            r"<IMG>",
         ]
 
-        context_has_placeholders = any(
-            re.search(pattern, context) for pattern in image_placeholder_patterns
-        )
+        context_has_placeholders = any(re.search(pattern, context) for pattern in image_placeholder_patterns)
 
         if context_has_placeholders:
             eval_logger.debug("Context contains image placeholders, using context as-is")
@@ -1922,8 +1731,7 @@ class ILLUMEPlus(lmms):
                 },
                 {
                     "role": "user",
-                    "content": [{"type": "image"}] * len(images)
-                    + [{"type": "text", "text": context}],
+                    "content": [{"type": "image"}] * len(images) + [{"type": "text", "text": context}],
                 },
             ]
 
@@ -1959,9 +1767,8 @@ class ILLUMEPlus(lmms):
 
         del outputs, outputs_text, inputs
         torch.cuda.empty_cache()
-        
-        return answer
 
+        return answer
 
     def generate_visual_cot(self, requests: List[Instance]) -> List[str]:
         """Visual CoT (GtA) generation — delegates to generate_until which handles GtA routing."""
@@ -1981,9 +1788,7 @@ class ILLUMEPlus(lmms):
             desc=f"ILLUME+ {mode_desc}",
         )
 
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
         for chunk in chunks:
@@ -2012,13 +1817,9 @@ class ILLUMEPlus(lmms):
                 if doc_to_visual[0]:
                     visuals = doc_to_visual[0](doc)
                     if visuals:
-                        input_images = (
-                            visuals if isinstance(visuals, list) else [visuals]
-                        )
+                        input_images = visuals if isinstance(visuals, list) else [visuals]
 
-                final_answer, generated_images = self.generate_uni_mmmu_interleaved(
-                    input_images, contexts, str(doc_id), task, interleaved_config, doc
-                )
+                final_answer, generated_images = self.generate_uni_mmmu_interleaved(input_images, contexts, str(doc_id), task, interleaved_config, doc)
 
                 self._save_intermediate_artifacts(
                     doc_id=str(doc_id),
@@ -2031,9 +1832,7 @@ class ILLUMEPlus(lmms):
                 )
 
                 res.append(final_answer)
-                self.cache_hook.add_partial(
-                    "generate_until", (contexts, gen_kwargs), final_answer
-                )
+                self.cache_hook.add_partial("generate_until", (contexts, gen_kwargs), final_answer)
                 pbar.update(1)
                 continue
 
@@ -2043,46 +1842,32 @@ class ILLUMEPlus(lmms):
                 try:
                     visuals = doc_to_visual[0](self.task_dict[task][split][doc_id])
                     if visuals:
-                        original_images = (
-                            visuals if isinstance(visuals, list) else [visuals]
-                        )
+                        original_images = visuals if isinstance(visuals, list) else [visuals]
                 except Exception as e:
                     eval_logger.warning(f"Failed to extract images: {e}")
 
             # Check if this is a Visual CoT task (has generation prompt markers)
-            gen_prompt_match = re.search(
-                r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", contexts, re.DOTALL
-            )
-            question_match = re.search(
-                r"\[QUESTION\](.*?)\[/QUESTION\]", contexts, re.DOTALL
-            )
+            gen_prompt_match = re.search(r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", contexts, re.DOTALL)
+            question_match = re.search(r"\[QUESTION\](.*?)\[/QUESTION\]", contexts, re.DOTALL)
 
             # Only do image generation if:
             # 1. Visual CoT mode is enabled, OR
             # 2. The prompt explicitly requests generation (has GEN_PROMPT tags)
-            should_generate_image = self.enable_visual_cot or (
-                gen_prompt_match and question_match
-            )
+            should_generate_image = self.enable_visual_cot or (gen_prompt_match and question_match)
 
             if should_generate_image:
                 # Visual CoT mode or explicit generation request
                 if gen_prompt_match and question_match:
                     custom_gen_prompt = gen_prompt_match.group(1).strip()
                     actual_question = question_match.group(1).strip()
-                    generation_prompt = custom_gen_prompt.replace(
-                        "{question}", actual_question
-                    )
-                    contexts = contexts.replace(
-                        f"[GEN_PROMPT]{gen_prompt_match.group(1)}[/GEN_PROMPT]", ""
-                    )
+                    generation_prompt = custom_gen_prompt.replace("{question}", actual_question)
+                    contexts = contexts.replace(f"[GEN_PROMPT]{gen_prompt_match.group(1)}[/GEN_PROMPT]", "")
                     contexts = contexts.replace(
                         f"[QUESTION]{question_match.group(1)}[/QUESTION]",
                         question_match.group(1),
                     )
                 else:
-                    generation_prompt = self.generation_prompt_template.format(
-                        question=contexts
-                    )
+                    generation_prompt = self.generation_prompt_template.format(question=contexts)
 
                 stage1_text, generated_images = self._stage1_generate_image(
                     generation_prompt=generation_prompt,
@@ -2113,18 +1898,18 @@ class ILLUMEPlus(lmms):
             else:
                 # Standard mode: use _generate_response for visual understanding
                 eval_logger.debug(f"Standard mode: visual understanding for {task}")
-                
+
                 # Process images
                 images = []
                 for img in original_images:
                     extracted_img = self._extract_image_from_various_formats(img)
                     if extracted_img is not None:
                         images.append(extracted_img)
-                
+
                 # Resize and normalize images if multiple
                 if len(images) > 1:
                     images = self._normalize_image_sizes(images)
-                
+
                 # Call _generate_response
                 final_answer = self._generate_response(
                     context=contexts,
@@ -2136,23 +1921,18 @@ class ILLUMEPlus(lmms):
                 )
 
             res.append(final_answer)
-            self.cache_hook.add_partial(
-                "generate_until", (contexts, all_gen_kwargs[0]), final_answer
-            )
+            self.cache_hook.add_partial("generate_until", (contexts, all_gen_kwargs[0]), final_answer)
             pbar.update(1)
 
         res = re_ords.get_original(res)
         pbar.close()
         return res
+
     def generate_until_multi_round(self, requests) -> List[str]:
+        """Multi-round dialogue not yet implemented."""
 
-            """Multi-round dialogue not yet implemented."""
+        raise NotImplementedError("Multi-round dialogue not yet implemented for ILLUME+")
 
-            raise NotImplementedError(
-
-                "Multi-round dialogue not yet implemented for ILLUME+"
-
-            )
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         """Not supported for generation models."""
         raise NotImplementedError("ILLUME+ is a generation model and does not support loglikelihood")

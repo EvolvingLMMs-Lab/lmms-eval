@@ -94,10 +94,7 @@ class OvisU1(lmms):
         stage2_max_new_tokens: int = 512,
         stage2_temperature: float = 0.0,
         stage2_do_sample: bool = False,
-        generation_prompt_template: str = (
-            "Generate a detailed visual diagram or illustration to help "
-            "answer this question: {question}"
-        ),
+        generation_prompt_template: str = ("Generate a detailed visual diagram or illustration to help " "answer this question: {question}"),
         # Output and debugging
         output_dir: Optional[str] = None,
         save_intermediate: bool = False,
@@ -140,9 +137,7 @@ class OvisU1(lmms):
         self.generated_images_dir = os.path.join(self.output_dir, "generated_images")
 
         if intermediate_dir is None:
-            self.intermediate_dir = os.path.join(
-                self.output_dir, "intermediate_artifacts"
-            )
+            self.intermediate_dir = os.path.join(self.output_dir, "intermediate_artifacts")
         else:
             self.intermediate_dir = intermediate_dir
 
@@ -156,10 +151,7 @@ class OvisU1(lmms):
         # Validate attention implementation
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
-            raise ValueError(
-                f"attn_implementation must be one of "
-                f"{valid_attn_implementations}, got {attn_implementation}"
-            )
+            raise ValueError(f"attn_implementation must be one of " f"{valid_attn_implementations}, got {attn_implementation}")
 
         # Prepare model loading arguments
         model_kwargs = {
@@ -173,9 +165,7 @@ class OvisU1(lmms):
         # Load model
         eval_logger.info(f"Loading Ovis-U1 model from {pretrained}")
         with patch_autoconfig_register():
-            self._model = AutoModelForCausalLM.from_pretrained(
-                pretrained, **model_kwargs
-            )
+            self._model = AutoModelForCausalLM.from_pretrained(pretrained, **model_kwargs)
         self._model = self._model.eval().to(torch.bfloat16)
         self._tokenizer = self._model.text_tokenizer
         self._config = self._model.config
@@ -189,20 +179,14 @@ class OvisU1(lmms):
                 DistributedType.MULTI_GPU,
                 DistributedType.DEEPSPEED,
             ]
-            assert accelerator.distributed_type in distributed_type_list, (
-                "Unsupported distributed type. Only DDP, FSDP, and DeepSpeed supported"
-            )
+            assert accelerator.distributed_type in distributed_type_list, "Unsupported distributed type. Only DDP, FSDP, and DeepSpeed supported"
             if accelerator.distributed_type == DistributedType.FSDP:
                 self._model = accelerator.prepare(self.model)
             else:
-                self._model = accelerator.prepare_model(
-                    self.model, evaluation_mode=True
-                )
+                self._model = accelerator.prepare_model(self.model, evaluation_mode=True)
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
-                eval_logger.info(
-                    f"Using {accelerator.num_processes} devices with parallelism"
-                )
+                eval_logger.info(f"Using {accelerator.num_processes} devices with parallelism")
             self._rank = self.accelerator.local_process_index
             self._world_size = self.accelerator.num_processes
         else:
@@ -279,9 +263,7 @@ class OvisU1(lmms):
             else:
                 return Image.open(img_data).convert("RGB")
         except Exception as e:
-            eval_logger.debug(
-                f"Failed to extract image from {type(img_data)}: {e}"
-            )
+            eval_logger.debug(f"Failed to extract image from {type(img_data)}: {e}")
             return None
 
     def _prepare_images(self, visuals: list) -> List[Image.Image]:
@@ -292,9 +274,7 @@ class OvisU1(lmms):
             if img is not None:
                 images.append(img)
             else:
-                eval_logger.warning(
-                    f"Skipping non-image type: {type(visual)}"
-                )
+                eval_logger.warning(f"Skipping non-image type: {type(visual)}")
         return images
 
     def _save_intermediate_artifacts(
@@ -348,12 +328,8 @@ class OvisU1(lmms):
             visual_tokenizer = self.model.get_visual_tokenizer()
             height, width = self.image_shapes
 
-            uncond_image = Image.new(
-                "RGB", (width, height), (255, 255, 255)
-            ).convert("RGB")
-            cond_image = (
-                original_image.convert("RGB") if original_image else uncond_image
-            )
+            uncond_image = Image.new("RGB", (width, height), (255, 255, 255)).convert("RGB")
+            cond_image = original_image.convert("RGB") if original_image else uncond_image
 
             gen_kwargs = dict(
                 max_new_tokens=self.stage1_max_new_tokens,
@@ -381,13 +357,9 @@ class OvisU1(lmms):
                         processed_img,
                         vae_pixel_values,
                         cond_img_ids,
-                    ) = self.model.visual_generator.process_image_aspectratio(
-                        pil_image, target_size
-                    )
+                    ) = self.model.visual_generator.process_image_aspectratio(pil_image, target_size)
                     cond_img_ids[..., 0] = 1.0
-                    vae_pixel_values = vae_pixel_values.unsqueeze(0).to(
-                        device=self.model.device, dtype=torch.bfloat16
-                    )
+                    vae_pixel_values = vae_pixel_values.unsqueeze(0).to(device=self.model.device, dtype=torch.bfloat16)
                     img_w = original_pil.width
                     img_h = original_pil.height
                     rh, rw = visual_tokenizer.smart_resize(
@@ -401,28 +373,20 @@ class OvisU1(lmms):
                     vae_pixel_values = None
                     images_list = []
 
-                _, input_ids, pixel_values, grid_thws = (
-                    self.model.preprocess_inputs(
-                        prompt_text,
-                        images_list if images_list else None,
-                        generation_preface=None,
-                        return_labels=False,
-                        propagate_exception=False,
-                        multimodal_type=(
-                            "single_image" if images_list else "text_only"
-                        ),
-                        fix_sample_overall_length_navit=False,
-                    )
+                _, input_ids, pixel_values, grid_thws = self.model.preprocess_inputs(
+                    prompt_text,
+                    images_list if images_list else None,
+                    generation_preface=None,
+                    return_labels=False,
+                    propagate_exception=False,
+                    multimodal_type=("single_image" if images_list else "text_only"),
+                    fix_sample_overall_length_navit=False,
                 )
                 attention_mask = torch.ne(input_ids, text_tokenizer.pad_token_id)
                 input_ids = input_ids.unsqueeze(0).to(device=self.model.device)
-                attention_mask = attention_mask.unsqueeze(0).to(
-                    device=self.model.device
-                )
+                attention_mask = attention_mask.unsqueeze(0).to(device=self.model.device)
                 if pixel_values is not None:
-                    pixel_values = pixel_values.to(
-                        device=self.model.device, dtype=torch.bfloat16
-                    )
+                    pixel_values = pixel_values.to(device=self.model.device, dtype=torch.bfloat16)
                 if grid_thws is not None:
                     grid_thws = grid_thws.to(device=self.model.device)
                 return (
@@ -435,9 +399,7 @@ class OvisU1(lmms):
 
             # Step 1: Unconditional baseline
             uncond_prompt = "<image>\nGenerate an image."
-            input_ids, pixel_values, attention_mask, grid_thws, _ = build_inputs(
-                uncond_prompt, uncond_image, width, height
-            )
+            input_ids, pixel_values, attention_mask, grid_thws, _ = build_inputs(uncond_prompt, uncond_image, width, height)
             with torch.inference_mode():
                 no_both_cond = self.model.generate_condition(
                     input_ids,
@@ -553,9 +515,7 @@ class OvisU1(lmms):
             input_ids = input_ids.unsqueeze(0).to(self._device)
             attention_mask = torch.ones_like(input_ids)
             if pixel_values is not None:
-                pixel_values = pixel_values.to(
-                    device=self._device, dtype=self.model.dtype
-                )
+                pixel_values = pixel_values.to(device=self._device, dtype=self.model.dtype)
             if grid_thws is not None:
                 grid_thws = grid_thws.to(self._device)
 
@@ -576,9 +536,7 @@ class OvisU1(lmms):
             with torch.no_grad():
                 outputs = self.model.generate(**generate_kwargs)
 
-            answer_text = self.tokenizer.decode(
-                outputs[0], skip_special_tokens=True
-            )
+            answer_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
             del outputs, input_ids, pixel_values, grid_thws
             torch.cuda.empty_cache()
@@ -619,9 +577,7 @@ class OvisU1(lmms):
         input_ids = input_ids.unsqueeze(0).to(self._device)
         attention_mask = torch.ones_like(input_ids)
         if pixel_values is not None:
-            pixel_values = pixel_values.to(
-                device=self._device, dtype=self.model.dtype
-            )
+            pixel_values = pixel_values.to(device=self._device, dtype=self.model.dtype)
         if grid_thws is not None:
             grid_thws = grid_thws.to(self._device)
 
@@ -700,29 +656,19 @@ class OvisU1(lmms):
                             if original_image is not None:
                                 break
             except Exception as e:
-                eval_logger.error(
-                    f"Failed to extract original image for doc {doc_id}: {e}"
-                )
+                eval_logger.error(f"Failed to extract original image for doc {doc_id}: {e}")
 
         # Parse prompt tags
-        gen_prompt_match = re.search(
-            r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", contexts, re.DOTALL
-        )
-        question_match = re.search(
-            r"\[QUESTION\](.*?)\[/QUESTION\]", contexts, re.DOTALL
-        )
+        gen_prompt_match = re.search(r"\[GEN_PROMPT\](.*?)\[/GEN_PROMPT\]", contexts, re.DOTALL)
+        question_match = re.search(r"\[QUESTION\](.*?)\[/QUESTION\]", contexts, re.DOTALL)
 
         if gen_prompt_match and question_match:
             custom_gen_prompt = gen_prompt_match.group(1).strip()
             actual_question = question_match.group(1).strip()
-            generation_prompt = custom_gen_prompt.replace(
-                "{question}", actual_question
-            )
+            generation_prompt = custom_gen_prompt.replace("{question}", actual_question)
         else:
             actual_question = contexts
-            generation_prompt = self.generation_prompt_template.format(
-                question=contexts
-            )
+            generation_prompt = self.generation_prompt_template.format(question=contexts)
 
         eval_logger.info(f"Visual CoT for doc {doc_id}, task {task}")
 
@@ -736,9 +682,7 @@ class OvisU1(lmms):
         )
 
         if not generated_images:
-            eval_logger.warning(
-                f"No image generated for doc {doc_id}, returning empty"
-            )
+            eval_logger.warning(f"No image generated for doc {doc_id}, returning empty")
             return stage1_text or ""
 
         # Stage 2
@@ -788,9 +732,7 @@ class OvisU1(lmms):
             desc="Model Responding",
         )
 
-        re_ords = utils.Collator(
-            [reg.args for reg in requests], _collate, grouping=True
-        )
+        re_ords = utils.Collator([reg.args for reg in requests], _collate, grouping=True)
         chunks = re_ords.get_batched(n=self.batch_size, batch_fn=None)
 
         for chunk in chunks:
@@ -820,34 +762,25 @@ class OvisU1(lmms):
             # ── Route: Uni-MMMU interleaved ──
             bagel_interleaved = gen_kwargs.get("bagel_interleaved", None)
             if bagel_interleaved is not None:
-                eval_logger.info(
-                    f"Uni-MMMU interleaved mode for doc {doc_id[0]}"
-                )
+                eval_logger.info(f"Uni-MMMU interleaved mode for doc {doc_id[0]}")
                 doc = self.task_dict[task][split][doc_id[0]]
                 input_images = []
                 if doc_to_visual[0]:
                     visuals = doc_to_visual[0](doc)
                     if visuals:
-                        input_images = (
-                            visuals if isinstance(visuals, list) else [visuals]
-                        )
-                final_answer, generated_imgs = (
-                    self.generate_uni_mmmu_interleaved(
-                        input_images,
-                        context,
-                        str(doc_id[0]),
-                        task,
-                        bagel_interleaved,
-                        doc,
-                    )
+                        input_images = visuals if isinstance(visuals, list) else [visuals]
+                final_answer, generated_imgs = self.generate_uni_mmmu_interleaved(
+                    input_images,
+                    context,
+                    str(doc_id[0]),
+                    task,
+                    bagel_interleaved,
+                    doc,
                 )
                 self._save_intermediate_artifacts(
                     doc_id=str(doc_id[0]),
                     task=task,
-                    generation_prompt=(
-                        f"Interleaved: "
-                        f"{bagel_interleaved.get('task_type', 'unknown')}"
-                    ),
+                    generation_prompt=(f"Interleaved: " f"{bagel_interleaved.get('task_type', 'unknown')}"),
                     stage1_text="",
                     generated_images=generated_imgs,
                     question=context,
@@ -868,26 +801,19 @@ class OvisU1(lmms):
                     gen_kwargs=gen_kwargs,
                 )
                 res.append(answer)
-                self.cache_hook.add_partial(
-                    "generate_until", (context, gen_kwargs), answer
-                )
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), answer)
                 pbar.update(1)
                 continue
 
             # ── Route: Standard understanding ──
-            visuals = [
-                doc_to_visual[0](self.task_dict[task][split][ids])
-                for ids in doc_id
-            ]
+            visuals = [doc_to_visual[0](self.task_dict[task][split][ids]) for ids in doc_id]
             visuals = self.flatten(visuals)
             images = self._prepare_images(visuals)
 
             response = self._generate_standard(context, images, gen_kwargs)
 
             res.append(response)
-            self.cache_hook.add_partial(
-                "generate_until", (context, gen_kwargs), response
-            )
+            self.cache_hook.add_partial("generate_until", (context, gen_kwargs), response)
             pbar.update(1)
 
         res = re_ords.get_original(res)
@@ -917,20 +843,12 @@ class OvisU1(lmms):
         if doc is not None:
             if task_type == "maze":
                 steps_str = doc.get("steps", "[]")
-                steps = (
-                    json.loads(steps_str)
-                    if isinstance(steps_str, str)
-                    else steps_str
-                )
+                steps = json.loads(steps_str) if isinstance(steps_str, str) else steps_str
                 if steps:
                     num_images = len(steps)
             elif task_type == "sliding":
                 steps_str = doc.get("steps_words", "[]")
-                steps = (
-                    json.loads(steps_str)
-                    if isinstance(steps_str, str)
-                    else steps_str
-                )
+                steps = json.loads(steps_str) if isinstance(steps_str, str) else steps_str
                 if steps:
                     num_images = len(steps)
 
@@ -945,10 +863,7 @@ class OvisU1(lmms):
         if task_type == "jigsaw":
             # Generate 2 completed images then final answer
             for cand_idx in range(2):
-                suffix = (
-                    f"Output ONLY a single image with Candidate {cand_idx} "
-                    f"placed in the bottom-right cell. No text."
-                )
+                suffix = f"Output ONLY a single image with Candidate {cand_idx} " f"placed in the bottom-right cell. No text."
                 gen_prompt = prompt + "\n\n" + suffix
                 _, img_paths = self._stage1_generate_image(
                     generation_prompt=gen_prompt,
@@ -961,12 +876,7 @@ class OvisU1(lmms):
                     generated_images.extend(img_paths)
 
             # Final answer with all generated images
-            final_suffix = (
-                'Now output EXACTLY ONE <FINAL_ANSWER_JSON>'
-                '{"choice": 0 or 1, "rationale": "<=30 words"}'
-                "</FINAL_ANSWER_JSON>\n"
-                "Do not output any additional images."
-            )
+            final_suffix = "Now output EXACTLY ONE <FINAL_ANSWER_JSON>" '{"choice": 0 or 1, "rationale": "<=30 words"}' "</FINAL_ANSWER_JSON>\n" "Do not output any additional images."
             final_text = self._answer_with_multiple_images(
                 prompt + "\n\n" + final_suffix,
                 original_image,
@@ -976,15 +886,9 @@ class OvisU1(lmms):
             # Maze/Sliding: iterative generation
             for i in range(1, num_images + 1):
                 if task_type == "maze":
-                    plan_suffix = (
-                        f"Step {i}: Generate an image showing the next move "
-                        f"(one step up/down/left/right)."
-                    )
+                    plan_suffix = f"Step {i}: Generate an image showing the next move " f"(one step up/down/left/right)."
                 else:
-                    plan_suffix = (
-                        f"Step {i}: Generate an image showing which tile "
-                        f"to move and in which direction."
-                    )
+                    plan_suffix = f"Step {i}: Generate an image showing which tile " f"to move and in which direction."
                 gen_prompt = prompt + "\n\n" + plan_suffix
                 _, img_paths = self._stage1_generate_image(
                     generation_prompt=gen_prompt,
@@ -996,11 +900,7 @@ class OvisU1(lmms):
                 if img_paths:
                     generated_images.extend(img_paths)
 
-            final_suffix = (
-                "After the images, emit EXACTLY ONE LINE containing ONLY "
-                "the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>. "
-                "No other text."
-            )
+            final_suffix = "After the images, emit EXACTLY ONE LINE containing ONLY " "the final move list as <ANSWER_JSON>[...]</ANSWER_JSON>. " "No other text."
             final_text = self._answer_with_multiple_images(
                 prompt + "\n\n" + final_suffix,
                 original_image,
@@ -1035,9 +935,7 @@ class OvisU1(lmms):
         input_ids = input_ids.unsqueeze(0).to(self._device)
         attention_mask = torch.ones_like(input_ids)
         if pixel_values is not None:
-            pixel_values = pixel_values.to(
-                device=self._device, dtype=self.model.dtype
-            )
+            pixel_values = pixel_values.to(device=self._device, dtype=self.model.dtype)
         if grid_thws is not None:
             grid_thws = grid_thws.to(self._device)
 
@@ -1063,6 +961,4 @@ class OvisU1(lmms):
         raise NotImplementedError("Loglikelihood not implemented for Ovis-U1")
 
     def generate_until_multi_round(self, requests) -> List[str]:
-        raise NotImplementedError(
-            "Multi-round generation not yet implemented"
-        )
+        raise NotImplementedError("Multi-round generation not yet implemented")

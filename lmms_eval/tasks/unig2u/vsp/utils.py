@@ -10,12 +10,11 @@ from typing import Any, Dict, List
 from loguru import logger as eval_logger
 from PIL import Image
 
-
 # ============================================================================
 # Google Map Task
 # ============================================================================
 
-GMAP_PROMPT = '''As a professional pathfinder, your task is to analyze a map and find a route from the starting location to the goal. Since coding is not within your skill set, your approach relies on logical reasoning of the map.
+GMAP_PROMPT = """As a professional pathfinder, your task is to analyze a map and find a route from the starting location to the goal. Since coding is not within your skill set, your approach relies on logical reasoning of the map.
 
 ## Game Setup
 - The game presents a fully observable map.
@@ -49,7 +48,7 @@ Do not output any extra content after the above aggregated output.
 
 Please output path for the following map:
 
-[Test Image]'''
+[Test Image]"""
 
 
 def gmap_doc_to_visual(doc: Dict) -> List[Image.Image]:
@@ -84,29 +83,29 @@ def gmap_process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
         if c_index == -1:
             c_index = result_text.find("Path")
         if c_index != -1:
-            contents = result_text[c_index + 7:]
+            contents = result_text[c_index + 7 :]
         else:
             contents = result_text
 
-        contents = contents.replace('"', '').replace("'", '').replace(".", '')
-        lines = contents.strip().split('\n')
+        contents = contents.replace('"', "").replace("'", "").replace(".", "")
+        lines = contents.strip().split("\n")
 
         for line in lines:
             line_lower = line.lower()
             if "north" in line_lower:
-                match = re.search(r'north[:\s]*(\d+)', line_lower)
+                match = re.search(r"north[:\s]*(\d+)", line_lower)
                 if match:
                     north_south += int(match.group(1))
             if "south" in line_lower:
-                match = re.search(r'south[:\s]*(\d+)', line_lower)
+                match = re.search(r"south[:\s]*(\d+)", line_lower)
                 if match:
                     north_south -= int(match.group(1))
             if "east" in line_lower:
-                match = re.search(r'east[:\s]*(\d+)', line_lower)
+                match = re.search(r"east[:\s]*(\d+)", line_lower)
                 if match:
                     east_west += int(match.group(1))
             if "west" in line_lower:
-                match = re.search(r'west[:\s]*(\d+)', line_lower)
+                match = re.search(r"west[:\s]*(\d+)", line_lower)
                 if match:
                     east_west -= int(match.group(1))
     except Exception as e:
@@ -141,7 +140,7 @@ def gmap_aggregate_results(results: List[Dict]) -> float:
 # Collision Task
 # ============================================================================
 
-COLLISION_PROMPT_TEMPLATE = '''As a professional navigation agent, your task is to analyze a map and determine the time needed for the car and the person passing the goal.
+COLLISION_PROMPT_TEMPLATE = """As a professional navigation agent, your task is to analyze a map and determine the time needed for the car and the person passing the goal.
 
 ## Game Setup
 - The game presents a fully observable map. There is a person, a car, and a goal on the map.
@@ -172,7 +171,7 @@ Please analyze and determine the time needed for the car and the person passing 
 
 [Test Image]
 
-The car is moving {car_dir} with speed {car_speed}, and the person is moving {person_dir} with speed {person_speed}.'''
+The car is moving {car_dir} with speed {car_speed}, and the person is moving {person_dir} with speed {person_speed}."""
 
 
 def collision_doc_to_visual(doc: Dict) -> List[Image.Image]:
@@ -203,7 +202,7 @@ def collision_process_results(doc: Dict, results: List[str]) -> Dict[str, Any]:
     result_text = results[0] if results else ""
 
     # Parse Car and Person times
-    pattern = r'(Car|Person):\s*([0-9]*\.?[0-9]+)'
+    pattern = r"(Car|Person):\s*([0-9]*\.?[0-9]+)"
     matches = re.findall(pattern, result_text, re.IGNORECASE)
     info = {match[0].capitalize(): float(match[1]) for match in matches}
 
@@ -258,7 +257,7 @@ GMAP_GEN_PROMPT = (
     "and mark the number of crossroads to pass in each direction."
 )
 
-GMAP_QUESTION_PROMPT_COT = '''In addition to the original images, you are also given an auxiliary visualization image showing the path analysis.
+GMAP_QUESTION_PROMPT_COT = """In addition to the original images, you are also given an auxiliary visualization image showing the path analysis.
 
 As a professional pathfinder, your task is to analyze a map and find a route from the starting location to the goal. Since coding is not within your skill set, your approach relies on logical reasoning of the map.
 
@@ -294,7 +293,7 @@ Do not output any extra content after the above aggregated output.
 
 Please output path for the following map:
 
-[Test Image]'''
+[Test Image]"""
 
 
 def gmap_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
@@ -309,7 +308,7 @@ COLLISION_GEN_PROMPT = (
     "and from the person to the goal, with arrows indicating their movement directions."
 )
 
-COLLISION_QUESTION_TEMPLATE_COT = '''In addition to the original images, you are also given an auxiliary visualization image showing the distance analysis.
+COLLISION_QUESTION_TEMPLATE_COT = """In addition to the original images, you are also given an auxiliary visualization image showing the distance analysis.
 
 As a professional navigation agent, your task is to analyze a map and determine the time needed for the car and the person passing the goal.
 
@@ -342,12 +341,10 @@ Please analyze and determine the time needed for the car and the person passing 
 
 [Test Image]
 
-The car is moving {car_dir} with speed {car_speed}, and the person is moving {person_dir} with speed {person_speed}.'''
+The car is moving {car_dir} with speed {car_speed}, and the person is moving {person_dir} with speed {person_speed}."""
 
 
-def collision_doc_to_text_visual_cot(
-    doc: Dict, lmms_eval_specific_kwargs: Dict = None
-) -> str:
+def collision_doc_to_text_visual_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
     """Get Visual CoT prompt for collision task."""
     question = COLLISION_QUESTION_TEMPLATE_COT.format(
         car_dir=doc.get("car_dir", ""),

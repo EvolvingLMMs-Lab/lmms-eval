@@ -6,20 +6,18 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-from PIL import Image
-from loguru import logger as eval_logger
-
 from azure.identity import (
-    ChainedTokenCredential,
     AzureCliCredential,
+    ChainedTokenCredential,
     ManagedIdentityCredential,
     get_bearer_token_provider,
 )
+from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
+from PIL import Image
 
 from lmms_eval.azure_openai_compat import build_client as build_azure_compat_client
 from lmms_eval.azure_openai_compat import has_endpoint_support
-
 
 # ============================================================================
 # LLM Judge Client (Azure TRAPI or OpenAI)
@@ -129,11 +127,15 @@ def call_judge(question: str, groundtruth: str, modeloutput: str) -> bool:
     )
 
     try:
-        response_text = client.chat_completion(
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=16,
-            temperature=0,
-        ).strip().lower()
+        response_text = (
+            client.chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=16,
+                temperature=0,
+            )
+            .strip()
+            .lower()
+        )
         return "true" in response_text
     except Exception as e:
         eval_logger.error(f"[LLM Judge Error] {e}")
@@ -194,7 +196,7 @@ def extract_boxed_answer(text: str):
 def phyx_process_results_mc(doc, results):
     """Process multiple choice results using Azure TRAPI LLM Judge."""
     prediction = results[0].strip() if results else ""
-    
+
     # Extract answer from prediction
     pred_answer = extract_boxed_answer(prediction)
     if pred_answer is None:
@@ -204,17 +206,17 @@ def phyx_process_results_mc(doc, results):
             pred_answer = letter_match.group(1)
         else:
             pred_answer = prediction[:200]
-    
+
     # Get ground truth
     gt_answer = str(doc["answer"])
-    
+
     # Use LLM Judge for evaluation
     is_correct = call_judge(
         question=doc["question"],
         groundtruth=gt_answer,
         modeloutput=pred_answer,
     )
-    
+
     eval_result = {
         "index": doc["index"],
         "true_false": is_correct,
@@ -230,22 +232,22 @@ def phyx_process_results_mc(doc, results):
 def phyx_process_results(doc, results):
     """Process results using Azure TRAPI LLM Judge."""
     prediction = results[0].strip() if results else ""
-    
+
     # Extract answer from prediction
     pred_answer = extract_boxed_answer(prediction)
     if pred_answer is None:
         pred_answer = prediction[:200]
-    
+
     # Get ground truth
     gt_answer = str(doc["answer"])
-    
+
     # Use LLM Judge for evaluation
     is_correct = call_judge(
         question=doc["question"],
         groundtruth=gt_answer,
         modeloutput=pred_answer,
     )
-    
+
     eval_result = {
         "index": doc["index"],
         "true_false": is_correct,
@@ -286,19 +288,11 @@ MECHANICS_GEN_PROMPT = (
 
 def phyx_doc_to_text_optics_cot(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for PhyX Optics task."""
-    question = (
-        "In addition to the original image, you are also given an auxiliary "
-        "light ray diagram to help you solve the problem.\n\n"
-        + doc["question"]
-    )
+    question = "In addition to the original image, you are also given an auxiliary " "light ray diagram to help you solve the problem.\n\n" + doc["question"]
     return f"[GEN_PROMPT]{OPTICS_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
 
 
 def phyx_doc_to_text_mechanics_cot(doc, lmms_eval_specific_kwargs=None):
     """Visual CoT prompt for PhyX Mechanics task."""
-    question = (
-        "In addition to the original image, you are also given an auxiliary "
-        "free body diagram (force analysis diagram) to help you solve the problem.\n\n"
-        + doc["question"]
-    )
+    question = "In addition to the original image, you are also given an auxiliary " "free body diagram (force analysis diagram) to help you solve the problem.\n\n" + doc["question"]
     return f"[GEN_PROMPT]{MECHANICS_GEN_PROMPT}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"

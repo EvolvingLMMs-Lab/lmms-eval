@@ -32,10 +32,7 @@ if os.path.exists(mmada_path):
     sys.path.insert(0, mmada_path)
     eval_logger.info(f"Added MMaDA path to sys.path: {mmada_path}")
 else:
-    eval_logger.warning(
-        f"MMaDA repository not found at {mmada_path}. "
-        f"Please clone it: cd {wd} && git clone https://github.com/Gen-Verse/MMaDA.git"
-    )
+    eval_logger.warning(f"MMaDA repository not found at {mmada_path}. " f"Please clone it: cd {wd} && git clone https://github.com/Gen-Verse/MMaDA.git")
 
 
 @register_model("mmada")
@@ -89,9 +86,7 @@ class MMaDA(lmms):
         super().__init__()
 
         if mode not in ["understanding", "generation"]:
-            raise ValueError(
-                f"mode must be 'understanding' or 'generation', got '{mode}'"
-            )
+            raise ValueError(f"mode must be 'understanding' or 'generation', got '{mode}'")
 
         self.mode = mode
         self.pretrained = pretrained
@@ -117,9 +112,7 @@ class MMaDA(lmms):
             self.response_persistent_folder = response_persistent_folder
 
         if output_image_dir is None:
-            self.output_image_dir = os.path.join(
-                self.response_persistent_folder, "mmada_generated_images"
-            )
+            self.output_image_dir = os.path.join(self.response_persistent_folder, "mmada_generated_images")
         else:
             self.output_image_dir = output_image_dir
 
@@ -132,9 +125,7 @@ class MMaDA(lmms):
 
         if self.continual_mode:
             os.makedirs(self.response_persistent_folder, exist_ok=True)
-            self.response_persistent_file = os.path.join(
-                self.response_persistent_folder, "mmada_response.json"
-            )
+            self.response_persistent_file = os.path.join(self.response_persistent_folder, "mmada_response.json")
 
             if os.path.exists(self.response_persistent_file):
                 with open(self.response_persistent_file, "r") as f:
@@ -146,10 +137,7 @@ class MMaDA(lmms):
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
             if self.continual_mode:
-                eval_logger.warning(
-                    "Continual mode is not supported for distributed inference. "
-                    "Automatically disabling continual_mode."
-                )
+                eval_logger.warning("Continual mode is not supported for distributed inference. " "Automatically disabling continual_mode.")
                 self.continual_mode = False
             self.accelerator = accelerator
             self._rank = self.accelerator.local_process_index
@@ -167,23 +155,18 @@ class MMaDA(lmms):
     def _load_model(self):
         """Load MMaDA model components"""
         try:
-            from transformers import AutoTokenizer
             from models import MAGVITv2, MMadaModelLM
             from training.prompting_utils import UniversalPrompting
             from training.utils import image_transform, image_transform_squash
+            from transformers import AutoTokenizer
 
             # Use accelerator's device for proper distributed inference
             self.device = self.accelerator.device
-            eval_logger.info(
-                f"Using device: {self.device} "
-                f"(rank {self._rank}/{self._world_size})"
-            )
+            eval_logger.info(f"Using device: {self.device} " f"(rank {self._rank}/{self._world_size})")
 
             # Load tokenizer
             eval_logger.info("Loading tokenizer...")
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.pretrained, padding_side="left", trust_remote_code=True
-            )
+            self.tokenizer = AutoTokenizer.from_pretrained(self.pretrained, padding_side="left", trust_remote_code=True)
 
             # Setup universal prompting
             self.uni_prompting = UniversalPrompting(
@@ -207,9 +190,7 @@ class MMaDA(lmms):
 
             # Load VQ model (MAGVITv2)
             eval_logger.info("Loading VQ model...")
-            self.vq_model = MAGVITv2.from_pretrained("showlab/magvitv2").to(
-                self.device
-            )
+            self.vq_model = MAGVITv2.from_pretrained("showlab/magvitv2").to(self.device)
             self.vq_model.eval()
             self.vq_model.requires_grad_(False)
 
@@ -229,13 +210,7 @@ class MMaDA(lmms):
             eval_logger.info("Model loaded successfully")
 
         except ImportError as e:
-            raise ImportError(
-                f"Failed to import MMaDA dependencies. "
-                f"Please ensure:\n"
-                f"  1. MMaDA repository is cloned at lmms-eval root\n"
-                f"  2. Required dependencies are installed\n"
-                f"Error: {e}"
-            )
+            raise ImportError(f"Failed to import MMaDA dependencies. " f"Please ensure:\n" f"  1. MMaDA repository is cloned at lmms-eval root\n" f"  2. Required dependencies are installed\n" f"Error: {e}")
 
     @property
     def rank(self):
@@ -276,24 +251,15 @@ class MMaDA(lmms):
         try:
             # Transform image to tensor
             # Use squash transform for certain datasets, regular transform otherwise
-            if any(
-                tag in str(doc_id)
-                for tag in ["ai2d", "clevr", "docvqa", "geo", "llava"]
-            ):
-                image_tensor = self.image_transform_squash(
-                    image, resolution=512
-                ).to(self.device)
+            if any(tag in str(doc_id) for tag in ["ai2d", "clevr", "docvqa", "geo", "llava"]):
+                image_tensor = self.image_transform_squash(image, resolution=512).to(self.device)
             else:
-                image_tensor = self.image_transform(
-                    image, resolution=512
-                ).to(self.device)
+                image_tensor = self.image_transform(image, resolution=512).to(self.device)
 
             image_tensor = image_tensor.unsqueeze(0)
 
             # Get image tokens from VQ model
-            image_tokens = self.vq_model.get_code(image_tensor) + len(
-                self.uni_prompting.text_tokenizer
-            )
+            image_tokens = self.vq_model.get_code(image_tensor) + len(self.uni_prompting.text_tokenizer)
 
             # Prepare text input using chat template
             messages = [{"role": "user", "content": prompt}]
@@ -308,19 +274,10 @@ class MMaDA(lmms):
             batch_size = image_tokens.shape[0]
             input_ids = torch.cat(
                 [
-                    (
-                        torch.ones(batch_size, 1)
-                        * self.uni_prompting.sptids_dict["<|mmu|>"]
-                    ).to(self.device),
-                    (
-                        torch.ones(batch_size, 1)
-                        * self.uni_prompting.sptids_dict["<|soi|>"]
-                    ).to(self.device),
+                    (torch.ones(batch_size, 1) * self.uni_prompting.sptids_dict["<|mmu|>"]).to(self.device),
+                    (torch.ones(batch_size, 1) * self.uni_prompting.sptids_dict["<|soi|>"]).to(self.device),
                     image_tokens,
-                    (
-                        torch.ones(batch_size, 1)
-                        * self.uni_prompting.sptids_dict["<|eoi|>"]
-                    ).to(self.device),
+                    (torch.ones(batch_size, 1) * self.uni_prompting.sptids_dict["<|eoi|>"]).to(self.device),
                     text_token_ids,
                 ],
                 dim=1,
@@ -364,9 +321,7 @@ class MMaDA(lmms):
             eval_logger.error(f"Error in understand_image for doc_id={doc_id}: {e}")
             return ""
 
-    def generate_text_and_image(
-        self, prompt: str, doc_id: str, task: str
-    ) -> Tuple[str, List[str]]:
+    def generate_text_and_image(self, prompt: str, doc_id: str, task: str) -> Tuple[str, List[str]]:
         """
         Generate text and image from prompt
 
@@ -397,10 +352,7 @@ class MMaDA(lmms):
             batch_size = text_token_ids.shape[0]
             input_ids = torch.cat(
                 [
-                    (
-                        torch.ones(batch_size, 1)
-                        * self.uni_prompting.sptids_dict["<|t2i|>"]
-                    ).to(self.device),
+                    (torch.ones(batch_size, 1) * self.uni_prompting.sptids_dict["<|t2i|>"]).to(self.device),
                     text_token_ids,
                 ],
                 dim=1,
@@ -441,12 +393,8 @@ class MMaDA(lmms):
                 generated_image = self.vq_model.decode_code(image_codes)
 
                 # Convert to PIL Image and save
-                generated_image = torch.clamp(
-                    (generated_image + 1.0) / 2.0, min=0.0, max=1.0
-                )
-                generated_image = (
-                    generated_image.squeeze(0).permute(1, 2, 0).cpu().numpy() * 255.0
-                )
+                generated_image = torch.clamp((generated_image + 1.0) / 2.0, min=0.0, max=1.0)
+                generated_image = generated_image.squeeze(0).permute(1, 2, 0).cpu().numpy() * 255.0
                 generated_image = generated_image.astype(np.uint8)
                 pil_image = Image.fromarray(generated_image)
 
@@ -461,9 +409,7 @@ class MMaDA(lmms):
             return output_text, output_images
 
         except Exception as e:
-            eval_logger.error(
-                f"Error in generate_text_and_image for doc_id={doc_id}: {e}"
-            )
+            eval_logger.error(f"Error in generate_text_and_image for doc_id={doc_id}: {e}")
             return "", []
 
     def format_output(self, text: str, images: List[str]) -> str:
@@ -493,9 +439,7 @@ class MMaDA(lmms):
         def get_uuid(task, split, doc_id):
             return f"{task}___{split}___{doc_id}"
 
-        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [
-            reg.args for reg in requests
-        ]:
+        for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
             doc_uuid = get_uuid(task, split, doc_id)
 
             # Check cache
@@ -512,9 +456,7 @@ class MMaDA(lmms):
             if self.mode == "understanding":
                 # Image understanding mode
                 if doc_to_visual is None:
-                    eval_logger.warning(
-                        f"No visual provided for understanding mode, doc_id={doc_id}"
-                    )
+                    eval_logger.warning(f"No visual provided for understanding mode, doc_id={doc_id}")
                     res.append("")
                     pbar.update(1)
                     continue
@@ -537,9 +479,7 @@ class MMaDA(lmms):
                     # Ensure image is in RGB mode (handle RGBA, L, etc.)
                     image = image.convert("RGB")
                 else:
-                    eval_logger.warning(
-                        f"Unsupported visual type: {type(image)} for doc_id={doc_id}"
-                    )
+                    eval_logger.warning(f"Unsupported visual type: {type(image)} for doc_id={doc_id}")
                     res.append("")
                     pbar.update(1)
                     continue
@@ -549,9 +489,7 @@ class MMaDA(lmms):
 
             else:
                 # Image generation mode
-                output_text, output_images = self.generate_text_and_image(
-                    prompt, str(doc_id), task
-                )
+                output_text, output_images = self.generate_text_and_image(prompt, str(doc_id), task)
                 formatted_output = self.format_output(output_text, output_images)
 
             res.append(formatted_output)
@@ -569,12 +507,8 @@ class MMaDA(lmms):
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:
         """Not supported for generation models"""
-        raise NotImplementedError(
-            "MMaDA is a generation model and does not support loglikelihood"
-        )
+        raise NotImplementedError("MMaDA is a generation model and does not support loglikelihood")
 
     def generate_until_multi_round(self, requests) -> List[str]:
         """Multi-round dialogue generation"""
-        raise NotImplementedError(
-            "TODO: Implement multi-round dialogue generation for MMaDA"
-        )
+        raise NotImplementedError("TODO: Implement multi-round dialogue generation for MMaDA")

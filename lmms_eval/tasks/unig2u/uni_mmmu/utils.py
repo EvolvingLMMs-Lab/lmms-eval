@@ -9,20 +9,18 @@ import re
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
-from PIL import Image
-
 # Azure OpenAI imports
 from azure.identity import (
-    ChainedTokenCredential,
     AzureCliCredential,
+    ChainedTokenCredential,
     ManagedIdentityCredential,
     get_bearer_token_provider,
 )
 from openai import AzureOpenAI
+from PIL import Image
 
 from lmms_eval.azure_openai_compat import build_client as build_azure_compat_client
 from lmms_eval.azure_openai_compat import has_endpoint_support
-
 
 # ============================================================================
 # GPT-4o API Client (from api.py)
@@ -82,6 +80,7 @@ def call_gpt4o(prompt: str, max_tokens: int = 512) -> str:
 # Common Utilities
 # ============================================================================
 
+
 def find_first_json_substring(text: str) -> Optional[str]:
     """Extract first JSON object from text."""
     if not text:
@@ -109,6 +108,7 @@ def find_first_json_substring(text: str) -> Optional[str]:
 # ============================================================================
 # Jigsaw Task Functions
 # ============================================================================
+
 
 def jigsaw_doc_to_visual(doc: Dict) -> List[Image.Image]:
     """Get visual inputs for jigsaw task."""
@@ -150,7 +150,7 @@ Inputs:"""
 def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process jigsaw results - text evaluation only."""
     result_raw = results[0] if results else ""
-    
+
     # Handle case where result is a JSON string (from bagel format_output)
     result_text = ""
     if isinstance(result_raw, str):
@@ -169,14 +169,14 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
 
     # Parse choice from <FINAL_ANSWER_JSON> or <FINAL_ANSWER JSON> (flexible matching)
     choice = None
-    
+
     # Try exact match first: <FINAL_ANSWER_JSON>
     match = re.search(
         r"<FINAL_ANSWER_JSON>\s*(\{.*?\})\s*</FINAL_ANSWER_JSON>",
         result_text,
         re.DOTALL | re.IGNORECASE,
     )
-    
+
     # If not found, try with space: <FINAL_ANSWER JSON>
     if not match:
         match = re.search(
@@ -184,7 +184,7 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             result_text,
             re.DOTALL | re.IGNORECASE,
         )
-    
+
     if match:
         json_str = match.group(1)
         parsed = find_first_json_substring(json_str)
@@ -206,13 +206,13 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
             gt_label = int(gt_label)
         except ValueError:
             gt_label = -1
-    
+
     if choice is not None and not isinstance(choice, int):
         try:
             choice = int(choice)
         except (ValueError, TypeError):
             choice = None
-    
+
     text_correct = 1 if choice is not None and choice == gt_label else 0
 
     return {"jigsaw_text_acc": text_correct}
@@ -221,6 +221,7 @@ def jigsaw_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
 # ============================================================================
 # Maze Task Functions
 # ============================================================================
+
 
 def maze_doc_to_visual(doc: Dict) -> List[Image.Image]:
     """Get visual input for maze task."""
@@ -255,7 +256,7 @@ NO EXTRAS
 def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process maze results - text evaluation only using GPT-4o."""
     result_raw = results[0] if results else ""
-    
+
     # Handle case where result is a JSON string (from bagel format_output)
     result_text = ""
     if isinstance(result_raw, str):
@@ -274,11 +275,7 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
 
     # Parse predicted moves from <ANSWER_JSON>
     pred_moves = []
-    matches = list(re.finditer(
-        r"<ANSWER_JSON>\s*(\[.*?\])\s*</ANSWER_JSON>",
-        result_text,
-        re.DOTALL | re.IGNORECASE
-    ))
+    matches = list(re.finditer(r"<ANSWER_JSON>\s*(\[.*?\])\s*</ANSWER_JSON>", result_text, re.DOTALL | re.IGNORECASE))
     if matches:
         try:
             moves_data = json.loads(matches[-1].group(1))
@@ -293,10 +290,7 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
 
     # Text evaluation
     text_exact = 1 if pred_moves == gt_moves else 0
-    text_frame_acc = (
-        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
-        if gt_moves else 0.0
-    )
+    text_frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
 
     return {
         "maze_text_exact": text_exact,
@@ -307,6 +301,7 @@ def maze_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
 # ============================================================================
 # Sliding Puzzle Task Functions
 # ============================================================================
+
 
 def sliding_doc_to_visual(doc: Dict) -> List[Image.Image]:
     """Get visual input for sliding puzzle task."""
@@ -345,7 +340,7 @@ NO EXTRAS
 def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
     """Process sliding puzzle results - text evaluation only."""
     result_raw = results[0] if results else ""
-    
+
     # Handle case where result is a JSON string (from bagel format_output)
     result_text = ""
     if isinstance(result_raw, str):
@@ -364,11 +359,7 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
 
     # Parse predicted moves from <ANSWER_JSON>
     pred_moves = []
-    matches = list(re.finditer(
-        r"<ANSWER_JSON>\s*(\[.*?\])\s*</ANSWER_JSON>",
-        result_text,
-        re.DOTALL | re.IGNORECASE
-    ))
+    matches = list(re.finditer(r"<ANSWER_JSON>\s*(\[.*?\])\s*</ANSWER_JSON>", result_text, re.DOTALL | re.IGNORECASE))
     if matches:
         try:
             moves_data = json.loads(matches[-1].group(1))
@@ -383,20 +374,12 @@ def sliding_process_results(doc: Dict, results: List[str]) -> Dict[str, float]:
 
     # Convert ground truth moves: swap up<->down, left<->right
     # This is needed because the coordinate system in the dataset may differ from model's understanding
-    direction_map = {
-        "up": "down",
-        "down": "up",
-        "left": "right",
-        "right": "left"
-    }
+    direction_map = {"up": "down", "down": "up", "left": "right", "right": "left"}
     gt_moves = [direction_map.get(m, m) for m in gt_moves]
 
     # Text evaluation
     text_exact = 1 if pred_moves == gt_moves else 0
-    text_frame_acc = (
-        sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves)
-        if gt_moves else 0.0
-    )
+    text_frame_acc = sum(1 for p, g in zip(pred_moves, gt_moves) if p == g) / len(gt_moves) if gt_moves else 0.0
 
     return {
         "sliding_text_exact": text_exact,

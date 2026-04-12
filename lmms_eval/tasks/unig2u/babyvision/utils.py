@@ -10,20 +10,18 @@ from collections import defaultdict
 from functools import partial
 from typing import Any, Dict, List, Optional
 
-from loguru import logger as eval_logger
-from PIL import Image
-
 from azure.identity import (
-    ChainedTokenCredential,
     AzureCliCredential,
+    ChainedTokenCredential,
     ManagedIdentityCredential,
     get_bearer_token_provider,
 )
+from loguru import logger as eval_logger
 from openai import AzureOpenAI, OpenAI
+from PIL import Image
 
 from lmms_eval.azure_openai_compat import build_client as build_azure_compat_client
 from lmms_eval.azure_openai_compat import has_endpoint_support
-
 
 # ============================================================================
 # LLM Judge Client (Azure TRAPI or OpenAI)
@@ -133,11 +131,15 @@ def call_judge(question: str, groundtruth: str, modeloutput: str) -> bool:
     )
 
     try:
-        response_text = client.chat_completion(
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=16,
-            temperature=0,
-        ).strip().lower()
+        response_text = (
+            client.chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=16,
+                temperature=0,
+            )
+            .strip()
+            .lower()
+        )
         return "true" in response_text
     except Exception as e:
         eval_logger.error(f"[LLM Judge Error] {e}")
@@ -147,6 +149,7 @@ def call_judge(question: str, groundtruth: str, modeloutput: str) -> bool:
 # ============================================================================
 # Document Processing Functions
 # ============================================================================
+
 
 def format_choices(choices: List[str]) -> str:
     """Format multiple choice options as (A), (B), (C), etc."""
@@ -278,6 +281,7 @@ def aggregate_results(results: List[Dict]) -> float:
 # Dataset filtering functions (used by process_docs)
 # ============================================================================
 
+
 def process_docs(dataset, task_type: str):
     """Filter dataset by task type."""
     return dataset.filter(lambda x: x["type"] == task_type)
@@ -321,10 +325,7 @@ def doc_to_text_visual_cot(
         question = question + "\nChoices:\n" + format_choices(doc["options"])
 
     # Add auxiliary image notice
-    question = (
-        "In addition to the original image, you are also given an auxiliary "
-        "visualization image that highlights key visual elements.\n\n" + question
-    )
+    question = "In addition to the original image, you are also given an auxiliary " "visualization image that highlights key visual elements.\n\n" + question
 
     # Add pre_prompt and post_prompt
     if lmms_eval_specific_kwargs:
@@ -336,19 +337,11 @@ def doc_to_text_visual_cot(
     return f"[GEN_PROMPT]{gen_prompt}[/GEN_PROMPT][QUESTION]{question}[/QUESTION]"
 
 
-def doc_to_text_fine_grained_cot(
-    doc: Dict, lmms_eval_specific_kwargs: Dict = None
-) -> str:
+def doc_to_text_fine_grained_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
     """Visual CoT prompt for Fine-grained Discrimination task."""
-    return doc_to_text_visual_cot(
-        doc, lmms_eval_specific_kwargs, FINE_GRAINED_GEN_PROMPT
-    )
+    return doc_to_text_visual_cot(doc, lmms_eval_specific_kwargs, FINE_GRAINED_GEN_PROMPT)
 
 
-def doc_to_text_visual_tracking_cot(
-    doc: Dict, lmms_eval_specific_kwargs: Dict = None
-) -> str:
+def doc_to_text_visual_tracking_cot(doc: Dict, lmms_eval_specific_kwargs: Dict = None) -> str:
     """Visual CoT prompt for Visual Tracking task."""
-    return doc_to_text_visual_cot(
-        doc, lmms_eval_specific_kwargs, VISUAL_TRACKING_GEN_PROMPT
-    )
+    return doc_to_text_visual_cot(doc, lmms_eval_specific_kwargs, VISUAL_TRACKING_GEN_PROMPT)
