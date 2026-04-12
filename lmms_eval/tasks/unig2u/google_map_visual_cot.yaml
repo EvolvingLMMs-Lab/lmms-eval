@@ -4,7 +4,7 @@ dataset_kwargs:
   data_files: hf://datasets/kkv233/unig2u_dataset/vsp/vsp_google_map_50.parquet
 task: "unig2u_vsp_google_map_visual_cot"
 test_split: train
-output_type: generate_until
+output_type: generate_visual_cot
 
 doc_to_visual: !function utils.gmap_doc_to_visual
 doc_to_text: !function utils.gmap_doc_to_text_visual_cot

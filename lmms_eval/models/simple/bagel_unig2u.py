@@ -908,6 +908,10 @@ class BagelUniG2U(lmms):
 
     # ── Main inference ──────────────────────────────────────────────────
 
+    def generate_visual_cot(self, requests: List[Instance]) -> List[str]:
+        """Visual CoT (GtA) generation — delegates to generate_until which auto-detects GtA from prompt tags."""
+        return self.generate_until(requests)
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """
         Main inference method. Auto-detects mode:

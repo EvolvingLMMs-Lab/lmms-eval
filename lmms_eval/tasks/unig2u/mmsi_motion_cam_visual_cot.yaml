@@ -4,7 +4,7 @@ task: "unig2u_mmsi_motion_cam_visual_cot"
 dataset_kwargs:
   data_files: hf://datasets/kkv233/unig2u_dataset/mmsi_bench/motion_cam.parquet
 test_split: train
-output_type: generate_until
+output_type: generate_visual_cot
 doc_to_visual: !function utils.msr_doc_to_visual
 doc_to_text: !function utils.msr_doc_to_text_with_gen_prompt
 doc_to_target: "answer"

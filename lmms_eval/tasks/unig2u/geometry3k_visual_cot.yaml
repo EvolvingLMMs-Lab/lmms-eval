@@ -3,7 +3,7 @@ dataset_path: parquet
 dataset_kwargs:
   data_files: hf://datasets/kkv233/unig2u_dataset/geometry3k/geometry3k_train_first100.parquet
 test_split: train
-output_type: generate_until
+output_type: generate_visual_cot
 doc_to_visual: !function utils.geometry3k_doc_to_visual
 doc_to_text: !function utils.geometry3k_doc_to_text_visual_cot
 doc_to_target: !function utils.geometry3k_doc_to_target

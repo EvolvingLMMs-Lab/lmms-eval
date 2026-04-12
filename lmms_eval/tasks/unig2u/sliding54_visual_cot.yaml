@@ -4,7 +4,7 @@ dataset_kwargs:
   data_files: hf://datasets/kkv233/unig2u_dataset/uni_mmmu/uni_mmmu_sliding54.parquet
 task: "unig2u_uni_mmmu_sliding54_visual_cot"
 test_split: train
-output_type: generate_until
+output_type: generate_visual_cot
 
 doc_to_visual: !function utils.sliding_doc_to_visual
 doc_to_text: !function utils.sliding_doc_to_text_visual_cot

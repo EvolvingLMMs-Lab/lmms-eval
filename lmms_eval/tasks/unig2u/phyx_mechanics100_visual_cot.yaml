@@ -12,7 +12,7 @@ dataset_kwargs:
   data_files: hf://datasets/kkv233/unig2u_dataset/phyx/phyx_mechanics100.parquet
 task: "unig2u_phyx_mechanics100_visual_cot"
 test_split: train
-output_type: generate_until
+output_type: generate_visual_cot
 doc_to_visual: !function utils.phyx_doc_to_visual
 doc_to_text: !function utils.phyx_doc_to_text_mechanics_cot
 doc_to_target: "answer"

@@ -1972,6 +1972,10 @@ class ILLUMEPlus(lmms):
         return answer
 
 
+    def generate_visual_cot(self, requests: List[Instance]) -> List[str]:
+        """Visual CoT (GtA) generation — delegates to generate_until which handles GtA routing."""
+        return self.generate_until(requests)
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         res = []
 

@@ -4,7 +4,7 @@ dataset_kwargs:
   data_files:
     test: hf://datasets/kkv233/unig2u_dataset/visualpuzzles/deductive.parquet
 test_split: test
-output_type: generate_until
+output_type: generate_visual_cot
 doc_to_visual: !function utils.VisualPuzzles_doc_to_visual
 doc_to_text: !function utils.VisualPuzzles_doc_to_text_visual_cot_deductive
 doc_to_target: "answer"

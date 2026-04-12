@@ -765,6 +765,10 @@ class OvisU1(lmms):
 
     # ── Main entry point ────────────────────────────────────────────────
 
+    def generate_visual_cot(self, requests: List[Instance]) -> List[str]:
+        """Visual CoT (GtA) generation — delegates to generate_until which auto-detects GtA from prompt tags."""
+        return self.generate_until(requests)
+
     def generate_until(self, requests: List[Instance]) -> List[str]:
         """
         Generate text for each request, auto-detecting mode:

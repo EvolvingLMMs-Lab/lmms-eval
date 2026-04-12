@@ -3,7 +3,7 @@ dataset_kwargs:
   data_files: hf://datasets/kkv233/unig2u_dataset/auxsolidmath/auxsolidmath_test_easy_first100.parquet
 task: "unig2u_auxsolidmath_easy_visual_cot"
 test_split: train
-output_type: generate_until
+output_type: generate_visual_cot
 
 doc_to_visual: !function utils.auxsolidmath_doc_to_visual
 doc_to_text: !function utils.auxsolidmath_doc_to_text_visual_cot

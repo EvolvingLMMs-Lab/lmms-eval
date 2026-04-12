@@ -4,7 +4,7 @@ dataset_kwargs:
   data_files: hf://datasets/kkv233/unig2u_dataset/realunify/realunify_mental_tracking.parquet
 task: "unig2u_realunify_mental_tracking_visual_cot"
 test_split: train
-output_type: generate_until
+output_type: generate_visual_cot
 
 doc_to_visual: !function utils.doc_to_visual
 doc_to_text: !function utils.doc_to_text_mental_tracking_cot

@@ -625,6 +625,10 @@ class QwenImageEdit(lmms):
 
     # ── Main entry point ────────────────────────────────────────────
 
+    def generate_visual_cot(self, requests) -> List[str]:
+        """Visual CoT (GtA) generation — delegates to generate_until which handles GtA routing."""
+        return self.generate_until(requests)
+
     def generate_until(self, requests) -> List[str]:
         """
         Generate outputs. Mode selection:
