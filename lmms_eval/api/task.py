@@ -59,6 +59,7 @@ ALL_OUTPUT_TYPES = [
     "generate_until",
     "generate_until_multi_round",
     "generate_until_agentic",
+    "generate_visual_cot",
 ]
 
 
@@ -1563,6 +1564,8 @@ class ConfigurableTask(Task):
 
         elif self.OUTPUT_TYPE == "generate_until":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
+        elif self.OUTPUT_TYPE == "generate_visual_cot":
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "generate_until_multi_round":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "generate_until_agentic":
@@ -1572,7 +1575,7 @@ class ConfigurableTask(Task):
     # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
     def process_results(self, doc, results, full_docs=None):
-        if self.OUTPUT_TYPE == "generate_until":
+        if self.OUTPUT_TYPE in ("generate_until", "generate_visual_cot"):
             if isinstance(results, list) and isinstance(results[0], list):
                 results = [res.strip() for res in results[0]]
             else:

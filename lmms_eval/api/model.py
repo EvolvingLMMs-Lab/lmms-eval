@@ -118,6 +118,17 @@ class lmms(abc.ABC):
         """
         pass
 
+    def generate_visual_cot(self, requests) -> List[str]:
+        """Visual CoT (GtA) generation: two-stage pipeline that generates an
+        auxiliary visualization image (Stage 1) and then answers using both
+        the original and generated images (Stage 2).
+
+        Models that support GtA must override this method.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support Visual CoT (GtA). " f"To run visual_cot tasks, the model must implement generate_visual_cot(). " f"Supported models: ovis_u1, bagel_unig2u, illume_plus, qwen_image_edit"
+        )
+
     @classmethod
     def create_from_arg_string(cls: Type[T], arg_string: str, additional_config: Optional[dict] = None) -> T:
         """
