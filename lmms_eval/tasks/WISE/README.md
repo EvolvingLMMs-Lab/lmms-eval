@@ -3,7 +3,7 @@
 WISE is a knowledge-intensive text-to-image benchmark that evaluates whether models can use commonsense, cultural, scientific, spatial, and temporal knowledge to generate correct images.
 
 - Paper: https://arxiv.org/abs/2503.07265
-- Dataset: https://huggingface.co/datasets/Yuwei-Niu/WISE
+- Dataset: https://github.com/PKU-YuanGroup/WISE/tree/main/data
 
 ## Overview
 
@@ -23,29 +23,38 @@ WISE is a knowledge-intensive text-to-image benchmark that evaluates whether mod
 ```bash
 export WISE_API_KEY="your-api-key"                    # Judge API key
 export WISE_BASE_URL="https://api.openai.com/v1"     # Judge API endpoint
-export WISE_MODEL_NAME="gpt-4o-2024-05-13"                       # Judge model name
-export WISE_RAW_OUTPUT_DIR="/path/to/model/output"   # Where model saves generated images
+export WISE_MODEL_NAME="gpt-4o-2024-05-13"           # Judge model name
 ```
+
+## Image Generation Integration
+
+WISE uses `output_type: generate_until` because lmms-eval routes both text-only generation and image-capable model generation through the same request type.
+Image-generation model wrappers should save generated images to disk and return a JSON string like:
+
+```json
+{"text": "", "images": ["/path/to/model/output/WISE_0.png"]}
+```
+
+During scoring, WISE reads the first path in `images` and sends that file to the judge. Models that only write files without returning this JSON format are not supported by this task.
 
 ## Usage
 
-### Full Evaluation with bagel
+### Full Evaluation with an Image-Generation Model
 
 ```bash
-cd /pfs/weiyang/Show/lmms-eval
+cd /path/to/lmms-eval
 
-export WISE_API_KEY="sk-..."
-export WISE_BASE_URL="https://api.bltcy.ai/v1"
-export WISE_MODEL_NAME="gpt-4o"
-export WISE_RAW_OUTPUT_DIR="/pfs/weiyang/Show/lmms-eval/outputs/WISE_raw/bagel_umm"
+export WISE_API_KEY="your-api-key"
+export WISE_BASE_URL="https://api.openai.com/v1"
+export WISE_MODEL_NAME="gpt-4o-2024-05-13"
 
 python -m lmms_eval \
-  --model bagel_umm \
-  --model_args pretrained=/pfs/weiyang/WISE_re/CKPT/ByteDance-Seed/BAGEL-7B-MoT,mode=generate,output_dir=/pfs/weiyang/Show/lmms-eval/outputs/WISE_raw/bagel_umm \
+  --model your_image_generation_model \
+  --model_args pretrained=/path/to/checkpoint,mode=generate,output_dir=/path/to/lmms-eval/outputs/WISE_raw/model_name \
   --tasks WISE \
   --batch_size 1 \
   --log_samples \
-  --output_path /pfs/weiyang/Show/lmms-eval/outputs/WISE_eval/bagel_umm
+  --output_path /path/to/lmms-eval/outputs/WISE_eval/model_name
 ```
 
 ## Metrics

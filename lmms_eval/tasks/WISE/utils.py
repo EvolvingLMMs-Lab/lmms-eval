@@ -2,16 +2,14 @@
 
 Evaluation flow:
   1. Send doc["Prompt"] to a text-to-image model.
-  2. Model generates images to output_dir (e.g., WISE_raw/bagel_umm/).
-  3. Find generated images from output_dir based on doc_id.
+  2. Model saves generated images and returns their paths in JSON.
+  3. Read the first generated image path from results[0]["images"].
   4. Use an OpenAI-compatible multimodal judge to produce three scores:
      consistency, realism, aesthetic_quality (each 0-2).
   5. Calculate WiScore = (0.7*consistency + 0.2*realism + 0.1*aesthetic) / 2.
   6. Aggregate WiScores by WISE category weights.
 
 Environment variables:
-  - WISE_RAW_OUTPUT_DIR: model output directory (e.g., /pfs/.../WISE_raw/bagel_umm).
-    Required for finding generated images.
   - WISE_API_KEY: judge API key. Falls back to OPENAI_API_KEY.
   - WISE_BASE_URL: optional OpenAI-compatible base URL.
     Falls back to OPENAI_BASE_URL or OPENAI_API_BASE.
@@ -29,11 +27,11 @@ import os
 import re
 import time
 from collections import defaultdict
+from threading import Lock
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 import numpy as np
 from loguru import logger as eval_logger
-from PIL import Image
 
 CATEGORY_RANGES = {
     "culture": range(1, 401),
@@ -51,6 +49,15 @@ CATEGORY_LABELS = {
     "biology": "BIOLOGY",
     "physics": "PHYSICS",
     "chemistry": "CHEMISTRY",
+}
+
+CATEGORY_METRICS = {
+    "culture": "WISE_culture_score",
+    "time": "WISE_time_score",
+    "space": "WISE_space_score",
+    "biology": "WISE_biology_score",
+    "physics": "WISE_physics_score",
+    "chemistry": "WISE_chemistry_score",
 }
 
 GROUPS = {
@@ -71,6 +78,7 @@ REQUIRED_SCORE_KEYS = {"consistency", "realism", "aesthetic_quality"}
 MAX_EXTRACT_RETRIES = 3
 
 _OPENAI_CLIENT = None
+_OPENAI_CLIENT_LOCK = Lock()
 
 
 def wise_doc_to_visual(doc):
@@ -132,17 +140,21 @@ def _get_openai_client(cfg: Dict[str, Any]):
     if _OPENAI_CLIENT is not None:
         return _OPENAI_CLIENT
 
-    try:
-        from openai import OpenAI
-    except ImportError as e:
-        raise ImportError("openai package is required for WISE judging.") from e
+    with _OPENAI_CLIENT_LOCK:
+        if _OPENAI_CLIENT is not None:
+            return _OPENAI_CLIENT
 
-    kwargs = {"api_key": cfg["api_key"], "timeout": cfg["timeout"]}
-    if cfg.get("base_url"):
-        kwargs["base_url"] = cfg["base_url"]
-    _OPENAI_CLIENT = OpenAI(**kwargs)
-    eval_logger.info(f"Initialized WISE judge client (model={cfg['model']})")
-    return _OPENAI_CLIENT
+        try:
+            from openai import OpenAI
+        except ImportError as e:
+            raise ImportError("openai package is required for WISE judging.") from e
+
+        kwargs = {"api_key": cfg["api_key"], "timeout": cfg["timeout"]}
+        if cfg.get("base_url"):
+            kwargs["base_url"] = cfg["base_url"]
+        _OPENAI_CLIENT = OpenAI(**kwargs)
+        eval_logger.info(f"Initialized WISE judge client (model={cfg['model']})")
+        return _OPENAI_CLIENT
 
 
 def _encode_image(path: str) -> str:
@@ -363,66 +375,29 @@ def _load_prediction(results: Sequence[str]) -> Dict[str, Any]:
         return json.loads(pred)
     except (json.JSONDecodeError, TypeError):
         eval_logger.warning(f"Failed to parse WISE prediction JSON: {str(pred)[:200]}")
-        return {"text": str(pred), "images": []}
+        return {}
 
 
-def _find_generated_image(output_dir: str, doc_id: int) -> Optional[str]:
-    """Find generated image for doc_id in output_dir.
+def _image_from_prediction(pred: Dict[str, Any]) -> Optional[str]:
+    """Read the generated image path from the model JSON response.
 
-    Supported formats:
-    - bagel.py: output_dir/20260417_xxx/WISE_{doc_id}_0.png
-    - bagel_unig2u.py: output_dir/WISE_{doc_id}.png
-    - mmada.py: output_dir/WISE_{doc_id}.png
+    Expected model output:
+        {"text": "...", "images": ["/path/to/generated.png"]}
     """
-    if not os.path.exists(output_dir):
+    model_images = pred.get("images", [])
+    if not isinstance(model_images, (list, tuple)) or not model_images:
+        eval_logger.warning("WISE prediction JSON does not contain a non-empty 'images' list")
         return None
 
-    # 1. Check for timestamp subdirectories (bagel.py case)
-    subdirs = [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d)) and re.match(r"\d{8}_\d{6}_[a-f0-9]+", d)]
-
-    if subdirs:
-        # Use the latest timestamp directory
-        latest_subdir = sorted(subdirs, reverse=True)[0]
-        search_dir = os.path.join(output_dir, latest_subdir)
-    else:
-        search_dir = output_dir
-
-    # 2. Try common naming patterns
-    possible_names = [
-        f"WISE_{doc_id}_0.png",  # bagel.py
-        f"WISE_{doc_id}.png",  # bagel_unig2u, mmada
-    ]
-
-    for name in possible_names:
-        path = os.path.join(search_dir, name)
-        if os.path.exists(path):
-            return path
-
-    return None
-
-
-def _save_prompt_image(prompt_id: int, doc_id: int) -> Optional[str]:
-    """Find the generated image path for evaluation.
-
-    Args:
-        prompt_id: WISE dataset prompt_id
-        doc_id: lmms-eval doc index
-
-    Returns:
-        Image path if found, None otherwise
-    """
-    output_dir = os.getenv("WISE_RAW_OUTPUT_DIR")
-    if not output_dir:
-        eval_logger.warning("WISE_RAW_OUTPUT_DIR environment variable not set")
-        return None
-
-    # Find image from output_dir
-    image_path = _find_generated_image(output_dir, doc_id)
+    image_path = os.path.expanduser(os.path.expandvars(str(model_images[0]).strip()))
     if not image_path:
-        eval_logger.warning(f"Missing image: prompt_id={prompt_id}, doc_id={doc_id}")
+        eval_logger.warning("WISE prediction JSON contains an empty image path")
+        return None
+    if not os.path.isfile(image_path):
+        eval_logger.warning(f"WISE generated image path does not exist: {image_path}")
         return None
 
-    return image_path
+    return os.path.abspath(image_path)
 
 
 def _pack_result(
@@ -461,11 +436,19 @@ def _pack_result(
 def wise_process_results(doc, results, **kwargs):
     pred = _load_prediction(results)
     prompt_id = _prompt_id(doc)
-    doc_id = kwargs.get("doc_id", 0)  # Get doc_id from kwargs
-    image_path = _save_prompt_image(prompt_id, doc_id)
+    image_path = _image_from_prediction(pred)
 
     if not image_path:
-        packed = _pack_result(doc=doc, image_path=None, consistency=0.0, realism=0.0, aesthetic_quality=0.0, score=0.0, evaluation=None, status="missing_image")
+        packed = _pack_result(
+            doc=doc,
+            image_path=None,
+            consistency=0.0,
+            realism=0.0,
+            aesthetic_quality=0.0,
+            score=0.0,
+            evaluation=None,
+            status="missing_image",
+        )
     else:
         try:
             judged = _judge_image(doc, image_path)
@@ -483,19 +466,41 @@ def wise_process_results(doc, results, **kwargs):
             if "API_KEY" in str(e) or "openai package is required" in str(e):
                 raise
             eval_logger.error(f"WISE judge failed for prompt_id={prompt_id}: {str(e)[:300]}")
-            packed = _pack_result(doc=doc, image_path=image_path, consistency=0.0, realism=0.0, aesthetic_quality=0.0, score=0.0, evaluation=None, status="judge_failed")
+            packed = _pack_result(
+                doc=doc,
+                image_path=image_path,
+                consistency=0.0,
+                realism=0.0,
+                aesthetic_quality=0.0,
+                score=0.0,
+                evaluation=None,
+                status="judge_failed",
+            )
 
-    aggregate_entry = {key: packed[key] for key in ("prompt_id", "category", "category_label", "raw_category", "subcategory", "image_path", "consistency", "realism", "aesthetic_quality", "score", "status", "valid")}
-
-    return {
-        "WISE_culture_score": aggregate_entry,
-        "WISE_time_score": aggregate_entry,
-        "WISE_space_score": aggregate_entry,
-        "WISE_biology_score": aggregate_entry,
-        "WISE_physics_score": aggregate_entry,
-        "WISE_chemistry_score": aggregate_entry,
-        "WISE_overall_wiscore": aggregate_entry,
+    aggregate_entry = {
+        key: packed[key]
+        for key in (
+            "prompt_id",
+            "category",
+            "category_label",
+            "raw_category",
+            "subcategory",
+            "image_path",
+            "consistency",
+            "realism",
+            "aesthetic_quality",
+            "score",
+            "status",
+            "valid",
+        )
     }
+
+    metrics = {metric: None for metric in CATEGORY_METRICS.values()}
+    category_metric = CATEGORY_METRICS.get(packed["category"])
+    if category_metric:
+        metrics[category_metric] = packed["score"]
+    metrics["WISE_overall_wiscore"] = aggregate_entry
+    return metrics
 
 
 def _valid_results(results: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -510,19 +515,39 @@ def _valid_results(results: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return valid
 
 
+def _score_values(results: Iterable[Any]) -> List[float]:
+    values = []
+    for result in results:
+        if isinstance(result, (int, float)):
+            values.append(float(result))
+            continue
+        if not isinstance(result, dict) or not result.get("valid", True):
+            continue
+        score = result.get("score")
+        if isinstance(score, (int, float)):
+            values.append(float(score))
+    return values
+
+
 def _mean_score(results: Iterable[Dict[str, Any]]) -> float:
-    valid = _valid_results(results)
-    if not valid:
+    values = _score_values(results)
+    if not values:
         return 0.0
-    return float(np.mean([float(r["score"]) for r in valid]))
+    return float(np.mean(values))
 
 
 def _mean_for_categories(results: Iterable[Dict[str, Any]], categories: Sequence[str], label: str) -> float:
     categories = tuple(categories)
-    selected = [r for r in _valid_results(results) if r.get("category") in categories]
+    valid = _valid_results(results)
+    selected = [r for r in valid if r.get("category") in categories]
     if not selected:
-        eval_logger.warning(f"[WISE] No samples for {label}.")
-        return 0.0
+        values = _score_values(results)
+        if not values:
+            eval_logger.warning(f"[WISE] No samples for {label}.")
+            return 0.0
+        score = float(np.mean(values))
+        eval_logger.info(f"[WISE] {label}: {score:.4f} (n={len(values)})")
+        return score
     score = _mean_score(selected)
     eval_logger.info(f"[WISE] {label}: {score:.4f} (n={len(selected)})")
     return score

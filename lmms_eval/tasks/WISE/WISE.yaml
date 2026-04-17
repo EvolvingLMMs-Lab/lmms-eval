@@ -1,15 +1,17 @@
 # WISE text-to-image benchmark.
 #
 # Dataset notes:
-# - The source JSON is expected to be uploaded to Hugging Face as:
-#     Yuwei-Niu/WISE/final_data.json
-# - data_files maps that JSON into the lmms-eval test split without using any
-#   local mount path.
+# - The official WISE release stores prompts in three JSON files.
+# - data_files maps those files into the lmms-eval test split without using any
+#   local mount path or invalid HuggingFace repo-as-file value.
 
 dataset_path: json
 dataset_kwargs:
   data_files:
-    test: Yuwei-Niu/WISE
+    test:
+      - https://raw.githubusercontent.com/PKU-YuanGroup/WISE/main/data/cultural_common_sense.json
+      - https://raw.githubusercontent.com/PKU-YuanGroup/WISE/main/data/spatio-temporal_reasoning.json
+      - https://raw.githubusercontent.com/PKU-YuanGroup/WISE/main/data/natural_science.json
 task: WISE
 test_split: test
 output_type: generate_until
