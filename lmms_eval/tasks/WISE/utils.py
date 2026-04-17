@@ -35,7 +35,6 @@ import numpy as np
 from loguru import logger as eval_logger
 from PIL import Image
 
-
 CATEGORY_RANGES = {
     "culture": range(1, 401),
     "time": range(401, 568),
@@ -224,9 +223,7 @@ Please strictly adhere to the scoring criteria and follow the template format wh
     return [
         {
             "role": "system",
-            "content": [
-                _msg_text("You are a professional Vincennes image quality audit expert, please evaluate the image quality strictly according to the protocol.")
-            ],
+            "content": [_msg_text("You are a professional Vincennes image quality audit expert, please evaluate the image quality strictly according to the protocol.")],
         },
         {
             "role": "user",
@@ -381,8 +378,7 @@ def _find_generated_image(output_dir: str, doc_id: int) -> Optional[str]:
         return None
 
     # 1. Check for timestamp subdirectories (bagel.py case)
-    subdirs = [d for d in os.listdir(output_dir)
-               if os.path.isdir(os.path.join(output_dir, d)) and re.match(r'\d{8}_\d{6}_[a-f0-9]+', d)]
+    subdirs = [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d)) and re.match(r"\d{8}_\d{6}_[a-f0-9]+", d)]
 
     if subdirs:
         # Use the latest timestamp directory
@@ -394,7 +390,7 @@ def _find_generated_image(output_dir: str, doc_id: int) -> Optional[str]:
     # 2. Try common naming patterns
     possible_names = [
         f"WISE_{doc_id}_0.png",  # bagel.py
-        f"WISE_{doc_id}.png",    # bagel_unig2u, mmada
+        f"WISE_{doc_id}.png",  # bagel_unig2u, mmada
     ]
 
     for name in possible_names:
@@ -469,16 +465,7 @@ def wise_process_results(doc, results, **kwargs):
     image_path = _save_prompt_image(prompt_id, doc_id)
 
     if not image_path:
-        packed = _pack_result(
-            doc=doc,
-            image_path=None,
-            consistency=0.0,
-            realism=0.0,
-            aesthetic_quality=0.0,
-            score=0.0,
-            evaluation=None,
-            status="missing_image"
-        )
+        packed = _pack_result(doc=doc, image_path=None, consistency=0.0, realism=0.0, aesthetic_quality=0.0, score=0.0, evaluation=None, status="missing_image")
     else:
         try:
             judged = _judge_image(doc, image_path)
@@ -496,21 +483,9 @@ def wise_process_results(doc, results, **kwargs):
             if "API_KEY" in str(e) or "openai package is required" in str(e):
                 raise
             eval_logger.error(f"WISE judge failed for prompt_id={prompt_id}: {str(e)[:300]}")
-            packed = _pack_result(
-                doc=doc,
-                image_path=image_path,
-                consistency=0.0,
-                realism=0.0,
-                aesthetic_quality=0.0,
-                score=0.0,
-                evaluation=None,
-                status="judge_failed"
-            )
+            packed = _pack_result(doc=doc, image_path=image_path, consistency=0.0, realism=0.0, aesthetic_quality=0.0, score=0.0, evaluation=None, status="judge_failed")
 
-    aggregate_entry = {
-        key: packed[key]
-        for key in ("prompt_id", "category", "category_label", "raw_category", "subcategory", "image_path", "consistency", "realism", "aesthetic_quality", "score", "status", "valid")
-    }
+    aggregate_entry = {key: packed[key] for key in ("prompt_id", "category", "category_label", "raw_category", "subcategory", "image_path", "consistency", "realism", "aesthetic_quality", "score", "status", "valid")}
 
     return {
         "WISE_culture_score": aggregate_entry,
