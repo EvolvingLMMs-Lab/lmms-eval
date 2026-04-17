@@ -1,0 +1,60 @@
+# WISE text-to-image benchmark.
+#
+# Dataset notes:
+# - The source JSON is expected to be uploaded to Hugging Face as:
+#     Yuwei-Niu/WISE/final_data.json
+# - data_files maps that JSON into the lmms-eval test split without using any
+#   local mount path.
+
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: Yuwei-Niu/WISE
+task: WISE
+test_split: test
+output_type: generate_until
+
+doc_to_visual: !function utils.wise_doc_to_visual
+doc_to_text: !function utils.wise_doc_to_text
+doc_to_target: !function utils.wise_doc_to_target
+
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+process_results: !function utils.wise_process_results
+
+metric_list:
+  - metric: WISE_culture_score
+    aggregation: !function utils.wise_aggregate_culture
+    higher_is_better: true
+  - metric: WISE_time_score
+    aggregation: !function utils.wise_aggregate_time
+    higher_is_better: true
+  - metric: WISE_space_score
+    aggregation: !function utils.wise_aggregate_space
+    higher_is_better: true
+  - metric: WISE_biology_score
+    aggregation: !function utils.wise_aggregate_biology
+    higher_is_better: true
+  - metric: WISE_physics_score
+    aggregation: !function utils.wise_aggregate_physics
+    higher_is_better: true
+  - metric: WISE_chemistry_score
+    aggregation: !function utils.wise_aggregate_chemistry
+    higher_is_better: true
+  - metric: WISE_overall_wiscore
+    aggregation: !function utils.wise_aggregate_overall_wiscore
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+
+metadata:
+  - version: 0.1
+    description: "WISE text-to-image benchmark with OpenAI-compatible GPT image judge"
