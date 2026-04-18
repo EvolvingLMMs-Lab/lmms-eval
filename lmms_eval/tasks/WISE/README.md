@@ -7,7 +7,7 @@ WISE is a knowledge-intensive text-to-image benchmark that evaluates whether mod
 
 ## Overview
 
-**Dataset:** 1000 prompts loaded from the Hugging Face `train` split across 6 categories (Culture, Time, Space, Biology, Physics, Chemistry)
+**Dataset:** 1000 prompts loaded from the Hugging Face `test` split across 6 categories (Culture, Time, Space, Biology, Physics, Chemistry)
 
 **Evaluation:** GPT-4o judges each generated image on three dimensions:
 - **Consistency** (0-2): How well the image matches the prompt

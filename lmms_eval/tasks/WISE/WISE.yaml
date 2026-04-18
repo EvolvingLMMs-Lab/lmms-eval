@@ -2,7 +2,7 @@
 
 dataset_path: Yuwei-Niu/WISE
 task: WISE
-test_split: train
+test_split: test
 output_type: generate_until
 
 doc_to_visual: !function utils.wise_doc_to_visual
