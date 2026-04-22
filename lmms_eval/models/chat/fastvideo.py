@@ -92,6 +92,11 @@ def _fastvideo_dp_worker(
     os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_devices)
     for var in _DIST_ENV_VARS:
         os.environ.pop(var, None)
+    # Quiet per-step tqdm + most per-sample INFO chatter so the main
+    # process's DP progress bar stays readable.
+    if config.get("quiet", True):
+        os.environ.setdefault("TQDM_DISABLE", "1")
+        os.environ.setdefault("LOGURU_LEVEL", "WARNING")
 
     try:
         import torch as _torch
@@ -311,6 +316,7 @@ class FastVideo(lmms):
             "vae_cpu_offload": vae_cpu_offload,
             "trust_remote_code": trust_remote_code,
             "extra_kwargs": extra_kwargs,
+            "quiet": os.environ.get("FASTVIDEO_DP_QUIET", "1") != "0",
         }
 
         ctx = _mp.get_context("spawn")
@@ -539,23 +545,35 @@ class FastVideo(lmms):
             self._task_q.put((task_id, prompt, call_kwargs))
             dispatched[task_id] = prep
 
-        pbar = tqdm(total=len(dispatched), desc=f"FastVideo DP×{self.data_parallel} generating")
+        pbar = tqdm(
+            total=len(dispatched),
+            desc=f"FastVideo DP×{self.data_parallel} generating",
+            dynamic_ncols=True,
+        )
+        ok = err = 0
         remaining = len(dispatched)
         while remaining > 0:
             tag, task_id, payload = self._result_q.get()
             prep = dispatched.get(task_id)
             output_path = prep["output_path"] if prep else "?"
+            short = os.path.basename(os.path.dirname(output_path)) + "/" + os.path.basename(output_path)
             if tag == "done":
                 mp4_path = self._resolve_mp4(payload, output_path) if prep else None
                 if mp4_path is None:
                     eval_logger.error(f"FastVideo DP: no mp4 produced at {output_path}")
+                    err += 1
+                else:
+                    ok += 1
                 results[task_id] = self._pack_result(mp4_path)
             elif tag == "error":
                 eval_logger.error(f"FastVideo DP: sample {task_id} ({output_path}) failed: {payload}")
                 results[task_id] = self._empty_result()
+                err += 1
             else:
                 eval_logger.warning(f"FastVideo DP: unexpected message {(tag, task_id, payload)}")
                 results[task_id] = self._empty_result()
+                err += 1
+            pbar.set_postfix_str(f"last={short} ok={ok} err={err}", refresh=False)
             pbar.update(1)
             remaining -= 1
         pbar.close()
