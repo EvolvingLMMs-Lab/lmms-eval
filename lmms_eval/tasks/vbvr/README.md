@@ -50,6 +50,44 @@ The model must output JSON of the form:
 {"text": "", "videos": ["/abs/path/to/generated.mp4"]}
 ```
 
+### Full example (multi-GPU Wan2.2-I2V)
+
+```fish
+#!/usr/bin/env fish
+# Run from the lmms-eval repo root.
+cd /path/to/lmms-eval; or exit 1
+
+# Rule-based VBVR scorers read the GT mp4s/pngs from this root.
+set -gx VBVR_GT_PATH /path/to/VBVR-Bench
+
+set MODEL_DIR   /path/to/Wan2.2-I2V-A14B-Diffusers
+set OUT_ROOT    /path/to/eval_out/vbvr_wan22_full_highres
+set VIDEOS_DIR  $OUT_ROOT/videos
+set METRICS_DIR $OUT_ROOT/metrics
+mkdir -p $VIDEOS_DIR $METRICS_DIR
+
+set MODEL_ARGS "model=$MODEL_DIR"
+set MODEL_ARGS "$MODEL_ARGS,output_dir=$VIDEOS_DIR"
+set MODEL_ARGS "$MODEL_ARGS,data_parallel=4,num_gpus=2,sp_size=2,tp_size=1"
+set MODEL_ARGS "$MODEL_ARGS,num_inference_steps=50,num_frames=81"
+set MODEL_ARGS "$MODEL_ARGS,height=1024,width=1024,fps=16"
+set MODEL_ARGS "$MODEL_ARGS,dit_cpu_offload=False,text_encoder_cpu_offload=True"
+set MODEL_ARGS "$MODEL_ARGS,image_encoder_cpu_offload=False,vae_cpu_offload=False"
+set MODEL_ARGS "$MODEL_ARGS,enable_torch_compile=True"
+
+exec stdbuf -oL -eL .venv/bin/python -m lmms_eval eval \
+    --model fastvideo \
+    --model_args $MODEL_ARGS \
+    --tasks vbvr \
+    --batch_size 1 \
+    --log_samples \
+    --output_path $METRICS_DIR
+```
+
+Generated videos land in `$VIDEOS_DIR`; per-sample logs and aggregated metrics
+land in `$METRICS_DIR`. Tune `data_parallel`, `num_gpus`, `sp_size`, and the
+`*_cpu_offload` flags to match your hardware.
+
 ## Metrics
 
 - `vbvr_overall` — sample-weighted mean across both splits
