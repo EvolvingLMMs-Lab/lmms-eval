@@ -107,6 +107,9 @@ metrics = [
 gemini = [
     "google-generativeai",
 ]
+litellm = [
+    "litellm",
+]
 reka = [
     "httpx>=0.23.3",
     "reka-api",
