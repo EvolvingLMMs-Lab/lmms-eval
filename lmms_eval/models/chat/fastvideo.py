@@ -80,16 +80,16 @@ _DTYPES = {
 
 def _fastvideo_dp_worker(
     rank: int,
-    cuda_device: str,
+    cuda_devices: str,
     task_q: "_mp.Queue",
     result_q: "_mp.Queue",
     config: Dict[str, Any],
 ) -> None:
-    """Per-GPU worker loop. Loads a FastVideo generator pinned to one device,
-    then serves generate_video calls from the task queue until it gets a None
-    sentinel. Runs in a spawn-mode subprocess so torch is imported fresh with
-    CUDA_VISIBLE_DEVICES already scoped to a single GPU."""
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_device)
+    """Per-worker loop. Loads a FastVideo generator pinned to the given
+    CUDA devices (comma-separated) and serves generate_video calls from the
+    task queue until it gets a None sentinel. Runs in a spawn-mode subprocess
+    so torch is imported fresh with CUDA_VISIBLE_DEVICES already scoped."""
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_devices)
     for var in _DIST_ENV_VARS:
         os.environ.pop(var, None)
 
@@ -100,9 +100,9 @@ def _fastvideo_dp_worker(
         dtype = _DTYPES.get(config["torch_dtype"], _torch.bfloat16)
         gen_kwargs: Dict[str, Any] = {
             "torch_dtype": dtype,
-            "num_gpus": 1,
-            "tp_size": 1,
-            "sp_size": 1,
+            "num_gpus": config["num_gpus_per_worker"],
+            "tp_size": config["tp_size_per_worker"],
+            "sp_size": config["sp_size_per_worker"],
             "VSA_sparsity": config["VSA_sparsity"],
             "enable_torch_compile": config["enable_torch_compile"],
             "dit_cpu_offload": config["dit_cpu_offload"],
@@ -214,6 +214,9 @@ class FastVideo(lmms):
         if self.data_parallel > 1:
             self._init_dp_workers(
                 torch_dtype=torch_dtype,
+                num_gpus_per_worker=num_gpus,
+                tp_size_per_worker=tp_size,
+                sp_size_per_worker=sp_size,
                 VSA_sparsity=VSA_sparsity,
                 enable_torch_compile=enable_torch_compile,
                 dit_cpu_offload=dit_cpu_offload,
@@ -254,6 +257,9 @@ class FastVideo(lmms):
     def _init_dp_workers(
         self,
         torch_dtype: str,
+        num_gpus_per_worker: int,
+        tp_size_per_worker: int,
+        sp_size_per_worker: int,
         VSA_sparsity: float,
         enable_torch_compile: bool,
         dit_cpu_offload: bool,
@@ -268,17 +274,35 @@ class FastVideo(lmms):
             visible = [d.strip() for d in parent_vis.split(",") if d.strip()]
         else:
             visible = [str(i) for i in range(torch.cuda.device_count())]
-        if len(visible) < self.data_parallel:
+
+        gpus_per_worker = max(
+            int(num_gpus_per_worker),
+            int(tp_size_per_worker) if tp_size_per_worker > 0 else 1,
+            int(sp_size_per_worker) if sp_size_per_worker > 0 else 1,
+        )
+        needed = self.data_parallel * gpus_per_worker
+        if len(visible) < needed:
             raise ValueError(
-                f"data_parallel={self.data_parallel} but only {len(visible)} GPUs visible "
-                f"(CUDA_VISIBLE_DEVICES={parent_vis or 'unset'})."
+                f"data_parallel={self.data_parallel} × {gpus_per_worker} GPUs/worker = {needed} GPUs needed, "
+                f"but only {len(visible)} visible (CUDA_VISIBLE_DEVICES={parent_vis or 'unset'})."
             )
-        assigned = visible[: self.data_parallel]
-        eval_logger.info(f"FastVideo DP: spawning {self.data_parallel} workers on GPUs {assigned}")
+        # One contiguous chunk of physical GPU ids per worker.
+        worker_gpus: List[str] = [
+            ",".join(visible[r * gpus_per_worker : (r + 1) * gpus_per_worker])
+            for r in range(self.data_parallel)
+        ]
+        eval_logger.info(
+            f"FastVideo DP: spawning {self.data_parallel} workers "
+            f"(num_gpus={num_gpus_per_worker}, tp={tp_size_per_worker}, sp={sp_size_per_worker}) "
+            f"on GPU groups {worker_gpus}"
+        )
 
         config: Dict[str, Any] = {
             "model_path": self.model_path,
             "torch_dtype": torch_dtype,
+            "num_gpus_per_worker": int(num_gpus_per_worker),
+            "tp_size_per_worker": int(tp_size_per_worker),
+            "sp_size_per_worker": int(sp_size_per_worker),
             "VSA_sparsity": VSA_sparsity,
             "enable_torch_compile": enable_torch_compile,
             "dit_cpu_offload": dit_cpu_offload,
@@ -292,11 +316,14 @@ class FastVideo(lmms):
         ctx = _mp.get_context("spawn")
         self._task_q = ctx.Queue()
         self._result_q = ctx.Queue()
-        for rank, dev in enumerate(assigned):
+        for rank, devs in enumerate(worker_gpus):
+            # Non-daemon: FastVideo's VideoGenerator spawns its own
+            # MultiprocExecutor child inside each worker, and daemonic
+            # processes cannot have children.
             p = ctx.Process(
                 target=_fastvideo_dp_worker,
-                args=(rank, dev, self._task_q, self._result_q, config),
-                daemon=True,
+                args=(rank, devs, self._task_q, self._result_q, config),
+                daemon=False,
             )
             p.start()
             self._workers.append(p)
@@ -306,7 +333,7 @@ class FastVideo(lmms):
             tag, worker_rank, payload = self._result_q.get()
             if tag == "ready":
                 pending.discard(worker_rank)
-                eval_logger.info(f"FastVideo DP worker {worker_rank} ready on GPU {payload}")
+                eval_logger.info(f"FastVideo DP worker {worker_rank} ready on GPUs {payload}")
             elif tag == "init_error":
                 self._shutdown_workers()
                 raise RuntimeError(f"FastVideo DP worker {worker_rank} failed to init: {payload}")
