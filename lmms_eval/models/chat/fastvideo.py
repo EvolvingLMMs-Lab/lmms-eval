@@ -17,12 +17,14 @@ the new VBVR task:
 
 from __future__ import annotations
 
+import atexit
 import json
 import multiprocessing as _mp
 import os
 import re
 import shutil
 import tempfile
+import weakref
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -315,6 +317,19 @@ class FastVideo(lmms):
         ctx = _mp.get_context("spawn")
         self._task_q = ctx.Queue()
         self._result_q = ctx.Queue()
+        self._shutdown_done = False
+        # Register atexit BEFORE spawning. atexit runs registered callbacks in
+        # LIFO order, so ours runs before multiprocessing._exit_function (which
+        # would otherwise block on joining our non-daemon workers forever).
+        self_ref = weakref.ref(self)
+
+        def _atexit_shutdown():
+            inst = self_ref()
+            if inst is not None:
+                inst._shutdown_workers()
+
+        atexit.register(_atexit_shutdown)
+        self._atexit_cb = _atexit_shutdown
         # spawn's bootstrap imports the target's module (fastvideo) before our
         # worker code runs, and fastvideo's import path touches CUDA. To pin each
         # subprocess to the right GPU group we have to poke CUDA_VISIBLE_DEVICES
@@ -352,23 +367,60 @@ class FastVideo(lmms):
                 eval_logger.warning(f"Unexpected DP init message: {(tag, worker_rank, payload)}")
 
     def _shutdown_workers(self) -> None:
+        if getattr(self, "_shutdown_done", False):
+            return
+        self._shutdown_done = True
+
         if self._task_q is not None:
             for _ in self._workers:
                 try:
-                    self._task_q.put(None)
+                    self._task_q.put_nowait(None)
                 except Exception:
                     pass
+
+        # Graceful join — workers should exit on the None sentinel.
         for p in self._workers:
             try:
                 p.join(timeout=30)
             except Exception:
                 pass
+
+        # Anything still alive gets SIGTERM → join → SIGKILL. fastvideo's
+        # VideoGenerator spawns its own MultiprocExecutor grandchildren; we
+        # rely on SIGTERM propagating through the process group.
+        for p in self._workers:
             if p.is_alive():
                 try:
                     p.terminate()
                 except Exception:
                     pass
+        for p in self._workers:
+            if p.is_alive():
+                try:
+                    p.join(timeout=10)
+                except Exception:
+                    pass
+        for p in self._workers:
+            if p.is_alive() and hasattr(p, "kill"):
+                try:
+                    p.kill()
+                    p.join(timeout=5)
+                except Exception:
+                    pass
+
+        # Drain queues so the feeder threads exit and don't block atexit.
+        for q in (self._task_q, self._result_q):
+            if q is None:
+                continue
+            try:
+                q.close()
+                q.join_thread()
+            except Exception:
+                pass
+
         self._workers = []
+        self._task_q = None
+        self._result_q = None
 
     # ------------------------------------------------------------------ utils
     def _save_pil(self, img: Image.Image, tag: str) -> str:

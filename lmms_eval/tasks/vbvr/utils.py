@@ -189,7 +189,7 @@ def vbvr_process_results(doc: Dict[str, Any], results: Sequence[Any], **kwargs) 
 
     try:
         evaluator = get_evaluator(task_name)
-        vr = evaluator.evaluate(eval_info)
+        vr = evaluator.evaluate(eval_info, task_specific_only=True)
         score = float(vr.get("score", 0.0))
         dimensions = {k: float(v) for k, v in vr.get("dimensions", {}).items() if isinstance(v, (int, float))}
         status = "error" if "error" in vr else "ok"
