@@ -117,7 +117,7 @@ def _fastvideo_dp_worker(
         result_q.put(("init_error", rank, f"{type(e).__name__}: {str(e)[:500]}"))
         return
 
-    result_q.put(("ready", rank, cuda_device))
+    result_q.put(("ready", rank, cuda_devices))
 
     while True:
         msg = task_q.get()
@@ -316,17 +316,29 @@ class FastVideo(lmms):
         ctx = _mp.get_context("spawn")
         self._task_q = ctx.Queue()
         self._result_q = ctx.Queue()
-        for rank, devs in enumerate(worker_gpus):
-            # Non-daemon: FastVideo's VideoGenerator spawns its own
-            # MultiprocExecutor child inside each worker, and daemonic
-            # processes cannot have children.
-            p = ctx.Process(
-                target=_fastvideo_dp_worker,
-                args=(rank, devs, self._task_q, self._result_q, config),
-                daemon=False,
-            )
-            p.start()
-            self._workers.append(p)
+        # spawn's bootstrap imports the target's module (fastvideo) before our
+        # worker code runs, and fastvideo's import path touches CUDA. To pin each
+        # subprocess to the right GPU group we have to poke CUDA_VISIBLE_DEVICES
+        # into the parent env around each .start() call.
+        saved_cvd = os.environ.get("CUDA_VISIBLE_DEVICES")
+        try:
+            for rank, devs in enumerate(worker_gpus):
+                os.environ["CUDA_VISIBLE_DEVICES"] = devs
+                # Non-daemon: FastVideo's VideoGenerator spawns its own
+                # MultiprocExecutor child inside each worker, and daemonic
+                # processes cannot have children.
+                p = ctx.Process(
+                    target=_fastvideo_dp_worker,
+                    args=(rank, devs, self._task_q, self._result_q, config),
+                    daemon=False,
+                )
+                p.start()
+                self._workers.append(p)
+        finally:
+            if saved_cvd is None:
+                os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+            else:
+                os.environ["CUDA_VISIBLE_DEVICES"] = saved_cvd
 
         pending = set(range(self.data_parallel))
         while pending:
