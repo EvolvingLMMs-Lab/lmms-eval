@@ -47,11 +47,7 @@ _BASE64_PREFIX = re.compile(r"^data:image/[^;]+;base64,", re.IGNORECASE)
 def _gt_root() -> str:
     root = os.getenv("VBVR_GT_PATH")
     if not root:
-        raise RuntimeError(
-            "VBVR_GT_PATH is not set. Download the GT with:\n"
-            "    hf download Video-Reason/VBVR-Bench-Data --repo-type dataset --local-dir <path>\n"
-            "then `export VBVR_GT_PATH=<path>`."
-        )
+        raise RuntimeError("VBVR_GT_PATH is not set. Download the GT with:\n" "    hf download Video-Reason/VBVR-Bench-Data --repo-type dataset --local-dir <path>\n" "then `export VBVR_GT_PATH=<path>`.")
     return os.path.expanduser(os.path.expandvars(root))
 
 
@@ -252,11 +248,7 @@ def vbvr_aggregate_overall(results) -> float:
     if total == 0:
         return 0.0
     mean = (_mean(in_dom) * len(in_dom) + _mean(ood) * len(ood)) / total
-    eval_logger.info(
-        f"[VBVR] Overall: {mean:.4f} "
-        f"(In-Domain {_mean(in_dom):.4f} n={len(in_dom)}, "
-        f"Out-of-Domain {_mean(ood):.4f} n={len(ood)})"
-    )
+    eval_logger.info(f"[VBVR] Overall: {mean:.4f} " f"(In-Domain {_mean(in_dom):.4f} n={len(in_dom)}, " f"Out-of-Domain {_mean(ood):.4f} n={len(ood)})")
     # Per-category breakdown for the logs
     cat_scores: Dict[str, List[float]] = defaultdict(list)
     for e in entries:
