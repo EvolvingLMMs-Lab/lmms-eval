@@ -182,6 +182,8 @@ class FastVideo(lmms):
         trust_remote_code: bool = True,
         output_dir: str = "./fastvideo_generated_videos",
         batch_size: int = 1,
+        # Resume support: skip samples whose output mp4 already exists.
+        overwrite: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -209,6 +211,7 @@ class FastVideo(lmms):
         self.batch_size_per_gpu = int(batch_size)
         self._extra_kwargs = kwargs
         self.enable_teacache = enable_teacache
+        self.overwrite = bool(overwrite)
 
         self.data_parallel = int(data_parallel)
         self.generator = None
@@ -477,9 +480,35 @@ class FastVideo(lmms):
         with ThreadPoolExecutor(max_workers=WORKERS) as executor:
             prepared = list(executor.map(self.make_one_request, requests))
 
+        # Resume: if the target mp4 already exists and is non-empty, reuse it.
+        # Set overwrite=True in model_args to force regeneration.
+        presults: List[Optional[GenerationResult]] = [None] * len(prepared)
+        skipped_indices: List[int] = []
+        if not self.overwrite:
+            for i, prep in enumerate(prepared):
+                path = prep.get("output_path")
+                if path and os.path.isfile(path) and os.path.getsize(path) > 0:
+                    presults[i] = self._pack_result(os.path.abspath(path))
+                    skipped_indices.append(i)
+            if skipped_indices:
+                eval_logger.info(
+                    f"FastVideo: resume — reusing {len(skipped_indices)}/{len(prepared)} "
+                    f"existing mp4s (set overwrite=True to regenerate)"
+                )
+
+        pending_idx = [i for i in range(len(prepared)) if presults[i] is None]
+        if not pending_idx:
+            return [r for r in presults]  # type: ignore[return-value]
+
+        pending_prepared = [prepared[i] for i in pending_idx]
         if self.data_parallel > 1:
-            return self._generate_until_parallel(prepared)
-        return self._generate_until_single(prepared)
+            pending_results = self._generate_until_parallel(pending_prepared)
+        else:
+            pending_results = self._generate_until_single(pending_prepared)
+
+        for local, global_i in enumerate(pending_idx):
+            presults[global_i] = pending_results[local]
+        return [r for r in presults]  # type: ignore[return-value]
 
     def _empty_result(self) -> GenerationResult:
         return GenerationResult(text=json.dumps({"text": "", "videos": []}))
