@@ -1,0 +1,28 @@
+include: _default_template_yaml
+task: vbvr_out_of_domain
+
+process_docs: !function utils.filter_out_of_domain
+
+metric_list:
+  - metric: vbvr_out_of_domain
+    aggregation: !function utils.vbvr_aggregate_out_of_domain
+    higher_is_better: true
+  - metric: vbvr_abstraction
+    aggregation: !function utils.vbvr_aggregate_abstraction
+    higher_is_better: true
+  - metric: vbvr_knowledge
+    aggregation: !function utils.vbvr_aggregate_knowledge
+    higher_is_better: true
+  - metric: vbvr_perception
+    aggregation: !function utils.vbvr_aggregate_perception
+    higher_is_better: true
+  - metric: vbvr_spatiality
+    aggregation: !function utils.vbvr_aggregate_spatiality
+    higher_is_better: true
+  - metric: vbvr_transformation
+    aggregation: !function utils.vbvr_aggregate_transformation
+    higher_is_better: true
+
+metadata:
+  - version: 0.1
+    description: "VBVR-Bench Out-of-Domain_50 split (50 tasks, 250 samples)."
