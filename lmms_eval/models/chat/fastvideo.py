@@ -24,8 +24,10 @@ import os
 import re
 import shutil
 import tempfile
+import uuid
 import weakref
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
@@ -70,9 +72,19 @@ def _safe(name: str, default: str = "x") -> str:
     return s[:128]
 
 
-def _default_output_dir() -> str:
-    hf_home = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface"))
-    return os.path.join(hf_home, "lmms_eval", "generated_videos", "fastvideo")
+def _generate_run_id() -> str:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    short_uuid = str(uuid.uuid4())[:8]
+    return f"{timestamp}_{short_uuid}"
+
+
+def _model_slug(model_path: str) -> str:
+    base = os.path.basename(str(model_path).rstrip("/"))
+    return _SAFE_RE.sub("_", base).strip("_") or "model"
+
+
+def _default_output_dir(model_path: str) -> str:
+    return os.path.join("./logs/fastvideo", _model_slug(model_path), _generate_run_id())
 
 
 _DTYPES = {
@@ -212,8 +224,9 @@ class FastVideo(lmms):
         self.seed = seed
         self.negative_prompt = negative_prompt
 
-        self.output_dir = os.path.abspath(os.path.expanduser(output_dir or _default_output_dir()))
+        self.output_dir = os.path.abspath(os.path.expanduser(output_dir or _default_output_dir(self.model_path)))
         os.makedirs(self.output_dir, exist_ok=True)
+        eval_logger.info(f"FastVideo output directory: {self.output_dir}")
         self._tmp_img_dir = tempfile.mkdtemp(prefix="fastvideo_inputs_")
 
         self.batch_size_per_gpu = int(batch_size)
