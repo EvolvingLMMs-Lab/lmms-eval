@@ -563,6 +563,16 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
                 traceback.print_exc()
                 eval_logger.error(f"Error during evaluation: {e}. Please set `--verbosity=DEBUG` to get more information.")
                 results_list.append(None)
+                # Under torchrun/accelerate, a rank returning after a local
+                # exception leaves peers blocked in NCCL collectives until
+                # the launcher's timeout. Abort all ranks so the launcher
+                # propagates the failure immediately instead of deadlocking.
+                if torch.distributed.is_available() and torch.distributed.is_initialized():
+                    try:
+                        torch.distributed.destroy_process_group()
+                    except Exception:
+                        pass
+                    sys.exit(1)
 
     for args, results in zip(args_list, results_list):
         # cli_evaluate will return none if the process is not the main process (rank 0)
