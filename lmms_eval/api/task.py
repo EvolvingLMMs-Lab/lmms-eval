@@ -1576,7 +1576,10 @@ class ConfigurableTask(Task):
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
     def process_results(self, doc, results, full_docs=None):
         if self.OUTPUT_TYPE in ("generate_until", "generate_visual_cot"):
-            if isinstance(results, list) and isinstance(results[0], list):
+            # Guard empty results so results[0] below does not IndexError for
+            # samples whose generation failed. Downstream process_results then
+            # receives an empty list and can decide how to score the miss.
+            if results and isinstance(results, list) and isinstance(results[0], list):
                 results = [res.strip() for res in results[0]]
             else:
                 results = [res.strip() for res in results]
