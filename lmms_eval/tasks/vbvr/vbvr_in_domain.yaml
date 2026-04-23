@@ -22,6 +22,9 @@ metric_list:
   - metric: vbvr_transformation
     aggregation: !function utils.vbvr_aggregate_transformation
     higher_is_better: true
+  - metric: submission
+    aggregation: !function utils.vbvr_aggregate_submission
+    higher_is_better: true
 
 metadata:
   - version: 0.1

@@ -70,6 +70,11 @@ def _safe(name: str, default: str = "x") -> str:
     return s[:128]
 
 
+def _default_output_dir() -> str:
+    hf_home = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface"))
+    return os.path.join(hf_home, "lmms_eval", "generated_videos", "fastvideo")
+
+
 _DTYPES = {
     "float32": torch.float32,
     "fp32": torch.float32,
@@ -182,9 +187,10 @@ class FastVideo(lmms):
         vae_cpu_offload: bool = True,
         # Misc
         trust_remote_code: bool = True,
-        output_dir: str = "./fastvideo_generated_videos",
+        output_dir: Optional[str] = None,
         batch_size: int = 1,
-        # Resume support: skip samples whose output mp4 already exists.
+        # Artifact reuse: lmms-eval's response cache stores the JSON response,
+        # while VBVR still needs the referenced mp4 on disk.
         overwrite: bool = False,
         **kwargs,
     ):
@@ -206,7 +212,7 @@ class FastVideo(lmms):
         self.seed = seed
         self.negative_prompt = negative_prompt
 
-        self.output_dir = os.path.abspath(os.path.expanduser(output_dir))
+        self.output_dir = os.path.abspath(os.path.expanduser(output_dir or _default_output_dir()))
         os.makedirs(self.output_dir, exist_ok=True)
         self._tmp_img_dir = tempfile.mkdtemp(prefix="fastvideo_inputs_")
 
@@ -522,8 +528,8 @@ class FastVideo(lmms):
         with ThreadPoolExecutor(max_workers=WORKERS) as executor:
             prepared = list(executor.map(self.make_one_request, requests))
 
-        # Resume: if the target mp4 already exists and is non-empty, reuse it.
-        # Set overwrite=True in model_args to force regeneration.
+        # Reuse generated artifacts when the target mp4 already exists and is
+        # non-empty. Set overwrite=True in model_args to force regeneration.
         presults: List[Optional[GenerationResult]] = [None] * len(prepared)
         skipped_indices: List[int] = []
         if not self.overwrite:

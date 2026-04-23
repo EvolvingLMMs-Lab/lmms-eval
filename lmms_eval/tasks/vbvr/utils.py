@@ -5,17 +5,17 @@ Evaluation flow
 1. Each sample carries a first-frame image (base64 PNG) + a text prompt.
 2. The model generates an MP4 and returns JSON: ``{"text": "", "videos": [path]}``.
 3. ``vbvr_process_results`` parses the JSON, resolves the matching ground-truth
-   folder under ``$VBVR_GT_PATH``, dispatches to the per-task rule-based
-   evaluator from the vendored ``vbvr_bench`` package, and records a per-sample
-   score + dimension breakdown.
+   folder from the configured cache or ``$VBVR_GT_PATH``, dispatches to the
+   per-task rule-based evaluator from the vendored ``vbvr_bench`` package, and
+   records a per-sample score + dimension breakdown.
 4. Aggregation functions compute In-Domain / Out-of-Domain / per-category means
    and an overall mean matching the upstream VBVRBench output.
 
 Environment variables
 ---------------------
-- ``VBVR_GT_PATH``: local root of the downloaded Video-Reason/VBVR-Bench-Data
-  dataset. Must contain ``In-Domain_50/`` and ``Out-of-Domain_50/`` folders with
-  ``{task_name}/{video_idx}/{first_frame.png,final_frame.png,ground_truth.mp4,prompt.txt}``.
+- ``VBVR_GT_PATH``: optional local root of the downloaded
+  Video-Reason/VBVR-Bench-Data dataset. If unset, the task uses the configured
+  lmms-eval/Hugging Face cache directory and falls back to ``snapshot_download``.
 """
 
 from __future__ import annotations
@@ -26,12 +26,18 @@ import json
 import os
 import re
 from collections import defaultdict
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
+import yaml
+from huggingface_hub import snapshot_download
 from loguru import logger as eval_logger
 from PIL import Image
 
+from lmms_eval import utils as lmms_utils
+from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 from lmms_eval.tasks.vbvr.vbvr_bench.evaluators import (
     get_evaluator,
     get_split,
@@ -44,11 +50,43 @@ SPLITS = ("In_Domain", "Out_of_Domain")
 _BASE64_PREFIX = re.compile(r"^data:image/[^;]+;base64,", re.IGNORECASE)
 
 
+@lru_cache(maxsize=1)
+def _task_config() -> Dict[str, Any]:
+    with open(Path(__file__).parent / "_default_template_yaml", "r", encoding="utf-8") as f:
+        safe_data = [line for line in f if "!function" not in line]
+    return yaml.safe_load("".join(safe_data)) or {}
+
+
+def _dataset_repo_id() -> str:
+    return str(_task_config()["dataset_path"])
+
+
+def _cache_dir_name() -> str:
+    return str(_task_config()["dataset_kwargs"]["cache_dir"])
+
+
+def _looks_like_vbvr_root(root: str) -> bool:
+    return all(os.path.isdir(os.path.join(root, split)) for split in ("In-Domain_50", "Out-of-Domain_50"))
+
+
+@lru_cache(maxsize=1)
 def _gt_root() -> str:
     root = os.getenv("VBVR_GT_PATH")
-    if not root:
-        raise RuntimeError("VBVR_GT_PATH is not set. Download the GT with:\n" "    hf download Video-Reason/VBVR-Bench-Data --repo-type dataset --local-dir <path>\n" "then `export VBVR_GT_PATH=<path>`.")
-    return os.path.expanduser(os.path.expandvars(root))
+    if root:
+        root = os.path.expanduser(os.path.expandvars(root))
+        if _looks_like_vbvr_root(root):
+            return root
+        raise RuntimeError(f"VBVR_GT_PATH does not look like a VBVR-Bench checkout: {root}")
+
+    hf_home = os.path.expanduser(os.getenv("HF_HOME", "~/.cache/huggingface"))
+    cache_root = lmms_utils.resolve_cache_dir(_cache_dir_name(), base_dir=hf_home)
+    if _looks_like_vbvr_root(cache_root):
+        return cache_root
+
+    snapshot_root = snapshot_download(repo_id=_dataset_repo_id(), repo_type="dataset")
+    if _looks_like_vbvr_root(snapshot_root):
+        return snapshot_root
+    raise RuntimeError(f"Could not locate VBVR GT files in {cache_root} or HF snapshot {snapshot_root}.")
 
 
 def _decode_base64_image(data: str) -> Image.Image:
@@ -169,6 +207,7 @@ def _fanout_metrics(entry: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         "vbvr_perception": entry,
         "vbvr_spatiality": entry,
         "vbvr_transformation": entry,
+        "submission": entry,
     }
 
 
@@ -235,6 +274,42 @@ def _agg_by(results, key: str, value: str, label: str) -> float:
     mean = _mean([e["score"] for e in selected])
     eval_logger.info(f"[VBVR] {label}: {mean:.4f} (n={len(selected)})")
     return mean
+
+
+def _summary(entries: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    scores = [float(e["score"]) for e in entries if isinstance(e.get("score"), (int, float))]
+    summary: Dict[str, Any] = {
+        "overall": _mean(scores),
+        "n": len(scores),
+    }
+    for split in SPLITS:
+        split_scores = [float(e["score"]) for e in entries if e.get("split") == split and isinstance(e.get("score"), (int, float))]
+        summary[split] = {"score": _mean(split_scores), "n": len(split_scores)}
+    for category in CATEGORIES:
+        category_scores = [float(e["score"]) for e in entries if e.get("category") == category and isinstance(e.get("score"), (int, float))]
+        summary[category.lower()] = {"score": _mean(category_scores), "n": len(category_scores)}
+    return summary
+
+
+def _submission_file_name(entries: Sequence[Dict[str, Any]]) -> str:
+    splits = {e.get("split") for e in entries if e.get("split")}
+    if splits == {"In_Domain"}:
+        return "vbvr_in_domain_eval_results.json"
+    if splits == {"Out_of_Domain"}:
+        return "vbvr_out_of_domain_eval_results.json"
+    return "vbvr_eval_results.json"
+
+
+def vbvr_aggregate_submission(results, args) -> None:
+    entries = sorted(_entries(results), key=lambda e: (str(e.get("file_split", "")), str(e.get("task_name", "")), str(e.get("video_idx", ""))))
+    path = generate_submission_file(_submission_file_name(entries), args)
+    payload = {
+        "summary": _summary(entries),
+        "results": entries,
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    eval_logger.info(f"[VBVR] Detailed evaluation results saved to {path}")
 
 
 def vbvr_aggregate_overall(results) -> float:

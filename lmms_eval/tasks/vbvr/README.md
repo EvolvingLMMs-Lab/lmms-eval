@@ -17,18 +17,18 @@ MP4 video; scoring is rule-based and per-task (no LLM judge, no CLIP).
 | `vbvr_in_domain`      | In-Domain_50 only                |
 | `vbvr_out_of_domain`  | Out-of-Domain_50 only            |
 
-## One-time setup
+## Data Cache
 
 The HF dataset card (`Video-Reason/VBVR-Bench-Data`) carries the base64-encoded
 first-frame plus **relative** paths to `ground_truth.mp4`, `first_frame.png`,
-`final_frame.png`, `prompt.txt` etc. The rule-based evaluators read those GT
-files, so you must first download the repo and point `VBVR_GT_PATH` at it:
+`final_frame.png`, `prompt.txt` etc. The task config uses
+`dataset_kwargs.cache_dir: vbvr`, so lmms-eval downloads the dataset snapshot
+and links it under `$HF_HOME/vbvr` by default. The rule-based evaluators resolve
+GT files from that cache path automatically.
+
+If you already have a local checkout, you can still override the GT root with:
 
 ```bash
-hf download Video-Reason/VBVR-Bench-Data \
-  --repo-type dataset \
-  --local-dir /data/VBVR-Bench
-
 export VBVR_GT_PATH=/data/VBVR-Bench
 ```
 
@@ -58,16 +58,13 @@ The model must output JSON of the form:
 cd /path/to/lmms-eval; or exit 1
 
 # Rule-based VBVR scorers read the GT mp4s/pngs from this root.
-set -gx VBVR_GT_PATH /path/to/VBVR-Bench
+# By default this is populated automatically at $HF_HOME/vbvr.
+# Uncomment this only if you want to use an existing local checkout.
+# set -gx VBVR_GT_PATH /path/to/VBVR-Bench
 
 set MODEL_DIR   /path/to/Wan2.2-I2V-A14B-Diffusers
-set OUT_ROOT    /path/to/eval_out/vbvr_wan22_full_highres
-set VIDEOS_DIR  $OUT_ROOT/videos
-set METRICS_DIR $OUT_ROOT/metrics
-mkdir -p $VIDEOS_DIR $METRICS_DIR
 
 set MODEL_ARGS "model=$MODEL_DIR"
-set MODEL_ARGS "$MODEL_ARGS,output_dir=$VIDEOS_DIR"
 set MODEL_ARGS "$MODEL_ARGS,data_parallel=4,num_gpus=2,sp_size=2,tp_size=1"
 set MODEL_ARGS "$MODEL_ARGS,num_inference_steps=50,num_frames=81"
 set MODEL_ARGS "$MODEL_ARGS,height=1024,width=1024,fps=16"
@@ -81,12 +78,16 @@ exec stdbuf -oL -eL .venv/bin/python -m lmms_eval eval \
     --tasks vbvr \
     --batch_size 1 \
     --log_samples \
-    --output_path $METRICS_DIR
+    --output_path logs
 ```
 
-Generated videos land in `$VIDEOS_DIR`; per-sample logs and aggregated metrics
-land in `$METRICS_DIR`. Tune `data_parallel`, `num_gpus`, `sp_size`, and the
-`*_cpu_offload` flags to match your hardware.
+Generated videos land in `$HF_HOME/lmms_eval/generated_videos/fastvideo` by
+default. Per-sample logs and aggregated metrics land under `--output_path`, and
+the detailed VBVR evaluation JSON is written through `generate_submission_file()`
+under `--output_path/submissions/`. Add `--use_cache <path>` only if you want
+lmms-eval response caching in addition to FastVideo's generated-mp4 reuse. Tune
+`data_parallel`, `num_gpus`, `sp_size`, and the `*_cpu_offload` flags to match
+your hardware.
 
 ## Metrics
 

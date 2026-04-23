@@ -1,4 +1,8 @@
 dataset_path: Video-Reason/VBVR-Bench-Data
+dataset_kwargs:
+  cache_dir: vbvr
+  video: True
+  create_link: True
 test_split: test
 output_type: generate_until
 
