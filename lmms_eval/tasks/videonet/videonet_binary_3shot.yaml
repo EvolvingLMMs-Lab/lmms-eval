@@ -1,0 +1,10 @@
+include: _binary.yaml
+task: "videonet_binary_3shot"
+dataset_kwargs:
+  video: True
+  cache_dir: videonet
+  data_files:
+    test: "benchmarks/binary_3shot.jsonl"
+metadata:
+  num_fewshot: 3
+  version: 0.0
