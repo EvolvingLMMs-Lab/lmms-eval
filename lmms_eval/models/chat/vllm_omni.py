@@ -220,8 +220,7 @@ class VLLMOmni(lmms):
                 )
             except Exception as e:
                 warnings.warn(
-                    f"Failed to load AutoProcessor for {processor_name or model}: {type(e).__name__}: {e}. "
-                    "Falling back to plain-text prompts.",
+                    f"Failed to load AutoProcessor for {processor_name or model}: {type(e).__name__}: {e}. " "Falling back to plain-text prompts.",
                     stacklevel=2,
                 )
         if self.chat_template is not None and self.processor is not None:

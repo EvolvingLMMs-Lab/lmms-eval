@@ -13,9 +13,9 @@ from typing import Any
 
 from PIL import Image
 from tqdm import tqdm
+from vllm_omni import Omni
 
 from lmms_eval.tasks.vbvr.vbvr_bench import VBVRBench
-from vllm_omni import Omni
 
 try:
     from diffusers.utils import export_to_video
@@ -66,13 +66,7 @@ def decode_base64_image(data: str) -> Image.Image:
 
 
 def parse_task_meta(doc: dict[str, Any]) -> tuple[str, str, str]:
-    raw = (
-        doc.get("first_frame_path")
-        or doc.get("final_frame_path")
-        or doc.get("prompt_path")
-        or doc.get("ground_truth_video_path")
-        or ""
-    )
+    raw = doc.get("first_frame_path") or doc.get("final_frame_path") or doc.get("prompt_path") or doc.get("ground_truth_video_path") or ""
     parts = [part for part in str(raw).split("/") if part]
     if len(parts) < 3:
         raise ValueError(f"Cannot parse VBVR task meta from path: {raw!r}")
