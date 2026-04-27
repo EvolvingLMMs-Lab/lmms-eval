@@ -1036,8 +1036,11 @@ class ConfigurableTask(Task):
                     force_unzip = dataset_kwargs.get("force_unzip", False)
                     revision = dataset_kwargs.get("revision", "main")
                     create_link = dataset_kwargs.get("create_link", False)
-                    # If the user already has a cache dir, we skip download the zip files
-                    if not os.path.exists(cache_dir):
+                    cache_path = None
+                    # If the user already has a cache dir, we skip downloading archives.
+                    # Tasks that set create_link need the snapshot path even when the
+                    # cache dir already exists as a symlink from a previous run.
+                    if not os.path.exists(cache_dir) or (create_link and os.path.islink(cache_dir)):
                         cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
                         zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                         tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
@@ -1106,7 +1109,7 @@ class ConfigurableTask(Task):
                                 untar_video_data(output_tar)
 
                     # Link cache_path to cache_dir if needed.
-                    if create_link:
+                    if create_link and cache_path is not None:
                         if not os.path.exists(cache_dir) or os.path.islink(cache_dir):
                             if os.path.islink(cache_dir):
                                 os.remove(cache_dir)
