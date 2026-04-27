@@ -1,0 +1,4 @@
+dataset_path: "raivn/VideoNet"
+output_type: generate_until
+doc_to_target: "answer"
+test_split: test
