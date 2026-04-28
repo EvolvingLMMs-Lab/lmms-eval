@@ -1,4 +1,5 @@
 dataset_path: "raivn/VideoNet"
+dataset_name: "lmms-eval"
 output_type: generate_until
 doc_to_target: "answer"
 test_split: test

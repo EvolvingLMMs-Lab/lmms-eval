@@ -1,7 +1,7 @@
 include: _mcq.yaml
 task: "videonet_mcq_val"
 dataset_kwargs:
-  video: True
   cache_dir: videonet
   data_files:
-    test: "benchmarks/mcq_val.jsonl"
+    test:
+      - "benchmarks/mcq_val.jsonl"

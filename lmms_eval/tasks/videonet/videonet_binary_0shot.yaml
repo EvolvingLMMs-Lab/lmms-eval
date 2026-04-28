@@ -1,7 +1,6 @@
 include: _binary.yaml
 task: "videonet_binary_0shot"
 dataset_kwargs:
-  video: True
   cache_dir: videonet
   data_files:
     test: "benchmarks/binary_0shot.jsonl"
