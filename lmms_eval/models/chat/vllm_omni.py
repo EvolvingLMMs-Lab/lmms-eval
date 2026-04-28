@@ -102,6 +102,10 @@ def _read_model_index_float(model_path: str, key: str) -> float | None:
         return None
 
 
+def _has_local_model_index(model_path: str) -> bool:
+    return os.path.isfile(os.path.join(os.path.expanduser(str(model_path)), "model_index.json"))
+
+
 @dataclass
 class _PreparedRequest:
     prompt: dict[str, Any]
@@ -135,6 +139,177 @@ class VLLMOmni(lmms):
             soundfile, _ = optional_import("soundfile")
         if export_to_video is None and _has_diffusers:
             export_to_video, _ = optional_import("diffusers.utils", "export_to_video")
+
+    @staticmethod
+    def _int_env(name: str, default: int) -> int:
+        try:
+            return int(os.environ.get(name, str(default)) or default)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _has_internal_parallelism(tensor_parallel_size: int, data_parallel_size: int, kwargs: dict[str, Any]) -> bool:
+        sizes: list[Any] = [tensor_parallel_size, data_parallel_size]
+        parallel_config = kwargs.get("parallel_config")
+        if isinstance(parallel_config, dict):
+            sizes.extend(
+                parallel_config.get(key, 1)
+                for key in (
+                    "pipeline_parallel_size",
+                    "data_parallel_size",
+                    "tensor_parallel_size",
+                    "cfg_parallel_size",
+                    "vae_patch_parallel_size",
+                    "sequence_parallel_size",
+                    "ulysses_degree",
+                    "ring_degree",
+                )
+            )
+        else:
+            sizes.extend(
+                getattr(parallel_config, key, 1)
+                for key in (
+                    "pipeline_parallel_size",
+                    "data_parallel_size",
+                    "tensor_parallel_size",
+                    "cfg_parallel_size",
+                    "vae_patch_parallel_size",
+                    "sequence_parallel_size",
+                    "ulysses_degree",
+                    "ring_degree",
+                )
+            )
+        for size in sizes:
+            try:
+                if int(size) > 1:
+                    return True
+            except (TypeError, ValueError):
+                return True
+        return False
+
+    @classmethod
+    def _pin_default_diffusion_stage_to_local_rank(
+        cls,
+        model: str,
+        tensor_parallel_size: int,
+        data_parallel_size: int,
+        kwargs: dict[str, Any],
+    ) -> None:
+        world_size = cls._int_env("WORLD_SIZE", 1)
+        if world_size <= 1 or not _has_local_model_index(model):
+            return
+        if cls._has_internal_parallelism(tensor_parallel_size, data_parallel_size, kwargs):
+            return
+        if kwargs.get("stage_overrides") or kwargs.get("stage_0_devices") is not None:
+            return
+
+        local_rank = cls._int_env("LOCAL_RANK", cls._int_env("RANK", 0))
+        kwargs["stage_overrides"] = {"0": {"devices": str(local_rank)}}
+
+    @classmethod
+    def _patch_default_diffusion_stage_devices_for_external_dp(cls, model: str) -> None:
+        if cls._int_env("WORLD_SIZE", 1) <= 1 or not _has_local_model_index(model):
+            return
+        try:
+            from vllm_omni.engine import async_omni_engine
+        except Exception:
+            return
+
+        engine_cls = async_omni_engine.AsyncOmniEngine
+        original = engine_cls._create_default_diffusion_stage_cfg
+        if getattr(original, "_lmms_eval_external_dp_devices", False):
+            return
+
+        def create_default_diffusion_stage_cfg(kwargs):
+            stage_configs = original(kwargs)
+            if stage_configs:
+                local_rank = cls._int_env("LOCAL_RANK", cls._int_env("RANK", 0))
+                runtime = stage_configs[0].setdefault("runtime", {})
+                runtime["devices"] = str(local_rank)
+                engine_args = stage_configs[0].setdefault("engine_args", {})
+                engine_args.setdefault("master_port", 30005 + local_rank * 1000)
+            return stage_configs
+
+        create_default_diffusion_stage_cfg._lmms_eval_external_dp_devices = True
+        engine_cls._create_default_diffusion_stage_cfg = staticmethod(create_default_diffusion_stage_cfg)
+
+    @classmethod
+    def _patch_diffusion_stage_spawn_env_for_external_dp(cls, model: str) -> None:
+        if cls._int_env("WORLD_SIZE", 1) <= 1 or not _has_local_model_index(model):
+            return
+        try:
+            from vllm_omni.engine import async_omni_engine
+        except Exception:
+            return
+
+        original = async_omni_engine.initialize_diffusion_stage
+        if getattr(original, "_lmms_eval_external_dp_single_rank_env", False):
+            return
+
+        def initialize_diffusion_stage_single_rank_env(*args, **kwargs):
+            elastic_env_keys = tuple(key for key in os.environ if key.startswith("TORCHELASTIC_"))
+            dist_env_keys = (
+                "RANK",
+                "WORLD_SIZE",
+                "LOCAL_RANK",
+                "LOCAL_WORLD_SIZE",
+                "GROUP_RANK",
+                "GROUP_WORLD_SIZE",
+                "ROLE_RANK",
+                "ROLE_WORLD_SIZE",
+                "MASTER_ADDR",
+                "MASTER_PORT",
+            ) + elastic_env_keys
+            saved_env = {key: os.environ.get(key) for key in dist_env_keys}
+            try:
+                for key in elastic_env_keys:
+                    os.environ.pop(key, None)
+                os.environ.update(
+                    {
+                        "RANK": "0",
+                        "WORLD_SIZE": "1",
+                        "LOCAL_RANK": "0",
+                        "LOCAL_WORLD_SIZE": "1",
+                        "GROUP_RANK": "0",
+                        "GROUP_WORLD_SIZE": "1",
+                        "ROLE_RANK": "0",
+                        "ROLE_WORLD_SIZE": "1",
+                        "MASTER_ADDR": "localhost",
+                    }
+                )
+                os.environ.pop("MASTER_PORT", None)
+                return original(*args, **kwargs)
+            finally:
+                for key, value in saved_env.items():
+                    if value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = value
+
+        initialize_diffusion_stage_single_rank_env._lmms_eval_external_dp_single_rank_env = True
+        async_omni_engine.initialize_diffusion_stage = initialize_diffusion_stage_single_rank_env
+
+    @classmethod
+    def _patch_inline_diffusion_device_for_external_dp(cls, model: str) -> None:
+        if cls._int_env("WORLD_SIZE", 1) <= 1 or not _has_local_model_index(model):
+            return
+        try:
+            from vllm_omni.platforms import current_omni_platform
+        except Exception:
+            return
+        if vars(current_omni_platform).get("_lmms_eval_external_dp_device_patch", False):
+            return
+
+        original_get_torch_device = current_omni_platform.get_torch_device
+
+        def get_torch_device(local_rank: int | None = None) -> torch.device:
+            if local_rank == 0:
+                external_local_rank = cls._int_env("LOCAL_RANK", cls._int_env("RANK", 0))
+                return torch.device("cuda", external_local_rank)
+            return original_get_torch_device(local_rank)
+
+        current_omni_platform.get_torch_device = staticmethod(get_torch_device)
+        current_omni_platform._lmms_eval_external_dp_device_patch = True
 
     def __init__(
         self,
@@ -174,6 +349,12 @@ class VLLMOmni(lmms):
             raise ImportError("vllm is required by vllm_omni.")
 
         self.model = model
+        self._rank = self._int_env("RANK", 0)
+        self._world_size = self._int_env("WORLD_SIZE", 1)
+        self._local_rank = self._int_env("LOCAL_RANK", self._rank)
+        self._device = torch.device(f"cuda:{self._local_rank}" if self._world_size > 1 else ("cuda" if torch.cuda.is_available() else "cpu"))
+        if self._world_size > 1 and torch.cuda.is_available():
+            torch.cuda.set_device(self._local_rank)
         self.batch_size_per_gpu = int(batch_size)
         self.max_frame_num = int(max_frame_num)
         self.fps = int(fps) if fps is not None else None
@@ -206,6 +387,15 @@ class VLLMOmni(lmms):
                 data_parallel_size=data_parallel_size,
                 kwargs=kwargs,
             )
+        self._pin_default_diffusion_stage_to_local_rank(
+            model=self.model,
+            tensor_parallel_size=tensor_parallel_size,
+            data_parallel_size=data_parallel_size,
+            kwargs=kwargs,
+        )
+        self._patch_default_diffusion_stage_devices_for_external_dp(self.model)
+        self._patch_diffusion_stage_spawn_env_for_external_dp(self.model)
+        self._patch_inline_diffusion_device_for_external_dp(self.model)
         if "log_stats" not in kwargs:
             kwargs["log_stats"] = not self.disable_log_stats
 
@@ -235,6 +425,14 @@ class VLLMOmni(lmms):
             **kwargs,
         )
         atexit.register(self.close)
+
+    @property
+    def batch_size(self) -> int:
+        return self.batch_size_per_gpu
+
+    @property
+    def device(self) -> torch.device:
+        return self._device
 
     @staticmethod
     def _maybe_parse_json_dict(value: Any) -> dict[str, Any] | None:
@@ -491,6 +689,15 @@ class VLLMOmni(lmms):
 
     def make_one_request(self, request: Instance) -> _PreparedRequest:
         ctx, doc_to_messages, gen_kwargs, doc_id, task, split = request.arguments
+        if task is None:
+            if len(self.task_dict) != 1:
+                raise KeyError(f"Request did not include a task name and multiple tasks are loaded: {list(self.task_dict)}")
+            task = next(iter(self.task_dict))
+        if split is None:
+            task_splits = self.task_dict[task]
+            if len(task_splits) != 1:
+                raise KeyError(f"Request for task {task!r} did not include a split and multiple splits are loaded: {list(task_splits)}")
+            split = next(iter(task_splits))
         raw_messages = doc_to_messages(self.task_dict[task][split][doc_id])
         chat_messages = ChatMessages(messages=raw_messages)
         if self.processor is not None:
@@ -605,6 +812,13 @@ class VLLMOmni(lmms):
             paths.append(image_path)
         return paths
 
+    @staticmethod
+    def _is_video_payload(payload: Any) -> bool:
+        if torch.is_tensor(payload):
+            payload = payload.detach().cpu()
+            return payload.ndim >= 4
+        return isinstance(payload, np.ndarray) and payload.ndim >= 4
+
     def _normalize_video_frames(self, frames: Any) -> list[Any]:
         if isinstance(frames, list):
             normalized: list[Any] = []
@@ -638,7 +852,7 @@ class VLLMOmni(lmms):
         except Exception as e:
             raise ImportError("Saving video outputs requires `diffusers` or `imageio`.") from e
 
-        frames = [np.asarray(self._to_pil_image(image).convert("RGB")) for image in images]
+        frames = [np.asarray(self._to_pil_image(image).convert("RGB")) for image in self._normalize_video_frames(list(images))]
         imageio_v2.mimsave(video_path, frames, fps=fps)
         return [video_path]
 
@@ -677,14 +891,21 @@ class VLLMOmni(lmms):
         video_paths: list[str] = []
         out_dir = self._request_output_dir(prepared.task, prepared.split, prepared.doc_id)
 
-        images = getattr(output, "images", []) or []
+        images = getattr(output, "images", None)
+        if images is None:
+            images = []
+        elif isinstance(images, (Image.Image, np.ndarray)) or torch.is_tensor(images):
+            images = [images]
         if images:
-            if len(images) > 1:
+            if len(images) > 1 or any(self._is_video_payload(image) for image in images):
                 video_paths = self._save_video(images, out_dir)
             else:
                 image_paths = self._save_images(images, out_dir)
 
         multimodal_output = getattr(output, "multimodal_output", {}) or {}
+        video_payload = multimodal_output.get("video", multimodal_output.get("videos"))
+        if video_payload is not None and not video_paths:
+            video_paths = self._save_video(video_payload if isinstance(video_payload, list) else [video_payload], out_dir)
         fallback_sr = multimodal_output.get("audio_sample_rate", multimodal_output.get("sampling_rate", multimodal_output.get("sample_rate", multimodal_output.get("sr"))))
         if "audio" in multimodal_output:
             audio_paths = self._save_audios(multimodal_output["audio"], out_dir, fallback_sr)
@@ -692,14 +913,67 @@ class VLLMOmni(lmms):
         formatted = self._format_output(text, image_paths, audio_paths, video_paths)
         return GenerationResult(text=formatted, token_counts=token_counts)
 
+    def _can_use_diffusion_batch_request(self) -> bool:
+        return False
+
+    @classmethod
+    def _slice_batched_payload(cls, payload: Any, idx: int, count: int) -> Any:
+        if isinstance(payload, dict):
+            return {key: cls._slice_batched_payload(value, idx, count) for key, value in payload.items()}
+        if isinstance(payload, list):
+            if len(payload) == count:
+                return payload[idx]
+            return payload
+        if isinstance(payload, tuple):
+            if len(payload) == count:
+                return payload[idx]
+            return payload
+        if torch.is_tensor(payload):
+            return payload[idx] if payload.ndim > 0 and payload.shape[0] == count else payload
+        if isinstance(payload, np.ndarray):
+            return payload[idx] if payload.ndim > 0 and payload.shape[0] == count else payload
+        return payload
+
+    def _split_batched_output(self, output: Any, count: int) -> list[Any]:
+        images = getattr(output, "images", None) or []
+        if not isinstance(images, list):
+            images = [images]
+
+        if images and len(images) % count != 0:
+            raise ValueError(f"Batched vllm_omni output has {len(images)} image payloads for {count} requests")
+        images_per_request = (len(images) // count) if images else 0
+        multimodal_output = getattr(output, "multimodal_output", {}) or {}
+
+        split_outputs = []
+        for idx in range(count):
+            split_output = copy.copy(output)
+            start = idx * images_per_request
+            end = start + images_per_request
+            if hasattr(split_output, "images"):
+                split_output.images = images[start:end]
+            if hasattr(split_output, "_multimodal_output"):
+                split_output._multimodal_output = self._slice_batched_payload(multimodal_output, idx, count)
+            split_outputs.append(split_output)
+        return split_outputs
+
     def _generate_batch(self, prepared_requests: Sequence[_PreparedRequest]) -> tuple[list[Any], float]:
         prompts = [prepared.prompt for prepared in prepared_requests]
         start_time = time.time()
-        outputs = self.client.generate(
-            prompts,
-            sampling_params_list=prepared_requests[0].sampling_params_list,
-            use_tqdm=False,
-        )
+        if len(prompts) > 1 and self._can_use_diffusion_batch_request():
+            batched_outputs = self.client.generate(
+                [prompts],
+                sampling_params_list=prepared_requests[0].sampling_params_list,
+                use_tqdm=False,
+            )
+            if len(batched_outputs) != 1:
+                raise ValueError(f"Expected one vllm_omni batched output, got {len(batched_outputs)}")
+            outputs = self._split_batched_output(batched_outputs[0], len(prompts))
+        else:
+            outputs = self.client.generate(
+                prompts,
+                sampling_params_list=prepared_requests[0].sampling_params_list,
+                use_tqdm=False,
+            )
         return outputs, time.time() - start_time
 
     def _generate_single(self, prepared_request: _PreparedRequest) -> tuple[Any, float]:
