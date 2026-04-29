@@ -1,0 +1,6 @@
+task: vbench2_dynamic_spatial_relationship
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/dynamic_spatial_relationship.jsonl
+test_split: test
+include: _default_template_yaml
