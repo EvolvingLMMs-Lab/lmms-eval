@@ -1,0 +1,13 @@
+# HD-EPIC subtask: gaze_interaction_anticipation
+# "What object will the person interact with next, ignoring ongoing interactions?"
+include: _hd_epic_base.yaml
+
+task: hd_epic_gaze_interaction_anticipation
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_gaze_interaction_anticipation
+
+metadata:
+  version: 1.0
+  task_type: gaze_interaction_anticipation
+  description: "\"What object will the person interact with next, ignoring ongoing interactions?\""

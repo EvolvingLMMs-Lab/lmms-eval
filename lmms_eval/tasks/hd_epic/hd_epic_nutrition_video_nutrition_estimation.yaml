@@ -1,0 +1,13 @@
+# HD-EPIC subtask: nutrition_video_nutrition_estimation
+# "What is the ingredient with highest carbs/fat/etc. in this recipe?"
+include: _hd_epic_base.yaml
+
+task: hd_epic_nutrition_video_nutrition_estimation
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_nutrition_video_nutrition_estimation
+
+metadata:
+  version: 1.0
+  task_type: nutrition_video_nutrition_estimation
+  description: "\"What is the ingredient with highest carbs/fat/etc. in this recipe?\""

@@ -1,0 +1,13 @@
+# HD-EPIC subtask: ingredient_ingredient_adding_localization
+# "When was ingredient X added to recipe Y?" (pick the correct time range)
+include: _hd_epic_base.yaml
+
+task: hd_epic_ingredient_ingredient_adding_localization
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_ingredient_ingredient_adding_localization
+
+metadata:
+  version: 1.0
+  task_type: ingredient_ingredient_adding_localization
+  description: "\"When was ingredient X added to recipe Y?\" (pick the correct time range)"

@@ -1,0 +1,13 @@
+# HD-EPIC subtask: fine_grained_how_recognition
+# "What is the best description for HOW the person carried out the action <X>?"
+include: _hd_epic_base.yaml
+
+task: hd_epic_fine_grained_how_recognition
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_fine_grained_how_recognition
+
+metadata:
+  version: 1.0
+  task_type: fine_grained_how_recognition
+  description: "\"What is the best description for HOW the person carried out the action <X>?\""

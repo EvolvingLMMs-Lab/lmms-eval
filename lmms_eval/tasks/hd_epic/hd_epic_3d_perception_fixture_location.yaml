@@ -1,0 +1,13 @@
+# HD-EPIC subtask: 3d_perception_fixture_location
+# "Given the direction I am looking at TIME, where is the X located?" (clock-face directions: 1 o'clock ... 12 o'clock)
+include: _hd_epic_base.yaml
+
+task: hd_epic_3d_perception_fixture_location
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_3d_perception_fixture_location
+
+metadata:
+  version: 1.0
+  task_type: 3d_perception_fixture_location
+  description: "\"Given the direction I am looking at TIME, where is the X located?\" (clock-face directions: 1 o'clock ... 12 o'clock)"

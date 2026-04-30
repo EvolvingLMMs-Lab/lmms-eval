@@ -1,0 +1,9 @@
+# HD-EPIC 'object_motion' category -- bundles its 3 prototypes.
+# Run all of them with --tasks hd_epic_object_motion
+group: hd_epic_object_motion
+task:
+  - hd_epic_object_motion_object_movement_itinerary
+  - hd_epic_object_motion_object_movement_counting
+  - hd_epic_object_motion_stationary_object_localization
+metadata:
+  version: 1.0

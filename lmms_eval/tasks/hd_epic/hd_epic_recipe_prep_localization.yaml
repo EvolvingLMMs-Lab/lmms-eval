@@ -1,0 +1,13 @@
+# HD-EPIC subtask: recipe_prep_localization
+# "When did the participant perform prep for X from recipe Y?" (find prep moments, often multi-video)
+include: _hd_epic_base.yaml
+
+task: hd_epic_recipe_prep_localization
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_recipe_prep_localization
+
+metadata:
+  version: 1.0
+  task_type: recipe_prep_localization
+  description: "\"When did the participant perform prep for X from recipe Y?\" (find prep moments, often multi-video)"

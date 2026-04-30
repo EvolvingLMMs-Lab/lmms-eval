@@ -1,0 +1,13 @@
+# HD-EPIC subtask: recipe_multi_recipe_recognition
+# "Which of these recipes were carried out in this video?" (single-video, may contain multiple recipes)
+include: _hd_epic_base.yaml
+
+task: hd_epic_recipe_multi_recipe_recognition
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_recipe_multi_recipe_recognition
+
+metadata:
+  version: 1.0
+  task_type: recipe_multi_recipe_recognition
+  description: "\"Which of these recipes were carried out in this video?\" (single-video, may contain multiple recipes)"

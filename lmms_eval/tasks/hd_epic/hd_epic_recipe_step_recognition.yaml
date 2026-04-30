@@ -1,0 +1,13 @@
+# HD-EPIC subtask: recipe_step_recognition
+# "What step did the participant do between TIME and TIME?" (given a window, identify the step)
+include: _hd_epic_base.yaml
+
+task: hd_epic_recipe_step_recognition
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_recipe_step_recognition
+
+metadata:
+  version: 1.0
+  task_type: recipe_step_recognition
+  description: "\"What step did the participant do between TIME and TIME?\" (given a window, identify the step)"

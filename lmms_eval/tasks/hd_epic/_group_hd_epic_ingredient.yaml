@@ -1,0 +1,12 @@
+# HD-EPIC 'ingredient' category -- bundles its 6 prototypes.
+# Run all of them with --tasks hd_epic_ingredient
+group: hd_epic_ingredient
+task:
+  - hd_epic_ingredient_ingredient_retrieval
+  - hd_epic_ingredient_ingredient_weight
+  - hd_epic_ingredient_ingredients_order
+  - hd_epic_ingredient_ingredient_adding_localization
+  - hd_epic_ingredient_ingredient_recognition
+  - hd_epic_ingredient_exact_ingredient_recognition
+metadata:
+  version: 1.0

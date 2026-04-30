@@ -1,0 +1,13 @@
+# HD-EPIC subtask: ingredient_ingredients_order
+# "What is the order of ingredients added to the dish in this video?" (choices are ordered lists)
+include: _hd_epic_base.yaml
+
+task: hd_epic_ingredient_ingredients_order
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_ingredient_ingredients_order
+
+metadata:
+  version: 1.0
+  task_type: ingredient_ingredients_order
+  description: "\"What is the order of ingredients added to the dish in this video?\" (choices are ordered lists)"

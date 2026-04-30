@@ -1,0 +1,13 @@
+# HD-EPIC subtask: fine_grained_action_localization
+# "When did the action <X> happen in the video?" (pick from 5 time-range choices)
+include: _hd_epic_base.yaml
+
+task: hd_epic_fine_grained_action_localization
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_fine_grained_action_localization
+
+metadata:
+  version: 1.0
+  task_type: fine_grained_action_localization
+  description: "\"When did the action <X> happen in the video?\" (pick from 5 time-range choices)"
