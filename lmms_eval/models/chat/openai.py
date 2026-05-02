@@ -22,6 +22,7 @@ from lmms_eval.models.model_utils.usage_metrics import (
     log_usage,
 )
 from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleSimple
+from lmms_eval.models.simple.openai import _get_max_new_tokens
 from lmms_eval.protocol import ChatMessages
 
 VideoReader, _ = optional_import("decord", "VideoReader")
@@ -177,7 +178,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
             chat_messages_raw = doc_to_messages(self.task_dict[task][split][doc_id])
             chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages_raw})
             request_gen_kwargs = dict(gen_kwargs)
-            max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
+            max_new_tokens = _get_max_new_tokens(request_gen_kwargs)
             temperature = request_gen_kwargs.get("temperature", 0)
 
             if self.video_fps is not None and self.video_fps > 0:
@@ -196,7 +197,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                 payload.pop("temperature")
                 payload.pop("max_tokens")
                 payload["response_format"] = {"type": "text"}
-                payload["max_completion_tokens"] = 5000
+                payload["max_completion_tokens"] = max_new_tokens
 
             return payload
 
