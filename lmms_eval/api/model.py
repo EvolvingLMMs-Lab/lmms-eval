@@ -164,6 +164,10 @@ class lmms(abc.ABC):
         self.cache_hook = cache_hook
 
     def clean(self):
+        accelerator = getattr(self, "accelerator", None)
+        if accelerator is not None and hasattr(accelerator, "free_memory"):
+            accelerator.free_memory()
+
         for attr_name in list(vars(self)):
             attr_value = getattr(self, attr_name)
             if isinstance(attr_value, nn.Module):
