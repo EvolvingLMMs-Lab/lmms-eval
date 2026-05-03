@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import numpy as np
 import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
-from decord import VideoReader, cpu
+# from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
 
