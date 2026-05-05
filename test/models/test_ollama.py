@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import sys
 import types
 import unittest
@@ -33,21 +32,6 @@ def _make_ollama(model_version: str = "llava", **kwargs):
 
     with mock.patch("lmms_eval.models.simple.openai.OpenAI"), mock.patch("lmms_eval.models.simple.openai.Accelerator", return_value=_fake_accelerator()):
         return Ollama(model_version=model_version, **kwargs)
-
-
-def _make_post_mock(responses: list[dict]) -> mock.MagicMock:
-    """MagicMock for http_requests.post returning each response dict in sequence."""
-    side_effects = []
-    for resp in responses:
-        r = mock.MagicMock()
-        r.raise_for_status = mock.MagicMock()
-        r.json.return_value = resp
-        side_effects.append(r)
-    return mock.MagicMock(side_effect=side_effects)
-
-
-def _logprob_response(logprobs: list[float]) -> dict:
-    return {"logprobs": logprobs, "response": ""}
 
 
 def _make_instance(context: str, continuation: str) -> SimpleNamespace:
@@ -94,98 +78,12 @@ class TestOllamaInit(unittest.TestCase):
 
 
 class TestOllamaLoglikelihood(unittest.TestCase):
-    def test_loglikelihood_sums_continuation_tokens(self) -> None:
+    def test_loglikelihood_is_explicitly_unsupported(self) -> None:
         model = _make_ollama()
-        # full (ctx+cont) = -2.0, context-only = -1.0  →  continuation = -1.0
-        post_mock = _make_post_mock(
-            [
-                _logprob_response([-1.0, -0.5, -0.5]),
-                _logprob_response([-0.8, -0.2]),
-            ]
-        )
         instance = _make_instance("The sky is", " blue")
-        with mock.patch("lmms_eval.models.chat.ollama.http_requests.post", post_mock):
-            results = model.loglikelihood([instance])
 
-        lp, is_greedy = results[0]
-        self.assertAlmostEqual(lp, -1.0, places=5)
-        self.assertFalse(is_greedy)
-
-    def test_loglikelihood_payload_fields(self) -> None:
-        """Verify the POST payload contains the required Ollama API fields."""
-        model = _make_ollama(model_version="llava")
-        post_mock = _make_post_mock(
-            [
-                _logprob_response([-1.0]),
-                _logprob_response([-0.5]),
-            ]
-        )
-        instance = _make_instance("ctx", " cont")
-        with mock.patch("lmms_eval.models.chat.ollama.http_requests.post", post_mock):
+        with self.assertRaisesRegex(NotImplementedError, "generate_until"):
             model.loglikelihood([instance])
-
-        first_call_kwargs = post_mock.call_args_list[0].kwargs
-        payload = first_call_kwargs["json"]
-        self.assertEqual(payload["model"], "llava")
-        self.assertTrue(payload["logprobs"])
-        self.assertFalse(payload["stream"])
-        self.assertEqual(payload["options"]["temperature"], 0)
-        self.assertIn("/api/generate", post_mock.call_args_list[0].args[0])
-
-    def test_loglikelihood_correct_prompts_sent(self) -> None:
-        """First call gets full text, second gets context only."""
-        model = _make_ollama()
-        post_mock = _make_post_mock(
-            [
-                _logprob_response([-1.0]),
-                _logprob_response([-0.5]),
-            ]
-        )
-        instance = _make_instance("The sky is", " blue")
-        with mock.patch("lmms_eval.models.chat.ollama.http_requests.post", post_mock):
-            model.loglikelihood([instance])
-
-        self.assertEqual(post_mock.call_count, 2)
-        self.assertEqual(post_mock.call_args_list[0].kwargs["json"]["prompt"], "The sky is blue")
-        self.assertEqual(post_mock.call_args_list[1].kwargs["json"]["prompt"], "The sky is")
-
-    def test_loglikelihood_empty_context_skips_second_call(self) -> None:
-        model = _make_ollama()
-        post_mock = _make_post_mock([_logprob_response([-0.5, -0.5])])
-        instance = _make_instance("", "hello")
-        with mock.patch("lmms_eval.models.chat.ollama.http_requests.post", post_mock):
-            results = model.loglikelihood([instance])
-
-        self.assertEqual(post_mock.call_count, 1)
-        lp, _ = results[0]
-        self.assertAlmostEqual(lp, -1.0, places=5)
-
-    def test_loglikelihood_returns_neg_inf_on_failure(self) -> None:
-        model = _make_ollama()
-        model.max_retries = 2
-        model.retry_backoff_s = 0.0
-
-        instance = _make_instance("ctx", " cont")
-        with mock.patch("lmms_eval.models.chat.ollama.http_requests.post", side_effect=Exception("conn refused")):
-            results = model.loglikelihood([instance])
-
-        lp, _ = results[0]
-        self.assertEqual(lp, -math.inf)
-
-    def test_loglikelihood_positive_score_is_greedy(self) -> None:
-        model = _make_ollama()
-        post_mock = _make_post_mock(
-            [
-                _logprob_response([0.1, 0.2]),
-                _logprob_response([-0.5]),
-            ]
-        )
-        instance = _make_instance("ctx", " cont")
-        with mock.patch("lmms_eval.models.chat.ollama.http_requests.post", post_mock):
-            results = model.loglikelihood([instance])
-
-        _, is_greedy = results[0]
-        self.assertTrue(is_greedy)
 
 
 if __name__ == "__main__":
