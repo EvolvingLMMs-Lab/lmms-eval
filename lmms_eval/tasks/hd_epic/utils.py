@@ -101,7 +101,12 @@ def _extract_clip(video_id: str, start_s: float, end_s: float, video_dir: str) -
         end_s = start_s + 1.0
 
     dur = end_s - start_s
-    cmd = f"ffmpeg -y -hide_banner -loglevel error -ss {start_s} -t {dur} -i {src} -c copy {out_fn}"
+    cmd = (
+        f"ffmpeg -y -hide_banner -loglevel error "
+        f"-ss {start_s} -t {dur} -i {src} "
+        f"-c:v libx264 -preset ultrafast -crf 23 "
+        f"{out_fn}"
+    )
     try:
         subprocess.run(cmd, shell=True, check=True)
     except subprocess.CalledProcessError as exc:
