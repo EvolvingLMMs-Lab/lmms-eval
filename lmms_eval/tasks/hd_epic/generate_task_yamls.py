@@ -175,6 +175,29 @@ def master_group_yaml() -> str:
     return header + cats + "\nmetadata:\n  version: 1.0\n"
 
 
+# Shim utils.py written into each category subfolder. lmms-eval resolves
+# !function utils.filter_X relative to the YAML file's own directory, so
+# every subfolder needs a `utils` module reachable. This shim adds the
+# parent directory to sys.path and re-exports the real utils.py one level
+# up, so no YAML or top-level utils.py changes are required.
+_UTILS_SHIM = '''"""
+Shim: re-export the shared HD-EPIC utils so YAMLs in this subfolder can
+reference !function utils.filter_* without a path prefix.
+
+lmms-eval resolves !function module names relative to each YAML\'s own
+directory, so each category subfolder needs `utils` reachable from here.
+"""
+import os
+import sys
+
+_PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PARENT_DIR not in sys.path:
+    sys.path.insert(0, _PARENT_DIR)
+
+from utils import *  # noqa: F401,F403,E402
+'''
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -190,6 +213,12 @@ def main():
     for category, protos in CATEGORIES.items():
         cat_dir = os.path.join(args.output_dir, category)
         os.makedirs(cat_dir, exist_ok=True)
+
+        # Drop a utils.py shim so !function utils.filter_X resolves
+        # from YAMLs that live in this subfolder.
+        with open(os.path.join(cat_dir, "utils.py"), "w") as f:
+            f.write(_UTILS_SHIM)
+
         for tt in protos:
             fn = os.path.join(cat_dir, f"hd_epic_{tt}.yaml")
             with open(fn, "w") as f:
