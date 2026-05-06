@@ -79,14 +79,36 @@ def _video_path(video_id: str, video_dir: str) -> str:
 
 
 def _extract_clip(video_id: str, start_s: float, end_s: float, video_dir: str) -> str:
-    """
-    Extract a time-trimmed clip to a temp file and return its path.
-    If start_s == end_s == -1 the original file is returned as-is (no copy).
+    """Extract a time-trimmed subclip from a source video and return its path.
+
+    Uses a two-pass ffmpeg seek strategy for frame-accurate boundaries at
+    practical speed: a fast keyframe-aligned input seek jumps to ~2 seconds
+    before the target, then a short frame-accurate output seek covers the
+    remaining offset. This avoids the 10-20× slowdown of pure output seek
+    on long videos while producing the same frame-accurate result.
+
+    Extracted clips are cached in the system temp directory under the name
+    ``hd_epic_<video_id>_<start>_<end>.mp4``. If the cache file already
+    exists it is returned immediately without re-extracting.
+
+    Args:
+        video_id: Participant-prefixed video ID, e.g. ``"P01-20240427-151808"``.
+        start_s:  Clip start time in seconds. Pass ``-1`` to use the full video.
+        end_s:    Clip end time in seconds.   Pass ``-1`` to use the full video.
+        video_dir: Root directory containing ``<pid>/<video_id>.mp4`` files.
+                   Overridden at runtime by the ``HD_EPIC_VIDEO_DIR`` env var
+                   (handled upstream by ``_resolve_video_dir``).
+
+    Returns:
+        Absolute path to the extracted ``.mp4`` clip, or the path to the
+        original source file when no trimming is needed (``start_s == end_s
+        == -1``) or when ffmpeg fails (falls back gracefully with a logged
+        error rather than raising).
     """
     src = _video_path(video_id, video_dir)
 
     if start_s == -1 and end_s == -1:
-        return src  # use full video without copying
+        return src
 
     if not osp.exists(src):
         eval_logger.warning(f"HD-EPIC: video not found: {src}")
@@ -99,11 +121,21 @@ def _extract_clip(video_id: str, start_s: float, end_s: float, video_dir: str) -
 
     if end_s <= start_s:
         end_s = start_s + 1.0
-
     dur = end_s - start_s
+
+    # Two-pass seek: coarse input seek to ~2s before target (fast, jumps via
+    # keyframe), then fine output seek for the remaining offset (frame-
+    # accurate). Equivalent timing precision to pure output seek but orders
+    # of magnitude faster on long videos because the keyframe jump skips
+    # most of the decode.
+    coarse_start = max(0.0, start_s - 2.0)
+    fine_start = start_s - coarse_start  # 0 to 2 seconds
+
     cmd = (
         f"ffmpeg -y -hide_banner -loglevel error "
-        f"-ss {start_s} -t {dur} -i {src} "
+        f"-ss {coarse_start} "                       # input seek (fast)
+        f"-i {src} "
+        f"-ss {fine_start} -t {dur} "                # output seek (precise)
         f"-c:v libx264 -preset ultrafast -crf 23 "
         f"{out_fn}"
     )
@@ -111,7 +143,7 @@ def _extract_clip(video_id: str, start_s: float, end_s: float, video_dir: str) -
         subprocess.run(cmd, shell=True, check=True)
     except subprocess.CalledProcessError as exc:
         eval_logger.error(f"HD-EPIC: ffmpeg clip extraction failed: {exc}")
-        return src  # fall back to full video
+        return src
 
     return out_fn
 
@@ -382,3 +414,4 @@ _HD_EPIC_TASK_TYPES = [
 
 for _tt in _HD_EPIC_TASK_TYPES:
     globals()[f"filter_{_tt}"] = _make_filter(_tt)
+
