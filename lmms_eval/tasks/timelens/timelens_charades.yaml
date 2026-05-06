@@ -1,0 +1,4 @@
+include: _default_yaml_template
+
+task: timelens_charades
+test_split: charades
