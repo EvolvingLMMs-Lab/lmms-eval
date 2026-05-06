@@ -1,0 +1,13 @@
+# HD-EPIC subtask: object_motion_stationary_object_localization
+# "After the object <BBOX> seen at TIME is first moved, from which starting time does it remain static for >150s?"
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_object_motion_stationary_object_localization
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_object_motion_stationary_object_localization
+
+metadata:
+  version: 1.0
+  task_type: object_motion_stationary_object_localization
+  description: "\"After the object <BBOX> seen at TIME is first moved, from which starting time does it remain static for >150s?\""

@@ -1,0 +1,13 @@
+# HD-EPIC subtask: gaze_gaze_estimation
+# "What is the person looking at in this video segment?"
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_gaze_gaze_estimation
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_gaze_gaze_estimation
+
+metadata:
+  version: 1.0
+  task_type: gaze_gaze_estimation
+  description: "\"What is the person looking at in this video segment?\""

@@ -14,6 +14,30 @@
 | Object Motion | Object Movement Itinerary, Object Movement Counting, Stationary Object Localisation | 3 |
 | Gaze | Gaze Estimation, Interaction Anticipation | 2 |
 
+## Repository layout
+
+The 30 prototype YAMLs are organised into one subfolder per HD-EPIC category:
+
+\`\`\`
+lmms_eval/tasks/hd_epic/
+├── _hd_epic_base.yaml          # shared base config
+├── _group_hd_epic.yaml         # master group (all 30 prototypes)
+├── utils.py
+├── hd_epic_to_hf.py
+├── recipe/                     # 8 prototypes + category group
+├── ingredient/                 # 6 prototypes + category group
+├── nutrition/                  # 3 prototypes + category group
+├── fine_grained/               # 4 prototypes + category group
+├── 3d_perception/              # 4 prototypes + category group
+├── object_motion/              # 3 prototypes + category group
+└── gaze/                       # 2 prototypes + category group
+\`\`\`
+
+Each category subfolder contains a `_group_hd_epic_<category>.yaml` (the
+category group definition) plus the per-prototype YAMLs for that category.
+Task names are flat — e.g. `hd_epic_gaze_gaze_estimation` — so `--tasks`
+invocations don't need to know about the folder layout.
+
 ## Setup
 
 ### 1. Download videos
@@ -114,7 +138,6 @@ The 2pp difference is within the statistical noise for n=50 questions (SE ≈ 6p
 
 ## Notes
 
-- **Clip extraction**: `ffmpeg -c copy` is used for fast, lossless trimming to the question's time window. If keyframe alignment causes duration mismatches, replace `-c copy` with `-c:v libx264 -preset ultrafast` in `utils.py:_extract_clip`.
 - **BBOX coordinates**: Normalised from native 1408×1408 (Project Aria RGB camera) to 1000×1000, matching the official HD-EPIC eval protocol.
 - **TIME tags**: Made relative to clip start, consistent with the original `hd-epic-vqa-eval` repository.
 - **Multi-video questions**: Videos are passed in order as separate `{"type": "video", "url": ...}` blocks in the user message.

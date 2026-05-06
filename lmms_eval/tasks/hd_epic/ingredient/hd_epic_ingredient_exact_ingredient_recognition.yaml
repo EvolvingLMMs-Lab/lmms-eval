@@ -1,0 +1,13 @@
+# HD-EPIC subtask: ingredient_exact_ingredient_recognition
+# "What was the exact quantity of X used in Y?" (multi-video, exact tbsp/g/etc.)
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_ingredient_exact_ingredient_recognition
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_ingredient_exact_ingredient_recognition
+
+metadata:
+  version: 1.0
+  task_type: ingredient_exact_ingredient_recognition
+  description: "\"What was the exact quantity of X used in Y?\" (multi-video, exact tbsp/g/etc.)"

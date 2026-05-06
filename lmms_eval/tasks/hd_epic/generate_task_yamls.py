@@ -130,7 +130,7 @@ def yaml_for_task(task_type: str) -> str:
         f"""\
         # HD-EPIC subtask: {task_type}
         # {desc}
-        include: _hd_epic_base.yaml
+        include: ../_hd_epic_base.yaml
 
         task: {task_name(task_type)}
 
@@ -182,26 +182,37 @@ def main():
         default=os.path.dirname(os.path.abspath(__file__)),
     )
     args = parser.parse_args()
+
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Per-prototype YAMLs (30 files)
-    for tt in TASK_TYPES:
-        fn = os.path.join(args.output_dir, f"hd_epic_{tt}.yaml")
-        with open(fn, "w") as f:
-            f.write(yaml_for_task(tt))
+    # Per-prototype YAMLs go into <output_dir>/<category>/
+    n_protos = 0
+    for category, protos in CATEGORIES.items():
+        cat_dir = os.path.join(args.output_dir, category)
+        os.makedirs(cat_dir, exist_ok=True)
+        for tt in protos:
+            fn = os.path.join(cat_dir, f"hd_epic_{tt}.yaml")
+            with open(fn, "w") as f:
+                f.write(yaml_for_task(tt))
+            n_protos += 1
 
-    # Per-category group YAMLs (7 files)
+    # Per-category group YAMLs go inside their own category subfolder
     for cat, protos in CATEGORIES.items():
-        fn = os.path.join(args.output_dir, f"_group_hd_epic_{cat}.yaml")
+        fn = os.path.join(args.output_dir, cat, f"_group_hd_epic_{cat}.yaml")
         with open(fn, "w") as f:
             f.write(category_group_yaml(cat, protos))
 
-    # Master group YAML (1 file)
+    # Master group YAML stays at the top level
     fn = os.path.join(args.output_dir, "_group_hd_epic.yaml")
     with open(fn, "w") as f:
         f.write(master_group_yaml())
 
-    print(f"Generated:\n" f"  - {len(TASK_TYPES)} per-prototype YAMLs\n" f"  - {len(CATEGORIES)} category-group YAMLs\n" f"  - 1 master group YAML (hd_epic)")
+    print(
+        f"Generated:\n"
+        f"  - {n_protos} per-prototype YAMLs (in {len(CATEGORIES)} subfolders)\n"
+        f"  - {len(CATEGORIES)} category-group YAMLs (one per subfolder)\n"
+        f"  - 1 master group YAML at the top level (hd_epic)"
+    )
 
 
 if __name__ == "__main__":
