@@ -30,6 +30,29 @@ cpu, _ = optional_import("decord", "cpu")
 load_dotenv(verbose=True)
 
 
+def _content_parts_are_text_only(content) -> bool:
+    if isinstance(content, str):
+        return True
+    if not isinstance(content, list):
+        return False
+    return all(isinstance(part, dict) and part.get("type") == "text" for part in content)
+
+
+def _ctx_to_text_chat_messages(ctx: str, chat_messages_raw):
+    if not isinstance(ctx, str) or not ctx:
+        return chat_messages_raw
+    if not isinstance(chat_messages_raw, list) or len(chat_messages_raw) != 1:
+        return chat_messages_raw
+
+    message = chat_messages_raw[0]
+    if not isinstance(message, dict) or message.get("role") != "user":
+        return chat_messages_raw
+    if not _content_parts_are_text_only(message.get("content")):
+        return chat_messages_raw
+
+    return [{"role": "user", "content": [{"type": "text", "text": ctx}]}]
+
+
 @register_model("openai")
 class OpenAICompatible(OpenAICompatibleSimple):
     is_simple = False
@@ -172,9 +195,10 @@ class OpenAICompatible(OpenAICompatibleSimple):
 
         def build_payload_for_index(global_index: int) -> dict:
             req = reordered_requests[global_index]
-            _, doc_to_messages, gen_kwargs, doc_id, task, split = req.args
+            ctx, doc_to_messages, gen_kwargs, doc_id, task, split = req.args
 
             chat_messages_raw = doc_to_messages(self.task_dict[task][split][doc_id])
+            chat_messages_raw = _ctx_to_text_chat_messages(ctx, chat_messages_raw)
             chat_messages: ChatMessages = ChatMessages(**{"messages": chat_messages_raw})
             request_gen_kwargs = dict(gen_kwargs)
             max_new_tokens = min(request_gen_kwargs.get("max_new_tokens", 1024), 4096)
