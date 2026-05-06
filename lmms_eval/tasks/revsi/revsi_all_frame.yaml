@@ -1,0 +1,3 @@
+dataset_name: all_frame
+task: revsi_all_frame
+include: _default_template_yaml
