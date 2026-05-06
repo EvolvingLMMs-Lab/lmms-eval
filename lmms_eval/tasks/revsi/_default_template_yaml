@@ -15,8 +15,29 @@ generation_kwargs:
   do_sample: false
 process_results: !function utils.revsi_process_results
 metric_list:
-  - metric: revsi_acc
-    aggregation: !function utils.revsi_aggregate_results
+  - metric: overall_acc
+    aggregation: !function utils.revsi_aggregate_overall
+    higher_is_better: true
+  - metric: object_abs_distance_acc
+    aggregation: !function utils.revsi_aggregate_object_abs_distance_acc
+    higher_is_better: true
+  - metric: object_counting_acc
+    aggregation: !function utils.revsi_aggregate_object_counting_acc
+    higher_is_better: true
+  - metric: object_rel_direction_acc
+    aggregation: !function utils.revsi_aggregate_object_rel_direction_acc
+    higher_is_better: true
+  - metric: object_rel_distance_acc
+    aggregation: !function utils.revsi_aggregate_object_rel_distance_acc
+    higher_is_better: true
+  - metric: object_size_estimation_acc
+    aggregation: !function utils.revsi_aggregate_object_size_estimation_acc
+    higher_is_better: true
+  - metric: room_size_estimation_acc
+    aggregation: !function utils.revsi_aggregate_room_size_estimation_acc
+    higher_is_better: true
+  - metric: route_planning_acc
+    aggregation: !function utils.revsi_aggregate_route_planning_acc
     higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
