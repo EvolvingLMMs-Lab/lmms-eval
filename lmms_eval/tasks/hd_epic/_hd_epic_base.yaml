@@ -1,0 +1,56 @@
+# HD-EPIC base task configuration.
+# All per-task YAMLs use `group_alias` and inherit from this base via `include`.
+#
+# The dataset is expected to be loaded from a local JSONL file that was produced
+# by running `hd_epic_to_hf.py`, OR from a HuggingFace Hub dataset.
+#
+# Required setup:
+#   1. Run `python hd_epic_to_hf.py` to generate the JSONL dataset files, OR
+#      set `dataset_path` below to your HuggingFace Hub dataset ID.
+#   2. Export HD_EPIC_VIDEO_DIR=/path/to/your/videos
+#   3. Run lmms-eval:
+#        python -m lmms_eval \
+#          --model qwen2_5_vl \
+#          --model_args pretrained=Qwen/Qwen2.5-VL-7B-Instruct \
+#          --tasks hd_epic \
+#          --batch_size 1 \
+#          --include_path /path/to/this/folder
+
+dataset_path: json                        # use 'json' for local JSONL files
+                                          # OR replace with your HF Hub ID, e.g.:
+                                          # hd-epic/hd-epic-benchmark
+dataset_kwargs:
+  data_files:
+    test: /home/s3817733/contrib/lmms-eval/lmms_eval/tasks/hd_epic/hd_epic_questions.jsonl         # path to the output of hd_epic_to_hf.py
+
+test_split: test
+output_type: generate_until
+
+# Preferred: chat-model interface (doc_to_messages)
+doc_to_messages: !function utils.hd_epic_doc_to_messages
+
+# Legacy fallback (simple models using doc_to_visual + doc_to_text)
+doc_to_visual: !function utils.hd_epic_doc_to_visual
+doc_to_text: !function utils.hd_epic_doc_to_text
+doc_to_target: !function utils.hd_epic_doc_to_target
+
+process_results: !function utils.hd_epic_process_results
+
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.hd_epic_aggregate_accuracy
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 10
+  temperature: 0
+  do_sample: false
+  stop_sequences:
+    - "\n"
+
+# Group questions from the same video together for prefix-cache efficiency.
+# The field `video_ids` is a list; we use the first element as the cluster key.
+cluster_key: video_ids
+
+metadata:
+  version: 1.0

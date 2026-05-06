@@ -1,0 +1,10 @@
+# HD-EPIC 'fine_grained' category -- bundles its 4 prototypes.
+# Run all of them with --tasks hd_epic_fine_grained
+group: hd_epic_fine_grained
+task:
+  - hd_epic_fine_grained_action_recognition
+  - hd_epic_fine_grained_how_recognition
+  - hd_epic_fine_grained_why_recognition
+  - hd_epic_fine_grained_action_localization
+metadata:
+  version: 1.0
