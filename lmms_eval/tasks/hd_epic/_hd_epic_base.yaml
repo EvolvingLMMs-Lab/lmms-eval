@@ -48,9 +48,8 @@ generation_kwargs:
   stop_sequences:
     - "\n"
 
-# Group questions from the same video together for prefix-cache efficiency.
-# The field `video_ids` is a list; we use the first element as the cluster key.
-cluster_key: video_ids
+cluster_key: cluster_key
+
 
 metadata:
   version: 1.0
