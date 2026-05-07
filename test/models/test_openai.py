@@ -26,9 +26,7 @@ def _request(*args) -> SimpleNamespace:
     return SimpleNamespace(args=args)
 
 
-def _configure_openai_model(
-    model, completions: _CaptureCompletions, *, model_version: str = "gpt-4o"
-) -> None:
+def _configure_openai_model(model, completions: _CaptureCompletions, *, model_version: str = "gpt-4o") -> None:
     model.client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
     model.model_version = model_version
     model.max_retries = 1

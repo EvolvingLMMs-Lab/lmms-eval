@@ -1,11 +1,12 @@
 import os
+
 import datasets
 import numpy as np
 import pandas as pd
 from huggingface_hub.constants import HF_HOME
-from lmms_eval.utils import resolve_cache_dir
-from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
+from lmms_eval.utils import resolve_cache_dir
 
 MCQ_QUESTION_TYPES = [
     "object_rel_direction_forward_easy",
@@ -18,14 +19,7 @@ MCQ_QUESTION_TYPES = [
 ]
 
 
-NQ_QUESTION_TYPES = [
-    "object_counting_single",
-    "object_counting_multiple",
-    "object_abs_distance",
-    "object_size_estimation",
-    "room_size_estimation_single",
-    "room_size_estimation_multiple"
-]
+NQ_QUESTION_TYPES = ["object_counting_single", "object_counting_multiple", "object_abs_distance", "object_size_estimation", "room_size_estimation_single", "room_size_estimation_multiple"]
 
 
 REVSI_METRICS = [
@@ -113,9 +107,7 @@ def revsi_process_results(doc, results):
 
 
 def _collapse_question_types(output, metric_name, question_types):
-    question_type_metrics = [
-        f"{question_type}_acc" for question_type in question_types if f"{question_type}_acc" in output
-    ]
+    question_type_metrics = [f"{question_type}_acc" for question_type in question_types if f"{question_type}_acc" in output]
     if not question_type_metrics:
         return
     output[metric_name] = np.mean([output.pop(metric) for metric in question_type_metrics])
@@ -123,10 +115,7 @@ def _collapse_question_types(output, metric_name, question_types):
 
 def _compute_all_subscores(results) -> dict:
     results = pd.DataFrame(results)
-    output = {
-        f"{question_type}_acc": per_question_type["acc"].mean()
-        for question_type, per_question_type in results.groupby("question_type")
-    }
+    output = {f"{question_type}_acc": per_question_type["acc"].mean() for question_type, per_question_type in results.groupby("question_type")}
 
     for metric_name, question_types in COMPOSITE_METRICS.items():
         _collapse_question_types(output, metric_name, question_types)
