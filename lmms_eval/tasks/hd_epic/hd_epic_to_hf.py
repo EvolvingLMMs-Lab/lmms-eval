@@ -123,10 +123,7 @@ def _iter_question_file(path: str, seed: int) -> Iterator[dict]:
                 start_times.append(st)
                 end_times.append(et)
 
-        cluster_key = "__".join(
-        f"{vid}_{int(st)}_{int(et)}"
-        for vid, st, et in zip(video_ids, start_times, end_times)
-        )
+        cluster_key = "__".join(f"{vid}_{int(st)}_{int(et)}" for vid, st, et in zip(video_ids, start_times, end_times))
 
         yield {
             "question_id": q_id,
@@ -138,7 +135,7 @@ def _iter_question_file(path: str, seed: int) -> Iterator[dict]:
             "input_labels": input_labels,
             "start_times": start_times,
             "end_times": end_times,
-            "cluster_key":  cluster_key,
+            "cluster_key": cluster_key,
         }
 
 

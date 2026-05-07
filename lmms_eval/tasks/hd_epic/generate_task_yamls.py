@@ -236,12 +236,7 @@ def main():
     with open(fn, "w") as f:
         f.write(master_group_yaml())
 
-    print(
-        f"Generated:\n"
-        f"  - {n_protos} per-prototype YAMLs (in {len(CATEGORIES)} subfolders)\n"
-        f"  - {len(CATEGORIES)} category-group YAMLs (one per subfolder)\n"
-        f"  - 1 master group YAML at the top level (hd_epic)"
-    )
+    print(f"Generated:\n" f"  - {n_protos} per-prototype YAMLs (in {len(CATEGORIES)} subfolders)\n" f"  - {len(CATEGORIES)} category-group YAMLs (one per subfolder)\n" f"  - 1 master group YAML at the top level (hd_epic)")
 
 
 if __name__ == "__main__":

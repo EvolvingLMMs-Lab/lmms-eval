@@ -133,9 +133,9 @@ def _extract_clip(video_id: str, start_s: float, end_s: float, video_dir: str) -
 
     cmd = (
         f"ffmpeg -y -hide_banner -loglevel error "
-        f"-ss {coarse_start} "                       # input seek (fast)
+        f"-ss {coarse_start} "  # input seek (fast)
         f"-i {src} "
-        f"-ss {fine_start} -t {dur} "                # output seek (precise)
+        f"-ss {fine_start} -t {dur} "  # output seek (precise)
         f"-c:v libx264 -preset ultrafast -crf 23 "
         f"{out_fn}"
     )
@@ -414,4 +414,3 @@ _HD_EPIC_TASK_TYPES = [
 
 for _tt in _HD_EPIC_TASK_TYPES:
     globals()[f"filter_{_tt}"] = _make_filter(_tt)
-
