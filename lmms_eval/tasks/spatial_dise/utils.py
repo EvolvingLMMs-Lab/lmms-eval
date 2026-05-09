@@ -15,8 +15,10 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 REPO_ID = "TACPS-liv/Spatial-DISE"
-IMAGE_COLUMNS = [
+MERGE_IMAGE_COLUMNS = [
     ("image", "merged image"),
+]
+SEPARATE_IMAGE_COLUMNS = [
     ("question_image_path", "separate question image"),
     ("question_image_1_path", "separate question image 1"),
     ("question_image_2_path", "separate question image 2"),
@@ -28,12 +30,20 @@ IMAGE_COLUMNS = [
 
 
 def spatial_dise_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
+    return _process_docs(dataset, image_mode="merge")
+
+
+def spatial_dise_process_docs_separate(dataset: datasets.Dataset) -> datasets.Dataset:
+    return _process_docs(dataset, image_mode="separate")
+
+
+def _process_docs(dataset: datasets.Dataset, image_mode: str) -> datasets.Dataset:
     dataset_root = _dataset_root()
     tar_index = _tar_index(dataset_root)
 
     def _process_doc(doc, idx):
         clean_doc = {str(key).strip(): _strip(value) for key, value in doc.items()}
-        image_refs = _image_refs(clean_doc, tar_index)
+        image_refs = _image_refs(clean_doc, tar_index, image_mode)
         if len(image_refs) == 0:
             raise FileNotFoundError(f"Spatial-DISE image {clean_doc['image']} not found in tar shards under {dataset_root}")
 
@@ -46,6 +56,7 @@ def spatial_dise_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
             "image_paths": [ref["path"] for ref in image_refs],
             "image_shards": [ref["shard"] for ref in image_refs],
             "image_roles": [ref["role"] for ref in image_refs],
+            "image_mode": image_mode,
             "category": clean_doc.get("category", ""),
             "difficulty": clean_doc.get("difficulty", ""),
             "source": clean_doc.get("source", ""),
@@ -68,10 +79,12 @@ def spatial_dise_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs=None
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
-    image_context = (
-        "Images are provided in order: first the merged full image, followed by the available separate "
-        "question/view/option images from the original sample. Use all images together.\n"
-    )
+    image_context = ""
+    if doc.get("image_mode") == "separate":
+        image_context = (
+            "Images are provided as separate question/view/option images from the original sample. "
+            "Use all images together.\n"
+        )
     return f"{pre_prompt}{image_context}{doc['question'].strip()}{post_prompt}".strip()
 
 
@@ -162,10 +175,11 @@ def _csv_path_to_tar_member(path: str) -> str:
     return path.lstrip("/\\")
 
 
-def _image_refs(doc: Dict[str, Any], tar_index: Dict[str, str]) -> List[Dict[str, str]]:
+def _image_refs(doc: Dict[str, Any], tar_index: Dict[str, str], image_mode: str) -> List[Dict[str, str]]:
     refs = []
     seen = set()
-    for column, role in IMAGE_COLUMNS:
+    columns = SEPARATE_IMAGE_COLUMNS if image_mode == "separate" else MERGE_IMAGE_COLUMNS
+    for column, role in columns:
         value = doc.get(column, "")
         if value is None:
             continue
