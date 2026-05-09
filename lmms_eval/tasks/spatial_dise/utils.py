@@ -15,6 +15,16 @@ from loguru import logger as eval_logger
 from PIL import Image
 
 REPO_ID = "TACPS-liv/Spatial-DISE"
+IMAGE_COLUMNS = [
+    ("image", "merged image"),
+    ("question_image_path", "separate question image"),
+    ("question_image_1_path", "separate question image 1"),
+    ("question_image_2_path", "separate question image 2"),
+    ("option_a_image_path", "separate option A image"),
+    ("option_b_image_path", "separate option B image"),
+    ("option_c_image_path", "separate option C image"),
+    ("option_d_image_path", "separate option D image"),
+]
 
 
 def spatial_dise_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
@@ -23,17 +33,19 @@ def spatial_dise_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
 
     def _process_doc(doc, idx):
         clean_doc = {str(key).strip(): _strip(value) for key, value in doc.items()}
-        image_path = _csv_path_to_tar_member(clean_doc["image"])
-        shard = tar_index.get(image_path)
-        if shard is None:
+        image_refs = _image_refs(clean_doc, tar_index)
+        if len(image_refs) == 0:
             raise FileNotFoundError(f"Spatial-DISE image {clean_doc['image']} not found in tar shards under {dataset_root}")
 
         return {
             "id": f"benchmark_{idx}",
             "question": clean_doc["question"],
             "answer": clean_doc["answer"].upper(),
-            "image_path": image_path,
-            "image_shard": shard,
+            "image_path": image_refs[0]["path"],
+            "image_shard": image_refs[0]["shard"],
+            "image_paths": [ref["path"] for ref in image_refs],
+            "image_shards": [ref["shard"] for ref in image_refs],
+            "image_roles": [ref["role"] for ref in image_refs],
             "category": clean_doc.get("category", ""),
             "difficulty": clean_doc.get("difficulty", ""),
             "source": clean_doc.get("source", ""),
@@ -44,12 +56,10 @@ def spatial_dise_process_docs(dataset: datasets.Dataset) -> datasets.Dataset:
 
 
 def spatial_dise_doc_to_visual(doc: Dict[str, Any]) -> List[Image.Image]:
-    with tarfile.open(doc["image_shard"]) as tf:
-        image_file = tf.extractfile(doc["image_path"])
-        if image_file is None:
-            raise FileNotFoundError(f"{doc['image_path']} not found in {doc['image_shard']}")
-        image = Image.open(io.BytesIO(image_file.read())).convert("RGB")
-    return [image]
+    images = []
+    for image_path, image_shard in zip(doc["image_paths"], doc["image_shards"]):
+        images.append(_open_tar_image(image_shard, image_path))
+    return images
 
 
 def spatial_dise_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs=None) -> str:
@@ -58,7 +68,11 @@ def spatial_dise_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs=None
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
-    return f"{pre_prompt}{doc['question'].strip()}{post_prompt}".strip()
+    image_context = (
+        "Images are provided in order: first the merged full image, followed by the available separate "
+        "question/view/option images from the original sample. Use all images together.\n"
+    )
+    return f"{pre_prompt}{image_context}{doc['question'].strip()}{post_prompt}".strip()
 
 
 def spatial_dise_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Dict[str, Any]]:
@@ -146,6 +160,36 @@ def _csv_path_to_tar_member(path: str) -> str:
     if path.startswith("images/"):
         path = path[len("images/") :]
     return path.lstrip("/\\")
+
+
+def _image_refs(doc: Dict[str, Any], tar_index: Dict[str, str]) -> List[Dict[str, str]]:
+    refs = []
+    seen = set()
+    for column, role in IMAGE_COLUMNS:
+        value = doc.get(column, "")
+        if value is None:
+            continue
+        value = str(value).strip()
+        if not value or value.lower() == "nan":
+            continue
+        member = _csv_path_to_tar_member(value)
+        if member in seen:
+            continue
+        shard = tar_index.get(member)
+        if shard is None:
+            raise FileNotFoundError(f"Spatial-DISE image {column}={value} not found in tar shards")
+        refs.append({"role": role, "path": member, "shard": shard})
+        seen.add(member)
+    return refs
+
+
+def _open_tar_image(shard: str, member: str) -> Image.Image:
+    with tarfile.open(shard) as tf:
+        image_file = tf.extractfile(member)
+        if image_file is None:
+            raise FileNotFoundError(f"{member} not found in {shard}")
+        image = Image.open(io.BytesIO(image_file.read())).convert("RGB")
+    return image
 
 
 @lru_cache(maxsize=4)
