@@ -2,6 +2,7 @@ import io
 import os
 import os.path as osp
 import re
+import string
 import tarfile
 from collections import defaultdict
 from functools import lru_cache
@@ -46,11 +47,13 @@ def _process_docs(dataset: datasets.Dataset, image_mode: str) -> datasets.Datase
         image_refs = _image_refs(clean_doc, tar_index, image_mode)
         if len(image_refs) == 0:
             raise FileNotFoundError(f"Spatial-DISE image {clean_doc['image']} not found in tar shards under {dataset_root}")
+        option_letters = _option_letters(clean_doc.get("options", ""))
 
         return {
             "id": f"benchmark_{idx}",
             "question": clean_doc["question"],
             "answer": clean_doc["answer"].upper(),
+            "option_letters": option_letters,
             "image_path": image_refs[0]["path"],
             "image_shard": image_refs[0]["shard"],
             "image_paths": [ref["path"] for ref in image_refs],
@@ -79,19 +82,21 @@ def spatial_dise_doc_to_text(doc: Dict[str, Any], lmms_eval_specific_kwargs=None
 
     pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
     post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
-    image_context = ""
+    option_text = ", ".join(doc.get("option_letters") or ["A", "B", "C", "D"])
     if doc.get("image_mode") == "separate":
         image_context = (
             "Images are provided as separate question/view/option images from the original sample. "
-            "Use all images together.\n"
+            f"Use all images together. The answer choices are labeled {option_text}.\n"
         )
+    else:
+        image_context = f"The image contains answer choices labeled {option_text}.\n"
     return f"{pre_prompt}{image_context}{doc['question'].strip()}{post_prompt}".strip()
 
 
 def spatial_dise_process_results(doc: Dict[str, Any], results: List[str]) -> Dict[str, Dict[str, Any]]:
     response = results[0]
     target = doc["answer"].strip().upper()
-    pred = _extract_answer(response)
+    pred = _extract_answer(response, doc.get("option_letters"))
     is_correct = pred == target
 
     return {
@@ -119,27 +124,51 @@ def spatial_dise_aggregate_results(results: List[Dict[str, Any]]) -> float:
     return float(np.mean(scores))
 
 
-def _extract_answer(response: str) -> str:
+def _extract_answer(response: str, choices=None) -> str:
     response = str(response).strip()
+    choices = _normalize_choices(choices)
+    letters = "".join(re.escape(choice) for choice in choices)
     try:
         from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
 
-        answer = extract_mcq_answer(response, choices=["A", "B", "C", "D"])
+        answer = extract_mcq_answer(response, choices=choices)
         if answer:
             return answer.strip().upper()
     except Exception:
         pass
 
     patterns = [
-        r"(?:answer|final answer|correct answer)\s*[:：]?\s*\(?([A-D])\)?",
-        r"^\s*\(?([A-D])\)?(?:[\.\):\s]|$)",
-        r"\b([A-D])\b",
+        rf"(?:answer|final answer|correct answer)\s*[:：]?\s*\(?([{letters}])\)?",
+        rf"^\s*\(?([{letters}])\)?(?:[\.\):\s]|$)",
+        rf"\b([{letters}])\b",
     ]
     for pattern in patterns:
         match = re.search(pattern, response, flags=re.IGNORECASE)
         if match:
             return match.group(1).upper()
     return ""
+
+
+def _option_letters(value) -> List[str]:
+    if value is None:
+        return list("ABCD")
+    letters = []
+    for option in str(value).replace("，", ",").split(","):
+        option = option.strip().upper()
+        if option and option[0] in string.ascii_uppercase and option[0] not in letters:
+            letters.append(option[0])
+    return letters or list("ABCD")
+
+
+def _normalize_choices(choices) -> List[str]:
+    if not choices:
+        return list("ABCD")
+    normalized = []
+    for choice in choices:
+        choice = str(choice).strip().upper()
+        if choice and choice[0] in string.ascii_uppercase and choice[0] not in normalized:
+            normalized.append(choice[0])
+    return normalized or list("ABCD")
 
 
 def _log_breakdown(key: str, results: List[Dict[str, Any]]) -> None:
