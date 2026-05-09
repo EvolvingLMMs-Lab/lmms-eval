@@ -30,4 +30,4 @@ lmms_eval_specific_kwargs:
 metadata:
   - version: 0.0
   - dataset: TACPS-liv/Spatial-DISE
-  - paper: Spatial-DISE, ICLR 2026
+  - paper: https://openreview.net/pdf?id=bMINsPQpME
