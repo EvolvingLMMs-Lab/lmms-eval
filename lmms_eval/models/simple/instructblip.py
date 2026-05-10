@@ -212,7 +212,7 @@ class InstructBLIP(lmms):
                 )
             except Exception as e:
                 eval_logger.error(f"Error {e} in generating")
-                cont = ""
+                cont = [[]]
             text_outputs = self.tokenizer.batch_decode(cont, skip_special_tokens=True)[0].strip()
             res.append(text_outputs)
             self.cache_hook.add_partial("generate_until", (context, gen_kwargs), text_outputs)
