@@ -1,0 +1,6 @@
+task: vbench_temporal_style
+dataset_kwargs:
+  data_files:
+    test: lmms_eval/tasks/vbench/data/temporal_style.jsonl
+test_split: test
+include: _default_template_yaml
