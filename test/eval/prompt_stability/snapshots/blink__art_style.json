@@ -1,0 +1,9 @@
+{
+  "task": "blink_art_style",
+  "variant": null,
+  "doc_id": "1",
+  "prompt_text": "Note: You only need to respond with A, B, C, D without providing any additional information.\nWhich of the following art styles best matches the painting shown in the image?",
+  "gen_kwargs": {
+    "max_new_tokens": 1024
+  }
+}

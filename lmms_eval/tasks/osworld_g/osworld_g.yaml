@@ -1,0 +1,28 @@
+task: osworld_g
+dataset_path: MMInstruction/OSWorld-G
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.osworld_g_doc_to_visual
+doc_to_text: !function utils.osworld_g_doc_to_text
+doc_to_messages: !function utils.osworld_g_doc_to_messages
+doc_to_target: instruction
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  do_sample: false
+process_results: !function utils.osworld_g_process_results
+metric_list:
+  - metric: osworld_g_acc
+    aggregation: !function utils.osworld_g_acc
+    higher_is_better: true
+  - metric: osworld_g_bbox_acc
+    aggregation: !function utils.osworld_g_bbox_acc
+    higher_is_better: true
+  - metric: osworld_g_polygon_acc
+    aggregation: !function utils.osworld_g_polygon_acc
+    higher_is_better: true
+  - metric: osworld_g_refusal_acc
+    aggregation: !function utils.osworld_g_refusal_acc
+    higher_is_better: true
+metadata:
+  - version: 0.0

@@ -1,0 +1,23 @@
+dataset_path: vincentkoc/arc-agi-2
+dataset_kwargs:
+  token: false
+output_type: generate_until
+doc_to_visual: !function utils.arc_agi_2_doc_to_visual
+doc_to_text: !function utils.arc_agi_2_doc_to_text
+doc_to_target: !function utils.arc_agi_2_doc_to_target
+generation_kwargs:
+  max_new_tokens: 1024
+  temperature: 0
+  top_p: 1.0
+  do_sample: false
+process_results: !function utils.arc_agi_2_process_results
+metric_list:
+  - metric: arc_agi_2_acc
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""
+metadata:
+  version: 0.0

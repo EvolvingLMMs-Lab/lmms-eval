@@ -1,8 +1,6 @@
 import math
 import re
 
-import ipdb
-
 
 def levenshtein_distance(s1, s2):
     if len(s1) > len(s2):
@@ -26,10 +24,7 @@ def vqa_evaluation(predict, answers):
         for j in range(len(answers)):
             if isinstance(answers[j], (int, float)):
                 answers[j] = str(answers[j])
-            try:
-                answer = answers[j].lower().strip().replace("\n", " ")
-            except:
-                ipdb.set_trace()
+            answer = str(answers[j]).lower().strip().replace("\n", " ")
             if isinstance(predict, (int, float)):
                 predict = str(predict)
             predict = predict.lower().strip().replace("\n", " ")
@@ -69,10 +64,7 @@ def cn_vqa_evaluation(predict, answers):
         for j in range(len(answers)):
             if isinstance(answers[j], (int, float)):
                 answers[j] = str(answers[j])
-            try:
-                answer = answers[j].lower().strip().replace("\n", " ").replace(" ", "")
-            except:
-                ipdb.set_trace()
+            answer = str(answers[j]).lower().strip().replace("\n", " ").replace(" ", "")
             if isinstance(predict, (int, float)):
                 predict = str(predict)
             predict = predict.lower().strip().replace("\n", " ").replace(" ", "")
@@ -91,7 +83,7 @@ def cn_vqa_evaluation(predict, answers):
     else:
         answers = answers.lower().strip().replace("\n", " ").replace(" ", "")
         predict = predict.lower().strip().replace("\n", " ").replace(" ", "")
-        if len(answer.split(",")) < 4:
+        if len(answers.split(",")) < 4:
             if answers in predict:
                 score = 1
             else:
@@ -112,10 +104,7 @@ def vqa_evaluation_case_sensitive(predict, answers):
         for j in range(len(answers)):
             if isinstance(answers[j], (int, float)):
                 answers[j] = str(answers[j])
-            try:
-                answer = answers[j].strip().replace("\n", " ")
-            except:
-                ipdb.set_trace()
+            answer = str(answers[j]).strip().replace("\n", " ")
             predict = predict.strip().replace("\n", " ")
             if len(answer.split()) < 5:
                 if answer in predict:
@@ -195,16 +184,16 @@ def counting_evaluation(predict, answers, eval_method):
 
     else:
         answers = answers.lower().strip().replace("\n", " ")
-        predict = predict.lower().strip().replace("\n", " ")
+        predict = predict_processed
         if eval_method == "exact match":
-            if answer in predict:
+            if answers in predict:
                 score = 1
             else:
                 score = 0
         elif eval_method == "regression":
             predict = extract_first_number(predict)
             if predict:
-                answer = int(answer)
+                answer = int(answers)
                 if predict <= 0 or predict >= 2 * answer:
                     score = 0
                 else:

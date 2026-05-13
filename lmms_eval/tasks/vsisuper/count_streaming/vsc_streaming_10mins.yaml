@@ -1,0 +1,6 @@
+include: _default_vsc_streaming_yaml
+task: vsisuper_count_streaming_10mins
+process_docs: !function vsc_streaming_utils.process_docs_streaming_10mins
+tag:
+  - vsisuper
+  - vsisuper_count_streaming

@@ -1,0 +1,3 @@
+task: visres_bench_level_1_blur
+dataset_name: level_1_blur
+include: _default_template_visres_bench_yaml

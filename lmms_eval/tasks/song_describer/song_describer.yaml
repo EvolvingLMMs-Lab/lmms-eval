@@ -1,0 +1,4 @@
+group: song_describer
+task:
+  - song_describer_train
+  - song_describer_validation

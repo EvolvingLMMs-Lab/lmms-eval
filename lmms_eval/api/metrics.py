@@ -565,7 +565,9 @@ def stderr_for_metric(metric, bootstrap_iters: int):
         ter,
     ]
 
-    # Optional imports for tasks with extra dependencies (spacy, etc.)
+    # Optional imports for tasks with extra dependencies (spacy, etc.).
+    # Catch Exception (not just ImportError) because transitive deps may raise
+    # ValueError/RuntimeError from binary incompatibilities (e.g. numpy/spacy).
     try:
         from lmms_eval.tasks.amber_g.utils import (
             amber_g_aggregate_chair,
@@ -582,7 +584,7 @@ def stderr_for_metric(metric, bootstrap_iters: int):
                 amber_g_aggregate_cog,
             ]
         )
-    except ImportError:
+    except Exception:
         pass
 
     try:
@@ -599,7 +601,7 @@ def stderr_for_metric(metric, bootstrap_iters: int):
                 coco_cap_chair_aggregate_results_recall,
             ]
         )
-    except ImportError:
+    except Exception:
         pass
 
     if metric in bootstrappable:

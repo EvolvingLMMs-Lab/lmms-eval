@@ -1,0 +1,9 @@
+# HD-EPIC 'nutrition' category -- bundles its 3 prototypes.
+# Run all of them with --tasks hd_epic_nutrition
+group: hd_epic_nutrition
+task:
+  - hd_epic_nutrition_image_nutrition_estimation
+  - hd_epic_nutrition_nutrition_change
+  - hd_epic_nutrition_video_nutrition_estimation
+metadata:
+  version: 1.0

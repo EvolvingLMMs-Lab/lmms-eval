@@ -8,12 +8,28 @@ from PIL import Image
 eval_logger = logging.getLogger("lmms-eval")
 
 
+CATEGORY_ALIASES = {
+    "Positional Relationship (Obj.-Obj.)": "Positional Relationship (Obj.–Obj.)",
+    "Positional Relationship (Cam.-Obj.)": "Positional Relationship (Cam.–Obj.)",
+    "Positional Relationship (Cam.-Cam.)": "Positional Relationship (Cam.–Cam.)",
+    "Positional Relationship (Obj.-Reg.)": "Positional Relationship (Obj.–Reg.)",
+    "Positional Relationship (Cam.-Reg.)": "Positional Relationship (Cam.–Reg.)",
+    "Positional Relationship (Reg.-Reg.)": "Positional Relationship (Reg.–Reg.)",
+}
+
+
 def msr_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    if not isinstance(lmms_eval_specific_kwargs, dict):
+        lmms_eval_specific_kwargs = {}
+
+    pre_prompt = lmms_eval_specific_kwargs.get("pre_prompt", "")
+    post_prompt = lmms_eval_specific_kwargs.get("post_prompt", "")
+
     question = doc["question"].strip()
-    if "pre_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["pre_prompt"] != "":
-        question = f"{lmms_eval_specific_kwargs['pre_prompt']}{question}"
-    if "post_prompt" in lmms_eval_specific_kwargs and lmms_eval_specific_kwargs["post_prompt"] != "":
-        question = f"{question}{lmms_eval_specific_kwargs['post_prompt']}"
+    if pre_prompt != "":
+        question = f"{pre_prompt}{question}"
+    if post_prompt != "":
+        question = f"{question}{post_prompt}"
     return question
 
 
@@ -29,6 +45,11 @@ def msr_doc_to_visual(doc):
 
 
 def extract_single_choice_with_word_boundary(pred, gt):
+    if pred is None:
+        return None
+
+    pred = str(pred)
+
     pattern_1 = r"``([^`]*)``"
     match = re.search(pattern_1, pred)
     if match:
@@ -44,10 +65,10 @@ def extract_single_choice_with_word_boundary(pred, gt):
     if match:
         pred = match.group(1)
 
-    pattern_3 = r"\b[A-D]\b(?!\s[a-zA-Z])"
-    match = re.search(pattern_3, pred)
+    pattern_3 = r"\b[A-F]\b(?!\s[a-zA-Z])"
+    match = re.search(pattern_3, pred, flags=re.IGNORECASE)
     if match:
-        pred = match.group()
+        pred = match.group().upper()
     else:
         return None
 
@@ -79,10 +100,10 @@ def msr_process_results(doc, results):
     gt = doc["answer"]
 
     score = extract_single_choice_with_word_boundary(pred, gt)
-    category = doc["question_type"]
-    l2_category = doc["question_type"]
+    category = CATEGORY_ALIASES.get(doc["question_type"], doc["question_type"])
+    l2_category = category
     if score is None:
-        return {category: {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "can not find anwser"}, "average": {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "can not find anwser"}}
+        return {category: {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "cannot find answer"}, "average": {"question_id": doc["id"], "l2_category": l2_category, "score": 0, "note": "cannot find answer"}}
     return {category: {"question_id": doc["id"], "l2_category": l2_category, "score": score}, "average": {"question_id": doc["id"], "l2_category": l2_category, "score": score}}
 
 

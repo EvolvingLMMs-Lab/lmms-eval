@@ -3,6 +3,8 @@ dataset_kwargs:
   token: True
 task: "mathvista_testmini_solution"
 test_split: testmini
+tag:
+  - public_eval_qwen3_5_family
 output_type: generate_until
 doc_to_visual: !function utils.mathvista_doc_to_visual
 doc_to_text: !function utils.mathvista_doc_to_text

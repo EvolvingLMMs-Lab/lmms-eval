@@ -42,20 +42,11 @@ class Qwen3_Omni(lmms):
         use_cache: bool = True,
         attn_implementation: Optional[str] = "flash_attention_2",
         max_num_frames: int = 128,
-        use_custom_video_loader: Optional[bool] = False,
-        fps: Optional[float] = None,
-        max_image_size: Optional[int] = None,
         system_prompt: str = "You are Qwen, a virtual human developed by the Qwen Team, Alibaba Group, capable of perceiving auditory and visual inputs, as well as generating text and speech.",
         **kwargs,
     ) -> None:
         super().__init__()
         assert kwargs == {}, f"Unexpected kwargs: {kwargs}"
-
-        self.use_custom_video_loader = use_custom_video_loader
-        self.fps = fps
-        self.max_image_size = max_image_size
-        if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         if accelerator.num_processes > 1:

@@ -1,0 +1,126 @@
+name: task-input-ab
+
+on:
+  pull_request:
+    paths:
+      - "lmms_eval/tasks/**"
+      - "lmms_eval/api/**"
+      - "tools/task_input_capture.py"
+      - "test/eval/task_input_specs/**"
+      - ".github/workflows/task-input-ab.yml"
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: "Optional base commit SHA"
+        required: false
+        type: string
+
+jobs:
+  compare-task-input-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Resolve BASE revision
+        id: base
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE_SHA" ]; then
+            BASE_SHA="${{ github.event.inputs.base_sha }}"
+          fi
+          if [ -z "$BASE_SHA" ]; then
+            DEFAULT_HEAD="$(git symbolic-ref refs/remotes/origin/HEAD)"
+            DEFAULT_BRANCH="${DEFAULT_HEAD#refs/remotes/origin/}"
+            BASE_SHA="$(git merge-base HEAD "origin/${DEFAULT_BRANCH}")"
+          fi
+          BASE_WORKTREE="/tmp/lmms-base-${{ github.run_id }}"
+          echo "base_sha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "base_worktree=${BASE_WORKTREE}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare BASE worktree
+        run: git worktree add "${{ steps.base.outputs.base_worktree }}" "${{ steps.base.outputs.base_sha }}"
+
+      - name: Resolve pinned checker
+        id: checker
+        run: |
+          BASE_CHECKER="${{ steps.base.outputs.base_worktree }}/tools/task_input_capture.py"
+          BASE_SPEC="${{ steps.base.outputs.base_worktree }}/test/eval/task_input_specs/redundancy_refactor.yaml"
+          if [ -f "$BASE_CHECKER" ] && [ -f "$BASE_SPEC" ]; then
+            CHECKER_PATH="$BASE_CHECKER"
+            SPEC_PATH="$BASE_SPEC"
+          else
+            echo "Pinned checker/spec missing in base revision: ${{ steps.base.outputs.base_sha }}"
+            echo "Bootstrap mode: use HEAD checker/spec for this run."
+            CHECKER_PATH="tools/task_input_capture.py"
+            SPEC_PATH="test/eval/task_input_specs/redundancy_refactor.yaml"
+          fi
+
+          if [ ! -f "$CHECKER_PATH" ] || [ ! -f "$SPEC_PATH" ]; then
+            echo "Checker/spec not found in current checkout."
+            exit 1
+          fi
+
+          echo "checker_path=${CHECKER_PATH}" >> "$GITHUB_OUTPUT"
+          echo "spec_path=${SPEC_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Capture HEAD snapshot
+        run: |
+          source .venv/bin/activate
+          HF_HOME=/tmp/hf-cache python "${{ steps.checker.outputs.checker_path }}" \
+            --repo-root . \
+            --spec "${{ steps.checker.outputs.spec_path }}" \
+            --output /tmp/task-input-head.json
+
+      - name: Capture BASE snapshot
+        run: |
+          source .venv/bin/activate
+          HF_HOME=/tmp/hf-cache python "${{ steps.checker.outputs.checker_path }}" \
+            --repo-root "${{ steps.base.outputs.base_worktree }}" \
+            --spec "${{ steps.checker.outputs.spec_path }}" \
+            --output /tmp/task-input-base.json
+
+      - name: Compare snapshots
+        run: |
+          source .venv/bin/activate
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          base = json.loads(Path('/tmp/task-input-base.json').read_text(encoding='utf-8'))
+          head = json.loads(Path('/tmp/task-input-head.json').read_text(encoding='utf-8'))
+          if base != head:
+              print('Task input snapshot mismatch detected.')
+              raise SystemExit(1)
+          print('Task input snapshots match.')
+          PY
+
+      - name: Upload snapshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task-input-snapshots
+          path: |
+            /tmp/task-input-base.json
+            /tmp/task-input-head.json
+
+      - name: Cleanup BASE worktree
+        if: always()
+        run: |
+          if [ -n "${{ steps.base.outputs.base_worktree }}" ]; then
+            git worktree remove --force "${{ steps.base.outputs.base_worktree }}"
+          fi

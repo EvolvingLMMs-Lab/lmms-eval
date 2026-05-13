@@ -12,8 +12,12 @@ from lmms_eval.loggers.utils import _handle_non_serializable, remove_none_patter
 
 def get_wandb_printer() -> Literal["Printer"]:
     """Returns a wandb printer instance for pretty stdout."""
-    from wandb.sdk.lib.printer import get_printer
     from wandb.sdk.wandb_settings import Settings
+
+    try:
+        from wandb.sdk.lib.printer import get_printer
+    except ImportError:
+        from wandb.sdk.lib.printer import new_printer as get_printer
 
     printer = get_printer(Settings()._jupyter)
     return printer
@@ -222,7 +226,7 @@ class WandbLogger:
             instance = [x["arguments"][0][0] for x in data]
             resps = [x["resps"][0][0] for x in data]
             filtered_resps = [x["filtered_resps"][0] for x in data]
-        elif config["output_type"] == "generate_until":
+        elif "generate_until" in config["output_type"]:
             instance = [x["arguments"][0][0] for x in data]
             resps = [x["resps"][0][0] for x in data]
             filtered_resps = [x["filtered_resps"][0] for x in data]

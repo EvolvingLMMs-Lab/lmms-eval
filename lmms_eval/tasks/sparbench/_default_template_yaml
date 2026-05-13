@@ -20,6 +20,75 @@ metric_list:
   - metric: sparbench_score
     aggregation: !function utils.sparbench_aggregate_results
     higher_is_better: true
+  - metric: obj_spatial_relation_oo_accuracy
+    aggregation: !function utils.sparbench_aggregate_obj_spatial_relation_oo
+    higher_is_better: true
+  - metric: obj_spatial_relation_oc_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_obj_spatial_relation_oc_mv
+    higher_is_better: true
+  - metric: obj_spatial_relation_oo_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_obj_spatial_relation_oo_mv
+    higher_is_better: true
+  - metric: spatial_imagination_oc_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oc
+    higher_is_better: true
+  - metric: spatial_imagination_oo_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oo
+    higher_is_better: true
+  - metric: spatial_imagination_oc_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oc_mv
+    higher_is_better: true
+  - metric: spatial_imagination_oo_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_spatial_imagination_oo_mv
+    higher_is_better: true
+  - metric: position_matching_accuracy
+    aggregation: !function utils.sparbench_aggregate_position_matching
+    higher_is_better: true
+  - metric: camera_motion_infer_accuracy
+    aggregation: !function utils.sparbench_aggregate_camera_motion_infer
+    higher_is_better: true
+  - metric: distance_infer_center_oo_accuracy
+    aggregation: !function utils.sparbench_aggregate_distance_infer_center_oo
+    higher_is_better: true
+  - metric: distance_infer_center_oo_mv_accuracy
+    aggregation: !function utils.sparbench_aggregate_distance_infer_center_oo_mv
+    higher_is_better: true
+  - metric: depth_prediction_oc
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oc
+    higher_is_better: true
+  - metric: depth_prediction_oo
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oo
+    higher_is_better: true
+  - metric: distance_prediction_oc
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oc
+    higher_is_better: true
+  - metric: distance_prediction_oo
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oo
+    higher_is_better: true
+  - metric: depth_prediction_oc_mv
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oc_mv
+    higher_is_better: true
+  - metric: depth_prediction_oo_mv
+    aggregation: !function utils.sparbench_aggregate_depth_prediction_oo_mv
+    higher_is_better: true
+  - metric: distance_prediction_oo_mv
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oo_mv
+    higher_is_better: true
+  - metric: distance_prediction_oc_mv
+    aggregation: !function utils.sparbench_aggregate_distance_prediction_oc_mv
+    higher_is_better: true
+  - metric: view_change_infer_vci_metric
+    aggregation: !function utils.sparbench_aggregate_view_change_infer
+    higher_is_better: true
+  - metric: high
+    aggregation: !function utils.sparbench_aggregate_high
+    higher_is_better: true
+  - metric: middle
+    aggregation: !function utils.sparbench_aggregate_middle
+    higher_is_better: true
+  - metric: low
+    aggregation: !function utils.sparbench_aggregate_low
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     pre_prompt: ""

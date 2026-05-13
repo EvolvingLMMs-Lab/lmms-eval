@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
@@ -36,6 +36,7 @@ class VLLM(VLLMSimple):
         min_image_pixels=28,
         fps: Optional[int] = None,
         nframes: Optional[int] = 32,
+        max_new_tokens: int = 4096,
         **kwargs,
     ):
         super().__init__(
@@ -48,6 +49,7 @@ class VLLM(VLLMSimple):
             trust_remote_code,
             chat_template,
             min_image_pixels,
+            max_new_tokens=max_new_tokens,
             **kwargs,
         )
         self.fps = fps
@@ -64,15 +66,10 @@ class VLLM(VLLMSimple):
         chat_messages = ChatMessages(messages=raw_messages)
         # Copy to avoid side-effects across threads
         _gen = dict(gen_kwargs or {})
-        _gen.setdefault("max_new_tokens", 4096)
+        _gen["max_new_tokens"] = self._select_max_new_tokens(_gen.get("max_new_tokens"))
         _gen.setdefault("temperature", 0)
         _gen.setdefault("top_p", 0.95)
-
-        params = {
-            "temperature": _gen["temperature"],
-            "max_tokens": _gen["max_new_tokens"],
-            "top_p": _gen["top_p"],
-        }
+        params = self._build_sampling_params_dict(_gen)
 
         video_kwargs = {
             "max_pixels": self.max_pixels,
@@ -86,13 +83,14 @@ class VLLM(VLLMSimple):
         messages = chat_messages.to_openai_messages(video_kwargs=video_kwargs)
         return messages, params
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         res = []
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
         total_elapsed_time = 0
+        sample_token_counts: Optional[TokenCounts] = None
         for batch_requests in batched_requests:
             batched_messages = []
             with ThreadPoolExecutor(max_workers=WORKERS) as executor:
@@ -103,20 +101,23 @@ class VLLM(VLLMSimple):
 
             sampling_params = SamplingParams(**sampling_params)
             start_time = time.time()
-            response = self.client.chat(
-                sampling_params=sampling_params,
-                messages=batched_messages,
-                chat_template=self.chat_template,
-            )
-            end_time = time.time()
 
-            response_text = [o.outputs[0].text for o in response]
+            def _run_chat(inputs: list[dict]) -> list[str]:
+                response = self.client.chat(
+                    sampling_params=sampling_params,
+                    messages=inputs,
+                    chat_template=self.chat_template,
+                )
+                return [o.outputs[0].text for o in response]
+
+            response_text = self._run_tp_synced(batched_messages, _run_chat)
+            end_time = time.time()
 
             # Calculate timing metrics for batch
             total_elapsed_time += end_time - start_time
 
             assert len(response_text) == len(batch_requests)
-            res.extend(response_text)
+            res.extend([GenerationResult(text=resp_text, token_counts=sample_token_counts) for resp_text in response_text])
             pbar.update(len(batch_requests))
 
         if not self.disable_log_stats:

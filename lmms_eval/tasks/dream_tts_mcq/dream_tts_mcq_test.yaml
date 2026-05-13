@@ -1,0 +1,29 @@
+task: "dream_tts_mcq_test"
+dataset_path: AudioLLMs/dream_tts_mcq_test
+dataset_kwargs:
+  token: True
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.dream_tts_mcq_doc_to_audio
+doc_to_text: !function utils.dream_tts_mcq_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 256
+  temperature: 0.0
+  top_p: 1.0
+  do_sample: false
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Please listen carefully to the audio content and then answer the following questions. Please only output the option letters (A/B/C/D).\n\n"
+    post_prompt: "\n\nPlease select the correct answer:"
+process_results: !function utils.dream_tts_mcq_process_results
+metric_list:
+  - metric: accuracy
+    aggregation: !function utils.dream_tts_mcq_aggregate_results
+    higher_is_better: true
+  - metric: failure_rate
+    aggregation: !function utils.dream_tts_mcq_aggregate_results
+    higher_is_better: false
+metadata:
+  version: 0.0
+  description: "DREAM TTS Multiple Choice Questions Test"

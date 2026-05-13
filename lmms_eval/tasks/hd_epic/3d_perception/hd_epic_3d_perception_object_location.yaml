@@ -1,0 +1,13 @@
+# HD-EPIC subtask: 3d_perception_object_location
+# "Where did I put the object identified by <BBOX> at TIME after taking it at TIME?"
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_3d_perception_object_location
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_3d_perception_object_location
+
+metadata:
+  version: 1.0
+  task_type: 3d_perception_object_location
+  description: "\"Where did I put the object identified by <BBOX> at TIME after taking it at TIME?\""

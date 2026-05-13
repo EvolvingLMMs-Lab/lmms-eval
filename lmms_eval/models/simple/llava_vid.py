@@ -35,7 +35,7 @@ from transformers import AutoConfig
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
+from lmms_eval.models.model_utils.load_video import read_video
 
 # try:
 #     from llavavid.model.builder import load_pretrained_model
@@ -460,7 +460,7 @@ class LlavaVid(lmms):
                             force_sample=self.force_sample,
                         )
                     elif self.video_decode_backend == "pyav":
-                        video, frame_time, video_time = read_video_pyav(
+                        video, frame_time, video_time = read_video(
                             visuals[0],
                             self.max_frames_num,
                             self.fps,

@@ -1,0 +1,36 @@
+dataset_path: kcz358/timelens
+dataset_kwargs:
+  cache_dir: timelens
+  video: True
+
+generation_kwargs:
+  max_new_tokens: 50
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+output_type: generate_until
+doc_to_visual: !function utils.timelens_doc_to_visual
+doc_to_text: !function utils.timelens_doc_to_text
+doc_to_target: !function utils.timelens_doc_to_target
+process_results: !function utils.timelens_process_results
+
+metric_list:
+  - metric: timelens_IOU@3
+    aggregation: !function utils.timelens_aggregate_iou3
+    higher_is_better: true
+  - metric: timelens_IOU@5
+    aggregation: !function utils.timelens_aggregate_iou5
+    higher_is_better: true
+  - metric: timelens_IOU@7
+    aggregation: !function utils.timelens_aggregate_iou7
+    higher_is_better: true
+  - metric: timelens_mIOU
+    aggregation: !function utils.timelens_aggregate_miou
+    higher_is_better: true
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "Please find the visual event described by the sentence '"
+    post_prompt: "', determining its starting and ending times. The format should be: 'The event happens in <start time> - <end time> seconds'."

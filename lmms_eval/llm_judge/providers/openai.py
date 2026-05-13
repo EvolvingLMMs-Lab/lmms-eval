@@ -1,12 +1,12 @@
-import base64
 import os
 import time
-from io import BytesIO
 from typing import Dict, List, Optional, Union
 
 import requests
 from loguru import logger as eval_logger
-from PIL import Image
+
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
+from lmms_eval.models.model_utils.usage_metrics import log_usage
 
 from ..base import ServerInterface
 from ..protocol import Request, Response, ServerConfig
@@ -75,6 +75,26 @@ class OpenAIProvider(ServerInterface):
                     usage = response.get("usage")
                     raw_response = response
 
+                # Log usage for token tracking
+                if self.use_client and hasattr(response, "usage") and response.usage:
+                    log_usage(
+                        model_name=model_used or config.model_name,
+                        task_name=None,
+                        input_tokens=getattr(response.usage, "prompt_tokens", 0) or 0,
+                        output_tokens=getattr(response.usage, "completion_tokens", 0) or 0,
+                        reasoning_tokens=0,
+                        source="judge",
+                    )
+                elif not self.use_client and isinstance(usage, dict):
+                    log_usage(
+                        model_name=model_used or config.model_name,
+                        task_name=None,
+                        input_tokens=usage.get("prompt_tokens", 0) or 0,
+                        output_tokens=usage.get("completion_tokens", 0) or 0,
+                        reasoning_tokens=0,
+                        source="judge",
+                    )
+
                 return Response(content=content.strip(), model_used=model_used, usage=usage, raw_response=raw_response)
 
             except Exception as e:
@@ -120,7 +140,10 @@ class OpenAIProvider(ServerInterface):
 
     def _encode_image(self, image_path: str) -> str:
         """Encode image to base64"""
-        img = Image.open(image_path).convert("RGB")
-        buffered = BytesIO()
-        img.save(buffered, format="JPEG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+        return encode_image_to_base64(
+            image_path,
+            image_format="JPEG",
+            convert_rgb=True,
+            quality=85,
+            use_path_cache=True,
+        )

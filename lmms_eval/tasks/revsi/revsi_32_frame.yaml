@@ -1,0 +1,3 @@
+dataset_name: 32_frame
+task: revsi_32_frame
+include: _default_template_yaml

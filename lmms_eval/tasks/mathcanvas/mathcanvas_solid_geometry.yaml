@@ -1,0 +1,3 @@
+include: _default_template_yaml
+task: mathcanvas_solid_geometry
+dataset_name: Solid_Geometry

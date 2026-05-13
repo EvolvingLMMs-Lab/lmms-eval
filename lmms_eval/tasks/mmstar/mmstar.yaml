@@ -1,5 +1,7 @@
 dataset_path: Lin-Chen/MMStar
 task: "mmstar"
+tag:
+  - public_eval_qwen3_5_family
 doc_to_visual: !function utils.mmstar_doc_to_visual
 doc_to_text: !function utils.mmstar_doc_to_text
 process_results: !function utils.mmstar_process_results

@@ -1,0 +1,28 @@
+dataset_path: lmms-lab-eval/ovr_kinetics
+dataset_kwargs:
+  token: True
+  cache_dir: ovr_kinetics
+task: ovr_kinetics
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.ovr_kinetics_doc_to_visual
+doc_to_text: !function utils.ovr_kinetics_doc_to_text
+doc_to_target: !function utils.ovr_kinetics_doc_to_target
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  do_sample: false
+process_results: !function utils.ovr_kinetics_process_results
+metric_list:
+  - metric: mae
+    aggregation: mean
+    higher_is_better: false
+  - metric: obo
+    aggregation: mean
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with a single integer."
+metadata:
+  - version: 0.0

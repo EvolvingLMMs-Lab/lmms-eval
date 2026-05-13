@@ -1,0 +1,9 @@
+task: videomme_v2_reasoning
+include: _default_template_yaml
+doc_to_text: !function utils.videomme_v2_doc_to_text_reasoning
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false

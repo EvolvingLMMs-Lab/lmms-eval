@@ -1,0 +1,11 @@
+{
+  "task": "mmlongbench_doc",
+  "variant": null,
+  "doc_id": "annual_report_2023.pdf",
+  "prompt_text": "What is the total revenue reported in Q3 2023?\nAnswer with a single word or phrase. If the answer is not in the document, answer 'Not answerable'.",
+  "gen_kwargs": {
+    "max_new_tokens": 64,
+    "temperature": 0,
+    "do_sample": false
+  }
+}

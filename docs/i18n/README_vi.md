@@ -16,7 +16,7 @@
 
 🏠 [Trang Chủ LMMs-Lab](https://www.lmms-lab.com/) | 🤗 [Bộ Dữ Liệu Huggingface](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Tác Vụ Được Hỗ Trợ (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Mô Hình Được Hỗ Trợ (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Tài Liệu](../README.md)
+📖 [Tác Vụ Được Hỗ Trợ (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [Mô Hình Được Hỗ Trợ (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Tài Liệu](../README.md)
 
 ---
 
@@ -26,8 +26,8 @@ Việc đánh giá các mô hình đa phương thức khó hơn chúng ta tưở
 
 **Tháng 1 năm 2026** - Chúng tôi nhận thấy rằng khả năng suy luận không gian và bố cục vẫn là những điểm mù trong các benchmark hiện tại. Chúng tôi đã thêm [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/), và [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). Đối với các nhóm vận hành quy trình đánh giá từ xa, chúng tôi đã giới thiệu máy chủ đánh giá HTTP (#972). Đối với những người cần sự chặt chẽ về thống kê, chúng tôi đã thêm CLT và ước tính sai số chuẩn theo cụm (clustered standard error estimation) (#989).
 
-- [2025-10] 🚀🚀 **LMMs-Eval v0.5** đã ra mắt! Bản phát hành chính này giới thiệu đánh giá âm thanh toàn diện, bộ nhớ đệm phản hồi, 5 mô hình mới (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), và hơn 50 biến thể benchmark mới bao gồm âm thanh (Step2, VoiceBench, WenetSpeech), thị giác (CharXiv, Lemonade), và suy luận (CSBench, SciBench, MedQA, SuperGPQA). Xem [ghi chú phát hành](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md) để biết chi tiết.
-- [2025-07] 🚀🚀 Chúng tôi đã phát hành `lmms-eval-0.4`. Xem [ghi chú phát hành](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) để biết thêm chi tiết.
+- [2025-10] 🚀🚀 **LMMs-Eval v0.5** đã ra mắt! Bản phát hành chính này giới thiệu đánh giá âm thanh toàn diện, bộ nhớ đệm phản hồi, 5 mô hình mới (GPT-4o Audio Preview, Gemma-3, LongViLA-R1, LLaVA-OneVision 1.5, Thyme), và hơn 50 biến thể benchmark mới bao gồm âm thanh (Step2, VoiceBench, WenetSpeech), thị giác (CharXiv, Lemonade), và suy luận (CSBench, SciBench, MedQA, SuperGPQA). Xem [ghi chú phát hành](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md) để biết chi tiết.
+- [2025-07] 🚀🚀 Chúng tôi đã phát hành `lmms-eval-0.4`. Xem [ghi chú phát hành](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.4.md) để biết thêm chi tiết.
 
 ## Tại Sao Chọn `lmms-eval`?
 

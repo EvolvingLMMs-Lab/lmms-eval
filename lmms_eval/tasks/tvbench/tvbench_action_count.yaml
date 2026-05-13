@@ -1,0 +1,4 @@
+include: _default_template_yaml
+task: tvbench_action_count
+dataset_name: action_count
+test_split: train

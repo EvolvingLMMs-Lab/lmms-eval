@@ -298,45 +298,161 @@ def sparbench_process_results(doc, results):
     else:
         raise ValueError(f"Unknown question type: {doc['question_type']}")
 
-    return {"sparbench_score": doc}
+    # Build per-subcategory metric keys — names must match YAML metric_list exactly
+    result = {"sparbench_score": doc}
+    for task_type in MCA_QUESTION_TYPES:
+        result[f"{task_type}_accuracy"] = doc
+    for task_type in NA_QUESTION_TYPES:
+        result[task_type] = doc
+    result["view_change_infer_vci_metric"] = doc
+    # Difficulty levels
+    result["high"] = doc
+    result["middle"] = doc
+    result["low"] = doc
+
+    return result
 
 
-def sparbench_aggregate_results(results):
-    results = pd.DataFrame(results)
+def _compute_all_subscores(results) -> dict:
+    """Compute all sub-category scores from raw results. Shared logic for all aggregation functions."""
+    df = pd.DataFrame(results)
     output = {}
-    for question_type, question_type_indexes in results.groupby("task").groups.items():
-        per_question_type = results.iloc[question_type_indexes]
+
+    for question_type, question_type_indexes in df.groupby("task").groups.items():
+        per_question_type = df.iloc[question_type_indexes]
 
         if question_type in MCA_QUESTION_TYPES:
             for metric in METRICS_FOR_MCA.keys():
                 output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
         elif question_type in NA_QUESTION_TYPES:
             for metric in METRICS_FOR_NA.keys():
-                if metric == "success_rate":
-                    output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
-                else:
-                    output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
+                output[f"{question_type}_{metric}"] = per_question_type[metric].mean()
         elif question_type in SPECIAL_QUESTION_TYPES:
             if question_type == "view_change_infer":
                 output[f"{question_type}_vci_metric"] = per_question_type["vci_metric"].mean()
 
-    output["overall"] = sum([_ for _ in output.values()]) / len(output)
-    # eval_logger.info(f"Evaluation results: {output}")
+    output["overall"] = sum([_ for _ in output.values()]) / len(output) if output else 0.0
+
     low_list = []
     middle_list = []
     high_list = []
-    for task in output:
-        task_name = "_".join(task.split("_")[:-1])
+    for task_key in list(output.keys()):
+        if task_key == "overall":
+            continue
+        task_name = "_".join(task_key.split("_")[:-1])
         if task_name in Low:
-            low_list.append(output[task])
+            low_list.append(output[task_key])
         elif task_name in Middle:
-            middle_list.append(output[task])
+            middle_list.append(output[task_key])
         elif task_name in High:
-            high_list.append(output[task])
+            high_list.append(output[task_key])
 
-    output["Low"] = np.mean(low_list)
-    output["Middle"] = np.mean(middle_list)
-    output["High"] = np.mean(high_list)
+    output["low"] = np.mean(low_list) if low_list else 0.0
+    output["middle"] = np.mean(middle_list) if middle_list else 0.0
+    output["high"] = np.mean(high_list) if high_list else 0.0
 
+    return output
+
+
+def sparbench_aggregate_results(results):
+    output = _compute_all_subscores(results)
     eval_logger.info(f"Evaluation results: {output}")
     return output["overall"] * 100.0
+
+
+# --- Per-task-type aggregation functions ---
+
+
+def sparbench_aggregate_obj_spatial_relation_oo(results):
+    return _compute_all_subscores(results).get("obj_spatial_relation_oo_accuracy", 0.0)
+
+
+def sparbench_aggregate_obj_spatial_relation_oc_mv(results):
+    return _compute_all_subscores(results).get("obj_spatial_relation_oc_mv_accuracy", 0.0)
+
+
+def sparbench_aggregate_obj_spatial_relation_oo_mv(results):
+    return _compute_all_subscores(results).get("obj_spatial_relation_oo_mv_accuracy", 0.0)
+
+
+def sparbench_aggregate_spatial_imagination_oc(results):
+    return _compute_all_subscores(results).get("spatial_imagination_oc_accuracy", 0.0)
+
+
+def sparbench_aggregate_spatial_imagination_oo(results):
+    return _compute_all_subscores(results).get("spatial_imagination_oo_accuracy", 0.0)
+
+
+def sparbench_aggregate_spatial_imagination_oc_mv(results):
+    return _compute_all_subscores(results).get("spatial_imagination_oc_mv_accuracy", 0.0)
+
+
+def sparbench_aggregate_spatial_imagination_oo_mv(results):
+    return _compute_all_subscores(results).get("spatial_imagination_oo_mv_accuracy", 0.0)
+
+
+def sparbench_aggregate_position_matching(results):
+    return _compute_all_subscores(results).get("position_matching_accuracy", 0.0)
+
+
+def sparbench_aggregate_camera_motion_infer(results):
+    return _compute_all_subscores(results).get("camera_motion_infer_accuracy", 0.0)
+
+
+def sparbench_aggregate_distance_infer_center_oo(results):
+    return _compute_all_subscores(results).get("distance_infer_center_oo_accuracy", 0.0)
+
+
+def sparbench_aggregate_distance_infer_center_oo_mv(results):
+    return _compute_all_subscores(results).get("distance_infer_center_oo_mv_accuracy", 0.0)
+
+
+def sparbench_aggregate_depth_prediction_oc(results):
+    return _compute_all_subscores(results).get("depth_prediction_oc_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_depth_prediction_oo(results):
+    return _compute_all_subscores(results).get("depth_prediction_oo_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_distance_prediction_oc(results):
+    return _compute_all_subscores(results).get("distance_prediction_oc_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_distance_prediction_oo(results):
+    return _compute_all_subscores(results).get("distance_prediction_oo_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_depth_prediction_oc_mv(results):
+    return _compute_all_subscores(results).get("depth_prediction_oc_mv_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_depth_prediction_oo_mv(results):
+    return _compute_all_subscores(results).get("depth_prediction_oo_mv_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_distance_prediction_oo_mv(results):
+    return _compute_all_subscores(results).get("distance_prediction_oo_mv_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_distance_prediction_oc_mv(results):
+    return _compute_all_subscores(results).get("distance_prediction_oc_mv_MRA:.5:.95:.05", 0.0)
+
+
+def sparbench_aggregate_view_change_infer(results):
+    return _compute_all_subscores(results).get("view_change_infer_vci_metric", 0.0)
+
+
+# --- Difficulty level aggregation ---
+
+
+def sparbench_aggregate_high(results):
+    return _compute_all_subscores(results).get("high", 0.0)
+
+
+def sparbench_aggregate_middle(results):
+    return _compute_all_subscores(results).get("middle", 0.0)
+
+
+def sparbench_aggregate_low(results):
+    return _compute_all_subscores(results).get("low", 0.0)

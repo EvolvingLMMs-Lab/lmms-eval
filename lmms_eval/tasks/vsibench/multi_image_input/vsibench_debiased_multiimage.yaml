@@ -1,0 +1,29 @@
+# VSIBench Debiased Multi-Image Task Configuration
+dataset_name: debiased
+test_split: test
+task: "vsibench_debiased_multiimage"
+dataset_kwargs:
+  token: True
+  cache_dir: vsibench
+  video: True
+include: ../_default_template_yaml
+
+# Override doc_to_visual to return frames as images instead of video path
+doc_to_visual: !function utils.vsibench_doc_to_visual_as_images
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: "These are frames of a video."
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Please answer the question using a single word or phrase."
+    num_frames: 32
+  gemini_api:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Do not response anything other than a single number!"
+    num_frames: 32
+  gpt4v:
+    pre_prompt: ""
+    mca_post_prompt: "Answer with the option's letter from the given choices directly."
+    na_post_prompt: "Do not response anything other than a single number!"
+    num_frames: 32

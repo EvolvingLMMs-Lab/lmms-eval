@@ -1,0 +1,28 @@
+dataset_path: lmms-lab-eval/egotempo
+dataset_kwargs:
+  token: True
+  cache_dir: egotempo
+task: egotempo
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.egotempo_doc_to_visual
+doc_to_text: !function utils.egotempo_doc_to_text
+doc_to_target: !function utils.egotempo_doc_to_target
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  do_sample: false
+process_results: !function utils.egotempo_process_results
+metric_list:
+  - metric: egotempo_anls
+    aggregation: !function utils.egotempo_aggregate_results
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with a short phrase."
+  qwen_vl:
+    pre_prompt: ""
+    post_prompt: " Answer:"
+metadata:
+  - version: 0.0

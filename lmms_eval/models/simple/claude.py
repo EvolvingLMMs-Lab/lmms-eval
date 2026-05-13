@@ -1,18 +1,20 @@
-import base64
-import json
 import os
 import time
 from copy import deepcopy
-from io import BytesIO
 from typing import List, Tuple
 
 from accelerate import Accelerator, DistributedType
 from PIL import Image
 from tqdm import tqdm
 
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.media_encoder import (
+    encode_image_to_base64,
+    encode_image_to_bytes,
+)
+from lmms_eval.models.model_utils.usage_metrics import is_budget_exceeded, log_usage
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -40,8 +42,6 @@ class Claude(lmms):
         system_prompt: str = "",  # Whether you want some special system prompt here
         modality: str = "image",
         max_frames_num: int = 10,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -50,24 +50,6 @@ class Claude(lmms):
         self.system_prompt = system_prompt
         self.modality = modality
         self.max_frames_num = max_frames_num
-
-        self.continual_mode = continual_mode
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
-
         accelerator = Accelerator()
         if accelerator.num_processes > 1:
             assert accelerator.distributed_type in [DistributedType.FSDP, DistributedType.MULTI_GPU, DistributedType.DEEPSPEED], "Unsupported distributed type provided. Only DDP and FSDP are supported."
@@ -84,11 +66,13 @@ class Claude(lmms):
         self.device = self.accelerator.device
 
     def encode_image(self, image):
-        output_buffer = BytesIO()
-        image.save(output_buffer, format="JPEG")
-        byte_data = output_buffer.getvalue()
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+        return encode_image_to_base64(
+            image,
+            image_format="JPEG",
+            convert_rgb=True,
+            quality=85,
+            copy_if_pil=False,
+        )
 
     def flatten(self, input):
         new_list = []
@@ -98,16 +82,7 @@ class Claude(lmms):
         return new_list
 
     def get_image_size(self, image):
-        # Create a BytesIO object to store the image bytes
-        img_byte_array = BytesIO()
-
-        # Save the image to the BytesIO object
-        image.save(img_byte_array, format="PNG")
-
-        # Get the size of the BytesIO object
-        img_size = img_byte_array.tell()
-
-        return img_size
+        return len(encode_image_to_bytes(image, image_format="PNG"))
 
     # The max file size is 5MB for claude
     def shrink_image_to_file_size(self, img: Image, max_file_size=4838990) -> Image:
@@ -140,15 +115,19 @@ class Claude(lmms):
         base64_frames = []
         for frame in frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="JPEG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(f"{base64_str}")
+            base64_frames.append(
+                encode_image_to_base64(
+                    img,
+                    image_format="JPEG",
+                    convert_rgb=True,
+                    quality=85,
+                    copy_if_pil=False,
+                )
+            )
 
         return base64_frames
 
-    def generate_until(self, requests) -> List[str]:
+    def generate_until(self, requests) -> List[GenerationResult]:
         client = anthropic.Anthropic()
 
         res = []
@@ -170,16 +149,10 @@ class Claude(lmms):
         ]
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            ###################### CONTINUAL MODE ######################
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                if doc_uuid in self.response_cache:
-                    response_text = self.response_cache[doc_uuid]
-                    if response_text:
-                        res.append(response_text)
-                        pbar.update(1)
-                        continue
-
+            if is_budget_exceeded():
+                res.append(GenerationResult(text="", token_counts=None))
+                pbar.update(1)
+                continue
             visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
             visuals = self.flatten(visuals)
             imgs = []
@@ -242,24 +215,30 @@ class Claude(lmms):
                         time.sleep(NUM_SECONDS_TO_SLEEP)
                     else:  # If this was the last attempt, log and return empty
                         eval_logger.error(f"All 5 attempts failed. Last error message: {str(e)}")
-                        res.append("")
+                        res.append(GenerationResult(text="", token_counts=None))
                         pbar.update(1)
                         continue
                 if not retry_flag:
                     break
                 eval_logger.info("Retrying...")
 
+            token_counts = None
+            if hasattr(message, "usage") and message.usage:
+                log_usage(
+                    model_name=self.model_version,
+                    task_name=task,
+                    input_tokens=getattr(message.usage, "input_tokens", 0) or 0,
+                    output_tokens=getattr(message.usage, "output_tokens", 0) or 0,
+                    reasoning_tokens=0,
+                    source="model",
+                )
+                token_counts = TokenCounts(
+                    input_tokens=getattr(message.usage, "input_tokens", 0) or 0,
+                    output_tokens=getattr(message.usage, "output_tokens", 0) or 0,
+                )
             response_text = message.content[0].text
-            res.append(message.content[0].text)
+            res.append(GenerationResult(text=response_text, token_counts=token_counts))
             pbar.update(1)
-
-            ###################### CONTINUAL MODE ######################
-            if self.continual_mode is True:  # Cache the response
-                response_text = message.content[0].text
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                self.response_cache[doc_uuid] = response_text
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f, indent=4)
 
         pbar.close()
 

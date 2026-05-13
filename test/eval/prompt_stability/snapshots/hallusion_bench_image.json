@@ -1,0 +1,13 @@
+{
+  "task": "hallusion_bench_image",
+  "variant": null,
+  "doc_id": "unknown",
+  "prompt_text": "Is there a cat sitting on the table in this image?",
+  "gen_kwargs": {
+    "max_new_tokens": 128,
+    "temperature": 0,
+    "top_p": 1.0,
+    "num_beams": 1,
+    "do_sample": false
+  }
+}

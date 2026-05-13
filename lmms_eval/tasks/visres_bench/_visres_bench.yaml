@@ -1,0 +1,30 @@
+group: visres_bench
+task:
+  - visres_bench_level_1_global_occlusion_50
+  - visres_bench_level_1_global_occlusion_70
+  - visres_bench_level_1_global_occlusion_80
+  - visres_bench_level_1_edges
+  - visres_bench_level_1_location_random_sampling
+  - visres_bench_level_1_brightness
+  - visres_bench_level_1_blur
+  - visres_bench_level_1_rotation
+  - visres_bench_level_1_rotation_random_sampling
+  - visres_bench_level_1_edges_random_sampling
+  - visres_bench_level_1_location
+  - visres_bench_level_2_uniform_count
+  - visres_bench_level_2_count_progression
+  - visres_bench_level_2_uniform_orientation
+  - visres_bench_level_2_count_2_same_1_diff
+  - visres_bench_level_2_orientation_2same_1diff
+  - visres_bench_level_2_uniform_color
+  - visres_bench_level_2_count_arithmetic
+  - visres_bench_level_2_count_minmax
+  - visres_bench_level_2_orientation_3_diff
+  - visres_bench_level_2_color_2same_1diff
+  - visres_bench_level_2_color_3_diff
+  - visres_bench_level_2_count_3_diff
+  - visres_bench_level_3_spiral_color_orientation
+  - visres_bench_level_3_coupled_color_count
+  - visres_bench_level_3_independent_color_object_rientation
+  - visres_bench_level_3_coupled_color_orientation
+  - visres_bench_level_3_Independent_count_object_color

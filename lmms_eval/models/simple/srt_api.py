@@ -1,9 +1,5 @@
 import asyncio
-import base64
-import json
-import os
 import time
-from io import BytesIO
 from multiprocessing import cpu_count
 from typing import List, Tuple
 
@@ -23,6 +19,7 @@ from tqdm import tqdm
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
 
 NUM_SECONDS_TO_SLEEP = 5
 
@@ -42,8 +39,6 @@ class SRT_API(lmms):
         mem_fraction_static: float = 0.83,
         tp: int = 8,
         chunked_prefill_size: int = 16384,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         num_processes: int = cpu_count() // 2,
         force_sample: bool = False,
         add_time_instruction: bool = False,
@@ -58,25 +53,9 @@ class SRT_API(lmms):
         self.max_frames_num = max_frames_num
         self.image_token = "<image>"
         self.timeout = timeout
-        self.continual_mode = continual_mode
         self.force_sample = force_sample
         self.add_time_instruction = add_time_instruction
         eval_logger.info(f"Force sample: {self.force_sample}")
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
 
         accelerator = Accelerator()
         self.model = model_version
@@ -118,17 +97,18 @@ class SRT_API(lmms):
         self.device = self.accelerator.device
 
     # Function to encode the image
-    def encode_image(self, image: Image):
-        output_buffer = BytesIO()
-        image.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+    def encode_image(self, image: Image.Image):
+        return encode_image_to_base64(
+            image,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
+        )
 
     # Function to encode the video
     def encode_video(self, video_path, for_get_frames_num):
         # import pdb; pdb.set_trace()
-        if type(video_path) == str:
+        if isinstance(video_path, str):
             vr = VideoReader(video_path, ctx=cpu(0))
         else:
             vr = VideoReader(video_path[0], ctx=cpu(0))
@@ -148,11 +128,14 @@ class SRT_API(lmms):
         base64_frames = []
         for frame in spare_frames:
             img = Image.fromarray(frame)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
+            base64_frames.append(
+                encode_image_to_base64(
+                    img,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
+                )
+            )
 
         return base64_frames, frame_time, video_time
 

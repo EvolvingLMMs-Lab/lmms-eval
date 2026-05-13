@@ -1,4 +1,7 @@
-from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
+from lmms_eval.tasks._task_utils.reasoning_utils import (
+    make_reasoning_doc_to_messages,
+    make_reasoning_process_results,
+)
 from lmms_eval.tasks.phyx.utils import decode_base64_to_image
 
 SYSTEM_PROMPT = (
@@ -18,40 +21,10 @@ def phyx_doc_to_visual(doc):
     return [image]
 
 
-def phyx_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = phyx_doc_to_text(doc, lmms_eval_specific_kwargs)
-    visuals = phyx_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    messages[0]["content"].append({"type": "image", "url": visuals[0]})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
+phyx_doc_to_messages = make_reasoning_doc_to_messages(phyx_doc_to_visual, phyx_doc_to_text, system_prompt=SYSTEM_PROMPT)
 
 
-def phyx_process_results_mc(doc, results):
-    acc_score = 0
-    format_score = 0
-    question = phyx_doc_to_text(doc, None)
-    ground_truth = str(doc["answer"])
-    extra_info = {"question": question}
-    for pred in results:
-        score_dict = compute_score(data_source="phyx_mc", solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
-        acc_score += score_dict["acc_score"]
-        format_score += score_dict.get("format_reward_score", 0.0)
-
-    return {"acc_score": acc_score / len(results) if results else 0.0, "format_score": format_score / len(results) if results else 0.0}
+phyx_process_results_mc = make_reasoning_process_results("phyx_mc", phyx_doc_to_text)
 
 
-def phyx_process_results(doc, results):
-    acc_score = 0
-    format_score = 0
-    question = phyx_doc_to_text(doc, None)
-    ground_truth = str(doc["answer"])
-    extra_info = {"question": question}
-    for pred in results:
-        score_dict = compute_score(data_source="phyx_oe", solution_str=pred.strip(), ground_truth=ground_truth, extra_info=extra_info)
-        acc_score += score_dict["acc_score"]
-        format_score += score_dict.get("format_reward_score", 0.0)
-
-    return {"acc_score": acc_score / len(results) if results else 0.0, "format_score": format_score / len(results) if results else 0.0}
+phyx_process_results = make_reasoning_process_results("phyx_oe", phyx_doc_to_text)

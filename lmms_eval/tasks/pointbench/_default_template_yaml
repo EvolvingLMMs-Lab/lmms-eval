@@ -1,0 +1,22 @@
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    train: https://huggingface.co/datasets/PointArena/pointarena-data/raw/main/data.json
+output_type: generate_until
+process_docs: !function utils.pointbench_process_docs
+doc_to_visual: !function utils.pointbench_doc_to_visual
+doc_to_text: !function utils.pointbench_doc_to_text
+doc_to_target: ""
+process_results: !function utils.pointbench_process_results
+
+metric_list:
+  - metric: pointbench_acc
+    aggregation: !function utils.pointbench_aggregate_results
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 256
+
+metadata:
+  source_dataset: PointArena/pointarena-data
+  prompt_suffix_type: "0_999"

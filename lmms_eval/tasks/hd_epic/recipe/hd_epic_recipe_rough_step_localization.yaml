@@ -1,0 +1,13 @@
+# HD-EPIC subtask: recipe_rough_step_localization
+# "Which of these time segments belongs to recipe X step Y?" (pick the correct coarse window)
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_recipe_rough_step_localization
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_recipe_rough_step_localization
+
+metadata:
+  version: 1.0
+  task_type: recipe_rough_step_localization
+  description: "\"Which of these time segments belongs to recipe X step Y?\" (pick the correct coarse window)"

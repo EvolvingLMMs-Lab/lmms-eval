@@ -265,7 +265,21 @@ class EvaluationTracker:
                     sample["input"] = sample["arguments"][0]
                     sample["resps"] = sanitize_list(sample["resps"])
                     sample["filtered_resps"] = sanitize_list(sample["filtered_resps"])
-                    if sample["filtered_resps"] == sample["resps"][0] or sample["filtered_resps"] == sample["resps"]:
+
+                    # Flatten the per-request wrapper when there is only one
+                    # Instance per doc (the common case for generate_until tasks).
+                    # [[resp1, resp2, ...]] -> [resp1, resp2, ...] for resps
+                    # [value]               -> value               for filtered_resps
+                    # Multiple-choice / loglikelihood tasks have N Instances per
+                    # doc and keep their nested structure unchanged.
+                    if isinstance(sample["resps"], list) and len(sample["resps"]) == 1:
+                        sample["resps"] = sample["resps"][0]
+                    if isinstance(sample["filtered_resps"], list) and len(sample["filtered_resps"]) == 1:
+                        sample["filtered_resps"] = sample["filtered_resps"][0]
+
+                    if sample["resps"] == sample["filtered_resps"]:
+                        sample.pop("resps")
+                    elif isinstance(sample["resps"], list) and len(sample["resps"]) == 1 and sample["resps"][0] == sample["filtered_resps"]:
                         sample.pop("resps")
                     sample["target"] = str(sample["target"])
                     sample.pop("arguments")

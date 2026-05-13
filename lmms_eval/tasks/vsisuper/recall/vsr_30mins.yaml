@@ -1,0 +1,6 @@
+include: _default_vsr_yaml
+task: vsisuper_recall_30mins
+process_docs: !function vsr_utils.process_docs_30mins
+tag:
+  - vsisuper
+  - vsisuper_recall

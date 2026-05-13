@@ -2,6 +2,8 @@ dataset_path: lmms-lab/HallusionBench
 dataset_kwargs:
   token: True
 task: "hallusion_bench_image"
+tag:
+  - public_eval_qwen3_5_family
 test_split: image
 output_type: generate_until
 doc_to_visual: !function evaluate_hb.hb_doc_to_visual

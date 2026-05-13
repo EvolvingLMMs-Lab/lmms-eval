@@ -25,6 +25,42 @@ metric_list:
   - metric: chance_adjusted_acc
     aggregation: !function utils.spatial_aggregate_results
     higher_is_better: true
+  - metric: 3d_information_understanding_acc
+    aggregation: !function utils.aggregate_3d_information_understanding_acc
+    higher_is_better: true
+  - metric: 3d_information_understanding_caa
+    aggregation: !function utils.aggregate_3d_information_understanding_caa
+    higher_is_better: true
+  - metric: counting_and_existence_acc
+    aggregation: !function utils.aggregate_counting_and_existence_acc
+    higher_is_better: true
+  - metric: counting_and_existence_caa
+    aggregation: !function utils.aggregate_counting_and_existence_caa
+    higher_is_better: true
+  - metric: movement_prediction_and_navigation_acc
+    aggregation: !function utils.aggregate_movement_prediction_and_navigation_acc
+    higher_is_better: true
+  - metric: movement_prediction_and_navigation_caa
+    aggregation: !function utils.aggregate_movement_prediction_and_navigation_caa
+    higher_is_better: true
+  - metric: multiview_and_crossimage_reasoning_acc
+    aggregation: !function utils.aggregate_multiview_and_crossimage_reasoning_acc
+    higher_is_better: true
+  - metric: multiview_and_crossimage_reasoning_caa
+    aggregation: !function utils.aggregate_multiview_and_crossimage_reasoning_caa
+    higher_is_better: true
+  - metric: object_localization_and_positioning_acc
+    aggregation: !function utils.aggregate_object_localization_and_positioning_acc
+    higher_is_better: true
+  - metric: object_localization_and_positioning_caa
+    aggregation: !function utils.aggregate_object_localization_and_positioning_caa
+    higher_is_better: true
+  - metric: spatial_relationship_reasoning_acc
+    aggregation: !function utils.aggregate_spatial_relationship_reasoning_acc
+    higher_is_better: true
+  - metric: spatial_relationship_reasoning_caa
+    aggregation: !function utils.aggregate_spatial_relationship_reasoning_caa
+    higher_is_better: true
 lmms_eval_specific_kwargs:
   default:
     post_prompt: "Give me the answer letter directly. The best answer is:"

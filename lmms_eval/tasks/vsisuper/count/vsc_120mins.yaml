@@ -1,0 +1,6 @@
+include: _default_vsc_yaml
+task: vsisuper_count_120mins
+process_docs: !function vsc_utils.process_docs_120mins
+tag:
+  - vsisuper
+  - vsisuper_count

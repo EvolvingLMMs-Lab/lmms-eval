@@ -1,0 +1,13 @@
+group: unig2u
+task:
+  - unig2u_auxsolidmath_easy
+  - unig2u_chartqa100
+  - unig2u_geometry3k
+  - unig2u_babyvision
+  - unig2u_illusionbench_arshia_test
+  - unig2u_mmsi
+  - unig2u_phyx_simple
+  - unig2u_realunify
+  - unig2u_uni_mmmu
+  - unig2u_vsp
+  - unig2u_VisualPuzzles

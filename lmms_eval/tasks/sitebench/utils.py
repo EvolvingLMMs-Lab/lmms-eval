@@ -14,9 +14,19 @@ Categories = {
     "counting & existence",
     "spatial relationship reasoning",
     "object localization & positioning",
-    "depth & 3d understanding",
-    "movement navigation & intent prediction",
+    "3d information understanding",
+    "movement prediction & navigation",
     "multi-view & cross-image reasoning",
+}
+
+# Mapping from category name to metric key suffix
+CATEGORY_TO_METRIC_KEY = {
+    "3d information understanding": "3d_information_understanding",
+    "counting & existence": "counting_and_existence",
+    "movement prediction & navigation": "movement_prediction_and_navigation",
+    "multi-view & cross-image reasoning": "multiview_and_crossimage_reasoning",
+    "object localization & positioning": "object_localization_and_positioning",
+    "spatial relationship reasoning": "spatial_relationship_reasoning",
 }
 
 # Get the cache directory from the config file
@@ -228,10 +238,17 @@ def spatial_process_results(doc, results):
         "total": 1.0 - 1.0 / len(all_choices),
     }
 
-    return {
+    result = {
         "accuracy": accuracy_dict,
         "chance_adjusted_acc": chance_adjusted_accuracy_dict,
     }
+
+    # Per-category accuracy and chance-adjusted accuracy
+    for cat_name, metric_key in CATEGORY_TO_METRIC_KEY.items():
+        result[f"{metric_key}_acc"] = {"score": score, "category": category, "target_category": cat_name}
+        result[f"{metric_key}_caa"] = {"score": adjusted_score, "category": category, "target_category": cat_name, "total": 1.0 - 1.0 / len(all_choices)}
+
+    return result
 
 
 def spatial_aggregate_results(results):
@@ -275,3 +292,71 @@ def spatial_aggregate_results(results):
     #     f.write("=" * 50 + "\n")
 
     return round(overall_accuracy, 5)
+
+
+def _aggregate_category_acc(results, target_category: str) -> float:
+    total_correct = 0
+    total_examples = 0
+    for r in results:
+        if r["category"] == target_category:
+            total_correct += r["score"]
+            total_examples += 1
+    return round((total_correct / total_examples) * 100, 5) if total_examples > 0 else 0.0
+
+
+def _aggregate_category_caa(results, target_category: str) -> float:
+    total_adjusted = 0.0
+    total_baseline = 0.0
+    for r in results:
+        if r["category"] == target_category:
+            total_adjusted += r["score"]
+            total_baseline += r["total"]
+    return round((total_adjusted / total_baseline) * 100, 5) if total_baseline > 0 else 0.0
+
+
+def aggregate_3d_information_understanding_acc(results):
+    return _aggregate_category_acc(results, "3d information understanding")
+
+
+def aggregate_3d_information_understanding_caa(results):
+    return _aggregate_category_caa(results, "3d information understanding")
+
+
+def aggregate_counting_and_existence_acc(results):
+    return _aggregate_category_acc(results, "counting & existence")
+
+
+def aggregate_counting_and_existence_caa(results):
+    return _aggregate_category_caa(results, "counting & existence")
+
+
+def aggregate_movement_prediction_and_navigation_acc(results):
+    return _aggregate_category_acc(results, "movement prediction & navigation")
+
+
+def aggregate_movement_prediction_and_navigation_caa(results):
+    return _aggregate_category_caa(results, "movement prediction & navigation")
+
+
+def aggregate_multiview_and_crossimage_reasoning_acc(results):
+    return _aggregate_category_acc(results, "multi-view & cross-image reasoning")
+
+
+def aggregate_multiview_and_crossimage_reasoning_caa(results):
+    return _aggregate_category_caa(results, "multi-view & cross-image reasoning")
+
+
+def aggregate_object_localization_and_positioning_acc(results):
+    return _aggregate_category_acc(results, "object localization & positioning")
+
+
+def aggregate_object_localization_and_positioning_caa(results):
+    return _aggregate_category_caa(results, "object localization & positioning")
+
+
+def aggregate_spatial_relationship_reasoning_acc(results):
+    return _aggregate_category_acc(results, "spatial relationship reasoning")
+
+
+def aggregate_spatial_relationship_reasoning_caa(results):
+    return _aggregate_category_caa(results, "spatial relationship reasoning")

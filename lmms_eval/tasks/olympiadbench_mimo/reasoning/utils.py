@@ -1,6 +1,9 @@
 # Copyright 2025 Xiaomi Corporation.
 
-from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
+from lmms_eval.tasks._task_utils.reasoning_utils import (
+    compute_score,
+    make_reasoning_doc_to_messages,
+)
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant. When the user asks a question, your response must include two parts: "
@@ -51,16 +54,11 @@ def olympiadbench_doc_to_text(doc):
     return final_question
 
 
-def olympiadbench_doc_to_messages(doc, lmms_eval_specific_kwargs=None):
-    question = olympiadbench_doc_to_text(doc)
-    visuals = olympiadbench_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    for visual in visuals:
-        messages[0]["content"].append({"type": "image", "url": visual})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
+def _olympiadbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
+    return olympiadbench_doc_to_text(doc)
+
+
+olympiadbench_doc_to_messages = make_reasoning_doc_to_messages(olympiadbench_doc_to_visual, _olympiadbench_doc_to_text, system_prompt=SYSTEM_PROMPT)
 
 
 def olympiadbench_process_results(doc, results):

@@ -1,0 +1,46 @@
+dataset_path: MME-Benchmarks/Video-MME-v2
+dataset_kwargs:
+  token: True
+  cache_dir: videomme_v2
+  video: True
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.videomme_v2_doc_to_visual
+doc_to_text: !function utils.videomme_v2_doc_to_text
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.videomme_v2_process_results
+metric_list:
+  - metric: videomme_v2_score
+    aggregation: !function utils.videomme_v2_aggregate_results
+    higher_is_better: true
+  - metric: videomme_v2_relevance_score
+    aggregation: !function utils.videomme_v2_aggregate_relevance
+    higher_is_better: true
+  - metric: videomme_v2_logic_score
+    aggregation: !function utils.videomme_v2_aggregate_logic
+    higher_is_better: true
+  - metric: videomme_v2_level_1
+    aggregation: !function utils.videomme_v2_aggregate_level_1
+    higher_is_better: true
+  - metric: videomme_v2_level_2
+    aggregation: !function utils.videomme_v2_aggregate_level_2
+    higher_is_better: true
+  - metric: videomme_v2_level_3
+    aggregation: !function utils.videomme_v2_aggregate_level_3
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with the option's letter from the given choices directly."
+  qwen3_vl:
+    format: "qwen3_vl"
+    pre_prompt: "Question: "
+    post_prompt: "Answer with the option letter only."
+metadata:
+  - version: 0.0

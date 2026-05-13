@@ -19,3 +19,39 @@ metric_list:
   - metric: multi_object_accuracy
     aggregation: !function utils.aggregate_multi_object_accuracy
     higher_is_better: true
+  - metric: height_higher_accuracy
+    aggregation: !function utils.aggregate_height_higher_accuracy
+    higher_is_better: true
+  - metric: location_above_accuracy
+    aggregation: !function utils.aggregate_location_above_accuracy
+    higher_is_better: true
+  - metric: location_closer_to_camera_accuracy
+    aggregation: !function utils.aggregate_location_closer_to_camera_accuracy
+    higher_is_better: true
+  - metric: location_next_to_accuracy
+    aggregation: !function utils.aggregate_location_next_to_accuracy
+    higher_is_better: true
+  - metric: orientation_in_front_of_accuracy
+    aggregation: !function utils.aggregate_orientation_in_front_of_accuracy
+    higher_is_better: true
+  - metric: orientation_on_the_left_accuracy
+    aggregation: !function utils.aggregate_orientation_on_the_left_accuracy
+    higher_is_better: true
+  - metric: orientation_viewpoint_accuracy
+    aggregation: !function utils.aggregate_orientation_viewpoint_accuracy
+    higher_is_better: true
+  - metric: multi_object_closer_to_accuracy
+    aggregation: !function utils.aggregate_multi_object_closer_to_accuracy
+    higher_is_better: true
+  - metric: multi_object_facing_accuracy
+    aggregation: !function utils.aggregate_multi_object_facing_accuracy
+    higher_is_better: true
+  - metric: multi_object_parallel_accuracy
+    aggregation: !function utils.aggregate_multi_object_parallel_accuracy
+    higher_is_better: true
+  - metric: multi_object_same_direction_accuracy
+    aggregation: !function utils.aggregate_multi_object_same_direction_accuracy
+    higher_is_better: true
+  - metric: multi_object_viewpoint_towards_object_accuracy
+    aggregation: !function utils.aggregate_multi_object_viewpoint_towards_object_accuracy
+    higher_is_better: true

@@ -30,7 +30,7 @@ run_benchmark() {
 
   local start_ns=$(date +%s%N)
   python3 -m lmms_eval \
-      --model openai_compatible \
+      --model openai \
       --model_args "model_version=$MODEL_VERSION,num_concurrent=$concurrency,timeout=$TIMEOUT,max_retries=$MAX_RETRIES${extra_args}" \
       --tasks "$TASKS" \
       --batch_size 1 \

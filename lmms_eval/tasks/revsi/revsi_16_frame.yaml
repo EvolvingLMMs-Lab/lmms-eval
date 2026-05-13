@@ -1,0 +1,3 @@
+dataset_name: 16_frame
+task: revsi_16_frame
+include: _default_template_yaml

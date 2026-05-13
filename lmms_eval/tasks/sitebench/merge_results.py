@@ -208,6 +208,16 @@ def find_latest_sitebench_files(logs_dir: str) -> tuple[str | None, str | None]:
     return image_path, video_path
 
 
+SUBCATEGORIES = {
+    "3d information understanding",
+    "counting & existence",
+    "movement prediction & navigation",
+    "multi-view & cross-image reasoning",
+    "object localization & positioning",
+    "spatial relationship reasoning",
+}
+
+
 def print_results(name: str, stats: dict, category_stats: dict = None, random_acc: float = None):
     """Print formatted results."""
     print(f"\n{'='*60}")
@@ -222,6 +232,14 @@ def print_results(name: str, stats: dict, category_stats: dict = None, random_ac
         print(f"Overall: Accuracy={acc*100:.2f}%, CAA={caa*100:.2f}%, Count={count}")
         if random_acc is not None:
             print(f"Random Expected Accuracy: {random_acc*100:.2f}%")
+
+    # Print sub-category breakdown from metric_stats
+    metric_stats = stats.get("metric_stats", {})
+    subcat_stats = {k: v for k, v in metric_stats.items() if k in SUBCATEGORIES}
+    if subcat_stats:
+        subcat_df = stats_to_df(subcat_stats, "Sub-Category")
+        print("\nSub-Category Breakdown:")
+        print(subcat_df.to_string(index=False))
 
     if category_stats:
         cat_df = stats_to_df(category_stats, "Category")
@@ -354,23 +372,35 @@ def main():
 
         # Save to output file if requested
         if args.output:
+
+            def _stats_to_output(stats_dict: dict) -> dict:
+                """Convert a stats dict with acc/caa num/den to output format."""
+                out = {}
+                acc = stats_dict["acc_num"] / stats_dict["acc_den"] * 100 if stats_dict["acc_den"] > 0 else 0
+                caa = stats_dict["caa_num"] / stats_dict["caa_den"] * 100 if stats_dict["caa_den"] > 0 else 0
+                out["accuracy"] = acc
+                out["caa"] = caa
+                out["count"] = int(stats_dict["acc_den"])
+                return out
+
+            def _subcat_output(metric_stats: dict) -> dict:
+                """Extract sub-category scores from metric_stats."""
+                return {k: _stats_to_output(v) for k, v in metric_stats.items() if k in SUBCATEGORIES}
+
             output_data = {
                 "image": {
                     "file": image_path,
-                    "accuracy": (image_stats["overall"]["acc_num"] / image_stats["overall"]["acc_den"] * 100 if image_stats["overall"]["acc_den"] > 0 else 0),
-                    "caa": (image_stats["overall"]["caa_num"] / image_stats["overall"]["caa_den"] * 100 if image_stats["overall"]["caa_den"] > 0 else 0),
-                    "count": int(image_stats["overall"]["acc_den"]),
+                    **_stats_to_output(image_stats["overall"]),
+                    "subcategories": _subcat_output(image_stats.get("metric_stats", {})),
                 },
                 "video": {
                     "file": video_path,
-                    "accuracy": (video_stats["overall"]["acc_num"] / video_stats["overall"]["acc_den"] * 100 if video_stats["overall"]["acc_den"] > 0 else 0),
-                    "caa": (video_stats["overall"]["caa_num"] / video_stats["overall"]["caa_den"] * 100 if video_stats["overall"]["caa_den"] > 0 else 0),
-                    "count": int(video_stats["overall"]["acc_den"]),
+                    **_stats_to_output(video_stats["overall"]),
+                    "subcategories": _subcat_output(video_stats.get("metric_stats", {})),
                 },
                 "combined": {
-                    "accuracy": (combined_overall["acc_num"] / combined_overall["acc_den"] * 100 if combined_overall["acc_den"] > 0 else 0),
-                    "caa": (combined_overall["caa_num"] / combined_overall["caa_den"] * 100 if combined_overall["caa_den"] > 0 else 0),
-                    "count": int(combined_overall["acc_den"]),
+                    **_stats_to_output(combined_overall),
+                    "subcategories": _subcat_output(combined_metric),
                 },
             }
             with open(args.output, "w") as f:

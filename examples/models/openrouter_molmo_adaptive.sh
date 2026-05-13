@@ -25,7 +25,7 @@ mkdir -p "$OUTPUT_DIR"
 
 START_NS=$(date +%s%N)
 python3 -m lmms_eval \
-    --model openai_compatible \
+    --model openai \
     --model_args "model_version=$MODEL_VERSION,$ADAPTIVE_ARGS" \
     --tasks "$TASKS" \
     --batch_size 1 \

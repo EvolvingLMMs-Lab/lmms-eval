@@ -1,0 +1,4 @@
+dataset_name: "MechanisticKnowledge_maniskill_rotate_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_mechanisticknowledge_maniskill_rotate_subset"
+include: _default_template_yaml

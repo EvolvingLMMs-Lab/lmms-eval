@@ -1,27 +1,30 @@
-import base64
 import json
 import os
+import socket
+import time
 from concurrent.futures import ThreadPoolExecutor
-from io import BytesIO
-from typing import List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
+import torch.distributed as dist
 from accelerate import Accelerator, DistributedType
 from decord import VideoReader, cpu
 from loguru import logger as eval_logger
 from PIL import Image
-from tqdm import tqdm
 
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.imports import optional_import
+from lmms_eval.models.model_utils.media_encoder import encode_image_to_base64
+from lmms_eval.models.model_utils.progress import make_progress
 
 NUM_SECONDS_TO_SLEEP = int(os.getenv("NUM_SECONDS_TO_SLEEP", "5"))
 WORKERS = int(os.getenv("WORKERS", "32"))
 
 LLM, _has_vllm = optional_import("vllm", "LLM")
 SamplingParams, _ = optional_import("vllm", "SamplingParams")
+get_tp_group, _ = optional_import("vllm.distributed.parallel_state", "get_tp_group")
 
 
 @register_model("vllm")
@@ -50,6 +53,9 @@ class VLLM(lmms):
             Default: "Qwen/Qwen2.5-VL-3B-Instruct"
         tensor_parallel_size (int): Number of GPUs to use for tensor parallelism.
             Default: 1
+        data_parallel_size (int): Global number of data-parallel replicas across the
+            distributed launch. This is a world-size value, not a per-node or per-GPU
+            local count. Default: 1
         gpu_memory_utilization (float): Fraction of GPU memory to use for model weights.
             Should be between 0.0 and 1.0. Default: 0.8
         batch_size (int): Number of requests to process in parallel per GPU.
@@ -152,6 +158,7 @@ class VLLM(lmms):
         min_image_pixels: int = 28,  # minimum image dimension, required for Qwen 2/2.5-VL models
         disable_log_stats: bool = False,
         image_first: bool = False,
+        max_new_tokens: int = 1024,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -162,8 +169,10 @@ class VLLM(lmms):
         self.max_frame_num = max_frame_num
         self.chat_template = chat_template
         self.min_image_pixels = min_image_pixels
-        self.data_parallel_size = data_parallel_size
+        self.data_parallel_size = int(data_parallel_size)
+        self.tensor_parallel_size = int(tensor_parallel_size)
         self.image_first = image_first
+        self.max_new_tokens = int(max_new_tokens)
         # Qwen 2/2.5-VL models enforce minimum image dimensions
         self._enforce_image_resize = self._is_qwen_vl_model(model)
 
@@ -198,24 +207,32 @@ class VLLM(lmms):
                 DistributedType.FSDP,
                 DistributedType.MULTI_GPU,
                 DistributedType.DEEPSPEED,
-            ], "Unsupported distributed type provided. Only DDP and FSDP are supported."
+            ], "Unsupported distributed type provided. Only DDP, FSDP, and DeepSpeed are supported."
             self.accelerator = accelerator
             if self.accelerator.is_local_main_process:
                 eval_logger.info(f"Using {accelerator.num_processes} devices with data parallelism")
-            self._rank = self.accelerator.local_process_index
+            self._rank = self.accelerator.process_index
             self._world_size = self.accelerator.num_processes
         else:
             self.accelerator = accelerator
-            self._rank = self.accelerator.local_process_index
+            self._rank = self.accelerator.process_index
             self._world_size = self.accelerator.num_processes
-        # TODO: Support tensor parallelism in the future for flexible vllm parallel
-        if data_parallel_size > 1:
-            assert tensor_parallel_size == 1, "Data parallelism is not supported with tensor parallelism. For current vllm version"
+        expected_world_size = self.tensor_parallel_size * self.data_parallel_size
+        if self.data_parallel_size > 1 and accelerator.num_processes == 1:
+            raise ValueError(
+                "vLLM data parallel requires torchrun/accelerate multi-process launch. "
+                f"Expected world_size = tensor_parallel_size * data_parallel_size = {expected_world_size}, "
+                "but got single-process execution. Re-launch lmms_eval with torchrun or another "
+                "distributed launcher instead of passing data_parallel_size to a single process."
+            )
         if accelerator.num_processes > 1:
             kwargs["distributed_executor_backend"] = "external_launcher"
+            if expected_world_size > 1 and accelerator.num_processes != expected_world_size:
+                raise ValueError("For external_launcher mode, accelerate world size must equal " f"tensor_parallel_size * data_parallel_size ({expected_world_size}), " f"but got {accelerator.num_processes}.")
         self.client = LLM(
             model=self.model,
-            tensor_parallel_size=tensor_parallel_size,
+            tensor_parallel_size=self.tensor_parallel_size,
+            data_parallel_size=self.data_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
             trust_remote_code=trust_remote_code,
             disable_log_stats=disable_log_stats,
@@ -226,6 +243,149 @@ class VLLM(lmms):
 
         self.device = self.accelerator.device
         self.batch_size_per_gpu = int(batch_size)
+
+        self._tp_group_cpu = None
+        self._tp_world_size = 1
+        self._tp_rank_in_group = 0
+        self._setup_tp_group_for_request_sync()
+        self._watchdog_dir = os.getenv("LMMS_WATCHDOG_DIR", "").strip()
+        self._watchdog_path = ""
+        if self._watchdog_dir:
+            os.makedirs(self._watchdog_dir, exist_ok=True)
+            self._watchdog_path = os.path.join(self._watchdog_dir, f"rank_{self._watchdog_rank()}.json")
+            self._write_watchdog_heartbeat("init", batch_idx=-1)
+
+    def _setup_tp_group_for_request_sync(self) -> None:
+        if self.tensor_parallel_size <= 1 or get_tp_group is None:
+            return
+        try:
+            tp_group = get_tp_group()
+            self._tp_group_cpu = tp_group.cpu_group
+            self._tp_world_size = int(tp_group.world_size)
+            self._tp_rank_in_group = int(tp_group.rank_in_group)
+        except Exception as exc:
+            if self._world_size > 1:
+                raise RuntimeError("Failed to initialize vLLM TP group for synchronized request dispatch. " "This is required when tensor_parallel_size > 1 under distributed launch.") from exc
+            eval_logger.warning(f"Failed to initialize TP group for request sync: {exc}")
+
+    def _watchdog_rank(self) -> int:
+        if dist.is_available() and dist.is_initialized():
+            try:
+                return int(dist.get_rank())
+            except Exception:
+                pass
+        return int(self.rank)
+
+    @staticmethod
+    def _json_safe(value: Any) -> Any:
+        if value is None or isinstance(value, (bool, int, float, str)):
+            return value
+        return str(value)
+
+    def _summarize_batch_requests(self, batch_requests) -> tuple[list[str], list[Any], list[dict[str, Any]]]:
+        task_names = []
+        doc_ids = []
+        request_items = []
+        for request in batch_requests or []:
+            try:
+                _, _, _, doc_id, task, split = request.arguments
+            except Exception:
+                continue
+            task_names.append(str(task))
+            doc_ids.append(self._json_safe(doc_id))
+            request_items.append(
+                {
+                    "task": str(task),
+                    "split": self._json_safe(split),
+                    "doc_id": self._json_safe(doc_id),
+                }
+            )
+        return task_names, doc_ids, request_items
+
+    def _write_watchdog_heartbeat(self, phase: str, batch_idx: int, batch_requests=None) -> None:
+        if not self._watchdog_path:
+            return
+
+        task_names, doc_ids, request_items = self._summarize_batch_requests(batch_requests)
+        payload = {
+            "rank": self._watchdog_rank(),
+            "pid": os.getpid(),
+            "hostname": socket.gethostname(),
+            "phase": phase,
+            "batch_idx": batch_idx,
+            "updated_at": time.time(),
+            "request_count": len(batch_requests or []),
+            "task_names": task_names,
+            "doc_ids": doc_ids,
+            "requests": request_items,
+        }
+        tmp_path = f"{self._watchdog_path}.tmp"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, ensure_ascii=True, sort_keys=True)
+            os.replace(tmp_path, self._watchdog_path)
+        except OSError as exc:
+            eval_logger.warning(f"Failed to write watchdog heartbeat {self._watchdog_path}: {exc}")
+
+    def _select_max_new_tokens(self, request_max_new_tokens: Any) -> int:
+        if request_max_new_tokens is None:
+            return self.max_new_tokens
+        try:
+            request_max_new_tokens = int(request_max_new_tokens)
+        except (TypeError, ValueError):
+            eval_logger.warning("Invalid max_new_tokens from task (%s), falling back to model setting (%s)." % (request_max_new_tokens, self.max_new_tokens))
+            return self.max_new_tokens
+        return max(request_max_new_tokens, self.max_new_tokens)
+
+    @staticmethod
+    def _normalize_top_p_for_vllm(top_p: Any) -> Any:
+        if isinstance(top_p, bool):
+            return top_p
+        try:
+            numeric_top_p = float(top_p)
+        except (TypeError, ValueError):
+            return top_p
+        if numeric_top_p == 0.0:
+            return 1.0
+        return top_p
+
+    def _build_sampling_params_dict(self, gen_kwargs: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "max_tokens": gen_kwargs["max_new_tokens"],
+            "temperature": gen_kwargs["temperature"],
+            "top_p": self._normalize_top_p_for_vllm(gen_kwargs["top_p"]),
+        }
+
+    def _run_tp_synced(
+        self,
+        local_inputs: list[Any],
+        run_fn: Callable[[list[Any]], list[Any]],
+    ) -> list[Any]:
+        if self._tp_world_size <= 1 or self._tp_group_cpu is None:
+            return run_fn(local_inputs)
+        if not dist.is_available() or not dist.is_initialized():
+            return run_fn(local_inputs)
+
+        gathered_inputs = [None for _ in range(self._tp_world_size)]
+        dist.all_gather_object(gathered_inputs, local_inputs, group=self._tp_group_cpu)
+
+        merged_inputs = []
+        offsets = [0]
+        for rank_inputs in gathered_inputs:
+            rank_inputs = rank_inputs or []
+            merged_inputs.extend(rank_inputs)
+            offsets.append(len(merged_inputs))
+
+        if len(merged_inputs) == 0:
+            return []
+
+        merged_outputs = run_fn(merged_inputs)
+        if len(merged_outputs) != len(merged_inputs):
+            raise RuntimeError("vLLM output count mismatch after TP request synchronization: " f"expected {len(merged_inputs)}, got {len(merged_outputs)}")
+
+        start = offsets[self._tp_rank_in_group]
+        end = offsets[self._tp_rank_in_group + 1]
+        return merged_outputs[start:end]
 
     def _is_qwen_vl_model(self, model: str) -> bool:
         qwen_vl_patterns = ["qwen2-vl", "qwen2.5-vl"]
@@ -253,12 +413,13 @@ class VLLM(lmms):
             img = image.copy()
 
         img = self._maybe_resize_image(img)
-        output_buffer = BytesIO()
-        img.save(output_buffer, format="PNG")
-        byte_data = output_buffer.getvalue()
-
-        base64_str = base64.b64encode(byte_data).decode("utf-8")
-        return base64_str
+        return encode_image_to_base64(
+            img,
+            image_format="PNG",
+            convert_rgb=False,
+            quality=None,
+            copy_if_pil=False,
+        )
 
     # Function to encode the video
     def encode_video(self, video_path):
@@ -277,11 +438,15 @@ class VLLM(lmms):
         for frame in frames:
             img = Image.fromarray(frame)
             img = self._maybe_resize_image(img)
-            output_buffer = BytesIO()
-            img.save(output_buffer, format="PNG")
-            byte_data = output_buffer.getvalue()
-            base64_str = base64.b64encode(byte_data).decode("utf-8")
-            base64_frames.append(base64_str)
+            base64_frames.append(
+                encode_image_to_base64(
+                    img,
+                    image_format="PNG",
+                    convert_rgb=False,
+                    quality=None,
+                    copy_if_pil=False,
+                )
+            )
 
         return base64_frames
 
@@ -296,91 +461,95 @@ class VLLM(lmms):
 
     def generate_until(self, requests) -> List[str]:
         res = []
-        pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
+        pbar = make_progress(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         batch_size = self.batch_size_per_gpu
         batched_requests = [requests[i : i + batch_size] for i in range(0, len(requests), batch_size)]
-        for batch_requests in batched_requests:
-            batched_messages = []
-            for idx in range(len(batch_requests)):
-                contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
-                if "max_new_tokens" not in gen_kwargs:
-                    gen_kwargs["max_new_tokens"] = 1024
-                if "temperature" not in gen_kwargs:
-                    gen_kwargs["temperature"] = 0
-                if "top_p" not in gen_kwargs:
-                    gen_kwargs["top_p"] = 0.95
+        for batch_idx, batch_requests in enumerate(batched_requests):
+            self._write_watchdog_heartbeat("encode_start", batch_idx=batch_idx, batch_requests=batch_requests)
+            try:
+                batched_messages = []
+                for idx in range(len(batch_requests)):
+                    contexts, gen_kwargs, doc_to_visual, doc_id, task, split = batch_requests[idx].arguments
+                    gen_kwargs = dict(gen_kwargs or {})
+                    gen_kwargs["max_new_tokens"] = self._select_max_new_tokens(gen_kwargs.get("max_new_tokens"))
+                    gen_kwargs.setdefault("temperature", 0)
+                    gen_kwargs.setdefault("top_p", 0.95)
+                    sampling_params = SamplingParams(**self._build_sampling_params_dict(gen_kwargs))
 
-                params = {
-                    "max_tokens": gen_kwargs["max_new_tokens"],
-                    "temperature": gen_kwargs["temperature"],
-                    "top_p": gen_kwargs["top_p"],
-                }
+                    visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
+                    if None in visuals:
+                        visuals = []
+                        imgs = []
+                    else:
+                        visuals = self.flatten(visuals)
+                        imgs = []  # multiple images or frames for video
+                        all_tasks = []
+                        with ThreadPoolExecutor(max_workers=WORKERS) as executor:
+                            for visual in visuals:
+                                if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
+                                    all_tasks.append(executor.submit(self.encode_video, visual))
+                                elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
+                                    all_tasks.append(executor.submit(self.encode_image, visual))
+                                elif isinstance(visual, Image.Image):
+                                    all_tasks.append(executor.submit(self.encode_image, visual))
+
+                            for task in all_tasks:
+                                imgs.append(task.result())
+
+                    messages = [{"role": "user", "content": []}]
+                    if self.image_first:
+                        for img in self.flatten(imgs):
+                            messages[0]["content"].append(
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/png;base64,{img}"},
+                                }
+                            )
+                        messages[0]["content"].append({"type": "text", "text": contexts})
+                    else:
+                        messages[0]["content"].append({"type": "text", "text": contexts})
+                        for img in self.flatten(imgs):
+                            messages[0]["content"].append(
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/png;base64,{img}"},
+                                }
+                            )
+                    batched_messages.append(messages)
+
                 sampling_params = SamplingParams(**params)
+                self._write_watchdog_heartbeat("chat_start", batch_idx=batch_idx, batch_requests=batch_requests)
 
-                visuals = [doc_to_visual(self.task_dict[task][split][doc_id])]
-                if None in visuals:
-                    visuals = []
-                    imgs = []
-                else:
-                    visuals = self.flatten(visuals)
-                    imgs = []  # multiple images or frames for video
-                    all_tasks = []
-                    with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-                        for visual in visuals:
-                            if isinstance(visual, str) and (".mp4" in visual or ".avi" in visual or ".mov" in visual or ".flv" in visual or ".wmv" in visual):
-                                all_tasks.append(executor.submit(self.encode_video, visual))
-                            elif isinstance(visual, str) and (".jpg" in visual or ".jpeg" in visual or ".png" in visual or ".gif" in visual or ".bmp" in visual or ".tiff" in visual or ".webp" in visual):
-                                all_tasks.append(executor.submit(self.encode_image, visual))
-                            elif isinstance(visual, Image.Image):
-                                all_tasks.append(executor.submit(self.encode_image, visual))
-
-                        for task in all_tasks:
-                            imgs.append(task.result())
-
-                messages = [{"role": "user", "content": []}]
-                if self.image_first:
-                    for img in self.flatten(imgs):
-                        messages[0]["content"].append(
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/png;base64,{img}"},
-                            }
+                # NOTE:
+                # The chat method automatically applies the model's chat template to format the prompt
+                # - vllm chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
+                # The logic here is similar to the vllm implementation as shown here (https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat)
+                # - vllm implementation: https://github.com/vllm-project/vllm/blob/d97841078b6e0dde8da36d5a2b8e8857a2c37944/vllm/entrypoints/chat_utils.py#L829
+                def _run_chat(inputs: list[Any]) -> list[str]:
+                    if self.chat_template is not None:
+                        response = self.client.chat(
+                            sampling_params=sampling_params,
+                            messages=inputs,
+                            chat_template=self.chat_template,
                         )
-                    messages[0]["content"].append({"type": "text", "text": contexts})
-                else:
-                    messages[0]["content"].append({"type": "text", "text": contexts})
-                    for img in self.flatten(imgs):
-                        messages[0]["content"].append(
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/png;base64,{img}"},
-                            }
-                        )
-                batched_messages.append(messages)
+                    else:
+                        response = self.client.chat(sampling_params=sampling_params, messages=inputs)
+                    return [o.outputs[0].text for o in response]
 
-            sampling_params = SamplingParams(**params)
+                response_text = self._run_tp_synced(batched_messages, _run_chat)
+                self._write_watchdog_heartbeat("chat_done", batch_idx=batch_idx, batch_requests=batch_requests)
 
-            # NOTE:
-            # The chat method automatically applies the model's chat template to format the prompt
-            # - vllm chat method: https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat
-            # The logic here is similar to the vllm implementation as shown here (https://docs.vllm.ai/en/stable/models/generative_models.html#llmchat)
-            # - vllm implementation: https://github.com/vllm-project/vllm/blob/d97841078b6e0dde8da36d5a2b8e8857a2c37944/vllm/entrypoints/chat_utils.py#L829
-            if self.chat_template is not None:
-                response = self.client.chat(
-                    sampling_params=sampling_params,
-                    messages=batched_messages,
-                    chat_template=self.chat_template,
-                )
-            else:
-                response = self.client.chat(sampling_params=sampling_params, messages=batched_messages)
-            response_text = [o.outputs[0].text for o in response]
-
-            assert len(response_text) == len(batch_requests)
-            res.extend(response_text)
-            pbar.update(len(batch_requests))
+                assert len(response_text) == len(batch_requests)
+                res.extend(response_text)
+                pbar.update(len(batch_requests))
+                self._write_watchdog_heartbeat("batch_done", batch_idx=batch_idx, batch_requests=batch_requests)
+            except Exception:
+                self._write_watchdog_heartbeat("error", batch_idx=batch_idx, batch_requests=batch_requests)
+                raise
 
         pbar.close()
+        self._write_watchdog_heartbeat("complete", batch_idx=len(batched_requests))
         return res
 
     def loglikelihood(self, requests: List[Instance]) -> List[Tuple[float, bool]]:

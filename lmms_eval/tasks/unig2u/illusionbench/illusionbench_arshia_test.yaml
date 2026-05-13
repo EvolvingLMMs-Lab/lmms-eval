@@ -1,0 +1,8 @@
+group: unig2u_illusionbench_arshia_test
+task:
+  - unig2u_illusionbench_arshia_icon_shape_test
+  - unig2u_illusionbench_arshia_icon_scene_test
+  - unig2u_illusionbench_arshia_logo_shape_test
+  - unig2u_illusionbench_arshia_logo_scene_test
+  - unig2u_illusionbench_arshia_in_shape_test
+  - unig2u_illusionbench_arshia_in_scene_test

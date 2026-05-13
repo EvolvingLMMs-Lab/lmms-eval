@@ -1,0 +1,14 @@
+# HD-EPIC 'recipe' category -- bundles its 8 prototypes.
+# Run all of them with --tasks hd_epic_recipe
+group: hd_epic_recipe
+task:
+  - hd_epic_recipe_recipe_recognition
+  - hd_epic_recipe_multi_recipe_recognition
+  - hd_epic_recipe_multi_step_localization
+  - hd_epic_recipe_step_localization
+  - hd_epic_recipe_prep_localization
+  - hd_epic_recipe_step_recognition
+  - hd_epic_recipe_rough_step_localization
+  - hd_epic_recipe_following_activity_recognition
+metadata:
+  version: 1.0

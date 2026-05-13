@@ -1,0 +1,6 @@
+dataset_path: VisuLogic/VisuLogic
+dataset_kwargs:
+  data_files: data.jsonl
+task: visulogic
+test_split: train
+include: _default_template_yaml

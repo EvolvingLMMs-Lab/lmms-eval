@@ -19,7 +19,7 @@ from lmms_eval import utils
 from lmms_eval.api.instance import Instance
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
-from lmms_eval.models.model_utils.load_video import read_video_pyav
+from lmms_eval.models.model_utils.load_video import read_video
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -308,7 +308,7 @@ class Llava_OneVision(lmms):
                         if self.video_decode_backend == "decord":
                             frames = self.load_video(visual, self.max_frames_num)
                         elif self.video_decode_backend == "pyav":
-                            frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
+                            frames = read_video(visual[0], num_frm=self.max_frames_num)
                         frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().to(self._device)
                         image_tensor.append(frames)
                     except Exception as e:
@@ -493,7 +493,7 @@ class Llava_OneVision(lmms):
                             if self.video_decode_backend == "decord":
                                 frames = self.load_video(visual, self.max_frames_num)
                             elif self.video_decode_backend == "pyav":
-                                frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
+                                frames = read_video(visual[0], num_frm=self.max_frames_num)
                             frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().to(self._device)
                             image_tensor.append(frames)
                         except Exception as e:
@@ -723,7 +723,7 @@ class Llava_OneVision(lmms):
                                 if self.video_decode_backend == "decord":
                                     frames = self.load_video(visual, self.max_frames_num)
                                 elif self.video_decode_backend == "pyav":
-                                    frames = read_video_pyav(visual[0], num_frm=self.max_frames_num)
+                                    frames = read_video(visual[0], num_frm=self.max_frames_num)
                                 frames = self._image_processor.preprocess(frames, return_tensors="pt")["pixel_values"].half().to(self._device)
                                 image_tensor.append(frames)
                             except Exception as e:

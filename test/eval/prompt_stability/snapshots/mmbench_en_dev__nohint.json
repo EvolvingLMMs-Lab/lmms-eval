@@ -1,0 +1,16 @@
+{
+  "task": "mmbench_en_dev",
+  "variant": "no-hint",
+  "doc_id": "202",
+  "prompt_text": "What color is the car in the image? There are several options:\nA. Red\nB. Blue\nC. Green\nD. Yellow\n\nAnswer with the option's letter from the given choices directly.",
+  "gen_kwargs": {
+    "until": [
+      "ASSISTANT:"
+    ],
+    "max_new_tokens": 1024,
+    "temperature": 0,
+    "top_p": 1.0,
+    "num_beams": 1,
+    "do_sample": false
+  }
+}

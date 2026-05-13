@@ -1,5 +1,4 @@
 import base64
-import json
 import os
 import time
 from copy import deepcopy
@@ -54,8 +53,6 @@ class GPT4OAudio(lmms):
         model_version: str = "gpt-4o-audio-preview",
         modality: str = "audio",
         timeout: int = 120,
-        continual_mode: bool = False,
-        response_persistent_folder: str = None,
         audio_voice: str = "alloy",
         audio_format: str = "wav",
         **kwargs,
@@ -69,25 +66,8 @@ class GPT4OAudio(lmms):
         self.modality = modality
         self.audio_token = "<audio>"  # Audio token placeholder
         self.timeout = timeout
-        self.continual_mode = continual_mode
         self.audio_voice = audio_voice
         self.audio_format = audio_format
-
-        if self.continual_mode:
-            if response_persistent_folder is None:
-                raise ValueError("Continual mode requires a persistent path for the response. Please provide a valid path.")
-
-            os.makedirs(response_persistent_folder, exist_ok=True)
-            self.response_persistent_folder = response_persistent_folder
-            self.response_persistent_file = os.path.join(self.response_persistent_folder, f"{self.model_version}_response.json")
-
-            if os.path.exists(self.response_persistent_file):
-                with open(self.response_persistent_file, "r") as f:
-                    self.response_cache = json.load(f)
-                self.cache_mode = "resume"
-            else:
-                self.response_cache = {}
-                self.cache_mode = "start"
 
         if API_TYPE == "openai":
             self.client = OpenAI(api_key=API_KEY)
@@ -232,16 +212,6 @@ class GPT4OAudio(lmms):
         pbar = tqdm(total=len(requests), disable=(self.rank != 0), desc="Model Responding")
 
         for contexts, gen_kwargs, doc_to_visual, doc_id, task, split in [reg.args for reg in requests]:
-            if self.continual_mode is True and self.cache_mode == "resume":
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                if doc_uuid in self.response_cache:
-                    response_text = self.response_cache[doc_uuid]
-                    # Ensure cached response is not None
-                    if response_text is not None and response_text:
-                        res.append(response_text)
-                        pbar.update(1)
-                        continue
-
             audios = [doc_to_visual(self.task_dict[task][split][doc_id])]
             if None in audios:
                 audios = []
@@ -389,12 +359,6 @@ class GPT4OAudio(lmms):
             res.append(response_text)
             pbar.update(1)
 
-            if self.continual_mode is True and self.accelerator.is_local_main_process:
-                doc_uuid = f"{task}___{split}___{doc_id}"
-                cache_value = response_text if response_text is not None else ""
-                self.response_cache[doc_uuid] = cache_value
-                with open(self.response_persistent_file, "w") as f:
-                    json.dump(self.response_cache, f, indent=4)
         pbar.close()
         return res
 

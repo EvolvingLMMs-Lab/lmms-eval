@@ -16,7 +16,7 @@
 
 🏠 [LMMs-Lab Homepage](https://www.lmms-lab.com/) | 🤗 [Huggingface Datensätze](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [Unterstützte Aufgaben (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [Unterstützte Modelle (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Dokumentation](../README.md)
+📖 [Unterstützte Aufgaben (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [Unterstützte Modelle (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [Dokumentation](../README.md)
 
 ---
 
@@ -26,14 +26,14 @@ Die Evaluierung multimodaler Modelle ist schwieriger, als es aussieht. Wir haben
 
 **Januar 2026** – Wir haben erkannt, dass räumliches und kompositionelles Denken blinde Flecken in bestehenden Benchmarks blieben. Wir haben [CaptionQA](https://captionqa.github.io/), [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench), [SiteBench](https://sitebench.github.io/) und [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial) hinzugefügt. Für Teams, die Remote-Evaluierungs-Pipelines betreiben, haben wir einen HTTP-Eval-Server eingeführt (#972). Für diejenigen, die statistische Strenge benötigen, haben wir CLT und Clustered Standard Error Estimation hinzugefügt (#989).
 
-**Oktober 2025 (v0.5)** – Audio war eine Lücke. Modelle konnten hören, aber wir hatten keinen konsistenten Weg, sie zu testen. Dieses Release fügte eine umfassende Audio-Evaluierung, Response-Caching für Effizienz und über 50 Benchmark-Varianten hinzu, die Audio, Vision und Reasoning abdecken. [Release Notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
+**Oktober 2025 (v0.5)** – Audio war eine Lücke. Modelle konnten hören, aber wir hatten keinen konsistenten Weg, sie zu testen. Dieses Release fügte eine umfassende Audio-Evaluierung, Response-Caching für Effizienz und über 50 Benchmark-Varianten hinzu, die Audio, Vision und Reasoning abdecken. [Release Notes](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md).
 
 <details>
 <summary>Nachfolgend finden Sie eine chronologische Liste der jüngsten Aufgaben, Modelle und Funktionen, die von unseren großartigen Mitwirkenden hinzugefügt wurden. </summary>
 
 - [2025-01] 🎓🎓 Wir haben unseren neuen Benchmark veröffentlicht: [Video-MMMU: Evaluating Knowledge Acquisition from Multi-Discipline Professional Videos](https://arxiv.org/abs/2501.13826). Weitere Details finden Sie auf der [Projektseite](https://videommmu.github.io/).
 - [2024-12] 🎉🎉 Wir haben gemeinsam mit dem [MME-Team](https://github.com/BradyFU/Video-MME) und dem [OpenCompass-Team](https://github.com/open-compass) den [MME-Survey: A Comprehensive Survey on Evaluation of Multimodal LLMs](https://arxiv.org/pdf/2411.15296) vorgestellt.
-- [2024-11] 🔈🔊 `lmms-eval/v0.3.0` wurde aktualisiert, um Audio-Evaluierungen für Audio-Modelle wie Qwen2-Audio und Gemini-Audio über Aufgaben wie AIR-Bench, Clotho-AQA, LibriSpeech und mehr hinweg zu unterstützen. Weitere Details finden Sie im [Blog](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.3.md)!
+- [2024-11] 🔈🔊 `lmms-eval/v0.3.0` wurde aktualisiert, um Audio-Evaluierungen für Audio-Modelle wie Qwen2-Audio und Gemini-Audio über Aufgaben wie AIR-Bench, Clotho-AQA, LibriSpeech und mehr hinweg zu unterstützen. Weitere Details finden Sie im [Blog](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.3.md)!
 - [2024-10] 🎉🎉 Wir begrüßen die neue Aufgabe [NaturalBench](https://huggingface.co/datasets/BaiqiL/NaturalBench), ein visionszentrierter VQA-Benchmark (NeurIPS'24), der Vision-Language-Modelle mit einfachen Fragen zu natürlichen Bildern herausfordert.
 - [2024-10] 🎉🎉 Wir begrüßen die neue Aufgabe [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench) für feingliedriges temporäres Verständnis und Schlussfolgern für Videos, die eine riesige (>30%) Lücke zwischen Mensch und KI aufdeckt.
 

@@ -16,7 +16,7 @@
 
 🏠 [LMMs-Lab 主页](https://www.lmms-lab.com/) | 🤗 [Huggingface 数据集](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [支持的任务 (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [支持的模型 (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [文档](../README.md)
+📖 [支持的任务 (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [支持的模型 (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [文档](../README.md)
 
 ---
 
@@ -26,20 +26,20 @@
 
 **2026年1月** - 我们意识到空间推理和组合推理仍然是现有基准测试的盲点。我们添加了 [CaptionQA](https://captionqa.github.io/)、[SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench)、[SiteBench](https://sitebench.github.io/) 和 [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial)。对于运行远程评估流水线的团队，我们引入了 HTTP 评估服务器 (#972)。对于需要统计严密性的用户，我们添加了中心极限定理（CLT）和聚类标准误差估计 (#989)。
 
-**2025年10月 (v0.5)** - 音频评估曾是一个空白。模型可以“听”，但我们没有一致的方法来测试它们。此版本添加了全面的音频评估、响应缓存以提高效率，以及 50 多个涵盖音频、视觉和推理的基准变体。[发布说明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md)。
+**2025年10月 (v0.5)** - 音频评估曾是一个空白。模型可以“听”，但我们没有一致的方法来测试它们。此版本添加了全面的音频评估、响应缓存以提高效率，以及 50 多个涵盖音频、视觉和推理的基准变体。[发布说明](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md)。
 
 <details>
 <summary>以下是由我们优秀的贡献者添加的近期任务、模型和功能的按时间顺序排列的列表。</summary>
 
 - [2025-01] 🎓🎓 我们发布了新的基准测试：[Video-MMMU: Evaluating Knowledge Acquisition from Multi-Discipline Professional Videos](https://arxiv.org/abs/2501.13826)。详情请参阅[项目主页](https://videommmu.github.io/)。
 - [2024-12] 🎉🎉 我们与 [MME 团队](https://github.com/BradyFU/Video-MME)和 [OpenCompass 团队](https://github.com/open-compass)共同发布了 [MME-Survey: A Comprehensive Survey on Evaluation of Multimodal LLMs](https://arxiv.org/pdf/2411.15296)。
-- [2024-11] 🔈🔊 `lmms-eval/v0.3.0` 已升级，支持对 Qwen2-Audio 和 Gemini-Audio 等音频模型在 AIR-Bench、Clotho-AQA、LibriSpeech 等任务上进行音频评估。详情请参阅[博客](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.3.md)！
+- [2024-11] 🔈🔊 `lmms-eval/v0.3.0` 已升级，支持对 Qwen2-Audio 和 Gemini-Audio 等音频模型在 AIR-Bench、Clotho-AQA、LibriSpeech 等任务上进行音频评估。详情请参阅[博客](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.3.md)！
 - [2024-10] 🎉🎉 欢迎新任务 [NaturalBench](https://huggingface.co/datasets/BaiqiL/NaturalBench)，这是一个以视觉为核心的 VQA 基准测试 (NeurIPS'24)，通过关于自然图像的简单问题挑战视觉语言模型。
 - [2024-10] 🎉🎉 欢迎新任务 [TemporalBench](https://huggingface.co/datasets/microsoft/TemporalBench)，用于视频的细粒度时间理解和推理，揭示了巨大的 (>30%) 人机差距。
 - [2024-10] 🎉🎉 欢迎新任务 [VDC](https://rese1f.github.io/aurora-web/)（用于视频详细字幕生成）、[MovieChat-1K](https://rese1f.github.io/MovieChat/)（用于长视频理解）和 [Vinoground](https://vinoground.github.io/)（一个由 1000 个短自然视频-字幕对组成的时间反事实 LMM 基准测试）。同时欢迎新模型：[AuroraCap](https://github.com/rese1f/aurora) 和 [MovieChat](https://github.com/rese1f/MovieChat)。
 - [2024-09] 🎉🎉 欢迎新任务 [MMSearch](https://mmsearch.github.io/) 和 [MME-RealWorld](https://mme-realworld.github.io/) 以加速推理。
 - [2024-09] ⚙️️⚙️️️️ 我们将 `lmms-eval` 升级到 `0.2.3`，增加了更多任务和功能。我们支持一组紧凑的语言任务评估（代码致谢 [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)），并删除了启动时的注册逻辑（针对所有模型和任务）以减少开销。现在 `lmms-eval` 仅启动必要的任务/模型。详情请查看[发布说明](https://github.com/EvolvingLMMs-Lab/lmms-eval/releases/tag/v0.2.3)。
-- [2024-08] 🎉🎉 欢迎新模型 [LLaVA-OneVision](https://huggingface.co/papers/2408.03326)、[Mantis](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/162)，以及新任务 [MVBench](https://huggingface.co/datasets/OpenGVLab/MVBench)、[LongVideoBench](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/117)、[MMStar](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/158)。我们为 llava-onevision 模型提供了 SGlang Runtime API 的新功能，请参考[文档](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/commands.md)以加速推理。
+- [2024-08] 🎉🎉 欢迎新模型 [LLaVA-OneVision](https://huggingface.co/papers/2408.03326)、[Mantis](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/162)，以及新任务 [MVBench](https://huggingface.co/datasets/OpenGVLab/MVBench)、[LongVideoBench](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/117)、[MMStar](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/158)。我们为 llava-onevision 模型提供了 SGlang Runtime API 的新功能，请参考[文档](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/getting-started/commands.md)以加速推理。
 - [2024-07] 👨‍💻👨‍💻 `lmms-eval/v0.2.1` 已升级以支持更多模型，包括 [LongVA](https://github.com/EvolvingLMMs-Lab/LongVA)、[InternVL-2](https://github.com/OpenGVLab/InternVL)、[VILA](https://github.com/NVlabs/VILA)，以及更多评估任务，例如 [Details Captions](https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/136)、[MLVU](https://arxiv.org/abs/2406.04264)、[WildVision-Bench](https://huggingface.co/datasets/WildVision/wildvision-arena-data)、[VITATECS](https://github.com/lscpku/VITATECS) 和 [LLaVA-Interleave-Bench](https://llava-vl.github.io/blog/2024-06-16-llava-next-interleave/)。
 - [2024-07] 🎉🎉 我们发布了[技术报告](https://arxiv.org/abs/2407.12772)和 [LiveBench](https://huggingface.co/spaces/lmms-lab/LiveBench)！
 - [2024-06] 🎬🎬 `lmms-eval/v0.2.0` 已升级，支持对 LLaVA-NeXT Video 和 Gemini 1.5 Pro 等视频模型在 EgoSchema、PerceptionTest、VideoMME 等任务上进行视频评估。详情请参阅[博客](https://lmms-lab.github.io/posts/lmms-eval-0.2/)！

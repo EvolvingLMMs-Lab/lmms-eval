@@ -34,22 +34,23 @@ from lmms_eval.tasks.ocrbench_v2.vqa_metric import (
     vqa_evaluation_case_sensitive,
 )
 
-# Add the following functions to your existing utils.py file
-OCRBench_v2_score = {
-    "text_recognition_en": [],
-    "text_detection_en": [],
-    "text_spotting_en": [],
-    "relationship_extraction_en": [],
-    "element_parsing_en": [],
-    "mathematical_calculation_en": [],
-    "visual_text_understanding_en": [],
-    "knowledge_reasoning_en": [],
-    "text_recognition_cn": [],
-    "relationship_extraction_cn": [],
-    "element_parsing_cn": [],
-    "visual_text_understanding_cn": [],
-    "knowledge_reasoning_cn": [],
-}
+
+def _make_score_buckets():
+    return {
+        "text_recognition_en": [],
+        "text_detection_en": [],
+        "text_spotting_en": [],
+        "relationship_extraction_en": [],
+        "element_parsing_en": [],
+        "mathematical_calculation_en": [],
+        "visual_text_understanding_en": [],
+        "knowledge_reasoning_en": [],
+        "text_recognition_cn": [],
+        "relationship_extraction_cn": [],
+        "element_parsing_cn": [],
+        "visual_text_understanding_cn": [],
+        "knowledge_reasoning_cn": [],
+    }
 
 
 teds = TEDS(n_jobs=32)
@@ -253,7 +254,7 @@ def ocrbench_v2_process_results(doc, results):
             else:
                 pred_chart_html = dict_to_html(pred_chart_dict)
                 if isinstance(answer, str):
-                    answer = convert_str_to_multi_dict(pred)
+                    answer = convert_str_to_multi_dict(answer)
                 gt_chart_html = dict_to_html(answer)
                 score = teds.evaluate(pred_chart_html, gt_chart_html)
         else:
@@ -332,7 +333,7 @@ def ocrbench_v2_process_results(doc, results):
             score = (get_value_or_zero(ocr_metric["bleu"]) + get_value_or_zero(ocr_metric["meteor"]) + get_value_or_zero(ocr_metric["f_measure"]) + (1 - get_value_or_zero(ocr_metric["edit_dist"]))) / 4
     elif data_type == "full-page OCR en":
         if not pred:
-            score == 0
+            score = 0
         else:
             ocr_metric = cal_per_metrics(pred, gt_ans[0])
             score = (get_value_or_zero(ocr_metric["bleu"]) + get_value_or_zero(ocr_metric["meteor"]) + get_value_or_zero(ocr_metric["f_measure"]) + (1 - get_value_or_zero(ocr_metric["edit_dist"]))) / 4
@@ -367,17 +368,32 @@ def ocrbench_v2_process_results(doc, results):
             else:
                 score = spotting_evaluation(predict_bbox, doc)
 
+    payload = {"question_type": data_type, "score": score, "prediction": pred, "ground_truth": gt_ans}
     return {
-        "ocrbench_v2_accuracy": {"question_type": data_type, "score": score, "prediction": pred, "ground_truth": gt_ans},
+        "ocrbench_v2_accuracy": payload,
+        "ocrbench_v2_accuracy_en": payload,
+        "ocrbench_v2_accuracy_cn": payload,
     }
 
 
-def calculate_average_score(categories):
-    return sum(sum(OCRBench_v2_score[cat]) / len(OCRBench_v2_score[cat]) if len(OCRBench_v2_score[cat]) > 0 else 0 for cat in categories) / len(categories)
+def calculate_average_score(categories, score_buckets):
+    """Weighted average across categories by sample count."""
+    total_score = sum(sum(score_buckets[cat]) for cat in categories)
+    total_count = sum(len(score_buckets[cat]) for cat in categories)
+    if total_count == 0:
+        return 0.0
+    return total_score / total_count
 
 
-def ocrbench_v2_aggregate_accuracy(results, args):
+ENGLISH_TASKS = ["text_recognition_en", "text_detection_en", "text_spotting_en", "relationship_extraction_en", "element_parsing_en", "mathematical_calculation_en", "visual_text_understanding_en", "knowledge_reasoning_en"]
+
+CHINESE_TASKS = ["text_recognition_cn", "relationship_extraction_cn", "element_parsing_cn", "visual_text_understanding_cn", "knowledge_reasoning_cn"]
+
+
+def _fill_score_buckets(results):
+    """Shared logic: populate score buckets and per-question-type scores from results."""
     question_type_scores = {}
+    score_buckets = _make_score_buckets()
 
     for result in results:
         if "ignore" in result.keys() and result["ignore"] == "True":
@@ -391,56 +407,61 @@ def ocrbench_v2_aggregate_accuracy(results, args):
         question_type_scores[question_type].append(score)
 
         if question_type in ["text recognition en", "fine-grained text recognition en", "full-page OCR en"]:
-            OCRBench_v2_score["text_recognition_en"].append(score)
+            score_buckets["text_recognition_en"].append(score)
 
         elif question_type in ["text grounding en", "VQA with position en"]:
-            OCRBench_v2_score["text_detection_en"].append(score)
+            score_buckets["text_detection_en"].append(score)
 
         elif question_type == "text spotting en":
-            OCRBench_v2_score["text_spotting_en"].append(score)
+            score_buckets["text_spotting_en"].append(score)
 
         elif question_type in ["key information extraction en", "key information mapping en"]:
-            OCRBench_v2_score["relationship_extraction_en"].append(score)
+            score_buckets["relationship_extraction_en"].append(score)
 
         elif question_type in ["document parsing en", "chart parsing en", "table parsing en", "formula recognition en"]:
-            OCRBench_v2_score["element_parsing_en"].append(score)
+            score_buckets["element_parsing_en"].append(score)
 
         elif question_type in ["math QA en", "text counting en"]:
-            OCRBench_v2_score["mathematical_calculation_en"].append(score)
+            score_buckets["mathematical_calculation_en"].append(score)
 
         elif question_type in ["document classification en", "cognition VQA en", "diagram QA en"]:
-            OCRBench_v2_score["visual_text_understanding_en"].append(score)
+            score_buckets["visual_text_understanding_en"].append(score)
 
         elif question_type in ["reasoning VQA en", "science QA en", "APP agent en", "ASCII art classification en"]:
-            OCRBench_v2_score["knowledge_reasoning_en"].append(score)
+            score_buckets["knowledge_reasoning_en"].append(score)
 
         elif question_type == "full-page OCR cn":
-            OCRBench_v2_score["text_recognition_cn"].append(score)
+            score_buckets["text_recognition_cn"].append(score)
 
         elif question_type in ["key information extraction cn", "handwritten answer extraction cn"]:
-            OCRBench_v2_score["relationship_extraction_cn"].append(score)
+            score_buckets["relationship_extraction_cn"].append(score)
 
         elif question_type in ["document parsing cn", "table parsing cn", "formula recognition cn"]:
-            OCRBench_v2_score["element_parsing_cn"].append(score)
+            score_buckets["element_parsing_cn"].append(score)
 
         elif question_type == "cognition VQA cn":
-            OCRBench_v2_score["visual_text_understanding_cn"].append(score)
+            score_buckets["visual_text_understanding_cn"].append(score)
 
         elif question_type in ["reasoning VQA cn", "text translation cn"]:
-            OCRBench_v2_score["knowledge_reasoning_cn"].append(score)
+            score_buckets["knowledge_reasoning_cn"].append(score)
 
         else:
             print("No such task!")
             raise TypeError
 
-    english_tasks = ["text_recognition_en", "text_detection_en", "text_spotting_en", "relationship_extraction_en", "element_parsing_en", "mathematical_calculation_en", "visual_text_understanding_en", "knowledge_reasoning_en"]
+    return question_type_scores, score_buckets
 
-    chinese_tasks = ["text_recognition_cn", "relationship_extraction_cn", "element_parsing_cn", "visual_text_understanding_cn", "knowledge_reasoning_cn"]
 
-    OCRBench_v2_English_subset_score = calculate_average_score(english_tasks)
-    OCRBench_v2_Chinese_subset_score = calculate_average_score(chinese_tasks)
+def ocrbench_v2_aggregate_accuracy(results, args):
+    question_type_scores, score_buckets = _fill_score_buckets(results)
 
-    Final_score = (OCRBench_v2_English_subset_score + OCRBench_v2_Chinese_subset_score) / 2
+    OCRBench_v2_English_subset_score = calculate_average_score(ENGLISH_TASKS, score_buckets)
+    OCRBench_v2_Chinese_subset_score = calculate_average_score(CHINESE_TASKS, score_buckets)
+
+    en_count = sum(len(score_buckets[t]) for t in ENGLISH_TASKS)
+    cn_count = sum(len(score_buckets[t]) for t in CHINESE_TASKS)
+    total = en_count + cn_count
+    Final_score = (OCRBench_v2_English_subset_score * en_count + OCRBench_v2_Chinese_subset_score * cn_count) / total if total > 0 else 0.0
     file_name = generate_submission_file("ocrbench_v2_results.txt", args, subpath="results")
     with open(file_name, "w") as f:
         print("######################### OCRBench v2 ##########################", file=f)
@@ -449,15 +470,15 @@ def ocrbench_v2_aggregate_accuracy(results, args):
             avg_score = sum(scores) / len(scores) if len(scores) > 0 else 0
             print(f"{q_type} (sample number: {len(scores)}): {avg_score:.2f}", file=f)
         print("######################### English Subsets ######################", file=f)
-        for task in english_tasks:
-            num_samples = len(OCRBench_v2_score[task])
-            avg_score = sum(OCRBench_v2_score[task]) / num_samples if num_samples > 0 else 0
+        for task in ENGLISH_TASKS:
+            num_samples = len(score_buckets[task])
+            avg_score = sum(score_buckets[task]) / num_samples if num_samples > 0 else 0
             print(f"{task.replace('_', ' ').title()} (Total {num_samples}): {avg_score:.2f}", file=f)
         print(f"Overall English Score: {OCRBench_v2_English_subset_score:.2f}", file=f)
         print("######################### Chinese Subsets ######################", file=f)
-        for task in chinese_tasks:
-            num_samples = len(OCRBench_v2_score[task])
-            avg_score = sum(OCRBench_v2_score[task]) / num_samples if num_samples > 0 else 0
+        for task in CHINESE_TASKS:
+            num_samples = len(score_buckets[task])
+            avg_score = sum(score_buckets[task]) / num_samples if num_samples > 0 else 0
             print(f"{task.replace('_', ' ').title()} (Total {num_samples}): {avg_score:.2f}", file=f)
         print(f"Overall Chinese Score: {OCRBench_v2_Chinese_subset_score:.2f}", file=f)
         print("######################### Final Score ##########################", file=f)
@@ -465,3 +486,13 @@ def ocrbench_v2_aggregate_accuracy(results, args):
     logger.info(f"OCRBench v2 results saved to {file_name}")
 
     return Final_score  # return the final score as accuracy
+
+
+def ocrbench_v2_aggregate_accuracy_en(results, args):
+    _, score_buckets = _fill_score_buckets(results)
+    return calculate_average_score(ENGLISH_TASKS, score_buckets)
+
+
+def ocrbench_v2_aggregate_accuracy_cn(results, args):
+    _, score_buckets = _fill_score_buckets(results)
+    return calculate_average_score(CHINESE_TASKS, score_buckets)

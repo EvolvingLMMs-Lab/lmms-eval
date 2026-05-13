@@ -62,8 +62,6 @@ class BagelLmmsEngine(lmms):
         text_temperature: float = 0.3,
         seed: int = 0,
         image_ratio: str = "1:1",
-        continual_mode: bool = True,
-        response_persistent_folder: Optional[str] = None,
         device: Optional[str] = "cuda",
         device_map: Optional[str] = None,
         **kwargs,
@@ -74,7 +72,6 @@ class BagelLmmsEngine(lmms):
         self.load_in_4bit = load_in_4bit
         self.load_in_8bit = load_in_8bit
         self.show_thinking = show_thinking
-        self.continual_mode = continual_mode
 
         # Generation hyperparameters
         self.cfg_text_scale = cfg_text_scale
@@ -106,7 +103,7 @@ class BagelLmmsEngine(lmms):
             self.image_shapes = (1024, 1024)
 
         if output_image_dir is None:
-            self.output_image_dir = os.path.join(self.response_persistent_folder, "bagel_generated_images")
+            self.output_image_dir = "./logs/bagel_generated_images"
         else:
             self.output_image_dir = output_image_dir
 

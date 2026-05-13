@@ -1,5 +1,8 @@
 dataset_path: lmms-lab/MMMU
 task: "mmmu_val"
+tag:
+  - public_eval_qwen3_5_family
+  - public_eval_gpt5_family
 test_split: validation
 output_type: generate_until
 doc_to_visual: !function utils.mmmu_doc_to_visual

@@ -1,0 +1,3 @@
+task: visres_bench_level_3_coupled_color_count
+dataset_name: level_3_coupled_color_count
+include: _default_template_visres_bench_yaml

@@ -1,0 +1,33 @@
+dataset_path: maitrix-org/WM-ABench
+dataset_kwargs:
+  token: True
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.wm_abench_doc_to_visual
+doc_to_text: !function utils.wm_abench_doc_to_text
+doc_to_target: !function utils.wm_abench_doc_to_target
+
+process_results: !function utils.wm_abench_process_results
+
+metric_list:
+  - metric: wm_abench_acc
+    aggregation: !function utils.wm_abench_aggregate_results
+    higher_is_better: true
+  - metric: wm_abench_acc_clean
+    aggregation: !function utils.wm_abench_aggregate_results_clean
+    higher_is_better: true
+  - metric: wm_abench_blocked_rate
+    aggregation: !function utils.wm_abench_aggregate_blocked_rate
+    higher_is_better: false
+
+generation_kwargs:
+  max_new_tokens: 16
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

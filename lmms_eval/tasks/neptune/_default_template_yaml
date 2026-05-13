@@ -1,0 +1,25 @@
+dataset_path: lmms-lab/GoogleDeepMind-NEPTUNE
+dataset_kwargs:
+  token: True
+  cache_dir: neptune
+  video: True
+  force_download: False
+  force_unzip: False
+output_type: generate_until
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  do_sample: False
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with only the option letter (A, B, C, D, or E)."
+    max_num_frames: 32
+    frame_sampling: uniform
+  qwen3_vl:
+    pre_prompt: "Question: "
+    post_prompt: "\nRespond with only one letter: A, B, C, D, or E."
+    max_num_frames: 32
+    frame_sampling: uniform
+metadata:
+  - version: 0.0

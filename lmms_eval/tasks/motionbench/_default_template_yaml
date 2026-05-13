@@ -1,0 +1,36 @@
+dataset_path: text
+dataset_kwargs:
+  data_files:
+    test: https://raw.githubusercontent.com/zai-org/MotionBench/main/data/video_info.meta.jsonl
+task: motionbench_full
+test_split: test
+output_type: generate_until
+process_docs: !function utils.motionbench_process_docs
+doc_to_visual: !function utils.motionbench_doc_to_visual
+doc_to_text: !function utils.motionbench_doc_to_text
+doc_to_messages: !function utils.motionbench_doc_to_messages
+doc_to_target: "answer"
+generation_kwargs:
+  max_new_tokens: 64
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+process_results: !function utils.motionbench_process_results
+metric_list:
+  - metric: motionbench_acc
+    aggregation: !function utils.motionbench_aggregate_acc
+    higher_is_better: true
+  - metric: motionbench_answered_rate
+    aggregation: !function utils.motionbench_aggregate_answered_rate
+    higher_is_better: true
+  - metric: motionbench_tracking
+    aggregation: !function utils.motionbench_aggregate_tracking
+    higher_is_better: true
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "Answer with only the option letter (A, B, C, D, E, or F)."
+metadata:
+  version: 0.1
+  description: "MotionBench full integration with per-category tracking and chat/simple compatibility"

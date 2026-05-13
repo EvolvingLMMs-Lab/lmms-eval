@@ -2,6 +2,8 @@ dataset_path: ling99/OCRBench_v2
 dataset_kwargs:
   token: True
 task: "ocrbench_v2"
+tag:
+  - public_eval_seed2_family
 test_split: test
 output_type: generate_until
 doc_to_visual: !function utils.ocrbench_v2_doc_to_visual
@@ -17,6 +19,12 @@ process_results: !function utils.ocrbench_v2_process_results
 metric_list:
   - metric: ocrbench_v2_accuracy
     aggregation: !function utils.ocrbench_v2_aggregate_accuracy
+    higher_is_better: true
+  - metric: ocrbench_v2_accuracy_en
+    aggregation: !function utils.ocrbench_v2_aggregate_accuracy_en
+    higher_is_better: true
+  - metric: ocrbench_v2_accuracy_cn
+    aggregation: !function utils.ocrbench_v2_aggregate_accuracy_cn
     higher_is_better: true
 metadata:
   - version: 0.0

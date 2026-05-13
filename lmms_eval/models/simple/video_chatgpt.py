@@ -29,7 +29,7 @@ try:
 except ImportError:
     eval_logger.warning("Failed to import video_chatgpt modules")
 
-from lmms_eval.models.model_utils.load_video import read_video_pyav
+from lmms_eval.models.model_utils.load_video import read_video
 
 
 @register_model("video_chatgpt")
@@ -113,7 +113,7 @@ class VideoChatGPT(lmms):
             visuals = self.flatten(visuals)
             # videos = []
             for visual in visuals:
-                video_frames = read_video_pyav(visual, num_frm=self.num_frm)
+                video_frames = read_video(visual, num_frm=self.num_frm)
                 target_h, target_w = 224, 224
                 # If image shape is not as target, resize it
                 if video_frames.shape[-3] != target_h or video_frames.shape[-2] != target_w:

@@ -1,0 +1,9 @@
+{
+  "task": "mmmu_val",
+  "variant": "multiple-choice",
+  "doc_id": "validation_Accounting_1",
+  "prompt_text": "In the context of agency theory, which scenario best illustrates a Type I agency problem?\nA. Shareholders disagreeing with bondholders over dividend policy\nB. Managers pursuing personal projects that reduce firm value\nC. Majority shareholders expropriating minority shareholders\nD. Suppliers refusing to extend credit terms to the firm\n\nAnswer with the option's letter from the given choices directly.",
+  "gen_kwargs": {
+    "max_new_tokens": 128
+  }
+}

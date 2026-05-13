@@ -5,10 +5,12 @@ import sqlite3
 import tempfile
 import time
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from lmms_eval.api.instance import Instance
+from lmms_eval.caching.fs_detect import FsType
 from lmms_eval.caching.response_cache import (
+    _SCHEMA_VERSION,
     ResponseCache,
     _extract_content_hash,
     compute_cache_key,
@@ -25,7 +27,7 @@ def _make_instance(request_type, arguments, idx, task_name, doc_id, repeats=1):
     return Instance(request_type=request_type, arguments=arguments, idx=idx, metadata={"task": task_name, "doc_id": doc_id, "repeats": repeats})
 
 
-def _gen_request(prompt="prompt", doc_id=0, idx=0, task="t", temperature=0, do_sample=None, n=None, until=None, repeats=1):
+def _gen_request(prompt="prompt", doc_id=0, idx=0, task="t", temperature=0.0, do_sample=None, n=None, until=None, repeats=1):
     gk = {"temperature": temperature, "until": until or ["\n"]}
     if do_sample is not None:
         gk["do_sample"] = do_sample
@@ -57,34 +59,6 @@ class _CacheTestBase(unittest.TestCase):
             return [json.loads(line) for line in f if line.strip()]
 
 
-# ===========================================================================
-# Unit tests - pure functions, no I/O
-# ===========================================================================
-
-
-class TestDeterminismDetection(unittest.TestCase):
-    def test_loglikelihood_always_deterministic(self):
-        self.assertTrue(is_deterministic("loglikelihood", {"temperature": 999}))
-
-    def test_temp_zero_deterministic(self):
-        self.assertTrue(is_deterministic("generate_until", {"temperature": 0}))
-        self.assertTrue(is_deterministic("generate_until", {}))
-        self.assertTrue(is_deterministic("generate_until", None))
-
-    def test_temp_positive_nondeterministic(self):
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 0.7}))
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 1}))
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 0.01}))
-
-    def test_do_sample_nondeterministic(self):
-        self.assertFalse(is_deterministic("generate_until", {"temperature": 0, "do_sample": True}))
-
-    def test_multi_return_nondeterministic(self):
-        self.assertFalse(is_deterministic("generate_until", {"n": 3}))
-        self.assertFalse(is_deterministic("generate_until", {"best_of": 2}))
-        self.assertFalse(is_deterministic("generate_until", {"num_return_sequences": 5}))
-
-
 class TestCacheKeyCollision(unittest.TestCase):
     def test_conditional_vs_unconditional_differ(self):
         cond = _make_instance("loglikelihood", ("What is 2+2?", " A) 4", None, 0, "t", "test"), 0, "t", 42)
@@ -108,6 +82,21 @@ class TestCacheKeyCollision(unittest.TestCase):
     def test_task_fingerprint_invalidates(self):
         k1 = compute_cache_key("generate_until", "t", 1, {}, task_fingerprint="abc")
         k2 = compute_cache_key("generate_until", "t", 1, {}, task_fingerprint="def")
+        self.assertNotEqual(k1, k2)
+
+    def test_model_fingerprint_invalidates(self):
+        k1 = compute_cache_key("generate_until", "t", 1, {}, model_fingerprint_hash="model_a")
+        k2 = compute_cache_key("generate_until", "t", 1, {}, model_fingerprint_hash="model_b")
+        self.assertNotEqual(k1, k2)
+
+    def test_generate_until_same_doc_idx_different_prompt_differ(self):
+        r1 = _gen_request("prompt_a", doc_id=7, idx=0, task="t", temperature=0)
+        r2 = _gen_request("prompt_b", doc_id=7, idx=0, task="t", temperature=0)
+        ch1 = _extract_content_hash(r1)
+        ch2 = _extract_content_hash(r2)
+        self.assertNotEqual(ch1, ch2)
+        k1 = compute_cache_key("generate_until", "t", 7, {"temperature": 0, "until": ["\n"]}, idx=0, content_hash=ch1)
+        k2 = compute_cache_key("generate_until", "t", 7, {"temperature": 0, "until": ["\n"]}, idx=0, content_hash=ch2)
         self.assertNotEqual(k1, k2)
 
 
@@ -182,6 +171,26 @@ class TestCacheHitMiss(_CacheTestBase):
         self.assertEqual(sent[0].doc_id, 99)
         self.assertEqual(cache2.get_stats()["hits"], 3)
         self.assertEqual(cache2.get_stats()["misses"], 1)
+        cache2.close()
+
+    def test_same_doc_idx_different_prompts_do_not_collide(self):
+        reqs = [
+            _gen_request("prompt_a", doc_id=42, idx=0, task="mme"),
+            _gen_request("prompt_b", doc_id=42, idx=0, task="mme"),
+        ]
+        model = _mock_model(["answer_a", "answer_b"])
+        cache = self._open_cache()
+        results = cache.execute(model, "generate_until", reqs)
+        self.assertEqual(results, ["answer_a", "answer_b"])
+        self.assertEqual(cache.get_stats()["misses"], 2)
+        cache.close()
+
+        model2 = _mock_model([])
+        cache2 = self._open_cache()
+        results2 = cache2.execute(model2, "generate_until", reqs)
+        self.assertEqual(results2, ["answer_a", "answer_b"])
+        model2.generate_until.assert_not_called()
+        self.assertEqual(cache2.get_stats()["hits"], 2)
         cache2.close()
 
 
@@ -276,7 +285,7 @@ class TestAuditLogObservability(_CacheTestBase):
 
     def test_deterministic_responses_logged(self):
         model = _mock_model(["det_answer"])
-        cache = self._open_cache()
+        cache = self._open_cache(model_fingerprint="model_v1", task_fingerprints={"t": "task_fp_v1"})
         cache.execute(model, "generate_until", [_gen_request(temperature=0)])
         self.assertEqual(cache.get_stats()["total_cached_entries"], 1)
         cache.close()
@@ -286,6 +295,10 @@ class TestAuditLogObservability(_CacheTestBase):
         self.assertTrue(lines[0]["deterministic"])
         self.assertEqual(json.loads(lines[0]["response"]), "det_answer")
         self.assertNotEqual(lines[0]["cache_key"], "")
+        self.assertEqual(lines[0]["fingerprint_schema_version"], _SCHEMA_VERSION)
+        self.assertIn("model_fingerprint_hash", lines[0])
+        self.assertIn("task_fingerprint", lines[0])
+        self.assertIn("content_hash", lines[0])
 
     def test_mixed_all_logged(self):
         reqs = [
@@ -299,8 +312,8 @@ class TestAuditLogObservability(_CacheTestBase):
 
         lines = self._read_audit_lines()
         self.assertEqual(len(lines), 2)
-        det_lines = [l for l in lines if l["deterministic"]]
-        nondet_lines = [l for l in lines if not l["deterministic"]]
+        det_lines = [line_record for line_record in lines if line_record["deterministic"]]
+        nondet_lines = [line_record for line_record in lines if not line_record["deterministic"]]
         self.assertEqual(len(det_lines), 1)
         self.assertEqual(len(nondet_lines), 1)
 
@@ -313,8 +326,9 @@ class TestAuditLogObservability(_CacheTestBase):
 class TestCrashRecovery(_CacheTestBase):
     def test_jsonl_replay_after_simulated_crash(self):
         model = _mock_model(["crash_answer"])
+        req = _gen_request(temperature=0)
         cache = self._open_cache()
-        cache.execute(model, "generate_until", [_gen_request(temperature=0)])
+        cache.execute(model, "generate_until", [req])
 
         cache._audit_file.close()
         os.remove(self.db_path)
@@ -324,7 +338,14 @@ class TestCrashRecovery(_CacheTestBase):
                 os.remove(p)
 
         cache2 = self._open_cache()
-        key = compute_cache_key("generate_until", "t", 0, {"temperature": 0, "until": ["\n"]}, idx=0)
+        key = compute_cache_key(
+            "generate_until",
+            "t",
+            0,
+            {"temperature": 0, "until": ["\n"]},
+            idx=0,
+            content_hash=_extract_content_hash(req),
+        )
         self.assertEqual(cache2._lookup(key), "crash_answer")
         cache2.close()
 
@@ -402,6 +423,175 @@ class TestMultiRankIsolation(_CacheTestBase):
 
 
 # ===========================================================================
+# Integration - layered cache roots
+# ===========================================================================
+
+
+class TestCreateAndFinalize(_CacheTestBase):
+    """Tests for the new ResponseCache.create() / finalize() lifecycle API."""
+
+    def _mock_utils(self):
+        """Patch lmms_eval.utils imports used by create()."""
+        return patch.multiple(
+            "lmms_eval.utils",
+            hash_string=lambda s: "h" + s[:15].ljust(15, "0"),
+            simple_parse_args_string=lambda s: {"raw": s},
+            get_lmms_eval_cache_version=lambda: "test-v1",
+            create=True,
+        )
+
+    def test_create_sets_up_run_directory(self):
+        cache_root = os.path.join(self.tmpdir, "cache")
+        with (
+            patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-100"}, clear=False),
+            self._mock_utils(),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.LOCAL),
+        ):
+            rc = ResponseCache.create(cache_root, model="test_model", world_size=4, global_rank=2)
+
+        self.assertEqual(rc._cache_root, cache_root)
+        self.assertEqual(rc._run_id, "job-100")
+        self.assertEqual(rc._global_rank, 2)
+        self.assertEqual(rc._world_size, 4)
+        self.assertFalse(rc._use_scratch)
+        self.assertTrue(os.path.isdir(os.path.join(cache_root, "runs", "job-100")))
+        self.assertIn("rank_2.db", rc.db_path)
+        rc.close()
+
+    def test_create_with_db_suffix_normalizes_to_directory(self):
+        cache_root = os.path.join(self.tmpdir, "cache")
+        os.makedirs(cache_root, exist_ok=True)
+        db_path = os.path.join(cache_root, "cache.db")
+        with (
+            patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-db"}, clear=False),
+            self._mock_utils(),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.LOCAL),
+        ):
+            rc = ResponseCache.create(db_path, model="m", world_size=1, global_rank=0)
+
+        self.assertEqual(rc._cache_root, cache_root)
+        rc.close()
+
+    def test_create_remote_uses_scratch(self):
+        cache_root = os.path.join(self.tmpdir, "remote_cache")
+        scratch_root = os.path.join(self.tmpdir, "scratch")
+        os.makedirs(scratch_root, exist_ok=True)
+        with (
+            patch.dict(os.environ, {"LMMS_CACHE_RUN_ID": "job-remote"}, clear=False),
+            self._mock_utils(),
+            patch("lmms_eval.caching.response_cache.detect_fs_type", return_value=FsType.REMOTE),
+            patch("lmms_eval.caching.response_cache.find_local_scratch", return_value=scratch_root),
+        ):
+            rc = ResponseCache.create(cache_root, model="m", world_size=2, global_rank=1)
+
+        self.assertTrue(rc._use_scratch)
+        self.assertIn(scratch_root, rc.db_path)
+        self.assertIsNotNone(rc._remote_rank_db)
+        self.assertIn("rank_1.db", rc._remote_rank_db)
+        rc.close()
+
+    def test_finalize_merges_rank_dbs_into_root(self):
+        cache_root = os.path.join(self.tmpdir, "finalize_test")
+        run_dir = os.path.join(cache_root, "runs", "job-merge")
+        os.makedirs(run_dir, exist_ok=True)
+
+        # Simulate rank 0 writing data
+        rank_db = os.path.join(run_dir, "rank_0.db")
+        rank_audit = os.path.join(run_dir, "rank_0.audit.jsonl")
+        cache = ResponseCache(rank_db, rank_audit, model_fingerprint="model_A")
+        cache.execute(_mock_model(["answer"]), "generate_until", [_gen_request("prompt", doc_id=7)])
+
+        # Set finalize metadata (normally done by create())
+        cache._cache_root = cache_root
+        cache._run_id = "job-merge"
+        cache._run_dir = run_dir
+        cache._global_rank = 0
+        cache._world_size = 1
+        cache._use_scratch = False
+        cache._remote_rank_db = None
+        cache._remote_rank_audit = None
+
+        cache.finalize(success=True, dist_backend="none")
+
+        # Verify root cache.db was created with merged data
+        target_db = os.path.join(cache_root, "cache.db")
+        self.assertTrue(os.path.exists(target_db))
+
+        root_cache = ResponseCache(target_db, os.path.join(cache_root, "cache.audit.jsonl"), model_fingerprint="model_A")
+        results = root_cache.execute(_mock_model([]), "generate_until", [_gen_request("prompt", doc_id=7)])
+        self.assertEqual(results, ["answer"])
+        self.assertEqual(root_cache.get_stats()["hits"], 1)
+        root_cache.close()
+
+        # Verify ready/merged markers
+        self.assertTrue(os.path.exists(os.path.join(run_dir, ".ready")))
+        self.assertTrue(os.path.exists(os.path.join(run_dir, ".merged")))
+
+    def test_finalize_multi_rank_merge(self):
+        cache_root = os.path.join(self.tmpdir, "multirank")
+        run_dir = os.path.join(cache_root, "runs", "job-multi")
+        os.makedirs(run_dir, exist_ok=True)
+
+        # Rank 0 writes doc 0-1
+        db0 = os.path.join(run_dir, "rank_0.db")
+        audit0 = os.path.join(run_dir, "rank_0.audit.jsonl")
+        c0 = ResponseCache(db0, audit0, model_fingerprint="model_A")
+        c0.execute(_mock_model(["a0", "a1"]), "generate_until", [_gen_request(f"p{i}", doc_id=i) for i in range(2)])
+        c0.close()
+
+        # Rank 1 writes doc 2-3
+        db1 = os.path.join(run_dir, "rank_1.db")
+        audit1 = os.path.join(run_dir, "rank_1.audit.jsonl")
+        c1 = ResponseCache(db1, audit1, model_fingerprint="model_A")
+        c1.execute(_mock_model(["a2", "a3"]), "generate_until", [_gen_request(f"p{i}", doc_id=i) for i in range(2, 4)])
+        c1.close()
+
+        # Create a rank-0 instance with finalize metadata and call finalize
+        finalize_cache = ResponseCache(db0, audit0, model_fingerprint="model_A")
+        finalize_cache._cache_root = cache_root
+        finalize_cache._run_id = "job-multi"
+        finalize_cache._run_dir = run_dir
+        finalize_cache._global_rank = 0
+        finalize_cache._world_size = 2
+        finalize_cache._use_scratch = False
+        finalize_cache._remote_rank_db = None
+        finalize_cache._remote_rank_audit = None
+        finalize_cache.finalize(success=True, dist_backend="none")
+
+        # Verify all 4 entries merged into root
+        target_db = os.path.join(cache_root, "cache.db")
+        merged_db = sqlite3.connect(target_db)
+        count = merged_db.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
+        self.assertEqual(count, 4)
+        merged_db.close()
+
+    def test_finalize_skips_merge_on_failure(self):
+        cache_root = os.path.join(self.tmpdir, "fail_test")
+        run_dir = os.path.join(cache_root, "runs", "job-fail")
+        os.makedirs(run_dir, exist_ok=True)
+
+        rank_db = os.path.join(run_dir, "rank_0.db")
+        rank_audit = os.path.join(run_dir, "rank_0.audit.jsonl")
+        cache = ResponseCache(rank_db, rank_audit, model_fingerprint="model_A")
+        cache.execute(_mock_model(["answer"]), "generate_until", [_gen_request("prompt", doc_id=0)])
+
+        cache._cache_root = cache_root
+        cache._run_id = "job-fail"
+        cache._run_dir = run_dir
+        cache._global_rank = 0
+        cache._world_size = 1
+        cache._use_scratch = False
+        cache._remote_rank_db = None
+        cache._remote_rank_audit = None
+
+        cache.finalize(success=False, dist_backend="none")
+
+        # Root cache.db should NOT have been created
+        target_db = os.path.join(cache_root, "cache.db")
+        self.assertFalse(os.path.exists(target_db))
+
+
+# ===========================================================================
 # Integration - model fingerprint isolation
 # ===========================================================================
 
@@ -432,6 +622,15 @@ class TestModelFingerprintIsolation(_CacheTestBase):
         self.assertEqual(cache_b.get_stats()["hits"], 0)
         self.assertEqual(cache_b.get_stats()["misses"], 1)
         cache_b.close()
+
+    def test_fingerprint_hash_and_schema_stored_in_meta(self):
+        cache = self._open_cache(model_fingerprint="model_A|args_A")
+        hash_row = cache.db.execute("SELECT value FROM meta WHERE key = 'model_fingerprint_hash'").fetchone()
+        schema_row = cache.db.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
+        self.assertIsNotNone(hash_row)
+        self.assertEqual(len(hash_row[0]), 16)
+        self.assertEqual(schema_row[0], str(_SCHEMA_VERSION))
+        cache.close()
 
 
 # ===========================================================================

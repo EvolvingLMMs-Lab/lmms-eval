@@ -21,8 +21,17 @@ process_results: !function utils.temporal_grounding_process_results_generation
 
 
 metric_list:
-  - metric: submission
-    aggregation: !function utils.temporal_grounding_aggregate_charades
+  - metric: charades_sta_IOU@3
+    aggregation: !function utils.temporal_grounding_aggregate_iou3
+    higher_is_better: true
+  - metric: charades_sta_IOU@5
+    aggregation: !function utils.temporal_grounding_aggregate_iou5
+    higher_is_better: true
+  - metric: charades_sta_IOU@7
+    aggregation: !function utils.temporal_grounding_aggregate_iou7
+    higher_is_better: true
+  - metric: charades_sta_mIOU
+    aggregation: !function utils.temporal_grounding_aggregate_miou
     higher_is_better: true
 lmms_eval_specific_kwargs:
   default:

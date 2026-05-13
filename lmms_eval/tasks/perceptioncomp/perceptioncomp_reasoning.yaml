@@ -1,0 +1,9 @@
+task: perceptioncomp_reasoning
+include: _default_template_yaml
+doc_to_text: !function utils.perceptioncomp_doc_to_text_reasoning
+doc_to_messages: !function utils.perceptioncomp_doc_to_messages_reasoning
+generation_kwargs:
+  max_new_tokens: 4096
+  temperature: 0
+  top_p: 1.0
+  do_sample: false

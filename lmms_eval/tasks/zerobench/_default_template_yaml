@@ -1,0 +1,26 @@
+dataset_path: jonathan-roberts1/zerobench
+output_type: generate_until
+doc_to_visual: !function utils.zerobench_doc_to_visual
+doc_to_text: !function utils.zerobench_doc_to_text
+doc_to_target: "question_answer"
+process_results: !function utils.zerobench_process_results
+
+metric_list:
+  - metric: zerobench_exact_match
+    aggregation: !function utils.zerobench_aggregate_results
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  top_p: 1.0
+  num_beams: 1
+  do_sample: false
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: "\nAnswer with only the final answer."
+
+metadata:
+  version: 0.0

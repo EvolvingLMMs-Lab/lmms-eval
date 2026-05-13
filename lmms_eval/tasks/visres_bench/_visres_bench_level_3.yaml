@@ -1,0 +1,7 @@
+group: visres_bench_level_3
+task:
+  - visres_bench_level_3_spiral_color_orientation
+  - visres_bench_level_3_coupled_color_count
+  - visres_bench_level_3_independent_color_object_rientation
+  - visres_bench_level_3_coupled_color_orientation
+  - visres_bench_level_3_Independent_count_object_color

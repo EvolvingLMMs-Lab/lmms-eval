@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from functools import partial
+from functools import lru_cache, partial
 from glob import glob
 from typing import (
     Any,
@@ -46,6 +46,7 @@ from lmms_eval.api.registry import (
     is_higher_better,
 )
 from lmms_eval.caching.cache import load_from_cache, save_to_cache
+from lmms_eval.caching.fs_detect import FsType, detect_fs_type, find_local_scratch
 from lmms_eval.filters import build_filter_ensemble
 
 # HuggingfaceM4/NoCaps contains truncated image in test split
@@ -57,7 +58,45 @@ ALL_OUTPUT_TYPES = [
     "multiple_choice",
     "generate_until",
     "generate_until_multi_round",
+    "generate_until_agentic",
+    "generate_visual_cot",
 ]
+
+
+def _expand_cache_path(path: str) -> str:
+    return os.path.expanduser(os.path.expandvars(path))
+
+
+@lru_cache(maxsize=1)
+def _resolve_hf_datasets_cache_dir() -> str:
+    """Pick a datasets cache directory that is safe for file locks."""
+
+    explicit_cache_dir = os.getenv("LMMS_EVAL_DATASETS_CACHE", "").strip()
+    if explicit_cache_dir:
+        resolved_cache_dir = _expand_cache_path(explicit_cache_dir)
+        os.makedirs(resolved_cache_dir, exist_ok=True)
+        return resolved_cache_dir
+
+    hf_home = _expand_cache_path(os.getenv("HF_HOME", "~/.cache/huggingface"))
+    target_cache_dir = _expand_cache_path(os.getenv("HF_DATASETS_CACHE", os.path.join(hf_home, "datasets")))
+
+    if detect_fs_type(target_cache_dir) != FsType.REMOTE:
+        os.makedirs(target_cache_dir, exist_ok=True)
+        return target_cache_dir
+
+    local_scratch = find_local_scratch()
+    if local_scratch is None:
+        eval_logger.warning(
+            "HF datasets cache '{}' is on a remote filesystem but no local scratch directory was found; continuing with the remote cache, so file-lock errors may still occur.",
+            target_cache_dir,
+        )
+        os.makedirs(target_cache_dir, exist_ok=True)
+        return target_cache_dir
+
+    local_cache_dir = os.path.join(local_scratch, "lmms_eval_hf_datasets", os.getenv("USER", "unknown"))
+    os.makedirs(local_cache_dir, exist_ok=True)
+    eval_logger.info("HF datasets cache '{}' is on a remote filesystem; using node-local cache '{}'.", target_cache_dir, local_cache_dir)
+    return local_cache_dir
 
 
 @dataclass
@@ -114,6 +153,7 @@ class TaskConfig(dict):
     lmms_eval_specific_kwargs: dict = None
     model_specific_generation_kwargs: dict = None
     model_specific_target_kwargs: dict = None
+    reasoning_tags: Union[str, list] = None
 
     def __post_init__(self) -> None:
         if self.dataset_path and os.path.exists(os.path.dirname(self.dataset_path)):
@@ -261,18 +301,19 @@ class Task(abc.ABC):
             - `datasets.DownloadMode.FORCE_REDOWNLOAD`
                 Fresh download and fresh dataset.
         """
+        resolved_cache_dir = cache_dir if cache_dir is not None else _resolve_hf_datasets_cache_dir()
         self.dataset = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             data_dir=data_dir,
-            cache_dir=cache_dir,
+            cache_dir=resolved_cache_dir,
             download_mode=download_mode,
         )
         self.dataset_no_image = datasets.load_dataset(
             path=self.DATASET_PATH,
             name=self.DATASET_NAME,
             data_dir=data_dir,
-            cache_dir=cache_dir,
+            cache_dir=resolved_cache_dir,
             download_mode=download_mode,
         )
         for doc_name in self.dataset_no_image:
@@ -495,7 +536,31 @@ class Task(abc.ABC):
         self._instances = flattened_instances
 
         if len(self._instances) == 0:
-            raise ValueError("task.build_requests() did not find any docs!")
+            if world_size > 1:
+                eval_logger.warning(f"task.build_requests() found no docs on rank {rank}/{world_size - 1}; injecting one padding request for distributed synchronization.")
+                if len(self.eval_docs_no_media) > 0:
+                    pad_doc_id = 0
+                    pad_doc = self.eval_docs_no_media[pad_doc_id]
+                    pad_ctx = self.fewshot_context(
+                        pad_doc,
+                        0 if self.config.num_fewshot is None else self.config.num_fewshot,
+                        system_instruction,
+                        apply_chat_template,
+                        fewshot_as_multiturn,
+                        chat_template,
+                    )
+                    pad_metadata = {"task": self.config["task"], "doc_id": pad_doc_id, "repeats": self.config.repeats, "split": split, "__padding_only__": True}
+                    if self.config.metadata and type(self.config.metadata) == dict:
+                        pad_metadata.update(self.config.metadata)
+                    pad_inst = self.construct_requests(doc_id=pad_doc_id, ctx=pad_ctx, metadata=pad_metadata)
+                    if not isinstance(pad_inst, list):
+                        pad_inst = [pad_inst]
+                    self._instances = pad_inst
+                    eval_logger.warning(f"task.build_requests() injected {len(self._instances)} padding request(s) on rank {rank}/{world_size - 1}.")
+                else:
+                    eval_logger.warning(f"task.build_requests() could not inject padding request on rank {rank}/{world_size - 1} because dataset has no docs.")
+            else:
+                raise ValueError("task.build_requests() did not find any docs!")
 
         if cache_requests and (not cached_instances or rewrite_requests_cache):
             save_to_cache(file_name=cache_key, obj=instances)
@@ -895,8 +960,9 @@ class ConfigurableTask(Task):
         # Recursively search whether their is a zip and unzip it to the huggingface home
         download_config = DownloadConfig()
         download_config.max_retries = dataset_kwargs.get("max_retries", 10) if dataset_kwargs is not None else 10
-        download_config.num_proc = dataset_kwargs.get("num_proc", 8) if dataset_kwargs is not None else 8
+        download_config.num_proc = dataset_kwargs.get("num_proc", 1) if dataset_kwargs is not None else 1
         download_config.local_files_only = dataset_kwargs.get("local_files_only", False) if dataset_kwargs is not None else False
+        resolved_dataset_cache_dir = _resolve_hf_datasets_cache_dir()
         if dataset_kwargs is not None:
             if "From_YouTube" in dataset_kwargs:
 
@@ -920,11 +986,14 @@ class ConfigurableTask(Task):
                 if accelerator.is_main_process:
                     dataset_kwargs.pop("From_YouTube")
                     assert "load_from_disk" not in dataset_kwargs, "load_from_disk must not be True when From_YouTube is True"
+                    youtube_dataset_kwargs = dict(dataset_kwargs)
+                    youtube_cache_dir = youtube_dataset_kwargs.pop("cache_dir", resolved_dataset_cache_dir)
                     self.all_dataset = datasets.load_dataset(
                         path=self.DATASET_PATH,
                         name=self.DATASET_NAME,
+                        cache_dir=youtube_cache_dir,
                         download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
-                        **dataset_kwargs if dataset_kwargs is not None else {},
+                        **youtube_dataset_kwargs,
                     )
                     dataset_kwargs["From_YouTube"] = True
                     cache_path = snapshot_download(repo_id=self.DATASET_PATH, repo_type="dataset")  # download_parquet
@@ -960,16 +1029,18 @@ class ConfigurableTask(Task):
             if "video" in dataset_kwargs and dataset_kwargs["video"]:
                 hf_home = os.getenv("HF_HOME", "~/.cache/huggingface/")
                 hf_home = os.path.expanduser(hf_home)
-                cache_dir = dataset_kwargs["cache_dir"]
-                cache_dir = os.path.join(hf_home, cache_dir)
+                cache_dir = utils.resolve_cache_dir(dataset_kwargs["cache_dir"], base_dir=hf_home)
                 accelerator = Accelerator()
                 if accelerator.is_main_process:
                     force_download = dataset_kwargs.get("force_download", False)
                     force_unzip = dataset_kwargs.get("force_unzip", False)
                     revision = dataset_kwargs.get("revision", "main")
                     create_link = dataset_kwargs.get("create_link", False)
-                    # If the user already has a cache dir, we skip download the zip files
-                    if not os.path.exists(cache_dir):
+                    cache_path = None
+                    # If the user already has a cache dir, we skip downloading archives.
+                    # Tasks that set create_link need the snapshot path even when the
+                    # cache dir already exists as a symlink from a previous run.
+                    if not os.path.exists(cache_dir) or (create_link and os.path.islink(cache_dir)):
                         cache_path = snapshot_download(repo_id=self.DATASET_PATH, revision=revision, repo_type="dataset", force_download=force_download, etag_timeout=60)
                         zip_files = glob(os.path.join(cache_path, "**/*.zip"), recursive=True)
                         tar_files = glob(os.path.join(cache_path, "**/*.tar*"), recursive=True)
@@ -1038,7 +1109,7 @@ class ConfigurableTask(Task):
                                 untar_video_data(output_tar)
 
                     # Link cache_path to cache_dir if needed.
-                    if create_link:
+                    if create_link and cache_path is not None:
                         if not os.path.exists(cache_dir) or os.path.islink(cache_dir):
                             if os.path.islink(cache_dir):
                                 os.remove(cache_dir)
@@ -1073,12 +1144,16 @@ class ConfigurableTask(Task):
             # `ds = load_datasets("lmms-lab/MMMU")`
             self.dataset = datasets.load_from_disk(dataset_path=self.DATASET_PATH)
         else:
+            load_dataset_kwargs = dict(dataset_kwargs) if dataset_kwargs is not None else {}
+            load_dataset_cache_dir = load_dataset_kwargs.pop("cache_dir", resolved_dataset_cache_dir)
             self.dataset = datasets.load_dataset(
                 path=self.DATASET_PATH,
                 name=self.DATASET_NAME,
+                cache_dir=load_dataset_cache_dir,
                 download_mode=datasets.DownloadMode.REUSE_DATASET_IF_EXISTS,
                 download_config=download_config,
-                **dataset_kwargs if dataset_kwargs is not None else {},
+                num_proc=1,
+                **load_dataset_kwargs,
             )
 
         if self.config.process_docs is not None:
@@ -1086,21 +1161,24 @@ class ConfigurableTask(Task):
                 if split in [self.config.training_split, self.config.validation_split, self.config.test_split, self.config.fewshot_split]:
                     self.dataset[split] = self.config.process_docs(self.dataset[split])
 
-        # copy dataset, remove image features
-        self.dataset_no_image = self.dataset.copy()
-        for doc_name in self.dataset_no_image:
-            remove_cols = []
-            features = self.dataset_no_image[doc_name].features
-            # If it is an Image instance or a Sequence of Image instance. Remove it
-            for feature in features:
-                if isinstance(features[feature], Image):
-                    remove_cols.append(feature)
-                elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
-                    remove_cols.append(feature)
-                elif isinstance(features[feature], Audio):
-                    remove_cols.append(feature)
-            for remove_col in remove_cols:
-                self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
+        # copy dataset, remove image features (unless process_results needs them)
+        if getattr(self.config, "process_results_use_image", False):
+            self.dataset_no_image = self.dataset
+        else:
+            self.dataset_no_image = self.dataset.copy()
+            for doc_name in self.dataset_no_image:
+                remove_cols = []
+                features = self.dataset_no_image[doc_name].features
+                # If it is an Image instance or a Sequence of Image instance. Remove it
+                for feature in features:
+                    if isinstance(features[feature], Image):
+                        remove_cols.append(feature)
+                    elif isinstance(features[feature], Sequence) and isinstance(features[feature].feature, Image):
+                        remove_cols.append(feature)
+                    elif isinstance(features[feature], Audio):
+                        remove_cols.append(feature)
+                for remove_col in remove_cols:
+                    self.dataset_no_image[doc_name] = self.dataset_no_image[doc_name].remove_columns(remove_col)
 
     def has_training_docs(self) -> bool:
         if self.config.training_split is not None:
@@ -1489,18 +1567,22 @@ class ConfigurableTask(Task):
 
         elif self.OUTPUT_TYPE == "generate_until":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
+        elif self.OUTPUT_TYPE == "generate_visual_cot":
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, doc_id, self.config.task, split)
         elif self.OUTPUT_TYPE == "generate_until_multi_round":
+            arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
+        elif self.OUTPUT_TYPE == "generate_until_agentic":
             arguments = (ctx, copy.deepcopy(self.config.generation_kwargs), self.doc_to_visual, partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, **kwargs)
 
     # TODO: we add a full_docs interface here for some evaluations that needs to access the full datasets during process_results function. we may have better ways to handle this.
     @retry(stop=(stop_after_attempt(5) | stop_after_delay(1200)), wait=wait_fixed(2))
     def process_results(self, doc, results, full_docs=None):
-        if self.OUTPUT_TYPE == "generate_until":
+        if self.OUTPUT_TYPE in ("generate_until", "generate_visual_cot"):
             if isinstance(results, list) and isinstance(results[0], list):
-                results = [res.strip() for res in results[0]]
+                results = [res.strip() if res is not None else "" for res in results[0]]
             else:
-                results = [res.strip() for res in results]
+                results = [res.strip() if res is not None else "" for res in results]
 
         kwargs = {}
         if full_docs is not None:
@@ -1585,7 +1667,7 @@ class ConfigurableTask(Task):
 
         elif "generate_until" in self.OUTPUT_TYPE:
             gold = self.doc_to_target(doc)
-            result = [res.strip() for res in results]
+            result = [res.strip() if res is not None else "" for res in results]
             if self.config.doc_to_choice is not None:
                 # If you set doc_to_choice,
                 # it assumes that doc_to_target returns a number.
@@ -1643,7 +1725,7 @@ class ConfigurableTask(Task):
         else:
             raise ValueError(
                 f"Passed invalid output_type '{self.OUTPUT_TYPE}' ! Please use one of ",
-                "'loglikelihood','generate_until', 'generate_until_multi_round', or 'multiple_choice'",
+                "'loglikelihood','generate_until', 'generate_until_multi_round', 'generate_until_agentic', or 'multiple_choice'",
             )
 
         return result_dict
@@ -1687,13 +1769,31 @@ class ConfigurableMessagesTask(ConfigurableTask):
                 text = self.doc_to_text(doc)
                 messages = [{"role": "user", "content": []}]
                 content = []
+                _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".webp"}
+                _AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".webm"}
                 for visual in visuals:
                     if isinstance(visual, PIL_Image.Image):
                         content.append({"type": "image", "url": visual})
                     elif isinstance(visual, dict):
-                        content.append({"type": "audio", "url": visual})
+                        # Dict visuals carry explicit type (default: video).
+                        # Metadata keys (video_start, video_end, etc.) are
+                        # preserved in the url field so they flow through
+                        # ChatVideoContent → extract_media → fetch_video.
+                        media_type = visual.get("type", "video")
+                        has_metadata = any(k in visual for k in ("video_start", "video_end"))
+                        if has_metadata:
+                            media_url = visual  # pass full dict as url
+                        else:
+                            media_url = visual.get("url") or visual.get("path") or visual
+                        content.append({"type": media_type, "url": media_url})
                     elif isinstance(visual, str):
-                        content.append({"type": "video", "url": visual})
+                        ext = os.path.splitext(visual)[1].lower()
+                        if ext in _IMAGE_EXTS:
+                            content.append({"type": "image", "url": visual})
+                        elif ext in _AUDIO_EXTS:
+                            content.append({"type": "audio", "url": visual})
+                        else:
+                            content.append({"type": "video", "url": visual})
                 content.append({"type": "text", "text": text})
                 messages[0]["content"] = content
                 return messages
@@ -1706,9 +1806,20 @@ class ConfigurableMessagesTask(ConfigurableTask):
     def construct_requests(self, doc_id: int, ctx: str, **kwargs) -> Union[List[Instance], Instance]:
         split = kwargs.get("metadata").get("split")
         # kwargs.pop("split")
-        assert self.OUTPUT_TYPE == "generate_until", "Currently messages is used for generation only"
+        assert self.OUTPUT_TYPE in ["generate_until", "generate_until_agentic"], "Currently messages is used for generation only"
 
-        arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
+        if self.OUTPUT_TYPE == "generate_until_agentic":
+            arguments = (
+                ctx,
+                copy.deepcopy(self.config.generation_kwargs),
+                self.doc_to_visual,
+                partial(self.config.doc_to_text, lmms_eval_specific_kwargs=self.lmms_eval_specific_kwargs),
+                doc_id,
+                self.config.task,
+                split,
+            )
+        else:
+            arguments = (ctx, self.doc_to_messages, copy.deepcopy(self.config.generation_kwargs), doc_id, self.config.task, split)
         return Instance(request_type=self.OUTPUT_TYPE, arguments=arguments, idx=0, task_name=self.config.task, doc_id=doc_id, **kwargs)
 
     def __repr__(self):

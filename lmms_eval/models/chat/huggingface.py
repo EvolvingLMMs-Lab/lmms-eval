@@ -20,13 +20,10 @@ from transformers import (
 )
 
 from lmms_eval import utils
-from lmms_eval.api.instance import Instance
+from lmms_eval.api.instance import GenerationResult, Instance, TokenCounts
 from lmms_eval.api.model import lmms
 from lmms_eval.api.registry import register_model
 from lmms_eval.models.model_utils.gen_metrics import log_metrics
-from lmms_eval.models.model_utils.reasoning_model_utils import (
-    parse_reasoning_model_answer,
-)
 from lmms_eval.protocol import ChatMessages
 
 try:
@@ -56,9 +53,10 @@ class Huggingface(lmms):
         use_custom_video_loader: Optional[bool] = False,
         fps: Optional[float] = None,  # Only applicable if use_custom_video_loader is True
         max_image_size: Optional[int] = None,  # Only applicable if use_custom_video_loader is True
-        system_prompt: Optional[str] = "You are a helpful assistant.",
+        system_prompt: Optional[str] = None,
         interleave_visuals: Optional[bool] = False,
         reasoning_prompt: Optional[str] = None,
+        trust_remote_code: Optional[bool] = False,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -69,14 +67,6 @@ class Huggingface(lmms):
         valid_attn_implementations = [None, "flash_attention_2", "sdpa", "eager"]
         if attn_implementation not in valid_attn_implementations:
             raise ValueError(f"attn_implementation must be one of {valid_attn_implementations}, got {attn_implementation}")
-
-        self.use_custom_video_loader = use_custom_video_loader
-        self.fps = fps
-        # if self.fps and not self.use_custom_video_loader:
-        #     raise ValueError("FPS is only applicable if use_custom_video_loader is True")
-        self.max_image_size = max_image_size
-        if self.max_image_size and not self.use_custom_video_loader:
-            raise ValueError("max_image_size is only applicable if use_custom_video_loader is True")
 
         accelerator = Accelerator()
         self.accelerator = accelerator
@@ -97,7 +87,8 @@ class Huggingface(lmms):
         if attn_implementation is not None:
             model_kwargs["attn_implementation"] = attn_implementation
 
-        config = AutoConfig.from_pretrained(pretrained)
+        self.trust_remote_code = trust_remote_code
+        config = AutoConfig.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
         if config.model_type in AutoModelForCausalLM._model_mapping.keys():
             model_cls = AutoModelForCausalLM
         elif config.model_type in AutoModelForImageTextToText._model_mapping.keys():
@@ -105,16 +96,16 @@ class Huggingface(lmms):
         else:
             model_cls = AutoModel
 
-        self._model = model_cls.from_pretrained(pretrained, **model_kwargs).eval()
+        self._model = model_cls.from_pretrained(pretrained, trust_remote_code=trust_remote_code, **model_kwargs).eval()
         self.max_num_frames = max_num_frames
 
-        if reasoning_prompt:
-            self.reasoning_prompt = reasoning_prompt.replace("\\n", "\n")
+        raw_prompt = reasoning_prompt or system_prompt
+        if raw_prompt:
+            self.system_prompt = self._resolve_system_prompt(raw_prompt.replace("\\n", "\n"))
         else:
-            self.reasoning_prompt = None
-        self.processor = AutoProcessor.from_pretrained(pretrained)
-        self._tokenizer = AutoTokenizer.from_pretrained(pretrained)
-        self.system_prompt = system_prompt
+            self.system_prompt = None
+        self.processor = AutoProcessor.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
+        self._tokenizer = AutoTokenizer.from_pretrained(pretrained, trust_remote_code=trust_remote_code)
         self.interleave_visuals = interleave_visuals
 
         self._config = self.model.config
@@ -191,7 +182,7 @@ class Huggingface(lmms):
                 new_list.append(j)
         return new_list
 
-    def generate_until(self, requests: List[Instance]) -> List[str]:
+    def generate_until(self, requests: List[Instance]) -> List[GenerationResult]:
         res = []
 
         # A dummy collate here to sort by doc id
@@ -215,6 +206,8 @@ class Huggingface(lmms):
         for chunk in chunks:
             ctx, doc_to_messages, all_gen_kwargs, doc_id, task, split = zip(*chunk)
             chat_messages = [doc_to_messages[0](self.task_dict[task][split][ids]) for ids, task, split in zip(doc_id, task, split)]
+            if self.system_prompt:
+                chat_messages = [self._apply_system_prompt(messages, self.system_prompt) for messages in chat_messages]
             chat_messages: List[ChatMessages] = [ChatMessages(**{"messages": message}) for message in chat_messages]
             visuals = []
             videos = []
@@ -291,15 +284,13 @@ class Huggingface(lmms):
             total_elapsed_time += end_time - start_time
             total_tokens += sum(len(ids) for ids in generated_ids_trimmed)
 
-            for ans, context in zip(answers, texts):
-                clean_ans = parse_reasoning_model_answer(ans)
-                res.append(clean_ans)
-                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), clean_ans)
+            for i, (ans, context) in enumerate(zip(answers, texts)):
+                res.append(GenerationResult(text=ans, token_counts=TokenCounts(output_tokens=len(generated_ids_trimmed[i]))))
+                self.cache_hook.add_partial("generate_until", (context, gen_kwargs), ans)
                 pbar.update(1)
 
                 eval_logger.debug(f"Question: {context}")
-                eval_logger.debug(f"Model Raw Response: {ans}")
-                eval_logger.debug(f"Model Clean Response: {clean_ans}")
+                eval_logger.debug(f"Model Response: {ans}")
             # reorder this group of results back to original unsorted form
         res = re_ords.get_original(res)
         # Calculate average speed

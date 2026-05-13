@@ -1,30 +1,11 @@
 import sys
 
-# Early TUI detection - before heavy imports
-if "--tui" in sys.argv:
-    try:
-        from lmms_eval.tui.cli import main as tui_main
+# CLI dispatcher which handles subcommands (tasks, models, eval, ui, ...)
+# as well as the legacy flat-args form (--model X --tasks Y).
+if __name__ == "__main__":
+    from lmms_eval.cli.dispatch import main
 
-        tui_main()
-        sys.exit(0)
-    except ImportError as e:
-        print("TUI mode requires 'textual' package. Install with: pip install lmms_eval[tui]")
-        print(f"Error: {e}")
-        sys.exit(1)
-
-# Show quick help when no args provided (before heavy imports)
-if len(sys.argv) == 1:
-    print("┌───────────────────────────────────────────────────────────────────────────────┐")
-    print("│ LMMs-Eval: Evaluation framework for Large Multimodal Models                   │")
-    print("├───────────────────────────────────────────────────────────────────────────────┤")
-    print("│ Usage:                                                                        │")
-    print("│   lmms-eval --model MODEL --tasks TASKS [options]                             │")
-    print("│   lmms-eval --tui              # Interactive TUI mode                         │")
-    print("│   lmms-eval --help             # Full help                                    │")
-    print("├───────────────────────────────────────────────────────────────────────────────┤")
-    print("│ Example:                                                                      │")
-    print("│   lmms-eval --model llava --tasks mme --batch_size 1                          │")
-    print("└───────────────────────────────────────────────────────────────────────────────┘")
+    main()
     sys.exit(0)
 
 import argparse
@@ -48,14 +29,15 @@ from accelerate import Accelerator
 from accelerate.utils import InitProcessGroupKwargs
 from loguru import logger as eval_logger
 
-import lmms_eval.tasks
 from lmms_eval import evaluator, utils
 from lmms_eval.api.metrics import power_analysis
 from lmms_eval.api.registry import ALL_TASKS
+from lmms_eval.cli.power_utils import collect_task_sizes
 from lmms_eval.evaluator import request_caching_arg_to_dict
 from lmms_eval.loggers import EvaluationTracker, WandbLogger
 from lmms_eval.tasks import TaskManager
 from lmms_eval.utils import (
+    get_eval_banner,
     make_table,
     simple_parse_args_string,
 )
@@ -112,13 +94,7 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     """Run power analysis to calculate minimum sample size for detecting a given effect."""
     task_sizes = {}
     if args.tasks and args.tasks not in ["list", "list_groups", "list_tags", "list_subtasks"]:
-        task_manager = TaskManager(args.verbosity, include_path=args.include_path)
-        task_names = task_manager.match_tasks(args.tasks.split(","))
-        for task_name in task_names:
-            task_dict = lmms_eval.tasks.get_task_dict([task_name], task_manager)
-            for name, task_obj in task_dict.items():
-                if hasattr(task_obj, "eval_docs"):
-                    task_sizes[name] = len(task_obj.eval_docs)
+        task_sizes = collect_task_sizes(args.tasks, verbosity=args.verbosity, include_path=args.include_path)
 
     result = power_analysis(
         effect_size=args.effect_size,
@@ -169,12 +145,12 @@ def _run_power_analysis(args: argparse.Namespace) -> None:
     print("\n" + "=" * 60 + "\n")
 
 
-def parse_eval_args() -> argparse.Namespace:
+def parse_eval_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
         "--config",
         default="",
-        help="Path to a yaml file specifying all eval arguments, will ignore cli arguments if specified",
+        help="Path to a yaml file specifying eval arguments. CLI arguments override YAML values.",
     )
     parser.add_argument("--model", default="hf", help="Name of model e.g. `hf`")
     parser.add_argument(
@@ -243,10 +219,12 @@ def parse_eval_args() -> argparse.Namespace:
         "-c",
         type=str,
         default=None,
-        metavar="DIR",
-        help="Directory for response-level caching (SQLite + JSONL audit log). "
-        "Caches deterministic model responses (temperature=0) for reuse across runs. "
-        "Per-rank files created automatically for distributed safety. `None` to disable.",
+        metavar="PATH",
+        help="Path to a response-cache root directory or SQLite .db file. "
+        "If PATH is a directory, or an explicit PATH/cache.db root file, lmms-eval keeps the shared root cache at "
+        "PATH/cache.db and writes each run into PATH/runs/<run_id>/ before auto-merging back into the root DB. "
+        "This avoids write contention across concurrent jobs while preserving cache reuse. "
+        "If PATH is a file, legacy single-target behavior is preserved. `None` disables response caching.",
     )
     parser.add_argument(
         "--cache_requests",
@@ -323,6 +301,12 @@ def parse_eval_args() -> argparse.Namespace:
         help=("String arguments for model generation on greedy_until tasks," " e.g. `temperature=0,top_k=0,top_p=0`"),
     )
     parser.add_argument(
+        "--reasoning_tags",
+        type=str,
+        default='[["<think>", "</think>"], ["<analysis>", "</analysis>"]]',
+        help="JSON string list of [start_tag, end_tag] pairs used for reasoning extraction.",
+    )
+    parser.add_argument(
         "--verbosity",
         type=str,
         default="INFO",
@@ -378,6 +362,13 @@ def parse_eval_args() -> argparse.Namespace:
         help="Whether you will process you dataset with audio, image. By default set to False" "In case some benchmarks need to be processed with media, set this flag to True.",
     )
     parser.add_argument(
+        "--agentic_trace_mode",
+        type=str,
+        default="basic",
+        choices=["basic", "full"],
+        help="Controls agentic trace logging level. 'basic' logs compact final trace payload, 'full' logs per-round input/output/state snapshots.",
+    )
+    parser.add_argument(
         "--force_simple",
         action="store_true",
         help="Force the evaluation to use the simple mode of the models",
@@ -397,6 +388,14 @@ def parse_eval_args() -> argparse.Namespace:
         help=("Number of repeated generations per question for model stability " "measurement. Backward-compatible alias: --num_samples. " "When n > 1, enables k-samples " "mode and computes EA, CA, IV, CR metrics."),
     )
     parser.add_argument("--baseline", type=str, default=None, help="Baseline for paired t-test comparison. Accepts: local JSONL path, hf://user/repo, or preset name (e.g., qwen25vl).")
+
+    # Cost & Token Tracking
+    parser.add_argument(
+        "--max_tokens",
+        type=int,
+        default=None,
+        help="Maximum total tokens (input+output+reasoning). Evaluation stops gracefully when exceeded. Disabled by default.",
+    )
 
     # Power Analysis arguments
     parser.add_argument(
@@ -443,11 +442,11 @@ def parse_eval_args() -> argparse.Namespace:
     )
 
     args = parser.parse_args()
-    return args
+    return parser, args
 
 
 def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
-    default_args = parse_eval_args()
+    parser, default_args = parse_eval_args()
 
     # If args were provided, override the defaults
     if args:
@@ -485,10 +484,39 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         with open(args.config, "r") as file:
             config_args = yaml.safe_load(file)
         config_args = [config_args] if type(config_args) != list else config_args
+
+        # Extract and apply env vars before validation (env is not a CLI arg)
+        for config in config_args:
+            env_config = config.pop("env", None)
+            if env_config:
+                if not isinstance(env_config, dict):
+                    raise ValueError(f"'env' in config must be a dict, got {type(env_config).__name__}")
+                for env_key, env_value in env_config.items():
+                    resolved = os.path.expandvars(str(env_value))
+                    os.environ[env_key] = resolved
+                    eval_logger.info(f"Config env: {env_key}={'*' * min(len(resolved), 8) if any(s in env_key.upper() for s in ('KEY', 'TOKEN', 'SECRET', 'PASSWORD')) else resolved}")
+
+        # Validate config keys
+        valid_keys = {action.dest for action in parser._actions}
+        for config in config_args:
+            unknown_keys = set(config.keys()) - valid_keys
+            if unknown_keys:
+                raise ValueError(f"Unknown keys in config file: {sorted(unknown_keys)}. " f"Valid keys are: {sorted(valid_keys - {'help'})}")
+
+        # Determine which CLI args were explicitly provided by the user.
+        default_config_args = parser.parse_args([])
+        cli_explicit = {}
+        for key, value in vars(args).items():
+            default_value = getattr(default_config_args, key, None)
+            if value != default_value:
+                cli_explicit[key] = value
+
         # multiple configs, create args list first
         for config in config_args:
-            args_copy = argparse.Namespace(**vars(args))
+            args_copy = argparse.Namespace(**vars(default_config_args))
             for key, value in config.items():
+                setattr(args_copy, key, value)
+            for key, value in cli_explicit.items():
                 setattr(args_copy, key, value)
             args_list.append(args_copy)
     else:
@@ -540,6 +568,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         # cli_evaluate will return none if the process is not the main process (rank 0)
         if results is not None:
             print(f"{args.model} ({args.model_args}), gen_kwargs: ({args.gen_kwargs}), " f"limit: {args.limit}, offset: {args.offset}, num_fewshot: {args.num_fewshot}, " f"batch_size: {args.batch_size}")
+            print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
             print(make_table(results))
             if "groups" in results:
                 print(make_table(results, "groups"))
@@ -683,6 +712,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
         launcher_args=args.launcher_args,
         repeats=args.repeats,
         baseline=args.baseline,
+        max_tokens=args.max_tokens,
         **request_caching_args,
     )
 
@@ -691,6 +721,21 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
             samples = results.pop("samples")
         else:
             samples = None
+
+        # Print token usage summary if available
+        if results.get("usage") and "total" in results["usage"]:
+            u = results["usage"]["total"]
+            eval_logger.info(
+                "Token Usage - Input: {} | Output: {} | Reasoning: {} | Total: {} | API Calls: {}",
+                f"{u['input_tokens']:,}",
+                f"{u['output_tokens']:,}",
+                f"{u['reasoning_tokens']:,}",
+                f"{u['total_tokens']:,}",
+                f"{u['n_api_calls']:,}",
+            )
+            if results["usage"].get("budget_exceeded"):
+                eval_logger.warning("Evaluation stopped early: token budget exceeded. Results are partial.")
+
         dumped = json.dumps(results, indent=4, default=_handle_non_serializable)
         if args.show_config:
             print(dumped)
@@ -716,6 +761,7 @@ def cli_evaluate_single(args: Union[argparse.Namespace, None] = None) -> None:
 
 def print_results(args, results):
     print(f"{args.model} ({args.model_args}),\n" f"gen_kwargs: ({args.gen_kwargs}),\n" f"limit: {args.limit},\n" f"offset: {args.offset},\n" f"num_fewshot: {args.num_fewshot},\n" f"batch_size: {args.batch_size}")
+    print(get_eval_banner(branch=results.get("git_branch"), commit=results.get("git_hash")))
     print(evaluator.make_table(results))
     if "groups" in results:
         print(evaluator.make_table(results, "groups"))

@@ -1,0 +1,13 @@
+# HD-EPIC subtask: nutrition_nutrition_change
+# "From TIME to TIME, what changed in the nutrition values of the dish?"
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_nutrition_nutrition_change
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_nutrition_nutrition_change
+
+metadata:
+  version: 1.0
+  task_type: nutrition_nutrition_change
+  description: "\"From TIME to TIME, what changed in the nutrition values of the dish?\""

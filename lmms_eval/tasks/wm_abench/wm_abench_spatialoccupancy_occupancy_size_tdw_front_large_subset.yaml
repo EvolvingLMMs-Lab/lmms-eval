@@ -1,0 +1,4 @@
+dataset_name: "SpatialOccupancy_occupancy_size_tdw_front_large_subset"
+tag: "wm_abench_subtasks"
+task: "wm_abench_spatialoccupancy_occupancy_size_tdw_front_large_subset"
+include: _default_template_yaml

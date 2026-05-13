@@ -63,6 +63,21 @@ Target response times:
 - Triage first response: within 48 hours
 - First PR review: within 72 hours
 
+### Issue Writing Standard (aligned with PR template)
+
+For design-heavy or follow-up issues, use the same structure as PRs for consistency:
+
+1. **Summary** - max 3 bullets (problem, impact, desired outcome)
+2. **In scope** - explicit list of intended changes
+3. **Out of scope** - explicit list of excluded work
+4. **Proposed plan** - 3-6 concrete implementation steps
+5. **Validation plan** - commands/benchmarks and expected pass criteria
+6. **Risk / Compatibility** - behavior changes, migration risk, blockers
+7. **Acceptance criteria** - objective done conditions (checkbox style)
+
+GitHub supports this via `.github/ISSUE_TEMPLATE/design_proposal.yml`.
+For Linear tickets, use the same headings and keep each section concise.
+
 ### Commit Style
 
 Use conventional commit prefixes:
@@ -140,7 +155,7 @@ This is the most common contribution. Each benchmark lives in its own directory 
        --tasks my_benchmark --limit 8
    ```
 
-See `docs/task_guide.md` for a detailed walkthrough.
+See `docs/guides/task_guide.md` for a detailed walkthrough.
 
 ### Adding a New Model
 
@@ -159,7 +174,7 @@ Models live under `lmms_eval/models/chat/` (recommended) or `lmms_eval/models/si
    MyLib, _has_mylib = optional_import("mylib", "MyLib")
    ```
 
-See `docs/model_guide.md` for details and `CLAUDE.md` for architecture patterns.
+See `docs/guides/model_guide.md` for details.
 
 ### Fixing Bugs
 
@@ -171,9 +186,9 @@ See `docs/model_guide.md` for details and `CLAUDE.md` for architecture patterns.
 
 Documentation improvements are always welcome. Key docs:
 - `README.md` - Project overview (available in 16 languages under `docs/`)
-- `docs/task_guide.md` - How to add benchmarks
-- `docs/model_guide.md` - How to add models
-- `CLAUDE.md` - Architecture reference
+- `docs/guides/task_guide.md` - How to add benchmarks
+- `docs/guides/model_guide.md` - How to add models
+- `docs/releases/` - Release notes and changelog
 
 ## Package Management
 
@@ -190,4 +205,4 @@ uv run tool                # Run a tool in the environment
 
 - **Discord**: [discord.gg/zdkwKUqrPy](https://discord.gg/zdkwKUqrPy)
 - **Issues**: [GitHub Issues](https://github.com/EvolvingLMMs-Lab/lmms-eval/issues)
-- **Quick-start**: [Evaluate Your Model in 5 Minutes](docs/quickstart.md)
+- **Quick-start**: [Evaluate Your Model in 5 Minutes](docs/getting-started/quickstart.md)

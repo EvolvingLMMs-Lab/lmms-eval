@@ -1,0 +1,25 @@
+task: screenspot_v2
+dataset_path: HongxinLi/ScreenSpot_v2
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.screenspot_v2_doc_to_visual
+doc_to_text: !function utils.screenspot_v2_doc_to_text
+doc_to_messages: !function utils.screenspot_v2_doc_to_messages
+doc_to_target: instruction
+generation_kwargs:
+  max_new_tokens: 128
+  temperature: 0
+  do_sample: false
+process_results: !function utils.screenspot_v2_process_results
+metric_list:
+  - metric: screenspot_v2_action_acc
+    aggregation: !function utils.screenspot_v2_action_acc
+    higher_is_better: true
+  - metric: screenspot_v2_text_acc
+    aggregation: !function utils.screenspot_v2_text_acc
+    higher_is_better: true
+  - metric: screenspot_v2_icon_acc
+    aggregation: !function utils.screenspot_v2_icon_acc
+    higher_is_better: true
+metadata:
+  - version: 0.0

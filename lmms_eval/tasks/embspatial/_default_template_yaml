@@ -11,6 +11,15 @@ metric_list:
   - metric: embspatial_acc
     aggregation: !function utils.embspatial_aggregate_results
     higher_is_better: true
+  - metric: ai2thor_accuracy
+    aggregation: !function utils.embspatial_aggregate_ai2thor_accuracy
+    higher_is_better: true
+  - metric: mp3d_accuracy
+    aggregation: !function utils.embspatial_aggregate_mp3d_accuracy
+    higher_is_better: true
+  - metric: scannet_accuracy
+    aggregation: !function utils.embspatial_aggregate_scannet_accuracy
+    higher_is_better: true
 
 lmms_eval_specific_kwargs:
   default:

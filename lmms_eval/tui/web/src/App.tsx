@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import LogViewer from './LogViewer'
 
 const API_BASE = ''
 
@@ -292,6 +293,13 @@ interface TaskInfo {
   group: boolean
 }
 
+interface YamlPreview {
+  title: string
+  subtitle: string
+  yaml: string
+  download_filename?: string
+}
+
 interface Config {
   model: string
   model_args: string
@@ -303,6 +311,7 @@ interface Config {
   log_samples: boolean
   verbosity: string
   device: string | null
+  env_setup: string
 }
 
 type Status = 'ready' | 'running' | 'stopped' | 'completed' | 'error'
@@ -323,14 +332,15 @@ type TaskNode =
   | { type: 'leaf', task: TaskInfo }
 
 export default function App() {
+  const [page, setPage] = useState<'evaluate' | 'logs'>('evaluate')
   const [version, setVersion] = useState('...')
   const [gitInfo, setGitInfo] = useState<GitInfo>({ branch: '', commit: '' })
   const [sysInfo, setSysInfo] = useState<SysInfo>({ hostname: '', cwd: '' })
   const [models, setModels] = useState<ModelInfo[]>([])
   const [tasks, setTasks] = useState<TaskInfo[]>([])
   
-  const [model, setModel] = useState('openai_compatible')
-  const [modelArgs, setModelArgs] = useState('model_version=allenai/molmo-2-8b:free')
+  const [model, setModel] = useState('openai')
+  const [modelArgs, setModelArgs] = useState('model_version=bytedance-seed/seed-1.6-flash')
   const [envVars, setEnvVars] = useState(
     'export HF_HOME=${HF_HOME:-~/.cache/huggingface}\n' +
       'export OPENAI_API_KEY=${OPENROUTER_API_KEY}\n' +
@@ -339,10 +349,11 @@ export default function App() {
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set(['mme']))
   const [taskFilter, setTaskFilter] = useState('')
   const [batchSize, setBatchSize] = useState('1')
-  const [limit, setLimit] = useState('5')
+  const [limit, setLimit] = useState('8')
   const [device, setDevice] = useState('')
-  const [outputPath, setOutputPath] = useState('./logs/openrouter_test/')
+  const [outputPath, setOutputPath] = useState('./logs/openrouter_task_smoke/')
   const [verbosity, setVerbosity] = useState('DEBUG')
+  const [envSetup, setEnvSetup] = useState('')
   
   const [status, setStatus] = useState<Status>('ready')
   const [jobId, setJobId] = useState<string | null>(null)
@@ -354,6 +365,7 @@ export default function App() {
   const [tasksExpanded, setTasksExpanded] = useState(true)
   const [envVarsExpanded, setEnvVarsExpanded] = useState(true)
   const [logsMaximized, setLogsMaximized] = useState(false)
+  const [yamlPreview, setYamlPreview] = useState<YamlPreview | null>(null)
   
   const outputRef = useRef<HTMLDivElement>(null)
 
@@ -364,6 +376,7 @@ export default function App() {
         setVersion(d.version)
         if (d.git) setGitInfo(d.git)
         if (d.system) setSysInfo(d.system)
+        if (d.env_setup) setEnvSetup(d.env_setup)
       })
       .catch(() => setVersion('error'))
     
@@ -390,6 +403,7 @@ export default function App() {
       log_samples: true,
       verbosity,
       device: device || null,
+      env_setup: envSetup,
     }
     
     fetch(`${API_BASE}/eval/preview`, {
@@ -400,13 +414,26 @@ export default function App() {
       .then(r => r.json())
       .then(d => setCommand(d.command))
       .catch(() => setCommand('# Error generating command'))
-  }, [model, modelArgs, selectedTasks, envVars, batchSize, limit, device, outputPath, verbosity])
+  }, [model, modelArgs, selectedTasks, envVars, batchSize, limit, device, outputPath, verbosity, envSetup])
 
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight
     }
   }, [output])
+
+  useEffect(() => {
+    if (!yamlPreview) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setYamlPreview(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [yamlPreview])
 
   const visibleNodes = useMemo(() => {
     const nodes: TaskNode[] = []
@@ -506,6 +533,7 @@ export default function App() {
       log_samples: true,
       verbosity,
       device: device || null,
+      env_setup: envSetup,
     }
     
     try {
@@ -560,13 +588,126 @@ export default function App() {
     }
   }
 
+  const exportYaml = async () => {
+    const config = {
+      model,
+      model_args: modelArgs,
+      tasks: Array.from(selectedTasks),
+      env_vars: envVars,
+      batch_size: parseInt(batchSize) || 1,
+      limit: limit ? parseInt(limit) : null,
+      output_path: outputPath,
+      log_samples: true,
+      verbosity,
+      device: device || null,
+      env_setup: envSetup,
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/eval/export-yaml`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      })
+      const data = await res.json()
+
+      setYamlPreview({
+        title: 'Export Config',
+        subtitle: `eval_config_${model}.yaml`,
+        yaml: data.yaml_content,
+        download_filename: `eval_config_${model}.yaml`,
+      })
+    } catch (e) {
+      console.error('Export failed:', e)
+    }
+  }
+
+  const importYaml = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.yaml,.yml'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      const text = await file.text()
+      try {
+        const res = await fetch(`${API_BASE}/eval/import-yaml`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yaml_content: text }),
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          setOutput(prev => [...prev, `Import error: ${err.detail}`])
+          return
+        }
+        const data = await res.json()
+
+        if (data.model) setModel(data.model)
+        if (data.model_args) setModelArgs(data.model_args)
+        if (data.tasks && data.tasks.length > 0) setSelectedTasks(new Set(data.tasks))
+        if (data.env_vars) setEnvVars(data.env_vars)
+        if (data.batch_size) setBatchSize(String(data.batch_size))
+        if (data.limit != null) setLimit(String(data.limit))
+        if (data.output_path) setOutputPath(data.output_path)
+        if (data.verbosity) setVerbosity(data.verbosity)
+        if (data.device) setDevice(data.device)
+
+        setOutput(prev => [...prev, `Imported config from ${file.name}`])
+      } catch (e) {
+        setOutput(prev => [...prev, `Import failed: ${e}`])
+      }
+    }
+    input.click()
+  }
+
+  const previewTaskYaml = async (taskId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/yaml`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        setOutput(prev => [...prev, `YAML preview error (${taskId}): ${err.detail || res.statusText}`])
+        return
+      }
+      const data = await res.json()
+      setYamlPreview({ title: data.task_id, subtitle: data.path, yaml: data.yaml })
+    } catch (e) {
+      setOutput(prev => [...prev, `YAML preview failed (${taskId}): ${e}`])
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen bg-white text-neutral-900 font-light selection:bg-black selection:text-white">
       <header className="relative h-14 flex items-center justify-between px-6 border-b border-neutral-200 bg-white/80 backdrop-blur-md z-10">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="text-lg font-bold tracking-tight text-neutral-900">LMMs-Eval</div>
-          <div className="flex items-center gap-3 text-[10px] font-mono text-neutral-400">
-            <span className="bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-600">v{version}</span>
+          <div className="flex items-center rounded-md border border-neutral-300 bg-neutral-100 p-0.5">
+            <button
+              type="button"
+              onClick={() => setPage('evaluate')}
+              className={`h-8 px-3 text-[11px] font-semibold rounded-[5px] transition-colors ${
+                page === 'evaluate'
+                  ? 'bg-white text-black shadow-sm border border-neutral-300'
+                  : 'text-neutral-500 border border-transparent hover:text-neutral-700'
+              }`}
+            >
+              Evaluate
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage('logs')}
+              className={`h-8 px-3 text-[11px] font-semibold rounded-[5px] transition-colors ${
+                page === 'logs'
+                  ? 'bg-white text-black shadow-sm border border-neutral-300'
+                  : 'text-neutral-500 border border-transparent hover:text-neutral-700'
+              }`}
+            >
+              View Logs
+            </button>
+          </div>
+          <div className="hidden md:flex items-center gap-3 text-[10px] font-mono text-neutral-400">
+            <span>v{version}</span>
             {(gitInfo.branch || gitInfo.commit) && (
               <>
                 <span className="text-neutral-300">/</span>
@@ -588,7 +729,7 @@ export default function App() {
 
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           <div className={`px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-medium border ${
             status === 'ready' ? 'border-neutral-200 text-neutral-400' :
             status === 'running' ? 'border-black text-black animate-pulse' :
@@ -606,7 +747,8 @@ export default function App() {
         )}
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      {page === 'evaluate' ? (
+        <div className="flex flex-1 overflow-hidden">
         <div className="w-full md:w-[400px] lg:w-[450px] xl:w-[500px] 2xl:w-[550px] min-w-[320px] max-w-[600px] bg-white border-r border-neutral-200 flex flex-col overflow-y-auto scrollbar-thin flex-shrink-0">
           <div className="flex-shrink-0 border-b border-neutral-100">
             <div 
@@ -614,11 +756,43 @@ export default function App() {
               onClick={() => setConfigExpanded(!configExpanded)}
             >
               <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Configuration</h2>
-              <span className={`text-neutral-400 transform transition-transform ${configExpanded ? 'rotate-0' : '-rotate-90'}`}>▼</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    importYaml()
+                  }}
+                  className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 hover:text-neutral-900 transition-colors"
+                  title="Import YAML config file"
+                >
+                  Import
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    exportYaml()
+                  }}
+                  className="text-[10px] uppercase tracking-wider font-medium text-neutral-400 hover:text-neutral-900 transition-colors"
+                  title="Export current config as YAML"
+                >
+                  Export
+                </button>
+                <span className={`text-neutral-400 transform transition-transform ${configExpanded ? 'rotate-0' : '-rotate-90'}`}>▼</span>
+              </div>
             </div>
             
             {configExpanded && (
               <div className="p-6 pt-0 space-y-4">
+                <div className="group">
+                  <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 group-focus-within:text-neutral-900 transition-colors">Environment Setup</label>
+                  <input
+                    value={envSetup}
+                    onChange={e => setEnvSetup(e.target.value)}
+                    placeholder="e.g. source .venv/bin/activate"
+                    className="w-full bg-white border border-neutral-200 px-3 py-2 text-xs font-mono focus:border-black focus:outline-none transition-colors placeholder-neutral-400 text-neutral-600"
+                  />
+                </div>
+
                 <div className="group">
                   <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Model</label>
                   <Select
@@ -710,16 +884,31 @@ export default function App() {
                                         : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900'
                                     }`}
                                   >
-                                    <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
-                                      selectedTasks.has(child.id) 
-                                      ? 'border-black bg-black' 
-                                      : 'border-neutral-300 group-hover:border-black'
-                                    }`}>
-                                      {selectedTasks.has(child.id) && <div className="w-1 h-1 bg-white" />}
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
+                                        selectedTasks.has(child.id) 
+                                        ? 'border-black bg-black' 
+                                        : 'border-neutral-300 group-hover:border-black'
+                                      }`}>
+                                        {selectedTasks.has(child.id) && <div className="w-1 h-1 bg-white" />}
+                                      </div>
+                                      <span className="text-xs font-mono truncate">
+                                        <HighlightMatch text={child.id} match={taskFilter} />
+                                      </span>
                                     </div>
-                                    <span className="text-xs font-mono truncate">
-                                      <HighlightMatch text={child.id} match={taskFilter} />
-                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        previewTaskYaml(child.id)
+                                      }}
+                                      className="text-neutral-400 hover:text-neutral-900 transition-colors"
+                                      title={`Preview ${child.id} YAML`}
+                                    >
+                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                      </svg>
+                                    </button>
                                   </div>
                                 ))}
                               </div>
@@ -735,17 +924,32 @@ export default function App() {
                                     : 'hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900'
                                 }`}
                               >
-                                <div className="w-3"></div>
-                                <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
-                                  selectedTasks.has(node.task.id) 
-                                  ? 'border-black bg-black' 
-                                  : 'border-neutral-300 group-hover:border-black'
-                                }`}>
-                                  {selectedTasks.has(node.task.id) && <div className="w-1 h-1 bg-white" />}
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <div className="w-3"></div>
+                                  <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
+                                    selectedTasks.has(node.task.id) 
+                                    ? 'border-black bg-black' 
+                                    : 'border-neutral-300 group-hover:border-black'
+                                  }`}>
+                                    {selectedTasks.has(node.task.id) && <div className="w-1 h-1 bg-white" />}
+                                  </div>
+                                  <span className="text-xs font-mono truncate">
+                                    <HighlightMatch text={node.task.id} match={taskFilter} />
+                                  </span>
                                 </div>
-                                <span className="text-xs font-mono truncate">
-                                  <HighlightMatch text={node.task.id} match={taskFilter} />
-                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    previewTaskYaml(node.task.id)
+                                  }}
+                                  className="text-neutral-400 hover:text-neutral-900 transition-colors"
+                                  title={`Preview ${node.task.id} YAML`}
+                                >
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                  </svg>
+                                </button>
                               </div>
                             )
                           }
@@ -834,48 +1038,49 @@ export default function App() {
         </div>
 
         <div className="flex-1 flex flex-col bg-neutral-50/30 min-w-0">
-          <div className="px-6 py-4 border-b border-neutral-200 bg-white flex gap-3 justify-start">
-            <button
-              onClick={startEval}
-              disabled={status === 'running'}
-              className={`w-40 py-2.5 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
-                status === 'running'
-                  ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed border border-neutral-200'
-                  : 'bg-black text-white hover:bg-neutral-800 border border-black shadow-sm'
-              }`}
-            >
-              {status === 'running' ? 'Running...' : 'Start'}
-            </button>
-            <button
-              onClick={stopEval}
-              disabled={status !== 'running'}
-              className={`w-40 py-2.5 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
-                status !== 'running'
-                  ? 'bg-transparent text-neutral-300 border border-neutral-200 cursor-not-allowed'
-                  : 'bg-white text-neutral-900 border border-neutral-200 hover:border-black shadow-sm'
-              }`}
-            >
-              Stop
-            </button>
-          </div>
-
           {!logsMaximized && (
-            <div className="h-1/3 border-b border-neutral-200 flex flex-col bg-white transition-all duration-300">
-              <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
-                <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Command</h2>
-                <button 
-                  onClick={() => navigator.clipboard.writeText(command)}
-                  className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
-                >
-                  Copy
-                </button>
-              </div>
-              <div className="flex-1 overflow-auto p-6 font-mono text-xs text-neutral-600 bg-neutral-50/50 scrollbar-thin selection:bg-black selection:text-white">
-                <div className="whitespace-pre-wrap leading-relaxed break-all">
-                  {highlightShell(command)}
+            <>
+              <div className="h-1/3 border-b border-neutral-200 flex flex-col bg-white transition-all duration-300">
+                <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white">
+                  <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Command</h2>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(command)}
+                    className="text-[10px] text-neutral-400 hover:text-neutral-900 uppercase tracking-wider transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <div className="flex-1 overflow-auto p-6 font-mono text-xs text-neutral-600 bg-neutral-50/50 scrollbar-thin selection:bg-black selection:text-white">
+                  <div className="whitespace-pre-wrap leading-relaxed break-all">
+                    {highlightShell(command)}
+                  </div>
                 </div>
               </div>
-            </div>
+              <div className="px-6 py-3 border-b border-neutral-200 bg-white flex gap-2 items-center">
+                <button
+                  onClick={startEval}
+                  disabled={status === 'running'}
+                  className={`w-28 py-1.5 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
+                    status === 'running'
+                      ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed border border-neutral-200'
+                      : 'bg-black text-white hover:bg-neutral-800 border border-black shadow-sm'
+                  }`}
+                >
+                  {status === 'running' ? 'Running...' : 'Start'}
+                </button>
+                <button
+                  onClick={stopEval}
+                  disabled={status !== 'running'}
+                  className={`w-28 py-1.5 text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
+                    status !== 'running'
+                      ? 'bg-transparent text-neutral-300 border border-neutral-200 cursor-not-allowed'
+                      : 'bg-white text-neutral-900 border border-neutral-200 hover:border-black shadow-sm'
+                  }`}
+                >
+                  Stop
+                </button>
+              </div>
+            </>
           )}
 
           <div className="flex-1 flex flex-col bg-white transition-all duration-300 min-h-0">
@@ -908,6 +1113,70 @@ export default function App() {
           </div>
         </div>
       </div>
+      ) : (
+        <LogViewer />
+      )}
+
+      {yamlPreview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setYamlPreview(null)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[80vh] bg-white border border-neutral-200 shadow-xl flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-neutral-200 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest">{yamlPreview.title}</h3>
+                <p className="text-[10px] text-neutral-400 font-mono mt-1 truncate" title={yamlPreview.subtitle}>{yamlPreview.subtitle}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(yamlPreview.yaml)
+                  }}
+                  className="px-2 py-1 text-[10px] uppercase tracking-wider font-medium text-neutral-400 hover:text-neutral-900 border border-neutral-200 hover:border-neutral-400 transition-colors"
+                  title="Copy to clipboard"
+                >
+                  Copy
+                </button>
+                {yamlPreview.download_filename && (
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([yamlPreview.yaml], { type: 'text/yaml' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = yamlPreview.download_filename!
+                      document.body.appendChild(a)
+                      a.click()
+                      document.body.removeChild(a)
+                      URL.revokeObjectURL(url)
+                    }}
+                    className="px-2 py-1 text-[10px] uppercase tracking-wider font-medium text-white bg-black hover:bg-neutral-800 transition-colors"
+                    title="Download YAML file"
+                  >
+                    Download
+                  </button>
+                )}
+                <button
+                  onClick={() => setYamlPreview(null)}
+                  className="text-neutral-400 hover:text-neutral-900 text-sm leading-none transition-colors ml-1"
+                  title="Close preview"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-neutral-50/50 scrollbar-thin">
+              <pre className="text-xs font-mono leading-relaxed whitespace-pre-wrap break-words text-neutral-700">
+                {yamlPreview.yaml}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

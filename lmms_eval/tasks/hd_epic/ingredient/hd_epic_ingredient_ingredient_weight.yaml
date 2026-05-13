@@ -1,0 +1,13 @@
+# HD-EPIC subtask: ingredient_ingredient_weight
+# "How much did the participant weigh of X in this video?" (gram amounts)
+include: ../_hd_epic_base.yaml
+
+task: hd_epic_ingredient_ingredient_weight
+
+# Filter the combined JSONL down to this prototype's rows.
+process_docs: !function utils.filter_ingredient_ingredient_weight
+
+metadata:
+  version: 1.0
+  task_type: ingredient_ingredient_weight
+  description: "\"How much did the participant weigh of X in this video?\" (gram amounts)"

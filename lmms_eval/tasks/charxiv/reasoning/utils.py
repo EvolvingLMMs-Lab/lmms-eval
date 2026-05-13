@@ -1,6 +1,9 @@
 from datasets import Dataset
 
-from lmms_eval.tasks._task_utils.reasoning_utils import compute_score
+from lmms_eval.tasks._task_utils.reasoning_utils import (
+    make_reasoning_doc_to_messages,
+    make_reasoning_process_results,
+)
 from lmms_eval.tasks.charxiv.constant import DESCRIPTIVE_RESP_INST, REASONING_RESP_INST
 
 SYSTEM_PROMPT = (
@@ -83,45 +86,13 @@ def charxiv_doc_to_visual(doc):
     return [doc["image"].convert("RGB")]
 
 
-def charxiv_descriptive_doc_to_messages_cot(doc, lmms_eval_specific_kwargs=None):
-    question = charxiv_descriptive_doc_to_text_cot(doc, lmms_eval_specific_kwargs)
-    visuals = charxiv_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    messages[0]["content"].append({"type": "image", "url": visuals[0]})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
+charxiv_descriptive_doc_to_messages_cot = make_reasoning_doc_to_messages(charxiv_doc_to_visual, charxiv_descriptive_doc_to_text_cot, system_prompt=SYSTEM_PROMPT)
 
 
-def charxiv_reasoning_doc_to_messages_cot(doc, lmms_eval_specific_kwargs=None):
-    question = charxiv_reasoning_doc_to_text_cot(doc, lmms_eval_specific_kwargs)
-    visuals = charxiv_doc_to_visual(doc)
-    system_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
-    messages = [{"role": "user", "content": []}]
-    messages[0]["content"].append({"type": "image", "url": visuals[0]})
-    messages[0]["content"].append({"type": "text", "text": question.strip()})
-    messages = system_messages + messages
-    return messages
+charxiv_reasoning_doc_to_messages_cot = make_reasoning_doc_to_messages(charxiv_doc_to_visual, charxiv_reasoning_doc_to_text_cot, system_prompt=SYSTEM_PROMPT)
 
 
-def charxiv_reasoning_process_results(doc, results):
-    acc_score = 0
-    format_score = 0
-    for pred in results:
-        score_dict = compute_score(data_source="charxiv", solution_str=pred.strip(), ground_truth=doc["reasoning_a"])
-        acc_score += score_dict["acc_score"]
-        format_score += score_dict.get("format_reward_score", 0.0)
-
-    return {"acc_score": acc_score / len(results) if results else 0.0, "format_score": format_score / len(results) if results else 0.0}
+charxiv_reasoning_process_results = make_reasoning_process_results("charxiv", charxiv_reasoning_doc_to_text_cot, gt_key="reasoning_a")
 
 
-def charxiv_descriptive_process_results(doc, results):
-    acc_score = 0
-    format_score = 0
-    for pred in results:
-        score_dict = compute_score(data_source="charxiv", solution_str=pred.strip(), ground_truth=doc["descriptive_a"])
-        acc_score += score_dict["acc_score"]
-        format_score += score_dict.get("format_reward_score", 0.0)
-
-    return {"acc_score": acc_score / len(results) if results else 0.0, "format_score": format_score / len(results) if results else 0.0}
+charxiv_descriptive_process_results = make_reasoning_process_results("charxiv", charxiv_descriptive_doc_to_text_cot, gt_key="descriptive_a")

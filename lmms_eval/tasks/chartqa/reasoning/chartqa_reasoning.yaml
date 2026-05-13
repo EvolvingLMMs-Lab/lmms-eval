@@ -1,0 +1,44 @@
+dataset_path: lmms-lab/ChartQA
+dataset_kwargs:
+  token: True
+task: "chartqa_reasoning"
+test_split: test
+output_type: generate_until
+doc_to_visual: !function utils.chartqa_doc_to_visual
+doc_to_text: !function utils.chartqa_doc_to_text
+doc_to_messages: !function utils.chartqa_reasoning_doc_to_messages
+doc_to_target: "answer"
+process_results: !function utils.chartqa_reasoning_process_results
+
+metric_list:
+  - metric: relaxed_overall_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_overall_format_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_human_split_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_human_split_format_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_augmented_split_acc_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_augmented_split_format_score
+    aggregation: mean
+    higher_is_better: true
+
+generation_kwargs:
+  max_new_tokens: 49152
+  temperature: 0
+  do_sample: False
+
+metadata:
+  - version: 0.0
+
+lmms_eval_specific_kwargs:
+  default:
+    pre_prompt: ""
+    post_prompt: ""

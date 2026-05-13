@@ -1,0 +1,9 @@
+include: _binary.yaml
+task: "videonet_binary_2shot"
+dataset_kwargs:
+  cache_dir: videonet
+  data_files:
+    test: "benchmarks/binary_2shot.jsonl"
+metadata:
+  num_fewshot: 2
+  version: 0.0

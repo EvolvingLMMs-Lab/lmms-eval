@@ -20,7 +20,7 @@
 
 🏠 [الصفحة الرئيسية لـ LMMs-Lab](https://www.lmms-lab.com/) | 🤗 [مجموعات بيانات Huggingface](https://huggingface.co/lmms-lab) | <a href="https://emoji.gg/emoji/1684-discord-thread"><img src="https://cdn3.emoji.gg/emojis/1684-discord-thread.png" width="14px" height="14px" alt="Discord_Thread"></a> [discord/lmms-eval](https://discord.gg/zdkwKUqrPy)
 
-📖 [المهام المدعومة (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/current_tasks.md) | 🌟 [النماذج المدعومة (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [التوثيق](../README.md)
+📖 [المهام المدعومة (100+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/advanced/current_tasks.md) | 🌟 [النماذج المدعومة (30+)](https://github.com/EvolvingLMMs-Lab/lmms-eval/tree/main/lmms_eval/models) | 📚 [التوثيق](../README.md)
 
 ---
 
@@ -30,12 +30,12 @@
 
 **يناير 2026** - أدركنا أن الاستدلال المكاني والتركيبي لا يزال يمثل نقاطًا عمياء في المعايير الحالية. أضفنا [CaptionQA](https://captionqa.github.io/) و [SpatialTreeBench](https://github.com/THUNLP-MT/SpatialTreeBench) و [SiteBench](https://sitebench.github.io/) و [ViewSpatial](https://github.com/ViewSpatial/ViewSpatial). بالنسبة للفرق التي تدير خطوط أنابيب تقييم عن بعد، قدمنا خادم تقييم HTTP (#972). ولمن يحتاجون إلى دقة إحصائية، أضفنا CLT وتقدير الخطأ المعياري العنقودي (#989).
 
-**أكتوبر 2025 (v0.5)** - كان الصوت يمثل ثغرة. كان بإمكان النماذج السماع، ولكن لم تكن لدينا طريقة متسقة لاختبارها. أضاف هذا الإصدار تقييمًا صوتيًا شاملاً، وتخزينًا مؤقتًا للاستجابة من أجل الكفاءة، وأكثر من 50 متغيرًا للمعايير تغطي الصوت والرؤية والاستدلال. [ملاحظات الإصدار](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.5.md).
+**أكتوبر 2025 (v0.5)** - كان الصوت يمثل ثغرة. كان بإمكان النماذج السماع، ولكن لم تكن لدينا طريقة متسقة لاختبارها. أضاف هذا الإصدار تقييمًا صوتيًا شاملاً، وتخزينًا مؤقتًا للاستجابة من أجل الكفاءة، وأكثر من 50 متغيرًا للمعايير تغطي الصوت والرؤية والاستدلال. [ملاحظات الإصدار](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.5.md).
 
 <details>
 <summary>فيما يلي قائمة زمنية بالمهام والنماذج والميزات الأخيرة التي أضافها مساهمونا الرائعون. </summary>
 
-- [2025-07] 🚀🚀 أصدرنا `lmms-eval-0.4`. راجع [ملاحظات الإصدار](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/lmms-eval-0.4.md) لمزيد من التفاصيل.
+- [2025-07] 🚀🚀 أصدرنا `lmms-eval-0.4`. راجع [ملاحظات الإصدار](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/docs/releases/lmms-eval-0.4.md) لمزيد من التفاصيل.
 
 </details>
 

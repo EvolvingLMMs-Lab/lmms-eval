@@ -1,0 +1,12 @@
+group: tvbench
+task:
+  - tvbench_action_antonym
+  - tvbench_action_count
+  - tvbench_action_localization
+  - tvbench_action_sequence
+  - tvbench_egocentric_sequence
+  - tvbench_moving_direction
+  - tvbench_object_count
+  - tvbench_object_shuffle
+  - tvbench_scene_transition
+  - tvbench_unexpected_action

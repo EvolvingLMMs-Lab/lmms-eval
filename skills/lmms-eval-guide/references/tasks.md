@@ -1,4 +1,4 @@
-<!-- lmms-eval v0.6 -->
+<!-- lmms-eval v0.7 -->
 # Adding a New Task/Benchmark
 
 Tasks auto-register from YAML - no manual registration needed. The framework scans `tasks/` for YAML files at startup.
@@ -54,9 +54,13 @@ lmms_eval_specific_kwargs:
     pre_prompt: "Question: "
     post_prompt: "Answer with the option letter only."
 
+# Reasoning tag stripping (v0.7)
+# Per-task override for --reasoning_tags CLI flag. Task-level takes priority.
+# Set to none/false to disable stripping for this task.
+reasoning_tags: [["<think>", "</think>"]]  # or: none
+
 metadata:
   - version: 0.0
-```
 
 ## utils.py Implementation
 
@@ -207,6 +211,32 @@ def my_process_results(doc, results):
 | `generate_until` | Free-form text generation | Open QA, captioning |
 | `loglikelihood` | Multiple-choice via perplexity | MCQ benchmarks |
 | `generate_until_multi_round` | Multi-turn conversation | Dialog tasks |
+| `generate_until_agentic` | Specialized agentic flows | Tool-use tasks |
+
+### Reasoning Tag Stripping (v0.7)
+
+Reasoning models emit `<think>...</think>` blocks. The evaluator strips these **after** the filter pipeline and **before** `process_results()`. Models do not need to handle this.
+
+- **Default**: `<think>...</think>` stripping is enabled globally.
+- **Per-task override**: set `reasoning_tags` in YAML to override the CLI `--reasoning_tags` flag.
+- **Disable for a task**: set `reasoning_tags: none` in the task YAML.
+- **Raw output preserved**: `resps` field in JSONL logs retains `<think>` blocks for analysis. `filtered_resps` is the scored output.
+
+## Available Task Domains (v0.7)
+
+| Domain | Example Tasks |
+|--------|--------------|
+| Image QA | MME, MMMU, MMBench, MathVista, NaturalBench |
+| Video | VideoMME, LongVideoBench, Neptune, TVBench, ViVerBench, EgoTempo |
+| Document | OmniDocBench, MMLongBench, MMLongBench-Doc, DUDE, OfficeQA |
+| Math & reasoning | MathCanvas, MathKangaroo, VisuLogic |
+| Spatial & counting | Point-Bench, CountBench, FSC-147 |
+| Knowledge & QA | SimpleVQA, WorldVQA, MTVQA, HiPhO, MME-CC, VPCT, ZeroBench |
+| AGI & agentic | ARC-AGI-1, ARC-AGI-2, BrowseComp |
+| Audio | AMI, CN College Listen MCQ, DREAM TTS MCQ, EuroPal ASR, Song Describer |
+| Safety | JailbreakBench harmful + benign (`safety_redteam` group) |
+
+List all available tasks: `python -m lmms_eval --tasks list`
 
 ## Real-World Examples
 
@@ -217,3 +247,4 @@ Study these for patterns:
 | MME (image QA) | `tasks/mme/mme.yaml` | Basic image task, custom aggregation |
 | MMMU (multi-image) | `tasks/mmmu/mmmu_val.yaml` | `doc_to_messages`, template inheritance, model-specific kwargs |
 | VideoMME (video) | `tasks/videomme/videomme.yaml` | Video task, `cluster_key` for clustered SE |
+| JailbreakBench (safety) | `tasks/safety_redteam/` | Safety metrics, dual toxicity backends |

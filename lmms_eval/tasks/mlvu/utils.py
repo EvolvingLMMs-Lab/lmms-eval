@@ -63,13 +63,9 @@ def mlvu_doc_to_text(doc, lmms_eval_specific_kwargs=None):
 
 
 def extract_characters_regex(s):
-    s = s.strip()
-    if ")" in s:
-        index = s.index(")")
-        pred = s[index - 1 : index]
-        return pred
-    else:
-        return s
+    from lmms_eval.tasks._task_utils.mcq_extract import extract_mcq_answer
+
+    return extract_mcq_answer(s, choices=["A", "B", "C", "D"])
 
 
 def mlvu_process_results(doc, results):

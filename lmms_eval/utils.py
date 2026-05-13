@@ -129,6 +129,18 @@ def is_multimodal_content(value: Any) -> bool:
     return False
 
 
+def resolve_cache_dir(cache_dir: str, base_dir: Optional[str] = None) -> str:
+    """Resolve cache paths while allowing env vars and absolute paths.
+
+    Relative values are resolved against ``base_dir`` when provided.
+    Absolute values are preserved after ``$VAR``/``~`` expansion.
+    """
+    resolved = os.path.expanduser(os.path.expandvars(cache_dir))
+    if base_dir is not None and not os.path.isabs(resolved):
+        return os.path.join(base_dir, resolved)
+    return resolved
+
+
 def sanitize_list(sub):
     """
     Takes possible nested list and recursively converts all inner component to strings
@@ -540,7 +552,6 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
     all_headers = [
         column_name,
-        "Version",
         "Filter",
         "n-shot",
         "Metric",
@@ -561,7 +572,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     ]
 
     # Optional columns (index 9+) are hidden if all values are N/A
-    optional_col_indices = list(range(9, len(all_headers)))
+    optional_col_indices = list(range(8, len(all_headers)))
 
     # Helper to format stderr value
     def fmt_se(se_val):
@@ -585,7 +596,6 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
         keys = sorted(keys)
     for k in keys:
         dic = result_dict[column][k]
-        version = result_dict["versions"].get(k, "    N/A")
         n = str(result_dict.get("n-shot", " ").get(k, " "))
         higher_is_better = result_dict.get("higher_is_better", {}).get(k, {})
 
@@ -652,7 +662,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
             # Check if v is not empty (handle numpy array safely)
             is_empty = hasattr(v, "__len__") and not isinstance(v, str) and len(v) == 0
             if not is_empty:
-                values.append([k, version, f, n, m, hib, v, "±", se, se_clt, se_clustered, ea, ca, iv, cr, baseline_str, diff_str, ci_str, pval_str])
+                values.append([k, f, n, m, hib, v, "±", se, se_clt, se_clustered, ea, ca, iv, cr, baseline_str, diff_str, ci_str, pval_str])
 
     # Determine which optional columns to hide (all values are N/A)
     cols_to_hide = set()
@@ -777,6 +787,87 @@ def get_git_commit_hash():
         # FileNotFoundError occurs when git not installed on system
         git_hash = None
     return git_hash
+
+
+def get_git_branch_name():
+    """Gets the current git branch name (if in a repo)."""
+    try:
+        branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
+        return branch.decode()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def get_lmms_eval_version_string():
+    """Return a compact version string like 'branch@short_sha'."""
+    branch = get_git_branch_name() or "unknown"
+    commit = get_git_commit_hash() or "unknown"
+    return f"{branch}@{commit[:8]}"
+
+
+def get_lmms_eval_cache_version() -> str:
+    """Return a version string for cache key isolation.
+
+    For dev/editable installs the git commit hash is preferred because the
+    PyPI version stays constant while the code changes.  For pip installs
+    (no git repo) we fall back to ``importlib.metadata.version``.
+    """
+    commit = get_git_commit_hash()
+    if commit:
+        return commit
+    try:
+        import importlib.metadata
+
+        return importlib.metadata.version("lmms-eval")
+    except Exception:
+        return "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Evaluation banner: printed above the results table
+# ---------------------------------------------------------------------------
+
+LMMS_EVAL_MOTTOS = [
+    "We build trusted evaluation for probing real intelligence.",
+    "Better evals lead to better models.",
+    "Mapping the border of model capabilities.",
+    "Shaping what we build next, one benchmark at a time.",
+    "The unified evaluation toolkit for frontier models.",
+    "Probing abilities in the real world.",
+    "Good evaluation shapes what we build next.",
+    "Measure twice, train once.",
+    "Evaluation is the compass of progress.",
+    "Where rigorous benchmarks meet real-world intelligence.",
+]
+
+
+def get_eval_banner(branch: str = None, commit: str = None) -> str:
+    """Build a branded banner printed above the results table.
+
+    Example output::
+
+        LMMs-Eval: Probing Intelligence in the Real World
+        > Better evals lead to better models.
+
+        branch: dev-v0d7
+        commit: 25a430ee
+    """
+    import random
+
+    motto = random.choice(LMMS_EVAL_MOTTOS)
+    branch = branch or get_git_branch_name() or "unknown"
+    commit = commit or get_git_commit_hash() or "unknown"
+
+    lines = [
+        "",
+        "LMMs-Eval: Probing Intelligence in the Real World",
+        f"> {motto}",
+        "",
+        f"branch: {branch}",
+        f"commit: {commit}",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def get_datetime_str(timezone="Asia/Singapore"):

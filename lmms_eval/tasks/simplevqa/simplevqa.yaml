@@ -1,0 +1,3 @@
+task: simplevqa
+test_split: test
+include: _default_template_simplevqa_yaml

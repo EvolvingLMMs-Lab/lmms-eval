@@ -1,0 +1,4 @@
+task: "mle_bench_small"
+task_alias: "MLE-Bench (Small 0-30%)"
+include: _default_template_yaml
+process_docs: !function utils.filter_small

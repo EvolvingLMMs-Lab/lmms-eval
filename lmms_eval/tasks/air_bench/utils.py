@@ -3,13 +3,12 @@ import os
 import random
 import re
 import time
-from pathlib import Path
 
 import numpy as np
 import requests
-import yaml
 from loguru import logger as eval_logger
 
+from lmms_eval.tasks._task_utils.default_template_yaml import load_default_template_yaml
 from lmms_eval.tasks._task_utils.file_utils import generate_submission_file
 
 
@@ -24,15 +23,7 @@ def air_bench_doc_to_text_chat(doc, lmms_eval_specific_kwargs):
     return f"{pre_prompt}{question}{post_prompt}"
 
 
-with open(Path(__file__).parent / "_default_template_yaml", "r") as f:
-    raw_data = f.readlines()
-    safe_data = []
-    for i, line in enumerate(raw_data):
-        # remove function definition since yaml load cannot handle it
-        if "!function" not in line:
-            safe_data.append(line)
-
-    config = yaml.safe_load("".join(safe_data))
+config = load_default_template_yaml(__file__)
 
 # specify api type and key in .env
 GPT_EVAL_MODEL_NAME = os.getenv("MODEL_VERSION", "gpt-4o-2024-11-20")
@@ -107,17 +98,14 @@ def get_eval(max_tokens: int, content: str, retries: int = retries):
 
 
 def air_bench_process_results_chat(doc, result):
-    path = doc["path"]
     question = doc["question"]
     answer_gt = doc["answer_gt"]
-    task_name = doc["task_name"]
-    dataset_name = doc["dataset_name"]
     response = result[0]
 
-    if response == None:
+    if response is None:
         exit(1)
 
-    if doc["meta_info"] == None:
+    if doc["meta_info"] is None:
         print("lack meta info")
         exit(1)
     else:

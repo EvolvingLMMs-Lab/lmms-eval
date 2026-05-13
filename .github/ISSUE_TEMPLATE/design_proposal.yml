@@ -1,0 +1,106 @@
+name: Design Proposal / Follow-up
+description: Propose architecture-level follow-up work with clear scope and acceptance criteria
+labels: ["needs decision"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for non-trivial design or architecture work.
+        Keep it concise and evidence-driven, aligned with PR template style.
+
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched for related issues/PRs and linked them below.
+          required: true
+        - label: I have separated in-scope and out-of-scope items.
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Max 3 bullets. What is the problem and what outcome is expected?
+      placeholder: |
+        - Problem: ...
+        - Impact: ...
+        - Desired outcome: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: in_scope
+    attributes:
+      label: In Scope
+      description: Explicit list of what this issue will change.
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of Scope
+      description: Explicit list of what this issue will NOT change.
+      placeholder: |
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Plan
+      description: 3-6 concrete steps.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_plan
+    attributes:
+      label: Validation Plan
+      description: How will we verify success? Include commands/benchmarks where applicable.
+      placeholder: |
+        - `command` | sample size: `N=<...>` | key metrics: `<...>` | result: `pass/fail`
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk / Compatibility
+      description: 1-3 bullets on behavior changes, migration risk, or blockers.
+      placeholder: |
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Objective done conditions.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Related PRs, issues, docs, benchmark artifacts, or Linear links.
+      placeholder: |
+        - PR: ...
+        - Issue: ...
+        - Doc: ...
+    validations:
+      required: false

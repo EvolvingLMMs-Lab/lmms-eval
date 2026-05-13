@@ -58,7 +58,7 @@ def refine_samples_vllm(llm, sampling_params, tokenizer, sample_jsonl, output_js
     updated_samples = []
     for sample in tqdm(raw_samples, desc="Postprocessing samples with Qwen"):
         options = sample["doc"]["options"]
-        raw_pred = sample["resps"][0][0]
+        raw_pred = sample["resps"][0][0] if isinstance(sample["resps"][0], list) else sample["resps"][0]
         input_text = f"The options are: {options}\n\n The model response is: {raw_pred}"
         try:
             choice = extract_choice_vllm(llm, sampling_params, tokenizer, input_text, mcq)
@@ -73,7 +73,10 @@ def refine_samples_vllm(llm, sampling_params, tokenizer, sample_jsonl, output_js
             options.remove(answer)
             random.shuffle(options)
             choice = options[0]
-        sample["resps"][0][0] = choice
+        if isinstance(sample["resps"][0], list):
+            sample["resps"][0][0] = choice
+        else:
+            sample["resps"][0] = choice
         updated_samples.append(sample)
 
     with open(output_jsonl, "w") as f:
